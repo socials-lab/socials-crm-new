@@ -7,7 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 // TEMPORARILY DISABLED - Supabase dependencies
 // import { RouteGuard } from "@/components/layout/RouteGuard";
 // import { AuthProvider } from "@/hooks/useAuth";
-// import { CRMDataProvider } from "@/hooks/useCRMData";
+import { CRMDataProvider } from "@/hooks/useCRMData";
 import { LeadsDataProvider } from "@/hooks/useLeadsData";
 import { CreativeBoostProvider } from "@/hooks/useCreativeBoostData";
 import Dashboard from "./pages/Dashboard";
@@ -31,20 +31,20 @@ import Auth from "./pages/Auth";
 const queryClient = new QueryClient();
 
 // App component with all providers
-// NOTE: AuthProvider, CRMDataProvider and RouteGuard temporarily disabled
+// NOTE: AuthProvider and RouteGuard temporarily disabled
 const App = () => (
   <QueryClientProvider client={queryClient}>
     {/* TEMPORARILY DISABLED - AuthProvider */}
-    {/* TEMPORARILY DISABLED - CRMDataProvider */}
-    <CreativeBoostProvider>
-      <LeadsDataProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/auth" element={<Auth />} />
+    <CRMDataProvider>
+      <CreativeBoostProvider>
+        <LeadsDataProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
               
               {/* Routes - RouteGuard temporarily disabled */}
@@ -70,6 +70,7 @@ const App = () => (
         </TooltipProvider>
       </LeadsDataProvider>
     </CreativeBoostProvider>
+  </CRMDataProvider>
   </QueryClientProvider>
 );
 
