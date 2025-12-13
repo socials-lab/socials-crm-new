@@ -1,10 +1,9 @@
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
-import { DemoUserSwitcher } from './DemoUserSwitcher';
 import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { Outlet } from 'react-router-dom';
-import { Menu, LogOut, User } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -93,7 +92,6 @@ export function AppLayout() {
             </div>
             <div className="flex items-center gap-2">
               <NotificationsDropdown />
-              <DemoUserSwitcher />
               <UserMenu />
             </div>
           </header>
