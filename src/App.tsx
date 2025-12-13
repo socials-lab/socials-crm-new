@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { AuthProvider } from "@/hooks/useAuth";
+import { UserRoleProvider } from "@/hooks/useUserRole";
 import { CRMDataProvider } from "@/hooks/useCRMData";
 import { LeadsDataProvider } from "@/hooks/useLeadsData";
 import { CreativeBoostProvider } from "@/hooks/useCreativeBoostData";
@@ -32,42 +33,44 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <CRMDataProvider>
-        <CreativeBoostProvider>
-          <LeadsDataProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
-                  
-                  {/* Protected routes */}
-                  <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/my-work" element={<MyWork />} />
-                    <Route path="/leads" element={<Leads />} />
-                    <Route path="/clients" element={<Clients />} />
-                    <Route path="/contacts" element={<Contacts />} />
-                    <Route path="/engagements" element={<Engagements />} />
-                    <Route path="/extra-work" element={<ExtraWork />} />
-                    <Route path="/invoicing" element={<Invoicing />} />
-                    <Route path="/creative-boost" element={<CreativeBoost />} />
-                    <Route path="/services" element={<Services />} />
-                    <Route path="/colleagues" element={<Colleagues />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/notifications" element={<Notifications />} />
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </LeadsDataProvider>
-        </CreativeBoostProvider>
-      </CRMDataProvider>
+      <UserRoleProvider>
+        <CRMDataProvider>
+          <CreativeBoostProvider>
+            <LeadsDataProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
+                    
+                    {/* Protected routes */}
+                    <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/my-work" element={<MyWork />} />
+                      <Route path="/leads" element={<Leads />} />
+                      <Route path="/clients" element={<Clients />} />
+                      <Route path="/contacts" element={<Contacts />} />
+                      <Route path="/engagements" element={<Engagements />} />
+                      <Route path="/extra-work" element={<ExtraWork />} />
+                      <Route path="/invoicing" element={<Invoicing />} />
+                      <Route path="/creative-boost" element={<CreativeBoost />} />
+                      <Route path="/services" element={<Services />} />
+                      <Route path="/colleagues" element={<Colleagues />} />
+                      <Route path="/analytics" element={<Analytics />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/notifications" element={<Notifications />} />
+                    </Route>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </TooltipProvider>
+            </LeadsDataProvider>
+          </CreativeBoostProvider>
+        </CRMDataProvider>
+      </UserRoleProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

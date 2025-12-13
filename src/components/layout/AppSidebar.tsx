@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { getCurrentCRMUser } from '@/data/mockData';
+import { useUserRole } from '@/hooks/useUserRole';
 import socialsLogo from '@/assets/socials-logo.png';
 
 const mainNavItems = [
@@ -35,7 +35,7 @@ const managementNavItems = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const currentCRMUser = getCurrentCRMUser();
+  const { isSuperAdmin, colleagueId } = useUserRole();
   const { setOpenMobile } = useSidebar();
   
   const isActive = (path: string) => {
@@ -48,15 +48,11 @@ export function AppSidebar() {
     setOpenMobile(false);
   };
 
-  const hasColleagueId = !!currentCRMUser?.colleague_id;
-  const isSuperAdmin = currentCRMUser?.is_super_admin === true;
+  const hasColleagueId = !!colleagueId;
   
-  // Check if user has permission to view a page
-  const canViewPage = (pageName: string): boolean => {
-    if (isSuperAdmin) return true;
-    if (!currentCRMUser?.page_permissions) return false;
-    const permission = currentCRMUser.page_permissions.find(p => p.page === pageName);
-    return permission?.can_view === true;
+  // For now, allow all pages (role-based permissions will be implemented later)
+  const canViewPage = (_pageName: string): boolean => {
+    return true;
   };
   
   // Filter nav items based on user permissions

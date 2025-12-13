@@ -5,11 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { currentUser } from '@/data/mockData';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { User, Building, Bell, Shield } from 'lucide-react';
 
 export default function Settings() {
-  const canSeeSettings = ['admin', 'management'].includes(currentUser.role);
+  const { user } = useAuth();
+  const { role, isSuperAdmin } = useUserRole();
+  
+  const canSeeSettings = isSuperAdmin || role === 'admin' || role === 'management';
 
   if (!canSeeSettings) {
     return (
@@ -43,11 +47,11 @@ export default function Settings() {
           <CardContent className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Celé jméno</Label>
-              <Input id="name" defaultValue={currentUser.full_name} />
+              <Input id="name" defaultValue={user?.user_metadata?.full_name || user?.email?.split('@')[0] || ''} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue={currentUser.email} />
+              <Input id="email" type="email" defaultValue={user?.email || ''} />
             </div>
             <Button>Uložit změny</Button>
           </CardContent>

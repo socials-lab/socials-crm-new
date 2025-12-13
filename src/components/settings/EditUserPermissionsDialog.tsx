@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { CRMUser, UserRole, PagePermission, AppPage } from '@/types/crm';
-import { colleagues } from '@/data/mockData';
+import { useCRMData } from '@/hooks/useCRMData';
 import { Eye, Pencil, Wallet } from 'lucide-react';
 
 const PAGE_LABELS: Record<AppPage, string> = {
@@ -36,6 +36,7 @@ interface EditUserPermissionsDialogProps {
 }
 
 export function EditUserPermissionsDialog({ open, onOpenChange, user, onSave }: EditUserPermissionsDialogProps) {
+  const { colleagues } = useCRMData();
   const [fullName, setFullName] = useState(user.full_name);
   const [email, setEmail] = useState(user.email);
   const [role, setRole] = useState<UserRole>(user.role);

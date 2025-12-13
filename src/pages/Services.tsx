@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useCRMData } from '@/hooks/useCRMData';
 import { ServiceFormDialog } from '@/components/services/ServiceFormDialog';
 import { DeleteServiceDialog } from '@/components/services/DeleteServiceDialog';
-import { serviceTierConfigs } from '@/data/mockData';
+import { serviceTierConfigs } from '@/constants/services';
 import { toast } from 'sonner';
 import type { Service, ServiceCategory, ServiceType } from '@/types/crm';
 

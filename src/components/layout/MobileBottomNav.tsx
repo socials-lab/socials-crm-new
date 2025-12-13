@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSidebar } from '@/components/ui/sidebar';
-import { getCurrentCRMUser } from '@/data/mockData';
+import { useUserRole } from '@/hooks/useUserRole';
 
 // Main navigation items for bottom bar (max 5 for usability)
 const bottomNavItems = [
@@ -16,18 +16,14 @@ export function MobileBottomNav() {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { toggleSidebar } = useSidebar();
-  const currentCRMUser = getCurrentCRMUser();
+  const { isSuperAdmin } = useUserRole();
   
   // Only show on mobile
   if (!isMobile) return null;
-
-  const isSuperAdmin = currentCRMUser?.is_super_admin === true;
   
-  const canViewPage = (pageName: string): boolean => {
-    if (isSuperAdmin) return true;
-    if (!currentCRMUser?.page_permissions) return false;
-    const permission = currentCRMUser.page_permissions.find(p => p.page === pageName);
-    return permission?.can_view === true;
+  // For now, allow all pages (role-based permissions will be implemented later)
+  const canViewPage = (_pageName: string): boolean => {
+    return true;
   };
   
   const isActive = (path: string) => {

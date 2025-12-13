@@ -34,7 +34,7 @@ import {
 import { useCRMData } from '@/hooks/useCRMData';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { AddContactDialog } from '@/components/clients/AddContactDialog';
-import { currentUser, isSuperAdmin } from '@/data/mockData';
+import { useUserRole } from '@/hooks/useUserRole';
 import type { ClientStatus, Client, ClientContact, ClientTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -68,7 +68,7 @@ export default function Clients() {
     deleteContact,
   } = useCRMData();
   
-  const superAdmin = isSuperAdmin();
+  const { isSuperAdmin: superAdmin } = useUserRole();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');

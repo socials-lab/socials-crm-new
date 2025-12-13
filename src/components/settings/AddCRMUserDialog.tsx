@@ -4,112 +4,105 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CRMUser, UserRole, PagePermission, AppPage } from '@/types/crm';
-import { colleagues } from '@/data/mockData';
+import { useCRMData } from '@/hooks/useCRMData';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
 
-const ALL_PAGES: AppPage[] = [
-  'dashboard', 'leads', 'clients', 'contacts', 'engagements',
-  'extra_work', 'invoicing', 'creative_boost', 'services', 'colleagues', 'analytics', 'settings'
-];
-
-const ROLE_TEMPLATES: Record<UserRole, { can_view: AppPage[]; can_edit: AppPage[] }> = {
-  admin: {
-    can_view: ALL_PAGES,
-    can_edit: ALL_PAGES,
-  },
-  management: {
-    can_view: ALL_PAGES,
-    can_edit: ['leads', 'clients', 'contacts', 'engagements', 'extra_work', 'creative_boost'],
-  },
-  project_manager: {
-    can_view: ['dashboard', 'clients', 'contacts', 'engagements', 'extra_work', 'creative_boost', 'colleagues'],
-    can_edit: ['extra_work', 'creative_boost'],
-  },
-  specialist: {
-    can_view: ['dashboard', 'clients', 'creative_boost'],
-    can_edit: ['creative_boost'],
-  },
-  finance: {
-    can_view: ['dashboard', 'clients', 'engagements', 'invoicing', 'analytics'],
-    can_edit: ['invoicing'],
-  },
-  client: {
-    can_view: ['dashboard'],
-    can_edit: [],
-  },
-};
-
-function generatePermissions(role: UserRole): PagePermission[] {
-  const template = ROLE_TEMPLATES[role];
-  return ALL_PAGES.map(page => ({
-    page,
-    can_view: template.can_view.includes(page),
-    can_edit: template.can_edit.includes(page),
-  }));
-}
+type AppRole = Database['public']['Enums']['app_role'];
 
 interface AddCRMUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (user: CRMUser) => void;
+  onAdd: () => void;
 }
 
 export function AddCRMUserDialog({ open, onOpenChange, onAdd }: AddCRMUserDialogProps) {
-  const [fullName, setFullName] = useState('');
+  const { colleagues } = useCRMData();
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<UserRole>('specialist');
-  const [colleagueId, setColleagueId] = useState<string>('none');
+  const [role, setRole] = useState<AppRole>('specialist');
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (!fullName || !email) return;
+  const handleSubmit = async () => {
+    if (!email) {
+      toast.error('Email je povinný');
+      return;
+    }
 
-    const newUser: CRMUser = {
-      id: `crm-user-${Date.now()}`,
-      colleague_id: colleagueId === 'none' ? null : colleagueId,
-      full_name: fullName,
-      email,
-      role,
-      is_super_admin: false,
-      is_active: true,
-      can_see_financials: ['admin', 'management', 'finance'].includes(role),
-      page_permissions: generatePermissions(role),
-      last_login: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    setIsSubmitting(true);
+    
+    try {
+      // First, find the user by email in profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
 
-    onAdd(newUser);
-    resetForm();
-    onOpenChange(false);
+      if (profileError) {
+        throw profileError;
+      }
+
+      if (!profile) {
+        toast.error('Uživatel s tímto emailem nebyl nalezen. Uživatel se musí nejdřív zaregistrovat.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check if user already has a role
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', profile.id)
+        .maybeSingle();
+
+      if (existingRole) {
+        toast.error('Tento uživatel již má přiřazenou roli.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Add the role
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: profile.id,
+          role: role,
+          is_super_admin: isSuperAdmin,
+        });
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      onAdd();
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error adding user role:', error);
+      toast.error('Chyba při přidávání uživatele');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
-    setFullName('');
     setEmail('');
     setRole('specialist');
-    setColleagueId('none');
+    setIsSuperAdmin(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Přidat nového uživatele CRM</DialogTitle>
+          <DialogTitle>Přidat přístup do CRM</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Celé jméno *</Label>
-            <Input
-              id="fullName"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Jan Novák"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email">Email uživatele *</Label>
             <Input
               id="email"
               type="email"
@@ -117,11 +110,14 @@ export function AddCRMUserDialog({ open, onOpenChange, onAdd }: AddCRMUserDialog
               onChange={(e) => setEmail(e.target.value)}
               placeholder="jan@socials.cz"
             />
+            <p className="text-xs text-muted-foreground">
+              Uživatel se musí nejdřív zaregistrovat
+            </p>
           </div>
 
           <div className="space-y-2">
             <Label>Role</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
+            <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -133,26 +129,6 @@ export function AddCRMUserDialog({ open, onOpenChange, onAdd }: AddCRMUserDialog
                 <SelectItem value="finance">Finance</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Oprávnění budou přednastavena podle role
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Propojit s kolegou (volitelné)</Label>
-            <Select value={colleagueId} onValueChange={setColleagueId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Vyberte kolegu..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Žádný</SelectItem>
-                {colleagues.filter(c => c.status === 'active').map(col => (
-                  <SelectItem key={col.id} value={col.id}>
-                    {col.full_name} - {col.position}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
@@ -160,8 +136,8 @@ export function AddCRMUserDialog({ open, onOpenChange, onAdd }: AddCRMUserDialog
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
           </Button>
-          <Button onClick={handleSubmit} disabled={!fullName || !email}>
-            Přidat uživatele
+          <Button onClick={handleSubmit} disabled={!email || isSubmitting}>
+            {isSubmitting ? 'Přidávám...' : 'Přidat uživatele'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -6,6 +6,7 @@ import {
   clientMonthOutputs as initialOutputs,
 } from '@/data/creativeBoostMockData';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useAuth } from '@/hooks/useAuth';
 import type {
   OutputType,
   CreativeBoostClientMonth,
@@ -15,7 +16,6 @@ import type {
   MonthStatus,
   CreativeBoostSettingsChange,
 } from '@/types/creativeBoost';
-import { currentUser } from '@/data/mockData';
 
 interface ColleagueCreditDetail {
   clientId: string;
@@ -87,6 +87,7 @@ const CreativeBoostContext = createContext<CreativeBoostContextType | null>(null
 
 export function CreativeBoostProvider({ children }: { children: ReactNode }) {
   const { getClientById, colleagues, engagements, engagementServices } = useCRMData();
+  const { user } = useAuth();
   
   const [outputTypes, setOutputTypes] = useState<OutputType[]>(initialOutputTypes);
   const [clients, setClients] = useState<CreativeBoostClient[]>(initialClients);
