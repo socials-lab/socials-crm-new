@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
-import { currentUser } from '@/data/mockData';
+import { useAuth } from '@/hooks/useAuth';
 import type { Lead, LeadStage, LeadSource, LeadOfferType } from '@/types/crm';
 import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
@@ -121,6 +121,7 @@ const MOCK_ARES_DATA: Record<string, { company_name: string; dic: string; billin
 export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) {
   const { addLead, updateLead } = useLeadsData();
   const { colleagues } = useCRMData();
+  const { user } = useAuth();
   const [isLoadingAres, setIsLoadingAres] = useState(false);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
@@ -179,7 +180,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       contact_email: '',
       contact_phone: '',
       stage: 'new_lead',
-      owner_id: currentUser.id === 'user-1' ? 'col-1' : '',
+      owner_id: '',
       source: 'inbound',
       source_custom: '',
       client_message: '',
@@ -242,7 +243,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         contact_email: '',
         contact_phone: '',
         stage: 'new_lead',
-        owner_id: currentUser.id === 'user-1' ? 'col-1' : '',
+        owner_id: '',
         source: 'inbound',
         source_custom: '',
         client_message: '',
@@ -301,8 +302,8 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       contract_signed_at: lead?.contract_signed_at || null,
       offer_sent_at: lead?.offer_sent_at || null,
       offer_sent_by_id: lead?.offer_sent_by_id || null,
-      created_by: currentUser.id,
-      updated_by: currentUser.id,
+      created_by: user?.id || null,
+      updated_by: user?.id || null,
     };
 
     if (lead) {

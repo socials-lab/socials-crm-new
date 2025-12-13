@@ -1,25 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { getCurrentCRMUser } from '@/data/mockData';
-import type { AppPage } from '@/types/crm';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Loader2 } from 'lucide-react';
-
-// Map URL paths to AppPage types
-const pathToPageMap: Record<string, AppPage> = {
-  '/': 'dashboard',
-  '/my-work': 'dashboard', // My Work uses dashboard permission or requires colleague
-  '/leads': 'leads',
-  '/clients': 'clients',
-  '/contacts': 'contacts',
-  '/engagements': 'engagements',
-  '/extra-work': 'extra_work',
-  '/invoicing': 'invoicing',
-  '/creative-boost': 'creative_boost',
-  '/services': 'services',
-  '/colleagues': 'colleagues',
-  '/analytics': 'analytics',
-  '/settings': 'settings',
-};
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -27,11 +9,12 @@ interface RouteGuardProps {
 
 export function RouteGuard({ children }: RouteGuardProps) {
   const location = useLocation();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { isLoading: roleLoading, isSuperAdmin, colleagueId } = useUserRole();
   const currentPath = location.pathname;
 
-  // Show loading while checking auth
-  if (loading) {
+  // Show loading while checking auth or role
+  if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -44,47 +27,20 @@ export function RouteGuard({ children }: RouteGuardProps) {
     return <Navigate to="/auth" replace />;
   }
 
-  // For now, use mock CRM user for permissions (will be replaced with real DB data later)
-  const currentUser = getCurrentCRMUser();
-
-  // If no CRM user profile, allow access (new user)
-  if (!currentUser) {
-    return <>{children}</>;
-  }
-
   // Super admins have access to everything
-  if (currentUser.is_super_admin) {
+  if (isSuperAdmin) {
     return <>{children}</>;
   }
 
   // Special handling for /my-work - requires colleague_id
   if (currentPath === '/my-work') {
-    if (!currentUser.colleague_id) {
+    if (!colleagueId) {
       return <Navigate to="/" replace />;
     }
     return <>{children}</>;
   }
 
-  // Get the required page permission for this path
-  const requiredPage = pathToPageMap[currentPath];
-
-  // If path not in map, allow access (unknown routes handled by NotFound)
-  if (!requiredPage) {
-    return <>{children}</>;
-  }
-
-  // Dashboard is always accessible
-  if (requiredPage === 'dashboard') {
-    return <>{children}</>;
-  }
-
-  // Check if user has permission to view this page
-  const permission = currentUser.page_permissions.find(p => p.page === requiredPage);
-  const canView = permission?.can_view === true;
-
-  if (!canView) {
-    return <Navigate to="/" replace />;
-  }
-
+  // For now, allow all authenticated users access to all pages
+  // Role-based page permissions will be implemented later
   return <>{children}</>;
 }

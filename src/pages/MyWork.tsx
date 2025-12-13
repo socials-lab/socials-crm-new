@@ -5,13 +5,13 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useCreativeBoostData, CreativeBoostProvider } from '@/hooks/useCreativeBoostData';
-import { getCurrentCRMUser } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 
 function MyWorkContent() {
   const navigate = useNavigate();
-  const currentCRMUser = getCurrentCRMUser();
+  const { colleagueId } = useUserRole();
   
   const { 
     colleagues,
@@ -31,9 +31,9 @@ function MyWorkContent() {
 
   // Get current colleague based on logged-in user
   const currentColleague = useMemo(() => {
-    if (!currentCRMUser?.colleague_id) return null;
-    return getColleagueById(currentCRMUser.colleague_id);
-  }, [currentCRMUser, getColleagueById]);
+    if (!colleagueId) return null;
+    return getColleagueById(colleagueId);
+  }, [colleagueId, getColleagueById]);
 
   // Get assignments for current colleague
   const myAssignments = useMemo(() => {

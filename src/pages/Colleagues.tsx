@@ -22,9 +22,9 @@ import {
 } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { ColleagueForm } from '@/components/forms/ColleagueForm';
 import { UserManagement } from '@/components/settings/UserManagement';
-import { isSuperAdmin, getCurrentCRMUser, crmUsers, canCurrentUserSeeFinancials } from '@/data/mockData';
 import type { ColleagueStatus, Seniority, Colleague } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -51,13 +51,7 @@ function ColleaguesContent() {
   const tabParam = searchParams.get('tab');
   const highlightedRef = useRef<HTMLDivElement>(null);
   
-  const superAdmin = isSuperAdmin();
-  const canSeeFinancials = canCurrentUserSeeFinancials();
-  
-  // Helper to check if colleague has CRM access
-  const getColleagueCRMUser = (colleagueId: string) => {
-    return crmUsers.find(u => u.colleague_id === colleagueId);
-  };
+  const { isSuperAdmin: superAdmin, canSeeFinancials } = useUserRole();
 
   const { 
     colleagues, 
@@ -257,15 +251,11 @@ function ColleaguesContent() {
 
                 <div className="flex items-center gap-3">
                   <div className="hidden sm:flex items-center gap-4">
-                    {/* CRM Access Badge */}
-                    {superAdmin && getColleagueCRMUser(colleague.id) && (
+                    {/* CRM Access Badge - shows if colleague has profile_id linked */}
+                    {superAdmin && colleague.profile_id && (
                       <Badge 
                         variant="outline" 
-                        className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20 cursor-pointer hover:bg-emerald-500/20 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSearchParams({ tab: 'access', highlight: getColleagueCRMUser(colleague.id)!.id });
-                        }}
+                        className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                       >
                         <Shield className="h-3 w-3 mr-1" />
                         CRM přístup

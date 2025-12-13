@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Service, EngagementService, ServiceTier } from '@/types/crm';
-import { serviceTierConfigs } from '@/data/mockData';
+import { serviceTierConfigs } from '@/constants/services';
 
 const CREATIVE_BOOST_SERVICE_ID = 'srv-3';
 

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Search, Pencil, Trash2, Star, Key, Phone, Mail } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCRMData } from '@/hooks/useCRMData';
-import { isSuperAdmin } from '@/data/mockData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +37,7 @@ export default function Contacts() {
 
   const { clients, clientContacts, addContact, updateContact, deleteContact, getClientById } = useCRMData();
   
-  const superAdmin = isSuperAdmin();
+  const { isSuperAdmin: superAdmin } = useUserRole();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [clientFilter, setClientFilter] = useState<string>('all');

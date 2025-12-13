@@ -54,7 +54,7 @@ import { CreateInvoiceFromEngagementDialog } from '@/components/engagements/Crea
 import { EngagementInvoicingSection } from '@/components/engagements/EngagementInvoicingStatus';
 import { EndEngagementDialog } from '@/components/engagements/EndEngagementDialog';
 import { EngagementHistoryDialog } from '@/components/engagements/EngagementHistoryDialog';
-import { serviceTierConfigs } from '@/data/mockData';
+import { serviceTierConfigs } from '@/constants/services';
 import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier } from '@/types/crm';
 import { ADVERTISING_PLATFORMS } from '@/types/crm';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
