@@ -56,7 +56,7 @@ export default function Clients() {
   const { 
     clients, 
     engagements, 
-    clientServices, 
+    engagementServices,
     assignments, 
     colleagues,
     services,
@@ -121,9 +121,11 @@ export default function Clients() {
     const activeEngagements = clientEngagements.filter(e => e.status === 'active');
     const totalMonthlyFee = activeEngagements.reduce((sum, e) => sum + e.monthly_fee, 0);
     
-    const clientServiceList = clientServices
-      .filter(cs => cs.client_id === clientId && cs.is_active)
-      .map(cs => services.find(s => s.id === cs.service_id))
+    // Get services from engagement services
+    const clientEngIds = clientEngagements.map(e => e.id);
+    const clientServiceList = engagementServices
+      .filter(es => clientEngIds.includes(es.engagement_id) && es.is_active)
+      .map(es => services.find(s => s.id === es.service_id))
       .filter(Boolean);
     
     const colleagueIds = new Set<string>();

@@ -235,7 +235,7 @@ export default function OnboardingForm() {
       const primarySignatory = data.signatories[0];
       
       // Create new client
-      const newClient = addClient({
+      const newClient = await addClient({
         name: data.company_name,
         brand_name: data.company_name,
         ico: data.ico,
@@ -263,8 +263,9 @@ export default function OnboardingForm() {
       });
       
       // Create signatory contacts
-      data.signatories.forEach((signatory, index) => {
-        addContact({
+      for (let index = 0; index < data.signatories.length; index++) {
+        const signatory = data.signatories[index];
+        await addContact({
           client_id: newClient.id,
           name: signatory.name,
           position: signatory.position || null,
@@ -274,18 +275,16 @@ export default function OnboardingForm() {
           is_decision_maker: true,
           notes: 'Osoba pro podpis smlouvy',
         });
-      });
+      }
       
       // Create project contacts
-      if (data.useSignatoriesForProject) {
-        // Signatories are also project contacts - already created above
-      } else {
+      if (!data.useSignatoriesForProject) {
         // Create separate project contacts
-        data.projectContacts.forEach((contact) => {
+        for (const contact of data.projectContacts) {
           // Check if not duplicate of signatory
           const isDuplicate = data.signatories.some(s => s.email === contact.email);
           if (!isDuplicate) {
-            addContact({
+            await addContact({
               client_id: newClient.id,
               name: contact.name,
               position: null,
@@ -296,7 +295,7 @@ export default function OnboardingForm() {
               notes: 'Projektový kontakt pro Freelo',
             });
           }
-        });
+        }
       }
       
       // Generate contract URL (mock - prepared for PandaDoc integration)
@@ -304,14 +303,14 @@ export default function OnboardingForm() {
       const mockContractUrl = `https://app.pandadoc.com/documents/smlouva-${contractSlug}-${Date.now()}`;
       
       // Update lead with onboarding completion and contract info
-      updateLead(lead.id, {
+      await updateLead(lead.id, {
         onboarding_form_completed_at: new Date().toISOString(),
         contract_url: mockContractUrl,
         contract_created_at: new Date().toISOString(),
       });
       
       // Mark lead as converted
-      markLeadAsConverted(lead.id, newClient.id, '');
+      await markLeadAsConverted(lead.id, newClient.id, '');
       
       setIsSubmitted(true);
     } catch (error) {

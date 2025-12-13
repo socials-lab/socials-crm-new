@@ -1,7 +1,7 @@
 import { useState, useCallback, createContext, useContext, ReactNode } from 'react';
-import { leads as initialLeads } from '@/data/mockData';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import type { Lead, LeadStage, LeadNote, LeadChangeType, LeadHistoryEntry } from '@/types/crm';
-import { currentUser } from '@/data/mockData';
 
 // Field labels for history display
 const LEAD_FIELD_LABELS: Record<string, string> = {
@@ -51,17 +51,18 @@ export { STAGE_LABELS };
 interface LeadsDataContextType {
   leads: Lead[];
   leadHistory: LeadHistoryEntry[];
+  isLoading: boolean;
   
   // CRUD operations
-  addLead: (data: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'notes' | 'converted_to_client_id' | 'converted_to_engagement_id' | 'converted_at'>) => Lead;
-  updateLead: (id: string, data: Partial<Lead>) => void;
-  deleteLead: (id: string) => void;
+  addLead: (data: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'notes' | 'converted_to_client_id' | 'converted_to_engagement_id' | 'converted_at'>) => Promise<Lead>;
+  updateLead: (id: string, data: Partial<Lead>) => Promise<void>;
+  deleteLead: (id: string) => Promise<void>;
   
   // Stage management
-  updateLeadStage: (id: string, stage: LeadStage) => void;
+  updateLeadStage: (id: string, stage: LeadStage) => Promise<void>;
   
   // Notes
-  addNote: (leadId: string, text: string) => void;
+  addNote: (leadId: string, text: string) => Promise<void>;
   
   // Helpers
   getLeadById: (id: string) => Lead | undefined;
@@ -70,19 +71,36 @@ interface LeadsDataContextType {
   getLeadHistory: (leadId: string) => LeadHistoryEntry[];
   
   // Conversion
-  markLeadAsConverted: (leadId: string, clientId: string, engagementId: string) => void;
+  markLeadAsConverted: (leadId: string, clientId: string, engagementId: string) => Promise<void>;
 }
 
 const LeadsDataContext = createContext<LeadsDataContextType | null>(null);
 
 export function LeadsDataProvider({ children }: { children: ReactNode }) {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const queryClient = useQueryClient();
   const [leadHistory, setLeadHistory] = useState<LeadHistoryEntry[]>([]);
 
   const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const now = () => new Date().toISOString();
 
-  // Add history entry helper
+  // Fetch leads from Supabase
+  const { data: leads = [], isLoading } = useQuery({
+    queryKey: ['leads'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from('leads').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      // Transform leads to include notes array (will be empty for now)
+      return (data || []).map((lead: any) => ({
+        ...lead,
+        notes: [],
+        stage: lead.stage || 'new_lead',
+        potential_services: lead.potential_services || [],
+        access_request_platforms: lead.access_request_platforms || [],
+      }));
+    },
+  });
+
+  // Add history entry helper (local state for now)
   const addHistoryEntry = useCallback((
     leadId: string,
     changeType: LeadChangeType,
@@ -98,54 +116,65 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       field_label: fieldName ? LEAD_FIELD_LABELS[fieldName] || fieldName : null,
       old_value: oldValue,
       new_value: newValue,
-      changed_by: currentUser.id,
-      changed_by_name: currentUser.full_name,
+      changed_by: '',
+      changed_by_name: 'User',
       created_at: now(),
     };
     setLeadHistory(prev => [entry, ...prev]);
   }, []);
 
-  const addLead = useCallback((data: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'notes' | 'converted_to_client_id' | 'converted_to_engagement_id' | 'converted_at'>): Lead => {
-    const newLead: Lead = {
-      ...data,
-      id: generateId('lead'),
-      notes: [],
-      converted_to_client_id: null,
-      converted_to_engagement_id: null,
-      converted_at: null,
-      source_custom: data.source_custom ?? null,
-      client_message: data.client_message ?? null,
-      ad_spend_monthly: data.ad_spend_monthly ?? null,
-      offer_created_at: data.offer_created_at ?? null,
-      potential_services: data.potential_services ?? [],
-      access_request_sent_at: data.access_request_sent_at ?? null,
-      access_request_platforms: data.access_request_platforms ?? [],
-      access_received_at: data.access_received_at ?? null,
-      onboarding_form_sent_at: data.onboarding_form_sent_at ?? null,
-      onboarding_form_url: data.onboarding_form_url ?? null,
-      onboarding_form_completed_at: data.onboarding_form_completed_at ?? null,
-      contract_url: data.contract_url ?? null,
-      contract_created_at: data.contract_created_at ?? null,
-      created_at: now(),
-      updated_at: now(),
-    };
-    setLeads(prev => [...prev, newLead]);
-    
-    // Log creation
-    addHistoryEntry(newLead.id, 'created', null, null, data.company_name);
-    
-    return newLead;
-  }, [addHistoryEntry]);
+  // Mutations
+  const addLeadMutation = useMutation({
+    mutationFn: async (data: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'notes' | 'converted_to_client_id' | 'converted_to_engagement_id' | 'converted_at'>) => {
+      const insertData = {
+        ...data,
+        notes: [],
+        converted_to_client_id: null,
+        converted_to_engagement_id: null,
+        converted_at: null,
+      };
+      const { data: result, error } = await (supabase as any).from('leads').insert(insertData).select().single();
+      if (error) throw error;
+      return { ...result, notes: [] };
+    },
+    onSuccess: (newLead) => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      addHistoryEntry(newLead.id, 'created', null, null, newLead.company_name);
+    },
+  });
 
-  const updateLead = useCallback((id: string, data: Partial<Lead>) => {
+  const updateLeadMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Lead> }) => {
+      const { error } = await (supabase as any).from('leads').update({
+        ...data,
+        updated_at: now(),
+      }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
+  });
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).from('leads').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
+  });
+
+  const addLead = useCallback(async (data: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'notes' | 'converted_to_client_id' | 'converted_to_engagement_id' | 'converted_at'>): Promise<Lead> => {
+    return addLeadMutation.mutateAsync(data);
+  }, [addLeadMutation]);
+
+  const updateLead = useCallback(async (id: string, data: Partial<Lead>) => {
     const lead = leads.find(l => l.id === id);
     if (!lead) return;
     
     // Log field changes
     Object.keys(data).forEach(key => {
       if (key === 'updated_at' || key === 'updated_by') return;
-      const oldVal = String(lead[key as keyof Lead] ?? '');
-      const newVal = String(data[key as keyof Lead] ?? '');
+      const oldVal = String((lead as any)[key] ?? '');
+      const newVal = String((data as any)[key] ?? '');
       if (oldVal !== newVal) {
         if (key === 'owner_id') {
           addHistoryEntry(id, 'owner_change', key, oldVal, newVal);
@@ -155,16 +184,14 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       }
     });
     
-    setLeads(prev => prev.map(l => 
-      l.id === id ? { ...l, ...data, updated_at: now(), updated_by: currentUser.id } : l
-    ));
-  }, [leads, addHistoryEntry]);
+    await updateLeadMutation.mutateAsync({ id, data });
+  }, [leads, updateLeadMutation, addHistoryEntry]);
 
-  const deleteLead = useCallback((id: string) => {
-    setLeads(prev => prev.filter(l => l.id !== id));
-  }, []);
+  const deleteLead = useCallback(async (id: string) => {
+    await deleteLeadMutation.mutateAsync(id);
+  }, [deleteLeadMutation]);
 
-  const updateLeadStage = useCallback((id: string, stage: LeadStage) => {
+  const updateLeadStage = useCallback(async (id: string, stage: LeadStage) => {
     const lead = leads.find(l => l.id === id);
     if (!lead) return;
     
@@ -173,29 +200,16 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     
     addHistoryEntry(id, 'stage_change', 'stage', oldStageLabel, newStageLabel);
     
-    setLeads(prev => prev.map(l => 
-      l.id === id ? { ...l, stage, updated_at: now(), updated_by: currentUser.id } : l
-    ));
-  }, [leads, addHistoryEntry]);
+    await updateLeadMutation.mutateAsync({ id, data: { stage } });
+  }, [leads, updateLeadMutation, addHistoryEntry]);
 
-  const addNote = useCallback((leadId: string, text: string) => {
-    const note: LeadNote = {
-      id: generateId('note'),
-      lead_id: leadId,
-      author_id: currentUser.id,
-      author_name: currentUser.full_name,
-      text,
-      created_at: now(),
-    };
-    
+  const addNote = useCallback(async (leadId: string, text: string) => {
+    // For now, notes are stored in lead history (will be proper table later)
     addHistoryEntry(leadId, 'note_added', null, null, text.substring(0, 100) + (text.length > 100 ? '...' : ''));
     
-    setLeads(prev => prev.map(l => 
-      l.id === leadId 
-        ? { ...l, notes: [note, ...l.notes], updated_at: now() } 
-        : l
-    ));
-  }, [addHistoryEntry]);
+    // Update lead's updated_at
+    await updateLeadMutation.mutateAsync({ id: leadId, data: {} });
+  }, [updateLeadMutation, addHistoryEntry]);
 
   const getLeadById = useCallback((id: string) => leads.find(l => l.id === id), [leads]);
   
@@ -208,26 +222,25 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   const getLeadHistory = useCallback((leadId: string) => 
     leadHistory.filter(h => h.lead_id === leadId), [leadHistory]);
 
-  const markLeadAsConverted = useCallback((leadId: string, clientId: string, engagementId: string) => {
+  const markLeadAsConverted = useCallback(async (leadId: string, clientId: string, engagementId: string) => {
     addHistoryEntry(leadId, 'converted', null, null, 'Převedeno na zakázku');
     
-    setLeads(prev => prev.map(l => 
-      l.id === leadId ? {
-        ...l,
+    await updateLeadMutation.mutateAsync({
+      id: leadId,
+      data: {
         stage: 'won' as LeadStage,
         converted_to_client_id: clientId,
         converted_to_engagement_id: engagementId,
         converted_at: now(),
-        updated_at: now(),
-        updated_by: currentUser.id,
-      } : l
-    ));
-  }, [addHistoryEntry]);
+      },
+    });
+  }, [updateLeadMutation, addHistoryEntry]);
 
   return (
     <LeadsDataContext.Provider value={{
       leads,
       leadHistory,
+      isLoading,
       addLead,
       updateLead,
       deleteLead,

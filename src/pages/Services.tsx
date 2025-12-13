@@ -33,7 +33,7 @@ const categoryLabels: Record<ServiceCategory, string> = {
 };
 
 export default function Services() {
-  const { services, clientServices, clients, addService, updateService, deleteService, toggleServiceActive } = useCRMData();
+  const { services, engagementServices, clients, engagements, addService, updateService, deleteService, toggleServiceActive } = useCRMData();
   const navigate = useNavigate();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,13 +61,25 @@ export default function Services() {
   const addonServices = filteredServices.filter(s => s.service_type === 'addon');
 
   const getActiveClientCount = (serviceId: string) => {
-    const activeClientIds = clientServices.filter(cs => cs.service_id === serviceId && cs.is_active).map(cs => cs.client_id);
-    return new Set(activeClientIds).size;
+    // Get engagement IDs that use this service
+    const engagementIds = engagementServices
+      .filter(es => es.service_id === serviceId && es.is_active)
+      .map(es => es.engagement_id);
+    // Get unique client IDs from those engagements
+    const clientIds = engagements
+      .filter(e => engagementIds.includes(e.id))
+      .map(e => e.client_id);
+    return new Set(clientIds).size;
   };
 
   const getActiveClientsForService = (serviceId: string) => {
-    const activeClientIds = clientServices.filter(cs => cs.service_id === serviceId && cs.is_active).map(cs => cs.client_id);
-    const uniqueClientIds = [...new Set(activeClientIds)];
+    const engagementIds = engagementServices
+      .filter(es => es.service_id === serviceId && es.is_active)
+      .map(es => es.engagement_id);
+    const clientIds = engagements
+      .filter(e => engagementIds.includes(e.id))
+      .map(e => e.client_id);
+    const uniqueClientIds = [...new Set(clientIds)];
     return clients.filter((c) => uniqueClientIds.includes(c.id));
   };
 
