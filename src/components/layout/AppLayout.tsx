@@ -4,19 +4,21 @@ import { DemoUserSwitcher } from './DemoUserSwitcher';
 import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { Outlet } from 'react-router-dom';
-import { Menu, LogOut } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuth';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
+// TEMPORARILY DISABLED - Supabase dependencies
+// import { useAuth } from '@/hooks/useAuth';
+// import { LogOut } from 'lucide-react';
+// import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuLabel,
+//   DropdownMenuSeparator,
+//   DropdownMenuTrigger,
+// } from '@/components/ui/dropdown-menu';
+// import { toast } from 'sonner';
 
 function MobileMenuButton() {
   const { toggleSidebar, isMobile } = useSidebar();
@@ -36,61 +38,11 @@ function MobileMenuButton() {
   );
 }
 
-function UserMenu() {
-  const { user, signOut } = useAuth();
-
-  const handleSignOut = async () => {
-    await signOut();
-    toast.success('Odhlášeno');
-  };
-
-  const getInitials = () => {
-    if (!user) return '?';
-    const meta = user.user_metadata;
-    if (meta?.first_name && meta?.last_name) {
-      return `${meta.first_name[0]}${meta.last_name[0]}`.toUpperCase();
-    }
-    return user.email?.[0]?.toUpperCase() || '?';
-  };
-
-  const getDisplayName = () => {
-    if (!user) return '';
-    const meta = user.user_metadata;
-    if (meta?.first_name && meta?.last_name) {
-      return `${meta.first_name} ${meta.last_name}`;
-    }
-    return user.email || '';
-  };
-
-  if (!user) return null;
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-              {getInitials()}
-            </AvatarFallback>
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 bg-popover" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{getDisplayName()}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-          <LogOut className="mr-2 h-4 w-4" />
-          🚪 Odhlásit se
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
+// TEMPORARILY DISABLED - UserMenu component (requires Supabase auth)
+// function UserMenu() {
+//   const { user, signOut } = useAuth();
+//   ...
+// }
 
 export function AppLayout() {
   return (
@@ -109,7 +61,7 @@ export function AppLayout() {
             <div className="flex items-center gap-2">
               <NotificationsDropdown />
               <DemoUserSwitcher />
-              <UserMenu />
+              {/* TEMPORARILY DISABLED - UserMenu */}
             </div>
           </header>
           
