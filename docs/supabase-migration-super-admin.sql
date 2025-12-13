@@ -43,3 +43,11 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+-- 4. Create colleague record for danny@socials.cz linked to profile
+INSERT INTO public.colleagues (full_name, email, position, seniority, status, profile_id, is_freelancer)
+VALUES ('Danny', 'danny@socials.cz', 'Managing Director', 'partner', 'active', '746cca60-f2b3-44ae-ab5a-2b0168393399', false)
+ON CONFLICT DO NOTHING;
+
+-- 5. Delete test seed colleague
+DELETE FROM public.colleagues WHERE email = 'admin@company.cz';
