@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ChevronDown, ChevronUp, Mail, CreditCard, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus } from 'lucide-react';
+import { Search, Plus, ChevronDown, ChevronUp, Mail, CreditCard, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus, Send } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -25,11 +25,11 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { ColleagueForm } from '@/components/forms/ColleagueForm';
 import { UserManagement } from '@/components/settings/UserManagement';
-import { AddCRMUserDialog } from '@/components/settings/AddCRMUserDialog';
 import type { ColleagueStatus, Seniority, Colleague } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CreativeBoostProvider, useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { supabase } from '@/integrations/supabase/client';
 
 const seniorityColors: Record<Seniority, string> = {
   junior: 'bg-chart-3/10 text-chart-3 border-chart-3/20',
@@ -75,9 +75,7 @@ function ColleaguesContent() {
   // Inline editing for assignment costs (super admin only)
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [tempCost, setTempCost] = useState<string>('');
-  
-  // Invite user dialog
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
 
   // Handle highlight from URL
   useEffect(() => {
@@ -147,16 +145,75 @@ function ColleaguesContent() {
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = (data: Omit<Colleague, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleFormSubmit = async (data: Omit<Colleague, 'id' | 'created_at' | 'updated_at'> & { invite_to_crm?: boolean; role?: string }) => {
+    const { invite_to_crm, role, ...colleagueData } = data;
+    
     if (editingColleague) {
-      updateColleague(editingColleague.id, data);
+      updateColleague(editingColleague.id, colleagueData);
       toast.success('Kolega byl upraven');
     } else {
-      addColleague(data);
-      toast.success('Kolega byl vytvořen');
+      // Add colleague first
+      addColleague(colleagueData);
+      
+      // If invite_to_crm is checked, send invitation
+      if (invite_to_crm && role) {
+        setIsInviting(true);
+        try {
+          const nameParts = colleagueData.full_name.split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+          
+          const { error } = await supabase.functions.invoke('invite-user', {
+            body: {
+              email: colleagueData.email,
+              firstName,
+              lastName,
+              role,
+              position: colleagueData.position,
+            },
+          });
+          
+          if (error) throw error;
+          toast.success(`Pozvánka odeslána na ${colleagueData.email}`);
+        } catch (error: any) {
+          console.error('Error inviting user:', error);
+          toast.error(`Kolega vytvořen, ale pozvánka selhala: ${error.message}`);
+        } finally {
+          setIsInviting(false);
+        }
+      } else {
+        toast.success('Kolega byl vytvořen');
+      }
     }
     setIsFormOpen(false);
     setEditingColleague(null);
+  };
+
+  const handleInviteExistingColleague = async (colleague: Colleague) => {
+    setIsInviting(true);
+    try {
+      const nameParts = colleague.full_name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      const { error } = await supabase.functions.invoke('invite-user', {
+        body: {
+          email: colleague.email,
+          firstName,
+          lastName,
+          role: 'specialist',
+          position: colleague.position,
+        },
+      });
+      
+      if (error) throw error;
+      toast.success(`Pozvánka odeslána na ${colleague.email}`);
+    } catch (error: any) {
+      console.error('Error inviting user:', error);
+      toast.error(`Nepodařilo se odeslat pozvánku: ${error.message}`);
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   const handleSaveAssignmentCost = (assignmentId: string) => {
@@ -213,16 +270,10 @@ function ColleaguesContent() {
               </Select>
             </div>
             {superAdmin && (
-              <div className="flex gap-2">
-                <Button variant="outline" className="gap-2" onClick={() => setIsInviteDialogOpen(true)}>
-                  <UserPlus className="h-4 w-4" />
-                  Pozvat uživatele
-                </Button>
-                <Button className="gap-2" onClick={handleAddColleague}>
-                  <Plus className="h-4 w-4" />
-                  Přidat kolegu
-                </Button>
-              </div>
+              <Button className="gap-2" onClick={handleAddColleague}>
+                <Plus className="h-4 w-4" />
+                Přidat kolegu
+              </Button>
             )}
           </div>
 
@@ -337,6 +388,23 @@ function ColleaguesContent() {
                           {colleague.position}
                         </p>
                       </div>
+                      
+                      {/* Invite to CRM button for colleagues without profile_id */}
+                      {superAdmin && !colleague.profile_id && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-2 mt-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInviteExistingColleague(colleague);
+                          }}
+                          disabled={isInviting}
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                          {isInviting ? 'Posílám...' : 'Pozvat do CRM'}
+                        </Button>
+                      )}
                     </div>
 
                     {superAdmin && (
@@ -512,20 +580,14 @@ function ColleaguesContent() {
           <div className="mt-6">
             <ColleagueForm
               colleague={editingColleague || undefined}
-              onSubmit={handleFormSubmit}
+              onSubmit={handleFormSubmit as any}
               onCancel={() => setIsFormOpen(false)}
+              showInviteOption={superAdmin && !editingColleague}
             />
           </div>
         </SheetContent>
       </Sheet>
 
-      <AddCRMUserDialog
-        open={isInviteDialogOpen}
-        onOpenChange={setIsInviteDialogOpen}
-        onAdd={() => {
-          // Refresh will happen automatically via useCRMData
-        }}
-      />
         </TabsContent>
 
         {superAdmin && (
