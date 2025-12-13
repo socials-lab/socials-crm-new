@@ -70,14 +70,11 @@ serve(async (req) => {
 
     console.log(`Inviting user: ${email} with role: ${role}`);
 
-    // Check if user already exists
-    const { data: existingProfile } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
+    // Check if user already exists in auth.users
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
-    if (existingProfile) {
+    if (existingUser) {
       return new Response(
         JSON.stringify({ error: "Uživatel s tímto emailem již existuje" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
