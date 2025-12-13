@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ChevronDown, ChevronUp, Mail, CreditCard, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield } from 'lucide-react';
+import { Search, Plus, ChevronDown, ChevronUp, Mail, CreditCard, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { ColleagueForm } from '@/components/forms/ColleagueForm';
 import { UserManagement } from '@/components/settings/UserManagement';
+import { AddCRMUserDialog } from '@/components/settings/AddCRMUserDialog';
 import type { ColleagueStatus, Seniority, Colleague } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -74,6 +75,9 @@ function ColleaguesContent() {
   // Inline editing for assignment costs (super admin only)
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [tempCost, setTempCost] = useState<string>('');
+  
+  // Invite user dialog
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
 
   // Handle highlight from URL
   useEffect(() => {
@@ -209,10 +213,16 @@ function ColleaguesContent() {
               </Select>
             </div>
             {superAdmin && (
-              <Button className="gap-2" onClick={handleAddColleague}>
-                <Plus className="h-4 w-4" />
-                Přidat kolegu
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="gap-2" onClick={() => setIsInviteDialogOpen(true)}>
+                  <UserPlus className="h-4 w-4" />
+                  Pozvat uživatele
+                </Button>
+                <Button className="gap-2" onClick={handleAddColleague}>
+                  <Plus className="h-4 w-4" />
+                  Přidat kolegu
+                </Button>
+              </div>
             )}
           </div>
 
@@ -508,6 +518,14 @@ function ColleaguesContent() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <AddCRMUserDialog
+        open={isInviteDialogOpen}
+        onOpenChange={setIsInviteDialogOpen}
+        onAdd={() => {
+          // Refresh will happen automatically via useCRMData
+        }}
+      />
         </TabsContent>
 
         {superAdmin && (
