@@ -34,6 +34,8 @@ const colleagueSchema = z.object({
   capacity_hours_per_month: z.coerce.number().min(0).nullable(),
   status: z.enum(['active', 'on_hold', 'left'] as const),
   notes: z.string(),
+  invite_to_crm: z.boolean(),
+  role: z.enum(['admin', 'management', 'project_manager', 'specialist', 'finance'] as const).optional(),
 });
 
 type ColleagueFormData = z.infer<typeof colleagueSchema>;
@@ -42,9 +44,10 @@ interface ColleagueFormProps {
   colleague?: Colleague;
   onSubmit: (data: ColleagueFormData & { profile_id: string | null }) => void;
   onCancel: () => void;
+  showInviteOption?: boolean;
 }
 
-export function ColleagueForm({ colleague, onSubmit, onCancel }: ColleagueFormProps) {
+export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption = false }: ColleagueFormProps) {
   const form = useForm<ColleagueFormData>({
     resolver: zodResolver(colleagueSchema),
     defaultValues: {
@@ -59,8 +62,12 @@ export function ColleagueForm({ colleague, onSubmit, onCancel }: ColleagueFormPr
       capacity_hours_per_month: colleague?.capacity_hours_per_month ?? null,
       status: colleague?.status || 'active',
       notes: colleague?.notes || '',
+      invite_to_crm: showInviteOption,
+      role: 'specialist',
     },
   });
+
+  const inviteToCrm = form.watch('invite_to_crm');
 
   const handleSubmit = (data: ColleagueFormData) => {
     onSubmit({
@@ -268,6 +275,56 @@ export function ColleagueForm({ colleague, onSubmit, onCancel }: ColleagueFormPr
             </FormItem>
           )}
         />
+
+        {showInviteOption && !colleague && (
+          <div className="border-t pt-4 space-y-4">
+            <h4 className="font-medium text-sm">Přístup do CRM</h4>
+            <FormField
+              control={form.control}
+              name="invite_to_crm"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-3">
+                  <FormControl>
+                    <Checkbox 
+                      checked={field.value} 
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormLabel className="!mt-0 cursor-pointer">
+                    Pozvat jako uživatele CRM (pošle email s pozvánkou)
+                  </FormLabel>
+                </FormItem>
+              )}
+            />
+            
+            {inviteToCrm && (
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role v systému</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="management">Management</SelectItem>
+                        <SelectItem value="project_manager">Project Manager</SelectItem>
+                        <SelectItem value="specialist">Specialista</SelectItem>
+                        <SelectItem value="finance">Finance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button type="button" variant="outline" onClick={onCancel}>
