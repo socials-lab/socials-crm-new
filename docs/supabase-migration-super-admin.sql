@@ -14,7 +14,7 @@ INSERT INTO public.user_roles (user_id, role, is_super_admin)
 VALUES ('746cca60-f2b3-44ae-ab5a-2b0168393399', 'admin', TRUE)
 ON CONFLICT DO NOTHING;
 
--- 3. Update handle_new_user trigger to auto-assign super admin to first user
+-- 3. Update handle_new_user trigger to auto-assign super admin + auto-link colleague
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -23,8 +23,9 @@ SET search_path = public
 AS $$
 DECLARE
     user_count INTEGER;
+    existing_colleague_id UUID;
 BEGIN
-    -- Create profile
+    -- 1. Create profile
     INSERT INTO public.profiles (id, first_name, last_name, email)
     VALUES (
         NEW.id,
@@ -33,7 +34,20 @@ BEGIN
         NEW.email
     );
     
-    -- If this is the first user, auto-assign super admin role
+    -- 2. Link existing colleague by email (if exists and not already linked)
+    SELECT id INTO existing_colleague_id
+    FROM public.colleagues
+    WHERE email = NEW.email
+      AND profile_id IS NULL
+    LIMIT 1;
+    
+    IF existing_colleague_id IS NOT NULL THEN
+        UPDATE public.colleagues
+        SET profile_id = NEW.id
+        WHERE id = existing_colleague_id;
+    END IF;
+    
+    -- 3. If this is the first user, auto-assign super admin role
     SELECT COUNT(*) INTO user_count FROM public.user_roles;
     IF user_count = 0 THEN
         INSERT INTO public.user_roles (user_id, role, is_super_admin)
