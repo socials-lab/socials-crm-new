@@ -202,8 +202,8 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           fieldName: 'Max. kreditů',
           oldValue: existing.maxCredits,
           newValue: data.maxCredits,
-          changedBy: currentUser.id,
-          changedByName: currentUser.full_name,
+          changedBy: user?.id ?? '',
+          changedByName: user?.email ?? 'Neznámý',
           changedAt: now(),
         });
       }
@@ -219,8 +219,8 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           fieldName: 'Cena za kredit',
           oldValue: existing.pricePerCredit,
           newValue: data.pricePerCredit,
-          changedBy: currentUser.id,
-          changedByName: currentUser.full_name,
+          changedBy: user?.id ?? '',
+          changedByName: user?.email ?? 'Neznámý',
           changedAt: now(),
         });
       }
@@ -240,8 +240,8 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           fieldName: 'Status',
           oldValue: statusLabels[existing.status] || existing.status,
           newValue: statusLabels[data.status] || data.status,
-          changedBy: currentUser.id,
-          changedByName: currentUser.full_name,
+          changedBy: user?.id ?? '',
+          changedByName: user?.email ?? 'Neznámý',
           changedAt: now(),
         });
       }

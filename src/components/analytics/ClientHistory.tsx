@@ -18,7 +18,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Building2, TrendingUp, UserPlus, UserMinus } from 'lucide-react';
-import { clients, engagements, getClientById, getServiceById } from '@/data/mockData';
+import { useCRMData } from '@/hooks/useCRMData';
+import type { Client, Engagement } from '@/types/crm';
 
 const monthNames = [
   'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
@@ -28,75 +29,76 @@ const monthNames = [
 const yearOptions = [2023, 2024, 2025, 2026];
 
 interface ActiveClientData {
-  client: typeof clients[0];
-  engagements: typeof engagements;
+  client: Client;
+  engagements: Engagement[];
   totalMonthlyFee: number;
 }
 
-function getActiveClientsForMonth(year: number, month: number): ActiveClientData[] {
-  const periodStart = new Date(year, month - 1, 1);
-  const periodEnd = new Date(year, month, 0);
-
-  const activeClientMap = new Map<string, ActiveClientData>();
-
-  engagements.forEach(engagement => {
-    const startDate = new Date(engagement.start_date);
-    const endDate = engagement.end_date ? new Date(engagement.end_date) : null;
-
-    // Check if engagement was active during this period
-    const startedBeforeOrDuring = startDate <= periodEnd;
-    const didntEndBeforePeriod = !endDate || endDate >= periodStart;
-    const isActiveEngagement = engagement.status === 'active' || engagement.status === 'completed';
-
-    if (startedBeforeOrDuring && didntEndBeforePeriod && isActiveEngagement) {
-      const client = getClientById(engagement.client_id);
-      if (client) {
-        if (!activeClientMap.has(client.id)) {
-          activeClientMap.set(client.id, {
-            client,
-            engagements: [],
-            totalMonthlyFee: 0,
-          });
-        }
-        const clientData = activeClientMap.get(client.id)!;
-        clientData.engagements.push(engagement);
-        clientData.totalMonthlyFee += engagement.monthly_fee;
-      }
-    }
-  });
-
-  return Array.from(activeClientMap.values()).sort((a, b) => b.totalMonthlyFee - a.totalMonthlyFee);
-}
-
-function getNewClientsForMonth(year: number, month: number): typeof clients {
-  return clients.filter(client => {
-    const startDate = new Date(client.start_date);
-    return startDate.getFullYear() === year && startDate.getMonth() + 1 === month;
-  });
-}
-
-function getLostClientsForMonth(year: number, month: number): typeof clients {
-  return clients.filter(client => {
-    if (!client.end_date) return false;
-    const endDate = new Date(client.end_date);
-    return endDate.getFullYear() === year && endDate.getMonth() + 1 === month;
-  });
-}
-
-function getYearlyClientCounts(year: number): { month: string; count: number }[] {
-  return monthNames.map((name, index) => {
-    const activeClients = getActiveClientsForMonth(year, index + 1);
-    return {
-      month: name.substring(0, 3),
-      count: activeClients.length,
-    };
-  });
-}
-
 export function ClientHistory() {
+  const { clients, engagements, getClientById } = useCRMData();
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+
+  const getActiveClientsForMonth = (year: number, month: number): ActiveClientData[] => {
+    const periodStart = new Date(year, month - 1, 1);
+    const periodEnd = new Date(year, month, 0);
+
+    const activeClientMap = new Map<string, ActiveClientData>();
+
+    engagements.forEach(engagement => {
+      const startDate = new Date(engagement.start_date);
+      const endDate = engagement.end_date ? new Date(engagement.end_date) : null;
+
+      const startedBeforeOrDuring = startDate <= periodEnd;
+      const didntEndBeforePeriod = !endDate || endDate >= periodStart;
+      const isActiveEngagement = engagement.status === 'active' || engagement.status === 'completed';
+
+      if (startedBeforeOrDuring && didntEndBeforePeriod && isActiveEngagement) {
+        const client = getClientById(engagement.client_id);
+        if (client) {
+          if (!activeClientMap.has(client.id)) {
+            activeClientMap.set(client.id, {
+              client,
+              engagements: [],
+              totalMonthlyFee: 0,
+            });
+          }
+          const clientData = activeClientMap.get(client.id)!;
+          clientData.engagements.push(engagement);
+          clientData.totalMonthlyFee += engagement.monthly_fee;
+        }
+      }
+    });
+
+    return Array.from(activeClientMap.values()).sort((a, b) => b.totalMonthlyFee - a.totalMonthlyFee);
+  };
+
+  const getNewClientsForMonth = (year: number, month: number): Client[] => {
+    return clients.filter(client => {
+      if (!client.start_date) return false;
+      const startDate = new Date(client.start_date);
+      return startDate.getFullYear() === year && startDate.getMonth() + 1 === month;
+    });
+  };
+
+  const getLostClientsForMonth = (year: number, month: number): Client[] => {
+    return clients.filter(client => {
+      if (!client.end_date) return false;
+      const endDate = new Date(client.end_date);
+      return endDate.getFullYear() === year && endDate.getMonth() + 1 === month;
+    });
+  };
+
+  const getYearlyClientCounts = (year: number): { month: string; count: number }[] => {
+    return monthNames.map((name, index) => {
+      const activeClients = getActiveClientsForMonth(year, index + 1);
+      return {
+        month: name.substring(0, 3),
+        count: activeClients.length,
+      };
+    });
+  };
 
   const activeClients = getActiveClientsForMonth(selectedYear, selectedMonth);
   const newClients = getNewClientsForMonth(selectedYear, selectedMonth);

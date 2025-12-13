@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
-import { currentUser } from '@/data/mockData';
+import { useAuth } from '@/hooks/useAuth';
 import type { Lead, CostModel, ClientTier, BillingModel, LeadSource } from '@/types/crm';
 import { toast } from 'sonner';
 
@@ -99,6 +99,7 @@ interface ConvertLeadDialogProps {
 export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: ConvertLeadDialogProps) {
   const { markLeadAsConverted } = useLeadsData();
   const { addClient, addContact, addEngagement, addAssignment, colleagues, services } = useCRMData();
+  const { user } = useAuth();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
@@ -239,7 +240,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         end_date: data.end_date || null,
         notes: data.client_notes || '',
         pinned_notes: data.pinned_notes || '',
-        created_by: currentUser.id,
+        created_by: user?.id || null,
       });
 
       // 2. Create ClientContact

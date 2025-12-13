@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import type { Service, LeadService, ServiceTier } from '@/types/crm';
-import { serviceTierConfigs } from '@/data/mockData';
+import { SERVICE_TIER_CONFIGS } from '@/constants/services';
 
 interface AddLeadServiceDialogProps {
   open: boolean;
@@ -125,7 +125,7 @@ export function AddLeadServiceDialog({
                   <SelectValue placeholder="Vyberte úroveň" />
                 </SelectTrigger>
                 <SelectContent>
-                  {serviceTierConfigs.map((config) => {
+                  {SERVICE_TIER_CONFIGS.map((config) => {
                     const tierPricing = selectedService?.tier_pricing?.find(p => p.tier === config.tier);
                     const priceLabel = tierPricing?.price 
                       ? `${tierPricing.price.toLocaleString('cs-CZ')} Kč`
