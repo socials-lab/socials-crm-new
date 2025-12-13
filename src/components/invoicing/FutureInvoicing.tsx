@@ -26,7 +26,6 @@ import {
   creativeBoostClientMonths,
   clientMonthOutputs,
 } from '@/data/creativeBoostMockData';
-import { engagementServices as allEngagementServices } from '@/data/mockData';
 
 export interface IssuedStats {
   totalCount: number;
@@ -56,7 +55,7 @@ function calculateOutputCredits(outputTypeId: string, normalCount: number, expre
 }
 
 export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvoicingProps) {
-  const { clients, engagements, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices } = useCRMData();
+  const { clients, engagements, engagementServices, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices } = useCRMData();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<MonthlyEngagementInvoice[]>([]);
   const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
@@ -148,8 +147,8 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
         // Není poměrné pokud: aktivní všechny dny NEBO začíná 1.-5. den a nekončí předčasně
         const isProrated = activeDays < totalDays && !(startsEarlyInMonth && endsAtPeriodEnd);
 
-        // Get engagement services for this engagement
-        const services = allEngagementServices.filter(
+        // Get engagement services for this engagement from useCRMData
+        const services = engagementServices.filter(
           es => es.engagement_id === engagement.id && es.is_active && es.billing_type === 'monthly'
         );
 
