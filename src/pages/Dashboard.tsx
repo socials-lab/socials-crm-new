@@ -11,16 +11,7 @@ import {
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
-import { 
-  clients, 
-  engagements, 
-  colleagues,
-  getActiveClients,
-  getActiveEngagements,
-  getClientById,
-  canCurrentUserSeeFinancials,
-  getCurrentColleagueId,
-} from '@/data/mockData';
+import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -30,12 +21,15 @@ import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
   const { leads } = useLeadsData();
-  const canSeeFinancials = canCurrentUserSeeFinancials();
-  const hasColleagueId = !!getCurrentColleagueId();
+  const { clients, engagements, colleagues, getClientById } = useCRMData();
+  
+  // For now, always show financials (will be role-based later)
+  const canSeeFinancials = true;
+  const hasColleagueId = true;
 
   // Calculate KPIs
-  const activeClients = getActiveClients();
-  const activeEngagements = getActiveEngagements();
+  const activeClients = clients.filter(c => c.status === 'active');
+  const activeEngagements = engagements.filter(e => e.status === 'active');
   const activeColleagues = colleagues.filter(c => c.status === 'active');
 
   // Won leads (newly acquired clients)

@@ -14,26 +14,15 @@ import { AnalyticsOverview } from '@/components/analytics/AnalyticsOverview';
 import { LeadsAnalytics } from '@/components/analytics/LeadsAnalytics';
 import { ClientsEngagementsAnalytics } from '@/components/analytics/ClientsEngagementsAnalytics';
 import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
-import { 
-  clients, 
-  engagements, 
-  engagementAssignments,
-  engagementMonthlyMetrics,
-  extraWorks,
-  colleagues,
-  getActiveClients,
-  getActiveEngagements,
-  calculateMRR,
-  getClientById,
-} from '@/data/mockData';
+import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
-import { currentUser } from '@/data/mockData';
+
 import { format, subMonths, startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
-// Check permissions
-const canSeeAnalytics = ['admin', 'management', 'finance'].includes(currentUser.role);
+// Check permissions - for now, allow all
+const canSeeAnalytics = true;
 
 const monthNames = [
   'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
@@ -57,6 +46,10 @@ export default function Analytics() {
   
   const { leads } = useLeadsData();
   const { getClientMonthSummaries } = useCreativeBoostData();
+  const { clients, engagements, extraWorks, colleagues, assignments, getClientById } = useCRMData();
+  
+  // Empty metrics for now (will come from Supabase later)
+  const engagementMonthlyMetrics: any[] = [];
 
   const goToPreviousMonth = () => {
     if (selectedMonth === 1) {
@@ -498,8 +491,8 @@ export default function Analytics() {
     const engagementMargins = activeEngs.map(e => {
       const client = getClientById(e.client_id);
       const metric = metrics.find(m => m.engagement_id === e.id);
-      const assignments = engagementAssignments.filter(a => a.engagement_id === e.id);
-      const cost = assignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
+      const engAssignments = assignments.filter(a => a.engagement_id === e.id);
+      const cost = engAssignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
       
       return {
         id: e.id,

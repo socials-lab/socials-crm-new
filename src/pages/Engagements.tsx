@@ -54,7 +54,7 @@ import { CreateInvoiceFromEngagementDialog } from '@/components/engagements/Crea
 import { EngagementInvoicingSection } from '@/components/engagements/EngagementInvoicingStatus';
 import { EndEngagementDialog } from '@/components/engagements/EndEngagementDialog';
 import { EngagementHistoryDialog } from '@/components/engagements/EngagementHistoryDialog';
-import { canCurrentUserSeeFinancials, serviceTierConfigs, isSuperAdmin } from '@/data/mockData';
+import { serviceTierConfigs } from '@/data/mockData';
 import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier } from '@/types/crm';
 import { ADVERTISING_PLATFORMS } from '@/types/crm';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -69,8 +69,9 @@ function EngagementsContent() {
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
   const highlightedRef = useRef<HTMLDivElement>(null);
-  const canSeeFinancials = canCurrentUserSeeFinancials();
-  const superAdmin = isSuperAdmin();
+  // For now, allow all (will be role-based later)
+  const canSeeFinancials = true;
+  const superAdmin = true;
 
   const { 
     clients, 
@@ -82,10 +83,8 @@ function EngagementsContent() {
     services,
     getClientById,
     getAssignmentsByEngagementId,
-    getMetricsByEngagementId,
     getColleagueById,
     getEngagementServicesByEngagementId,
-    getInvoicesByEngagementId,
     addEngagement,
     updateEngagement,
     addAssignment,
@@ -95,8 +94,12 @@ function EngagementsContent() {
     updateEngagementService,
     deleteEngagementService,
     getUnbilledOneOffServices,
-    getEngagementHistory,
   } = useCRMData();
+
+  // Stub functions for features not yet in Supabase
+  const getMetricsByEngagementId = (_engagementId: string) => [] as any[];
+  const getInvoicesByEngagementId = (_engagementId: string) => [] as any[];
+  const getEngagementHistory = (_engagementId: string) => [] as any[];
 
   const { 
     getClientMonthSummaryByEngagementServiceId, 
@@ -1307,8 +1310,8 @@ function EngagementsContent() {
           }}
           engagementId={serviceEngagementId}
           services={services}
-          onSubmit={(data) => {
-            const newService = addEngagementService(data);
+          onSubmit={async (data) => {
+            const newService = await addEngagementService(data);
             
             // If Creative Boost service, automatically create record in Creative Boost tab
             if (data.service_id === CREATIVE_BOOST_SERVICE_ID) {

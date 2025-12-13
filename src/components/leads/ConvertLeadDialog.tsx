@@ -210,76 +210,75 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
     setTeamMembers(prev => prev.filter((_, i) => i !== index));
   };
 
-  const executeConversion = (data: ConvertFormData) => {
+  const executeConversion = async (data: ConvertFormData) => {
     if (!lead) return;
 
-    // 1. Create Client
-    const newClient = addClient({
-      name: data.client_name,
-      brand_name: data.brand_name,
-      ico: data.ico,
-      dic: data.dic || null,
-      website: data.website || '',
-      country: data.country || 'Czech Republic',
-      industry: data.industry || '',
-      status: 'active',
-      tier: data.tier as ClientTier,
-      sales_representative_id: lead.owner_id,
-      billing_street: data.billing_street || null,
-      billing_city: data.billing_city || null,
-      billing_zip: data.billing_zip || null,
-      billing_country: data.billing_country || null,
-      billing_email: data.billing_email || null,
-      main_contact_name: data.contact_name,
-      main_contact_email: data.contact_email || '',
-      main_contact_phone: data.contact_phone || '',
-      acquisition_channel: data.acquisition_channel,
-      start_date: data.start_date,
-      end_date: data.end_date || null,
-      notes: data.client_notes || '',
-      pinned_notes: data.pinned_notes || '',
-      created_by: currentUser.id,
-    });
+    try {
+      // 1. Create Client
+      const newClient = await addClient({
+        name: data.client_name,
+        brand_name: data.brand_name,
+        ico: data.ico,
+        dic: data.dic || null,
+        website: data.website || '',
+        country: data.country || 'Czech Republic',
+        industry: data.industry || '',
+        status: 'active',
+        tier: data.tier as ClientTier,
+        sales_representative_id: lead.owner_id,
+        billing_street: data.billing_street || null,
+        billing_city: data.billing_city || null,
+        billing_zip: data.billing_zip || null,
+        billing_country: data.billing_country || null,
+        billing_email: data.billing_email || null,
+        main_contact_name: data.contact_name,
+        main_contact_email: data.contact_email || '',
+        main_contact_phone: data.contact_phone || '',
+        acquisition_channel: data.acquisition_channel,
+        start_date: data.start_date,
+        end_date: data.end_date || null,
+        notes: data.client_notes || '',
+        pinned_notes: data.pinned_notes || '',
+        created_by: currentUser.id,
+      });
 
-    // 2. Create ClientContact
-    const newContact = addContact({
-      client_id: newClient.id,
-      name: data.contact_name,
-      position: data.contact_position || null,
-      email: data.contact_email || null,
-      phone: data.contact_phone || null,
-      is_primary: data.contact_is_primary,
-      is_decision_maker: data.contact_is_decision_maker,
-      notes: data.contact_notes || '',
-    });
+      // 2. Create ClientContact
+      const newContact = await addContact({
+        client_id: newClient.id,
+        name: data.contact_name,
+        position: data.contact_position || null,
+        email: data.contact_email || null,
+        phone: data.contact_phone || null,
+        is_primary: data.contact_is_primary,
+        is_decision_maker: data.contact_is_decision_maker,
+        notes: data.contact_notes || '',
+      });
 
-    // 3. Create Engagement with document links from lead
-    const newEngagement = addEngagement({
-      client_id: newClient.id,
-      contact_person_id: newContact.id,
-      name: data.engagement_name,
-      type: data.engagement_type,
-      billing_model: data.billing_model as BillingModel,
-      currency: data.currency,
-      monthly_fee: data.monthly_fee,
-      one_off_fee: data.one_off_fee,
-      status: 'active',
-      start_date: data.start_date,
-      end_date: data.end_date || null,
-      notice_period_months: data.notice_period_months || null,
-      freelo_url: null,
-      platforms: [],
-      notes: data.engagement_notes || '',
-      // Copy document links from lead
-      offer_url: lead.offer_url || null,
-      contract_url: lead.contract_url || null,
-    });
+      // 3. Create Engagement with document links from lead
+      const newEngagement = await addEngagement({
+        client_id: newClient.id,
+        contact_person_id: newContact.id,
+        name: data.engagement_name,
+        type: data.engagement_type,
+        billing_model: data.billing_model as BillingModel,
+        currency: data.currency,
+        monthly_fee: data.monthly_fee,
+        one_off_fee: data.one_off_fee,
+        status: 'active',
+        start_date: data.start_date,
+        end_date: data.end_date || null,
+        notice_period_months: data.notice_period_months || null,
+        freelo_url: null,
+        platforms: [],
+        notes: data.engagement_notes || '',
+        // Copy document links from lead
+        offer_url: lead.offer_url || null,
+        contract_url: lead.contract_url || null,
+      });
 
-    // 4. Create Assignments for team members
-    teamMembers
-      .filter(m => m.colleague_id && m.role)
-      .forEach(member => {
-        addAssignment({
+      // 4. Create Assignments for team members
+      for (const member of teamMembers.filter(m => m.colleague_id && m.role)) {
+        await addAssignment({
           engagement_id: newEngagement.id,
           engagement_service_id: null,
           colleague_id: member.colleague_id,
@@ -292,18 +291,22 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           end_date: null,
           notes: '',
         });
-      });
+      }
 
-    // 5. Mark lead as converted
-    markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
+      // 5. Mark lead as converted
+      await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
 
-    toast.success('Lead byl úspěšně převeden na zakázku');
-    onSuccess();
+      toast.success('Lead byl úspěšně převeden na zakázku');
+      onSuccess();
+    } catch (error) {
+      console.error('Error converting lead:', error);
+      toast.error('Chyba při převodu leadu');
+    }
   };
 
-  const handleSubmit = (data: ConvertFormData) => {
+  const handleSubmit = async (data: ConvertFormData) => {
     if (!lead) return;
-    executeConversion(data);
+    await executeConversion(data);
   };
 
   if (!lead) return null;
