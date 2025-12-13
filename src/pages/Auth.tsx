@@ -5,9 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Lock, Mail } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Neplatný formát e-mailu');
@@ -15,18 +14,12 @@ const passwordSchema = z.string().min(6, 'Heslo musí mít alespoň 6 znaků');
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, signIn, signUp, signInWithGoogle, loading: authLoading } = useAuth();
+  const { user, signIn, signInWithGoogle, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
 
   // Form states
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [registerEmail, setRegisterEmail] = useState('');
-  const [registerPassword, setRegisterPassword] = useState('');
-  const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
 
   // Redirect if already logged in
   if (user && !authLoading) {
@@ -78,35 +71,6 @@ export default function Auth() {
     navigate('/');
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateEmail(registerEmail) || !validatePassword(registerPassword)) {
-      return;
-    }
-
-    if (registerPassword !== registerConfirmPassword) {
-      toast.error('Hesla se neshodují');
-      return;
-    }
-
-    setIsLoading(true);
-    const { error } = await signUp(registerEmail, registerPassword, firstName, lastName);
-    setIsLoading(false);
-
-    if (error) {
-      if (error.message.includes('User already registered')) {
-        toast.error('Uživatel s tímto e-mailem již existuje');
-      } else {
-        toast.error('Chyba při registraci: ' + error.message);
-      }
-      return;
-    }
-
-    toast.success('Registrace úspěšná! Zkontrolujte svůj e-mail pro potvrzení účtu.');
-    setActiveTab('login');
-  };
-
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     const { error } = await signInWithGoogle();
@@ -130,132 +94,55 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Lock className="h-6 w-6 text-primary" />
+          </div>
           <CardTitle className="text-2xl font-bold">Socials CRM</CardTitle>
-          <CardDescription>Přihlaste se nebo vytvořte nový účet</CardDescription>
+          <CardDescription>Přihlaste se do svého účtu</CardDescription>
         </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'register')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Přihlášení</TabsTrigger>
-              <TabsTrigger value="register">Registrace</TabsTrigger>
-            </TabsList>
+        <CardContent className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="login-email">E-mail</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="login-email"
+                  type="email"
+                  placeholder="vas@email.cz"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password">Heslo</Label>
+              <Input
+                id="login-password"
+                type="password"
+                placeholder="••••••••"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Přihlašování...
+                </>
+              ) : (
+                'Přihlásit se'
+              )}
+            </Button>
+          </form>
 
-            <TabsContent value="login" className="space-y-4 mt-4">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">E-mail</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="vas@email.cz"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Heslo</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Přihlašování...
-                    </>
-                  ) : (
-                    'Přihlásit se'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="register" className="space-y-4 mt-4">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="first-name">Jméno</Label>
-                    <Input
-                      id="first-name"
-                      type="text"
-                      placeholder="Jan"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="last-name">Příjmení</Label>
-                    <Input
-                      id="last-name"
-                      type="text"
-                      placeholder="Novák"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-email">E-mail</Label>
-                  <Input
-                    id="register-email"
-                    type="email"
-                    placeholder="vas@email.cz"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-password">Heslo</Label>
-                  <Input
-                    id="register-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Potvrdit heslo</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={registerConfirmPassword}
-                    onChange={(e) => setRegisterConfirmPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Registrace...
-                    </>
-                  ) : (
-                    'Zaregistrovat se'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-
-          <div className="relative my-6">
+          <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
@@ -291,8 +178,9 @@ export default function Auth() {
             Pokračovat s Google
           </Button>
         </CardContent>
-        <CardFooter className="text-center text-sm text-muted-foreground">
-          Pro rychlé testování vypněte "Confirm email" v Supabase nastavení.
+        <CardFooter className="flex flex-col space-y-2 text-center text-sm text-muted-foreground">
+          <p>Přístup pouze na pozvánku.</p>
+          <p>Kontaktujte administrátora pro vytvoření účtu.</p>
         </CardFooter>
       </Card>
     </div>

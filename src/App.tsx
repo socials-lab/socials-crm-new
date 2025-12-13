@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import OnboardingForm from "./pages/OnboardingForm";
 import Notifications from "./pages/Notifications";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
                   <Routes>
                     {/* Public routes */}
                     <Route path="/auth" element={<Auth />} />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
                     <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
                     
                     {/* Protected routes */}
