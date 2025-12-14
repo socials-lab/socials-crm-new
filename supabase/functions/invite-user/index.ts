@@ -12,6 +12,13 @@ interface InviteRequest {
   lastName: string;
   role: string;
   position?: string;
+  seniority?: string;
+  phone?: string;
+  notes?: string;
+  is_freelancer?: boolean;
+  internal_hourly_cost?: number;
+  monthly_fixed_cost?: number;
+  capacity_hours_per_month?: number;
 }
 
 serve(async (req) => {
@@ -59,7 +66,20 @@ serve(async (req) => {
       );
     }
 
-    const { email, firstName, lastName, role, position }: InviteRequest = await req.json();
+    const { 
+      email, 
+      firstName, 
+      lastName, 
+      role, 
+      position,
+      seniority,
+      phone,
+      notes,
+      is_freelancer,
+      internal_hourly_cost,
+      monthly_fixed_cost,
+      capacity_hours_per_month,
+    }: InviteRequest = await req.json();
 
     if (!email || !firstName || !lastName || !role) {
       return new Response(
@@ -106,7 +126,7 @@ serve(async (req) => {
 
     console.log(`User invited successfully, ID: ${inviteData.user.id}`);
 
-    // Pre-create colleague record (will be auto-linked by trigger)
+    // Pre-create colleague record with all provided data
     const { error: colleagueError } = await supabaseAdmin
       .from("colleagues")
       .insert({
@@ -114,13 +134,24 @@ serve(async (req) => {
         full_name: `${firstName} ${lastName}`,
         position: position || "Team Member",
         status: "active",
-        seniority: "mid",
+        seniority: seniority || "mid",
+        phone: phone || null,
+        notes: notes || "",
+        is_freelancer: is_freelancer || false,
+        internal_hourly_cost: internal_hourly_cost || 0,
+        monthly_fixed_cost: monthly_fixed_cost || null,
+        capacity_hours_per_month: capacity_hours_per_month || null,
       });
 
     if (colleagueError) {
       console.error("Colleague creation error:", colleagueError);
-      // Don't fail the whole operation, colleague can be created later
+      return new Response(
+        JSON.stringify({ error: "Nepodařilo se vytvořit kolegu: " + colleagueError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+    
+    console.log(`Colleague created for ${email}`);
 
     // Pre-assign role
     const { error: roleError } = await supabaseAdmin
