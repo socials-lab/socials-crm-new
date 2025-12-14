@@ -152,10 +152,7 @@ function ColleaguesContent() {
       updateColleague(editingColleague.id, colleagueData);
       toast.success('Kolega byl upraven');
     } else {
-      // Add colleague first
-      addColleague(colleagueData);
-      
-      // If invite_to_crm is checked, send invitation
+      // If invite_to_crm is checked, use edge function (creates colleague + user + sends email)
       if (invite_to_crm && role) {
         setIsInviting(true);
         try {
@@ -163,25 +160,44 @@ function ColleaguesContent() {
           const firstName = nameParts[0] || '';
           const lastName = nameParts.slice(1).join(' ') || '';
           
-          const { error } = await supabase.functions.invoke('invite-user', {
+          const { data: responseData, error } = await supabase.functions.invoke('invite-user', {
             body: {
               email: colleagueData.email,
               firstName,
               lastName,
               role,
               position: colleagueData.position,
+              seniority: colleagueData.seniority,
+              phone: colleagueData.phone,
+              notes: colleagueData.notes,
+              is_freelancer: colleagueData.is_freelancer,
+              internal_hourly_cost: colleagueData.internal_hourly_cost,
+              monthly_fixed_cost: colleagueData.monthly_fixed_cost,
+              capacity_hours_per_month: colleagueData.capacity_hours_per_month,
             },
           });
           
-          if (error) throw error;
-          toast.success(`Pozvánka odeslána na ${colleagueData.email}`);
+          if (error) {
+            // Parse error from edge function response
+            const errorMessage = error.message || 'Nepodařilo se pozvat uživatele';
+            throw new Error(errorMessage);
+          }
+          
+          // Check if response contains error
+          if (responseData?.error) {
+            throw new Error(responseData.error);
+          }
+          
+          toast.success(`Kolega vytvořen a pozvánka odeslána na ${colleagueData.email}`);
         } catch (error: any) {
           console.error('Error inviting user:', error);
-          toast.error(`Kolega vytvořen, ale pozvánka selhala: ${error.message}`);
+          toast.error(error.message || 'Nepodařilo se pozvat uživatele');
         } finally {
           setIsInviting(false);
         }
       } else {
+        // No invite - just create colleague locally
+        addColleague(colleagueData);
         toast.success('Kolega byl vytvořen');
       }
     }
