@@ -29,6 +29,9 @@ const INITIAL_MOCK_APPLICANTS: Applicant[] = [
     billing_city: null,
     billing_zip: null,
     bank_account: null,
+    // Communication tracking
+    interview_invite_sent_at: null,
+    rejection_sent_at: null,
     // Onboarding
     onboarding_sent_at: null,
     onboarding_completed_at: null,
@@ -49,6 +52,8 @@ interface ApplicantsDataContextType {
   addNote: (applicantId: string, text: string) => void;
   getApplicantById: (id: string) => Applicant | undefined;
   getApplicantsByStage: (stage: ApplicantStage) => Applicant[];
+  sendInterviewInvite: (applicantId: string) => void;
+  sendRejection: (applicantId: string) => void;
   sendOnboarding: (applicantId: string) => void;
   completeOnboarding: (applicantId: string, data: OnboardingData) => Colleague;
 }
@@ -125,6 +130,20 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     ));
   }, [colleagues, user]);
 
+  const sendInterviewInvite = useCallback((applicantId: string) => {
+    updateApplicant(applicantId, { 
+      interview_invite_sent_at: new Date().toISOString(),
+      stage: 'invited_interview'
+    });
+  }, [updateApplicant]);
+
+  const sendRejection = useCallback((applicantId: string) => {
+    updateApplicant(applicantId, { 
+      rejection_sent_at: new Date().toISOString(),
+      stage: 'rejected'
+    });
+  }, [updateApplicant]);
+
   const sendOnboarding = useCallback((applicantId: string) => {
     updateApplicant(applicantId, { 
       onboarding_sent_at: new Date().toISOString() 
@@ -190,9 +209,11 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     addNote,
     getApplicantById,
     getApplicantsByStage,
+    sendInterviewInvite,
+    sendRejection,
     sendOnboarding,
     completeOnboarding,
-  }), [applicants, isLoading, error, addApplicant, updateApplicant, deleteApplicant, updateApplicantStage, addNote, getApplicantById, getApplicantsByStage, sendOnboarding, completeOnboarding]);
+  }), [applicants, isLoading, error, addApplicant, updateApplicant, deleteApplicant, updateApplicantStage, addNote, getApplicantById, getApplicantsByStage, sendInterviewInvite, sendRejection, sendOnboarding, completeOnboarding]);
 
   return (
     <ApplicantsDataContext.Provider value={value}>

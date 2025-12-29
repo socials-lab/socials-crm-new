@@ -57,6 +57,10 @@ export interface Applicant {
   billing_zip: string | null;
   bank_account: string | null;
   
+  // Communication tracking
+  interview_invite_sent_at: string | null;
+  rejection_sent_at: string | null;
+  
   // Onboarding (after hiring)
   onboarding_sent_at: string | null;
   onboarding_completed_at: string | null;

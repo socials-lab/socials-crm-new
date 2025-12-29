@@ -20,12 +20,14 @@ interface SendApplicantOnboardingDialogProps {
   applicant: Applicant;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSend?: () => void;
 }
 
 export function SendApplicantOnboardingDialog({
   applicant,
   open,
   onOpenChange,
+  onSend,
 }: SendApplicantOnboardingDialogProps) {
   const { sendOnboarding } = useApplicantsData();
   const [copied, setCopied] = useState(false);
@@ -58,12 +60,14 @@ HR tým Socials.cz`;
     const mailtoLink = `mailto:${applicant.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
     window.open(mailtoLink, '_blank');
     sendOnboarding(applicant.id);
+    onSend?.();
     toast.success('Onboarding byl odeslán');
     onOpenChange(false);
   };
 
   const handleMarkAsSent = () => {
     sendOnboarding(applicant.id);
+    onSend?.();
     toast.success('Označeno jako odesláno');
     onOpenChange(false);
   };
