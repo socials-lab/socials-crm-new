@@ -25,7 +25,7 @@ import Settings from "./pages/Settings";
 import ExtraWork from "./pages/ExtraWork";
 import MyWork from "./pages/MyWork";
 import Recruitment from "./pages/Recruitment";
-import CareerForm from "./pages/CareerForm";
+import ApplicantOnboardingForm from "./pages/ApplicantOnboardingForm";
 import NotFound from "./pages/NotFound";
 import OnboardingForm from "./pages/OnboardingForm";
 import Notifications from "./pages/Notifications";
@@ -51,8 +51,8 @@ const App = () => (
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/auth/callback" element={<AuthCallback />} />
                       <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
-                      <Route path="/career" element={<CareerForm />} />
-                      <Route path="/career/:position" element={<CareerForm />} />
+                      <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
+                      
                       
                       {/* Protected routes */}
                       <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
