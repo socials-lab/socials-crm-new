@@ -2,6 +2,7 @@ import React, { createContext, useContext, ReactNode, useMemo, useState, useCall
 import type { Applicant, ApplicantStage, ApplicantNote } from '@/types/applicant';
 import { useAuth } from './useAuth';
 import { useCRMData } from './useCRMData';
+import type { Colleague } from '@/types/crm';
 
 // Mock data for testing without Supabase
 const INITIAL_MOCK_APPLICANTS: Applicant[] = [
@@ -19,6 +20,16 @@ const INITIAL_MOCK_APPLICANTS: Applicant[] = [
     notes: [],
     source: 'linkedin',
     source_custom: null,
+    // Freelancer info (null until onboarding)
+    ico: null,
+    company_name: null,
+    dic: null,
+    hourly_rate: null,
+    billing_street: null,
+    billing_city: null,
+    billing_zip: null,
+    bank_account: null,
+    // Onboarding
     onboarding_sent_at: null,
     onboarding_completed_at: null,
     converted_to_colleague_id: null,
@@ -39,13 +50,29 @@ interface ApplicantsDataContextType {
   getApplicantById: (id: string) => Applicant | undefined;
   getApplicantsByStage: (stage: ApplicantStage) => Applicant[];
   sendOnboarding: (applicantId: string) => void;
+  completeOnboarding: (applicantId: string, data: OnboardingData) => Colleague;
+}
+
+export interface OnboardingData {
+  full_name: string;
+  email: string;
+  phone: string;
+  position: string;
+  ico: string;
+  company_name: string;
+  dic?: string;
+  hourly_rate: number;
+  billing_street: string;
+  billing_city: string;
+  billing_zip: string;
+  bank_account: string;
 }
 
 const ApplicantsDataContext = createContext<ApplicantsDataContextType | undefined>(undefined);
 
 export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const { colleagues } = useCRMData();
+  const { colleagues, addColleague } = useCRMData();
   
   // Use local state with mock data (no Supabase)
   const [applicants, setApplicants] = useState<Applicant[]>(INITIAL_MOCK_APPLICANTS);
@@ -104,6 +131,46 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     });
   }, [updateApplicant]);
 
+  const completeOnboarding = useCallback((applicantId: string, data: OnboardingData): Colleague => {
+    // Create new colleague from onboarding data
+    const newColleague: Colleague = {
+      id: crypto.randomUUID(),
+      full_name: data.full_name,
+      email: data.email,
+      phone: data.phone,
+      position: data.position,
+      seniority: 'mid',
+      status: 'active',
+      is_freelancer: true,
+      internal_hourly_cost: data.hourly_rate,
+      capacity_hours_per_month: null,
+      monthly_fixed_cost: null,
+      notes: `IČO: ${data.ico}\nFirma: ${data.company_name}${data.dic ? `\nDIČ: ${data.dic}` : ''}\nAdresa: ${data.billing_street}, ${data.billing_zip} ${data.billing_city}\nÚčet: ${data.bank_account}`,
+      profile_id: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Add colleague via CRM data hook
+    addColleague(newColleague);
+
+    // Update applicant with onboarding completion and colleague link
+    updateApplicant(applicantId, {
+      onboarding_completed_at: new Date().toISOString(),
+      converted_to_colleague_id: newColleague.id,
+      ico: data.ico,
+      company_name: data.company_name,
+      dic: data.dic || null,
+      hourly_rate: data.hourly_rate,
+      billing_street: data.billing_street,
+      billing_city: data.billing_city,
+      billing_zip: data.billing_zip,
+      bank_account: data.bank_account,
+    });
+
+    return newColleague;
+  }, [updateApplicant, addColleague]);
+
   const getApplicantById = useCallback((id: string) => {
     return applicants.find(a => a.id === id);
   }, [applicants]);
@@ -124,7 +191,8 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     getApplicantById,
     getApplicantsByStage,
     sendOnboarding,
-  }), [applicants, isLoading, error, addApplicant, updateApplicant, deleteApplicant, updateApplicantStage, addNote, getApplicantById, getApplicantsByStage, sendOnboarding]);
+    completeOnboarding,
+  }), [applicants, isLoading, error, addApplicant, updateApplicant, deleteApplicant, updateApplicantStage, addNote, getApplicantById, getApplicantsByStage, sendOnboarding, completeOnboarding]);
 
   return (
     <ApplicantsDataContext.Provider value={value}>

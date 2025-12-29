@@ -15,7 +15,8 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { CheckCircle, Loader2, User, Building, CreditCard, MapPin } from 'lucide-react';
+import { CheckCircle, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import socialsLogo from '@/assets/socials-logo.png';
 
 const formSchema = z.object({
@@ -25,22 +26,21 @@ const formSchema = z.object({
   phone: z.string().min(9, 'Telefon je povinný'),
   position: z.string().min(2, 'Pozice je povinná'),
   
-  // New fields to fill
-  birth_date: z.string().min(1, 'Datum narození je povinné'),
-  birth_number: z.string().optional(),
-  nationality: z.string().min(1, 'Státní příslušnost je povinná'),
+  // Company info (ARES validated)
+  ico: z.string().min(8, 'IČO musí mít 8 číslic').max(8, 'IČO musí mít 8 číslic'),
+  company_name: z.string().min(1, 'Název firmy je povinný'),
+  dic: z.string().optional(),
   
-  // Address
-  street: z.string().min(1, 'Ulice je povinná'),
-  city: z.string().min(1, 'Město je povinné'),
-  zip: z.string().min(5, 'PSČ je povinné'),
+  // Billing address
+  billing_street: z.string().min(1, 'Ulice je povinná'),
+  billing_city: z.string().min(1, 'Město je povinné'),
+  billing_zip: z.string().min(5, 'PSČ je povinné'),
   
-  // Bank
+  // Hourly rate
+  hourly_rate: z.coerce.number().min(100, 'Minimální hodinová sazba je 100 Kč'),
+  
+  // Bank account
   bank_account: z.string().min(1, 'Číslo účtu je povinné'),
-  bank_code: z.string().min(4, 'Kód banky je povinný'),
-  
-  // Health insurance
-  health_insurance: z.string().min(1, 'Zdravotní pojišťovna je povinná'),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -55,12 +55,23 @@ const MOCK_APPLICANT_DATA = {
   },
 };
 
+interface ARESData {
+  company_name: string;
+  dic?: string;
+  billing_street: string;
+  billing_city: string;
+  billing_zip: string;
+}
+
 export default function ApplicantOnboardingForm() {
   const { applicantId } = useParams<{ applicantId: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isValidatingARES, setIsValidatingARES] = useState(false);
+  const [aresError, setAresError] = useState<string | null>(null);
+  const [aresValidated, setAresValidated] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -69,15 +80,14 @@ export default function ApplicantOnboardingForm() {
       email: '',
       phone: '',
       position: '',
-      birth_date: '',
-      birth_number: '',
-      nationality: 'Česká republika',
-      street: '',
-      city: '',
-      zip: '',
+      ico: '',
+      company_name: '',
+      dic: '',
+      billing_street: '',
+      billing_city: '',
+      billing_zip: '',
+      hourly_rate: 0,
       bank_account: '',
-      bank_code: '',
-      health_insurance: '',
     },
   });
 
@@ -101,13 +111,61 @@ export default function ApplicantOnboardingForm() {
     }
   }, [applicantId, form]);
 
+  // ARES validation function
+  const validateARES = async (ico: string) => {
+    if (ico.length !== 8) {
+      setAresError('IČO musí mít přesně 8 číslic');
+      return;
+    }
+
+    setIsValidatingARES(true);
+    setAresError(null);
+
+    try {
+      const response = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
+      
+      if (!response.ok) {
+        throw new Error('Subjekt nebyl nalezen v ARES');
+      }
+
+      const data = await response.json();
+      
+      // Extract data from ARES response
+      const aresData: ARESData = {
+        company_name: data.obchodniJmeno || '',
+        dic: data.dic || '',
+        billing_street: data.sidlo?.textovaAdresa?.split(',')[0] || '',
+        billing_city: data.sidlo?.nazevObce || '',
+        billing_zip: data.sidlo?.psc?.toString() || '',
+      };
+
+      // Update form with ARES data
+      form.setValue('company_name', aresData.company_name);
+      if (aresData.dic) form.setValue('dic', aresData.dic);
+      if (aresData.billing_street) form.setValue('billing_street', aresData.billing_street);
+      if (aresData.billing_city) form.setValue('billing_city', aresData.billing_city);
+      if (aresData.billing_zip) form.setValue('billing_zip', aresData.billing_zip);
+
+      setAresValidated(true);
+      toast.success(`Údaje načteny z ARES: ${aresData.company_name}`);
+    } catch (error) {
+      setAresError(error instanceof Error ? error.message : 'Chyba při validaci IČO');
+      setAresValidated(false);
+    } finally {
+      setIsValidatingARES(false);
+    }
+  };
+
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     
-    // Simulate API call
+    // Simulate API call - in production would call backend to:
+    // 1. Update applicant with onboarding_completed_at
+    // 2. Create new colleague record
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     console.log('Onboarding data submitted:', data);
+    toast.success('Onboarding dokončen! Byl jste přidán do týmu.');
     setIsSubmitted(true);
     setIsSubmitting(false);
   };
@@ -145,7 +203,7 @@ export default function ApplicantOnboardingForm() {
             </div>
             <h2 className="text-2xl font-bold">Onboarding dokončen!</h2>
             <p className="text-muted-foreground">
-              Děkujeme za vyplnění všech údajů. Brzy se vám ozveme s dalšími informacemi o nástupu.
+              Děkujeme za vyplnění všech údajů. Vaše fakturační údaje byly uloženy a můžete začít spolupracovat.
             </p>
           </CardContent>
         </Card>
@@ -166,7 +224,7 @@ export default function ApplicantOnboardingForm() {
           <div>
             <h1 className="text-3xl font-bold">Vítejte v týmu!</h1>
             <p className="text-muted-foreground mt-2">
-              Prosím vyplňte následující údaje pro dokončení nástupu.
+              Pro dokončení nástupu vyplňte prosím fakturační údaje pro spolupráci na IČO.
             </p>
           </div>
         </div>
@@ -176,7 +234,7 @@ export default function ApplicantOnboardingForm() {
           <CardHeader>
             <CardTitle>Onboarding formulář</CardTitle>
             <CardDescription>
-              Zkontrolujte předvyplněné údaje a doplňte chybějící informace
+              Zkontrolujte předvyplněné údaje a doplňte fakturační informace
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -248,22 +306,77 @@ export default function ApplicantOnboardingForm() {
                   </div>
                 </div>
 
-                {/* Personal details */}
+                {/* Company/IČO info */}
                 <div className="space-y-4">
                   <h3 className="font-medium flex items-center gap-2">
                     <Building className="h-4 w-4" />
-                    Osobní údaje
+                    Fakturační údaje (IČO)
                   </h3>
+
+                  <FormField
+                    control={form.control}
+                    name="ico"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>IČO *</FormLabel>
+                        <div className="flex gap-2">
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              placeholder="12345678"
+                              maxLength={8}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                setAresValidated(false);
+                                setAresError(null);
+                              }}
+                            />
+                          </FormControl>
+                          <Button 
+                            type="button"
+                            variant="outline"
+                            onClick={() => validateARES(field.value)}
+                            disabled={isValidatingARES || field.value.length !== 8}
+                          >
+                            {isValidatingARES ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Search className="h-4 w-4 mr-1" />
+                                ARES
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        {aresError && (
+                          <div className="flex items-center gap-1 text-sm text-destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            {aresError}
+                          </div>
+                        )}
+                        {aresValidated && (
+                          <div className="flex items-center gap-1 text-sm text-green-600">
+                            <CheckCircle className="h-4 w-4" />
+                            IČO ověřeno v ARES
+                          </div>
+                        )}
+                        <FormDescription>
+                          Zadejte IČO a klikněte na ARES pro automatické doplnění údajů
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="birth_date"
+                      name="company_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Datum narození *</FormLabel>
+                          <FormLabel>Název firmy / Jméno OSVČ *</FormLabel>
                           <FormControl>
-                            <Input type="date" {...field} />
+                            <Input {...field} placeholder="Vyplní se z ARES" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -271,12 +384,12 @@ export default function ApplicantOnboardingForm() {
                     />
                     <FormField
                       control={form.control}
-                      name="birth_number"
+                      name="dic"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Rodné číslo</FormLabel>
+                          <FormLabel>DIČ</FormLabel>
                           <FormControl>
-                            <Input placeholder="XXXXXX/XXXX" {...field} />
+                            <Input {...field} placeholder="CZ12345678" />
                           </FormControl>
                           <FormDescription>Volitelné</FormDescription>
                           <FormMessage />
@@ -284,46 +397,18 @@ export default function ApplicantOnboardingForm() {
                       )}
                     />
                   </div>
-
-                  <FormField
-                    control={form.control}
-                    name="nationality"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Státní příslušnost *</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="health_insurance"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Zdravotní pojišťovna *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="např. VZP, ČPZP, OZP..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 {/* Address */}
                 <div className="space-y-4">
                   <h3 className="font-medium flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
-                    Trvalá adresa
+                    Fakturační adresa
                   </h3>
 
                   <FormField
                     control={form.control}
-                    name="street"
+                    name="billing_street"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Ulice a číslo popisné *</FormLabel>
@@ -338,7 +423,7 @@ export default function ApplicantOnboardingForm() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="city"
+                      name="billing_city"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Město *</FormLabel>
@@ -351,7 +436,7 @@ export default function ApplicantOnboardingForm() {
                     />
                     <FormField
                       control={form.control}
-                      name="zip"
+                      name="billing_zip"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>PSČ *</FormLabel>
@@ -365,36 +450,46 @@ export default function ApplicantOnboardingForm() {
                   </div>
                 </div>
 
-                {/* Bank details */}
+                {/* Hourly rate & Bank */}
                 <div className="space-y-4">
                   <h3 className="font-medium flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
-                    Bankovní spojení
+                    Sazba a platební údaje
                   </h3>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="bank_account"
+                      name="hourly_rate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Číslo účtu *</FormLabel>
+                          <FormLabel>Hodinová sazba (Kč) *</FormLabel>
                           <FormControl>
-                            <Input placeholder="123456789" {...field} />
+                            <Input 
+                              type="number" 
+                              placeholder="500" 
+                              {...field}
+                            />
                           </FormControl>
+                          <FormDescription>
+                            Vaše hodinová sazba pro fakturaci
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     <FormField
                       control={form.control}
-                      name="bank_code"
+                      name="bank_account"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Kód banky *</FormLabel>
+                          <FormLabel>Číslo bankovního účtu *</FormLabel>
                           <FormControl>
-                            <Input placeholder="0100" {...field} />
+                            <Input placeholder="123456789/0100" {...field} />
                           </FormControl>
+                          <FormDescription>
+                            Ve formátu číslo účtu/kód banky
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
