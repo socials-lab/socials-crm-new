@@ -26,6 +26,7 @@ const mainNavItems = [
   { title: '🎨 Creative Boost', url: '/creative-boost', page: 'creative-boost' },
   { title: '📦 Služby', url: '/services', page: 'services' },
   { title: '👥 Kolegové', url: '/colleagues', page: 'colleagues' },
+  { title: '🎓 Nábor', url: '/recruitment', page: 'recruitment' },
   { title: '📊 Analytika', url: '/analytics', page: 'analytics' },
 ];
 
