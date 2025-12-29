@@ -15,7 +15,7 @@ const INITIAL_MOCK_APPLICANTS: Applicant[] = [
     cover_letter: 'Dobrý den,\n\nzajímám se o pozici Performance Specialist ve vaší agentuře. Mám 3 roky zkušeností s Google Ads a Meta Ads, pracoval jsem pro několik e-commerce klientů.\n\nTěším se na případný pohovor.\n\nS pozdravem,\nJan Novák',
     cv_url: 'https://drive.google.com/file/d/example-cv',
     video_url: 'https://www.youtube.com/watch?v=example',
-    stage: 'new_applicant',
+    stage: 'hired',
     owner_id: null,
     notes: [],
     source: 'linkedin',
