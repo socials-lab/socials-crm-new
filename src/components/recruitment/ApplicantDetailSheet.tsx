@@ -234,8 +234,8 @@ export function ApplicantDetailSheet({
               )}
             </div>
 
-            {/* STEP 2: Onboarding - Show only for hired applicants */}
-            {isHired && (
+            {/* STEP 2: Onboarding - Show for all stages except rejected */}
+            {!isRejected && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm flex items-center gap-2">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">2</span>
