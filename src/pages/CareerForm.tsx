@@ -54,7 +54,8 @@ export default function CareerForm() {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase
+      // Using 'as any' until applicants table is created in database
+      const { error } = await (supabase as any)
         .from('applicants')
         .insert({
           full_name: data.full_name,
