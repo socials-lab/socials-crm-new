@@ -32,6 +32,10 @@ import {
   MessageSquare,
   Send,
   UserPlus,
+  ClipboardList,
+  CheckCircle2,
+  Building,
+  CreditCard,
 } from 'lucide-react';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
@@ -61,9 +65,12 @@ export function ApplicantDetailSheet({
 
   const isHired = applicant.stage === 'hired';
   const onboardingAlreadySent = !!applicant.onboarding_sent_at;
+  const onboardingCompleted = !!applicant.onboarding_completed_at;
+  const convertedToColleague = !!applicant.converted_to_colleague_id;
 
   const stageConfig = APPLICANT_STAGE_CONFIG[applicant.stage];
   const owner = colleagues.find(c => c.id === applicant.owner_id);
+  const linkedColleague = colleagues.find(c => c.id === applicant.converted_to_colleague_id);
 
   const handleStageChange = (newStage: string) => {
     updateApplicantStage(applicant.id, newStage as ApplicantStage);
@@ -85,22 +92,10 @@ export function ApplicantDetailSheet({
               <SheetTitle className="text-xl">{applicant.full_name}</SheetTitle>
               <p className="text-muted-foreground">{applicant.position}</p>
             </div>
-            <div className="flex gap-2">
-              {isHired && (
-                <Button 
-                  variant={onboardingAlreadySent ? "outline" : "default"}
-                  size="sm" 
-                  onClick={() => setIsOnboardingDialogOpen(true)}
-                >
-                  <UserPlus className="h-4 w-4 mr-1" />
-                  {onboardingAlreadySent ? 'Onboarding odeslán' : 'Odeslat onboarding'}
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={() => onEdit(applicant)}>
-                <Edit className="h-4 w-4 mr-1" />
-                Upravit
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={() => onEdit(applicant)}>
+              <Edit className="h-4 w-4 mr-1" />
+              Upravit
+            </Button>
           </div>
 
           {/* Stage selector */}
@@ -125,6 +120,107 @@ export function ApplicantDetailSheet({
 
         <ScrollArea className="flex-1">
           <div className="space-y-6 pr-4">
+            {/* Onboarding Section - Show only for hired applicants */}
+            {isHired && (
+              <>
+                <div className="space-y-3">
+                  <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4" />
+                    Onboarding
+                  </h3>
+
+                  <div className="space-y-2">
+                    {/* Onboarding form status */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Onboarding formulář</span>
+                      </div>
+                      {onboardingCompleted ? (
+                        <Badge variant="default" className="bg-green-500">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Vyplněno
+                        </Badge>
+                      ) : onboardingAlreadySent ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">Odesláno</Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsOnboardingDialogOpen(true)}
+                          >
+                            Odeslat znovu
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => setIsOnboardingDialogOpen(true)}
+                        >
+                          <Send className="h-4 w-4 mr-1" />
+                          Odeslat
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Colleague conversion status */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <UserPlus className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Přidán do kolegů</span>
+                      </div>
+                      {convertedToColleague ? (
+                        <Badge variant="default" className="bg-green-500">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          {linkedColleague?.full_name || 'Přidán'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          Čeká na onboarding
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Show company info if onboarding completed */}
+                  {onboardingCompleted && applicant.ico && (
+                    <div className="mt-4 p-3 rounded-lg border bg-card">
+                      <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        Fakturační údaje
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">IČO:</span>
+                          <span className="ml-1 font-medium">{applicant.ico}</span>
+                        </div>
+                        {applicant.company_name && (
+                          <div>
+                            <span className="text-muted-foreground">Firma:</span>
+                            <span className="ml-1">{applicant.company_name}</span>
+                          </div>
+                        )}
+                        {applicant.hourly_rate && (
+                          <div>
+                            <span className="text-muted-foreground">Sazba:</span>
+                            <span className="ml-1 font-medium">{applicant.hourly_rate} Kč/h</span>
+                          </div>
+                        )}
+                        {applicant.bank_account && (
+                          <div className="flex items-center gap-1">
+                            <CreditCard className="h-3 w-3 text-muted-foreground" />
+                            <span>{applicant.bank_account}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+              </>
+            )}
+
             {/* Contact info */}
             <div className="space-y-2">
               <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">

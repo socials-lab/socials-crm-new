@@ -121,6 +121,16 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       owner_id: data.owner_id || null,
       source: data.source as ApplicantSource,
       source_custom: data.source_custom || null,
+      // Freelancer info (null until onboarding)
+      ico: null,
+      company_name: null,
+      dic: null,
+      hourly_rate: null,
+      billing_street: null,
+      billing_city: null,
+      billing_zip: null,
+      bank_account: null,
+      // Onboarding status
       onboarding_sent_at: null,
       onboarding_completed_at: null,
       converted_to_colleague_id: null,

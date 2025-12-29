@@ -47,6 +47,16 @@ export interface Applicant {
   source: ApplicantSource;
   source_custom: string | null;
   
+  // Freelancer/Company info (filled during onboarding)
+  ico: string | null;
+  company_name: string | null;
+  dic: string | null;
+  hourly_rate: number | null;
+  billing_street: string | null;
+  billing_city: string | null;
+  billing_zip: string | null;
+  bank_account: string | null;
+  
   // Onboarding (after hiring)
   onboarding_sent_at: string | null;
   onboarding_completed_at: string | null;
