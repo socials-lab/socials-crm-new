@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -37,6 +38,10 @@ import {
   Building,
   CreditCard,
   ArrowRightLeft,
+  PhoneCall,
+  UserX,
+  Clock,
+  DollarSign,
 } from 'lucide-react';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
@@ -44,6 +49,8 @@ import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { SendApplicantOnboardingDialog } from './SendApplicantOnboardingDialog';
 import { ConvertApplicantDialog } from './ConvertApplicantDialog';
+import { SendInterviewInviteDialog } from './SendInterviewInviteDialog';
+import { SendRejectionEmailDialog } from './SendRejectionEmailDialog';
 
 interface ApplicantDetailSheetProps {
   applicant: Applicant | null;
@@ -58,15 +65,20 @@ export function ApplicantDetailSheet({
   onOpenChange, 
   onEdit 
 }: ApplicantDetailSheetProps) {
-  const { updateApplicantStage, addNote } = useApplicantsData();
+  const { updateApplicantStage, addNote, sendInterviewInvite, sendRejection, sendOnboarding } = useApplicantsData();
   const { colleagues } = useCRMData();
   const [newNote, setNewNote] = useState('');
   const [isOnboardingDialogOpen, setIsOnboardingDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
+  const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
 
   if (!applicant) return null;
 
   const isHired = applicant.stage === 'hired';
+  const isRejected = applicant.stage === 'rejected';
+  const interviewInviteSent = !!applicant.interview_invite_sent_at;
+  const rejectionSent = !!applicant.rejection_sent_at;
   const onboardingAlreadySent = !!applicant.onboarding_sent_at;
   const onboardingCompleted = !!applicant.onboarding_completed_at;
   const convertedToColleague = !!applicant.converted_to_colleague_id;
@@ -84,6 +96,18 @@ export function ApplicantDetailSheet({
       addNote(applicant.id, newNote.trim());
       setNewNote('');
     }
+  };
+
+  const handleSendInterviewInvite = () => {
+    sendInterviewInvite(applicant.id);
+  };
+
+  const handleSendRejection = () => {
+    sendRejection(applicant.id);
+  };
+
+  const handleSendOnboarding = () => {
+    sendOnboarding(applicant.id);
   };
 
   return (
@@ -123,36 +147,141 @@ export function ApplicantDetailSheet({
 
         <ScrollArea className="flex-1">
           <div className="space-y-6 pr-4">
-            {/* Onboarding Section - Show only for hired applicants */}
-            {isHired && (
-              <>
-                <div className="space-y-3">
-                  <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                    <ClipboardList className="h-4 w-4" />
-                    Onboarding
-                  </h3>
+            {/* STEP 1: Communication with applicant */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">1</span>
+                Komunikace s uchazečem
+              </h3>
 
-                  <div className="space-y-2">
-                    {/* Onboarding form status */}
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-2">
-                        <ClipboardList className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Onboarding formulář</span>
+              {/* Interview invite */}
+              <Card className="border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${interviewInviteSent ? 'bg-green-100 text-green-600' : 'bg-muted'}`}>
+                        <PhoneCall className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">Pozvánka na pohovor</p>
+                        {interviewInviteSent ? (
+                          <p className="text-xs text-muted-foreground">
+                            Odesláno {format(new Date(applicant.interview_invite_sent_at!), 'd. M. yyyy', { locale: cs })}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Zatím neodesláno</p>
+                        )}
+                      </div>
+                    </div>
+                    {interviewInviteSent ? (
+                      <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Odesláno
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => setIsInterviewInviteDialogOpen(true)}
+                        disabled={isRejected}
+                      >
+                        <Send className="h-4 w-4 mr-1" />
+                        Odeslat
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Rejection email */}
+              {!isHired && !convertedToColleague && (
+                <Card className="border-border/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${rejectionSent ? 'bg-red-100 text-red-600' : 'bg-muted'}`}>
+                          <UserX className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Odmítnutí kandidáta</p>
+                          {rejectionSent ? (
+                            <p className="text-xs text-muted-foreground">
+                              Odesláno {format(new Date(applicant.rejection_sent_at!), 'd. M. yyyy', { locale: cs })}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Slušné odmítnutí emailem</p>
+                          )}
+                        </div>
+                      </div>
+                      {rejectionSent ? (
+                        <Badge variant="secondary" className="bg-red-100 text-red-700 border-red-200">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Odesláno
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setIsRejectionDialogOpen(true)}
+                        >
+                          <UserX className="h-4 w-4 mr-1" />
+                          Odmítnout
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* STEP 2: Onboarding - Show only for hired applicants */}
+            {isHired && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">2</span>
+                  Onboarding
+                </h3>
+
+                {/* Onboarding form */}
+                <Card className="border-border/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${onboardingCompleted ? 'bg-green-100 text-green-600' : onboardingAlreadySent ? 'bg-yellow-100 text-yellow-600' : 'bg-muted'}`}>
+                          <ClipboardList className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Onboarding formulář</p>
+                          {onboardingCompleted ? (
+                            <p className="text-xs text-muted-foreground">
+                              Vyplněno {format(new Date(applicant.onboarding_completed_at!), 'd. M. yyyy', { locale: cs })}
+                            </p>
+                          ) : onboardingAlreadySent ? (
+                            <p className="text-xs text-muted-foreground">
+                              Odesláno {format(new Date(applicant.onboarding_sent_at!), 'd. M. yyyy', { locale: cs })}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Odeslat odkaz na vyplnění údajů</p>
+                          )}
+                        </div>
                       </div>
                       {onboardingCompleted ? (
-                        <Badge variant="default" className="bg-green-500">
+                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
                           Vyplněno
                         </Badge>
                       ) : onboardingAlreadySent ? (
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary">Odesláno</Badge>
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Čeká na vyplnění
+                          </Badge>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setIsOnboardingDialogOpen(true)}
                           >
-                            Odeslat znovu
+                            Znovu
                           </Button>
                         </div>
                       ) : (
@@ -165,17 +294,32 @@ export function ApplicantDetailSheet({
                         </Button>
                       )}
                     </div>
+                  </CardContent>
+                </Card>
 
-                    {/* Colleague conversion status */}
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-2">
-                        <UserPlus className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Přidán do kolegů</span>
+                {/* Colleague conversion */}
+                <Card className="border-border/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${convertedToColleague ? 'bg-green-100 text-green-600' : 'bg-muted'}`}>
+                          <UserPlus className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Převod na kolegu</p>
+                          {convertedToColleague ? (
+                            <p className="text-xs text-muted-foreground">
+                              Vytvořen záznam: {linkedColleague?.full_name}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Vytvořit záznam v kolegové</p>
+                          )}
+                        </div>
                       </div>
                       {convertedToColleague ? (
-                        <Badge variant="default" className="bg-green-500">
+                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
-                          {linkedColleague?.full_name || 'Přidán'}
+                          Převedeno
                         </Badge>
                       ) : (
                         <Button
@@ -188,16 +332,18 @@ export function ApplicantDetailSheet({
                         </Button>
                       )}
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Show company info if onboarding completed */}
-                  {onboardingCompleted && applicant.ico && (
-                    <div className="mt-4 p-3 rounded-lg border bg-card">
-                      <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                {/* Company info if onboarding completed */}
+                {onboardingCompleted && applicant.ico && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardContent className="p-4">
+                      <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
                         <Building className="h-4 w-4" />
                         Fakturační údaje
                       </h4>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
                           <span className="text-muted-foreground">IČO:</span>
                           <span className="ml-1 font-medium">{applicant.ico}</span>
@@ -208,26 +354,40 @@ export function ApplicantDetailSheet({
                             <span className="ml-1">{applicant.company_name}</span>
                           </div>
                         )}
-                        {applicant.hourly_rate && (
+                        {applicant.dic && (
                           <div>
-                            <span className="text-muted-foreground">Sazba:</span>
-                            <span className="ml-1 font-medium">{applicant.hourly_rate} Kč/h</span>
+                            <span className="text-muted-foreground">DIČ:</span>
+                            <span className="ml-1">{applicant.dic}</span>
+                          </div>
+                        )}
+                        {applicant.hourly_rate && (
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-medium">{applicant.hourly_rate} Kč/h</span>
+                          </div>
+                        )}
+                        {applicant.billing_street && (
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground">Adresa:</span>
+                            <span className="ml-1">
+                              {applicant.billing_street}, {applicant.billing_zip} {applicant.billing_city}
+                            </span>
                           </div>
                         )}
                         {applicant.bank_account && (
-                          <div className="flex items-center gap-1">
+                          <div className="col-span-2 flex items-center gap-1">
                             <CreditCard className="h-3 w-3 text-muted-foreground" />
                             <span>{applicant.bank_account}</span>
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                <Separator />
-              </>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             )}
+
+            <Separator />
 
             {/* Contact info */}
             <div className="space-y-2">
@@ -262,6 +422,12 @@ export function ApplicantDetailSheet({
                   <Briefcase className="h-4 w-4 text-muted-foreground" />
                   <span>{applicant.position}</span>
                 </div>
+                {applicant.hourly_rate && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <span>Hodinová sazba: <strong>{applicant.hourly_rate} Kč/h</strong></span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span>Odpovědný: {owner?.full_name || 'Nepřiřazeno'}</span>
@@ -371,11 +537,28 @@ export function ApplicantDetailSheet({
         </ScrollArea>
       </SheetContent>
 
+      {/* Interview Invite Dialog */}
+      <SendInterviewInviteDialog
+        applicant={applicant}
+        open={isInterviewInviteDialogOpen}
+        onOpenChange={setIsInterviewInviteDialogOpen}
+        onSend={handleSendInterviewInvite}
+      />
+
+      {/* Rejection Email Dialog */}
+      <SendRejectionEmailDialog
+        applicant={applicant}
+        open={isRejectionDialogOpen}
+        onOpenChange={setIsRejectionDialogOpen}
+        onSend={handleSendRejection}
+      />
+
       {/* Onboarding Dialog */}
       <SendApplicantOnboardingDialog
         applicant={applicant}
         open={isOnboardingDialogOpen}
         onOpenChange={setIsOnboardingDialogOpen}
+        onSend={handleSendOnboarding}
       />
 
       {/* Convert to Colleague Dialog */}
