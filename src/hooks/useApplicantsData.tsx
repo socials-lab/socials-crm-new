@@ -1,9 +1,31 @@
-import React, { createContext, useContext, ReactNode, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import React, { createContext, useContext, ReactNode, useMemo, useState, useCallback } from 'react';
 import type { Applicant, ApplicantStage, ApplicantNote } from '@/types/applicant';
 import { useAuth } from './useAuth';
 import { useCRMData } from './useCRMData';
+
+// Mock data for testing without Supabase
+const INITIAL_MOCK_APPLICANTS: Applicant[] = [
+  {
+    id: 'mock-applicant-1',
+    full_name: 'Jan Novák',
+    email: 'jan.novak@email.cz',
+    phone: '+420 777 123 456',
+    position: 'Performance Specialist',
+    cover_letter: 'Dobrý den,\n\nzajímám se o pozici Performance Specialist ve vaší agentuře. Mám 3 roky zkušeností s Google Ads a Meta Ads, pracoval jsem pro několik e-commerce klientů.\n\nTěším se na případný pohovor.\n\nS pozdravem,\nJan Novák',
+    cv_url: 'https://drive.google.com/file/d/example-cv',
+    video_url: 'https://www.youtube.com/watch?v=example',
+    stage: 'new_applicant',
+    owner_id: null,
+    notes: [],
+    source: 'linkedin',
+    source_custom: null,
+    onboarding_sent_at: null,
+    onboarding_completed_at: null,
+    converted_to_colleague_id: null,
+    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
 
 interface ApplicantsDataContextType {
   applicants: Applicant[];
@@ -16,138 +38,48 @@ interface ApplicantsDataContextType {
   addNote: (applicantId: string, text: string) => void;
   getApplicantById: (id: string) => Applicant | undefined;
   getApplicantsByStage: (stage: ApplicantStage) => Applicant[];
+  sendOnboarding: (applicantId: string) => void;
 }
 
 const ApplicantsDataContext = createContext<ApplicantsDataContextType | undefined>(undefined);
 
 export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { colleagues } = useCRMData();
+  
+  // Use local state with mock data (no Supabase)
+  const [applicants, setApplicants] = useState<Applicant[]>(INITIAL_MOCK_APPLICANTS);
+  const [isLoading] = useState(false);
+  const [error] = useState<Error | null>(null);
 
-  // Fetch applicants - using any type until table is created in DB
-  const { data: applicantsData = [], isLoading, error } = useQuery({
-    queryKey: ['applicants'],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from('applicants')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      return (data || []).map((row: any) => ({
-        id: row.id,
-        full_name: row.full_name,
-        email: row.email,
-        phone: row.phone,
-        position: row.position,
-        cover_letter: row.cover_letter,
-        cv_url: row.cv_url,
-        video_url: row.video_url,
-        stage: row.stage as ApplicantStage,
-        owner_id: row.owner_id,
-        notes: (row.notes as ApplicantNote[]) || [],
-        source: row.source || 'website',
-        source_custom: row.source_custom,
-        onboarding_sent_at: row.onboarding_sent_at,
-        onboarding_completed_at: row.onboarding_completed_at,
-        converted_to_colleague_id: row.converted_to_colleague_id,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      })) as Applicant[];
-    },
-    enabled: !!user,
-  });
+  const addApplicant = useCallback((applicant: Omit<Applicant, 'id' | 'created_at' | 'updated_at' | 'notes'>) => {
+    const newApplicant: Applicant = {
+      ...applicant,
+      id: crypto.randomUUID(),
+      notes: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setApplicants(prev => [newApplicant, ...prev]);
+  }, []);
 
-  // Add applicant mutation
-  const addMutation = useMutation({
-    mutationFn: async (applicant: Omit<Applicant, 'id' | 'created_at' | 'updated_at' | 'notes'>) => {
-      const { data, error } = await (supabase as any)
-        .from('applicants')
-        .insert({
-          full_name: applicant.full_name,
-          email: applicant.email,
-          phone: applicant.phone,
-          position: applicant.position,
-          cover_letter: applicant.cover_letter,
-          cv_url: applicant.cv_url,
-          video_url: applicant.video_url,
-          stage: applicant.stage,
-          owner_id: applicant.owner_id,
-          source: applicant.source,
-          source_custom: applicant.source_custom,
-          notes: [],
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['applicants'] });
-    },
-  });
+  const updateApplicant = useCallback((id: string, updates: Partial<Applicant>) => {
+    setApplicants(prev => prev.map(a => 
+      a.id === id 
+        ? { ...a, ...updates, updated_at: new Date().toISOString() } 
+        : a
+    ));
+  }, []);
 
-  // Update applicant mutation
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Applicant> }) => {
-      const { notes, ...restUpdates } = updates;
-      const updateData: Record<string, any> = { ...restUpdates };
-      
-      if (notes !== undefined) {
-        updateData.notes = notes;
-      }
-      
-      const { error } = await (supabase as any)
-        .from('applicants')
-        .update(updateData)
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['applicants'] });
-    },
-  });
+  const deleteApplicant = useCallback((id: string) => {
+    setApplicants(prev => prev.filter(a => a.id !== id));
+  }, []);
 
-  // Delete applicant mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
-        .from('applicants')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['applicants'] });
-    },
-  });
+  const updateApplicantStage = useCallback((id: string, stage: ApplicantStage) => {
+    updateApplicant(id, { stage });
+  }, [updateApplicant]);
 
-  // Helper functions
-  const addApplicant = (applicant: Omit<Applicant, 'id' | 'created_at' | 'updated_at' | 'notes'>) => {
-    addMutation.mutate(applicant);
-  };
-
-  const updateApplicant = (id: string, updates: Partial<Applicant>) => {
-    updateMutation.mutate({ id, updates });
-  };
-
-  const deleteApplicant = (id: string) => {
-    deleteMutation.mutate(id);
-  };
-
-  const updateApplicantStage = (id: string, stage: ApplicantStage) => {
-    updateMutation.mutate({ id, updates: { stage } });
-  };
-
-  const addNote = (applicantId: string, text: string) => {
-    const applicant = applicantsData.find(a => a.id === applicantId);
-    if (!applicant) return;
-
+  const addNote = useCallback((applicantId: string, text: string) => {
     const currentUser = colleagues.find(c => c.profile_id === user?.id);
     
     const newNote: ApplicantNote = {
@@ -159,22 +91,31 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
       created_at: new Date().toISOString(),
     };
 
-    const updatedNotes = [...applicant.notes, newNote];
-    updateMutation.mutate({ id: applicantId, updates: { notes: updatedNotes } });
-  };
+    setApplicants(prev => prev.map(a => 
+      a.id === applicantId 
+        ? { ...a, notes: [...a.notes, newNote], updated_at: new Date().toISOString() } 
+        : a
+    ));
+  }, [colleagues, user]);
 
-  const getApplicantById = (id: string) => {
-    return applicantsData.find(a => a.id === id);
-  };
+  const sendOnboarding = useCallback((applicantId: string) => {
+    updateApplicant(applicantId, { 
+      onboarding_sent_at: new Date().toISOString() 
+    });
+  }, [updateApplicant]);
 
-  const getApplicantsByStage = (stage: ApplicantStage) => {
-    return applicantsData.filter(a => a.stage === stage);
-  };
+  const getApplicantById = useCallback((id: string) => {
+    return applicants.find(a => a.id === id);
+  }, [applicants]);
+
+  const getApplicantsByStage = useCallback((stage: ApplicantStage) => {
+    return applicants.filter(a => a.stage === stage);
+  }, [applicants]);
 
   const value = useMemo(() => ({
-    applicants: applicantsData,
+    applicants,
     isLoading,
-    error: error as Error | null,
+    error,
     addApplicant,
     updateApplicant,
     deleteApplicant,
@@ -182,7 +123,8 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     addNote,
     getApplicantById,
     getApplicantsByStage,
-  }), [applicantsData, isLoading, error, colleagues, user]);
+    sendOnboarding,
+  }), [applicants, isLoading, error, addApplicant, updateApplicant, deleteApplicant, updateApplicantStage, addNote, getApplicantById, getApplicantsByStage, sendOnboarding]);
 
   return (
     <ApplicantsDataContext.Provider value={value}>

@@ -31,11 +31,13 @@ import {
   Edit,
   MessageSquare,
   Send,
+  UserPlus,
 } from 'lucide-react';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { useCRMData } from '@/hooks/useCRMData';
+import { SendApplicantOnboardingDialog } from './SendApplicantOnboardingDialog';
 
 interface ApplicantDetailSheetProps {
   applicant: Applicant | null;
@@ -53,8 +55,12 @@ export function ApplicantDetailSheet({
   const { updateApplicantStage, addNote } = useApplicantsData();
   const { colleagues } = useCRMData();
   const [newNote, setNewNote] = useState('');
+  const [isOnboardingDialogOpen, setIsOnboardingDialogOpen] = useState(false);
 
   if (!applicant) return null;
+
+  const isHired = applicant.stage === 'hired';
+  const onboardingAlreadySent = !!applicant.onboarding_sent_at;
 
   const stageConfig = APPLICANT_STAGE_CONFIG[applicant.stage];
   const owner = colleagues.find(c => c.id === applicant.owner_id);
@@ -79,10 +85,22 @@ export function ApplicantDetailSheet({
               <SheetTitle className="text-xl">{applicant.full_name}</SheetTitle>
               <p className="text-muted-foreground">{applicant.position}</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => onEdit(applicant)}>
-              <Edit className="h-4 w-4 mr-1" />
-              Upravit
-            </Button>
+            <div className="flex gap-2">
+              {isHired && (
+                <Button 
+                  variant={onboardingAlreadySent ? "outline" : "default"}
+                  size="sm" 
+                  onClick={() => setIsOnboardingDialogOpen(true)}
+                >
+                  <UserPlus className="h-4 w-4 mr-1" />
+                  {onboardingAlreadySent ? 'Onboarding odeslán' : 'Odeslat onboarding'}
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => onEdit(applicant)}>
+                <Edit className="h-4 w-4 mr-1" />
+                Upravit
+              </Button>
+            </div>
           </div>
 
           {/* Stage selector */}
@@ -248,6 +266,13 @@ export function ApplicantDetailSheet({
           </div>
         </ScrollArea>
       </SheetContent>
+
+      {/* Onboarding Dialog */}
+      <SendApplicantOnboardingDialog
+        applicant={applicant}
+        open={isOnboardingDialogOpen}
+        onOpenChange={setIsOnboardingDialogOpen}
+      />
     </Sheet>
   );
 }

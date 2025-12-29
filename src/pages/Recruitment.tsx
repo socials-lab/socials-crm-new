@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, LayoutGrid, List, ExternalLink } from 'lucide-react';
+import { Search, Plus, LayoutGrid, List } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,6 @@ import { ApplicantDetailSheet } from '@/components/recruitment/ApplicantDetailSh
 import { AddApplicantDialog } from '@/components/recruitment/AddApplicantDialog';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG } from '@/types/applicant';
-import { cn } from '@/lib/utils';
 
 type ViewMode = 'kanban' | 'table';
 
@@ -104,9 +103,6 @@ export default function Recruitment() {
     return ownerIds.map(id => colleagues.find(c => c.id === id)).filter(Boolean);
   }, [applicants, colleagues]);
 
-  // Get the career form URL
-  const careerFormUrl = `${window.location.origin}/career`;
-
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       <PageHeader 
@@ -115,12 +111,6 @@ export default function Recruitment() {
         description="Pipeline uchazečů o práci"
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" asChild>
-              <a href={careerFormUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-1" />
-                Kariérní formulář
-              </a>
-            </Button>
             <div className="flex border rounded-lg overflow-hidden">
               <Button
                 variant={viewMode === 'kanban' ? 'default' : 'ghost'}
