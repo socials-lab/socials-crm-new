@@ -36,12 +36,14 @@ import {
   CheckCircle2,
   Building,
   CreditCard,
+  ArrowRightLeft,
 } from 'lucide-react';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { SendApplicantOnboardingDialog } from './SendApplicantOnboardingDialog';
+import { ConvertApplicantDialog } from './ConvertApplicantDialog';
 
 interface ApplicantDetailSheetProps {
   applicant: Applicant | null;
@@ -60,6 +62,7 @@ export function ApplicantDetailSheet({
   const { colleagues } = useCRMData();
   const [newNote, setNewNote] = useState('');
   const [isOnboardingDialogOpen, setIsOnboardingDialogOpen] = useState(false);
+  const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
 
   if (!applicant) return null;
 
@@ -175,9 +178,14 @@ export function ApplicantDetailSheet({
                           {linkedColleague?.full_name || 'Přidán'}
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          Čeká na onboarding
-                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsConvertDialogOpen(true)}
+                        >
+                          <ArrowRightLeft className="h-4 w-4 mr-1" />
+                          Převést ručně
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -368,6 +376,13 @@ export function ApplicantDetailSheet({
         applicant={applicant}
         open={isOnboardingDialogOpen}
         onOpenChange={setIsOnboardingDialogOpen}
+      />
+
+      {/* Convert to Colleague Dialog */}
+      <ConvertApplicantDialog
+        applicant={applicant}
+        open={isConvertDialogOpen}
+        onOpenChange={setIsConvertDialogOpen}
       />
     </Sheet>
   );
