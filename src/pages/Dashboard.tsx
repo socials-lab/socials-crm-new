@@ -7,6 +7,7 @@ import {
   User,
   Mail,
   PartyPopper,
+  Cake,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -18,6 +19,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
 
 export default function Dashboard() {
   const { leads } = useLeadsData();
@@ -31,6 +33,9 @@ export default function Dashboard() {
   const activeClients = clients.filter(c => c.status === 'active');
   const activeEngagements = engagements.filter(e => e.status === 'active');
   const activeColleagues = colleagues.filter(c => c.status === 'active');
+
+  // Upcoming birthdays (next 14 days)
+  const upcomingBirthdays = getUpcomingBirthdays(colleagues, 14);
 
   // Won leads (newly acquired clients)
   const wonLeads = leads
@@ -147,8 +152,65 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Team Contacts + Won Leads */}
+      {/* Birthdays + Team Contacts */}
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Upcoming Birthdays */}
+        <Card className="border-rose-200/50 dark:border-rose-800/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Cake className="h-4 w-4 text-rose-500" />
+              🎂 Nadcházející narozeniny
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {upcomingBirthdays.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                V příštích 14 dnech nemá nikdo narozeniny
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {upcomingBirthdays.map((colleague) => (
+                  <Link
+                    key={colleague.id}
+                    to={`/colleagues?highlight=${colleague.id}`}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                      colleague.isBirthdayToday
+                        ? 'bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/30 dark:to-pink-950/30 border-rose-300 dark:border-rose-700 shadow-sm'
+                        : 'bg-card hover:bg-muted/50 hover:border-primary/30'
+                    }`}
+                  >
+                    <Avatar className={`h-10 w-10 ${colleague.isBirthdayToday ? 'ring-2 ring-rose-400 ring-offset-2' : ''}`}>
+                      <AvatarFallback className={`${colleague.isBirthdayToday ? 'bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-300' : 'bg-primary/10 text-primary'} text-sm`}>
+                        {colleague.full_name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm truncate">{colleague.full_name}</p>
+                        {colleague.isBirthdayToday && (
+                          <Badge className="bg-rose-500 hover:bg-rose-600 text-white text-xs px-1.5 py-0">
+                            🎉 Dnes!
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{colleague.position}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {colleague.isBirthdayToday ? (
+                        <span className="text-lg">🎂</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          {formatBirthdayShort(colleague.birthday!)}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Team Contacts */}
         <Card>
           <CardHeader className="pb-3">
@@ -158,7 +220,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2">
-              {activeColleagues.map((colleague) => (
+              {activeColleagues.slice(0, 6).map((colleague) => (
                 <Link 
                   key={colleague.id}
                   to={`/colleagues?highlight=${colleague.id}`}
@@ -189,7 +251,10 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
 
+      {/* Won Leads + Top Clients */}
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Won Leads */}
         <Card>
           <CardHeader className="pb-3">
@@ -228,10 +293,7 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* Top Clients + Recent Engagements */}
-      <div className="grid gap-6 lg:grid-cols-2">
         {/* Top Clients */}
         <Card>
           <CardHeader className="pb-3">
@@ -263,43 +325,43 @@ export default function Dashboard() {
             ))}
           </CardContent>
         </Card>
-
-        {/* Recent Engagements */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium">
-              📋 Poslední zakázky
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {recentEngagements.map((engagement) => {
-              const client = getClientById(engagement.client_id);
-              return (
-                <div 
-                  key={engagement.id} 
-                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{engagement.name}</p>
-                    <p className="text-xs text-muted-foreground">{client?.brand_name}</p>
-                  </div>
-                  <div className="flex items-center gap-2 ml-2">
-                    <StatusBadge status={engagement.status} />
-                    {canSeeFinancials && (
-                      <span className="text-sm font-medium whitespace-nowrap">
-                        {engagement.type === 'retainer' 
-                          ? `${engagement.monthly_fee.toLocaleString()} CZK/měs`
-                          : `${engagement.one_off_fee.toLocaleString()} CZK`
-                        }
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
       </div>
+
+      {/* Recent Engagements */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">
+            📋 Poslední zakázky
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          {recentEngagements.map((engagement) => {
+            const client = getClientById(engagement.client_id);
+            return (
+              <div 
+                key={engagement.id} 
+                className="flex items-center justify-between py-2 border-b border-border last:border-0"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{engagement.name}</p>
+                  <p className="text-xs text-muted-foreground">{client?.brand_name}</p>
+                </div>
+                <div className="flex items-center gap-2 ml-2">
+                  <StatusBadge status={engagement.status} />
+                  {canSeeFinancials && (
+                    <span className="text-sm font-medium whitespace-nowrap">
+                      {engagement.type === 'retainer' 
+                        ? `${engagement.monthly_fee.toLocaleString()} CZK/měs`
+                        : `${engagement.one_off_fee.toLocaleString()} CZK`
+                      }
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
     </div>
   );
 }

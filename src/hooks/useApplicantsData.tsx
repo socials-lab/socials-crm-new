@@ -166,6 +166,7 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
       monthly_fixed_cost: null,
       notes: `IČO: ${data.ico}\nFirma: ${data.company_name}${data.dic ? `\nDIČ: ${data.dic}` : ''}\nAdresa: ${data.billing_street}, ${data.billing_zip} ${data.billing_city}\nÚčet: ${data.bank_account}`,
       profile_id: null,
+      birthday: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

@@ -246,6 +246,7 @@ export interface Colleague {
   capacity_hours_per_month: number | null;
   status: ColleagueStatus;
   notes: string;
+  birthday: string | null;
   created_at: string;
   updated_at: string;
 }

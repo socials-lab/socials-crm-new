@@ -26,6 +26,7 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   lead_converted: 'Lead převeden',
   access_granted: 'Přístupy uděleny',
   offer_sent: 'Nabídka odeslána',
+  colleague_birthday: 'Narozeniny kolegy',
 };
 
 export default function Notifications() {
