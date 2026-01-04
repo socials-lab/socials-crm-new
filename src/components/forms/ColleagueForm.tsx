@@ -1,10 +1,19 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Form,
   FormControl,
@@ -20,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type { Colleague } from '@/types/crm';
 
 const colleagueSchema = z.object({
@@ -34,6 +44,7 @@ const colleagueSchema = z.object({
   capacity_hours_per_month: z.coerce.number().min(0).nullable(),
   status: z.enum(['active', 'on_hold', 'left'] as const),
   notes: z.string(),
+  birthday: z.date().nullable(),
   invite_to_crm: z.boolean(),
   role: z.enum(['admin', 'management', 'project_manager', 'specialist', 'finance'] as const).optional(),
 });
@@ -62,6 +73,7 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
       capacity_hours_per_month: colleague?.capacity_hours_per_month ?? null,
       status: colleague?.status || 'active',
       notes: colleague?.notes || '',
+      birthday: colleague?.birthday ? new Date(colleague.birthday) : null,
       invite_to_crm: showInviteOption,
       role: 'specialist',
     },
@@ -108,25 +120,71 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Telefon</FormLabel>
-              <FormControl>
-                <Input 
-                  type="tel" 
-                  placeholder="+420 602 123 456" 
-                  {...field} 
-                  value={field.value || ''} 
-                  onChange={(e) => field.onChange(e.target.value || null)}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Telefon</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="tel" 
+                    placeholder="+420 602 123 456" 
+                    {...field} 
+                    value={field.value || ''} 
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="birthday"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Datum narození</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "d. MMMM yyyy", { locale: cs })
+                        ) : (
+                          <span>Vybrat datum</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value || undefined}
+                      onSelect={field.onChange}
+                      disabled={(date) => date > new Date()}
+                      initialFocus
+                      className="pointer-events-auto"
+                      captionLayout="dropdown-buttons"
+                      fromYear={1950}
+                      toYear={new Date().getFullYear()}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField

@@ -1,9 +1,44 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { mockNotifications } from '@/data/notificationsMockData';
 import type { Notification } from '@/types/notifications';
+import { useCRMData } from '@/hooks/useCRMData';
+import { 
+  getTodaysBirthdays, 
+  wasBirthdayNotificationShown, 
+  markBirthdayNotificationShown 
+} from '@/utils/birthdayUtils';
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const { colleagues } = useCRMData();
+
+  // Check for birthday notifications on load and when colleagues change
+  useEffect(() => {
+    if (!colleagues || colleagues.length === 0) return;
+
+    const todaysBirthdays = getTodaysBirthdays(colleagues);
+    
+    todaysBirthdays.forEach((colleague) => {
+      if (!wasBirthdayNotificationShown(colleague.id)) {
+        const birthdayNotification: Notification = {
+          id: `birthday-${colleague.id}-${Date.now()}`,
+          type: 'colleague_birthday',
+          title: '🎂 Narozeniny!',
+          message: `${colleague.full_name} má dnes narozeniny! Nezapomeňte popřát.`,
+          link: '/colleagues',
+          read: false,
+          created_at: new Date().toISOString(),
+          metadata: {
+            colleague_id: colleague.id,
+            colleague_name: colleague.full_name,
+          },
+        };
+        
+        setNotifications(prev => [birthdayNotification, ...prev]);
+        markBirthdayNotificationShown(colleague.id);
+      }
+    });
+  }, [colleagues]);
 
   const unreadCount = useMemo(
     () => notifications.filter(n => !n.read).length,

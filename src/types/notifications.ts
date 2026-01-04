@@ -4,7 +4,8 @@ export type NotificationType =
   | 'contract_signed'
   | 'lead_converted'
   | 'access_granted'
-  | 'offer_sent';
+  | 'offer_sent'
+  | 'colleague_birthday';
 
 export interface Notification {
   id: string;
@@ -18,6 +19,8 @@ export interface Notification {
     lead_id?: string;
     client_id?: string;
     company_name?: string;
+    colleague_id?: string;
+    colleague_name?: string;
   };
 }
 
@@ -55,5 +58,10 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, {
     icon: '📤', 
     color: 'text-pink-600',
     bgColor: 'bg-pink-500/10'
+  },
+  colleague_birthday: { 
+    icon: '🎂', 
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-500/10'
   },
 };
