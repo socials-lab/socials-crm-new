@@ -6,10 +6,8 @@ import {
   Clock, 
   MapPin, 
   Link as LinkIcon, 
-  Users, 
   Building2,
   FileText,
-  CheckSquare,
   Sparkles,
   Edit,
   Trash2,
@@ -25,13 +23,23 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useMeetingsData } from '@/hooks/useMeetingsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
@@ -116,7 +124,6 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
   };
 
   const handleDelete = async () => {
-    if (!confirm('Opravdu chcete smazat tento meeting?')) return;
     try {
       await deleteMeeting(meeting.id);
       onOpenChange(false);
@@ -159,9 +166,6 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
                 </Badge>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleDelete}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
           </div>
         </SheetHeader>
 
@@ -209,7 +213,7 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
 
         {/* Status Actions */}
         {meeting.status !== 'cancelled' && (
-          <div className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-6 flex-wrap">
             {meeting.status === 'scheduled' && (
               <>
                 <Button 
@@ -235,6 +239,29 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
                 Ukončit meeting
               </Button>
             )}
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Smazat
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Smazat meeting?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Opravdu chcete smazat meeting "{meeting.title}"? Tuto akci nelze vrátit zpět.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Smazat
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
 
