@@ -24,6 +24,7 @@ const mainNavItems = [
   { title: '🔧 Vícepráce', url: '/extra-work', page: 'extra-work' },
   { title: '🧾 Fakturace', url: '/invoicing', page: 'invoicing' },
   { title: '🎨 Creative Boost', url: '/creative-boost', page: 'creative-boost' },
+  { title: '📅 Meetingy', url: '/meetings', page: 'meetings' },
   { title: '📦 Služby', url: '/services', page: 'services' },
   { title: '👥 Kolegové', url: '/colleagues', page: 'colleagues' },
   { title: '🎓 Nábor', url: '/recruitment', page: 'recruitment' },
