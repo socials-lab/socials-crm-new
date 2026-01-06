@@ -28,6 +28,7 @@ const mainNavItems = [
   { title: '📦 Služby', url: '/services', page: 'services' },
   { title: '👥 Kolegové', url: '/colleagues', page: 'colleagues' },
   { title: '🎓 Nábor', url: '/recruitment', page: 'recruitment' },
+  { title: '💡 Feedback Zone', url: '/feedback', page: 'feedback' },
   { title: '📊 Analytika', url: '/analytics', page: 'analytics' },
 ];
 
