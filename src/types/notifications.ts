@@ -5,7 +5,8 @@ export type NotificationType =
   | 'lead_converted'
   | 'access_granted'
   | 'offer_sent'
-  | 'colleague_birthday';
+  | 'colleague_birthday'
+  | 'new_feedback_idea';
 
 export interface Notification {
   id: string;
@@ -63,5 +64,10 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, {
     icon: '🎂', 
     color: 'text-rose-600',
     bgColor: 'bg-rose-500/10'
+  },
+  new_feedback_idea: { 
+    icon: '💡', 
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-500/10'
   },
 };

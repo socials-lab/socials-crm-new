@@ -27,6 +27,7 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   access_granted: 'Přístupy uděleny',
   offer_sent: 'Nabídka odeslána',
   colleague_birthday: 'Narozeniny kolegy',
+  new_feedback_idea: 'Nový nápad',
 };
 
 export default function Notifications() {
