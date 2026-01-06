@@ -8,12 +8,18 @@ import {
   Mail,
   PartyPopper,
   Cake,
+  Calendar,
+  Clock,
+  Video,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
+import { useMeetingsData } from '@/hooks/useMeetingsData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -24,6 +30,7 @@ import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils
 export default function Dashboard() {
   const { leads } = useLeadsData();
   const { clients, engagements, colleagues, getClientById } = useCRMData();
+  const { getTodaysMeetings, getUpcomingMeetings } = useMeetingsData();
   
   // For now, always show financials (will be role-based later)
   const canSeeFinancials = true;
@@ -36,6 +43,10 @@ export default function Dashboard() {
 
   // Upcoming birthdays (next 14 days)
   const upcomingBirthdays = getUpcomingBirthdays(colleagues, 14);
+
+  // Today's meetings
+  const todaysMeetings = getTodaysMeetings();
+  const upcomingMeetingsWeek = getUpcomingMeetings(7);
 
   // Won leads (newly acquired clients)
   const wonLeads = leads
@@ -152,8 +163,79 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Birthdays + Team Contacts */}
+      {/* Today's Meetings + Birthdays */}
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Today's Meetings */}
+        <Card className="border-primary/20">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                📅 Dnešní meetingy
+              </CardTitle>
+              <Link to="/meetings">
+                <Button variant="ghost" size="sm" className="text-xs">
+                  Všechny meetingy
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {todaysMeetings.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                Dnes nejsou naplánované žádné meetingy
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {todaysMeetings.slice(0, 5).map((meeting) => {
+                  const meetingDate = new Date(meeting.scheduled_at);
+                  const client = meeting.client_id ? clients.find(c => c.id === meeting.client_id) : null;
+                  return (
+                    <Link
+                      key={meeting.id}
+                      to="/meetings"
+                      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 hover:border-primary/30 transition-all cursor-pointer"
+                    >
+                      <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                        {meeting.meeting_link ? (
+                          <Video className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Calendar className="h-4 w-4 text-primary" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{meeting.title}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {format(meetingDate, 'HH:mm')}
+                          </span>
+                          <span>•</span>
+                          <span>{meeting.duration_minutes} min</span>
+                          {client && (
+                            <>
+                              <span>•</span>
+                              <span>{client.brand_name || client.name}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {meeting.type === 'internal' ? '🏠' : '🏢'}
+                      </Badge>
+                    </Link>
+                  );
+                })}
+                {todaysMeetings.length > 5 && (
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    + {todaysMeetings.length - 5} dalších meetingů
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Upcoming Birthdays */}
         <Card className="border-rose-200/50 dark:border-rose-800/30">
           <CardHeader className="pb-3">
