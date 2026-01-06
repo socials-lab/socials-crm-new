@@ -268,11 +268,10 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
         <Separator className="my-4" />
 
         <Tabs defaultValue={isPast ? 'summary' : 'agenda'} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="participants">Účastníci</TabsTrigger>
             <TabsTrigger value="summary">Shrnutí</TabsTrigger>
-            <TabsTrigger value="tasks">Úkoly</TabsTrigger>
           </TabsList>
 
           <TabsContent value="agenda" className="mt-4">
@@ -472,13 +471,6 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
             </Card>
           </TabsContent>
 
-          <TabsContent value="tasks" className="mt-4">
-            <MeetingTasks 
-              meetingId={meeting.id} 
-              tasks={tasks}
-              colleagues={colleagues}
-            />
-          </TabsContent>
         </Tabs>
       </SheetContent>
     </Sheet>
