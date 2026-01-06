@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useState } from 'react';
+import { createContext, useContext, ReactNode, useState, useMemo } from 'react';
 import type { 
   Meeting, 
   MeetingParticipant, 
@@ -6,12 +6,16 @@ import type {
   MeetingWithDetails,
 } from '@/types/meetings';
 import { useCRMData } from './useCRMData';
+import { useUserRole } from './useUserRole';
 
 interface MeetingsDataContextType {
   // Data
   meetings: Meeting[];
   participants: MeetingParticipant[];
   tasks: MeetingTask[];
+  
+  // Access control
+  canViewAllMeetings: boolean;
   
   // Loading states
   isLoading: boolean;
@@ -184,12 +188,29 @@ const generateDummyTasks = (): MeetingTask[] => [
 
 export function MeetingsDataProvider({ children }: { children: ReactNode }) {
   const { clients, engagements, colleagues } = useCRMData();
+  const { colleagueId, isSuperAdmin, role } = useUserRole();
   
-  const [meetings, setMeetings] = useState<Meeting[]>(generateDummyMeetings);
+  const [allMeetings, setAllMeetings] = useState<Meeting[]>(generateDummyMeetings);
   const [participants, setParticipants] = useState<MeetingParticipant[]>(generateDummyParticipants);
   const [tasks, setTasks] = useState<MeetingTask[]>(generateDummyTasks);
 
   const isLoading = false;
+  
+  // Admins and management can view all meetings
+  const canViewAllMeetings = isSuperAdmin || role === 'admin' || role === 'management';
+  
+  // Filter meetings based on user role and participation
+  const meetings = useMemo(() => {
+    if (canViewAllMeetings) return allMeetings;
+    if (!colleagueId) return [];
+    
+    // Find meeting IDs where user is a participant
+    const myMeetingIds = participants
+      .filter(p => p.colleague_id === colleagueId)
+      .map(p => p.meeting_id);
+    
+    return allMeetings.filter(m => myMeetingIds.includes(m.id));
+  }, [allMeetings, participants, colleagueId, canViewAllMeetings]);
 
   // Meeting operations
   const addMeeting = async (data: Omit<Meeting, 'id' | 'created_at' | 'updated_at'>): Promise<Meeting> => {
@@ -199,18 +220,18 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    setMeetings(prev => [...prev, newMeeting]);
+    setAllMeetings(prev => [...prev, newMeeting]);
     return newMeeting;
   };
 
   const updateMeeting = async (id: string, data: Partial<Meeting>): Promise<void> => {
-    setMeetings(prev => prev.map(m => 
+    setAllMeetings(prev => prev.map(m => 
       m.id === id ? { ...m, ...data, updated_at: new Date().toISOString() } : m
     ));
   };
 
   const deleteMeeting = async (id: string): Promise<void> => {
-    setMeetings(prev => prev.filter(m => m.id !== id));
+    setAllMeetings(prev => prev.filter(m => m.id !== id));
     setParticipants(prev => prev.filter(p => p.meeting_id !== id));
     setTasks(prev => prev.filter(t => t.meeting_id !== id));
   };
@@ -265,8 +286,8 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
     setTasks(prev => prev.filter(t => t.id !== id));
   };
 
-  // Helper functions
-  const getMeetingById = (id: string) => meetings.find(m => m.id === id);
+  // Helper functions - use allMeetings for internal lookups to support operations
+  const getMeetingById = (id: string) => allMeetings.find(m => m.id === id);
 
   const getMeetingWithDetails = (id: string): MeetingWithDetails | undefined => {
     const meeting = getMeetingById(id);
@@ -349,6 +370,7 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
     meetings,
     participants,
     tasks,
+    canViewAllMeetings,
     isLoading,
     addMeeting,
     updateMeeting,
