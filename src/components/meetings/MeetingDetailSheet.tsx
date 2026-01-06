@@ -16,6 +16,8 @@ import {
   ExternalLink,
   Save,
   X,
+  Mail,
+  CalendarCheck,
 } from 'lucide-react';
 import {
   Sheet,
@@ -51,9 +53,10 @@ const STATUS_CONFIG: Record<MeetingStatus, { label: string; color: string }> = {
 };
 
 export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetailSheetProps) {
-  const { updateMeeting, deleteMeeting, getParticipantsByMeetingId, getTasksByMeetingId } = useMeetingsData();
+  const { updateMeeting, deleteMeeting, getParticipantsByMeetingId, getTasksByMeetingId, sendCalendarInvites } = useMeetingsData();
   const { clients, engagements, colleagues } = useCRMData();
   const { toast } = useToast();
+  const [isSendingInvites, setIsSendingInvites] = useState(false);
   
   const [isEditingAgenda, setIsEditingAgenda] = useState(false);
   const [isEditingTranscript, setIsEditingTranscript] = useState(false);
@@ -120,6 +123,25 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
       toast({ title: 'Meeting smazán' });
     } catch (error) {
       toast({ title: 'Chyba při mazání', variant: 'destructive' });
+    }
+  };
+
+  const handleSendInvites = async () => {
+    setIsSendingInvites(true);
+    try {
+      await sendCalendarInvites(meeting.id);
+      toast({ 
+        title: 'Pozvánky připraveny k odeslání',
+        description: 'Pro skutečné odeslání je potřeba nastavit Resend API.',
+      });
+    } catch (error: any) {
+      toast({ 
+        title: 'Chyba při odesílání', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsSendingInvites(false);
     }
   };
 
@@ -275,7 +297,47 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
             </Card>
           </TabsContent>
 
-          <TabsContent value="participants" className="mt-4">
+          <TabsContent value="participants" className="mt-4 space-y-4">
+            {/* Calendar Invite Section */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CalendarCheck className="h-4 w-4" />
+                    Kalendářní pozvánky
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="text-sm text-muted-foreground">
+                    {meeting.calendar_invites_sent_at ? (
+                      <span className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                        <Mail className="h-4 w-4" />
+                        Odesláno {format(new Date(meeting.calendar_invites_sent_at), 'd. M. yyyy HH:mm', { locale: cs })}
+                      </span>
+                    ) : (
+                      <span>Pozvánky zatím nebyly odeslány</span>
+                    )}
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant={meeting.calendar_invites_sent_at ? 'outline' : 'default'}
+                    onClick={handleSendInvites}
+                    disabled={isSendingInvites || participants.length === 0}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    {isSendingInvites ? 'Odesílám...' : meeting.calendar_invites_sent_at ? 'Odeslat znovu' : 'Odeslat pozvánky'}
+                  </Button>
+                </div>
+                {participants.length === 0 && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Nejprve přidejte účastníky níže.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             <MeetingParticipants 
               meetingId={meeting.id} 
               participants={participants}

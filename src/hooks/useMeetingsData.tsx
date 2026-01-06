@@ -42,6 +42,7 @@ interface MeetingsDataContextType {
   getTodaysMeetings: () => Meeting[];
   getMeetingsByEngagement: (engagementId: string) => Meeting[];
   getMeetingsByClient: (clientId: string) => Meeting[];
+  sendCalendarInvites: (meetingId: string) => Promise<void>;
 }
 
 const MeetingsDataContext = createContext<MeetingsDataContextType | null>(null);
@@ -58,6 +59,7 @@ const transformMeeting = (row: any): Meeting => ({
   ai_summary: row.ai_summary || '',
   notes: row.notes || '',
   duration_minutes: row.duration_minutes || 60,
+  calendar_invites_sent_at: row.calendar_invites_sent_at || null,
   created_at: row.created_at || new Date().toISOString(),
   updated_at: row.updated_at || new Date().toISOString(),
 });
@@ -273,6 +275,31 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
   const getMeetingsByClient = (clientId: string) =>
     meetings.filter(m => m.client_id === clientId);
 
+  const sendCalendarInvites = async (meetingId: string) => {
+    const meeting = getMeetingById(meetingId);
+    if (!meeting) throw new Error('Meeting not found');
+    
+    const meetingParticipants = getParticipantsByMeetingId(meetingId);
+    const colleagueEmails = meetingParticipants
+      .filter(p => p.colleague_id)
+      .map(p => {
+        const colleague = colleagues.find(c => c.id === p.colleague_id);
+        return colleague?.email;
+      })
+      .filter(Boolean);
+
+    if (colleagueEmails.length === 0) {
+      throw new Error('Žádní účastníci s emailem');
+    }
+
+    // TODO: Call edge function to send actual emails
+    // For now, just update the timestamp
+    await updateMeetingMutation.mutateAsync({
+      id: meetingId,
+      data: { calendar_invites_sent_at: new Date().toISOString() },
+    });
+  };
+
   const value: MeetingsDataContextType = {
     meetings,
     participants,
@@ -295,6 +322,7 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
     getTodaysMeetings,
     getMeetingsByEngagement,
     getMeetingsByClient,
+    sendCalendarInvites,
   };
 
   return (

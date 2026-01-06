@@ -110,6 +110,7 @@ export function AddMeetingDialog() {
         ai_summary: '',
         notes: '',
         created_by: null,
+        calendar_invites_sent_at: null,
       });
 
       toast({
