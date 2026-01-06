@@ -44,7 +44,6 @@ import type { MeetingType } from '@/types/meetings';
 
 const meetingSchema = z.object({
   title: z.string().min(1, 'Název je povinný'),
-  description: z.string().optional(),
   type: z.enum(['internal', 'client']),
   client_id: z.string().nullable().optional(),
   engagement_id: z.string().nullable().optional(),
@@ -68,7 +67,6 @@ export function AddMeetingDialog() {
     resolver: zodResolver(meetingSchema),
     defaultValues: {
       title: '',
-      description: '',
       type: 'internal',
       client_id: null,
       engagement_id: null,
@@ -96,7 +94,7 @@ export function AddMeetingDialog() {
 
       await addMeeting({
         title: data.title,
-        description: data.description || '',
+        description: '',
         type: data.type as MeetingType,
         client_id: data.type === 'client' ? data.client_id || null : null,
         engagement_id: data.type === 'client' ? data.engagement_id || null : null,
@@ -382,22 +380,6 @@ export function AddMeetingDialog() {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Popis</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Dodatečné informace..."
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
