@@ -1,6 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { createContext, useContext, ReactNode, useState } from 'react';
 import type { 
   Meeting, 
   MeetingParticipant, 
@@ -47,177 +45,225 @@ interface MeetingsDataContextType {
 
 const MeetingsDataContext = createContext<MeetingsDataContextType | null>(null);
 
-const transformMeeting = (row: any): Meeting => ({
-  ...row,
-  type: row.type || 'internal',
-  status: row.status || 'scheduled',
-  description: row.description || '',
-  location: row.location || '',
-  meeting_link: row.meeting_link || '',
-  agenda: row.agenda || '',
-  transcript: row.transcript || '',
-  ai_summary: row.ai_summary || '',
-  notes: row.notes || '',
-  duration_minutes: row.duration_minutes || 60,
-  calendar_invites_sent_at: row.calendar_invites_sent_at || null,
-  created_at: row.created_at || new Date().toISOString(),
-  updated_at: row.updated_at || new Date().toISOString(),
-});
+// Generate dummy meetings data
+const generateDummyMeetings = (): Meeting[] => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  return [
+    {
+      id: 'meeting-1',
+      title: 'Týdenní standup',
+      description: '',
+      type: 'internal',
+      client_id: null,
+      engagement_id: null,
+      scheduled_at: new Date(today.getTime() + 9 * 60 * 60 * 1000).toISOString(), // today 9:00
+      duration_minutes: 30,
+      location: 'Kancelář',
+      meeting_link: 'https://meet.google.com/abc-defg-hij',
+      status: 'scheduled',
+      agenda: '1. Status update\n2. Blokery\n3. Plán na tento týden',
+      transcript: '',
+      ai_summary: '',
+      notes: '',
+      created_by: null,
+      calendar_invites_sent_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'meeting-2',
+      title: 'Kick-off nového projektu',
+      description: '',
+      type: 'client',
+      client_id: null,
+      engagement_id: null,
+      scheduled_at: new Date(today.getTime() + 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000).toISOString(), // tomorrow 14:00
+      duration_minutes: 60,
+      location: 'Online',
+      meeting_link: 'https://zoom.us/j/123456789',
+      status: 'scheduled',
+      agenda: '1. Představení týmu\n2. Cíle projektu\n3. Timeline\n4. Q&A',
+      transcript: '',
+      ai_summary: '',
+      notes: '',
+      created_by: null,
+      calendar_invites_sent_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'meeting-3',
+      title: 'Review kampaní Q1',
+      description: '',
+      type: 'client',
+      client_id: null,
+      engagement_id: null,
+      scheduled_at: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000 + 10 * 60 * 60 * 1000).toISOString(), // in 3 days 10:00
+      duration_minutes: 90,
+      location: 'Zasedací místnost A',
+      meeting_link: '',
+      status: 'scheduled',
+      agenda: '1. Přehled výkonnosti\n2. Doporučení pro Q2\n3. Budget review',
+      transcript: '',
+      ai_summary: '',
+      notes: '',
+      created_by: null,
+      calendar_invites_sent_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ];
+};
+
+const generateDummyParticipants = (): MeetingParticipant[] => [
+  {
+    id: 'participant-1',
+    meeting_id: 'meeting-1',
+    colleague_id: null,
+    external_name: 'Jan Novák',
+    external_email: 'jan.novak@example.com',
+    role: 'organizer',
+    attendance: 'confirmed',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'participant-2',
+    meeting_id: 'meeting-1',
+    colleague_id: null,
+    external_name: 'Marie Svobodová',
+    external_email: 'marie@example.com',
+    role: 'required',
+    attendance: 'pending',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'participant-3',
+    meeting_id: 'meeting-2',
+    colleague_id: null,
+    external_name: 'Petr Klient',
+    external_email: 'petr@klient.cz',
+    role: 'required',
+    attendance: 'confirmed',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+const generateDummyTasks = (): MeetingTask[] => [
+  {
+    id: 'task-1',
+    meeting_id: 'meeting-1',
+    title: 'Připravit report za minulý týden',
+    description: '',
+    assigned_to: null,
+    due_date: new Date().toISOString().split('T')[0],
+    status: 'todo',
+    priority: 'high',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    completed_at: null,
+  },
+  {
+    id: 'task-2',
+    meeting_id: 'meeting-2',
+    title: 'Zaslat onboarding dokumenty',
+    description: '',
+    assigned_to: null,
+    due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    status: 'in_progress',
+    priority: 'medium',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    completed_at: null,
+  },
+];
 
 export function MeetingsDataProvider({ children }: { children: ReactNode }) {
-  const queryClient = useQueryClient();
   const { clients, engagements, colleagues } = useCRMData();
+  
+  const [meetings, setMeetings] = useState<Meeting[]>(generateDummyMeetings);
+  const [participants, setParticipants] = useState<MeetingParticipant[]>(generateDummyParticipants);
+  const [tasks, setTasks] = useState<MeetingTask[]>(generateDummyTasks);
 
-  const { data: meetings = [], isLoading: meetingsLoading } = useQuery({
-    queryKey: ['meetings'],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from('meetings')
-        .select('*')
-        .order('scheduled_at', { ascending: true });
-      if (error) throw error;
-      return (data || []).map(transformMeeting);
-    },
-  });
+  const isLoading = false;
 
-  const { data: participants = [], isLoading: participantsLoading } = useQuery({
-    queryKey: ['meeting_participants'],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from('meeting_participants')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  // Meeting operations
+  const addMeeting = async (data: Omit<Meeting, 'id' | 'created_at' | 'updated_at'>): Promise<Meeting> => {
+    const newMeeting: Meeting = {
+      ...data,
+      id: `meeting-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setMeetings(prev => [...prev, newMeeting]);
+    return newMeeting;
+  };
 
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
-    queryKey: ['meeting_tasks'],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from('meeting_tasks')
-        .select('*')
-        .order('due_date', { ascending: true });
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const updateMeeting = async (id: string, data: Partial<Meeting>): Promise<void> => {
+    setMeetings(prev => prev.map(m => 
+      m.id === id ? { ...m, ...data, updated_at: new Date().toISOString() } : m
+    ));
+  };
 
-  const isLoading = meetingsLoading || participantsLoading || tasksLoading;
+  const deleteMeeting = async (id: string): Promise<void> => {
+    setMeetings(prev => prev.filter(m => m.id !== id));
+    setParticipants(prev => prev.filter(p => p.meeting_id !== id));
+    setTasks(prev => prev.filter(t => t.meeting_id !== id));
+  };
 
-  // Mutations
-  const addMeetingMutation = useMutation({
-    mutationFn: async (data: Omit<Meeting, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data: result, error } = await (supabase as any)
-        .from('meetings')
-        .insert(data)
-        .select()
-        .single();
-      if (error) throw error;
-      return transformMeeting(result);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meetings'] }),
-  });
+  // Participant operations
+  const addParticipant = async (data: Omit<MeetingParticipant, 'id' | 'created_at' | 'updated_at'>): Promise<MeetingParticipant> => {
+    const newParticipant: MeetingParticipant = {
+      ...data,
+      id: `participant-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setParticipants(prev => [...prev, newParticipant]);
+    return newParticipant;
+  };
 
-  const updateMeetingMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Meeting> }) => {
-      const { error } = await (supabase as any)
-        .from('meetings')
-        .update(data)
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meetings'] }),
-  });
+  const updateParticipant = async (id: string, data: Partial<MeetingParticipant>): Promise<void> => {
+    setParticipants(prev => prev.map(p => 
+      p.id === id ? { ...p, ...data, updated_at: new Date().toISOString() } : p
+    ));
+  };
 
-  const deleteMeetingMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
-        .from('meetings')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meetings'] });
-      queryClient.invalidateQueries({ queryKey: ['meeting_participants'] });
-      queryClient.invalidateQueries({ queryKey: ['meeting_tasks'] });
-    },
-  });
+  const removeParticipant = async (id: string): Promise<void> => {
+    setParticipants(prev => prev.filter(p => p.id !== id));
+  };
 
-  const addParticipantMutation = useMutation({
-    mutationFn: async (data: Omit<MeetingParticipant, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data: result, error } = await (supabase as any)
-        .from('meeting_participants')
-        .insert(data)
-        .select()
-        .single();
-      if (error) throw error;
-      return result;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meeting_participants'] }),
-  });
+  // Task operations
+  const addTask = async (data: Omit<MeetingTask, 'id' | 'created_at' | 'updated_at' | 'completed_at'>): Promise<MeetingTask> => {
+    const newTask: MeetingTask = {
+      ...data,
+      id: `task-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      completed_at: null,
+    };
+    setTasks(prev => [...prev, newTask]);
+    return newTask;
+  };
 
-  const updateParticipantMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<MeetingParticipant> }) => {
-      const { error } = await (supabase as any)
-        .from('meeting_participants')
-        .update(data)
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meeting_participants'] }),
-  });
-
-  const removeParticipantMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
-        .from('meeting_participants')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meeting_participants'] }),
-  });
-
-  const addTaskMutation = useMutation({
-    mutationFn: async (data: Omit<MeetingTask, 'id' | 'created_at' | 'updated_at' | 'completed_at'>) => {
-      const { data: result, error } = await (supabase as any)
-        .from('meeting_tasks')
-        .insert(data)
-        .select()
-        .single();
-      if (error) throw error;
-      return result;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meeting_tasks'] }),
-  });
-
-  const updateTaskMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<MeetingTask> }) => {
-      const updateData = { ...data };
-      if (data.status === 'done' && !data.completed_at) {
-        updateData.completed_at = new Date().toISOString();
+  const updateTask = async (id: string, data: Partial<MeetingTask>): Promise<void> => {
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const updated = { ...t, ...data, updated_at: new Date().toISOString() };
+      if (data.status === 'done' && !updated.completed_at) {
+        updated.completed_at = new Date().toISOString();
       }
-      const { error } = await (supabase as any)
-        .from('meeting_tasks')
-        .update(updateData)
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meeting_tasks'] }),
-  });
+      return updated;
+    }));
+  };
 
-  const deleteTaskMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
-        .from('meeting_tasks')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meeting_tasks'] }),
-  });
+  const deleteTask = async (id: string): Promise<void> => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+  };
 
   // Helper functions
   const getMeetingById = (id: string) => meetings.find(m => m.id === id);
@@ -280,24 +326,23 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
     if (!meeting) throw new Error('Meeting not found');
     
     const meetingParticipants = getParticipantsByMeetingId(meetingId);
-    const colleagueEmails = meetingParticipants
-      .filter(p => p.colleague_id)
+    const emails = meetingParticipants
+      .filter(p => p.colleague_id || p.external_email)
       .map(p => {
-        const colleague = colleagues.find(c => c.id === p.colleague_id);
-        return colleague?.email;
+        if (p.colleague_id) {
+          const colleague = colleagues.find(c => c.id === p.colleague_id);
+          return colleague?.email;
+        }
+        return p.external_email;
       })
       .filter(Boolean);
 
-    if (colleagueEmails.length === 0) {
+    if (emails.length === 0) {
       throw new Error('Žádní účastníci s emailem');
     }
 
-    // TODO: Call edge function to send actual emails
-    // For now, just update the timestamp
-    await updateMeetingMutation.mutateAsync({
-      id: meetingId,
-      data: { calendar_invites_sent_at: new Date().toISOString() },
-    });
+    // Mock: just update timestamp
+    await updateMeeting(meetingId, { calendar_invites_sent_at: new Date().toISOString() });
   };
 
   const value: MeetingsDataContextType = {
@@ -305,15 +350,15 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
     participants,
     tasks,
     isLoading,
-    addMeeting: (data) => addMeetingMutation.mutateAsync(data),
-    updateMeeting: (id, data) => updateMeetingMutation.mutateAsync({ id, data }),
-    deleteMeeting: (id) => deleteMeetingMutation.mutateAsync(id),
-    addParticipant: (data) => addParticipantMutation.mutateAsync(data),
-    updateParticipant: (id, data) => updateParticipantMutation.mutateAsync({ id, data }),
-    removeParticipant: (id) => removeParticipantMutation.mutateAsync(id),
-    addTask: (data) => addTaskMutation.mutateAsync(data),
-    updateTask: (id, data) => updateTaskMutation.mutateAsync({ id, data }),
-    deleteTask: (id) => deleteTaskMutation.mutateAsync(id),
+    addMeeting,
+    updateMeeting,
+    deleteMeeting,
+    addParticipant,
+    updateParticipant,
+    removeParticipant,
+    addTask,
+    updateTask,
+    deleteTask,
     getMeetingById,
     getMeetingWithDetails,
     getParticipantsByMeetingId,
