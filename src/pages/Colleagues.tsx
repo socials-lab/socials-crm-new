@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ChevronDown, ChevronUp, Mail, CreditCard, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus, Send } from 'lucide-react';
+import { Search, Plus, ChevronDown, ChevronUp, Mail, CreditCard, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -75,7 +75,7 @@ function ColleaguesContent() {
   // Inline editing for assignment costs (super admin only)
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [tempCost, setTempCost] = useState<string>('');
-  const [isInviting, setIsInviting] = useState(false);
+  
 
   // Handle highlight from URL
   useEffect(() => {
@@ -154,7 +154,6 @@ function ColleaguesContent() {
     } else {
       // If invite_to_crm is checked, use edge function (creates colleague + user + sends email)
       if (invite_to_crm && role) {
-        setIsInviting(true);
         try {
           const nameParts = colleagueData.full_name.split(' ');
           const firstName = nameParts[0] || '';
@@ -178,12 +177,10 @@ function ColleaguesContent() {
           });
           
           if (error) {
-            // Parse error from edge function response
             const errorMessage = error.message || 'Nepodařilo se pozvat uživatele';
             throw new Error(errorMessage);
           }
           
-          // Check if response contains error
           if (responseData?.error) {
             throw new Error(responseData.error);
           }
@@ -192,8 +189,6 @@ function ColleaguesContent() {
         } catch (error: any) {
           console.error('Error inviting user:', error);
           toast.error(error.message || 'Nepodařilo se pozvat uživatele');
-        } finally {
-          setIsInviting(false);
         }
       } else {
         // No invite - just create colleague locally
@@ -205,32 +200,6 @@ function ColleaguesContent() {
     setEditingColleague(null);
   };
 
-  const handleInviteExistingColleague = async (colleague: Colleague) => {
-    setIsInviting(true);
-    try {
-      const nameParts = colleague.full_name.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
-      
-      const { error } = await supabase.functions.invoke('invite-user', {
-        body: {
-          email: colleague.email,
-          firstName,
-          lastName,
-          role: 'specialist',
-          position: colleague.position,
-        },
-      });
-      
-      if (error) throw error;
-      toast.success(`Pozvánka odeslána na ${colleague.email}`);
-    } catch (error: any) {
-      console.error('Error inviting user:', error);
-      toast.error(`Nepodařilo se odeslat pozvánku: ${error.message}`);
-    } finally {
-      setIsInviting(false);
-    }
-  };
 
   const handleSaveAssignmentCost = (assignmentId: string) => {
     const cost = parseFloat(tempCost) || 0;
@@ -405,22 +374,6 @@ function ColleaguesContent() {
                         </p>
                       </div>
                       
-                      {/* Invite to CRM button for colleagues without profile_id */}
-                      {superAdmin && !colleague.profile_id && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="gap-2 mt-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleInviteExistingColleague(colleague);
-                          }}
-                          disabled={isInviting}
-                        >
-                          <Send className="h-3.5 w-3.5" />
-                          {isInviting ? 'Posílám...' : 'Pozvat do CRM'}
-                        </Button>
-                      )}
                     </div>
 
                     {superAdmin && (
