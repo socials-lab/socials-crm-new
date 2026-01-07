@@ -44,7 +44,7 @@ const managementNavItems = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const { isSuperAdmin, colleagueId } = useUserRole();
+  const { isSuperAdmin, colleagueId, canAccessPage } = useUserRole();
   const { setOpenMobile } = useSidebar();
   
   const isActive = (path: string) => {
@@ -59,9 +59,9 @@ export function AppSidebar() {
 
   const hasColleagueId = !!colleagueId;
   
-  // For now, allow all pages (role-based permissions will be implemented later)
-  const canViewPage = (_pageName: string): boolean => {
-    return true;
+  // Check if user can view a specific page based on allowed_pages
+  const canViewPage = (pageName: string): boolean => {
+    return canAccessPage(pageName);
   };
   
   // Filter nav items based on user permissions

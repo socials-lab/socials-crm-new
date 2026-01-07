@@ -19,6 +19,8 @@ interface UserRoleData {
   user_id: string;
   role: AppRole;
   is_super_admin: boolean;
+  allowed_pages?: string[];
+  can_see_financials?: boolean;
   profile?: {
     id: string;
     email: string | null;
@@ -46,13 +48,15 @@ export function UserManagement() {
     is_super_admin: boolean;
     displayName: string;
     email: string;
+    allowed_pages?: string[];
+    can_see_financials?: boolean;
   } | null>(null);
 
   const fetchUserRoles = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('user_roles')
-      .select('id, user_id, role, is_super_admin');
+      .select('*');
     
     if (error) {
       console.error('Error fetching user roles:', error);
@@ -96,6 +100,8 @@ export function UserManagement() {
       is_super_admin: userRole.is_super_admin || false,
       displayName,
       email: userRole.profile?.email || '',
+      allowed_pages: userRole.allowed_pages || [],
+      can_see_financials: userRole.can_see_financials || false,
     });
     setEditDialogOpen(true);
   };
