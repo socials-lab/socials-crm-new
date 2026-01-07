@@ -163,7 +163,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Today's Meetings + Birthdays */}
+      {/* Today's Meetings */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Today's Meetings */}
         <Card className="border-primary/20">
@@ -171,7 +171,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-primary" />
-                📅 Dnešní meetingy
+                📅 Tvoje dnešní meetingy
               </CardTitle>
               <Link to="/meetings">
                 <Button variant="ghost" size="sm" className="text-xs">
@@ -183,7 +183,7 @@ export default function Dashboard() {
           <CardContent>
             {todaysMeetings.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                Dnes nejsou naplánované žádné meetingy
+                Dnes nemáš naplánované žádné meetingy
               </p>
             ) : (
               <div className="space-y-2">
