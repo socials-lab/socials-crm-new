@@ -30,6 +30,7 @@ export default function Meetings() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<MeetingType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [participantFilter, setParticipantFilter] = useState<string>('all');
 
   const today = startOfToday();
 
@@ -52,9 +53,16 @@ export default function Meetings() {
       // Status filter
       if (statusFilter !== 'all' && meeting.status !== statusFilter) return false;
       
+      // Participant filter
+      if (participantFilter !== 'all') {
+        const meetingParticipants = participants.filter(p => p.meeting_id === meeting.id);
+        const isParticipant = meetingParticipants.some(p => p.colleague_id === participantFilter);
+        if (!isParticipant) return false;
+      }
+      
       return true;
     });
-  }, [meetings, searchQuery, typeFilter, statusFilter, clients]);
+  }, [meetings, searchQuery, typeFilter, statusFilter, participantFilter, participants, clients]);
 
   // Split into upcoming and past
   const upcomingMeetings = filteredMeetings
@@ -155,6 +163,22 @@ export default function Meetings() {
             <SelectItem value="in_progress">Probíhá</SelectItem>
             <SelectItem value="completed">Dokončeno</SelectItem>
             <SelectItem value="cancelled">Zrušeno</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={participantFilter} onValueChange={setParticipantFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Účastník" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Všichni účastníci</SelectItem>
+            {colleagues
+              .filter(c => c.status === 'active')
+              .sort((a, b) => a.full_name.localeCompare(b.full_name))
+              .map(colleague => (
+                <SelectItem key={colleague.id} value={colleague.id}>
+                  {colleague.full_name}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
