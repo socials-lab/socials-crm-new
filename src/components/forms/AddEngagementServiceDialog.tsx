@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,6 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { TrendingUp } from 'lucide-react';
+import { useCRMData } from '@/hooks/useCRMData';
 import type { Service, EngagementService, ServiceTier } from '@/types/crm';
 import { serviceTierConfigs } from '@/constants/services';
 
@@ -63,6 +67,11 @@ export function AddEngagementServiceDialog({
   services,
   onSubmit,
 }: AddEngagementServiceDialogProps) {
+  const { colleagues } = useCRMData();
+  const [upsoldById, setUpsoldById] = useState<string | null>(null);
+  
+  const activeColleagues = colleagues.filter(c => c.status === 'active');
+
   const form = useForm<EngagementServiceFormData>({
     resolver: zodResolver(engagementServiceSchema),
     defaultValues: {
@@ -161,10 +170,16 @@ export function AddEngagementServiceDialog({
       invoiced_at: null,
       invoiced_in_period: null,
       invoice_id: null,
+      // Upsell tracking
+      upsold_by_id: upsoldById,
+      upsell_commission_percent: upsoldById ? 10 : null,
     });
     form.reset();
+    setUpsoldById(null);
     onOpenChange(false);
   };
+
+  const watchedPrice = form.watch('price');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -404,6 +419,38 @@ export function AddEngagementServiceDialog({
                 </FormItem>
               )}
             />
+
+            {/* Upsell section */}
+            <div className="p-4 rounded-lg bg-muted/50 border space-y-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-green-600" />
+                <Label className="font-medium">Upsell (volitelné)</Label>
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-sm text-muted-foreground">Prodal kolega</Label>
+                <Select 
+                  value={upsoldById || ''} 
+                  onValueChange={(val) => setUpsoldById(val || null)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Žádný upsell" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Žádný upsell</SelectItem>
+                    {activeColleagues.map(col => (
+                      <SelectItem key={col.id} value={col.id}>
+                        {col.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {upsoldById && watchedPrice > 0 && (
+                <p className="text-sm text-green-600 font-medium">
+                  💰 Provize 10%: {watchedPrice * 0.1} {form.getValues('currency')}
+                </p>
+              )}
+            </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

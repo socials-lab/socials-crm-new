@@ -51,8 +51,10 @@ import {
   FileText,
   Receipt,
   Trash2,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface ExtraWorkTableProps {
   extraWorks: ExtraWork[];
@@ -430,6 +432,7 @@ export function ExtraWorkTable({
                 const engagement = work.engagement_id ? getEngagementById(work.engagement_id) : null;
                 const config = statusConfig[work.status];
                 const isInvoiced = work.status === 'invoiced';
+                const upsoldBy = work.upsold_by_id ? getColleagueById(work.upsold_by_id) : null;
                 
                 return (
                   <TableRow key={work.id}>
@@ -446,8 +449,16 @@ export function ExtraWorkTable({
                     {/* Zakázka & Klient */}
                     <TableCell className="py-2">
                       <div className="space-y-0.5">
-                        <div className="font-medium text-sm truncate">
-                          {engagement?.name || '—'}
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm truncate">
+                            {engagement?.name || '—'}
+                          </span>
+                          {upsoldBy && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-green-50 text-green-700 border-green-200 shrink-0" title={`Prodal: ${upsoldBy.full_name} (provize ${work.upsell_commission_percent || 10}%)`}>
+                              <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+                              Upsell
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground truncate">
                           {client?.brand_name}

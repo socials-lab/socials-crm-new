@@ -12,10 +12,11 @@ import { useCRMData } from '@/hooks/useCRMData';
 import type { ExtraWork, ExtraWorkStatus } from '@/types/crm';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Clock, User, Receipt, Loader2, FileText } from 'lucide-react';
+import { Clock, User, Receipt, Loader2, FileText, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { statusConfig } from './ExtraWorkStatusBadge';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 interface ExtraWorkKanbanProps {
   extraWorks: ExtraWork[];
@@ -42,6 +43,7 @@ function KanbanCard({
   const { toast } = useToast();
   const client = getClientById(work.client_id);
   const colleague = getColleagueById(work.colleague_id);
+  const upsoldBy = work.upsold_by_id ? getColleagueById(work.upsold_by_id) : null;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -79,9 +81,17 @@ function KanbanCard({
           className="font-medium text-sm h-8 px-2 border-transparent hover:border-border focus:border-primary"
         />
         
-        {/* Client */}
+        {/* Client & Upsell badge */}
         <div className="text-xs space-y-1">
-          <div className="font-medium text-foreground">{client?.brand_name || '—'}</div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground">{client?.brand_name || '—'}</span>
+            {upsoldBy && (
+              <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-green-50 text-green-700 border-green-200">
+                <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+                Upsell
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Colleague */}
