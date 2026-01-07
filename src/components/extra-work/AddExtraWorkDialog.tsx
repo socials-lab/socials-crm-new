@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cs } from 'date-fns/locale';
 import type { ExtraWork } from '@/types/crm';
@@ -47,6 +47,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
   const [workDate, setWorkDate] = useState<Date | undefined>(new Date());
   const [billingPeriod, setBillingPeriod] = useState('');
   const [notes, setNotes] = useState('');
+  const [upsoldById, setUpsoldById] = useState<string | null>(null);
 
   // Calculated amount
   const calculatedAmount = useMemo(() => {
@@ -95,6 +96,8 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
       work_date: format(workDate, 'yyyy-MM-dd'),
       billing_period: effectiveBillingPeriod,
       notes,
+      upsold_by_id: upsoldById,
+      upsell_commission_percent: upsoldById ? 10 : null,
     });
 
     toast({
@@ -112,6 +115,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
     setWorkDate(new Date());
     setBillingPeriod('');
     setNotes('');
+    setUpsoldById(null);
     onOpenChange(false);
   };
 
@@ -279,6 +283,38 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
                 <SelectItem value="2025-02">Únor 2025</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Upsell section */}
+          <div className="p-4 rounded-lg bg-muted/50 border space-y-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-green-600" />
+              <Label className="font-medium">Upsell (volitelné)</Label>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="upsold-by" className="text-sm text-muted-foreground">Prodal kolega</Label>
+              <Select 
+                value={upsoldById || ''} 
+                onValueChange={(val) => setUpsoldById(val || null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Žádný upsell" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Žádný upsell</SelectItem>
+                  {activeColleagues.map(col => (
+                    <SelectItem key={col.id} value={col.id}>
+                      {col.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {upsoldById && calculatedAmount > 0 && (
+              <p className="text-sm text-green-600 font-medium">
+                💰 Provize 10%: {formatCurrency(Math.round(calculatedAmount * 0.1))}
+              </p>
+            )}
           </div>
 
           <div className="grid gap-2">

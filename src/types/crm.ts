@@ -228,6 +228,9 @@ export interface EngagementService {
   invoiced_at: string | null;
   invoiced_in_period: string | null; // Format: "2025-02" (year-month)
   invoice_id: string | null;
+  // Upsell tracking - who sold this service
+  upsold_by_id: string | null;
+  upsell_commission_percent: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -314,6 +317,10 @@ export interface ExtraWork {
   invoice_id: string | null;
   invoice_number: string | null;
   invoiced_at: string | null;
+  
+  // Upsell tracking - who sold this extra work
+  upsold_by_id: string | null;
+  upsell_commission_percent: number | null;
   
   notes: string;
   created_at: string;
