@@ -11,6 +11,8 @@ interface UserRoleContextType {
   isLoading: boolean;
   colleagueId: string | null;
   canSeeFinancials: boolean;
+  allowedPages: string[];
+  canAccessPage: (page: string) => boolean;
   hasRole: (role: AppRole) => boolean;
 }
 
@@ -22,6 +24,8 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [colleagueId, setColleagueId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [canSeeFinancials, setCanSeeFinancials] = useState(false);
+  const [allowedPages, setAllowedPages] = useState<string[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -30,6 +34,8 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       setRole(null);
       setIsSuperAdmin(false);
       setColleagueId(null);
+      setCanSeeFinancials(false);
+      setAllowedPages([]);
       setIsLoading(false);
       return;
     }
@@ -37,10 +43,10 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     const fetchUserRole = async () => {
       setIsLoading(true);
       try {
-        // Fetch user role
+        // Fetch user role - use raw query to handle both old and new schema
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
-          .select('role, is_super_admin')
+          .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -51,10 +57,16 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         if (roleData) {
           setRole(roleData.role);
           setIsSuperAdmin(roleData.is_super_admin || false);
+          // Handle new columns that might not exist yet
+          const data = roleData as Record<string, unknown>;
+          setCanSeeFinancials((data.can_see_financials as boolean) || false);
+          setAllowedPages((data.allowed_pages as string[]) || []);
         } else {
           // User has no role assigned yet
           setRole(null);
           setIsSuperAdmin(false);
+          setCanSeeFinancials(false);
+          setAllowedPages([]);
         }
 
         // Fetch linked colleague
@@ -84,7 +96,14 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     return role === checkRole;
   };
 
-  const canSeeFinancials = isSuperAdmin || role === 'admin' || role === 'management' || role === 'finance';
+  const canAccessPage = (page: string): boolean => {
+    // Super admin has access to everything
+    if (isSuperAdmin) return true;
+    // If no allowed_pages defined, allow access (backward compatibility)
+    if (allowedPages.length === 0) return true;
+    // Check if page is in allowed pages
+    return allowedPages.includes(page);
+  };
 
   return (
     <UserRoleContext.Provider value={{ 
@@ -93,6 +112,8 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       isLoading, 
       colleagueId,
       canSeeFinancials,
+      allowedPages,
+      canAccessPage,
       hasRole 
     }}>
       {children}
