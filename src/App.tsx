@@ -35,6 +35,7 @@ import Notifications from "./pages/Notifications";
 import Feedback from "./pages/Feedback";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
+import PublicOfferPage from "./pages/PublicOfferPage";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
                           <Route path="/auth/callback" element={<AuthCallback />} />
                           <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
                           <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
+                          <Route path="/offer/:token" element={<PublicOfferPage />} />
                           
                           {/* Protected routes */}
                           <Route element={<RouteGuard><AppLayout /></RouteGuard>}>

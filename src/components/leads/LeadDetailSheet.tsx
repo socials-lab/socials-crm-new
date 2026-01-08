@@ -23,7 +23,9 @@ import {
   FileSignature,
   CheckCircle2,
   Send,
-  Check
+  Check,
+  Link2,
+  Eye
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -61,6 +63,7 @@ import { AddLeadServiceDialog } from './AddLeadServiceDialog';
 import { RequestAccessDialog } from './RequestAccessDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
+import { CreateOfferDialog } from './CreateOfferDialog';
 import type { Lead, LeadStage, LeadService } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -105,6 +108,8 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetail
   const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
   const [isOnboardingFormOpen, setIsOnboardingFormOpen] = useState(false);
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
+  const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
+  const [sharedOfferUrl, setSharedOfferUrl] = useState<string | null>(null);
   const [showContractWarning, setShowContractWarning] = useState(false);
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const isProcessingWarning = useRef(false);
@@ -682,53 +687,65 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetail
                 📄 Nabídka
               </h4>
 
-              {/* Notion offer */}
+              {/* Shared offer - NEW */}
               <div className={cn(
                 "p-3 rounded-lg border",
-                lead.offer_url ? "border-green-500/30 bg-green-500/5" : "bg-card"
+                sharedOfferUrl || lead.offer_url ? "border-green-500/30 bg-green-500/5" : "bg-card"
               )}>
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Nabídka v Notion</span>
-                  {lead.offer_url && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                  <Link2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Sdílená nabídka</span>
+                  {(sharedOfferUrl || lead.offer_url) && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                 </div>
                 
-                {lead.offer_url ? (
+                {sharedOfferUrl || lead.offer_url ? (
                   <div className="space-y-2">
-                    <a
-                      href={lead.offer_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-primary hover:underline"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Otevřít nabídku v Notion
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={sharedOfferUrl || lead.offer_url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Otevřít nabídku
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7"
+                        onClick={() => {
+                          navigator.clipboard.writeText(sharedOfferUrl || lead.offer_url || '');
+                          toast.success('Odkaz zkopírován');
+                        }}
+                      >
+                        Kopírovat link
+                      </Button>
+                    </div>
                     {lead.offer_created_at && (
                       <p className="text-xs text-muted-foreground">
                         Vytvořeno: {new Date(lead.offer_created_at).toLocaleDateString('cs-CZ')}
                       </p>
                     )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => setIsCreateOfferOpen(true)}
+                    >
+                      Vytvořit novou nabídku
+                    </Button>
                   </div>
                 ) : (
                   <>
                     <Button
                       variant="default"
                       className="w-full"
-                      onClick={handleCreateOffer}
-                      disabled={isCreatingOffer || (lead.potential_services?.length || 0) === 0}
+                      onClick={() => setIsCreateOfferOpen(true)}
+                      disabled={(lead.potential_services?.length || 0) === 0}
                     >
-                      {isCreatingOffer ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Vytvářím nabídku...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Vytvořit nabídku v Notion
-                        </>
-                      )}
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Vytvořit sdílenou nabídku
                     </Button>
                     {(lead.potential_services?.length || 0) === 0 && (
                       <p className="text-xs text-muted-foreground text-center mt-2">
