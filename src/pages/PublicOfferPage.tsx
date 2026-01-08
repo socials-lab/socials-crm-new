@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,30 +10,10 @@ import {
 } from '@/components/ui/collapsible';
 import { ChevronDown, ExternalLink, Calendar, FileText, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { PublicOfferService } from '@/types/publicOffer';
+import type { PublicOfferService, PublicOffer } from '@/types/publicOffer';
 import socialsLogo from '@/assets/socials-logo.png';
-
-interface PublicOfferData {
-  id: string;
-  lead_id: string;
-  token: string;
-  company_name: string;
-  contact_name: string;
-  audit_summary: string | null;
-  custom_note: string | null;
-  notion_url: string | null;
-  services: PublicOfferService[];
-  total_price: number;
-  currency: string;
-  offer_type: 'retainer' | 'one_off';
-  valid_until: string | null;
-  is_active: boolean;
-  viewed_at: string | null;
-  view_count: number;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
+// Use PublicOffer type directly from types
 
 function ServiceCard({ service }: { service: PublicOfferService }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -99,73 +78,33 @@ function ServiceCard({ service }: { service: PublicOfferService }) {
 
 export default function PublicOfferPage() {
   const { token } = useParams<{ token: string }>();
-  const [offer, setOffer] = useState<PublicOfferData | null>(null);
+  const [offer, setOffer] = useState<PublicOffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchOffer() {
+    function fetchOffer() {
       if (!token) {
         setError('Neplatný odkaz na nabídku');
         setLoading(false);
         return;
       }
 
-      try {
-        // Fetch offer using raw SQL to bypass type restrictions
-        const { data, error: fetchError } = await supabase
-          .from('public_offers' as any)
-          .select('*')
-          .eq('token', token)
-          .eq('is_active', true)
-          .maybeSingle();
+      // Fetch from mock store
+      const foundOffer = getPublicOfferByToken(token);
 
-        if (fetchError) throw fetchError;
-
-        if (!data) {
-          setError('Nabídka nebyla nalezena nebo již není platná');
-          setLoading(false);
-          return;
-        }
-
-        // Parse the data
-        const offerData = data as any;
-        const parsedOffer: PublicOfferData = {
-          id: offerData.id,
-          lead_id: offerData.lead_id,
-          token: offerData.token,
-          company_name: offerData.company_name,
-          contact_name: offerData.contact_name,
-          audit_summary: offerData.audit_summary,
-          custom_note: offerData.custom_note,
-          notion_url: offerData.notion_url,
-          services: (offerData.services as PublicOfferService[]) || [],
-          total_price: offerData.total_price,
-          currency: offerData.currency || 'CZK',
-          offer_type: offerData.offer_type || 'retainer',
-          valid_until: offerData.valid_until,
-          is_active: offerData.is_active,
-          viewed_at: offerData.viewed_at,
-          view_count: offerData.view_count || 0,
-          created_by: offerData.created_by,
-          created_at: offerData.created_at,
-          updated_at: offerData.updated_at,
-        };
-
-        setOffer(parsedOffer);
-
-        // Track view - try to call the RPC function, ignore errors if it doesn't exist
-        try {
-          await supabase.rpc('increment_offer_view' as any, { offer_token: token });
-        } catch {
-          // Function might not exist yet, silently ignore
-        }
-      } catch (err) {
-        console.error('Error fetching offer:', err);
-        setError('Chyba při načítání nabídky');
-      } finally {
+      if (!foundOffer) {
+        setError('Nabídka nebyla nalezena nebo již není platná');
         setLoading(false);
+        return;
       }
+
+      setOffer(foundOffer);
+
+      // Track view in mock store
+      incrementOfferView(token);
+      
+      setLoading(false);
     }
 
     fetchOffer();

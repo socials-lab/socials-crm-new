@@ -13,12 +13,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, Copy, ExternalLink, Check } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
-import type { PublicOfferService } from '@/types/publicOffer';
-
+import type { PublicOfferService, PublicOffer } from '@/types/publicOffer';
+import { addPublicOffer } from '@/data/publicOffersMockData';
 interface CreateOfferDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -81,9 +80,11 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     try {
       const token = generateToken();
       const offerUrl = `${window.location.origin}/offer/${token}`;
+      const now = new Date().toISOString();
 
-      // Use type assertion to bypass type restrictions for new table
-      const { error } = await supabase.from('public_offers' as any).insert({
+      // Create offer object for mock store
+      const newOffer: PublicOffer = {
+        id: crypto.randomUUID(),
         lead_id: lead.id,
         token,
         company_name: lead.company_name,
@@ -94,12 +95,18 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         services: offerServices,
         total_price: totalPrice,
         currency: lead.currency,
-        offer_type: lead.offer_type,
+        offer_type: lead.offer_type as 'retainer' | 'one_off',
         valid_until: validUntil || null,
+        is_active: true,
+        viewed_at: null,
+        view_count: 0,
         created_by: currentColleague?.id || null,
-      } as any);
+        created_at: now,
+        updated_at: now,
+      };
 
-      if (error) throw error;
+      // Add to mock store
+      addPublicOffer(newOffer);
 
       setCreatedOfferUrl(offerUrl);
       toast.success('Nabídka byla vytvořena!');
