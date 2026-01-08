@@ -1180,6 +1180,19 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
           });
         }}
       />
+
+      <CreateOfferDialog
+        open={isCreateOfferOpen}
+        onOpenChange={setIsCreateOfferOpen}
+        lead={lead}
+        onSuccess={(token, offerUrl) => {
+          setSharedOfferUrl(offerUrl);
+          updateLead(lead.id, {
+            offer_url: offerUrl,
+            offer_created_at: new Date().toISOString(),
+          });
+        }}
+      />
     </>
   );
 }
