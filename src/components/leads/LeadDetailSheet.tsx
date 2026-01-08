@@ -97,8 +97,8 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
   other: 'Jiný',
 };
 
-export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
-  const { updateLeadStage, updateLead, addNote, getLeadHistory } = useLeadsData();
+export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
+  const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services } = useCRMData();
   const [noteText, setNoteText] = useState('');
   const [isConvertOpen, setIsConvertOpen] = useState(false);
@@ -114,8 +114,10 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetail
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const isProcessingWarning = useRef(false);
 
-  if (!lead) return null;
+  // Use fresh lead data from context to reflect updates immediately
+  const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
 
+  if (!lead) return null;
 
   const owner = colleagues.find(c => c.id === lead.owner_id);
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
