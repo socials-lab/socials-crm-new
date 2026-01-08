@@ -60,6 +60,7 @@ const App = () => (
                           <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
                           <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
                           <Route path="/offer/:token" element={<PublicOfferPage />} />
+                          <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
                           
                           {/* Protected routes */}
                           <Route element={<RouteGuard><AppLayout /></RouteGuard>}>

@@ -76,15 +76,21 @@ function ServiceCard({ service }: { service: PublicOfferService }) {
   );
 }
 
-export default function PublicOfferPage() {
-  const { token } = useParams<{ token: string }>();
+export default function PublicOfferPage({ testToken }: { testToken?: string }) {
+  const params = useParams<{ token: string }>();
+  const rawToken = testToken || params.token || '';
+  
+  // Normalize token - remove whitespace, decode URI, remove trailing slashes
+  const token = decodeURIComponent(rawToken).trim().replace(/\/+$/, '');
+  
   const [offer, setOffer] = useState<PublicOffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     function fetchOffer() {
-      if (!token) {
+      // Check for invalid/placeholder tokens
+      if (!token || token === ':token' || token.length < 3) {
         setError('Neplatný odkaz na nabídku');
         setLoading(false);
         return;
@@ -130,14 +136,31 @@ export default function PublicOfferPage() {
   if (error || !offer) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center p-8">
+        <div className="text-center p-8 max-w-md">
           <div className="mb-6">
             <img src={socialsLogo} alt="Socials" className="h-10 mx-auto" />
           </div>
           <h1 className="text-2xl font-semibold mb-2">Nabídka není dostupná</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             {error || 'Tato nabídka neexistuje nebo již není platná.'}
           </p>
+          
+          {/* Debug info */}
+          <div className="mt-6 p-3 rounded bg-muted text-xs text-left">
+            <p><strong>Debug:</strong></p>
+            <p>Raw token: <code>{rawToken || '(prázdný)'}</code></p>
+            <p>Normalized: <code>{token || '(prázdný)'}</code></p>
+          </div>
+          
+          {/* Link to test offer */}
+          <div className="mt-4">
+            <a 
+              href="/offer/test-nabidka-123"
+              className="text-primary hover:underline text-sm"
+            >
+              → Otevřít testovací nabídku
+            </a>
+          </div>
         </div>
       </div>
     );
