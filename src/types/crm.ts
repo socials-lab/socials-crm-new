@@ -143,6 +143,7 @@ export interface Service {
   service_type: ServiceType;
   category: ServiceCategory;
   description: string;
+  offer_description: string | null; // Detailní popis pro nabídky
   external_url: string | null;
   base_price: number;
   currency: string;
