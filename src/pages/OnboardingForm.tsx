@@ -113,7 +113,35 @@ export default function OnboardingForm() {
   const [originalIco, setOriginalIco] = useState<string>('');
 
   
-  const lead = leadId ? getLeadById(leadId) : undefined;
+  // DEV BYPASS: Use mock lead for demo if not found
+  const realLead = leadId ? getLeadById(leadId) : undefined;
+  const mockLead = {
+    id: 'demo-lead',
+    company_name: 'Demo Company s.r.o.',
+    ico: '12345678',
+    dic: 'CZ12345678',
+    website: 'https://demo.cz',
+    industry: 'Marketing',
+    contact_name: 'Jan Novák',
+    contact_position: 'CEO',
+    contact_email: 'jan@demo.cz',
+    contact_phone: '+420 123 456 789',
+    billing_street: 'Václavské náměstí 1',
+    billing_city: 'Praha',
+    billing_zip: '11000',
+    billing_country: 'Česká republika',
+    billing_email: 'fakturace@demo.cz',
+    stage: 'offer_sent' as const,
+    owner_id: 'dev-colleague',
+    source: 'website' as const,
+    potential_services: [
+      { name: 'Social Media Management', price: 25000, currency: 'Kč', billing_type: 'monthly' as const, selected_tier: 'standard' },
+      { name: 'PPC Reklama', price: 15000, currency: 'Kč', billing_type: 'monthly' as const, selected_tier: 'premium' },
+    ],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  const lead = realLead || mockLead;
   
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
@@ -151,12 +179,7 @@ export default function OnboardingForm() {
 
   // Load lead data
   useEffect(() => {
-    if (!leadId) {
-      setLeadNotFound(true);
-      setIsLoading(false);
-      return;
-    }
-    
+    // DEV BYPASS: Always load lead (mock or real)
     if (lead) {
       setOriginalIco(lead.ico);
       form.reset({
@@ -181,9 +204,6 @@ export default function OnboardingForm() {
         startDate: startOfMonth(addMonths(new Date(), 1)),
         orderConfirmed: false,
       });
-      setIsLoading(false);
-    } else {
-      setLeadNotFound(true);
       setIsLoading(false);
     }
   }, [leadId, lead, form]);
