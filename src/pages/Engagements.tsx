@@ -94,12 +94,10 @@ function EngagementsContent() {
     updateEngagementService,
     deleteEngagementService,
     getUnbilledOneOffServices,
+    getMetricsByEngagementId,
+    getEngagementHistory,
+    getInvoicesByEngagementId,
   } = useCRMData();
-
-  // Stub functions for features not yet in Supabase
-  const getMetricsByEngagementId = (_engagementId: string) => [] as any[];
-  const getInvoicesByEngagementId = (_engagementId: string) => [] as any[];
-  const getEngagementHistory = (_engagementId: string) => [] as any[];
 
   const { 
     getClientMonthSummaryByEngagementServiceId, 

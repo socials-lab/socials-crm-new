@@ -55,6 +55,7 @@ import {
 } from '@/components/ui/select';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useDigiSign } from '@/hooks/useDigiSign';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
@@ -64,6 +65,7 @@ import { SendOfferDialog } from './SendOfferDialog';
 import type { Lead, LeadStage, LeadService } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 interface LeadDetailSheetProps {
   lead: Lead | null;
@@ -97,6 +99,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
 export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory } = useLeadsData();
   const { colleagues, services } = useCRMData();
+  const { createContract, isLoading: isCreatingContract } = useDigiSign();
   const [noteText, setNoteText] = useState('');
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -108,6 +111,12 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetail
   const [showContractWarning, setShowContractWarning] = useState(false);
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const isProcessingWarning = useRef(false);
+
+  const handleCreateContract = async () => {
+    if (!lead) return;
+    await createContract(lead.id);
+    // Lead data refreshes automatically via useLeadsData query invalidation
+  };
 
   if (!lead) return null;
 
@@ -851,40 +860,62 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetail
                 "p-3 rounded-lg border",
                 lead.contract_url ? "border-green-500/30 bg-green-500/5" : "bg-card"
               )}>
-                <div className="flex items-center gap-2">
-                  <FileSignature className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">Smlouva vytvořena</p>
-                      {lead.contract_url && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                    </div>
-                    {lead.contract_url ? (
-                      <div className="space-y-1">
-                        <p className="text-xs text-green-700">
-                          ✓ Vytvořeno {lead.contract_created_at && new Date(lead.contract_created_at).toLocaleDateString('cs-CZ', {
-                            day: 'numeric',
-                            month: 'numeric',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                        <a
-                          href={lead.contract_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-sm text-primary hover:underline"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          Otevřít smlouvu
-                        </a>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-1">
+                    <FileSignature className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">Smlouva vytvořena</p>
+                        {lead.contract_url && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                       </div>
-                    ) : lead.onboarding_form_completed_at ? (
-                      <p className="text-xs text-amber-600">⏳ Čeká na vytvoření</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Bude vytvořena po vyplnění formuláře</p>
-                    )}
+                      {lead.contract_url ? (
+                        <div className="space-y-1">
+                          <p className="text-xs text-green-700">
+                            ✓ Vytvořeno {lead.contract_created_at && new Date(lead.contract_created_at).toLocaleDateString('cs-CZ', {
+                              day: 'numeric',
+                              month: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                          <a
+                            href={lead.contract_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-sm text-primary hover:underline"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Otevřít smlouvu
+                          </a>
+                        </div>
+                      ) : lead.onboarding_form_completed_at ? (
+                        <p className="text-xs text-amber-600">⏳ Čeká na vytvoření</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Bude vytvořena po vyplnění formuláře</p>
+                      )}
+                    </div>
                   </div>
+                  {!lead.contract_url && lead.onboarding_form_completed_at && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleCreateContract}
+                      disabled={isCreatingContract}
+                    >
+                      {isCreatingContract ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          Vytváření...
+                        </>
+                      ) : (
+                        <>
+                          <FileSignature className="h-4 w-4 mr-1" />
+                          Vytvořit smlouvu
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
 

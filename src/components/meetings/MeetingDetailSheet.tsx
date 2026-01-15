@@ -42,10 +42,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { useMeetingsData } from '@/hooks/useMeetingsData';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { useAISummary } from '@/hooks/useAISummary';
 import { useToast } from '@/hooks/use-toast';
 import type { Meeting, MeetingStatus } from '@/types/meetings';
 import { MeetingParticipants } from './MeetingParticipants';
 import { MeetingTasks } from './MeetingTasks';
+import { Loader2 } from 'lucide-react';
 
 interface MeetingDetailSheetProps {
   meeting: Meeting | null;
@@ -61,10 +64,11 @@ const STATUS_CONFIG: Record<MeetingStatus, { label: string; color: string }> = {
 };
 
 export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetailSheetProps) {
-  const { updateMeeting, deleteMeeting, getParticipantsByMeetingId, getTasksByMeetingId, sendCalendarInvites } = useMeetingsData();
+  const { updateMeeting, deleteMeeting, getParticipantsByMeetingId, getTasksByMeetingId } = useMeetingsData();
   const { clients, engagements, colleagues } = useCRMData();
+  const { createCalendarEvent, isConnected, isLoading: isCreatingEvent } = useGoogleCalendar();
+  const { generateSummary, isGenerating } = useAISummary();
   const { toast } = useToast();
-  const [isSendingInvites, setIsSendingInvites] = useState(false);
   
   const [isEditingAgenda, setIsEditingAgenda] = useState(false);
   const [isEditingTranscript, setIsEditingTranscript] = useState(false);
@@ -134,21 +138,14 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
   };
 
   const handleSendInvites = async () => {
-    setIsSendingInvites(true);
     try {
-      await sendCalendarInvites(meeting.id);
-      toast({ 
-        title: 'Pozvánky připraveny k odeslání',
-        description: 'Pro skutečné odeslání je potřeba nastavit Resend API.',
-      });
+      await createCalendarEvent(meeting.id);
     } catch (error: any) {
       toast({ 
         title: 'Chyba při odesílání', 
         description: error.message,
         variant: 'destructive' 
       });
-    } finally {
-      setIsSendingInvites(false);
     }
   };
 
@@ -350,10 +347,19 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
                     size="sm" 
                     variant={meeting.calendar_invites_sent_at ? 'outline' : 'default'}
                     onClick={handleSendInvites}
-                    disabled={isSendingInvites || participants.length === 0}
+                    disabled={isCreatingEvent || !isConnected || participants.length === 0}
                   >
                     <Mail className="h-4 w-4 mr-2" />
-                    {isSendingInvites ? 'Odesílám...' : meeting.calendar_invites_sent_at ? 'Odeslat znovu' : 'Odeslat pozvánky'}
+                    {isCreatingEvent ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Odesílám...
+                      </>
+                    ) : meeting.calendar_invites_sent_at ? (
+                      'Odeslat znovu'
+                    ) : (
+                      'Odeslat pozvánky'
+                    )}
                   </Button>
                 </div>
                 {participants.length === 0 && (
@@ -430,18 +436,43 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
                     <Sparkles className="h-4 w-4 text-purple-500" />
                     AI Shrnutí
                   </CardTitle>
-                  {!isEditingSummary && (
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => {
-                        setEditedSummary(meeting.ai_summary);
-                        setIsEditingSummary(true);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <div className="flex gap-2">
+                    {!meeting.ai_summary && !isEditingSummary && (
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        onClick={async () => {
+                          await generateSummary(meeting.id, meeting.transcript);
+                          // Data refreshes automatically via query invalidation in useAISummary
+                        }}
+                        disabled={isGenerating || (!meeting.transcript && !meeting.notes && !meeting.agenda)}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            Generování...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-1" />
+                            Vygenerovat AI shrnutí
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {!isEditingSummary && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => {
+                          setEditedSummary(meeting.ai_summary || '');
+                          setIsEditingSummary(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -465,7 +496,12 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
                 ) : meeting.ai_summary ? (
                   <p className="text-sm whitespace-pre-wrap">{meeting.ai_summary}</p>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Shrnutí nebylo přidáno</p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Shrnutí nebylo přidáno</p>
+                    {!meeting.transcript && !meeting.notes && !meeting.agenda && (
+                      <p className="text-xs text-muted-foreground">Nejprve přidejte transcript nebo poznámky</p>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>

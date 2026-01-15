@@ -6,27 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FutureInvoicing, IssuedStats } from '@/components/invoicing/FutureInvoicing';
 import { InvoiceHistory } from '@/components/invoicing/InvoiceHistory';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { format, startOfMonth, endOfMonth, parseISO, isAfter, isBefore, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { FileText, CheckCircle, Package, Briefcase, ChevronLeft, ChevronRight, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  creativeBoostClientMonths,
-  clientMonthOutputs,
-  outputTypes,
-} from '@/data/creativeBoostMockData';
-
-// Helper to calculate Creative Boost credits
-function calculateOutputCredits(outputTypeId: string, normalCount: number, expressCount: number) {
-  const outputType = outputTypes.find(t => t.id === outputTypeId);
-  const baseCredits = outputType?.baseCredits ?? 0;
-  
-  const normalCredits = normalCount * baseCredits;
-  const expressCredits = Math.ceil(expressCount * baseCredits * 1.5);
-  const totalCredits = normalCredits + expressCredits;
-
-  return { normalCredits, expressCredits, totalCredits };
-}
 
 const Invoicing = () => {
   const currentDate = new Date();
@@ -47,6 +31,12 @@ const Invoicing = () => {
     getUnbilledOneOffServices,
     engagementServices,
   } = useCRMData();
+  
+  const {
+    clientMonths,
+    getClientOutputs,
+    calculateOutputCredits,
+  } = useCreativeBoostData();
 
 
   const monthLabel = format(new Date(selectedYear, selectedMonth - 1), 'LLLL yyyy', { locale: cs });
@@ -70,15 +60,13 @@ const Invoicing = () => {
 
     // Calculate Creative Boost amount for this period
     let creativeBoostAmount = 0;
-    creativeBoostClientMonths
+    clientMonths
       .filter(cm => cm.year === selectedYear && cm.month === selectedMonth)
       .forEach(cm => {
-        const outputs = clientMonthOutputs.filter(
-          o => o.clientId === cm.clientId && o.year === selectedYear && o.month === selectedMonth
-        );
+        const clientOutputs = getClientOutputs(cm.clientId, selectedYear, selectedMonth);
         
         let totalCredits = 0;
-        outputs.forEach(output => {
+        clientOutputs.forEach(output => {
           const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
           totalCredits += credits.totalCredits;
         });
@@ -124,7 +112,7 @@ const Invoicing = () => {
       // Total expected invoice amount
       const totalAmount = retainerAmount + creativeBoostAmount + extraWorkAmount + unbilledOneOffAmount;
       // Count Creative Boost clients for this month
-      const creativeBoostCount = creativeBoostClientMonths.filter(
+      const creativeBoostCount = clientMonths.filter(
         cm => cm.year === selectedYear && cm.month === selectedMonth && cm.status === 'active'
       ).length;
 

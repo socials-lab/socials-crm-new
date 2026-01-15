@@ -21,11 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { InvoiceLineItem, MonthlyEngagementInvoice } from '@/types/crm';
 import { getDaysInMonth, parseISO, startOfMonth, endOfMonth, format, isAfter, isBefore } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import {
-  outputTypes,
-  creativeBoostClientMonths,
-  clientMonthOutputs,
-} from '@/data/creativeBoostMockData';
+import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 
 export interface IssuedStats {
   totalCount: number;
@@ -74,15 +70,13 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     // Get Creative Boost data for the period (grouped by client for now, will associate with engagement)
     const creativeBoostData = new Map<string, { usedCredits: number; pricePerCredit: number; totalAmount: number }>();
     
-    creativeBoostClientMonths
+    clientMonths
       .filter(cm => cm.year === year && cm.month === month)
       .forEach(cm => {
-        const outputs = clientMonthOutputs.filter(
-          o => o.clientId === cm.clientId && o.year === year && o.month === month
-        );
+        const clientOutputs = getClientOutputs(cm.clientId, year, month);
         
         let totalCredits = 0;
-        outputs.forEach(output => {
+        clientOutputs.forEach(output => {
           const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
           totalCredits += credits.totalCredits;
         });

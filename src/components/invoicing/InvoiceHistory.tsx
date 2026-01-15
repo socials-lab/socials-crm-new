@@ -4,14 +4,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, ExternalLink, Eye } from 'lucide-react';
+import { FileText, ExternalLink, Eye, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useFakturoid } from '@/hooks/useFakturoid';
 import { Link } from 'react-router-dom';
 
 export function InvoiceHistory() {
   const { issuedInvoices, getIssuedInvoicesByYear } = useCRMData();
+  const { createInvoiceInFakturoid, isLoading: isCreatingFakturoid } = useFakturoid();
   const [selectedYear, setSelectedYear] = useState('2024');
 
   const formatCurrency = (amount: number, currency: string = 'CZK') => {
@@ -185,7 +187,7 @@ export function InvoiceHistory() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {invoice.fakturoid_url && (
+                        {invoice.fakturoid_url ? (
                           <Button 
                             variant="ghost" 
                             size="icon" 
@@ -194,6 +196,23 @@ export function InvoiceHistory() {
                             title="Otevřít ve Fakturoidu"
                           >
                             <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => createInvoiceInFakturoid(invoice.id)}
+                            disabled={isCreatingFakturoid}
+                            title="Vytvořit ve Fakturoid"
+                          >
+                            {isCreatingFakturoid ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <FileText className="h-4 w-4 mr-1" />
+                                Fakturoid
+                              </>
+                            )}
                           </Button>
                         )}
                         <Button 

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { ShieldCheck, Wallet } from 'lucide-react';
 import { ALL_PAGES, PAGE_GROUPS } from '@/constants/permissions';
 import type { Database } from '@/integrations/supabase/types';
+import type { PagePermission } from '@/types/crm';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -21,7 +22,7 @@ interface UserData {
   is_super_admin: boolean;
   displayName: string;
   email: string;
-  allowed_pages?: string[];
+  page_permissions?: PagePermission[];
   can_see_financials?: boolean;
 }
 
@@ -38,6 +39,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
   project_manager: 'Project Manager',
   specialist: 'Specialista',
   finance: 'Finance',
+  client: 'Klient',
 };
 
 const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
@@ -46,6 +48,7 @@ const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
   project_manager: 'Správa projektů, engagementů a kolegů',
   specialist: 'Základní přístup k přiřazeným úkolům',
   finance: 'Přístup k fakturaci a finančním přehledům',
+  client: 'Přístup k vlastním datům a zakázkám',
 };
 
 export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUserRoleDialogProps) {
@@ -57,7 +60,11 @@ export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUse
   useEffect(() => {
     if (user) {
       setRole(user.role);
-      setAllowedPages(user.allowed_pages || []);
+      // Extract page IDs from page_permissions array
+      const pageIds = (user.page_permissions || [])
+        .filter(p => p.can_view)
+        .map(p => p.page);
+      setAllowedPages(pageIds);
       setCanSeeFinancials(user.can_see_financials || false);
     }
   }, [user]);
@@ -82,11 +89,23 @@ export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUse
     if (!user) return;
     
     setIsSaving(true);
+    
+    // Transform allowedPages to page_permissions format
+    // For simplicity, we set can_view=true for selected pages, can_edit based on role
+    const canEditRoles: AppRole[] = ['admin', 'management'];
+    const canEdit = canEditRoles.includes(role);
+    
+    const page_permissions: PagePermission[] = allowedPages.map(page => ({
+      page: page as PagePermission['page'],
+      can_view: true,
+      can_edit: canEdit,
+    }));
+    
     const { error } = await supabase
       .from('user_roles')
       .update({ 
         role,
-        allowed_pages: allowedPages,
+        page_permissions: page_permissions.length > 0 ? page_permissions : null,
         can_see_financials: canSeeFinancials,
       } as Record<string, unknown>)
       .eq('id', user.id);

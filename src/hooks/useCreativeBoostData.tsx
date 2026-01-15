@@ -1,10 +1,6 @@
-import { useState, useCallback, createContext, useContext, ReactNode, useMemo } from 'react';
-import {
-  outputTypes as initialOutputTypes,
-  creativeBoostClients as initialClients,
-  creativeBoostClientMonths as initialClientMonths,
-  clientMonthOutputs as initialOutputs,
-} from '@/data/creativeBoostMockData';
+import { createContext, useContext, ReactNode, useMemo, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import type {
@@ -15,6 +11,7 @@ import type {
   ClientMonthOutput,
   MonthStatus,
   CreativeBoostSettingsChange,
+  OutputCategory,
 } from '@/types/creativeBoost';
 
 interface ColleagueCreditDetail {
@@ -31,33 +28,29 @@ interface ColleagueCreditDetail {
 interface CreativeBoostContextType {
   // Data
   outputTypes: OutputType[];
-  clients: CreativeBoostClient[];
   clientMonths: CreativeBoostClientMonth[];
   outputs: ClientMonthOutput[];
   settingsHistory: CreativeBoostSettingsChange[];
 
   // Output type operations
-  addOutputType: (data: Omit<OutputType, 'id' | 'createdAt' | 'updatedAt'>) => OutputType;
-  updateOutputType: (id: string, data: Partial<OutputType>) => void;
-
-  // Client operations
-  addCreativeBoostClient: (clientId: string, defaults?: Partial<CreativeBoostClient>) => CreativeBoostClient;
+  addOutputType: (data: Omit<OutputType, 'id' | 'createdAt' | 'updatedAt'>) => Promise<OutputType>;
+  updateOutputType: (id: string, data: Partial<OutputType>) => Promise<void>;
 
   // Client month operations
-  addClientToMonth: (clientId: string, year: number, month: number, settings?: Partial<CreativeBoostClientMonth>) => CreativeBoostClientMonth;
-  removeClientFromMonth: (clientId: string, year: number, month: number) => void;
-  updateClientMonth: (id: string, data: Partial<CreativeBoostClientMonth>) => void;
+  addClientToMonth: (clientId: string, year: number, month: number, settings?: Partial<CreativeBoostClientMonth>) => Promise<CreativeBoostClientMonth>;
+  removeClientFromMonth: (clientId: string, year: number, month: number) => Promise<void>;
+  updateClientMonth: (id: string, data: Partial<CreativeBoostClientMonth>) => Promise<void>;
   getClientsForMonth: (year: number, month: number) => string[];
   getAvailableClientsForMonth: (year: number, month: number) => CreativeBoostClient[];
   getClientMonthByClientId: (clientId: string, year: number, month: number) => CreativeBoostClientMonth | undefined;
 
   // Output operations (spreadsheet mode)
   getClientOutputs: (clientId: string, year: number, month: number) => ClientMonthOutput[];
-  updateClientOutput: (clientId: string, outputTypeId: string, year: number, month: number, data: Partial<ClientMonthOutput>) => void;
+  updateClientOutput: (clientId: string, outputTypeId: string, year: number, month: number, data: Partial<ClientMonthOutput>) => Promise<void>;
 
   // Computed data
   getClientMonthSummaries: (year: number, month: number) => ClientMonthSummary[];
-  calculateOutputCredits: (outputTypeId: string, quantity: number, expressCount: number) => {
+  calculateOutputCredits: (outputTypeId: string, normalCount: number, expressCount: number) => {
     normalCredits: number;
     expressCredits: number;
     totalCredits: number;
@@ -76,7 +69,7 @@ interface CreativeBoostContextType {
   getSettingsHistory: (clientId: string, year?: number, month?: number) => CreativeBoostSettingsChange[];
 
   // Auto-sync for active engagements
-  ensureClientMonthsForActiveEngagements: (year: number, month: number) => void;
+  ensureClientMonthsForActiveEngagements: (year: number, month: number) => Promise<void>;
 
   // Helpers
   getOutputTypeById: (id: string) => OutputType | undefined;
@@ -85,259 +78,400 @@ interface CreativeBoostContextType {
 
 const CreativeBoostContext = createContext<CreativeBoostContextType | null>(null);
 
+// Transformer functions: snake_case DB -> camelCase TypeScript
+const transformOutputType = (row: any): OutputType => ({
+  id: row.id,
+  name: row.name,
+  category: row.category as OutputCategory,
+  baseCredits: parseFloat(row.base_credits),
+  description: row.description,
+  isActive: row.is_active,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const transformClientMonth = (row: any): CreativeBoostClientMonth => ({
+  id: row.id,
+  clientId: row.client_id,
+  year: row.year,
+  month: row.month,
+  minCredits: parseFloat(row.min_credits),
+  maxCredits: parseFloat(row.max_credits),
+  pricePerCredit: parseFloat(row.price_per_credit),
+  colleagueId: row.colleague_id || '',
+  status: row.status as MonthStatus,
+  engagementServiceId: row.engagement_service_id,
+  engagementId: row.engagement_id,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const transformOutput = (row: any): ClientMonthOutput => ({
+  id: row.id,
+  clientId: row.client_id,
+  year: row.year,
+  month: row.month,
+  outputTypeId: row.output_type_id,
+  normalCount: row.normal_count || 0,
+  expressCount: row.express_count || 0,
+  colleagueId: row.colleague_id || '',
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const transformSettingsHistory = (row: any): CreativeBoostSettingsChange => ({
+  id: row.id,
+  clientMonthId: row.client_month_id,
+  clientId: row.client_id,
+  year: row.year,
+  month: row.month,
+  changeType: row.change_type,
+  fieldName: row.field_name,
+  oldValue: row.old_value,
+  newValue: row.new_value,
+  changedBy: row.changed_by,
+  changedByName: row.changed_by_name,
+  changedAt: row.changed_at,
+});
+
 export function CreativeBoostProvider({ children }: { children: ReactNode }) {
-  const { getClientById, colleagues, engagements, engagementServices } = useCRMData();
+  const queryClient = useQueryClient();
+  const { getClientById, colleagues, engagements, engagementServices, services } = useCRMData();
   const { user } = useAuth();
   
-  const [outputTypes, setOutputTypes] = useState<OutputType[]>(initialOutputTypes);
-  const [clients, setClients] = useState<CreativeBoostClient[]>(initialClients);
-  const [clientMonths, setClientMonths] = useState<CreativeBoostClientMonth[]>(initialClientMonths);
-  const [outputs, setOutputs] = useState<ClientMonthOutput[]>(initialOutputs);
-  const [settingsHistory, setSettingsHistory] = useState<CreativeBoostSettingsChange[]>([]);
+  // Queries
+  const { data: outputTypes = [], isLoading: outputTypesLoading } = useQuery({
+    queryKey: ['output_types'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('output_types').select('*').order('name');
+      if (error) throw error;
+      return (data || []).map(transformOutputType);
+    },
+  });
 
-  const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  const now = () => new Date().toISOString();
+  const { data: clientMonths = [], isLoading: clientMonthsLoading } = useQuery({
+    queryKey: ['creative_boost_client_months'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('creative_boost_client_months')
+        .select('*')
+        .order('year', { ascending: false })
+        .order('month', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(transformClientMonth);
+    },
+  });
 
-  // Output type operations
-  const addOutputType = useCallback((data: Omit<OutputType, 'id' | 'createdAt' | 'updatedAt'>): OutputType => {
-    const newType: OutputType = {
-      ...data,
-      id: generateId('ot'),
-      createdAt: now(),
-      updatedAt: now(),
-    };
-    setOutputTypes(prev => [...prev, newType]);
-    return newType;
-  }, []);
+  const { data: outputs = [], isLoading: outputsLoading } = useQuery({
+    queryKey: ['creative_boost_outputs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('creative_boost_outputs')
+        .select('*')
+        .order('year', { ascending: false })
+        .order('month', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(transformOutput);
+    },
+  });
 
-  const updateOutputType = useCallback((id: string, data: Partial<OutputType>) => {
-    setOutputTypes(prev => prev.map(t =>
-      t.id === id ? { ...t, ...data, updatedAt: now() } : t
-    ));
-  }, []);
+  const { data: settingsHistory = [], isLoading: historyLoading } = useQuery({
+    queryKey: ['creative_boost_settings_history'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('creative_boost_settings_history')
+        .select('*')
+        .order('changed_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(transformSettingsHistory);
+    },
+  });
 
-  // Client operations
-  const addCreativeBoostClient = useCallback((clientId: string, defaults?: Partial<CreativeBoostClient>): CreativeBoostClient => {
-    const existing = clients.find(c => c.clientId === clientId);
-    if (existing) return existing;
+  const isLoading = outputTypesLoading || clientMonthsLoading || outputsLoading || historyLoading;
 
-    const newClient: CreativeBoostClient = {
-      clientId,
-      isActive: defaults?.isActive ?? true,
-      defaultMinCredits: defaults?.defaultMinCredits ?? 30,
-      defaultMaxCredits: defaults?.defaultMaxCredits ?? 50,
-      defaultPricePerCredit: defaults?.defaultPricePerCredit ?? 1500,
-    };
-    
-    setClients(prev => [...prev, newClient]);
-    return newClient;
-  }, [clients]);
+  // Mutations
+  const addOutputTypeMutation = useMutation({
+    mutationFn: async (data: Omit<OutputType, 'id' | 'createdAt' | 'updatedAt'>) => {
+      const { data: result, error } = await supabase
+        .from('output_types')
+        .insert({
+          name: data.name,
+          category: data.category,
+          base_credits: data.baseCredits,
+          description: data.description,
+          is_active: data.isActive,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return transformOutputType(result);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['output_types'] }),
+  });
 
-  // Client month operations
-  const addClientToMonth = useCallback((clientId: string, year: number, month: number, settings?: Partial<CreativeBoostClientMonth>): CreativeBoostClientMonth => {
-    // Auto-add client to Creative Boost clients if not exists
-    const clientExists = clients.find(c => c.clientId === clientId);
-    if (!clientExists) {
-      const newClient: CreativeBoostClient = {
-        clientId,
-        isActive: true,
-        defaultMinCredits: settings?.minCredits ?? 30,
-        defaultMaxCredits: settings?.maxCredits ?? 50,
-        defaultPricePerCredit: settings?.pricePerCredit ?? 1500,
-      };
-      setClients(prev => [...prev, newClient]);
-    }
-    const existing = clientMonths.find(
-      cm => cm.clientId === clientId && cm.year === year && cm.month === month
-    );
-    
-    if (existing) return existing;
+  const updateOutputTypeMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<OutputType> }) => {
+      const updateData: any = {};
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.category !== undefined) updateData.category = data.category;
+      if (data.baseCredits !== undefined) updateData.base_credits = data.baseCredits;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.isActive !== undefined) updateData.is_active = data.isActive;
 
-    const clientConfig = clients.find(c => c.clientId === clientId);
-    const newMonth: CreativeBoostClientMonth = {
-      id: generateId('cbm'),
+      const { error } = await supabase.from('output_types').update(updateData).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['output_types'] }),
+  });
+
+  const addClientToMonthMutation = useMutation({
+    mutationFn: async ({
       clientId,
       year,
       month,
-      minCredits: settings?.minCredits ?? clientConfig?.defaultMinCredits ?? 30,
-      maxCredits: settings?.maxCredits ?? clientConfig?.defaultMaxCredits ?? 50,
-      pricePerCredit: settings?.pricePerCredit ?? clientConfig?.defaultPricePerCredit ?? 1500,
-      colleagueId: settings?.colleagueId ?? '',
-      status: settings?.status ?? 'active',
-      engagementServiceId: settings?.engagementServiceId ?? null,
-      engagementId: settings?.engagementId ?? null,
-      createdAt: now(),
-      updatedAt: now(),
-    };
-    
-    setClientMonths(prev => [...prev, newMonth]);
-    return newMonth;
-  }, [clientMonths, clients]);
-
-  const removeClientFromMonth = useCallback((clientId: string, year: number, month: number) => {
-    setClientMonths(prev => prev.filter(
-      cm => !(cm.clientId === clientId && cm.year === year && cm.month === month)
-    ));
-    setOutputs(prev => prev.filter(
-      o => !(o.clientId === clientId && o.year === year && o.month === month)
-    ));
-  }, []);
-
-  const updateClientMonth = useCallback((id: string, data: Partial<CreativeBoostClientMonth>) => {
-    setClientMonths(prev => {
-      const existing = prev.find(cm => cm.id === id);
-      if (!existing) return prev;
-      
-      // Track changes for history
-      const changes: CreativeBoostSettingsChange[] = [];
-      
-      if (data.maxCredits !== undefined && data.maxCredits !== existing.maxCredits) {
-        changes.push({
-          id: `cbsh-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          clientMonthId: id,
-          clientId: existing.clientId,
-          year: existing.year,
-          month: existing.month,
-          changeType: 'max_credits',
-          fieldName: 'Max. kreditů',
-          oldValue: existing.maxCredits,
-          newValue: data.maxCredits,
-          changedBy: user?.id ?? '',
-          changedByName: user?.email ?? 'Neznámý',
-          changedAt: now(),
-        });
-      }
-      
-      if (data.pricePerCredit !== undefined && data.pricePerCredit !== existing.pricePerCredit) {
-        changes.push({
-          id: `cbsh-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          clientMonthId: id,
-          clientId: existing.clientId,
-          year: existing.year,
-          month: existing.month,
-          changeType: 'price_per_credit',
-          fieldName: 'Cena za kredit',
-          oldValue: existing.pricePerCredit,
-          newValue: data.pricePerCredit,
-          changedBy: user?.id ?? '',
-          changedByName: user?.email ?? 'Neznámý',
-          changedAt: now(),
-        });
-      }
-      
-      if (data.status !== undefined && data.status !== existing.status) {
-        const statusLabels: Record<string, string> = {
-          active: 'Aktivní',
-          inactive: 'Neaktivní',
-        };
-        changes.push({
-          id: `cbsh-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          clientMonthId: id,
-          clientId: existing.clientId,
-          year: existing.year,
-          month: existing.month,
-          changeType: 'status',
-          fieldName: 'Status',
-          oldValue: statusLabels[existing.status] || existing.status,
-          newValue: statusLabels[data.status] || data.status,
-          changedBy: user?.id ?? '',
-          changedByName: user?.email ?? 'Neznámý',
-          changedAt: now(),
-        });
-      }
-      
-      if (changes.length > 0) {
-        setSettingsHistory(prev => [...prev, ...changes]);
-      }
-      
-      return prev.map(cm =>
-        cm.id === id ? { ...cm, ...data, updatedAt: now() } : cm
+      settings,
+    }: {
+      clientId: string;
+      year: number;
+      month: number;
+      settings?: Partial<CreativeBoostClientMonth>;
+    }) => {
+      // Check if already exists
+      const existing = clientMonths.find(
+        cm => cm.clientId === clientId && cm.year === year && cm.month === month
       );
-    });
-  }, []);
+      if (existing) return existing;
 
-  const getClientsForMonth = useCallback((year: number, month: number) => {
-    return clientMonths
-      .filter(cm => cm.year === year && cm.month === month)
-      .map(cm => cm.clientId);
-  }, [clientMonths]);
+      const { data: result, error } = await supabase
+        .from('creative_boost_client_months')
+        .insert({
+          client_id: clientId,
+          year,
+          month,
+          min_credits: settings?.minCredits ?? 30,
+          max_credits: settings?.maxCredits ?? 50,
+          price_per_credit: settings?.pricePerCredit ?? 1500,
+          colleague_id: settings?.colleagueId || null,
+          status: settings?.status || 'active',
+          engagement_service_id: settings?.engagementServiceId || null,
+          engagement_id: settings?.engagementId || null,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return transformClientMonth(result);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['creative_boost_client_months'] }),
+  });
 
-  const getAvailableClientsForMonth = useCallback((year: number, month: number) => {
-    const existingClientIds = getClientsForMonth(year, month);
-    return clients.filter(c => c.isActive && !existingClientIds.includes(c.clientId));
-  }, [clients, getClientsForMonth]);
+  const removeClientFromMonthMutation = useMutation({
+    mutationFn: async ({ clientId, year, month }: { clientId: string; year: number; month: number }) => {
+      // Delete outputs first (cascade should handle this, but explicit is safer)
+      await supabase
+        .from('creative_boost_outputs')
+        .delete()
+        .eq('client_id', clientId)
+        .eq('year', year)
+        .eq('month', month);
 
-  const getClientMonthByClientId = useCallback((clientId: string, year: number, month: number) => {
-    return clientMonths.find(
-      cm => cm.clientId === clientId && cm.year === year && cm.month === month
-    );
-  }, [clientMonths]);
+      // Delete client month
+      const { error } = await supabase
+        .from('creative_boost_client_months')
+        .delete()
+        .eq('client_id', clientId)
+        .eq('year', year)
+        .eq('month', month);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['creative_boost_client_months'] });
+      queryClient.invalidateQueries({ queryKey: ['creative_boost_outputs'] });
+    },
+  });
 
-  // Output operations
-  const getClientOutputs = useCallback((clientId: string, year: number, month: number) => {
-    return outputs.filter(
-      o => o.clientId === clientId && o.year === year && o.month === month
-    );
-  }, [outputs]);
+  const updateClientMonthMutation = useMutation({
+    mutationFn: async ({
+      id,
+      data,
+      changes,
+    }: {
+      id: string;
+      data: Partial<CreativeBoostClientMonth>;
+      changes: Omit<CreativeBoostSettingsChange, 'id' | 'changedAt'>[];
+    }) => {
+      const existing = clientMonths.find(cm => cm.id === id);
+      if (!existing) throw new Error('Client month not found');
 
-  const updateClientOutput = useCallback((clientId: string, outputTypeId: string, year: number, month: number, data: Partial<ClientMonthOutput>) => {
-    setOutputs(prev => {
-      const existingIndex = prev.findIndex(
+      // Prepare update data
+      const updateData: any = {};
+      if (data.minCredits !== undefined) updateData.min_credits = data.minCredits;
+      if (data.maxCredits !== undefined) updateData.max_credits = data.maxCredits;
+      if (data.pricePerCredit !== undefined) updateData.price_per_credit = data.pricePerCredit;
+      if (data.colleagueId !== undefined) updateData.colleague_id = data.colleagueId || null;
+      if (data.status !== undefined) updateData.status = data.status;
+
+      // Update client month
+      const { error: updateError } = await supabase
+        .from('creative_boost_client_months')
+        .update(updateData)
+        .eq('id', id);
+      if (updateError) throw updateError;
+
+      // Insert history entries
+      if (changes.length > 0) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated - cannot log settings history');
+        
+        const userName = user.user_metadata?.full_name || user.email || 'Unknown';
+
+        const historyEntries = changes.map(change => ({
+          client_month_id: id,
+          client_id: change.clientId,
+          year: change.year,
+          month: change.month,
+          change_type: change.changeType,
+          field_name: change.fieldName,
+          old_value: String(change.oldValue),
+          new_value: String(change.newValue),
+          changed_by: user.id,
+          changed_by_name: userName,
+        }));
+
+        const { error: historyError } = await supabase
+          .from('creative_boost_settings_history')
+          .insert(historyEntries);
+        if (historyError) throw historyError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['creative_boost_client_months'] });
+      queryClient.invalidateQueries({ queryKey: ['creative_boost_settings_history'] });
+    },
+  });
+
+  const updateClientOutputMutation = useMutation({
+    mutationFn: async ({
+      clientId,
+      outputTypeId,
+      year,
+      month,
+      data,
+    }: {
+      clientId: string;
+      outputTypeId: string;
+      year: number;
+      month: number;
+      data: Partial<ClientMonthOutput>;
+    }) => {
+      // Check if output exists
+      const existing = outputs.find(
         o => o.clientId === clientId && o.outputTypeId === outputTypeId && o.year === year && o.month === month
       );
       
-      if (existingIndex >= 0) {
-        // Update existing
-        const updated = [...prev];
-        updated[existingIndex] = { ...updated[existingIndex], ...data, updatedAt: now() };
+      const totalCount = (data.normalCount ?? existing?.normalCount ?? 0) + (data.expressCount ?? existing?.expressCount ?? 0);
         
-        // Remove if both counts are 0
-        const totalCount = (updated[existingIndex].normalCount ?? 0) + (updated[existingIndex].expressCount ?? 0);
+      if (existing) {
         if (totalCount === 0) {
-          updated.splice(existingIndex, 1);
+          // Delete if both counts are 0
+          const { error } = await supabase.from('creative_boost_outputs').delete().eq('id', existing.id);
+          if (error) throw error;
+        } else {
+          // Update existing
+          const updateData: any = {};
+          if (data.normalCount !== undefined) updateData.normal_count = data.normalCount;
+          if (data.expressCount !== undefined) updateData.express_count = data.expressCount;
+          if (data.colleagueId !== undefined) updateData.colleague_id = data.colleagueId || null;
+
+          const { error } = await supabase.from('creative_boost_outputs').update(updateData).eq('id', existing.id);
+          if (error) throw error;
         }
+      } else if (totalCount > 0) {
+        // Create new - need to get client_month_id for the FK relationship
+        const { data: clientMonthData } = await supabase
+          .from('creative_boost_client_months')
+          .select('id')
+          .eq('client_id', clientId)
+          .eq('year', year)
+          .eq('month', month)
+          .single();
         
-        return updated;
-      } else {
-        // Create new only if there's at least one item
-        const totalCount = (data.normalCount ?? 0) + (data.expressCount ?? 0);
-        if (totalCount > 0) {
-          const newOutput: ClientMonthOutput = {
-            id: generateId('cmo'),
-            clientId,
-            outputTypeId,
+        const { error } = await supabase.from('creative_boost_outputs').insert({
+          client_id: clientId,
+          client_month_id: clientMonthData?.id || null,
+          output_type_id: outputTypeId,
             year,
             month,
-            normalCount: data.normalCount ?? 0,
-            expressCount: data.expressCount ?? 0,
-            colleagueId: data.colleagueId ?? '',
-            createdAt: now(),
-            updatedAt: now(),
-          };
-          return [...prev, newOutput];
-        }
+          normal_count: data.normalCount ?? 0,
+          express_count: data.expressCount ?? 0,
+          colleague_id: data.colleagueId || null,
+        });
+        if (error) throw error;
       }
-      
-      return prev;
-    });
-  }, []);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['creative_boost_outputs'] }),
+  });
 
-  // Calculate credits for output
-  // Express delivery multiplies credits by 1.5x
-  const calculateOutputCredits = useCallback((outputTypeId: string, normalCount: number, expressCount: number) => {
+  // Helper functions
+  const getClientsForMonth = useCallback(
+    (year: number, month: number) => {
+      return clientMonths.filter(cm => cm.year === year && cm.month === month).map(cm => cm.clientId);
+    },
+    [clientMonths]
+  );
+
+  const getAvailableClientsForMonth = useCallback(
+    (year: number, month: number) => {
+      const existingClientIds = getClientsForMonth(year, month);
+      // Get clients with active Creative Boost engagement services
+      const cbClients = engagements
+        .filter(e => e.status === 'active')
+        .map(e => e.client_id)
+        .filter((id, index, self) => self.indexOf(id) === index)
+        .map(clientId => getClientById(clientId))
+        .filter((c): c is NonNullable<typeof c> => c !== undefined && !existingClientIds.includes(c.id));
+
+      return cbClients.map(c => ({
+        clientId: c.id,
+        isActive: true,
+        defaultMinCredits: 30,
+        defaultMaxCredits: 50,
+        defaultPricePerCredit: 1500,
+      }));
+    },
+    [engagements, getClientById, getClientsForMonth]
+  );
+
+  const getClientMonthByClientId = useCallback(
+    (clientId: string, year: number, month: number) => {
+      return clientMonths.find(cm => cm.clientId === clientId && cm.year === year && cm.month === month);
+    },
+    [clientMonths]
+  );
+
+  const getClientOutputs = useCallback(
+    (clientId: string, year: number, month: number) => {
+      return outputs.filter(o => o.clientId === clientId && o.year === year && o.month === month);
+    },
+    [outputs]
+  );
+
+  // Credit calculations (pure functions)
+  const calculateOutputCredits = useCallback(
+    (outputTypeId: string, normalCount: number, expressCount: number) => {
     const outputType = outputTypes.find(t => t.id === outputTypeId);
     const baseCredits = outputType?.baseCredits ?? 0;
     
     const normalCredits = normalCount * baseCredits;
-    // Express items cost 1.5x the base credits
     const expressCredits = expressCount * baseCredits * 1.5;
     const totalCredits = normalCredits + expressCredits;
 
     return { normalCredits, expressCredits, totalCredits };
-  }, [outputTypes]);
+    },
+    [outputTypes]
+  );
 
-  // Computed data
-  const getClientMonthSummaries = useCallback((year: number, month: number): ClientMonthSummary[] => {
+  const getClientMonthSummaries = useCallback(
+    (year: number, month: number): ClientMonthSummary[] => {
     return clientMonths
       .filter(cm => cm.year === year && cm.month === month)
       .map(monthData => {
@@ -376,28 +510,36 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         };
       })
       .filter((s): s is ClientMonthSummary => s !== null);
-  }, [clientMonths, getClientById, getClientOutputs, calculateOutputCredits]);
+    },
+    [clientMonths, getClientById, getClientOutputs, calculateOutputCredits]
+  );
 
-  // Colleague credits
-  const getColleagueCredits = useCallback((colleagueId: string, year: number, month: number) => {
+  const getColleagueCredits = useCallback(
+    (colleagueId: string, year: number, month: number) => {
     return outputs
       .filter(o => o.colleagueId === colleagueId && o.year === year && o.month === month)
       .reduce((sum, output) => {
         const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
         return sum + credits.totalCredits;
       }, 0);
-  }, [outputs, calculateOutputCredits]);
+    },
+    [outputs, calculateOutputCredits]
+  );
 
-  const getColleagueCreditsYear = useCallback((colleagueId: string, year: number) => {
+  const getColleagueCreditsYear = useCallback(
+    (colleagueId: string, year: number) => {
     return outputs
       .filter(o => o.colleagueId === colleagueId && o.year === year)
       .reduce((sum, output) => {
         const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
         return sum + credits.totalCredits;
       }, 0);
-  }, [outputs, calculateOutputCredits]);
+    },
+    [outputs, calculateOutputCredits]
+  );
 
-  const getColleagueCreditsDetail = useCallback((colleagueId: string, year?: number, month?: number): ColleagueCreditDetail[] => {
+  const getColleagueCreditsDetail = useCallback(
+    (colleagueId: string, year?: number, month?: number): ColleagueCreditDetail[] => {
     return outputs
       .filter(o => {
         if (o.colleagueId !== colleagueId) return false;
@@ -421,25 +563,21 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           totalCredits: credits.totalCredits,
         };
       });
-  }, [outputs, getClientById, outputTypes, calculateOutputCredits]);
+    },
+    [outputs, getClientById, outputTypes, calculateOutputCredits]
+  );
 
-  // Helpers
-  const getOutputTypeById = useCallback((id: string) => {
-    return outputTypes.find(t => t.id === id);
-  }, [outputTypes]);
-
-  const getActiveOutputTypes = useCallback(() => {
-    return outputTypes.filter(t => t.isActive);
-  }, [outputTypes]);
-
-  // Engagement service integration
-  const getClientMonthByEngagementServiceId = useCallback((engagementServiceId: string, year: number, month: number) => {
+  const getClientMonthByEngagementServiceId = useCallback(
+    (engagementServiceId: string, year: number, month: number) => {
     return clientMonths.find(
       cm => cm.engagementServiceId === engagementServiceId && cm.year === year && cm.month === month
     );
-  }, [clientMonths]);
+    },
+    [clientMonths]
+  );
 
-  const getClientMonthSummaryByEngagementServiceId = useCallback((engagementServiceId: string, year: number, month: number): ClientMonthSummary | undefined => {
+  const getClientMonthSummaryByEngagementServiceId = useCallback(
+    (engagementServiceId: string, year: number, month: number): ClientMonthSummary | undefined => {
     const monthData = clientMonths.find(
       cm => cm.engagementServiceId === engagementServiceId && cm.year === year && cm.month === month
     );
@@ -481,10 +619,12 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       status: monthData.status,
       itemCount: clientOutputs.length,
     };
-  }, [clientMonths, outputs, getClientById, calculateOutputCredits]);
+    },
+    [clientMonths, outputs, getClientById, calculateOutputCredits]
+  );
 
-  // Settings history
-  const getSettingsHistory = useCallback((clientId: string, year?: number, month?: number): CreativeBoostSettingsChange[] => {
+  const getSettingsHistory = useCallback(
+    (clientId: string, year?: number, month?: number): CreativeBoostSettingsChange[] => {
     return settingsHistory
       .filter(h => {
         if (h.clientId !== clientId) return false;
@@ -493,55 +633,72 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         return true;
       })
       .sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
-  }, [settingsHistory]);
+    },
+    [settingsHistory]
+  );
+
+  const getOutputTypeById = useCallback(
+    (id: string) => {
+      return outputTypes.find(t => t.id === id);
+    },
+    [outputTypes]
+  );
+
+  const getActiveOutputTypes = useCallback(() => {
+    return outputTypes.filter(t => t.isActive);
+  }, [outputTypes]);
 
   // Auto-sync: Ensure CreativeBoostClientMonth records exist for all active engagements with CB service
-  const CREATIVE_BOOST_SERVICE_ID = 'srv-3';
+  // Find Creative Boost service by name pattern
+  const cbServiceId = useMemo(() => {
+    const cbService = services.find(s => 
+      s.name.toLowerCase().includes('creative boost') || 
+      s.name.toLowerCase().includes('cb')
+    );
+    return cbService?.id;
+  }, [services]);
   
-  const ensureClientMonthsForActiveEngagements = useCallback((year: number, month: number) => {
-    // Find all active engagements with Creative Boost service
+  const ensureClientMonthsForActiveEngagements = useCallback(
+    async (year: number, month: number) => {
+      if (!cbServiceId) return; // No Creative Boost service found
+      
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0);
+
+      const promises: Promise<void>[] = [];
     
     engagements.forEach(engagement => {
-      // Check if engagement is active for this month
       if (engagement.status !== 'active') return;
       
       const startDate = new Date(engagement.start_date);
       const endDate = engagement.end_date ? new Date(engagement.end_date) : null;
       
-      // Engagement must have started before or during this month
       if (startDate > monthEnd) return;
-      // Engagement must not have ended before this month
       if (endDate && endDate < monthStart) return;
       
-      // Find Creative Boost service for this engagement
       const cbService = engagementServices.find(
-        es => es.engagement_id === engagement.id && es.service_id === CREATIVE_BOOST_SERVICE_ID
+          es => es.engagement_id === engagement.id && es.service_id === cbServiceId
       );
       
       if (!cbService) return;
       
-      // Check if record already exists for this month
       const existingMonth = clientMonths.find(
         cm => cm.engagementServiceId === cbService.id && cm.year === year && cm.month === month
       );
       
       if (existingMonth) return;
       
-      // Find previous month's settings to copy (or use service defaults)
       const prevMonth = month === 1 ? 12 : month - 1;
       const prevYear = month === 1 ? year - 1 : year;
       const previousMonth = clientMonths.find(
         cm => cm.engagementServiceId === cbService.id && cm.year === prevYear && cm.month === prevMonth
       );
       
-      // Create new month record
-      const newMonth: CreativeBoostClientMonth = {
-        id: generateId('cbm'),
+        const promise = addClientToMonthMutation.mutateAsync({
         clientId: engagement.client_id,
         year,
         month,
+          settings: {
         minCredits: previousMonth?.minCredits ?? cbService.creative_boost_min_credits ?? 0,
         maxCredits: previousMonth?.maxCredits ?? cbService.creative_boost_max_credits ?? 50,
         pricePerCredit: previousMonth?.pricePerCredit ?? cbService.creative_boost_price_per_credit ?? 1500,
@@ -549,37 +706,134 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         status: 'active',
         engagementServiceId: cbService.id,
         engagementId: engagement.id,
-        createdAt: now(),
-        updatedAt: now(),
+          },
+        });
+
+        promises.push(promise);
+      });
+
+      await Promise.all(promises);
+    },
+    [engagements, engagementServices, clientMonths, addClientToMonthMutation, cbServiceId]
+  );
+
+  // Wrapper functions for mutations
+  const addOutputType = async (data: Omit<OutputType, 'id' | 'createdAt' | 'updatedAt'>): Promise<OutputType> => {
+    return addOutputTypeMutation.mutateAsync(data);
+  };
+
+  const updateOutputType = async (id: string, data: Partial<OutputType>): Promise<void> => {
+    await updateOutputTypeMutation.mutateAsync({ id, data });
+  };
+
+  const addClientToMonth = async (
+    clientId: string,
+    year: number,
+    month: number,
+    settings?: Partial<CreativeBoostClientMonth>
+  ): Promise<CreativeBoostClientMonth> => {
+    return addClientToMonthMutation.mutateAsync({ clientId, year, month, settings });
+  };
+
+  const removeClientFromMonth = async (clientId: string, year: number, month: number): Promise<void> => {
+    await removeClientFromMonthMutation.mutateAsync({ clientId, year, month });
+  };
+
+  const updateClientMonth = async (id: string, data: Partial<CreativeBoostClientMonth>): Promise<void> => {
+    const existing = clientMonths.find(cm => cm.id === id);
+    if (!existing) throw new Error('Client month not found');
+
+    const changes: Omit<CreativeBoostSettingsChange, 'id' | 'changedAt'>[] = [];
+
+    if (data.maxCredits !== undefined && data.maxCredits !== existing.maxCredits) {
+      changes.push({
+        clientMonthId: id,
+        clientId: existing.clientId,
+        year: existing.year,
+        month: existing.month,
+        changeType: 'max_credits',
+        fieldName: 'Max. kreditů',
+        oldValue: existing.maxCredits,
+        newValue: data.maxCredits,
+        changedBy: user?.id || '',
+        changedByName: user?.email || 'Neznámý',
+      });
+    }
+
+    if (data.pricePerCredit !== undefined && data.pricePerCredit !== existing.pricePerCredit) {
+      changes.push({
+        clientMonthId: id,
+        clientId: existing.clientId,
+        year: existing.year,
+        month: existing.month,
+        changeType: 'price_per_credit',
+        fieldName: 'Cena za kredit',
+        oldValue: existing.pricePerCredit,
+        newValue: data.pricePerCredit,
+        changedBy: user?.id || '',
+        changedByName: user?.email || 'Neznámý',
+      });
+    }
+
+    if (data.status !== undefined && data.status !== existing.status) {
+      const statusLabels: Record<string, string> = {
+        active: 'Aktivní',
+        inactive: 'Neaktivní',
       };
-      
-      setClientMonths(prev => [...prev, newMonth]);
-      
-      // Also ensure client exists in Creative Boost clients
-      const clientExists = clients.find(c => c.clientId === engagement.client_id);
-      if (!clientExists) {
-        const newClient: CreativeBoostClient = {
-          clientId: engagement.client_id,
-          isActive: true,
-          defaultMinCredits: newMonth.minCredits,
-          defaultMaxCredits: newMonth.maxCredits,
-          defaultPricePerCredit: newMonth.pricePerCredit,
-        };
-        setClients(prev => [...prev, newClient]);
-      }
-    });
-  }, [engagements, engagementServices, clientMonths, clients]);
+      changes.push({
+        clientMonthId: id,
+        clientId: existing.clientId,
+        year: existing.year,
+        month: existing.month,
+        changeType: 'status',
+        fieldName: 'Status',
+        oldValue: statusLabels[existing.status] || existing.status,
+        newValue: statusLabels[data.status] || data.status,
+        changedBy: user?.id || '',
+        changedByName: user?.email || 'Neznámý',
+      });
+    }
+
+    if (data.colleagueId !== undefined && data.colleagueId !== existing.colleagueId) {
+      const oldColleague = colleagues.find(c => c.id === existing.colleagueId);
+      const newColleague = colleagues.find(c => c.id === data.colleagueId);
+      changes.push({
+        clientMonthId: id,
+        clientId: existing.clientId,
+        year: existing.year,
+        month: existing.month,
+        changeType: 'colleague',
+        fieldName: 'Přiřazený kolega',
+        oldValue: oldColleague?.full_name || '',
+        newValue: newColleague?.full_name || '',
+        changedBy: user?.id || '',
+        changedByName: user?.email || 'Neznámý',
+      });
+    }
+
+    await updateClientMonthMutation.mutateAsync({ id, data, changes });
+  };
+
+  const updateClientOutput = async (
+    clientId: string,
+    outputTypeId: string,
+    year: number,
+    month: number,
+    data: Partial<ClientMonthOutput>
+  ): Promise<void> => {
+    await updateClientOutputMutation.mutateAsync({ clientId, outputTypeId, year, month, data });
+  };
 
   return (
-    <CreativeBoostContext.Provider value={{
+    <CreativeBoostContext.Provider
+      value={{
       outputTypes,
-      clients,
       clientMonths,
       outputs,
       settingsHistory,
+      isLoading,
       addOutputType,
       updateOutputType,
-      addCreativeBoostClient,
       addClientToMonth,
       removeClientFromMonth,
       updateClientMonth,
@@ -599,7 +853,8 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       ensureClientMonthsForActiveEngagements,
       getOutputTypeById,
       getActiveOutputTypes,
-    }}>
+      }}
+    >
       {children}
     </CreativeBoostContext.Provider>
   );

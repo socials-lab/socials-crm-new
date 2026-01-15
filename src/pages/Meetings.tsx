@@ -16,14 +16,18 @@ import {
 } from '@/components/ui/select';
 import { useMeetingsData } from '@/hooks/useMeetingsData';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { AddMeetingDialog } from '@/components/meetings/AddMeetingDialog';
 import { MeetingCard } from '@/components/meetings/MeetingCard';
 import { MeetingDetailSheet } from '@/components/meetings/MeetingDetailSheet';
+import { Button } from '@/components/ui/button';
+import { CalendarCheck } from 'lucide-react';
 import type { Meeting, MeetingType } from '@/types/meetings';
 
 export default function Meetings() {
   const { meetings, participants, isLoading } = useMeetingsData();
   const { clients, colleagues } = useCRMData();
+  const { connectGoogleCalendar, isConnected } = useGoogleCalendar();
   
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -107,7 +111,17 @@ export default function Meetings() {
       <PageHeader 
         title="📅 Meetingy" 
         description="Evidence interních a klientských meetingů"
-        actions={<AddMeetingDialog />}
+        actions={
+          <div className="flex gap-2">
+            {!isConnected && (
+              <Button variant="outline" onClick={connectGoogleCalendar}>
+                <CalendarCheck className="h-4 w-4 mr-2" />
+                Propojit Google kalendář
+              </Button>
+            )}
+            <AddMeetingDialog />
+          </div>
+        }
       />
 
       {/* Today's highlight */}

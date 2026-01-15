@@ -83,7 +83,7 @@ export function ExtraWorkTable({
   filterMonth = 'all',
   onFilterMonthChange,
 }: ExtraWorkTableProps) {
-  const { clients, colleagues, getClientById, getEngagementById, getColleagueById } = useCRMData();
+  const { clients, colleagues, getClientById, getEngagementById, getColleagueById, approveExtraWork, completeExtraWork } = useCRMData();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -171,7 +171,7 @@ export function ExtraWorkTable({
   };
 
   // Handle status change - show billing period dialog when changing to ready_to_invoice
-  const handleStatusChange = (id: string, newStatus: ExtraWorkStatus) => {
+  const handleStatusChange = async (id: string, newStatus: ExtraWorkStatus) => {
     const work = extraWorks.find(w => w.id === id);
     if (!work) return;
 
@@ -182,32 +182,36 @@ export function ExtraWorkTable({
       return;
     }
 
-    const updates: Partial<ExtraWork> = { status: newStatus };
-
-    // Set approval_date when moving out of pending_approval
-    if (work.status === 'pending_approval' && newStatus !== 'pending_approval' && !work.approval_date) {
-      updates.approval_date = new Date().toISOString();
+    // Use proper status transition helpers
+    if (newStatus === 'in_progress' && work.status === 'pending_approval') {
+      await approveExtraWork(id);
+      toast({
+        title: 'Schváleno',
+        description: 'Vícepráce byla schválena a převedena do práce.',
+      });
+      return;
     }
 
+    // For other status changes, use update
+    const updates: Partial<ExtraWork> = { status: newStatus };
     onUpdate(id, updates);
   };
 
   // Handle billing period confirmation
-  const handleBillingPeriodConfirm = (billingPeriod: string) => {
+  const handleBillingPeriodConfirm = async (billingPeriod: string) => {
     if (!pendingStatusChange) return;
-
     const { id, work } = pendingStatusChange;
-    const updates: Partial<ExtraWork> = {
-      status: 'ready_to_invoice',
-      billing_period: billingPeriod,
-    };
-
-    // Set approval_date if not already set
-    if (work.status === 'pending_approval' && !work.approval_date) {
-      updates.approval_date = new Date().toISOString();
+    
+    // If transitioning from pending_approval, approve first
+    if (work.status === 'pending_approval') {
+      await approveExtraWork(id);
     }
-
-    onUpdate(id, updates);
+    
+    // Then complete to ready_to_invoice
+    await completeExtraWork(id);
+    
+    // Update billing period
+    onUpdate(id, { billing_period: billingPeriod });
     
     toast({
       title: 'K fakturaci',
@@ -252,10 +256,10 @@ export function ExtraWorkTable({
     setSelectedIds(newSet);
   };
 
-  const handleBulkStatusChange = (newStatus: ExtraWorkStatus) => {
-    selectedIds.forEach(id => {
-      handleStatusChange(id, newStatus);
-    });
+  const handleBulkStatusChange = async (newStatus: ExtraWorkStatus) => {
+    for (const id of selectedIds) {
+      await handleStatusChange(id, newStatus);
+    }
     toast({
       title: 'Stav změněn',
       description: `${selectedIds.size} položek aktualizováno.`,

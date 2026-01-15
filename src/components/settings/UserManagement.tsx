@@ -11,6 +11,7 @@ import { AddCRMUserDialog } from './AddCRMUserDialog';
 import { EditUserRoleDialog } from './EditUserRoleDialog';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
+import type { PagePermission } from '@/types/crm';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -19,13 +20,12 @@ interface UserRoleData {
   user_id: string;
   role: AppRole;
   is_super_admin: boolean;
-  allowed_pages?: string[];
+  page_permissions?: PagePermission[];
   can_see_financials?: boolean;
   profile?: {
     id: string;
     email: string | null;
-    first_name: string | null;
-    last_name: string | null;
+    full_name: string | null;
   } | null;
   colleague?: {
     id: string;
@@ -48,7 +48,7 @@ export function UserManagement() {
     is_super_admin: boolean;
     displayName: string;
     email: string;
-    allowed_pages?: string[];
+    page_permissions?: PagePermission[];
     can_see_financials?: boolean;
   } | null>(null);
 
@@ -56,7 +56,8 @@ export function UserManagement() {
     setLoading(true);
     const { data, error } = await supabase
       .from('user_roles')
-      .select('*');
+      .select('*')
+      .eq('is_active', true);
     
     if (error) {
       console.error('Error fetching user roles:', error);
@@ -68,7 +69,7 @@ export function UserManagement() {
     const enrichedData = await Promise.all((data || []).map(async (role) => {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id, email, first_name, last_name')
+        .select('id, email, full_name')
         .eq('id', role.user_id)
         .single();
       
@@ -90,7 +91,7 @@ export function UserManagement() {
 
   const handleEditUser = (userRole: UserRoleData) => {
     const displayName = userRole.profile 
-      ? `${userRole.profile.first_name || ''} ${userRole.profile.last_name || ''}`.trim() || userRole.profile.email || 'Neznámý'
+      ? (userRole.profile.full_name || userRole.profile.email || 'Neznámý')
       : 'Neznámý';
     
     setSelectedUser({
@@ -100,7 +101,7 @@ export function UserManagement() {
       is_super_admin: userRole.is_super_admin || false,
       displayName,
       email: userRole.profile?.email || '',
-      allowed_pages: userRole.allowed_pages || [],
+      page_permissions: userRole.page_permissions || [],
       can_see_financials: userRole.can_see_financials || false,
     });
     setEditDialogOpen(true);
@@ -116,6 +117,7 @@ export function UserManagement() {
       project_manager: 'Project Manager',
       specialist: 'Specialista',
       finance: 'Finance',
+      client: 'Klient',
     };
     return <Badge variant="secondary">{roleLabels[role] || role}</Badge>;
   };
@@ -153,7 +155,7 @@ export function UserManagement() {
             <TableBody>
               {userRoles.map(userRole => {
                 const displayName = userRole.profile 
-                  ? `${userRole.profile.first_name || ''} ${userRole.profile.last_name || ''}`.trim() || userRole.profile.email 
+                  ? (userRole.profile.full_name || userRole.profile.email || 'Neznámý')
                   : 'Neznámý';
                 
                 return (

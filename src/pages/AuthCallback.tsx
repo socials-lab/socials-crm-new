@@ -19,6 +19,32 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const oauthType = sessionStorage.getItem('oauth_type');
+        
+        // Check if this is a Google Calendar OAuth callback
+        if (code && oauthType === 'google_calendar') {
+          sessionStorage.removeItem('oauth_type');
+          
+          // Exchange code for tokens via Edge Function
+          const redirectUri = `${window.location.origin}/auth/callback`;
+          const { data, error } = await supabase.functions.invoke('calendar-oauth-callback', {
+            body: { code, redirect_uri: redirectUri },
+          });
+          
+          if (error || data?.error) {
+            console.error('Google OAuth error:', error || data?.error);
+            toast.error('Chyba při propojování Google kalendáře: ' + (error?.message || data?.error));
+          } else {
+            toast.success('Google kalendář byl úspěšně propojen!');
+          }
+          
+          // Redirect back to meetings page
+          navigate('/meetings');
+          return;
+        }
+        
         // Get the session from URL hash (magic link callback)
         const { data: { session }, error } = await supabase.auth.getSession();
 
@@ -41,7 +67,6 @@ export default function AuthCallback() {
           if (profile) {
             // Check if this might be a new invite (no password set yet)
             // We'll show the password form for invite links
-            const urlParams = new URLSearchParams(window.location.search);
             const type = urlParams.get('type');
             
             if (type === 'invite' || type === 'recovery') {

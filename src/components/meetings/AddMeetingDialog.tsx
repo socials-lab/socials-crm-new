@@ -38,8 +38,11 @@ import {
 } from '@/components/ui/select';
 import { useMeetingsData } from '@/hooks/useMeetingsData';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import type { MeetingType } from '@/types/meetings';
 
 const meetingSchema = z.object({
@@ -59,8 +62,10 @@ type MeetingFormValues = z.infer<typeof meetingSchema>;
 
 export function AddMeetingDialog() {
   const [open, setOpen] = useState(false);
+  const [sendCalendarInvites, setSendCalendarInvites] = useState(false);
   const { addMeeting } = useMeetingsData();
   const { clients, engagements } = useCRMData();
+  const { createCalendarEvent, isConnected } = useGoogleCalendar();
   const { toast } = useToast();
 
   const form = useForm<MeetingFormValues>({
@@ -92,7 +97,7 @@ export function AddMeetingDialog() {
       const scheduledAt = new Date(data.scheduled_date);
       scheduledAt.setHours(hours, minutes, 0, 0);
 
-      await addMeeting({
+      const newMeeting = await addMeeting({
         title: data.title,
         description: '',
         type: data.type as MeetingType,
@@ -111,12 +116,18 @@ export function AddMeetingDialog() {
         calendar_invites_sent_at: null,
       });
 
+      // Send calendar invites if requested and connected
+      if (sendCalendarInvites && isConnected && newMeeting?.id) {
+        await createCalendarEvent(newMeeting.id);
+      }
+
       toast({
         title: 'Meeting vytvořen',
         description: `Meeting "${data.title}" byl úspěšně naplánován.`,
       });
 
       form.reset();
+      setSendCalendarInvites(false);
       setOpen(false);
     } catch (error) {
       toast({
@@ -380,6 +391,18 @@ export function AddMeetingDialog() {
               )}
             />
 
+            {isConnected && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="send-calendar-invites"
+                  checked={sendCalendarInvites}
+                  onCheckedChange={(checked) => setSendCalendarInvites(checked === true)}
+                />
+                <Label htmlFor="send-calendar-invites" className="text-sm font-normal cursor-pointer">
+                  Odeslat pozvánky do Google kalendáře
+                </Label>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>

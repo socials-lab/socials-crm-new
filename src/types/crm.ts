@@ -339,6 +339,7 @@ export interface InvoiceLineItem {
   source: LineItemSource;
   engagement_id: string | null;
   extra_work_id: string | null;
+  engagement_service_id: string | null;
   source_description: string;
   source_amount: number;
   period_start: string;
@@ -359,6 +360,9 @@ export interface InvoiceLineItem {
   hourly_rate: number | null;
   currency: string;
   is_reverse_charge: boolean;
+  // Timestamps
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MonthlyClientInvoice {

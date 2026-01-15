@@ -57,6 +57,7 @@ serve(async (req) => {
       .from("user_roles")
       .select("is_super_admin, role")
       .eq("user_id", caller.id)
+      .eq("is_active", true)
       .single();
 
     if (!callerRole?.is_super_admin && callerRole?.role !== "admin") {
@@ -109,8 +110,7 @@ serve(async (req) => {
       email,
       {
         data: {
-          first_name: firstName,
-          last_name: lastName,
+          full_name: `${firstName} ${lastName}`,
         },
         redirectTo: `${origin}/auth/callback`,
       }
@@ -160,6 +160,7 @@ serve(async (req) => {
         user_id: inviteData.user.id,
         role: role,
         is_super_admin: false,
+        is_active: true,
       });
 
     if (roleError) {

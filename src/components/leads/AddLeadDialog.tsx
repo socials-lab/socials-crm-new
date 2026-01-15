@@ -28,6 +28,7 @@ import {
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
+import { useAresLookup } from '@/hooks/useAresLookup';
 import type { Lead, LeadStage, LeadSource, LeadOfferType } from '@/types/crm';
 import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
@@ -90,39 +91,12 @@ const SERVICE_OPTIONS = [
   'Strategy Consulting',
 ];
 
-// Mock ARES data for demo
-const MOCK_ARES_DATA: Record<string, { company_name: string; dic: string; billing_street: string; billing_city: string; billing_zip: string; billing_country: string }> = {
-  '12345678': {
-    company_name: 'Demo Firma s.r.o.',
-    dic: 'CZ12345678',
-    billing_street: 'Václavské náměstí 1',
-    billing_city: 'Praha',
-    billing_zip: '110 00',
-    billing_country: 'Česká republika',
-  },
-  '87654321': {
-    company_name: 'Test Company a.s.',
-    dic: 'CZ87654321',
-    billing_street: 'Masarykova 123',
-    billing_city: 'Brno',
-    billing_zip: '602 00',
-    billing_country: 'Česká republika',
-  },
-  '11223344': {
-    company_name: 'Innovation Labs s.r.o.',
-    dic: 'CZ11223344',
-    billing_street: 'Technologická 5',
-    billing_city: 'Ostrava',
-    billing_zip: '708 00',
-    billing_country: 'Česká republika',
-  },
-};
 
 export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) {
   const { addLead, updateLead } = useLeadsData();
   const { colleagues } = useCRMData();
   const { user } = useAuth();
-  const [isLoadingAres, setIsLoadingAres] = useState(false);
+  const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   
@@ -133,33 +107,29 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       return;
     }
     
-    setIsLoadingAres(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check mock data first
-    const mockData = MOCK_ARES_DATA[ico];
-    if (mockData) {
-      form.setValue('company_name', mockData.company_name);
-      form.setValue('dic', mockData.dic);
-      form.setValue('billing_street', mockData.billing_street);
-      form.setValue('billing_city', mockData.billing_city);
-      form.setValue('billing_zip', mockData.billing_zip);
-      form.setValue('billing_country', mockData.billing_country);
+    const result = await lookupCompany(ico);
+    if (result) {
+      form.setValue('company_name', result.name || '');
+      form.setValue('dic', result.dic || '');
+      if (result.address) {
+        // Try to parse address (format may vary)
+        const addressParts = result.address.split(',');
+        if (addressParts.length >= 2) {
+          form.setValue('billing_street', addressParts[0].trim());
+          const cityZip = addressParts[addressParts.length - 1].trim().split(' ');
+          if (cityZip.length >= 2) {
+            form.setValue('billing_zip', cityZip[0]);
+            form.setValue('billing_city', cityZip.slice(1).join(' '));
+          } else {
+            form.setValue('billing_city', cityZip[0]);
+          }
+        } else {
+          form.setValue('billing_street', result.address);
+        }
+        form.setValue('billing_country', 'Česká republika');
+      }
       toast.success('Údaje načteny z ARES');
-    } else {
-      // Generate random mock data for any IČO
-      form.setValue('company_name', `Společnost ${ico} s.r.o.`);
-      form.setValue('dic', `CZ${ico}`);
-      form.setValue('billing_street', 'Ulice 123');
-      form.setValue('billing_city', 'Praha');
-      form.setValue('billing_zip', '100 00');
-      form.setValue('billing_country', 'Česká republika');
-      toast.success('Údaje načteny z ARES (demo)');
     }
-    
-    setIsLoadingAres(false);
   };
 
   const form = useForm<LeadFormData>({

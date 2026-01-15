@@ -19,9 +19,6 @@ import {
 } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 import { useFeedbackData } from '@/hooks/useFeedbackData';
-import { useCRMData } from '@/hooks/useCRMData';
-import { useUserRole } from '@/hooks/useUserRole';
-import { useNotifications } from '@/hooks/useNotifications';
 import { FEEDBACK_CATEGORY_CONFIG, type FeedbackCategory } from '@/types/feedback';
 import { toast } from 'sonner';
 
@@ -36,11 +33,8 @@ export function AddFeedbackDialog({ children }: AddFeedbackDialogProps) {
   const [category, setCategory] = useState<FeedbackCategory>('other');
   
   const { addIdea } = useFeedbackData();
-  const { colleagues } = useCRMData();
-  const { colleagueId } = useUserRole();
-  const { addNotification } = useNotifications();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!title.trim() || !description.trim()) {
@@ -48,23 +42,7 @@ export function AddFeedbackDialog({ children }: AddFeedbackDialogProps) {
       return;
     }
 
-    const newIdea = addIdea({ title, description, category });
-    
-    // Get author name for notification
-    const author = colleagues.find(c => c.id === colleagueId);
-    const authorName = author?.full_name || 'Někdo';
-    
-    // Add notification
-    addNotification({
-      type: 'new_feedback_idea',
-      title: 'Nový nápad!',
-      message: `${authorName} přidal nápad: "${title}"`,
-      link: '/feedback',
-      metadata: {
-        colleague_id: colleagueId || undefined,
-        colleague_name: authorName,
-      },
-    });
+    await addIdea({ title, description, category });
     
     toast.success('Nápad byl přidán');
     setTitle('');

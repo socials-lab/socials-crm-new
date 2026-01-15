@@ -41,7 +41,7 @@ export function IssueInvoicesDialog({
   onIssueSuccess,
 }: IssueInvoicesDialogProps) {
   const { toast } = useToast();
-  const { addIssuedInvoice, getClientById } = useCRMData();
+  const { createInvoiceWithLineItems, getClientById } = useCRMData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successData, setSuccessData] = useState<{ 
@@ -102,27 +102,50 @@ export function IssueInvoicesDialog({
       // Get invoice number and ID from Fakturoid (simulated)
       const fakturoidData = simulateFakturoidResponse(i);
       
-      const issuedInvoice: Omit<IssuedInvoice, 'id' | 'created_at'> = {
+      // Extract extra work IDs and one-off service IDs from line items
+      const extraWorkIds: string[] = [];
+      const oneOffServiceIds: string[] = [];
+      
+      invoice.line_items.forEach(item => {
+        if (item.extra_work_id) {
+          extraWorkIds.push(item.extra_work_id);
+        }
+        if (item.engagement_service_id) {
+          oneOffServiceIds.push(item.engagement_service_id);
+        }
+      });
+      
+      // Prepare line items without invoice_id (will be set by createInvoiceWithLineItems)
+      const lineItemsWithoutInvoiceId = invoice.line_items.map(item => {
+        const { id, invoice_id, created_at, updated_at, ...rest } = item;
+        return rest;
+      });
+      
+      const invoiceData: Omit<IssuedInvoice, 'id' | 'created_at' | 'invoice_number'> = {
         engagement_id: invoice.engagement_id,
         engagement_name: invoice.engagement_name,
         client_id: invoice.client_id,
         client_name: client?.brand_name || client?.name || 'Neznámý klient',
         year: invoice.year,
         month: invoice.month,
-        invoice_number: fakturoidData.invoice_number,
         fakturoid_id: fakturoidData.fakturoid_id,
         fakturoid_url: fakturoidData.fakturoid_url,
         line_items: invoice.line_items,
         total_amount: invoice.total_amount,
         currency: invoice.currency,
         issued_at: new Date().toISOString(),
-        issued_by: 'user-1',
+        issued_by: null, // Will be set by createInvoiceWithLineItems
       };
       
-      addIssuedInvoice(issuedInvoice);
+      const createdInvoice = await createInvoiceWithLineItems(
+        invoiceData,
+        lineItemsWithoutInvoiceId,
+        extraWorkIds,
+        oneOffServiceIds
+      );
       
       issuedInvoiceInfos.push({
-        invoice_number: fakturoidData.invoice_number,
+        invoice_number: createdInvoice.invoice_number,
         engagement_name: invoice.engagement_name,
         amount: invoice.total_amount,
         fakturoid_url: fakturoidData.fakturoid_url,

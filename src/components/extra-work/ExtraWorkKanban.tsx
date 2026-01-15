@@ -39,7 +39,7 @@ function KanbanCard({
   work: ExtraWork; 
   onUpdate: (id: string, data: Partial<ExtraWork>) => void;
 }) {
-  const { getClientById, getColleagueById } = useCRMData();
+  const { getClientById, getColleagueById, approveExtraWork, completeExtraWork } = useCRMData();
   const { toast } = useToast();
   const client = getClientById(work.client_id);
   const colleague = getColleagueById(work.colleague_id);
@@ -54,21 +54,29 @@ function KanbanCard({
     }).format(amount);
   };
 
-  const handleStatusChange = (newStatus: ExtraWorkStatus) => {
-    const updates: Partial<ExtraWork> = { status: newStatus };
-    
-    if (work.status === 'pending_approval' && newStatus !== 'pending_approval' && !work.approval_date) {
-      updates.approval_date = new Date().toISOString();
+  const handleStatusChange = async (newStatus: ExtraWorkStatus) => {
+    // Use proper status transition helpers
+    if (newStatus === 'in_progress' && work.status === 'pending_approval') {
+      await approveExtraWork(work.id);
+      toast({
+        title: 'Schváleno',
+        description: 'Vícepráce byla schválena a převedena do práce.',
+      });
+      return;
     }
-
-    onUpdate(work.id, updates);
-
-    if (newStatus === 'ready_to_invoice') {
+    
+    if (newStatus === 'ready_to_invoice' && work.status === 'in_progress') {
+      await completeExtraWork(work.id);
       toast({
         title: 'K fakturaci',
         description: 'Vícepráce bude zahrnuta v příští fakturaci.',
       });
+      return;
     }
+
+    // For other status changes, use update
+    const updates: Partial<ExtraWork> = { status: newStatus };
+    onUpdate(work.id, updates);
   };
 
   return (
