@@ -219,17 +219,11 @@ Správa schůzek – interních i s klienty.
 - Deadline
 - Status (todo / in progress / done)
 
-### Transcript a AI Shrnutí
+### Transcript a Shrnutí
 
-**Aktuální stav:** Pouze textová pole pro ruční vložení.
-
-**Plánovaná funkce:**
-1. Uživatel vloží transcript z nahrávky (Google Meet, Zoom, Fathom...)
-2. AI automaticky vygeneruje strukturované shrnutí:
-   - Klíčové body diskuze
-   - Rozhodnutí
-   - Akční úkoly (kdo, co, kdy)
-3. Možnost editace
+Textová pole pro ruční vložení:
+- **Transcript** – záznam z nahrávky meetingu (Google Meet, Zoom, Fathom...)
+- **Shrnutí** – manuálně vytvořené shrnutí klíčových bodů, rozhodnutí a akčních úkolů
 
 ### Kalendářní pozvánky
 
@@ -399,22 +393,6 @@ Interní systém pro návrhy a zpětnou vazbu od týmu.
 
 ---
 
-### AI Shrnutí meetingů
-
-**Status:** Připravená struktura, bez implementace
-
-**Plánovaná funkce:**
-1. Uživatel nahraje/vloží transcript meetingu (z Google Meet, Zoom, Fathom...)
-2. AI vygeneruje strukturované shrnutí:
-   - Klíčové body diskuze
-   - Přijatá rozhodnutí
-   - Akční úkoly (kdo, co, do kdy)
-3. Možnost ručně editovat
-
-**Aktuálně:** Pouze textová pole pro transcript a shrnutí (ruční vkládání).
-
----
-
 ### Kalendář / Google Calendar
 
 **Status:** Není implementováno
@@ -436,7 +414,6 @@ Interní systém pro návrhy a zpětnou vazbu od týmu.
 | Emaily | Mock odesílání | Chybí SMTP integrace |
 | Freelo | Pouze URL | Možná v budoucnu |
 | Notion | Pouze URL | Pouze odkazy |
-| AI Summary | Textové pole | Chybí AI integrace |
 | Google Calendar | Nic | Plánováno |
 
 ---

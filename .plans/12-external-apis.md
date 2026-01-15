@@ -3,13 +3,12 @@
 ## Status: Not Started
 
 ## Scope
-Integrate with external services: Fakturoid (invoicing), DigiSign (contracts), Google Calendar, and AI for meeting summaries.
+Integrate with external services: Fakturoid (invoicing), DigiSign (contracts), and Google Calendar.
 
 ## Goals
 - [ ] Implement Fakturoid integration for invoice creation
 - [ ] Implement DigiSign integration for electronic signatures
 - [ ] Implement Google Calendar integration
-- [ ] Implement AI meeting summary generation
 - [ ] Set up webhooks for status updates
 
 ## Integrations Overview
@@ -19,7 +18,6 @@ Integrate with external services: Fakturoid (invoicing), DigiSign (contracts), G
 | Fakturoid | Create and track invoices | REST API + Webhooks |
 | DigiSign | Electronic contract signing | REST API + Webhooks |
 | Google Calendar | Sync meetings, send invites | OAuth + Calendar API |
-| Claude/OpenAI | Generate meeting summaries | AI API |
 
 ---
 
@@ -122,43 +120,6 @@ Auth: API key in header
 
 ---
 
-## 4. AI Meeting Summary
-
-### Features
-- Generate summary from meeting transcript
-- Extract action items
-- Identify key decisions
-- Update ai_summary field
-
-### Implementation
-
-#### Edge Function: ai-generate-summary
-- [ ] Accept meeting transcript
-- [ ] Call Claude/OpenAI API
-- [ ] Parse response for summary
-- [ ] Optionally extract tasks
-- [ ] Return summary text
-
-### Prompt Template
-```
-You are a meeting assistant. Summarize the following meeting transcript.
-
-Include:
-1. Key topics discussed
-2. Decisions made
-3. Action items with assignees
-4. Next steps
-
-Transcript:
-{transcript}
-```
-
-### Environment Variables
-- ANTHROPIC_API_KEY (for Claude)
-- OPENAI_API_KEY (for GPT)
-
----
-
 ## Files to Create
 
 | File | Purpose |
@@ -168,7 +129,6 @@ Transcript:
 | `supabase/functions/digisign-create-contract/index.ts` | Create DigiSign contract |
 | `supabase/functions/digisign-webhook/index.ts` | Handle DigiSign webhooks |
 | `supabase/functions/calendar-create-event/index.ts` | Create calendar event |
-| `supabase/functions/ai-generate-summary/index.ts` | Generate AI summary |
 
 ## Frontend Integration
 
@@ -184,7 +144,6 @@ Transcript:
 
 ### Meetings
 - [ ] "Send Calendar Invites" button
-- [ ] "Generate AI Summary" button
 - [ ] Display summary in sheet
 
 ## Webhook Setup
@@ -208,8 +167,6 @@ https://<project>.supabase.co/functions/v1/digisign-webhook
 - [ ] DigiSign webhook updates contract status
 - [ ] Google Calendar event creation works
 - [ ] Calendar invites sent to participants
-- [ ] AI summary generates from transcript
-- [ ] AI summary stored in meeting record
 - [ ] All integrations handle errors gracefully
 - [ ] Webhook signatures validated
 
@@ -217,6 +174,4 @@ https://<project>.supabase.co/functions/v1/digisign-webhook
 - Start with Fakturoid as it's most commonly used
 - DigiSign may require template setup in their dashboard
 - Google Calendar requires per-user OAuth consent
-- AI summary is optional enhancement
-- Consider rate limiting for AI calls
 - Webhook endpoints should validate signatures

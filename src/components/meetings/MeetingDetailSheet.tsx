@@ -8,7 +8,6 @@ import {
   Link as LinkIcon, 
   Building2,
   FileText,
-  Sparkles,
   Edit,
   Trash2,
   ExternalLink,
@@ -43,7 +42,6 @@ import { Separator } from '@/components/ui/separator';
 import { useMeetingsData } from '@/hooks/useMeetingsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { useAISummary } from '@/hooks/useAISummary';
 import { useToast } from '@/hooks/use-toast';
 import type { Meeting, MeetingStatus } from '@/types/meetings';
 import { MeetingParticipants } from './MeetingParticipants';
@@ -67,7 +65,6 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
   const { updateMeeting, deleteMeeting, getParticipantsByMeetingId, getTasksByMeetingId } = useMeetingsData();
   const { clients, engagements, colleagues } = useCRMData();
   const { createCalendarEvent, isConnected, isLoading: isCreatingEvent } = useGoogleCalendar();
-  const { generateSummary, isGenerating } = useAISummary();
   const { toast } = useToast();
   
   const [isEditingAgenda, setIsEditingAgenda] = useState(false);
@@ -428,38 +425,15 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
               </CardContent>
             </Card>
 
-            {/* AI Summary */}
+            {/* Summary */}
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-purple-500" />
-                    AI Shrnutí
+                    <FileText className="h-4 w-4" />
+                    Shrnutí
                   </CardTitle>
                   <div className="flex gap-2">
-                    {!meeting.ai_summary && !isEditingSummary && (
-                      <Button 
-                        size="sm" 
-                        variant="default"
-                        onClick={async () => {
-                          await generateSummary(meeting.id, meeting.transcript);
-                          // Data refreshes automatically via query invalidation in useAISummary
-                        }}
-                        disabled={isGenerating || (!meeting.transcript && !meeting.notes && !meeting.agenda)}
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                            Generování...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-4 w-4 mr-1" />
-                            Vygenerovat AI shrnutí
-                          </>
-                        )}
-                      </Button>
-                    )}
                     {!isEditingSummary && (
                       <Button 
                         size="sm" 
@@ -496,12 +470,7 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
                 ) : meeting.ai_summary ? (
                   <p className="text-sm whitespace-pre-wrap">{meeting.ai_summary}</p>
                 ) : (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Shrnutí nebylo přidáno</p>
-                    {!meeting.transcript && !meeting.notes && !meeting.agenda && (
-                      <p className="text-xs text-muted-foreground">Nejprve přidejte transcript nebo poznámky</p>
-                    )}
-                  </div>
+                  <p className="text-sm text-muted-foreground">Shrnutí nebylo přidáno</p>
                 )}
               </CardContent>
             </Card>
