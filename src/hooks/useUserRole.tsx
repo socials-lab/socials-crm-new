@@ -20,7 +20,7 @@ interface UserRoleContextType {
 const UserRoleContext = createContext<UserRoleContextType | undefined>(undefined);
 
 export function UserRoleProvider({ children }: { children: ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const [role, setRole] = useState<AppRole | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [colleagueId, setColleagueId] = useState<string | null>(null);
@@ -29,29 +29,44 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const [pagePermissions, setPagePermissions] = useState<PagePermission[]>([]);
 
   useEffect(() => {
-    if (authLoading || !user) {
-      setIsLoading(authLoading);
-      if (!user) {
-        setRole(null);
-        setIsSuperAdmin(false);
-        setColleagueId(null);
-        setCanSeeFinancials(false);
-        setPagePermissions([]);
-        setIsLoading(false);
-      }
+    if (authLoading) {
+      return;
+    }
+    
+    if (!user || !session) {
+      setRole(null);
+      setIsSuperAdmin(false);
+      setColleagueId(null);
+      setCanSeeFinancials(false);
+      setPagePermissions([]);
+      setIsLoading(false);
       return;
     }
 
     async function fetchUserRole() {
       setIsLoading(true);
       try {
-        // Fetch user role
-        const { data: userRole, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role, is_super_admin, can_see_financials, page_permissions')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .single();
+        // Use session from context - no need to call getSession() again
+        const accessToken = session!.access_token;
+        
+        // Direct fetch to avoid any SDK issues
+        const apiUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        const directResponse = await fetch(
+          `${apiUrl}/rest/v1/user_roles?user_id=eq.${user!.id}&is_active=eq.true&select=role,is_super_admin,can_see_financials,page_permissions`,
+          {
+            headers: {
+              'apikey': apiKey,
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+        
+        const directData = await directResponse.json();
+        const userRole = directData[0] || null;
+        const roleError = directResponse.ok ? null : { message: directResponse.statusText };
 
         if (roleError && roleError.code !== 'PGRST116') {
           console.error('Error fetching user role:', roleError);
@@ -72,17 +87,19 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
           setPagePermissions([]);
         }
 
-        // Fetch colleague ID
-        const { data: colleague, error: colleagueError } = await supabase
-          .from('colleagues')
-          .select('id')
-          .eq('profile_id', user.id)
-          .single();
-
-        if (colleagueError && colleagueError.code !== 'PGRST116') {
-          console.error('Error fetching colleague:', colleagueError);
-        }
-
+        // Fetch colleague ID using direct fetch
+        const colleagueResponse = await fetch(
+          `${apiUrl}/rest/v1/colleagues?profile_id=eq.${user!.id}&select=id`,
+          {
+            headers: {
+              'apikey': apiKey,
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+        const colleagueData = await colleagueResponse.json();
+        const colleague = colleagueData[0] || null;
         setColleagueId(colleague?.id ?? null);
       } catch (error) {
         console.error('Error in fetchUserRole:', error);
@@ -92,7 +109,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     }
 
     fetchUserRole();
-  }, [user, authLoading]);
+  }, [user, session, authLoading]);
 
   const hasRole = (checkRole: AppRole): boolean => {
     if (isSuperAdmin) return true;

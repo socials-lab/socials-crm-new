@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet, createRoutesFromElements, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -38,6 +38,46 @@ import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <>
+      {/* Public routes */}
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
+      <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
+      
+      {/* Protected routes */}
+      <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/my-work" element={<MyWork />} />
+        <Route path="/leads" element={<Leads />} />
+        <Route path="/clients" element={<Clients />} />
+        <Route path="/contacts" element={<Contacts />} />
+        <Route path="/engagements" element={<Engagements />} />
+        <Route path="/extra-work" element={<ExtraWork />} />
+        <Route path="/invoicing" element={<Invoicing />} />
+        <Route path="/creative-boost" element={<CreativeBoost />} />
+        <Route path="/meetings" element={<Meetings />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/colleagues" element={<Colleagues />} />
+        <Route path="/recruitment" element={<Recruitment />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/feedback" element={<Feedback />} />
+      </Route>
+      <Route path="*" element={<NotFound />} />
+    </>
+  ),
+  {
+    future: {
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    },
+  }
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -51,37 +91,7 @@ const App = () => (
                     <TooltipProvider>
                       <Toaster />
                       <Sonner />
-                      <BrowserRouter>
-                        <Routes>
-                          {/* Public routes */}
-                          <Route path="/auth" element={<Auth />} />
-                          <Route path="/auth/callback" element={<AuthCallback />} />
-                          <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
-                          <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
-                          
-                          {/* Protected routes */}
-                          <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
-                            <Route path="/" element={<Dashboard />} />
-                            <Route path="/my-work" element={<MyWork />} />
-                            <Route path="/leads" element={<Leads />} />
-                            <Route path="/clients" element={<Clients />} />
-                            <Route path="/contacts" element={<Contacts />} />
-                            <Route path="/engagements" element={<Engagements />} />
-                            <Route path="/extra-work" element={<ExtraWork />} />
-                            <Route path="/invoicing" element={<Invoicing />} />
-                            <Route path="/creative-boost" element={<CreativeBoost />} />
-                            <Route path="/meetings" element={<Meetings />} />
-                            <Route path="/services" element={<Services />} />
-                            <Route path="/colleagues" element={<Colleagues />} />
-                            <Route path="/recruitment" element={<Recruitment />} />
-                            <Route path="/analytics" element={<Analytics />} />
-                            <Route path="/settings" element={<Settings />} />
-                            <Route path="/notifications" element={<Notifications />} />
-                            <Route path="/feedback" element={<Feedback />} />
-                          </Route>
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </BrowserRouter>
+                      <RouterProvider router={router} future={{ v7_startTransition: true }} />
                     </TooltipProvider>
                   </FeedbackProvider>
                 </MeetingsDataProvider>

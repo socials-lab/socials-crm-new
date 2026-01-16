@@ -20,7 +20,6 @@ import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { AddMeetingDialog } from '@/components/meetings/AddMeetingDialog';
 import { MeetingCard } from '@/components/meetings/MeetingCard';
 import { MeetingDetailSheet } from '@/components/meetings/MeetingDetailSheet';
-import { Button } from '@/components/ui/button';
 import { CalendarCheck } from 'lucide-react';
 import type { Meeting, MeetingType } from '@/types/meetings';
 

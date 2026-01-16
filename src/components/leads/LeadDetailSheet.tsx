@@ -65,7 +65,6 @@ import { SendOfferDialog } from './SendOfferDialog';
 import type { Lead, LeadStage, LeadService } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
 
 interface LeadDetailSheetProps {
   lead: Lead | null;

@@ -20,8 +20,19 @@ export default function AuthCallback() {
     const handleCallback = async () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const code = urlParams.get('code');
         const oauthType = sessionStorage.getItem('oauth_type');
+        
+        // Check for OAuth errors
+        const error = hashParams.get('error');
+        if (error) {
+          const errorDescription = hashParams.get('error_description') || 'Neznámá chyba';
+          console.error('OAuth error:', error, errorDescription);
+          toast.error('Chyba přihlášení: ' + errorDescription);
+          navigate('/auth');
+          return;
+        }
         
         // Check if this is a Google Calendar OAuth callback
         if (code && oauthType === 'google_calendar') {
@@ -46,11 +57,11 @@ export default function AuthCallback() {
         }
         
         // Get the session from URL hash (magic link callback)
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error('Auth callback error:', error);
-          toast.error('Chyba při ověřování: ' + error.message);
+        if (sessionError) {
+          console.error('Auth callback error:', sessionError);
+          toast.error('Chyba při ověřování: ' + sessionError.message);
           navigate('/auth');
           return;
         }
