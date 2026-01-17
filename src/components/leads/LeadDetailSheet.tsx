@@ -64,7 +64,7 @@ import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import type { Lead, LeadStage, LeadService } from '@/types/crm';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 interface LeadDetailSheetProps {
   lead: Lead | null;

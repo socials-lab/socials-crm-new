@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 function MobileMenuButton() {
   const { toggleSidebar, isMobile } = useSidebar();

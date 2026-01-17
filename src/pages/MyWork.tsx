@@ -4,6 +4,7 @@ import { Briefcase, CreditCard, ExternalLink, Sparkles, Zap } from 'lucide-react
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ColorBadge } from '@/components/shared/ColorBadge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCreativeBoostData, CreativeBoostProvider } from '@/hooks/useCreativeBoostData';
@@ -229,10 +230,9 @@ function MyWorkContent() {
                   </div>
                   <div className="flex items-center gap-2">
                     {detail.expressCount > 0 && (
-                      <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
-                        <Zap className="h-3 w-3 mr-1" />
+                      <ColorBadge color="amber" className="text-xs" icon={<Zap className="h-3 w-3" />}>
                         Express
-                      </Badge>
+                      </ColorBadge>
                     )}
                     <span className="font-bold">{detail.totalCredits} kreditů</span>
                   </div>

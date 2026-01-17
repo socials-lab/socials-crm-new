@@ -3,6 +3,7 @@ import { Pencil, Trash2, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { TierBadge } from '@/components/shared/TierBadge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,9 +65,9 @@ export function EngagementServiceCard({
                   {engagementService.billing_type === 'monthly' ? 'Měsíčně' : 'Jednorázově'}
                 </Badge>
                 {service?.service_type === 'core' && engagementService.selected_tier && (
-                  <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                  <TierBadge className="text-xs">
                     {tierLabels[engagementService.selected_tier]}
-                  </Badge>
+                  </TierBadge>
                 )}
                 {canSeeFinancials && (
                   <span className="text-xs text-muted-foreground">

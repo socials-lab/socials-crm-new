@@ -37,7 +37,7 @@ import { AddContactDialog } from '@/components/clients/AddContactDialog';
 import { useUserRole } from '@/hooks/useUserRole';
 import type { ClientStatus, Client, ClientContact, ClientTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 const tierConfig: Record<ClientTier, { label: string; color: string; icon: string }> = {
   standard: { label: 'Standard', color: 'bg-muted text-muted-foreground', icon: '' },

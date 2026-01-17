@@ -20,7 +20,7 @@ import {
 import { Plus } from 'lucide-react';
 import { useFeedbackData } from '@/hooks/useFeedbackData';
 import { FEEDBACK_CATEGORY_CONFIG, type FeedbackCategory } from '@/types/feedback';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 interface AddFeedbackDialogProps {
   children?: React.ReactNode;

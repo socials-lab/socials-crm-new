@@ -126,7 +126,8 @@ serve(async (req) => {
 
     console.log(`User invited successfully, ID: ${inviteData.user.id}`);
 
-    // Pre-create colleague record with all provided data
+    // Pre-create colleague record with all provided data AND link to profile
+    // We set profile_id directly since the invite already created the user/profile
     const { error: colleagueError } = await supabaseAdmin
       .from("colleagues")
       .insert({
@@ -141,6 +142,7 @@ serve(async (req) => {
         internal_hourly_cost: internal_hourly_cost || 0,
         monthly_fixed_cost: monthly_fixed_cost || null,
         capacity_hours_per_month: capacity_hours_per_month || null,
+        profile_id: inviteData.user.id, // Link colleague to user profile directly
       });
 
     if (colleagueError) {
@@ -151,7 +153,7 @@ serve(async (req) => {
       );
     }
     
-    console.log(`Colleague created for ${email}`);
+    console.log(`Colleague created and linked to profile for ${email}`);
 
     // Pre-assign role
     const { error: roleError } = await supabaseAdmin

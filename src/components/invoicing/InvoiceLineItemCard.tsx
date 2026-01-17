@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { ColorBadge } from '@/components/shared/ColorBadge';
 import { FileText, AlertTriangle, Trash2, Plus, CheckCircle2, Copy, MessageSquare, Clock, ArrowRightLeft } from 'lucide-react';
 import type { InvoiceLineItem } from '@/types/crm';
 import { cn } from '@/lib/utils';
@@ -253,10 +254,9 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
           )}
           
           {item.is_reverse_charge && (
-            <Badge variant="secondary" className="text-xs h-5 bg-amber-100 text-amber-800 border-amber-300">
-              <ArrowRightLeft className="h-3 w-3 mr-1" />
+            <ColorBadge color="amber" className="text-xs h-5" icon={<ArrowRightLeft className="h-3 w-3" />}>
               Přenesená DPH
-            </Badge>
+            </ColorBadge>
           )}
         </div>
         

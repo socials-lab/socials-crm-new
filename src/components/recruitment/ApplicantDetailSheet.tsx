@@ -174,10 +174,9 @@ export function ApplicantDetailSheet({
                       </div>
                     </div>
                     {interviewInviteSent ? (
-                      <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      <ColorBadge color="green" icon={<CheckCircle2 className="h-3 w-3" />}>
                         Odesláno
-                      </Badge>
+                      </ColorBadge>
                     ) : (
                       <Button
                         size="sm"
@@ -213,10 +212,9 @@ export function ApplicantDetailSheet({
                         </div>
                       </div>
                       {rejectionSent ? (
-                        <Badge variant="secondary" className="bg-red-100 text-red-700 border-red-200">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <ColorBadge color="red" icon={<CheckCircle2 className="h-3 w-3" />}>
                           Odesláno
-                        </Badge>
+                        </ColorBadge>
                       ) : (
                         <Button
                           size="sm"
@@ -266,16 +264,14 @@ export function ApplicantDetailSheet({
                         </div>
                       </div>
                       {onboardingCompleted ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <ColorBadge color="green" icon={<CheckCircle2 className="h-3 w-3" />}>
                           Vyplněno
-                        </Badge>
+                        </ColorBadge>
                       ) : onboardingAlreadySent ? (
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200">
-                            <Clock className="h-3 w-3 mr-1" />
+                          <ColorBadge color="yellow" icon={<Clock className="h-3 w-3" />}>
                             Čeká na vyplnění
-                          </Badge>
+                          </ColorBadge>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -317,10 +313,9 @@ export function ApplicantDetailSheet({
                         </div>
                       </div>
                       {convertedToColleague ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <ColorBadge color="green" icon={<CheckCircle2 className="h-3 w-3" />}>
                           Převedeno
-                        </Badge>
+                        </ColorBadge>
                       ) : (
                         <Button
                           size="sm"

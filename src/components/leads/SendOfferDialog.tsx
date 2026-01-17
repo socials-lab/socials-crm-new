@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { Lead, Colleague } from '@/types/crm';
 

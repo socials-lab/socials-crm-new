@@ -16,7 +16,7 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { CheckCircle, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import socialsLogo from '@/assets/socials-logo.png';
 
 const formSchema = z.object({

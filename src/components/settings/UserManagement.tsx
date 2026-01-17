@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil } from 'lucide-react';
+import { TierBadge } from '@/components/shared/TierBadge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { AddCRMUserDialog } from './AddCRMUserDialog';
 import { EditUserRoleDialog } from './EditUserRoleDialog';
 import { CreateColleagueForUserDialog } from './CreateColleagueForUserDialog';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import type { PagePermission } from '@/types/crm';
@@ -144,7 +145,7 @@ export function UserManagement() {
 
   const getRoleBadge = (role: AppRole, isSuperAdmin: boolean) => {
     if (isSuperAdmin) {
-      return <Badge className="bg-primary/10 text-primary border-primary/20"><ShieldCheck className="h-3 w-3 mr-1" />Super Admin</Badge>;
+      return <TierBadge icon={<ShieldCheck className="h-3 w-3" />}>Super Admin</TierBadge>;
     }
     const roleLabels: Record<AppRole, string> = {
       admin: 'Admin',

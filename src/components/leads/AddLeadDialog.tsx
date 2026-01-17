@@ -30,7 +30,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { useAresLookup } from '@/hooks/useAresLookup';
 import type { Lead, LeadStage, LeadSource, LeadOfferType } from '@/types/crm';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { useEffect, useState } from 'react';
 import { Loader2, Search } from 'lucide-react';
 

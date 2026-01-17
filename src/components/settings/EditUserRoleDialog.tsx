@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { ShieldCheck, Wallet } from 'lucide-react';
 import { ALL_PAGES, PAGE_GROUPS } from '@/constants/permissions';
 import type { Database } from '@/integrations/supabase/types';

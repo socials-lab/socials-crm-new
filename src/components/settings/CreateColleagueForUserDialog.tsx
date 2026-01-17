@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 

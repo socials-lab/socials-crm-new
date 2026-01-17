@@ -34,7 +34,7 @@ import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import type { Lead, CostModel, ClientTier, BillingModel, LeadSource } from '@/types/crm';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 const convertSchema = z.object({
   // Client info

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Plus, ChevronDown, ChevronUp, Mail, CreditCard, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { ColorBadge } from '@/components/shared/ColorBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -27,7 +28,7 @@ import { ColleagueForm } from '@/components/forms/ColleagueForm';
 import { UserManagement } from '@/components/settings/UserManagement';
 import type { ColleagueStatus, Seniority, Colleague } from '@/types/crm';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { CreativeBoostProvider, useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -90,12 +91,14 @@ function ColleaguesContent() {
     }
   }, [highlightId]);
 
-  // Update active tab when superAdmin loads and URL has tab=access
+  // Sync active tab with URL parameter
   useEffect(() => {
-    if (superAdmin && tabParam === 'access') {
+    if (tabParam === 'access' && superAdmin) {
       setActiveTab('access');
+    } else if (tabParam === 'team' || !tabParam) {
+      setActiveTab('team');
     }
-  }, [superAdmin, tabParam]);
+  }, [tabParam, superAdmin]);
 
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
@@ -158,13 +161,13 @@ function ColleaguesContent() {
   const handleFormSubmit = async (data: Omit<Colleague, 'id' | 'created_at' | 'updated_at'> & { invite_to_crm?: boolean; role?: string }) => {
     const { invite_to_crm, role, ...colleagueData } = data;
     
-    if (editingColleague) {
-      updateColleague(editingColleague.id, colleagueData);
-      toast.success('Kolega byl upraven');
-    } else {
-      // If invite_to_crm is checked, use edge function (creates colleague + user + sends email)
-      if (invite_to_crm && role) {
-        try {
+    try {
+      if (editingColleague) {
+        updateColleague(editingColleague.id, colleagueData);
+        toast.success('Kolega byl upraven');
+      } else {
+        // If invite_to_crm is checked, use edge function (creates colleague + user + sends email)
+        if (invite_to_crm && role) {
           const nameParts = colleagueData.full_name.split(' ');
           const firstName = nameParts[0] || '';
           const lastName = nameParts.slice(1).join(' ') || '';
@@ -196,19 +199,21 @@ function ColleaguesContent() {
           }
           
           toast.success(`Kolega vytvořen a pozvánka odeslána na ${colleagueData.email}`);
-        } catch (error) {
-          console.error('Error inviting user:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Nepodařilo se pozvat uživatele';
-          toast.error(errorMessage);
+        } else {
+          // No invite - just create colleague locally
+          addColleague(colleagueData);
+          toast.success('Kolega byl vytvořen');
         }
-      } else {
-        // No invite - just create colleague locally
-        addColleague(colleagueData);
-        toast.success('Kolega byl vytvořen');
       }
+      
+      setIsFormOpen(false);
+      setEditingColleague(null);
+    } catch (error) {
+      console.error('Error in form submission:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Nepodařilo se pozvat uživatele';
+      toast.error(errorMessage);
+      // Don't close form on error so user can retry
     }
-    setIsFormOpen(false);
-    setEditingColleague(null);
   };
 
 
@@ -227,7 +232,20 @@ function ColleaguesContent() {
         description="Kolegové, přístupy a oprávnění"
       />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(value) => {
+          setActiveTab(value);
+          const newSearchParams = new URLSearchParams(searchParams);
+          if (value === 'team') {
+            newSearchParams.delete('tab');
+          } else {
+            newSearchParams.set('tab', value);
+          }
+          setSearchParams(newSearchParams, { replace: true });
+        }} 
+        className="w-full"
+      >
         <TabsList className="mb-4">
           <TabsTrigger value="team" className="gap-2">
             <Users className="h-4 w-4" />
@@ -310,13 +328,9 @@ function ColleaguesContent() {
                   <div className="hidden sm:flex items-center gap-4">
                     {/* CRM Access Badge - shows if colleague has profile_id linked */}
                     {superAdmin && colleague.profile_id && (
-                      <Badge 
-                        variant="outline" 
-                        className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                      >
-                        <Shield className="h-3 w-3 mr-1" />
+                      <ColorBadge color="emerald" className="text-xs" icon={<Shield className="h-3 w-3" />}>
                         CRM přístup
-                      </Badge>
+                      </ColorBadge>
                     )}
                     <Badge 
                       variant="outline" 

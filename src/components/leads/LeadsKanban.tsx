@@ -3,7 +3,7 @@ import { LeadCard } from './LeadCard';
 import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 interface LeadsKanbanProps {
   leads: Lead[];

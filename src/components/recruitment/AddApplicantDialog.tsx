@@ -30,7 +30,7 @@ import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { Applicant, ApplicantSource, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_SOURCE_LABELS, APPLICANT_STAGE_CONFIG } from '@/types/applicant';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 const formSchema = z.object({
   full_name: z.string().min(1, 'Jméno je povinné'),

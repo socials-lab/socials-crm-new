@@ -21,7 +21,7 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Loader2, Search, CheckCircle, AlertCircle, UserPlus } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 

@@ -57,31 +57,39 @@ ALTER TABLE engagement_history
   ADD CONSTRAINT engagement_history_changed_by_fkey 
   FOREIGN KEY (changed_by) REFERENCES auth.users(id) ON DELETE SET NULL;
 
--- Fix engagement_monthly_settings_history table
-ALTER TABLE engagement_monthly_settings_history 
-  ALTER COLUMN changed_by DROP NOT NULL,
-  ALTER COLUMN changed_by_name SET DEFAULT 'System';
+-- Fix engagement_monthly_settings_history table (if it exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'engagement_monthly_settings_history') THEN
+    ALTER TABLE engagement_monthly_settings_history 
+      ALTER COLUMN changed_by DROP NOT NULL;
+    ALTER TABLE engagement_monthly_settings_history 
+      ALTER COLUMN changed_by_name SET DEFAULT 'System';
+  END IF;
+END $$;
 
--- Drop and recreate foreign key with SET NULL on delete
+-- Drop and recreate foreign key with SET NULL on delete (if table exists)
 DO $$
 DECLARE
   constraint_name TEXT;
 BEGIN
-  -- Find the constraint name
-  SELECT conname INTO constraint_name
-  FROM pg_constraint
-  WHERE conrelid = 'engagement_monthly_settings_history'::regclass
-    AND confrelid = 'auth.users'::regclass
-    AND contype = 'f';
-  
-  IF constraint_name IS NOT NULL THEN
-    EXECUTE format('ALTER TABLE engagement_monthly_settings_history DROP CONSTRAINT %I', constraint_name);
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'engagement_monthly_settings_history') THEN
+    -- Find the constraint name
+    SELECT conname INTO constraint_name
+    FROM pg_constraint
+    WHERE conrelid = 'engagement_monthly_settings_history'::regclass
+      AND confrelid = 'auth.users'::regclass
+      AND contype = 'f';
+    
+    IF constraint_name IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE engagement_monthly_settings_history DROP CONSTRAINT %I', constraint_name);
+    END IF;
+    
+    ALTER TABLE engagement_monthly_settings_history 
+      ADD CONSTRAINT engagement_monthly_settings_history_changed_by_fkey 
+      FOREIGN KEY (changed_by) REFERENCES auth.users(id) ON DELETE SET NULL;
   END IF;
 END $$;
-
-ALTER TABLE engagement_monthly_settings_history 
-  ADD CONSTRAINT engagement_monthly_settings_history_changed_by_fkey 
-  FOREIGN KEY (changed_by) REFERENCES auth.users(id) ON DELETE SET NULL;
 
 -- ============================================
 -- Update Helper Functions to Handle NULL auth.uid()

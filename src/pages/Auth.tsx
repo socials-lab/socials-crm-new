@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { Loader2, Lock, Mail } from 'lucide-react';
 import { z } from 'zod';
 

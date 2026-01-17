@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { Loader2, CheckCircle } from 'lucide-react';
 
 export default function AuthCallback() {
@@ -22,14 +22,40 @@ export default function AuthCallback() {
         const urlParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const code = urlParams.get('code');
+        const token = urlParams.get('token');
+        const type = urlParams.get('type');
         const oauthType = sessionStorage.getItem('oauth_type');
         
-        // Check for OAuth errors
-        const error = hashParams.get('error');
-        if (error) {
-          const errorDescription = hashParams.get('error_description') || 'Neznámá chyba';
-          console.error('OAuth error:', error, errorDescription);
-          toast.error('Chyba přihlášení: ' + errorDescription);
+        // Get tokens from hash (Supabase puts them there after redirect)
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const hashType = hashParams.get('type');
+        const hashError = hashParams.get('error');
+        const errorCode = hashParams.get('error_code');
+        const errorDescription = hashParams.get('error_description');
+        
+        console.log('Auth callback:', { 
+          code, token, type, 
+          accessToken: accessToken ? 'present' : 'none',
+          refreshToken: refreshToken ? 'present' : 'none',
+          hashType, hashError, errorCode,
+          fullUrl: window.location.href 
+        });
+        
+        // Check for errors in hash (from Supabase redirect)
+        if (hashError) {
+          console.error('Auth error from hash:', hashError, errorCode, errorDescription);
+          
+          // Provide specific error messages based on error code
+          if (errorCode === 'otp_expired' || errorDescription?.includes('expired')) {
+            toast.error('Platnost odkazu vypršela. Požádejte administrátora o novou pozvánku.');
+          } else if (errorCode === 'access_denied') {
+            toast.error('Přístup zamítnut. Kontaktujte administrátora.');
+          } else if (errorDescription) {
+            toast.error('Chyba přihlášení: ' + errorDescription);
+          } else {
+            toast.error('Chyba přihlášení: ' + hashError);
+          }
           navigate('/auth');
           return;
         }
@@ -56,8 +82,84 @@ export default function AuthCallback() {
           return;
         }
         
-        // Get the session from URL hash (magic link callback)
+        // If we have access_token in hash, set the session
+        if (accessToken && refreshToken) {
+          console.log('Setting session from hash tokens');
+          
+          const { data: sessionData, error: setSessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          
+          if (setSessionError) {
+            console.error('Error setting session:', setSessionError);
+            toast.error('Chyba při nastavení relace: ' + setSessionError.message);
+            navigate('/auth');
+            return;
+          }
+          
+          if (sessionData.session) {
+            console.log('Session set successfully, user:', sessionData.session.user.email);
+            
+            // For invite type, show password form
+            if (hashType === 'invite' || type === 'invite') {
+              setShowPasswordForm(true);
+              setIsProcessing(false);
+              return;
+            }
+            
+            // For other types, redirect to dashboard
+            toast.success('Úspěšně přihlášeno!');
+            navigate('/');
+            return;
+          }
+        }
+        
+        // Handle invite/recovery token verification (if token is in URL params, not hash)
+        if (token && (type === 'invite' || type === 'recovery' || type === 'signup')) {
+          console.log('Verifying token for type:', type);
+          
+          const otpType = type === 'invite' ? 'invite' : type === 'recovery' ? 'recovery' : 'signup';
+          
+          const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: token,
+            type: otpType,
+          });
+          
+          if (verifyError) {
+            console.error('Token verification error:', verifyError);
+            
+            // Provide specific error messages
+            if (verifyError.message.includes('expired')) {
+              toast.error('Platnost odkazu vypršela. Požádejte administrátora o novou pozvánku.');
+            } else if (verifyError.message.includes('invalid')) {
+              toast.error('Neplatný odkaz. Zkontrolujte, že jste použili celý odkaz z e-mailu.');
+            } else if (verifyError.message.includes('already') || verifyError.message.includes('used')) {
+              toast.error('Tento odkaz již byl použit. Přihlaste se pomocí svého hesla.');
+            } else {
+              toast.error('Chyba při ověřování odkazu: ' + verifyError.message);
+            }
+            navigate('/auth');
+            return;
+          }
+          
+          if (verifyData.session) {
+            console.log('Token verified, session created');
+            // Token verified, show password form
+            setShowPasswordForm(true);
+            setIsProcessing(false);
+            return;
+          }
+        }
+        
+        // Try to get existing session (might be set by Supabase automatically)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        console.log('Existing session check:', { 
+          hasSession: !!session, 
+          error: sessionError?.message,
+          userEmail: session?.user?.email 
+        });
 
         if (sessionError) {
           console.error('Auth callback error:', sessionError);
@@ -67,40 +169,28 @@ export default function AuthCallback() {
         }
 
         if (session) {
-          // User is authenticated, show password form for new users
-          // or redirect to dashboard for existing users
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profile) {
-            // Check if this might be a new invite (no password set yet)
-            // We'll show the password form for invite links
-            const type = urlParams.get('type');
-            
-            if (type === 'invite' || type === 'recovery') {
-              setShowPasswordForm(true);
-              setIsProcessing(false);
-            } else {
-              // Regular login, redirect to dashboard
-              toast.success('Úspěšně přihlášeno!');
-              navigate('/');
-            }
-          } else {
-            // New user, show password form
+          // User is authenticated
+          console.log('User authenticated:', session.user.email);
+          
+          // Check if this is from an invite (show password form)
+          if (hashType === 'invite' || type === 'invite') {
             setShowPasswordForm(true);
             setIsProcessing(false);
+            return;
           }
+          
+          // Regular login, redirect to dashboard
+          toast.success('Úspěšně přihlášeno!');
+          navigate('/');
         } else {
-          // No session, redirect to auth
-          toast.error('Přihlášení vypršelo');
+          // No session and no token - user needs to log in
+          console.log('No session found, no tokens in URL');
+          toast.error('Odkaz pro přihlášení není platný nebo již vypršel. Přihlaste se prosím.');
           navigate('/auth');
         }
       } catch (error) {
         console.error('Callback processing error:', error);
-        toast.error('Neočekávaná chyba');
+        toast.error('Neočekávaná chyba při zpracování přihlášení');
         navigate('/auth');
       }
     };

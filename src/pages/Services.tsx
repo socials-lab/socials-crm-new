@@ -13,7 +13,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { ServiceFormDialog } from '@/components/services/ServiceFormDialog';
 import { DeleteServiceDialog } from '@/components/services/DeleteServiceDialog';
 import { serviceTierConfigs } from '@/constants/services';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import type { Service, ServiceCategory, ServiceType } from '@/types/crm';
 
 const categoryColors: Record<ServiceCategory, string> = {

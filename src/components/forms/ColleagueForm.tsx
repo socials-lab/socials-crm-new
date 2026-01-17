@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -53,7 +53,7 @@ type ColleagueFormData = z.infer<typeof colleagueSchema>;
 
 interface ColleagueFormProps {
   colleague?: Colleague;
-  onSubmit: (data: ColleagueFormData & { profile_id: string | null }) => void;
+  onSubmit: (data: ColleagueFormData & { profile_id: string | null }) => Promise<void> | void;
   onCancel: () => void;
   showInviteOption?: boolean;
 }
@@ -81,8 +81,8 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
 
   const inviteToCrm = form.watch('invite_to_crm');
 
-  const handleSubmit = (data: ColleagueFormData) => {
-    onSubmit({
+  const handleSubmit = async (data: ColleagueFormData) => {
+    await onSubmit({
       ...data,
       profile_id: colleague?.profile_id || null,
     });
@@ -385,11 +385,18 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
         )}
 
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={form.formState.isSubmitting}>
             Zrušit
           </Button>
-          <Button type="submit">
-            {colleague ? 'Uložit změny' : 'Vytvořit kolegu'}
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {inviteToCrm ? 'Odesílám pozvánku...' : 'Ukládám...'}
+              </>
+            ) : (
+              colleague ? 'Uložit změny' : 'Vytvořit kolegu'
+            )}
           </Button>
         </div>
       </form>
