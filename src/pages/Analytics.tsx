@@ -49,7 +49,7 @@ export default function Analytics() {
   const { clients, engagements, extraWorks, colleagues, assignments, getClientById } = useCRMData();
   
   // Empty metrics for now (will come from Supabase later)
-  const engagementMonthlyMetrics: any[] = [];
+  const engagementMonthlyMetrics: Array<{ year: number; month: number; margin_percent: number }> = [];
 
   const goToPreviousMonth = () => {
     if (selectedMonth === 1) {
@@ -183,7 +183,7 @@ export default function Analytics() {
         pendingExtraWork,
       },
     };
-  }, [selectedYear, selectedMonth, leads]);
+  }, [selectedYear, selectedMonth, clients, engagements, engagementMonthlyMetrics, getClientById, extraWorks, leads]);
 
   // =====================================================
   // LEADS DATA
@@ -441,7 +441,7 @@ export default function Analytics() {
       topClientsByMargin,
       clientsByTier,
     };
-  }, [selectedYear, selectedMonth]);
+  }, [selectedYear, selectedMonth, clients, engagements, engagementMonthlyMetrics]);
 
   // =====================================================
   // FINANCE DATA
@@ -604,7 +604,7 @@ export default function Analytics() {
         creditsTrend,
       },
     };
-  }, [selectedYear, selectedMonth, getClientMonthSummaries]);
+  }, [selectedYear, selectedMonth, engagements, engagementMonthlyMetrics, extraWorks, assignments, getClientById, colleagues, getClientMonthSummaries]);
 
   if (!canSeeAnalytics) {
     return (

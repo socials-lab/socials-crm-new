@@ -7,7 +7,7 @@ import { getTodaysBirthdays, wasBirthdayNotificationShown, markBirthdayNotificat
 import type { Notification } from '@/types/notifications';
 
 // Transformer function
-const transformNotification = (row: any): Notification => ({
+const transformNotification = (row: Record<string, unknown>): Notification => ({
   id: row.id,
   type: row.type,
   title: row.title,

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider, Outlet, createRoutesFromElements, Route } from "react-router-dom";
+import * as Sentry from "@sentry/react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -78,30 +79,47 @@ const router = createBrowserRouter(
   }
 );
 
+const ErrorFallback = ({ error, resetError }: { error: Error; resetError: () => void }) => (
+  <div className="flex min-h-screen items-center justify-center bg-muted">
+    <div className="text-center">
+      <h1 className="mb-4 text-4xl font-bold">Something went wrong</h1>
+      <p className="mb-4 text-xl text-muted-foreground">{error.message}</p>
+      <button
+        onClick={resetError}
+        className="rounded bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+      >
+        Try again
+      </button>
+    </div>
+  </div>
+);
+
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <UserRoleProvider>
-        <CRMDataProvider>
-          <CreativeBoostProvider>
-            <LeadsDataProvider>
-              <ApplicantsDataProvider>
-                <MeetingsDataProvider>
-                  <FeedbackProvider>
-                    <TooltipProvider>
-                      <Toaster />
-                      <Sonner />
-                      <RouterProvider router={router} future={{ v7_startTransition: true }} />
-                    </TooltipProvider>
-                  </FeedbackProvider>
-                </MeetingsDataProvider>
-              </ApplicantsDataProvider>
-            </LeadsDataProvider>
-          </CreativeBoostProvider>
-        </CRMDataProvider>
-      </UserRoleProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+  <Sentry.ErrorBoundary fallback={ErrorFallback}>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <UserRoleProvider>
+          <CRMDataProvider>
+            <CreativeBoostProvider>
+              <LeadsDataProvider>
+                <ApplicantsDataProvider>
+                  <MeetingsDataProvider>
+                    <FeedbackProvider>
+                      <TooltipProvider>
+                        <Toaster />
+                        <Sonner />
+                        <RouterProvider router={router} future={{ v7_startTransition: true }} />
+                      </TooltipProvider>
+                    </FeedbackProvider>
+                  </MeetingsDataProvider>
+                </ApplicantsDataProvider>
+              </LeadsDataProvider>
+            </CreativeBoostProvider>
+          </CRMDataProvider>
+        </UserRoleProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </Sentry.ErrorBoundary>
 );
 
 export default App;

@@ -18,13 +18,17 @@ interface DigiSignEnvelopePayload {
     name: string;
     order: number;
   }>;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
+  let leadId: string | null = null;
+  let userId: string | null = null;
 
   try {
     const supabaseAdmin = createClient(
@@ -50,7 +54,9 @@ serve(async (req) => {
       );
     }
 
+    userId = user.id;
     const { lead_id, template_id }: DigiSignContractRequest = await req.json();
+    leadId = lead_id;
     
     if (!lead_id) {
       return new Response(
@@ -125,7 +131,24 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
+      const durationMs = Date.now() - startTime;
       console.error("DigiSign error:", errorText);
+      
+      // Log failed API call
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'digisign',
+        action: 'create_contract',
+        related_table: 'leads',
+        related_record_id: leadId,
+        request_payload: payload,
+        response_status: response.status,
+        response_payload: { error: errorText },
+        is_success: false,
+        error_message: errorText,
+        triggered_by: userId,
+        duration_ms: durationMs,
+      });
+      
       return new Response(
         JSON.stringify({ error: `DigiSign chyba: ${errorText}` }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -134,6 +157,7 @@ serve(async (req) => {
 
     const digisignEnvelope = await response.json();
     const contractUrl = digisignEnvelope.signing_url || digisignEnvelope.url;
+    const durationMs = Date.now() - startTime;
     
     // Update lead with DigiSign ID and contract URL
     const { error: updateError } = await supabaseAdmin
@@ -147,11 +171,41 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("Update error:", updateError);
+      
+      // Log failed update
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'digisign',
+        action: 'create_contract',
+        related_table: 'leads',
+        related_record_id: leadId,
+        request_payload: payload,
+        response_status: response.status,
+        response_payload: digisignEnvelope,
+        is_success: false,
+        error_message: `Update failed: ${updateError.message}`,
+        triggered_by: userId,
+        duration_ms: durationMs,
+      });
+      
       return new Response(
         JSON.stringify({ error: "Smlouva vytvořena v DigiSign, ale nepodařilo se uložit ID" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log successful integration call
+    await supabaseAdmin.from('integration_log').insert({
+      service: 'digisign',
+      action: 'create_contract',
+      related_table: 'leads',
+      related_record_id: leadId,
+      request_payload: payload,
+      response_status: response.status,
+      response_payload: digisignEnvelope,
+      is_success: true,
+      triggered_by: userId,
+      duration_ms: durationMs,
+    });
 
     return new Response(
       JSON.stringify({ 
@@ -162,8 +216,30 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("DigiSign create contract error:", error);
+    const durationMs = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : "Interní chyba serveru";
+    
+    // Log error
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'digisign',
+        action: 'create_contract',
+        related_table: 'leads',
+        related_record_id: leadId,
+        is_success: false,
+        error_message: errorMessage,
+        triggered_by: userId,
+        duration_ms: durationMs,
+      });
+    } catch (logError) {
+      console.error("Failed to log integration error:", logError);
+    }
+    
+    console.error("DigiSign create contract error:", error);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

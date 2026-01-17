@@ -20,7 +20,7 @@ interface FeedbackDataContextType {
 const FeedbackDataContext = createContext<FeedbackDataContextType | undefined>(undefined);
 
 // Transformer functions
-const transformIdea = (row: any): FeedbackIdea => ({
+const transformIdea = (row: Record<string, unknown>): FeedbackIdea => ({
   id: row.id,
   title: row.title,
   description: row.description,
@@ -31,7 +31,7 @@ const transformIdea = (row: any): FeedbackIdea => ({
   updated_at: row.updated_at,
 });
 
-const transformVote = (row: any): FeedbackVote => ({
+const transformVote = (row: Record<string, unknown>): FeedbackVote => ({
   id: row.id,
   idea_id: row.idea_id,
   colleague_id: row.colleague_id,
@@ -174,21 +174,21 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   );
 
   // Wrapper functions
-  const addIdea = async (data: { title: string; description: string; category: FeedbackCategory }): Promise<FeedbackIdea> => {
+  const addIdea = useCallback(async (data: { title: string; description: string; category: FeedbackCategory }): Promise<FeedbackIdea> => {
     return addIdeaMutation.mutateAsync(data);
-  };
+  }, [addIdeaMutation]);
 
-  const updateIdeaStatus = async (id: string, status: FeedbackStatus): Promise<void> => {
+  const updateIdeaStatus = useCallback(async (id: string, status: FeedbackStatus): Promise<void> => {
     await updateIdeaStatusMutation.mutateAsync({ id, status });
-  };
+  }, [updateIdeaStatusMutation]);
 
-  const vote = async (ideaId: string, voteType: 'up' | 'down'): Promise<void> => {
+  const vote = useCallback(async (ideaId: string, voteType: 'up' | 'down'): Promise<void> => {
     await voteMutation.mutateAsync({ ideaId, voteType });
-  };
+  }, [voteMutation]);
 
-  const removeVote = async (ideaId: string): Promise<void> => {
+  const removeVote = useCallback(async (ideaId: string): Promise<void> => {
     await removeVoteMutation.mutateAsync(ideaId);
-  };
+  }, [removeVoteMutation]);
 
   const value: FeedbackDataContextType = useMemo(
     () => ({

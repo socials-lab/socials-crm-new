@@ -15,6 +15,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let meetingId: string | null = null;
+  let userId: string | null = null;
+
   try {
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -39,7 +43,9 @@ serve(async (req) => {
       );
     }
 
+    userId = user.id;
     const { meeting_id }: CalendarEventRequest = await req.json();
+    meetingId = meeting_id;
     
     if (!meeting_id) {
       return new Response(
@@ -85,7 +91,7 @@ serve(async (req) => {
     }
 
     // Refresh token if needed (simplified - should call refresh-token function)
-    let accessToken = tokens.access_token;
+    const accessToken = tokens.access_token;
 
     // Get participant emails
     const attendees: string[] = [];
@@ -142,7 +148,24 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
+      const durationMs = Date.now() - startTime;
       console.error("Google Calendar error:", errorText);
+      
+      // Log failed API call
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'google_calendar',
+        action: 'create_event',
+        related_table: 'meetings',
+        related_record_id: meetingId,
+        request_payload: calendarEvent,
+        response_status: response.status,
+        response_payload: { error: errorText },
+        is_success: false,
+        error_message: errorText,
+        triggered_by: userId,
+        duration_ms: durationMs,
+      });
+      
       return new Response(
         JSON.stringify({ error: `Google Calendar chyba: ${errorText}` }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -150,6 +173,7 @@ serve(async (req) => {
     }
 
     const googleEvent = await response.json();
+    const durationMs = Date.now() - startTime;
     
     // Update meeting with Google event ID
     const { error: updateError } = await supabaseAdmin
@@ -162,11 +186,41 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("Update error:", updateError);
+      
+      // Log failed update
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'google_calendar',
+        action: 'create_event',
+        related_table: 'meetings',
+        related_record_id: meetingId,
+        request_payload: calendarEvent,
+        response_status: response.status,
+        response_payload: googleEvent,
+        is_success: false,
+        error_message: `Update failed: ${updateError.message}`,
+        triggered_by: userId,
+        duration_ms: durationMs,
+      });
+      
       return new Response(
         JSON.stringify({ error: "Událost vytvořena, ale nepodařilo se uložit ID" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log successful integration call
+    await supabaseAdmin.from('integration_log').insert({
+      service: 'google_calendar',
+      action: 'create_event',
+      related_table: 'meetings',
+      related_record_id: meetingId,
+      request_payload: calendarEvent,
+      response_status: response.status,
+      response_payload: googleEvent,
+      is_success: true,
+      triggered_by: userId,
+      duration_ms: durationMs,
+    });
 
     return new Response(
       JSON.stringify({ 
@@ -177,8 +231,30 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Calendar create event error:", error);
+    const durationMs = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : "Interní chyba serveru";
+    
+    // Log error
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'google_calendar',
+        action: 'create_event',
+        related_table: 'meetings',
+        related_record_id: meetingId,
+        is_success: false,
+        error_message: errorMessage,
+        triggered_by: userId,
+        duration_ms: durationMs,
+      });
+    } catch (logError) {
+      console.error("Failed to log integration error:", logError);
+    }
+    
+    console.error("Calendar create event error:", error);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

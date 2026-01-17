@@ -196,9 +196,10 @@ function ColleaguesContent() {
           }
           
           toast.success(`Kolega vytvořen a pozvánka odeslána na ${colleagueData.email}`);
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error inviting user:', error);
-          toast.error(error.message || 'Nepodařilo se pozvat uživatele');
+          const errorMessage = error instanceof Error ? error.message : 'Nepodařilo se pozvat uživatele';
+          toast.error(errorMessage);
         }
       } else {
         // No invite - just create colleague locally
@@ -559,7 +560,7 @@ function ColleaguesContent() {
           <div className="mt-6">
             <ColleagueForm
               colleague={editingColleague || undefined}
-              onSubmit={handleFormSubmit as any}
+              onSubmit={handleFormSubmit}
               onCancel={() => setIsFormOpen(false)}
               showInviteOption={superAdmin && !editingColleague}
             />

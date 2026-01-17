@@ -135,7 +135,7 @@ const Invoicing = () => {
         extraWorkCount,
         extraWorkAmount,
       };
-  }, [selectedYear, selectedMonth, engagements, engagementServices, getExtraWorksReadyToInvoice, getUnbilledOneOffServices]);
+  }, [selectedYear, selectedMonth, engagements, engagementServices, getExtraWorksReadyToInvoice, getUnbilledOneOffServices, calculateOutputCredits, clientMonths, getClientOutputs]);
 
   // Reset issued stats when month changes
   const handleMonthChange = (newYear: number, newMonth: number) => {

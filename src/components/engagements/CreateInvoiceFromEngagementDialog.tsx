@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -135,11 +135,11 @@ export function CreateInvoiceFromEngagementDialog({
   const [items, setItems] = useState<InvoiceItemDraft[]>([]);
 
   // Get period label for descriptions
-  const getPeriodLabel = (period: string) => {
+  const getPeriodLabel = useCallback((period: string) => {
     const option = periodOptions.find(p => p.value === period);
     if (!option) return '';
     return format(new Date(option.year, option.month - 1), 'LLLL yyyy', { locale: cs });
-  };
+  }, [periodOptions]);
 
   // Reset form and prefill items when dialog opens
   useEffect(() => {
@@ -167,7 +167,7 @@ export function CreateInvoiceFromEngagementDialog({
         setItems([createEmptyItem(engagement.currency || 'CZK')]);
       }
     }
-  }, [open, engagementServices, engagement.currency, defaultPeriod]);
+  }, [open, engagementServices, engagement.currency, defaultPeriod, getPeriodLabel]);
 
   // Update descriptions when period changes
   useEffect(() => {
@@ -184,7 +184,7 @@ export function CreateInvoiceFromEngagementDialog({
       }
       return item;
     }));
-  }, [selectedPeriod]);
+  }, [selectedPeriod, getPeriodLabel, open]);
 
   const updateItem = (id: string, updates: Partial<InvoiceItemDraft>) => {
     setItems(prev => prev.map(item => {

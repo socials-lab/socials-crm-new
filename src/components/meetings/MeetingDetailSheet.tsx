@@ -137,10 +137,11 @@ export function MeetingDetailSheet({ meeting, open, onOpenChange }: MeetingDetai
   const handleSendInvites = async () => {
     try {
       await createCalendarEvent(meeting.id);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Nepodařilo se odeslat pozvánku';
       toast({ 
         title: 'Chyba při odesílání', 
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive' 
       });
     }

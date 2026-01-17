@@ -10,6 +10,12 @@ interface FakturoidInvoiceRequest {
   invoice_id: string;
 }
 
+interface InvoiceLineItem {
+  line_description: string;
+  quantity: number;
+  unit_price: number;
+}
+
 interface FakturoidInvoiceItem {
   name: string;
   quantity: number;
@@ -29,6 +35,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
+  let invoiceId: string | null = null;
+  let userId: string | null = null;
 
   try {
     const supabaseAdmin = createClient(
@@ -54,7 +64,9 @@ serve(async (req) => {
       );
     }
 
+    userId = user.id;
     const { invoice_id }: FakturoidInvoiceRequest = await req.json();
+    invoiceId = invoice_id;
     
     if (!invoice_id) {
       return new Response(
@@ -106,7 +118,7 @@ serve(async (req) => {
     }
 
     // Map line items to Fakturoid format
-    const lines: FakturoidInvoiceItem[] = invoice.invoice_line_items.map((item: any) => ({
+    const lines: FakturoidInvoiceItem[] = (invoice.invoice_line_items as InvoiceLineItem[]).map((item) => ({
       name: item.line_description,
       quantity: Number(item.quantity),
       unit_price: Number(item.unit_price),
@@ -140,7 +152,24 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
+      const durationMs = Date.now() - startTime;
       console.error("Fakturoid error:", errorText);
+      
+      // Log failed API call
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'fakturoid',
+        action: 'create_invoice',
+        related_table: 'issued_invoices',
+        related_record_id: invoiceId,
+        request_payload: payload,
+        response_status: response.status,
+        response_payload: { error: errorText },
+        is_success: false,
+        error_message: errorText,
+        triggered_by: userId,
+        duration_ms: durationMs,
+      });
+      
       return new Response(
         JSON.stringify({ error: `Fakturoid chyba: ${errorText}` }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -148,6 +177,7 @@ serve(async (req) => {
     }
 
     const fakturoidInvoice = await response.json();
+    const durationMs = Date.now() - startTime;
     
     // Update invoice with Fakturoid IDs
     const fakturoidInvoiceUrl = `https://app.fakturoid.cz/invoices/${fakturoidInvoice.id}`;
@@ -162,11 +192,41 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("Update error:", updateError);
+      
+      // Log failed update
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'fakturoid',
+        action: 'create_invoice',
+        related_table: 'issued_invoices',
+        related_record_id: invoiceId,
+        request_payload: payload,
+        response_status: response.status,
+        response_payload: fakturoidInvoice,
+        is_success: false,
+        error_message: `Update failed: ${updateError.message}`,
+        triggered_by: userId,
+        duration_ms: durationMs,
+      });
+      
       return new Response(
         JSON.stringify({ error: "Faktura vytvořena ve Fakturoid, ale nepodařilo se uložit ID" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log successful integration call
+    await supabaseAdmin.from('integration_log').insert({
+      service: 'fakturoid',
+      action: 'create_invoice',
+      related_table: 'issued_invoices',
+      related_record_id: invoiceId,
+      request_payload: payload,
+      response_status: response.status,
+      response_payload: fakturoidInvoice,
+      is_success: true,
+      triggered_by: userId,
+      duration_ms: durationMs,
+    });
 
     return new Response(
       JSON.stringify({ 
@@ -177,8 +237,30 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Fakturoid create invoice error:", error);
+    const durationMs = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : "Interní chyba serveru";
+    
+    // Log error
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'fakturoid',
+        action: 'create_invoice',
+        related_table: 'issued_invoices',
+        related_record_id: invoiceId,
+        is_success: false,
+        error_message: errorMessage,
+        triggered_by: userId,
+        duration_ms: durationMs,
+      });
+    } catch (logError) {
+      console.error("Failed to log integration error:", logError);
+    }
+    
+    console.error("Fakturoid create invoice error:", error);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

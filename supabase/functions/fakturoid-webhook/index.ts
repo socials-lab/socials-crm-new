@@ -20,7 +20,19 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let invoiceId: string | null = null;
+
   try {
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Read body once and parse
+    const bodyText = await req.text();
+    const payload: FakturoidWebhookPayload = JSON.parse(bodyText);
+
     const WEBHOOK_SECRET = Deno.env.get("FAKTUROID_WEBHOOK_SECRET");
     const signature = req.headers.get("X-Fakturoid-Signature");
 
@@ -29,12 +41,10 @@ serve(async (req) => {
       // Simple signature verification - adjust based on Fakturoid's actual method
       const expectedSignature = await crypto.subtle.digest(
         "SHA-256",
-        new TextEncoder().encode(WEBHOOK_SECRET + JSON.stringify(await req.json()))
+        new TextEncoder().encode(WEBHOOK_SECRET + bodyText)
       );
       // Note: This is a simplified check. Fakturoid may use a different signature method.
     }
-
-    const payload: FakturoidWebhookPayload = await req.json();
 
     if (payload.event !== "invoice.paid" && payload.event !== "invoice.updated") {
       return new Response(
@@ -42,11 +52,6 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     // Find invoice by fakturoid_id
     const { data: invoice, error: findError } = await supabaseAdmin
@@ -56,15 +61,30 @@ serve(async (req) => {
       .single();
 
     if (findError || !invoice) {
+      const durationMs = Date.now() - startTime;
       console.error("Invoice not found:", findError);
+      
+      // Log webhook error
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'fakturoid',
+        action: 'webhook_invoice_update',
+        related_table: 'issued_invoices',
+        request_payload: payload,
+        is_success: false,
+        error_message: `Invoice not found: ${findError?.message || 'Unknown'}`,
+        duration_ms: durationMs,
+      });
+      
       return new Response(
         JSON.stringify({ error: "Faktura nenalezena" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    invoiceId = invoice.id;
+
     // Update invoice status
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     
     if (payload.invoice.status === "paid" && payload.invoice.paid_at) {
       updates.status = "paid";
@@ -82,7 +102,21 @@ serve(async (req) => {
         .eq("id", invoice.id);
 
       if (updateError) {
+        const durationMs = Date.now() - startTime;
         console.error("Update error:", updateError);
+        
+        // Log update error
+        await supabaseAdmin.from('integration_log').insert({
+          service: 'fakturoid',
+          action: 'webhook_invoice_update',
+          related_table: 'issued_invoices',
+          related_record_id: invoiceId,
+          request_payload: payload,
+          is_success: false,
+          error_message: `Update failed: ${updateError.message}`,
+          duration_ms: durationMs,
+        });
+        
         return new Response(
           JSON.stringify({ error: "Nepodařilo se aktualizovat fakturu" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -90,11 +124,48 @@ serve(async (req) => {
       }
     }
 
+    const durationMs = Date.now() - startTime;
+    
+    // Log successful webhook
+    await supabaseAdmin.from('integration_log').insert({
+      service: 'fakturoid',
+      action: 'webhook_invoice_update',
+      related_table: 'issued_invoices',
+      related_record_id: invoiceId,
+      request_payload: payload,
+      response_status: 200,
+      is_success: true,
+      duration_ms: durationMs,
+    });
+
     return new Response(
       JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
+    const durationMs = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : "Interní chyba serveru";
+    
+    // Log error
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'fakturoid',
+        action: 'webhook_invoice_update',
+        related_table: 'issued_invoices',
+        related_record_id: invoiceId,
+        request_payload: null,
+        is_success: false,
+        error_message: errorMessage,
+        duration_ms: durationMs,
+      });
+    } catch (logError) {
+      console.error("Failed to log integration error:", logError);
+    }
+    
     console.error("Fakturoid webhook error:", error);
     return new Response(
       JSON.stringify({ error: "Interní chyba serveru" }),

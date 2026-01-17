@@ -10,7 +10,7 @@ import type { Client, Colleague } from '@/types/crm';
 interface MeetingCardProps {
   meeting: Meeting;
   client?: Client;
-  participants: any[];
+  participants: MeetingParticipant[];
   colleagues: Colleague[];
   onClick: () => void;
 }

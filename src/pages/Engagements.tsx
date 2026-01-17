@@ -217,7 +217,7 @@ function EngagementsContent() {
 
       return matchesSearch && matchesStatus && matchesType && matchesMonth;
     });
-  }, [engagements, searchQuery, statusFilter, typeFilter, filterYear, filterMonth, getClientById, engagementServices]);
+  }, [engagements, searchQuery, statusFilter, typeFilter, filterYear, filterMonth, getClientById, engagementServices, isEngagementActiveInMonth]);
 
   // Month navigation helpers
   const goToPreviousMonth = () => {

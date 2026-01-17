@@ -24,7 +24,7 @@ function CreativeBoostContent() {
       });
     }
     return options;
-  }, []);
+  }, [currentDate]);
 
   const handlePeriodChange = (value: string) => {
     const [year, month] = value.split('-').map(Number);

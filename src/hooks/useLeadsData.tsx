@@ -88,7 +88,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       // Transform leads - notes is JSONB array, ensure it's always an array
-      return (data || []).map((lead: any) => ({
+      return (data || []).map((lead: Record<string, unknown>) => ({
         ...lead,
         notes: Array.isArray(lead.notes) ? lead.notes : [],
         stage: lead.stage || 'new_lead',
@@ -107,7 +107,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map((entry: any) => ({
+      return (data || []).map((entry: Record<string, unknown>) => ({
         ...entry,
         field_label: entry.field_label || (entry.field_name ? LEAD_FIELD_LABELS[entry.field_name] || entry.field_name : null),
       }));
@@ -204,8 +204,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     const historyPromises: Promise<void>[] = [];
     Object.keys(data).forEach(key => {
       if (key === 'updated_at' || key === 'updated_by' || key === 'notes') return;
-      const oldVal = String((lead as any)[key] ?? '');
-      const newVal = String((data as any)[key] ?? '');
+      const oldVal = String((lead as Record<string, unknown>)[key] ?? '');
+      const newVal = String((data as Record<string, unknown>)[key] ?? '');
       if (oldVal !== newVal) {
         const fieldLabel = LEAD_FIELD_LABELS[key] || key;
         if (key === 'owner_id') {

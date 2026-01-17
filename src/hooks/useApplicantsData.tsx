@@ -40,7 +40,7 @@ export interface OnboardingData {
 const ApplicantsDataContext = createContext<ApplicantsDataContextType | undefined>(undefined);
 
 // Transformer function
-const transformApplicant = (row: any): Applicant => ({
+const transformApplicant = (row: Record<string, unknown>): Applicant => ({
   id: row.id,
   full_name: row.full_name,
   email: row.email,
@@ -117,7 +117,7 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
 
   const updateApplicantMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Applicant> }) => {
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (updates.full_name !== undefined) updateData.full_name = updates.full_name;
       if (updates.email !== undefined) updateData.email = updates.email;
       if (updates.phone !== undefined) updateData.phone = updates.phone;
@@ -253,27 +253,27 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
   );
 
   // Wrapper functions
-  const addApplicant = async (applicant: Omit<Applicant, 'id' | 'created_at' | 'updated_at' | 'notes'>): Promise<Applicant> => {
+  const addApplicant = useCallback(async (applicant: Omit<Applicant, 'id' | 'created_at' | 'updated_at' | 'notes'>): Promise<Applicant> => {
     return addApplicantMutation.mutateAsync(applicant);
-  };
+  }, [addApplicantMutation]);
 
-  const updateApplicant = async (id: string, updates: Partial<Applicant>): Promise<void> => {
+  const updateApplicant = useCallback(async (id: string, updates: Partial<Applicant>): Promise<void> => {
     await updateApplicantMutation.mutateAsync({ id, updates });
-  };
+  }, [updateApplicantMutation]);
 
-  const deleteApplicant = async (id: string): Promise<void> => {
+  const deleteApplicant = useCallback(async (id: string): Promise<void> => {
     await deleteApplicantMutation.mutateAsync(id);
-  };
+  }, [deleteApplicantMutation]);
 
-  const updateApplicantStage = async (id: string, stage: ApplicantStage): Promise<void> => {
+  const updateApplicantStage = useCallback(async (id: string, stage: ApplicantStage): Promise<void> => {
     await updateApplicantMutation.mutateAsync({ id, updates: { stage } });
-  };
+  }, [updateApplicantMutation]);
 
-  const addNote = async (applicantId: string, text: string): Promise<void> => {
+  const addNote = useCallback(async (applicantId: string, text: string): Promise<void> => {
     await addNoteMutation.mutateAsync({ applicantId, text });
-  };
+  }, [addNoteMutation]);
 
-  const sendInterviewInvite = async (applicantId: string): Promise<void> => {
+  const sendInterviewInvite = useCallback(async (applicantId: string): Promise<void> => {
     await updateApplicantMutation.mutateAsync({
       id: applicantId,
       updates: {
@@ -281,9 +281,9 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
         stage: 'invited_interview',
       },
     });
-  };
+  }, [updateApplicantMutation]);
 
-  const sendRejection = async (applicantId: string): Promise<void> => {
+  const sendRejection = useCallback(async (applicantId: string): Promise<void> => {
     await updateApplicantMutation.mutateAsync({
       id: applicantId,
       updates: {
@@ -291,20 +291,20 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
         stage: 'rejected',
       },
     });
-  };
+  }, [updateApplicantMutation]);
 
-  const sendOnboarding = async (applicantId: string): Promise<void> => {
+  const sendOnboarding = useCallback(async (applicantId: string): Promise<void> => {
     await updateApplicantMutation.mutateAsync({
       id: applicantId,
       updates: {
         onboarding_sent_at: new Date().toISOString(),
       },
     });
-  };
+  }, [updateApplicantMutation]);
 
-  const completeOnboarding = async (applicantId: string, data: OnboardingData): Promise<Colleague> => {
+  const completeOnboarding = useCallback(async (applicantId: string, data: OnboardingData): Promise<Colleague> => {
     return completeOnboardingMutation.mutateAsync({ applicantId, data });
-  };
+  }, [completeOnboardingMutation]);
 
   const value: ApplicantsDataContextType = useMemo(
     () => ({

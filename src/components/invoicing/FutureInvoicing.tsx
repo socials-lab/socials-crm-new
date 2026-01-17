@@ -304,7 +304,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       });
 
     return newInvoices;
-  }, [year, month, engagements, clients, getClientById, getUnbilledOneOffServices]);
+  }, [year, month, engagements, clients, getClientById, getUnbilledOneOffServices, engagementServices, getExtraWorksReadyToInvoice]);
 
   // Merge generated invoices with any saved changes
   const currentInvoices = useMemo(() => {

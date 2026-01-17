@@ -58,7 +58,7 @@ interface MeetingsDataContextType {
 const MeetingsDataContext = createContext<MeetingsDataContextType | null>(null);
 
 // Transformer functions
-const transformMeeting = (row: any): Meeting => ({
+const transformMeeting = (row: Record<string, unknown>): Meeting => ({
   id: row.id,
   title: row.title,
   description: row.description || '',
@@ -80,7 +80,7 @@ const transformMeeting = (row: any): Meeting => ({
   updated_at: row.updated_at,
 });
 
-const transformParticipant = (row: any): MeetingParticipant => ({
+const transformParticipant = (row: Record<string, unknown>): MeetingParticipant => ({
   id: row.id,
   meeting_id: row.meeting_id,
   colleague_id: row.colleague_id,
@@ -92,7 +92,7 @@ const transformParticipant = (row: any): MeetingParticipant => ({
   updated_at: row.updated_at,
 });
 
-const transformTask = (row: any): MeetingTask => ({
+const transformTask = (row: Record<string, unknown>): MeetingTask => ({
   id: row.id,
   meeting_id: row.meeting_id,
   title: row.title,
@@ -199,7 +199,7 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
 
   const updateMeetingMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Meeting> }) => {
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (data.title !== undefined) updateData.title = data.title;
       if (data.description !== undefined) updateData.description = data.description;
       if (data.type !== undefined) updateData.type = data.type;
@@ -259,7 +259,7 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
 
   const updateParticipantMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<MeetingParticipant> }) => {
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (data.colleague_id !== undefined) updateData.colleague_id = data.colleague_id;
       if (data.external_name !== undefined) updateData.external_name = data.external_name;
       if (data.external_email !== undefined) updateData.external_email = data.external_email;
@@ -303,7 +303,7 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<MeetingTask> }) => {
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (data.title !== undefined) updateData.title = data.title;
       if (data.description !== undefined) updateData.description = data.description;
       if (data.assigned_to !== undefined) updateData.assigned_to = data.assigned_to;

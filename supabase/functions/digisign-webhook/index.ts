@@ -21,7 +21,15 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let leadId: string | null = null;
+
   try {
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
     const WEBHOOK_SECRET = Deno.env.get("DIGISIGN_WEBHOOK_SECRET");
     const signature = req.headers.get("X-DigiSign-Signature");
 
@@ -40,11 +48,6 @@ serve(async (req) => {
       );
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
     // Find lead by digisign_id
     const { data: lead, error: findError } = await supabaseAdmin
       .from("leads")
@@ -53,15 +56,30 @@ serve(async (req) => {
       .single();
 
     if (findError || !lead) {
+      const durationMs = Date.now() - startTime;
       console.error("Lead not found:", findError);
+      
+      // Log webhook error
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'digisign',
+        action: 'webhook_envelope_update',
+        related_table: 'leads',
+        request_payload: payload,
+        is_success: false,
+        error_message: `Lead not found: ${findError?.message || 'Unknown'}`,
+        duration_ms: durationMs,
+      });
+      
       return new Response(
         JSON.stringify({ error: "Lead nenalezen" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    leadId = lead.id;
+
     // Update contract signing status
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     
     if (payload.envelope.status === "signed" || payload.envelope.status === "completed") {
       updates.contract_signed_at = payload.envelope.signed_at || new Date().toISOString();
@@ -79,7 +97,21 @@ serve(async (req) => {
         .eq("id", lead.id);
 
       if (updateError) {
+        const durationMs = Date.now() - startTime;
         console.error("Update error:", updateError);
+        
+        // Log update error
+        await supabaseAdmin.from('integration_log').insert({
+          service: 'digisign',
+          action: 'webhook_envelope_update',
+          related_table: 'leads',
+          related_record_id: leadId,
+          request_payload: payload,
+          is_success: false,
+          error_message: `Update failed: ${updateError.message}`,
+          duration_ms: durationMs,
+        });
+        
         return new Response(
           JSON.stringify({ error: "Nepodařilo se aktualizovat smlouvu" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -87,11 +119,48 @@ serve(async (req) => {
       }
     }
 
+    const durationMs = Date.now() - startTime;
+    
+    // Log successful webhook
+    await supabaseAdmin.from('integration_log').insert({
+      service: 'digisign',
+      action: 'webhook_envelope_update',
+      related_table: 'leads',
+      related_record_id: leadId,
+      request_payload: payload,
+      response_status: 200,
+      is_success: true,
+      duration_ms: durationMs,
+    });
+
     return new Response(
       JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
+    const durationMs = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : "Interní chyba serveru";
+    
+    // Log error
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      await supabaseAdmin.from('integration_log').insert({
+        service: 'digisign',
+        action: 'webhook_envelope_update',
+        related_table: 'leads',
+        related_record_id: leadId,
+        request_payload: null,
+        is_success: false,
+        error_message: errorMessage,
+        duration_ms: durationMs,
+      });
+    } catch (logError) {
+      console.error("Failed to log integration error:", logError);
+    }
+    
     console.error("DigiSign webhook error:", error);
     return new Response(
       JSON.stringify({ error: "Interní chyba serveru" }),

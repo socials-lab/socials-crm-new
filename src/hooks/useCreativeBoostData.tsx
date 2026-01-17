@@ -79,7 +79,7 @@ interface CreativeBoostContextType {
 const CreativeBoostContext = createContext<CreativeBoostContextType | null>(null);
 
 // Transformer functions: snake_case DB -> camelCase TypeScript
-const transformOutputType = (row: any): OutputType => ({
+const transformOutputType = (row: Record<string, unknown>): OutputType => ({
   id: row.id,
   name: row.name,
   category: row.category as OutputCategory,
@@ -90,7 +90,7 @@ const transformOutputType = (row: any): OutputType => ({
   updatedAt: row.updated_at,
 });
 
-const transformClientMonth = (row: any): CreativeBoostClientMonth => ({
+const transformClientMonth = (row: Record<string, unknown>): CreativeBoostClientMonth => ({
   id: row.id,
   clientId: row.client_id,
   year: row.year,
@@ -106,7 +106,7 @@ const transformClientMonth = (row: any): CreativeBoostClientMonth => ({
   updatedAt: row.updated_at,
 });
 
-const transformOutput = (row: any): ClientMonthOutput => ({
+const transformOutput = (row: Record<string, unknown>): ClientMonthOutput => ({
   id: row.id,
   clientId: row.client_id,
   year: row.year,
@@ -119,7 +119,7 @@ const transformOutput = (row: any): ClientMonthOutput => ({
   updatedAt: row.updated_at,
 });
 
-const transformSettingsHistory = (row: any): CreativeBoostSettingsChange => ({
+const transformSettingsHistory = (row: Record<string, unknown>): CreativeBoostSettingsChange => ({
   id: row.id,
   clientMonthId: row.client_month_id,
   clientId: row.client_id,
@@ -211,7 +211,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
 
   const updateOutputTypeMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<OutputType> }) => {
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (data.name !== undefined) updateData.name = data.name;
       if (data.category !== undefined) updateData.category = data.category;
       if (data.baseCredits !== undefined) updateData.base_credits = data.baseCredits;
@@ -303,7 +303,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       if (!existing) throw new Error('Client month not found');
 
       // Prepare update data
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (data.minCredits !== undefined) updateData.min_credits = data.minCredits;
       if (data.maxCredits !== undefined) updateData.max_credits = data.maxCredits;
       if (data.pricePerCredit !== undefined) updateData.price_per_credit = data.pricePerCredit;
@@ -377,7 +377,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           if (error) throw error;
         } else {
           // Update existing
-          const updateData: any = {};
+          const updateData: Record<string, unknown> = {};
           if (data.normalCount !== undefined) updateData.normal_count = data.normalCount;
           if (data.expressCount !== undefined) updateData.express_count = data.expressCount;
           if (data.colleagueId !== undefined) updateData.colleague_id = data.colleagueId || null;

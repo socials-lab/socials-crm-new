@@ -27,7 +27,7 @@ interface CRMDataContextType {
   services: Service[];
   issuedInvoices: IssuedInvoice[];
   engagementMetrics: EngagementMonthlyMetrics[];
-  engagementHistory: any[]; // Will use proper type after removing as any
+  engagementHistory: Array<Record<string, unknown>>;
   
   // Loading states
   isLoading: boolean;
@@ -108,7 +108,7 @@ interface CRMDataContextType {
   getMetricsByEngagementId: (engagementId: string) => EngagementMonthlyMetrics[];
   
   // Engagement History
-  getEngagementHistory: (engagementId: string) => any[];
+  getEngagementHistory: (engagementId: string) => Array<Record<string, unknown>>;
   
   // Helper functions
   getClientById: (id: string) => Client | undefined;
@@ -121,7 +121,7 @@ interface CRMDataContextType {
 const CRMDataContext = createContext<CRMDataContextType | null>(null);
 
 // Helper function to transform DB row to Client type
-const transformClient = (row: any): Client => ({
+const transformClient = (row: Record<string, unknown>): Client => ({
   ...row,
   status: row.status || 'active',
   tier: row.tier || 'standard',
@@ -130,7 +130,7 @@ const transformClient = (row: any): Client => ({
   updated_at: row.updated_at || new Date().toISOString(),
 });
 
-const transformEngagement = (row: any): Engagement => ({
+const transformEngagement = (row: Record<string, unknown>): Engagement => ({
   ...row,
   type: row.type || 'retainer',
   billing_model: row.billing_model || 'fixed_fee',
@@ -141,7 +141,7 @@ const transformEngagement = (row: any): Engagement => ({
   updated_at: row.updated_at || new Date().toISOString(),
 });
 
-const transformColleague = (row: any): Colleague => ({
+const transformColleague = (row: Record<string, unknown>): Colleague => ({
   ...row,
   seniority: row.seniority || 'mid',
   status: row.status || 'active',
@@ -149,7 +149,7 @@ const transformColleague = (row: any): Colleague => ({
   updated_at: row.updated_at || new Date().toISOString(),
 });
 
-const transformService = (row: any): Service => ({
+const transformService = (row: Record<string, unknown>): Service => ({
   ...row,
   service_type: row.service_type || 'core',
   category: row.category || 'performance',
@@ -362,8 +362,8 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const historyPromises: Promise<void>[] = [];
       Object.keys(data).forEach(key => {
         if (key === 'updated_at' || key === 'created_at') return;
-        const oldVal = String((engagement as any)[key] ?? '');
-        const newVal = String((data as any)[key] ?? '');
+        const oldVal = String((engagement as Record<string, unknown>)[key] ?? '');
+        const newVal = String((data as Record<string, unknown>)[key] ?? '');
         if (oldVal !== newVal) {
           const changeType = key === 'status' ? 'status_change' : 'field_update';
           const fieldLabel = key === 'status' ? 'Status' : key === 'name' ? 'Název' : key === 'start_date' ? 'Datum začátku' : key === 'end_date' ? 'Datum konce' : key;
