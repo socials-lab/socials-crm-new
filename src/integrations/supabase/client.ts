@@ -11,11 +11,22 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Custom lock implementation that doesn't use navigator.locks
+// This prevents deadlocks when tabs/windows interfere with each other
+const noOpLock = async <R>(
+  name: string,
+  acquireTimeout: number,
+  fn: () => Promise<R>
+): Promise<R> => {
+  return fn();
+};
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    lock: noOpLock, // Disable navigator.locks to prevent deadlocks
   }
 });

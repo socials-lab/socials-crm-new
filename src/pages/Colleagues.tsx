@@ -76,6 +76,9 @@ function ColleaguesContent() {
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [tempCost, setTempCost] = useState<string>('');
   
+  // Controlled tab state to handle superAdmin loading
+  const [activeTab, setActiveTab] = useState<string>('team');
+  
 
   // Handle highlight from URL
   useEffect(() => {
@@ -86,6 +89,13 @@ function ColleaguesContent() {
       }, 100);
     }
   }, [highlightId]);
+
+  // Update active tab when superAdmin loads and URL has tab=access
+  useEffect(() => {
+    if (superAdmin && tabParam === 'access') {
+      setActiveTab('access');
+    }
+  }, [superAdmin, tabParam]);
 
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
@@ -216,7 +226,7 @@ function ColleaguesContent() {
         description="Kolegové, přístupy a oprávnění"
       />
 
-      <Tabs defaultValue={tabParam === 'access' && superAdmin ? 'access' : 'team'} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="team" className="gap-2">
             <Users className="h-4 w-4" />
@@ -563,7 +573,7 @@ function ColleaguesContent() {
           <TabsContent value="access" className="space-y-4">
             <Card>
               <CardContent className="pt-6">
-                <UserManagement />
+                <UserManagement key={activeTab === 'access' ? 'active' : 'inactive'} />
               </CardContent>
             </Card>
           </TabsContent>

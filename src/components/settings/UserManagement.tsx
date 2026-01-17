@@ -6,10 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
-import { supabase } from '@/integrations/supabase/client';
 import { AddCRMUserDialog } from './AddCRMUserDialog';
 import { EditUserRoleDialog } from './EditUserRoleDialog';
+import { CreateColleagueForUserDialog } from './CreateColleagueForUserDialog';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import type { PagePermission } from '@/types/crm';
 
@@ -36,11 +37,17 @@ interface UserRoleData {
 
 export function UserManagement() {
   const navigate = useNavigate();
-  const { colleagues } = useCRMData();
+  useCRMData(); // Ensure CRMDataProvider is initialized (needed for CreateColleagueForUserDialog)
   const [userRoles, setUserRoles] = useState<UserRoleData[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createColleagueDialogOpen, setCreateColleagueDialogOpen] = useState(false);
+  const [createColleagueUser, setCreateColleagueUser] = useState<{
+    profileId: string;
+    email: string;
+    fullName: string;
+  } | null>(null);
   const [selectedUser, setSelectedUser] = useState<{
     id: string;
     user_id: string;
@@ -54,35 +61,63 @@ export function UserManagement() {
 
   const fetchUserRoles = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('is_active', true);
-    
-    if (error) {
-      console.error('Error fetching user roles:', error);
-      toast.error('Chyba při načítání uživatelů');
-      setLoading(false);
-      return;
-    }
+    try {
+      // Fetch user roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (rolesError) {
+        throw rolesError;
+      }
+      
+      if (!rolesData || rolesData.length === 0) {
+        setUserRoles([]);
+        setLoading(false);
+        return;
+      }
 
-    const enrichedData = await Promise.all((data || []).map(async (role) => {
-      const { data: profile } = await supabase
+      // Fetch profiles
+      const userIds = rolesData.map(r => r.user_id).filter(Boolean) as string[];
+      
+      const { data: profilesData = [], error: profilesError } = await supabase
         .from('profiles')
         .select('id, email, full_name')
-        .eq('id', role.user_id)
-        .single();
+        .in('id', userIds);
       
-      const { data: colleague } = await supabase
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+      }
+
+      // Fetch colleagues
+      const { data: colleaguesData = [], error: colleaguesError } = await supabase
         .from('colleagues')
-        .select('id, full_name, position')
-        .eq('profile_id', role.user_id)
-        .maybeSingle();
+        .select('id, full_name, position, profile_id')
+        .in('profile_id', userIds);
       
-      return { ...role, profile, colleague };
-    }));
-    setUserRoles(enrichedData);
-    setLoading(false);
+      if (colleaguesError) {
+        console.error('Error fetching colleagues:', colleaguesError);
+      }
+
+      // Build lookup maps
+      const profilesMap = new Map((profilesData || []).map(p => [p.id, p]));
+      const colleaguesMap = new Map((colleaguesData || []).map(c => [c.profile_id, c]));
+
+      // Enrich data
+      const enrichedData = rolesData.map(role => ({
+        ...role,
+        profile: profilesMap.get(role.user_id) || null,
+        colleague: colleaguesMap.get(role.user_id) || null,
+      }));
+      
+      setUserRoles(enrichedData);
+    } catch (err) {
+      console.error('Error fetching user roles:', err);
+      toast.error('Chyba při načítání uživatelů');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -178,6 +213,24 @@ export function UserManagement() {
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
                           <UserX className="h-4 w-4" />
                           <span>Nepropojeno</span>
+                          {userRole.profile && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 ml-2"
+                              onClick={() => {
+                                setCreateColleagueUser({
+                                  profileId: userRole.profile!.id,
+                                  email: userRole.profile!.email || '',
+                                  fullName: userRole.profile!.full_name || userRole.profile!.email || 'Neznámý',
+                                });
+                                setCreateColleagueDialogOpen(true);
+                              }}
+                            >
+                              <UserPlus className="h-3 w-3 mr-1" />
+                              Vytvořit
+                            </Button>
+                          )}
                         </div>
                       )}
                     </TableCell>
@@ -194,6 +247,22 @@ export function UserManagement() {
                             <Pencil className="h-4 w-4 mr-2" />
                             Upravit roli
                           </DropdownMenuItem>
+                          {!userRole.colleague && userRole.profile && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => {
+                                setCreateColleagueUser({
+                                  profileId: userRole.profile!.id,
+                                  email: userRole.profile!.email || '',
+                                  fullName: userRole.profile!.full_name || userRole.profile!.email || 'Neznámý',
+                                });
+                                setCreateColleagueDialogOpen(true);
+                              }}>
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                Vytvořit kolegu
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           {userRole.colleague && (
                             <>
                               <DropdownMenuSeparator />
@@ -230,6 +299,18 @@ export function UserManagement() {
         user={selectedUser}
         onSave={fetchUserRoles}
       />
+
+      {createColleagueUser && (
+        <CreateColleagueForUserDialog
+          open={createColleagueDialogOpen}
+          onOpenChange={setCreateColleagueDialogOpen}
+          user={createColleagueUser}
+          onSuccess={() => {
+            fetchUserRoles();
+            setCreateColleagueUser(null);
+          }}
+        />
+      )}
     </div>
   );
 }

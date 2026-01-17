@@ -46,39 +46,25 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     async function fetchUserRole() {
       setIsLoading(true);
       try {
-        // Use session from context - no need to call getSession() again
-        const accessToken = session!.access_token;
-        
-        // Direct fetch to avoid any SDK issues
-        const apiUrl = import.meta.env.VITE_SUPABASE_URL;
-        const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        
-        const directResponse = await fetch(
-          `${apiUrl}/rest/v1/user_roles?user_id=eq.${user!.id}&is_active=eq.true&select=role,is_super_admin,can_see_financials,page_permissions`,
-          {
-            headers: {
-              'apikey': apiKey,
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            }
-          }
-        );
-        
-        const directData = await directResponse.json();
-        const userRole = directData[0] || null;
-        const roleError = directResponse.ok ? null : { message: directResponse.statusText };
+        // Fetch user role
+        const { data: userRolesData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role, is_super_admin, can_see_financials, page_permissions')
+          .eq('user_id', user!.id)
+          .eq('is_active', true)
+          .maybeSingle();
 
         if (roleError && roleError.code !== 'PGRST116') {
           console.error('Error fetching user role:', roleError);
         }
 
-        if (userRole) {
-          setRole(userRole.role);
-          setIsSuperAdmin(userRole.is_super_admin ?? false);
-          setCanSeeFinancials(userRole.can_see_financials ?? false);
+        if (userRolesData) {
+          setRole(userRolesData.role);
+          setIsSuperAdmin(userRolesData.is_super_admin ?? false);
+          setCanSeeFinancials(userRolesData.can_see_financials ?? false);
           
           // Parse page_permissions JSONB
-          const permissions = (userRole.page_permissions as PagePermission[]) || [];
+          const permissions = (userRolesData.page_permissions as PagePermission[]) || [];
           setPagePermissions(permissions);
         } else {
           setRole(null);
@@ -87,20 +73,18 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
           setPagePermissions([]);
         }
 
-        // Fetch colleague ID using direct fetch
-        const colleagueResponse = await fetch(
-          `${apiUrl}/rest/v1/colleagues?profile_id=eq.${user!.id}&select=id`,
-          {
-            headers: {
-              'apikey': apiKey,
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            }
-          }
-        );
-        const colleagueData = await colleagueResponse.json();
-        const colleague = colleagueData[0] || null;
-        setColleagueId(colleague?.id ?? null);
+        // Fetch colleague ID
+        const { data: colleagueData, error: colleagueError } = await supabase
+          .from('colleagues')
+          .select('id')
+          .eq('profile_id', user!.id)
+          .maybeSingle();
+
+        if (colleagueError && colleagueError.code !== 'PGRST116') {
+          console.error('Error fetching colleague:', colleagueError);
+        }
+
+        setColleagueId(colleagueData?.id ?? null);
       } catch (error) {
         console.error('Error in fetchUserRole:', error);
       } finally {
