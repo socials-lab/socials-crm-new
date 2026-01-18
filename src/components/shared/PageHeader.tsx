@@ -10,8 +10,8 @@ interface PageHeaderProps {
 export function PageHeader({ title, titleAccent, description, actions }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">
+      <div className="min-w-0 flex-1">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
           {title}
           {titleAccent && (
             <span className="font-serif italic text-primary"> {titleAccent}</span>

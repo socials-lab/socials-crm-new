@@ -327,32 +327,35 @@ export default function Dashboard() {
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2">
               {activeColleagues.slice(0, 6).map((colleague) => (
-                <Link 
+                <div 
                   key={colleague.id}
-                  to={`/colleagues?highlight=${colleague.id}`}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 hover:border-primary/30 transition-all cursor-pointer"
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 hover:border-primary/30 transition-all"
                 >
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {colleague.full_name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{colleague.full_name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{colleague.position}</p>
-                  </div>
+                  <Link 
+                    to={`/colleagues?highlight=${colleague.id}`}
+                    className="flex items-center gap-3 flex-1 min-w-0"
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                        {colleague.full_name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{colleague.full_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{colleague.position}</p>
+                    </div>
+                  </Link>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-8 w-8 shrink-0"
                     asChild
-                    onClick={(e) => e.stopPropagation()}
                   >
                     <a href={`mailto:${colleague.email}`}>
                       <Mail className="h-4 w-4 text-muted-foreground" />
                     </a>
                   </Button>
-                </Link>
+                </div>
               ))}
             </div>
           </CardContent>

@@ -29,7 +29,9 @@ import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { useAresLookup } from '@/hooks/useAresLookup';
-import type { Lead, LeadStage, LeadSource, LeadOfferType } from '@/types/crm';
+import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
+import type { Lead, LeadSource } from '@/types/crm';
+import type { CompanySearchResult } from '@/hooks/useAresSearch';
 import { toast } from '@/components/ui/sonner';
 import { useEffect, useState } from 'react';
 import { Loader2, Search } from 'lucide-react';
@@ -130,6 +132,18 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       }
       toast.success('Údaje načteny z ARES');
     }
+  };
+
+  const handleCompanySelect = (company: CompanySearchResult) => {
+    // Auto-fill all fields from selected company
+    form.setValue('company_name', company.name);
+    form.setValue('ico', company.ico);
+    form.setValue('dic', company.dic || '');
+    form.setValue('billing_street', company.billing_street);
+    form.setValue('billing_city', company.billing_city);
+    form.setValue('billing_zip', company.billing_zip);
+    form.setValue('billing_country', company.billing_country);
+    toast.success('Údaje načteny z ARES');
   };
 
   const form = useForm<LeadFormData>({
@@ -307,7 +321,12 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormItem>
                       <FormLabel>Název firmy *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Firma s.r.o." {...field} />
+                        <CompanySearchInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          onSelect={handleCompanySelect}
+                          placeholder="Zadejte název firmy (min. 3 znaky)..."
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -541,11 +560,14 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="new_lead">Nový lead</SelectItem>
-                          <SelectItem value="contacted">Kontaktováno</SelectItem>
-                          <SelectItem value="in_progress">Probíhá jednání</SelectItem>
+                          <SelectItem value="meeting_done">Schůzka proběhla</SelectItem>
+                          <SelectItem value="waiting_access">Čekáme na přístupy</SelectItem>
+                          <SelectItem value="access_received">Přístupy přijaty</SelectItem>
+                          <SelectItem value="preparing_offer">Příprava nabídky</SelectItem>
                           <SelectItem value="offer_sent">Nabídka odeslána</SelectItem>
                           <SelectItem value="won">Vyhráno</SelectItem>
                           <SelectItem value="lost">Prohráno</SelectItem>
+                          <SelectItem value="postponed">Odloženo</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

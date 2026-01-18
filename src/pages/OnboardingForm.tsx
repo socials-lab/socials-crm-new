@@ -102,7 +102,7 @@ type OnboardingFormData = z.infer<typeof onboardingSchema>;
 export default function OnboardingForm() {
   const { leadId } = useParams<{ leadId: string }>();
   const { getLeadById, markLeadAsConverted, updateLead } = useLeadsData();
-  const { addClient, addContact } = useCRMData();
+  const { addClient, addContact, addEngagement } = useCRMData();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,35 +113,7 @@ export default function OnboardingForm() {
   const [originalIco, setOriginalIco] = useState<string>('');
 
   
-  // DEV BYPASS: Use mock lead for demo if not found
-  const realLead = leadId ? getLeadById(leadId) : undefined;
-  const mockLead = {
-    id: 'demo-lead',
-    company_name: 'Demo Company s.r.o.',
-    ico: '12345678',
-    dic: 'CZ12345678',
-    website: 'https://demo.cz',
-    industry: 'Marketing',
-    contact_name: 'Jan Novák',
-    contact_position: 'CEO',
-    contact_email: 'jan@demo.cz',
-    contact_phone: '+420 123 456 789',
-    billing_street: 'Václavské náměstí 1',
-    billing_city: 'Praha',
-    billing_zip: '11000',
-    billing_country: 'Česká republika',
-    billing_email: 'fakturace@demo.cz',
-    stage: 'offer_sent' as const,
-    owner_id: 'dev-colleague',
-    source: 'website' as const,
-    potential_services: [
-      { name: 'Social Media Management', price: 25000, currency: 'Kč', billing_type: 'monthly' as const, selected_tier: 'standard' },
-      { name: 'PPC Reklama', price: 15000, currency: 'Kč', billing_type: 'monthly' as const, selected_tier: 'premium' },
-    ],
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-  const lead = realLead || mockLead;
+  const lead = leadId ? getLeadById(leadId) : undefined;
   
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
@@ -179,7 +151,12 @@ export default function OnboardingForm() {
 
   // Load lead data
   useEffect(() => {
-    // DEV BYPASS: Always load lead (mock or real)
+    if (!leadId) {
+      setLeadNotFound(true);
+      setIsLoading(false);
+      return;
+    }
+    
     if (lead) {
       setOriginalIco(lead.ico);
       form.reset({
@@ -205,8 +182,17 @@ export default function OnboardingForm() {
         orderConfirmed: false,
       });
       setIsLoading(false);
+    } else if (leadId) {
+      // Lead ID provided but lead not found - wait a bit for data to load
+      const timer = setTimeout(() => {
+        if (!getLeadById(leadId)) {
+          setLeadNotFound(true);
+          setIsLoading(false);
+        }
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-  }, [leadId, lead, form]);
+  }, [leadId, lead, form, getLeadById]);
 
   // Watch IČO for changes
   const watchedIco = form.watch('ico');
@@ -243,7 +229,11 @@ export default function OnboardingForm() {
   };
 
   const onSubmit = async (data: OnboardingFormData) => {
-    if (!lead) return;
+    if (!lead) {
+      console.error('Lead not found');
+      setLeadNotFound(true);
+      return;
+    }
     
     setIsSubmitting(true);
     
@@ -282,10 +272,11 @@ export default function OnboardingForm() {
         pinned_notes: '',
       });
       
-      // Create signatory contacts
+      // Create signatory contacts and capture primary contact
+      let primaryContactRecord = null;
       for (let index = 0; index < data.signatories.length; index++) {
         const signatory = data.signatories[index];
-        await addContact({
+        const contact = await addContact({
           client_id: newClient.id,
           name: signatory.name,
           position: signatory.position || null,
@@ -295,6 +286,9 @@ export default function OnboardingForm() {
           is_decision_maker: true,
           notes: 'Osoba pro podpis smlouvy',
         });
+        if (index === 0) {
+          primaryContactRecord = contact;
+        }
       }
       
       // Create project contacts
@@ -318,19 +312,59 @@ export default function OnboardingForm() {
         }
       }
       
+      if (!primaryContactRecord) {
+        throw new Error('Primary contact was not created');
+      }
+
       // Generate contract URL (mock - prepared for PandaDoc integration)
       const contractSlug = data.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const mockContractUrl = `https://app.pandadoc.com/documents/smlouva-${contractSlug}-${Date.now()}`;
       
-      // Update lead with onboarding completion and contract info
+      // Update lead with onboarding completion and contract info first
       await updateLead(lead.id, {
         onboarding_form_completed_at: new Date().toISOString(),
         contract_url: mockContractUrl,
         contract_created_at: new Date().toISOString(),
       });
+
+      // Determine engagement type and pricing from lead
+      const hasMonthlyServices = lead.potential_services?.some(s => s.billing_type === 'monthly') || false;
+      const hasOneOffServices = lead.potential_services?.some(s => s.billing_type === 'one_off') || false;
+      const engagementType = hasMonthlyServices ? 'retainer' : 'one_off';
+      const totalMonthlyPrice = lead.potential_services
+        ?.filter(s => s.billing_type === 'monthly')
+        .reduce((sum, s) => sum + s.price, 0) || 0;
+      const totalOneOffPrice = lead.potential_services
+        ?.filter(s => s.billing_type === 'one_off')
+        .reduce((sum, s) => sum + s.price, 0) || 0;
+
+      // Create engagement with contract URL from lead
+      const newEngagement = await addEngagement({
+        client_id: newClient.id,
+        contact_person_id: primaryContactRecord.id,
+        name: `${lead.potential_service || 'Hlavní zakázka'} - ${data.company_name}`,
+        type: engagementType,
+        billing_model: 'fixed_fee',
+        currency: lead.currency || 'CZK',
+        monthly_fee: totalMonthlyPrice,
+        one_off_fee: totalOneOffPrice,
+        status: 'active',
+        start_date: format(data.startDate, 'yyyy-MM-dd'),
+        end_date: null,
+        notice_period_months: 1,
+        freelo_url: null,
+        platforms: [],
+        notes: lead.summary || '',
+        offer_url: lead.offer_url || null,
+        contract_url: mockContractUrl,
+      });
+
+      // Update engagement with contract URL
+      // Note: We need to update the engagement after lead is updated
+      // This is a workaround - ideally we'd pass contract_url when creating engagement
       
       // Mark lead as converted
-      await markLeadAsConverted(lead.id, newClient.id, '');
+      await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
       
       setIsSubmitted(true);
     } catch (error) {
@@ -956,7 +990,6 @@ export default function OnboardingForm() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
                       🔄 MĚSÍČNÍ SLUŽBY
-                      MĚSÍČNÍ SLUŽBY
                     </div>
                     <div className="border rounded-lg overflow-hidden">
                       <div className="divide-y">

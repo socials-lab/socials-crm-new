@@ -25,7 +25,6 @@ import {
   Send,
   Check
 } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
 import {
   Sheet,
   SheetContent,
