@@ -82,9 +82,20 @@ serve(async (req) => {
       capacity_hours_per_month,
     }: InviteRequest = await req.json();
 
-    if (!email || !firstName || !lastName || !role) {
+    // Validate required fields with specific error messages
+    // Note: lastName is optional - single-name users are allowed
+    const missingFields: string[] = [];
+    if (!email) missingFields.push('email');
+    if (!firstName) missingFields.push('firstName (jméno)');
+    if (!role) missingFields.push('role');
+    
+    if (missingFields.length > 0) {
+      console.error("Missing fields:", missingFields, "Received data:", { email, firstName, lastName, role });
       return new Response(
-        JSON.stringify({ error: "Chybí povinná pole" }),
+        JSON.stringify({ 
+          error: `Chybí povinná pole: ${missingFields.join(', ')}`,
+          missingFields 
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -105,12 +116,15 @@ serve(async (req) => {
     // Get origin for redirect URL
     const origin = req.headers.get("origin") || "https://empndmpeyrdycjdesoxr.lovable.app";
 
+    // Build full name (handle single-name users)
+    const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+    
     // Invite user using Supabase Admin API
     const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       email,
       {
         data: {
-          full_name: `${firstName} ${lastName}`,
+          full_name: fullName,
         },
         redirectTo: `${origin}/auth/callback`,
       }
@@ -132,7 +146,7 @@ serve(async (req) => {
       .from("colleagues")
       .insert({
         email,
-        full_name: `${firstName} ${lastName}`,
+        full_name: fullName,
         position: position || "Team Member",
         status: "active",
         seniority: seniority || "mid",

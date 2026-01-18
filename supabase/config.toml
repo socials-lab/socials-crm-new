@@ -1,4 +1,12 @@
 project_id = "bkemtvqmbpxopuasgxcq"
 
+[auth]
+site_url = "http://localhost:8080"
+additional_redirect_urls = ["http://localhost:8080/auth/callback"]
+
+[auth.email.template.invite]
+subject = "You have been invited to Socials CRM"
+content_path = "./supabase/templates/invite.html"
+
 [functions.invite-user]
 verify_jwt = false

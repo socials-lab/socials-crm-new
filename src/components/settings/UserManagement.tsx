@@ -4,11 +4,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil, User } from 'lucide-react';
 import { TierBadge } from '@/components/shared/TierBadge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { AddCRMUserDialog } from './AddCRMUserDialog';
 import { EditUserRoleDialog } from './EditUserRoleDialog';
+import { EditUserNameDialog } from './EditUserNameDialog';
 import { CreateColleagueForUserDialog } from './CreateColleagueForUserDialog';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,6 +44,12 @@ export function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editNameDialogOpen, setEditNameDialogOpen] = useState(false);
+  const [editNameUser, setEditNameUser] = useState<{
+    userId: string;
+    currentName: string;
+    email: string;
+  } | null>(null);
   const [createColleagueDialogOpen, setCreateColleagueDialogOpen] = useState(false);
   const [createColleagueUser, setCreateColleagueUser] = useState<{
     profileId: string;
@@ -123,6 +130,22 @@ export function UserManagement() {
 
   useEffect(() => {
     fetchUserRoles();
+    
+    // Set up real-time subscription for colleague updates
+    const subscription = supabase
+      .channel('colleagues-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'colleagues' },
+        () => {
+          console.log('[UserManagement] Colleague data changed, refetching...');
+          fetchUserRoles();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleEditUser = (userRole: UserRoleData) => {
@@ -248,6 +271,19 @@ export function UserManagement() {
                             <Pencil className="h-4 w-4 mr-2" />
                             Upravit roli
                           </DropdownMenuItem>
+                          {userRole.profile && (
+                            <DropdownMenuItem onClick={() => {
+                              setEditNameUser({
+                                userId: userRole.user_id,
+                                currentName: userRole.profile!.full_name || '',
+                                email: userRole.profile!.email || '',
+                              });
+                              setEditNameDialogOpen(true);
+                            }}>
+                              <User className="h-4 w-4 mr-2" />
+                              Upravit jméno
+                            </DropdownMenuItem>
+                          )}
                           {!userRole.colleague && userRole.profile && (
                             <>
                               <DropdownMenuSeparator />
@@ -299,6 +335,16 @@ export function UserManagement() {
         onOpenChange={setEditDialogOpen}
         user={selectedUser}
         onSave={fetchUserRoles}
+      />
+
+      <EditUserNameDialog
+        open={editNameDialogOpen}
+        onOpenChange={setEditNameDialogOpen}
+        user={editNameUser}
+        onSuccess={() => {
+          fetchUserRoles();
+          setEditNameUser(null);
+        }}
       />
 
       {createColleagueUser && (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,15 @@ export default function AuthCallback() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const processedRef = useRef(false);
 
   useEffect(() => {
+    // Prevent double processing
+    if (processedRef.current) return;
+    processedRef.current = true;
+
+    console.log('[AuthCallback] Component mounted, URL:', window.location.href);
+
     const handleCallback = async () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
@@ -34,17 +41,20 @@ export default function AuthCallback() {
         const errorCode = hashParams.get('error_code');
         const errorDescription = hashParams.get('error_description');
         
-        console.log('Auth callback:', { 
-          code, token, type, 
+        console.log('[AuthCallback] Parsed params:', { 
+          code: code ? 'present' : 'none',
+          token: token ? 'present' : 'none',
+          type, 
           accessToken: accessToken ? 'present' : 'none',
           refreshToken: refreshToken ? 'present' : 'none',
           hashType, hashError, errorCode,
-          fullUrl: window.location.href 
+          hash: window.location.hash,
+          search: window.location.search
         });
         
         // Check for errors in hash (from Supabase redirect)
         if (hashError) {
-          console.error('Auth error from hash:', hashError, errorCode, errorDescription);
+          console.error('[AuthCallback] Auth error from hash:', hashError, errorCode, errorDescription);
           
           // Provide specific error messages based on error code
           if (errorCode === 'otp_expired' || errorDescription?.includes('expired')) {
@@ -62,6 +72,7 @@ export default function AuthCallback() {
         
         // Check if this is a Google Calendar OAuth callback
         if (code && oauthType === 'google_calendar') {
+          console.log('[AuthCallback] Google Calendar OAuth callback');
           sessionStorage.removeItem('oauth_type');
           
           // Exchange code for tokens via Edge Function
@@ -71,7 +82,7 @@ export default function AuthCallback() {
           });
           
           if (error || data?.error) {
-            console.error('Google OAuth error:', error || data?.error);
+            console.error('[AuthCallback] Google OAuth error:', error || data?.error);
             toast.error('Chyba při propojování Google kalendáře: ' + (error?.message || data?.error));
           } else {
             toast.success('Google kalendář byl úspěšně propojen!');
@@ -82,42 +93,27 @@ export default function AuthCallback() {
           return;
         }
         
-        // If we have access_token in hash, set the session
+        // If we have access_token in hash, Supabase's detectSessionInUrl should handle it
+        // But we need to check if it's an invite and remember the type
+        const isInviteFlow = hashType === 'invite' || type === 'invite';
+        
         if (accessToken && refreshToken) {
-          console.log('Setting session from hash tokens');
+          console.log('[AuthCallback] Tokens found in hash, isInviteFlow:', isInviteFlow);
           
-          const { data: sessionData, error: setSessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          
-          if (setSessionError) {
-            console.error('Error setting session:', setSessionError);
-            toast.error('Chyba při nastavení relace: ' + setSessionError.message);
-            navigate('/auth');
-            return;
+          // Store invite flag before Supabase potentially clears the hash
+          if (isInviteFlow) {
+            sessionStorage.setItem('auth_invite_flow', 'true');
           }
           
-          if (sessionData.session) {
-            console.log('Session set successfully, user:', sessionData.session.user.email);
-            
-            // For invite type, show password form
-            if (hashType === 'invite' || type === 'invite') {
-              setShowPasswordForm(true);
-              setIsProcessing(false);
-              return;
-            }
-            
-            // For other types, redirect to dashboard
-            toast.success('Úspěšně přihlášeno!');
-            navigate('/');
-            return;
-          }
+          // Don't manually call setSession - Supabase's detectSessionInUrl handles this
+          // Just wait a moment for Supabase to process
+          console.log('[AuthCallback] Waiting for Supabase to process tokens...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
         
         // Handle invite/recovery token verification (if token is in URL params, not hash)
         if (token && (type === 'invite' || type === 'recovery' || type === 'signup')) {
-          console.log('Verifying token for type:', type);
+          console.log('[AuthCallback] Verifying token for type:', type);
           
           const otpType = type === 'invite' ? 'invite' : type === 'recovery' ? 'recovery' : 'signup';
           
@@ -127,7 +123,7 @@ export default function AuthCallback() {
           });
           
           if (verifyError) {
-            console.error('Token verification error:', verifyError);
+            console.error('[AuthCallback] Token verification error:', verifyError);
             
             // Provide specific error messages
             if (verifyError.message.includes('expired')) {
@@ -144,7 +140,7 @@ export default function AuthCallback() {
           }
           
           if (verifyData.session) {
-            console.log('Token verified, session created');
+            console.log('[AuthCallback] Token verified, session created, showing password form');
             // Token verified, show password form
             setShowPasswordForm(true);
             setIsProcessing(false);
@@ -152,17 +148,26 @@ export default function AuthCallback() {
           }
         }
         
+        // Supabase may have already processed the URL and established a session
+        // (due to detectSessionInUrl: true). Wait a moment and check for session.
+        console.log('[AuthCallback] No direct tokens found, waiting for Supabase to process...');
+        
+        // Small delay to allow Supabase to process the URL
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         // Try to get existing session (might be set by Supabase automatically)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        console.log('Existing session check:', { 
+        console.log('[AuthCallback] Session check:', { 
           hasSession: !!session, 
           error: sessionError?.message,
-          userEmail: session?.user?.email 
+          userEmail: session?.user?.email,
+          userCreatedAt: session?.user?.created_at,
+          userConfirmedAt: session?.user?.confirmed_at
         });
 
         if (sessionError) {
-          console.error('Auth callback error:', sessionError);
+          console.error('[AuthCallback] Auth callback error:', sessionError);
           toast.error('Chyba při ověřování: ' + sessionError.message);
           navigate('/auth');
           return;
@@ -170,10 +175,35 @@ export default function AuthCallback() {
 
         if (session) {
           // User is authenticated
-          console.log('User authenticated:', session.user.email);
+          console.log('[AuthCallback] User authenticated:', session.user.email);
           
-          // Check if this is from an invite (show password form)
-          if (hashType === 'invite' || type === 'invite') {
+          // Check if this user was recently created (within last 5 minutes) - likely from invite
+          const createdAt = new Date(session.user.created_at);
+          const now = new Date();
+          const minutesSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+          const isNewUser = minutesSinceCreation < 5;
+          
+          // Check for invite flow flag we might have stored
+          const storedInviteFlag = sessionStorage.getItem('auth_invite_flow');
+          if (storedInviteFlag) {
+            sessionStorage.removeItem('auth_invite_flow');
+          }
+          
+          // Check if user has no password set (invited users don't have password initially)
+          // We detect this by checking if they came from an invite flow
+          const isFromInvite = hashType === 'invite' || type === 'invite' || storedInviteFlag === 'true' || isNewUser;
+          
+          console.log('[AuthCallback] User analysis:', { 
+            minutesSinceCreation, 
+            isNewUser, 
+            isFromInvite,
+            hashType,
+            type,
+            storedInviteFlag
+          });
+          
+          if (isFromInvite) {
+            console.log('[AuthCallback] Showing password form for invited/new user');
             setShowPasswordForm(true);
             setIsProcessing(false);
             return;
@@ -184,12 +214,12 @@ export default function AuthCallback() {
           navigate('/');
         } else {
           // No session and no token - user needs to log in
-          console.log('No session found, no tokens in URL');
+          console.log('[AuthCallback] No session found, no tokens in URL');
           toast.error('Odkaz pro přihlášení není platný nebo již vypršel. Přihlaste se prosím.');
           navigate('/auth');
         }
       } catch (error) {
-        console.error('Callback processing error:', error);
+        console.error('[AuthCallback] Callback processing error:', error);
         toast.error('Neočekávaná chyba při zpracování přihlášení');
         navigate('/auth');
       }
