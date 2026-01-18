@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { ServiceFormDialog } from '@/components/services/ServiceFormDialog';
 import { DeleteServiceDialog } from '@/components/services/DeleteServiceDialog';
 import { serviceTierConfigs } from '@/constants/services';
@@ -34,7 +35,11 @@ const categoryLabels: Record<ServiceCategory, string> = {
 
 export default function Services() {
   const { services, engagementServices, clients, engagements, addService, updateService, deleteService, toggleServiceActive } = useCRMData();
+  const { isSuperAdmin, role } = useUserRole();
   const navigate = useNavigate();
+  
+  // Check if user can manage services (admin or management roles)
+  const canManageServices = isSuperAdmin || role === 'admin' || role === 'management';
   
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | ServiceType>('all');
@@ -208,30 +213,32 @@ export default function Services() {
               {service.is_active ? 'Aktivní' : 'Neaktivní'}
             </Badge>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-popover">
-                <DropdownMenuItem onClick={() => handleEditService(service)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Upravit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleToggleActive(service)}>
-                  {service.is_active ? 'Deaktivovat' : 'Aktivovat'}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => handleDeleteClick(service)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Smazat
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {canManageServices && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-popover">
+                  <DropdownMenuItem onClick={() => handleEditService(service)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Upravit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleToggleActive(service)}>
+                    {service.is_active ? 'Deaktivovat' : 'Aktivovat'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => handleDeleteClick(service)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Smazat
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             {isExpanded ? (
               <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -252,72 +259,92 @@ export default function Services() {
 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Kategorie:</span>
-                <Select
-                  value={service.category}
-                  onValueChange={(value) => handleCategoryChange(service, value as ServiceCategory)}
-                >
-                  <SelectTrigger className="w-[120px] h-7 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {Object.entries(categoryLabels).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {canManageServices ? (
+                  <Select
+                    value={service.category}
+                    onValueChange={(value) => handleCategoryChange(service, value as ServiceCategory)}
+                  >
+                    <SelectTrigger className="w-[120px] h-7 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {Object.entries(categoryLabels).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className="text-xs">{categoryLabels[service.category] || service.category}</span>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Status:</span>
-                <Switch
-                  checked={service.is_active}
-                  onCheckedChange={() => handleToggleActive(service)}
-                  className="scale-90"
-                />
-                <span className="text-xs">
-                  {service.is_active ? 'Aktivní' : 'Neaktivní'}
-                </span>
+                {canManageServices ? (
+                  <>
+                    <Switch
+                      checked={service.is_active}
+                      onCheckedChange={() => handleToggleActive(service)}
+                      className="scale-90"
+                    />
+                    <span className="text-xs">
+                      {service.is_active ? 'Aktivní' : 'Neaktivní'}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-xs">
+                    {service.is_active ? 'Aktivní' : 'Neaktivní'}
+                  </span>
+                )}
               </div>
 
               {/* Only show base price editing for Add-on services */}
               {service.service_type === 'addon' && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">Cena:</span>
-                  {editingPriceId === service.id ? (
-                    <div className="flex items-center gap-1">
-                      <Input
-                        type="number"
-                        value={tempPrice}
-                        onChange={(e) => setTempPrice(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handlePriceSave(service);
-                          } else if (e.key === 'Escape') {
-                            setEditingPriceId(null);
-                          }
+                  {canManageServices ? (
+                    editingPriceId === service.id ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={tempPrice}
+                          onChange={(e) => setTempPrice(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handlePriceSave(service);
+                            } else if (e.key === 'Escape') {
+                              setEditingPriceId(null);
+                            }
+                          }}
+                          onBlur={() => handlePriceSave(service)}
+                          className="h-7 w-24 text-xs"
+                          autoFocus
+                        />
+                        <span className="text-xs text-muted-foreground">{service.currency}</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPriceId(service.id);
+                          setTempPrice(String(service.base_price));
                         }}
-                        onBlur={() => handlePriceSave(service)}
-                        className="h-7 w-24 text-xs"
-                        autoFocus
-                      />
-                      <span className="text-xs text-muted-foreground">{service.currency}</span>
-                    </div>
+                        className="flex items-center gap-1 text-xs font-medium hover:text-primary transition-colors"
+                      >
+                        {service.base_price > 0
+                          ? `${service.base_price.toLocaleString('cs-CZ')} ${service.currency}`
+                          : 'Nenastaveno'}
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )
                   ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingPriceId(service.id);
-                        setTempPrice(String(service.base_price));
-                      }}
-                      className="flex items-center gap-1 text-xs font-medium hover:text-primary transition-colors"
-                    >
+                    <span className="text-xs font-medium">
                       {service.base_price > 0
                         ? `${service.base_price.toLocaleString('cs-CZ')} ${service.currency}`
                         : 'Nenastaveno'}
-                      <Pencil className="h-3 w-3" />
-                    </button>
+                    </span>
                   )}
                 </div>
               )}
@@ -403,24 +430,26 @@ export default function Services() {
             )}
 
             {/* Action Buttons */}
-            <div className="mt-3 pt-3 border-t flex gap-2">
-              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleEditService(service)}>
-                <Pencil className="mr-1 h-3 w-3" />
-                Upravit
-              </Button>
-              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleToggleActive(service)}>
-                {service.is_active ? 'Deaktivovat' : 'Aktivovat'}
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => handleDeleteClick(service)}
-              >
-                <Trash2 className="mr-1 h-3 w-3" />
-                Smazat
-              </Button>
-            </div>
+            {canManageServices && (
+              <div className="mt-3 pt-3 border-t flex gap-2">
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleEditService(service)}>
+                  <Pencil className="mr-1 h-3 w-3" />
+                  Upravit
+                </Button>
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleToggleActive(service)}>
+                  {service.is_active ? 'Deaktivovat' : 'Aktivovat'}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => handleDeleteClick(service)}
+                >
+                  <Trash2 className="mr-1 h-3 w-3" />
+                  Smazat
+                </Button>
+              </div>
+            )}
           </CardContent>
         )}
       </Card>
@@ -434,10 +463,12 @@ export default function Services() {
         titleAccent="agentury"
         description="Správa nabídky služeb"
         actions={
-          <Button className="gap-2" onClick={handleAddService}>
-            <Plus className="h-4 w-4" />
-            Přidat službu
-          </Button>
+          canManageServices ? (
+            <Button className="gap-2" onClick={handleAddService}>
+              <Plus className="h-4 w-4" />
+              Přidat službu
+            </Button>
+          ) : undefined
         }
       />
 

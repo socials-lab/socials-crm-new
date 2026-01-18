@@ -38,20 +38,10 @@ interface FutureInvoicingProps {
   onIssuedStatsChange?: (stats: IssuedStats) => void;
 }
 
-// Helper to calculate Creative Boost credits
-function calculateOutputCredits(outputTypeId: string, normalCount: number, expressCount: number) {
-  const outputType = outputTypes.find(t => t.id === outputTypeId);
-  const baseCredits = outputType?.baseCredits ?? 0;
-  
-  const normalCredits = normalCount * baseCredits;
-  const expressCredits = Math.ceil(expressCount * baseCredits * 1.5);
-  const totalCredits = normalCredits + expressCredits;
-
-  return { normalCredits, expressCredits, totalCredits };
-}
 
 export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvoicingProps) {
   const { clients, engagements, engagementServices, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices } = useCRMData();
+  const { clientMonths, getClientOutputs, calculateOutputCredits } = useCreativeBoostData();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<MonthlyEngagementInvoice[]>([]);
   const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
@@ -304,7 +294,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       });
 
     return newInvoices;
-  }, [year, month, engagements, clients, getClientById, getUnbilledOneOffServices, engagementServices, getExtraWorksReadyToInvoice]);
+  }, [year, month, engagements, getUnbilledOneOffServices, engagementServices, getExtraWorksReadyToInvoice, clientMonths, getClientOutputs, calculateOutputCredits]);
 
   // Merge generated invoices with any saved changes
   const currentInvoices = useMemo(() => {

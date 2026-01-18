@@ -32,7 +32,7 @@ export function DeleteServiceDialog({ open, onOpenChange, service, activeClientC
             </span>
             {activeClientCount > 0 && (
               <span className="block text-destructive font-medium">
-                ⚠️ Tato služba je aktivní u {activeClientCount} klient{activeClientCount === 1 ? 'a' : activeClientCount < 5 ? 'ů' : 'ů'}. 
+                ⚠️ Tato služba je aktivní u {activeClientCount} klient{activeClientCount === 1 ? 'a' : 'ů'}. 
                 Smazáním služby budou ovlivněny jejich zakázky.
               </span>
             )}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isSameMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -170,17 +170,17 @@ function EngagementsContent() {
   }, [highlightId]);
 
   // Helper to check if engagement has unbilled one-off services
-  const hasUnbilledOneOffServices = (engagementId: string): boolean => {
+  const hasUnbilledOneOffServices = useCallback((engagementId: string): boolean => {
     const services = getEngagementServicesByEngagementId(engagementId);
     return services.some(s => 
       s.billing_type === 'one_off' && 
       s.invoicing_status === 'pending' && 
       s.is_active
     );
-  };
+  }, [getEngagementServicesByEngagementId]);
 
   // Helper to check if engagement is active in selected month
-  const isEngagementActiveInMonth = (engagement: Engagement, year: number, month: number): boolean => {
+  const isEngagementActiveInMonth = useCallback((engagement: Engagement, year: number, month: number): boolean => {
     const monthStart = startOfMonth(new Date(year, month - 1));
     const monthEnd = endOfMonth(new Date(year, month - 1));
     const engagementStart = parseISO(engagement.start_date);
@@ -201,7 +201,7 @@ function EngagementsContent() {
     const endsAfterOrDuringMonth = !engagementEnd || engagementEnd >= monthStart;
 
     return startsBeforeOrDuringMonth && endsAfterOrDuringMonth;
-  };
+  }, [hasUnbilledOneOffServices]);
 
   const filteredEngagements = useMemo(() => {
     return engagements.filter(engagement => {
@@ -217,7 +217,7 @@ function EngagementsContent() {
 
       return matchesSearch && matchesStatus && matchesType && matchesMonth;
     });
-  }, [engagements, searchQuery, statusFilter, typeFilter, filterYear, filterMonth, getClientById, engagementServices, isEngagementActiveInMonth]);
+  }, [engagements, searchQuery, statusFilter, typeFilter, filterYear, filterMonth, getClientById, isEngagementActiveInMonth]);
 
   // Month navigation helpers
   const goToPreviousMonth = () => {

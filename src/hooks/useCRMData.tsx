@@ -153,6 +153,10 @@ const transformService = (row: Record<string, unknown>): Service => ({
   ...row,
   service_type: row.service_type || 'core',
   category: row.category || 'performance',
+  description: row.description ?? '',
+  base_price: row.base_price ?? 0,
+  currency: row.currency ?? 'CZK',
+  is_active: row.is_active ?? true,
   created_at: row.created_at || new Date().toISOString(),
   updated_at: row.updated_at || new Date().toISOString(),
 });

@@ -96,11 +96,11 @@ serve(async (req) => {
     // Transform ARES response to our format
     const companies = (data.ekonomickeSubjekty || []).map((subjekt) => {
       // Parse address if available
-      let address = subjekt.sidlo?.textovaAdresa || '';
+      const address = subjekt.sidlo?.textovaAdresa || '';
       let billing_street = '';
       let billing_city = '';
       let billing_zip = '';
-      let billing_country = 'Česká republika';
+      const billing_country = 'Česká republika';
 
       if (address) {
         // Try to parse address (format: "Street, ZIP City" or similar)

@@ -8,15 +8,15 @@ import { format, addMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 function CreativeBoostContent() {
-  const currentDate = new Date();
-  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
 
   const monthOptions = useMemo(() => {
+    const today = new Date();
     const options = [];
     // Past 3 months + current + next 2 months
     for (let i = -3; i <= 2; i++) {
-      const date = addMonths(currentDate, i);
+      const date = addMonths(today, i);
       options.push({
         year: date.getFullYear(),
         month: date.getMonth() + 1,
@@ -24,7 +24,7 @@ function CreativeBoostContent() {
       });
     }
     return options;
-  }, [currentDate]);
+  }, []);
 
   const handlePeriodChange = (value: string) => {
     const [year, month] = value.split('-').map(Number);

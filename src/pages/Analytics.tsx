@@ -173,10 +173,11 @@ export default function Analytics() {
       .filter(e => e.margin > 0 && e.margin < 30)
       .sort((a, b) => a.margin - b.margin);
 
+    const currentDate = new Date();
     const overdueLeads = leads
       .filter(l => l.stage !== 'won' && l.stage !== 'lost')
       .map(l => {
-        const days = differenceInDays(now, new Date(l.updated_at));
+        const days = differenceInDays(currentDate, new Date(l.updated_at));
         return { company: l.company_name, daysOverdue: days };
       })
       .filter(l => l.daysOverdue > 14)
@@ -309,7 +310,7 @@ export default function Analytics() {
       leadsBySource,
       leadsByOwner,
     };
-  }, [selectedYear, selectedMonth, leads]);
+  }, [selectedYear, selectedMonth, leads, colleagues]);
 
   // =====================================================
   // CLIENTS & ENGAGEMENTS DATA
