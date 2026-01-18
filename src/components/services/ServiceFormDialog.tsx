@@ -33,7 +33,7 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
   const [category, setCategory] = useState<ServiceCategory>('performance');
   const [description, setDescription] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
-  const [basePrice, setBasePrice] = useState<number>(0);
+  const [basePrice, setBasePrice] = useState<string>('');
   const [currency, setCurrency] = useState('CZK');
   const [isActive, setIsActive] = useState(true);
   
@@ -52,9 +52,9 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       setCode(service.code);
       setServiceType(service.service_type);
       setCategory(service.category);
-      setDescription(service.description);
+      setDescription(service.description || '');
       setExternalUrl(service.external_url || '');
-      setBasePrice(service.base_price);
+      setBasePrice(service.base_price > 0 ? String(service.base_price) : '');
       setCurrency(service.currency);
       setIsActive(service.is_active);
       setTierPricing(service.tier_pricing || [
@@ -69,7 +69,7 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       setCategory('performance');
       setDescription('');
       setExternalUrl('');
-      setBasePrice(0);
+      setBasePrice('');
       setCurrency('CZK');
       setIsActive(true);
       setTierPricing([
@@ -91,6 +91,8 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
   const handleSave = () => {
     if (!name.trim() || !code.trim()) return;
 
+    const parsedBasePrice = basePrice === '' ? 0 : Number(basePrice);
+
     onSave({
       name: name.trim(),
       code: code.trim().toUpperCase().replace(/\s+/g, '_'),
@@ -98,7 +100,7 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       category,
       description: description.trim(),
       external_url: externalUrl.trim() || null,
-      base_price: serviceType === 'core' ? (tierPricing.find(t => t.tier === 'growth')?.price || 0) : basePrice,
+      base_price: serviceType === 'core' ? (tierPricing.find(t => t.tier === 'growth')?.price || 0) : parsedBasePrice,
       currency,
       tier_pricing: serviceType === 'core' ? tierPricing : null,
       is_active: isActive,
@@ -183,8 +185,9 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
                   id="basePrice"
                   type="number"
                   min={0}
+                  step={0.01}
                   value={basePrice}
-                  onChange={(e) => setBasePrice(Number(e.target.value))}
+                  onChange={(e) => setBasePrice(e.target.value)}
                   placeholder="25000"
                 />
               </div>
