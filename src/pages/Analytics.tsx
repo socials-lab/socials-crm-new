@@ -17,12 +17,10 @@ import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { useUserRole } from '@/hooks/useUserRole';
 
 import { format, subMonths, startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
-
-// Check permissions - for now, allow all
-const canSeeAnalytics = true;
 
 const monthNames = [
   'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
@@ -45,11 +43,12 @@ export default function Analytics() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   
   const { leads } = useLeadsData();
-  const { getClientMonthSummaries } = useCreativeBoostData();
-  const { clients, engagements, extraWorks, colleagues, assignments, getClientById } = useCRMData();
+  const { getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits } = useCreativeBoostData();
+  const { clients, engagements, extraWorks, colleagues, assignments, engagementMetrics, getClientById } = useCRMData();
+  const { canSeeFinancials, canAccessPage } = useUserRole();
   
-  // Empty metrics for now (will come from Supabase later)
-  const engagementMonthlyMetrics: Array<{ year: number; month: number; margin_percent: number }> = [];
+  // Check permissions
+  const canSeeAnalytics = canAccessPage('analytics');
 
   const goToPreviousMonth = () => {
     if (selectedMonth === 1) {
@@ -110,7 +109,7 @@ export default function Analytics() {
       .reduce((sum, e) => sum + e.monthly_fee, 0);
 
     // Average margin
-    const metrics = engagementMonthlyMetrics.filter(m => m.year === selectedYear && m.month === selectedMonth);
+    const metrics = engagementMetrics.filter(m => m.year === selectedYear && m.month === selectedMonth);
     const avgMargin = metrics.length > 0 
       ? metrics.reduce((sum, m) => sum + m.margin_percent, 0) / metrics.length 
       : 0;
@@ -135,13 +134,30 @@ export default function Analytics() {
       };
     });
 
-    // Revenue breakdown
+    // Revenue breakdown - calculate from actual data
+    const retainerRevenue = activeEngs
+      .filter(e => e.type === 'retainer')
+      .reduce((sum, e) => sum + e.monthly_fee, 0);
+    
+    const oneOffRevenue = activeEngs
+      .filter(e => e.type === 'one_off')
+      .reduce((sum, e) => sum + e.one_off_fee, 0);
+    
+    const periodExtraWorks = extraWorks.filter(ew => {
+      const date = new Date(ew.work_date);
+      return date >= periodStart && date <= periodEnd && ew.status === 'invoiced';
+    });
+    const extraWorkRevenue = periodExtraWorks.reduce((sum, ew) => sum + ew.amount, 0);
+    
+    const cbSummaries = getClientMonthSummaries(selectedYear, selectedMonth);
+    const creativeBoostRevenue = cbSummaries.reduce((sum, s) => sum + s.estimatedInvoice, 0);
+    
     const revenueBreakdown = [
-      { name: 'Retainery', value: Math.round(mrr * 0.7) },
-      { name: 'Vícepráce', value: Math.round(mrr * 0.15) },
-      { name: 'Jednorázové', value: Math.round(mrr * 0.1) },
-      { name: 'Creative Boost', value: Math.round(mrr * 0.05) },
-    ];
+      { name: 'Retainery', value: retainerRevenue },
+      { name: 'Vícepráce', value: extraWorkRevenue },
+      { name: 'Jednorázové', value: oneOffRevenue },
+      { name: 'Creative Boost', value: creativeBoostRevenue },
+    ].filter(item => item.value > 0); // Only show non-zero items
 
     // Alerts
     const lowMarginEngagements = activeEngs
@@ -183,7 +199,7 @@ export default function Analytics() {
         pendingExtraWork,
       },
     };
-  }, [selectedYear, selectedMonth, clients, engagements, engagementMonthlyMetrics, getClientById, extraWorks, leads]);
+  }, [selectedYear, selectedMonth, clients, engagements, engagementMetrics, getClientById, extraWorks, leads, getClientMonthSummaries]);
 
   // =====================================================
   // LEADS DATA
@@ -406,7 +422,7 @@ export default function Analytics() {
       .slice(0, 10);
 
     // Top clients by margin
-    const metrics = engagementMonthlyMetrics.filter(m => m.year === selectedYear && m.month === selectedMonth);
+    const metrics = engagementMetrics.filter(m => m.year === selectedYear && m.month === selectedMonth);
     const topClientsByMargin = activeClientsForPeriod
       .map(c => {
         const clientEngs = activeEngs.filter(e => e.client_id === c.id);
@@ -441,7 +457,7 @@ export default function Analytics() {
       topClientsByMargin,
       clientsByTier,
     };
-  }, [selectedYear, selectedMonth, clients, engagements, engagementMonthlyMetrics]);
+  }, [selectedYear, selectedMonth, clients, engagements, engagementMetrics]);
 
   // =====================================================
   // FINANCE DATA
@@ -473,7 +489,7 @@ export default function Analytics() {
       : 0;
 
     // Metrics
-    const metrics = engagementMonthlyMetrics.filter(m => m.year === selectedYear && m.month === selectedMonth);
+    const metrics = engagementMetrics.filter(m => m.year === selectedYear && m.month === selectedMonth);
     const avgMarginPercent = metrics.length > 0 
       ? metrics.reduce((sum, m) => sum + m.margin_percent, 0) / metrics.length 
       : 0;
@@ -511,7 +527,7 @@ export default function Analytics() {
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
 
-      const monthMetrics = engagementMonthlyMetrics.filter(m => m.year === year && m.month === month);
+      const monthMetrics = engagementMetrics.filter(m => m.year === year && m.month === month);
       const avgPercent = monthMetrics.length > 0 
         ? monthMetrics.reduce((sum, m) => sum + m.margin_percent, 0) / monthMetrics.length
         : 0;
@@ -555,20 +571,38 @@ export default function Analytics() {
     const allSummaries = getClientMonthSummaries(selectedYear, selectedMonth);
     const totalCredits = allSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
 
-    // Credits by type (mock data)
-    const creditsByType = [
-      { type: 'Bannery', credits: Math.round(totalCredits * 0.4) },
-      { type: 'Videa', credits: Math.round(totalCredits * 0.35) },
-      { type: 'Překlady', credits: Math.round(totalCredits * 0.15) },
-      { type: 'Ostatní', credits: Math.round(totalCredits * 0.1) },
-    ];
+    // Credits by type - calculate from actual outputs
+    const periodOutputs = outputs.filter(o => o.year === selectedYear && o.month === selectedMonth);
+    const creditsByTypeMap = new Map<string, number>();
+    
+    periodOutputs.forEach(output => {
+      const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
+      const outputType = outputTypes.find(t => t.id === output.outputTypeId);
+      const typeName = outputType?.name || 'Neznámý typ';
+      const currentCredits = creditsByTypeMap.get(typeName) || 0;
+      creditsByTypeMap.set(typeName, currentCredits + credits.totalCredits);
+    });
+    
+    const creditsByType = Array.from(creditsByTypeMap.entries())
+      .map(([type, credits]) => ({ type, credits }))
+      .sort((a, b) => b.credits - a.credits);
 
-    // Credits by colleague (mock data)
-    const cbColleagues = colleagues.filter(c => c.position.toLowerCase().includes('design') || c.position.toLowerCase().includes('video'));
-    const creditsByColleague = cbColleagues.slice(0, 5).map(c => ({
-      name: c.full_name.split(' ')[0],
-      credits: Math.round(totalCredits / cbColleagues.length + Math.random() * 20 - 10),
-    }));
+    // Credits by colleague - calculate from actual outputs
+    const creditsByColleagueMap = new Map<string, number>();
+    
+    periodOutputs.forEach(output => {
+      if (!output.colleagueId) return;
+      const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
+      const colleague = colleagues.find(c => c.id === output.colleagueId);
+      const colleagueName = colleague?.full_name.split(' ')[0] || 'Neznámý';
+      const currentCredits = creditsByColleagueMap.get(colleagueName) || 0;
+      creditsByColleagueMap.set(colleagueName, currentCredits + credits.totalCredits);
+    });
+    
+    const creditsByColleague = Array.from(creditsByColleagueMap.entries())
+      .map(([name, credits]) => ({ name, credits }))
+      .sort((a, b) => b.credits - a.credits)
+      .slice(0, 5);
 
     // Credits trend
     const creditsTrend = Array.from({ length: 12 }, (_, i) => {
@@ -604,7 +638,7 @@ export default function Analytics() {
         creditsTrend,
       },
     };
-  }, [selectedYear, selectedMonth, engagements, engagementMonthlyMetrics, extraWorks, assignments, getClientById, colleagues, getClientMonthSummaries]);
+  }, [selectedYear, selectedMonth, engagements, engagementMetrics, extraWorks, assignments, getClientById, colleagues, getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits]);
 
   if (!canSeeAnalytics) {
     return (

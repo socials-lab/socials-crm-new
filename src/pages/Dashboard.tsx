@@ -13,13 +13,14 @@ import {
   Video,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useMeetingsData } from '@/hooks/useMeetingsData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -31,15 +32,38 @@ export default function Dashboard() {
   const { leads } = useLeadsData();
   const { clients, engagements, colleagues, getClientById } = useCRMData();
   const { getTodaysMeetings, getUpcomingMeetings } = useMeetingsData();
+  const { canSeeFinancials, colleagueId } = useUserRole();
   
-  // For now, always show financials (will be role-based later)
-  const canSeeFinancials = true;
-  const hasColleagueId = true;
+  const hasColleagueId = !!colleagueId;
 
   // Calculate KPIs
   const activeClients = clients.filter(c => c.status === 'active');
   const activeEngagements = engagements.filter(e => e.status === 'active');
   const activeColleagues = colleagues.filter(c => c.status === 'active');
+
+  // Calculate client trend (month-over-month change)
+  const now = new Date();
+  const currentMonthStart = startOfMonth(now);
+  const currentMonthEnd = endOfMonth(now);
+  const prevMonthStart = startOfMonth(subMonths(now, 1));
+  const prevMonthEnd = endOfMonth(subMonths(now, 1));
+
+  const currentMonthActiveClients = clients.filter(c => {
+    const start = new Date(c.start_date);
+    const end = c.end_date ? new Date(c.end_date) : null;
+    return c.status === 'active' && start <= currentMonthEnd && (!end || end >= currentMonthStart);
+  }).length;
+
+  const prevMonthActiveClients = clients.filter(c => {
+    const start = new Date(c.start_date);
+    const end = c.end_date ? new Date(c.end_date) : null;
+    return c.status === 'active' && start <= prevMonthEnd && (!end || end >= prevMonthStart);
+  }).length;
+
+  const clientTrendValue = prevMonthActiveClients > 0
+    ? Math.round(((currentMonthActiveClients - prevMonthActiveClients) / prevMonthActiveClients) * 100)
+    : currentMonthActiveClients > 0 ? 100 : 0;
+  const clientTrendIsPositive = clientTrendValue >= 0;
 
   // Upcoming birthdays (next 14 days)
   const upcomingBirthdays = getUpcomingBirthdays(colleagues, 14);
@@ -147,7 +171,7 @@ export default function Dashboard() {
           value={activeClients.length}
           subtitle={`${clients.filter(c => c.status === 'lead').length} leadů v pipeline`}
           icon={Building2}
-          trend={{ value: 12, isPositive: true }}
+          trend={{ value: Math.abs(clientTrendValue), isPositive: clientTrendIsPositive }}
         />
         <KPICard
           title="📋 Aktivní zakázky"
