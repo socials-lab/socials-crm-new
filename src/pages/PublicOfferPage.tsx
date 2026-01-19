@@ -137,7 +137,7 @@ const PROCESS_STEPS = [
 ];
 
 function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferService; showTypeLabel?: boolean }) {
-  const [isOpen, setIsOpen] = useState(true); // Default open to show details
+  const [isOpen, setIsOpen] = useState(false); // Default closed
 
   // Use deliverables if available, otherwise parse offer_description
   const hasDeliverables = service.deliverables && service.deliverables.length > 0;
