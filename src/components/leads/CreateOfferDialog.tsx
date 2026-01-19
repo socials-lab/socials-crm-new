@@ -79,6 +79,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           discount_reason: '',
           currency: ls.currency,
           billing_type: ls.billing_type,
+          // Pass service_type from service definition
+          service_type: serviceDetails?.service_type,
           // Pre-fill from service defaults
           deliverables: serviceDetails?.default_deliverables || [],
           frequency: serviceDetails?.default_frequency || '',

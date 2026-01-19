@@ -21,6 +21,7 @@ export interface PublicOfferService {
   discount_reason?: string;       // Reason for the discount
   currency: string;
   billing_type: 'monthly' | 'one_off';
+  service_type?: 'core' | 'addon'; // Core or add-on service
   // Extended service details
   deliverables?: string[];        // What client gets (specific outputs)
   frequency?: string;             // How often (e.g., "8 posts/month")

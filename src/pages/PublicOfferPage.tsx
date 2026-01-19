@@ -136,7 +136,7 @@ const PROCESS_STEPS = [
   },
 ];
 
-function ServiceCard({ service }: { service: PublicOfferService }) {
+function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferService; showTypeLabel?: boolean }) {
   const [isOpen, setIsOpen] = useState(true); // Default open to show details
 
   // Use deliverables if available, otherwise parse offer_description
@@ -161,7 +161,28 @@ function ServiceCard({ service }: { service: PublicOfferService }) {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-semibold text-lg">{service.name}</p>
-                  {service.selected_tier && (
+                  {/* Tier badge for core services */}
+                  {service.service_type === 'core' && service.selected_tier && (
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        "text-xs uppercase font-medium",
+                        service.selected_tier === 'elite' && "border-amber-500 text-amber-600 bg-amber-50",
+                        service.selected_tier === 'pro' && "border-primary text-primary bg-primary/5",
+                        service.selected_tier === 'growth' && "border-emerald-500 text-emerald-600 bg-emerald-50",
+                      )}
+                    >
+                      {service.selected_tier}
+                    </Badge>
+                  )}
+                  {/* Add-on badge */}
+                  {service.service_type === 'addon' && (
+                    <Badge variant="outline" className="text-xs">
+                      Doplněk
+                    </Badge>
+                  )}
+                  {/* Legacy: show tier if service_type not set */}
+                  {!service.service_type && service.selected_tier && (
                     <Badge 
                       variant="outline" 
                       className={cn(
@@ -273,6 +294,46 @@ function ServiceCard({ service }: { service: PublicOfferService }) {
         )}
       </div>
     </Collapsible>
+  );
+}
+
+function ServiceStructureExplanation() {
+  return (
+    <div className="p-4 rounded-xl bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 mb-4">
+      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+        📦 Jak strukturujeme naše služby
+      </h3>
+      
+      <div className="space-y-3 text-sm">
+        {/* Core služby */}
+        <div className="flex items-start gap-3">
+          <Badge className="bg-primary/20 text-primary border-primary/30 shrink-0 mt-0.5">Core</Badge>
+          <div>
+            <p className="font-medium">Hlavní služby</p>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Základní pilíře vaší online strategie. Core služby jsou rozděleny do úrovní{' '}
+              <span className="font-medium text-emerald-600">GROWTH</span>,{' '}
+              <span className="font-medium text-primary">PRO</span> a{' '}
+              <span className="font-medium text-amber-600">ELITE</span>{' '}
+              podle rozsahu správy a výše spravovaného rozpočtu.
+            </p>
+          </div>
+        </div>
+        
+        {/* Add-on služby */}
+        <div className="flex items-start gap-3">
+          <Badge variant="outline" className="shrink-0 mt-0.5">Doplněk</Badge>
+          <div>
+            <p className="font-medium">Doplňkové služby</p>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Rozšíření k hlavním službám pro maximální efektivitu.{' '}
+              <span className="font-medium text-foreground">Doplňky nelze využívat samostatně</span> – 
+              vždy fungují jako rozšíření k některé z Core služeb.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -512,19 +573,77 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* Services - As recommendations */}
         <section className="mb-6">
           <h2 className="text-base font-semibold mb-3">
-            🎯
-            Služby navržené pro{' '}
+            🎯 Služby navržené pro{' '}
             <span className="text-primary">
               {offer.website 
                 ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
                 : offer.company_name}
             </span>
           </h2>
-          <div className="space-y-3">
-            {offer.services.map((service, idx) => (
-              <ServiceCard key={service.id || idx} service={service} />
-            ))}
-          </div>
+          
+          {/* Service structure explanation */}
+          <ServiceStructureExplanation />
+          
+          {/* Group services by type */}
+          {(() => {
+            const coreServices = offer.services.filter(s => s.service_type === 'core');
+            const addonServices = offer.services.filter(s => s.service_type === 'addon');
+            const otherServices = offer.services.filter(s => !s.service_type);
+            
+            // If no service_type set, show all in one list
+            if (coreServices.length === 0 && addonServices.length === 0) {
+              return (
+                <div className="space-y-3">
+                  {offer.services.map((service, idx) => (
+                    <ServiceCard key={service.id || idx} service={service} />
+                  ))}
+                </div>
+              );
+            }
+            
+            return (
+              <div className="space-y-5">
+                {/* Core services */}
+                {coreServices.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Badge className="bg-primary/20 text-primary border-primary/30">Core</Badge>
+                      <span className="text-sm font-medium text-muted-foreground">Hlavní služby</span>
+                    </div>
+                    <div className="space-y-3">
+                      {coreServices.map((service, idx) => (
+                        <ServiceCard key={service.id || idx} service={service} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Add-on services */}
+                {addonServices.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Badge variant="outline">Doplněk</Badge>
+                      <span className="text-sm font-medium text-muted-foreground">Doplňkové služby ke Core produktům</span>
+                    </div>
+                    <div className="space-y-3">
+                      {addonServices.map((service, idx) => (
+                        <ServiceCard key={service.id || idx} service={service} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Services without type (legacy) */}
+                {otherServices.length > 0 && (
+                  <div className="space-y-3">
+                    {otherServices.map((service, idx) => (
+                      <ServiceCard key={service.id || idx} service={service} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </section>
 
         {/* Pricing Summary - Clean */}
