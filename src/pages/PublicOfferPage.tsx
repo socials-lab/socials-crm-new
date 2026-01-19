@@ -600,7 +600,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               </Link>
             </Button>
             <p className="mt-3 text-xs text-muted-foreground">
-              ✅ Smlouva do 5 minut • 📅 Výpovědní lhůta 1 měsíc
+              ✅ Smlouva do 5 minut
             </p>
           </div>
         </section>
