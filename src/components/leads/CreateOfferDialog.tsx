@@ -19,6 +19,7 @@ import type { Lead } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
 import { addPublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
+import { mergeWithDefaults } from '@/constants/serviceDefaults';
 
 interface CreateOfferDialogProps {
   open: boolean;
@@ -67,6 +68,16 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     if (open && lead.potential_services) {
       const initialServices: PublicOfferService[] = lead.potential_services.map(ls => {
         const serviceDetails = services.find(s => s.id === ls.service_id);
+        
+        // Get merged defaults (service-specific or intelligent fallbacks)
+        const mergedDefaults = mergeWithDefaults(
+          ls.name,
+          serviceDetails?.default_deliverables,
+          serviceDetails?.default_frequency,
+          serviceDetails?.default_turnaround,
+          serviceDetails?.default_requirements,
+        );
+        
         return {
           id: ls.id,
           service_id: ls.service_id,
@@ -81,11 +92,11 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           billing_type: ls.billing_type,
           // Pass service_type from service definition
           service_type: serviceDetails?.service_type,
-          // Pre-fill from service defaults
-          deliverables: serviceDetails?.default_deliverables || [],
-          frequency: serviceDetails?.default_frequency || '',
-          turnaround: serviceDetails?.default_turnaround || '',
-          requirements: serviceDetails?.default_requirements || [],
+          // Pre-fill with merged defaults (custom from DB or intelligent fallbacks)
+          deliverables: mergedDefaults.deliverables,
+          frequency: mergedDefaults.frequency,
+          turnaround: mergedDefaults.turnaround,
+          requirements: mergedDefaults.requirements,
           start_timeline: '',
         };
       });
