@@ -44,6 +44,26 @@ const TEST_OFFER: PublicOffer = {
       selected_tier: 'growth',
     },
   ],
+  portfolio_links: [
+    {
+      id: 'portfolio-1',
+      title: 'Case Study: E-shop Fashion Brand',
+      url: 'https://www.canva.com/design/example1',
+      type: 'case_study',
+    },
+    {
+      id: 'portfolio-2',
+      title: 'Ukázka kampaní pro B2B klienty',
+      url: 'https://www.canva.com/design/example2',
+      type: 'presentation',
+    },
+    {
+      id: 'portfolio-3',
+      title: 'Reference od klientů',
+      url: 'https://socials.cz/reference',
+      type: 'reference',
+    },
+  ],
   audit_summary: 'Na základě našeho auditu jsme identifikovali následující příležitosti:\n\n1. Sociální sítě nejsou aktivně spravovány\n2. PPC kampaně mají prostor pro optimalizaci\n3. Chybí jednotná vizuální identita',
   custom_note: 'Těšíme se na spolupráci! V případě dotazů nás neváhejte kontaktovat.',
   notion_url: null,

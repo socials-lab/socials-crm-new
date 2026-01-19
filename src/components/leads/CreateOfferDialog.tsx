@@ -12,12 +12,20 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Copy, ExternalLink, Check } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Loader2, Copy, ExternalLink, Check, Plus, X } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
-import type { PublicOfferService, PublicOffer } from '@/types/publicOffer';
+import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
 import { addPublicOffer } from '@/data/publicOffersMockData';
+
 interface CreateOfferDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,12 +42,22 @@ function generateToken(): string {
   return result;
 }
 
+// Default portfolio links that can be added
+const DEFAULT_PORTFOLIO_OPTIONS: Omit<PortfolioLink, 'id'>[] = [
+  { title: 'Case Study: E-shop Fashion Brand', url: 'https://www.canva.com/design/example1', type: 'case_study' },
+  { title: 'Ukázka kampaní pro B2B klienty', url: 'https://www.canva.com/design/example2', type: 'presentation' },
+  { title: 'Reference od klientů', url: 'https://socials.cz/reference', type: 'reference' },
+];
+
 export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: CreateOfferDialogProps) {
   const { services, colleagues } = useCRMData();
   const [auditSummary, setAuditSummary] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [notionUrl, setNotionUrl] = useState('');
   const [validUntil, setValidUntil] = useState('');
+  const [portfolioLinks, setPortfolioLinks] = useState<PortfolioLink[]>(
+    DEFAULT_PORTFOLIO_OPTIONS.map((p, idx) => ({ ...p, id: `portfolio-${idx}` }))
+  );
   const [isCreating, setIsCreating] = useState(false);
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -93,6 +111,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         custom_note: customNote.trim() || null,
         notion_url: notionUrl.trim() || null,
         services: offerServices,
+        portfolio_links: portfolioLinks,
         total_price: totalPrice,
         currency: lead.currency,
         offer_type: lead.offer_type as 'retainer' | 'one_off',
