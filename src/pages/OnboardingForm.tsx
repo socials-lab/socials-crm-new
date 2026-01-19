@@ -118,6 +118,8 @@ const TEST_LEAD = {
   billing_email: 'fakturace@example.cz',
   stage: 'offer_sent' as const,
   owner_id: 'test-owner',
+  owner_name: 'Petr Svoboda',
+  owner_email: 'petr.svoboda@socials.cz',
   source: 'website' as const,
   potential_services: [
     { id: 'svc-1', name: 'Meta Ads Management', price: 25000, currency: 'CZK', billing_type: 'monthly' as const, selected_tier: 'pro' as const },
@@ -132,7 +134,7 @@ const TEST_LEAD = {
 export default function OnboardingForm() {
   const { leadId } = useParams<{ leadId: string }>();
   const { getLeadById, markLeadAsConverted, updateLead } = useLeadsData();
-  const { addClient, addContact } = useCRMData();
+  const { addClient, addContact, getColleagueById } = useCRMData();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -145,6 +147,11 @@ export default function OnboardingForm() {
   // Get lead from database or use test lead for development
   const dbLead = leadId ? getLeadById(leadId) : undefined;
   const lead = dbLead || (leadId === 'test-lead' ? TEST_LEAD : undefined);
+  
+  // Get owner colleague info for contact display
+  const ownerColleague = lead?.owner_id ? getColleagueById(lead.owner_id) : null;
+  const ownerEmail = ownerColleague?.email || (lead as any)?.owner_email || 'info@socials.cz';
+  const ownerName = ownerColleague?.full_name || (lead as any)?.owner_name || 'tým Socials';
   
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
@@ -432,6 +439,9 @@ export default function OnboardingForm() {
                     <p className="text-sm text-muted-foreground">
                       Do 24 hodin vám na e-mail dorazí smlouva ke kontrole a podpisu přes DigiSign.
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                    </p>
                   </div>
                 </div>
                 
@@ -440,8 +450,11 @@ export default function OnboardingForm() {
                   <div>
                     <p className="font-medium">📞 Osobní kontakt</p>
                     <p className="text-sm text-muted-foreground">
-                      Po podpisu smlouvy vás bude kontaktovat váš osobní account manager, 
+                      Po podpisu smlouvy vás bude kontaktovat <strong>{ownerName}</strong>, 
                       se kterým budete řešit celý projekt.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
                     </p>
                   </div>
                 </div>
@@ -453,6 +466,9 @@ export default function OnboardingForm() {
                     <p className="text-sm text-muted-foreground">
                       Společně naplánujeme první kroky a pustíme se do práce!
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -460,13 +476,13 @@ export default function OnboardingForm() {
             
             <div className="text-center pt-4 border-t">
               <p className="text-sm text-muted-foreground mb-2">
-                Máte dotazy? Jsme tu pro vás.
+                Máte dotazy? {ownerName} je tu pro vás.
               </p>
               <a 
-                href="mailto:info@socials.cz" 
+                href={`mailto:${ownerEmail}`}
                 className="text-primary hover:underline"
               >
-                info@socials.cz
+                {ownerEmail}
               </a>
             </div>
           </CardContent>
@@ -496,16 +512,25 @@ export default function OnboardingForm() {
                 <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold mb-2">1</div>
                 <p className="font-medium">Vyplníte formulář</p>
                 <p className="text-sm text-muted-foreground">Zkontrolujte a doplňte údaje (2 min)</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dotazy? <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                </p>
               </div>
               <div className="flex flex-col items-center text-center p-3">
                 <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold mb-2">2</div>
                 <p className="font-medium">Smlouva k podpisu</p>
                 <p className="text-sm text-muted-foreground">Do 24h vám dorazí smlouva přes DigiSign</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dotazy? <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                </p>
               </div>
               <div className="flex flex-col items-center text-center p-3">
                 <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold mb-2">3</div>
                 <p className="font-medium">Osobní kontakt</p>
-                <p className="text-sm text-muted-foreground">Váš account manager vás bude kontaktovat</p>
+                <p className="text-sm text-muted-foreground">{ownerName} vás bude kontaktovat</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dotazy? <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                </p>
               </div>
             </div>
           </CardContent>
