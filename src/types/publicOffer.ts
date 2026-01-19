@@ -19,6 +19,12 @@ export interface PublicOfferService {
   price: number;
   currency: string;
   billing_type: 'monthly' | 'one_off';
+  // Extended service details
+  deliverables?: string[];        // What client gets (specific outputs)
+  frequency?: string;             // How often (e.g., "8 posts/month")
+  turnaround?: string;            // Delivery time (e.g., "within 14 days")
+  requirements?: string[];        // What we need from client
+  start_timeline?: string;        // When we can start
 }
 
 // Public offer for clients
@@ -43,6 +49,7 @@ export interface PublicOffer {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  estimated_start_date?: string;  // When collaboration can start
 }
 
 // Form data for creating offer

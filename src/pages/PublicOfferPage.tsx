@@ -25,6 +25,13 @@ import {
   Presentation,
   BookOpen,
   Video,
+  Package,
+  Clock,
+  Rocket,
+  ClipboardList,
+  FileSignature,
+  UserCheck,
+  Phone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
@@ -69,19 +76,51 @@ function getPortfolioIcon(type: PortfolioLink['type']) {
   }
 }
 
-function ServiceCard({ service }: { service: PublicOfferService }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const hasDescription = service.offer_description && service.offer_description.trim().length > 0;
+// Process steps for "How it works" section
+const PROCESS_STEPS = [
+  {
+    number: 1,
+    icon: ClipboardList,
+    title: 'Vyplníte krátký formulář',
+    description: 'Základní údaje pro přípravu smlouvy (5 min)',
+  },
+  {
+    number: 2,
+    icon: FileSignature,
+    title: 'Připravíme vám smlouvu',
+    description: 'Do 24 hodin obdržíte smlouvu k podpisu',
+  },
+  {
+    number: 3,
+    icon: UserCheck,
+    title: 'Spojí se s vámi account manager',
+    description: 'Představí se kolega, který bude mít váš projekt na starosti',
+  },
+  {
+    number: 4,
+    icon: Phone,
+    title: 'Onboarding call a start spolupráce',
+    description: 'Domluvíme si úvodní hovor a můžeme začít',
+  },
+];
 
-  // Parse offer description into bullet points if possible
-  const descriptionLines = service.offer_description
-    ?.split('\n')
-    .filter(line => line.trim().length > 0) || [];
+function ServiceCard({ service }: { service: PublicOfferService }) {
+  const [isOpen, setIsOpen] = useState(true); // Default open to show details
+
+  // Use deliverables if available, otherwise parse offer_description
+  const hasDeliverables = service.deliverables && service.deliverables.length > 0;
+  const hasRequirements = service.requirements && service.requirements.length > 0;
+  const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline;
+
+  // Parse offer description into bullet points if no deliverables
+  const descriptionLines = !hasDeliverables 
+    ? (service.offer_description?.split('\n').filter(line => line.trim().length > 0) || [])
+    : [];
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow">
-        <CollapsibleTrigger className="w-full" disabled={!hasDescription}>
+      <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+        <CollapsibleTrigger className="w-full">
           <div className="flex items-center justify-between p-5">
             <div className="flex items-center gap-4 text-left">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -118,7 +157,7 @@ function ServiceCard({ service }: { service: PublicOfferService }) {
                   {service.billing_type === 'monthly' ? '/měs' : ''}
                 </span>
               </div>
-              {hasDescription && (
+              {hasDetails && (
                 <ChevronDown
                   className={cn(
                     'h-5 w-5 text-muted-foreground transition-transform',
@@ -129,28 +168,158 @@ function ServiceCard({ service }: { service: PublicOfferService }) {
             </div>
           </div>
         </CollapsibleTrigger>
-        {hasDescription && (
+        
+        {hasDetails && (
           <CollapsibleContent>
-            <div className="px-5 pb-5">
-              <div className="p-4 rounded-lg bg-muted/50 border-l-4 border-primary">
-                <p className="text-sm font-semibold mb-3 text-foreground">Co zahrnuje:</p>
-                <ul className="space-y-2">
-                  {descriptionLines.map((line, idx) => {
-                    const cleanLine = line.replace(/^[-•*]\s*/, '');
-                    return (
-                      <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <span>{cleanLine}</span>
+            <div className="px-5 pb-5 space-y-4">
+              {/* What you get (deliverables) */}
+              {(hasDeliverables || descriptionLines.length > 0) && (
+                <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Package className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">Co dostanete:</p>
+                  </div>
+                  <ul className="space-y-2">
+                    {(hasDeliverables ? service.deliverables! : descriptionLines).map((item, idx) => {
+                      const cleanItem = item.replace(/^[-•*]\s*/, '');
+                      return (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-emerald-800 dark:text-emerald-200">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                          <span>{cleanItem}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {/* Frequency and turnaround */}
+              {(service.frequency || service.turnaround) && (
+                <div className="flex flex-wrap gap-3">
+                  {service.frequency && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted text-sm">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>{service.frequency}</span>
+                    </div>
+                  )}
+                  {service.turnaround && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted text-sm">
+                      <Rocket className="h-4 w-4 text-muted-foreground" />
+                      <span>{service.turnaround}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Start timeline */}
+              {service.start_timeline && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 text-sm">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-primary">Start: {service.start_timeline}</span>
+                </div>
+              )}
+
+              {/* Requirements from client */}
+              {hasRequirements && (
+                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ClipboardList className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">Co od vás budeme potřebovat:</p>
+                  </div>
+                  <ul className="space-y-2">
+                    {service.requirements!.map((req, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-200">
+                        <span className="text-amber-600 dark:text-amber-400">•</span>
+                        <span>{req}</span>
                       </li>
-                    );
-                  })}
-                </ul>
-              </div>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </CollapsibleContent>
         )}
       </div>
     </Collapsible>
+  );
+}
+
+function NextStepsSection({ estimatedStart }: { estimatedStart?: string }) {
+  return (
+    <section className="mb-12">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold mb-2">Jak to funguje?</h2>
+        <p className="text-muted-foreground">
+          Od vyplnění formuláře ke startu spolupráce
+        </p>
+      </div>
+      
+      {/* Timeline for desktop */}
+      <div className="hidden md:block relative">
+        {/* Connecting line */}
+        <div className="absolute top-10 left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-primary/20 via-primary to-primary/20" />
+        
+        <div className="grid grid-cols-4 gap-4">
+          {PROCESS_STEPS.map((step, idx) => (
+            <div key={idx} className="relative text-center">
+              {/* Step circle */}
+              <div className="relative z-10 w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
+                <step.icon className="h-8 w-8 text-primary-foreground" />
+              </div>
+              
+              {/* Step number */}
+              <div className="absolute top-0 right-1/2 translate-x-12 -translate-y-1 w-6 h-6 rounded-full bg-background border-2 border-primary flex items-center justify-center text-xs font-bold text-primary">
+                {step.number}
+              </div>
+              
+              {/* Content */}
+              <div className="mt-4">
+                <p className="font-semibold mb-1">{step.title}</p>
+                <p className="text-sm text-muted-foreground">{step.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Timeline for mobile */}
+      <div className="md:hidden space-y-4">
+        {PROCESS_STEPS.map((step, idx) => (
+          <div key={idx} className="flex gap-4">
+            {/* Left side - line and circle */}
+            <div className="flex flex-col items-center">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
+                <step.icon className="h-5 w-5 text-primary-foreground" />
+              </div>
+              {idx < PROCESS_STEPS.length - 1 && (
+                <div className="w-0.5 flex-1 bg-gradient-to-b from-primary to-primary/20 mt-2" />
+              )}
+            </div>
+            
+            {/* Right side - content */}
+            <div className="pb-6">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                  {step.number}
+                </span>
+                <p className="font-semibold">{step.title}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">{step.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Estimated time */}
+      <div className="mt-8 text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary">
+          <Clock className="h-4 w-4" />
+          <span className="text-sm font-medium">
+            {estimatedStart || 'Od vyplnění formuláře ke startu: cca 3-5 pracovních dnů'}
+          </span>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -460,6 +629,9 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </a>
           </section>
         )}
+
+        {/* How it works / Next Steps */}
+        <NextStepsSection estimatedStart={offer.estimated_start_date} />
 
         {/* CTA Section */}
         <section className="mb-12">
