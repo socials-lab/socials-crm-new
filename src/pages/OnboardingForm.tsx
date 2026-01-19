@@ -408,29 +408,67 @@ export default function OnboardingForm() {
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
+        <Card className="max-w-lg w-full">
           <CardHeader className="text-center">
             <img src={socialsLogo} alt="Socials" className="h-10 mx-auto mb-4" />
             <div className="flex justify-center mb-4">
-              <CheckCircle2 className="h-16 w-16 text-green-500 animate-bounce" />
+              <CheckCircle2 className="h-16 w-16 text-green-500" />
             </div>
             <CardTitle className="text-2xl">🎉 Děkujeme!</CardTitle>
             <CardDescription className="text-base">
               Vaše údaje byly úspěšně odeslány.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Náš tým se vám brzy ozve s dalšími kroky pro zahájení spolupráce.
-            </p>
-            <a 
-              href="https://socials.cz" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-block text-primary hover:underline"
-            >
-              Navštívit socials.cz →
-            </a>
+          <CardContent className="space-y-6">
+            {/* Co bude následovat */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-center text-lg">Co bude následovat?</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold shrink-0 text-sm">1</div>
+                  <div>
+                    <p className="font-medium">📧 Smlouva k podpisu</p>
+                    <p className="text-sm text-muted-foreground">
+                      Do 24 hodin vám na e-mail dorazí smlouva ke kontrole a podpisu přes DigiSign.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">2</div>
+                  <div>
+                    <p className="font-medium">📞 Osobní kontakt</p>
+                    <p className="text-sm text-muted-foreground">
+                      Po podpisu smlouvy vás bude kontaktovat váš osobní account manager, 
+                      se kterým budete řešit celý projekt.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">3</div>
+                  <div>
+                    <p className="font-medium">🚀 Zahájení spolupráce</p>
+                    <p className="text-sm text-muted-foreground">
+                      Společně naplánujeme první kroky a pustíme se do práce!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center pt-4 border-t">
+              <p className="text-sm text-muted-foreground mb-2">
+                Máte dotazy? Jsme tu pro vás.
+              </p>
+              <a 
+                href="mailto:info@socials.cz" 
+                className="text-primary hover:underline"
+              >
+                info@socials.cz
+              </a>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -445,9 +483,33 @@ export default function OnboardingForm() {
           <img src={socialsLogo} alt="Socials" className="h-12 mx-auto" />
           <h1 className="text-2xl font-bold">Onboarding formulář</h1>
           <p className="text-muted-foreground">
-            Vyplňte prosím vaše údaje pro dokončení registrace.
+            Zkontrolujte a doplňte vaše údaje pro zahájení spolupráce.
           </p>
         </div>
+
+        {/* Process Steps */}
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+          <CardContent className="pt-6 pb-5">
+            <h3 className="text-center font-semibold mb-4">📋 Jak to bude probíhat?</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col items-center text-center p-3">
+                <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold mb-2">1</div>
+                <p className="font-medium">Vyplníte formulář</p>
+                <p className="text-sm text-muted-foreground">Zkontrolujte a doplňte údaje (2 min)</p>
+              </div>
+              <div className="flex flex-col items-center text-center p-3">
+                <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold mb-2">2</div>
+                <p className="font-medium">Smlouva k podpisu</p>
+                <p className="text-sm text-muted-foreground">Do 24h vám dorazí smlouva přes DigiSign</p>
+              </div>
+              <div className="flex flex-col items-center text-center p-3">
+                <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold mb-2">3</div>
+                <p className="font-medium">Osobní kontakt</p>
+                <p className="text-sm text-muted-foreground">Váš account manager vás bude kontaktovat</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -1064,7 +1126,7 @@ export default function OnboardingForm() {
                           Souhlasím s objednávkou výše uvedených služeb *
                         </FormLabel>
                         <p className="text-sm text-muted-foreground">
-                          Odesláním formuláře potvrzujete zájem o spolupráci na uvedených službách.
+                          Odesláním formuláře potvrzujete zájem o spolupráci. <strong className="text-foreground">Tímto krokem spolupráce ještě nezačíná</strong> – do 24 hodin vám zašleme smlouvu k podpisu přes DigiSign.
                         </p>
                       </div>
                     </FormItem>
