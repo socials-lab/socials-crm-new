@@ -507,26 +507,6 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* How it works - Compact */}
         <NextStepsSection />
 
-        {/* Portfolio - Mini version */}
-        {offer.portfolio_links && offer.portfolio_links.length > 0 && (
-          <section className="mb-6">
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              <span className="text-muted-foreground">Ukázky práce:</span>
-              {offer.portfolio_links.map((link) => (
-                <a
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
-                >
-                  {link.title}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* Notion Link */}
         {offer.notion_url && (
@@ -551,7 +531,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               Pojďme do toho
             </h2>
             <p className="mb-4 text-muted-foreground text-sm max-w-sm mx-auto">
-              Vyplníte krátký formulář a my se o zbytek postaráme
+              Vyplníte krátký formulář a my se o zbytek postaráme. Naše smlouva je velice flexibilní s výpovědní lhůtou pouze 1 měsíc.
             </p>
             <Button 
               asChild 
@@ -564,21 +544,32 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               </Link>
             </Button>
             <p className="mt-3 text-xs text-muted-foreground">
-              Bez závazků • Smlouva do 5 minut
+              Smlouva do 5 minut • Výpovědní lhůta 1 měsíc
             </p>
           </div>
         </section>
 
         {/* Footer - Credibility badges */}
         <footer className="pt-6 border-t">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
               <span>Meta Business Partner</span>
               <span>•</span>
               <span>Google Partner</span>
               <span>•</span>
-              <span>150+ klientů</span>
+              <span className="font-medium text-amber-600">Shoptet Zlatý Partner</span>
+              <span>•</span>
+              <span>30 mil. Kč/měsíc ve správě kampaní</span>
             </div>
+            <a 
+              href="https://socials.cz" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+            >
+              Více o nás
+              <ExternalLink className="h-3 w-3" />
+            </a>
             <img src={socialsLogo} alt="Socials" className="h-5 opacity-50" />
           </div>
         </footer>
