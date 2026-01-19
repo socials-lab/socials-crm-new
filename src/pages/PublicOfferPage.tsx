@@ -435,8 +435,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <section className="mb-6">
             <div className="p-4 rounded-xl bg-muted/50 border">
               <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                Co jsme zjistili
+                🔍 Co jsme zjistili
               </h2>
               <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
                 {offer.audit_summary}
@@ -457,6 +456,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* Services - As recommendations */}
         <section className="mb-6">
           <h2 className="text-base font-semibold mb-3">
+            🎯
             Služby navržené pro{' '}
             <span className="text-primary">
               {offer.website 
@@ -528,7 +528,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <section className="mb-8">
           <div className="p-5 rounded-xl bg-muted/30 border text-center">
             <h2 className="text-lg font-semibold mb-1">
-              Pusťte se do toho s námi
+              🚀 Pusťte se do toho s námi
             </h2>
             <p className="mb-4 text-muted-foreground text-sm max-w-sm mx-auto">
               Společně posuneme váš byznys na další úroveň. Stačí vyplnit krátký formulář a o zbytek se postaráme.
@@ -544,7 +544,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               </Link>
             </Button>
             <p className="mt-3 text-xs text-muted-foreground">
-              Smlouva do 5 minut • Výpovědní lhůta 1 měsíc
+              ✅ Smlouva do 5 minut • 📅 Výpovědní lhůta 1 měsíc
             </p>
           </div>
         </section>
