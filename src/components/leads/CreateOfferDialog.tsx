@@ -106,6 +106,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         lead_id: lead.id,
         token,
         company_name: lead.company_name,
+        website: lead.website || null,
         contact_name: lead.contact_name,
         audit_summary: auditSummary.trim() || null,
         recommendation_intro: null,
