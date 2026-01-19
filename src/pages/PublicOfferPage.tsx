@@ -528,10 +528,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <section className="mb-8">
           <div className="p-5 rounded-xl bg-muted/30 border text-center">
             <h2 className="text-lg font-semibold mb-1">
-              Pojďme do toho
+              Pusťte se do toho s námi
             </h2>
             <p className="mb-4 text-muted-foreground text-sm max-w-sm mx-auto">
-              Vyplníte krátký formulář a my se o zbytek postaráme. Naše smlouva je velice flexibilní s výpovědní lhůtou pouze 1 měsíc.
+              Společně posuneme váš byznys na další úroveň. Stačí vyplnit krátký formulář a o zbytek se postaráme.
             </p>
             <Button 
               asChild 
