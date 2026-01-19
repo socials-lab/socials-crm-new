@@ -99,6 +99,36 @@ const onboardingSchema = z.object({
 
 type OnboardingFormData = z.infer<typeof onboardingSchema>;
 
+// Mock lead pro testování (odpovídá TEST_OFFER v publicOffersMockData.ts)
+const TEST_LEAD = {
+  id: 'test-lead',
+  company_name: 'Testovací Firma s.r.o.',
+  ico: '12345678',
+  dic: 'CZ12345678',
+  website: 'https://www.example-eshop.cz',
+  industry: 'E-commerce',
+  contact_name: 'Jan Novák',
+  contact_email: 'jan.novak@example.cz',
+  contact_phone: '+420 123 456 789',
+  contact_position: 'Jednatel',
+  billing_street: 'Václavské náměstí 1',
+  billing_city: 'Praha',
+  billing_zip: '11000',
+  billing_country: 'Česká republika',
+  billing_email: 'fakturace@example.cz',
+  stage: 'offer_sent' as const,
+  owner_id: 'test-owner',
+  source: 'website' as const,
+  potential_services: [
+    { id: 'svc-1', name: 'Meta Ads Management', price: 25000, currency: 'CZK', billing_type: 'monthly' as const, selected_tier: 'pro' as const },
+    { id: 'svc-2', name: 'Google Ads PPC', price: 18000, currency: 'CZK', billing_type: 'monthly' as const, selected_tier: 'growth' as const },
+    { id: 'svc-3', name: 'Kreativní produkce', price: 15000, currency: 'CZK', billing_type: 'monthly' as const, selected_tier: 'pro' as const },
+    { id: 'svc-4', name: 'Úvodní Audit & Strategie', price: 12000, currency: 'CZK', billing_type: 'one_off' as const, selected_tier: null },
+  ],
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export default function OnboardingForm() {
   const { leadId } = useParams<{ leadId: string }>();
   const { getLeadById, markLeadAsConverted, updateLead } = useLeadsData();
@@ -112,8 +142,9 @@ export default function OnboardingForm() {
   const [icoChanged, setIcoChanged] = useState(false);
   const [originalIco, setOriginalIco] = useState<string>('');
 
-  
-  const lead = leadId ? getLeadById(leadId) : undefined;
+  // Get lead from database or use test lead for development
+  const dbLead = leadId ? getLeadById(leadId) : undefined;
+  const lead = dbLead || (leadId === 'test-lead' ? TEST_LEAD : undefined);
   
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
