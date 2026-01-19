@@ -52,6 +52,62 @@ function getPortfolioIcon(type: PortfolioLink['type']) {
   }
 }
 
+// Get emoji based on service name/type
+function getServiceEmoji(serviceName: string): string {
+  const name = serviceName.toLowerCase();
+  
+  // Meta / Facebook / Instagram
+  if (name.includes('meta') || name.includes('facebook') || name.includes('instagram')) {
+    return '📘';
+  }
+  // Google / Search / PPC
+  if (name.includes('google') || name.includes('search') || name.includes('ppc') || name.includes('ads')) {
+    return '🔎';
+  }
+  // TikTok
+  if (name.includes('tiktok')) {
+    return '🎵';
+  }
+  // LinkedIn
+  if (name.includes('linkedin')) {
+    return '💼';
+  }
+  // Creative / Design / Grafika
+  if (name.includes('kreativ') || name.includes('creative') || name.includes('design') || name.includes('grafik')) {
+    return '🎨';
+  }
+  // Video / Reels
+  if (name.includes('video') || name.includes('reels')) {
+    return '🎬';
+  }
+  // Analytics / Reporting
+  if (name.includes('analytic') || name.includes('report') || name.includes('měření')) {
+    return '📊';
+  }
+  // Strategy / Consulting
+  if (name.includes('strateg') || name.includes('consult') || name.includes('poradenství')) {
+    return '🧠';
+  }
+  // Email / Newsletter
+  if (name.includes('email') || name.includes('newsletter') || name.includes('mailing')) {
+    return '📧';
+  }
+  // SEO
+  if (name.includes('seo')) {
+    return '🔗';
+  }
+  // Social / Community
+  if (name.includes('social') || name.includes('community') || name.includes('správa')) {
+    return '💬';
+  }
+  // E-commerce / Shoptet
+  if (name.includes('ecommerce') || name.includes('e-commerce') || name.includes('shoptet') || name.includes('eshop')) {
+    return '🛒';
+  }
+  // Default
+  return '✨';
+}
+
 // Process steps for "How it works" section - compact version
 const PROCESS_STEPS = [
   {
@@ -99,8 +155,8 @@ function ServiceCard({ service }: { service: PublicOfferService }) {
         <CollapsibleTrigger className="w-full">
           <div className="flex items-center justify-between p-5">
             <div className="flex items-center gap-4 text-left">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="h-6 w-6 text-primary" />
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-2xl">
+                {getServiceEmoji(service.name)}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
