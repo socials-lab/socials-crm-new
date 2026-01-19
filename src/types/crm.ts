@@ -151,6 +151,11 @@ export interface Service {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Default values for offer generation
+  default_deliverables: string[] | null;     // Co klient dostane
+  default_frequency: string | null;          // Jak často (např. "8 příspěvků/měsíc")
+  default_turnaround: string | null;         // Doba dodání
+  default_requirements: string[] | null;     // Co potřebujeme od klienta
 }
 
 export interface ClientService {

@@ -17,6 +17,8 @@ export interface PublicOfferService {
   offer_description: string | null;
   selected_tier: ServiceTier | null;
   price: number;
+  original_price?: number;        // Original price before discount
+  discount_reason?: string;       // Reason for the discount
   currency: string;
   billing_type: 'monthly' | 'one_off';
   // Extended service details
