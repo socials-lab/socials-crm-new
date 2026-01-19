@@ -35,6 +35,7 @@ export interface PublicOffer {
   company_name: string;
   contact_name: string;
   audit_summary: string | null;
+  recommendation_intro: string | null;  // Why we recommend these services
   custom_note: string | null;
   notion_url: string | null;
   services: PublicOfferService[];

@@ -38,30 +38,6 @@ import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/pub
 import socialsLogo from '@/assets/socials-logo.png';
 import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
 
-// Value proposition items
-const VALUE_PROPS = [
-  {
-    icon: Users,
-    title: '🎯 150+ spokojených klientů',
-    description: 'Pomáháme firmám růst online už 8 let',
-  },
-  {
-    icon: Award,
-    title: '🏆 Certifikovaní specialisté',
-    description: 'Meta Business Partner & Google Partner',
-  },
-  {
-    icon: BarChart3,
-    title: '📊 Transparentní reporting',
-    description: 'Měsíční reporty s jasnými KPIs',
-  },
-  {
-    icon: Headphones,
-    title: '🤝 Dedikovaný account manager',
-    description: 'Vždy víte, na koho se obrátit',
-  },
-];
-
 // Portfolio icon by type
 function getPortfolioIcon(type: PortfolioLink['type']) {
   switch (type) {
@@ -76,31 +52,31 @@ function getPortfolioIcon(type: PortfolioLink['type']) {
   }
 }
 
-// Process steps for "How it works" section
+// Process steps for "How it works" section - compact version
 const PROCESS_STEPS = [
   {
     number: 1,
     icon: ClipboardList,
-    title: '📝 Vyplníte krátký formulář',
-    description: 'Základní údaje pro přípravu smlouvy (5 min)',
+    title: 'Vyplníte formulář',
+    description: '5 minut',
   },
   {
     number: 2,
     icon: FileSignature,
-    title: '⚡ Připravíme vám smlouvu',
-    description: 'Do 5 minut obdržíte smlouvu k podpisu',
+    title: 'Smlouva k podpisu',
+    description: 'Do 5 minut',
   },
   {
     number: 3,
     icon: UserCheck,
-    title: '👋 Spojí se s vámi account manager',
-    description: 'Představí se kolega, který bude mít váš projekt na starosti',
+    title: 'Account manager',
+    description: 'Váš kontakt',
   },
   {
     number: 4,
     icon: Phone,
-    title: '🚀 Onboarding call a start',
-    description: 'Domluvíme si úvodní hovor a můžeme začít',
+    title: 'Onboarding a start',
+    description: 'Jdeme na to',
   },
 ];
 
@@ -244,70 +220,27 @@ function ServiceCard({ service }: { service: PublicOfferService }) {
   );
 }
 
-function NextStepsSection({ estimatedStart }: { estimatedStart?: string }) {
+function NextStepsSection() {
   return (
-    <section className="mb-8">
-      <h2 className="text-lg md:text-xl font-bold mb-4 text-center">🔄 Jak to funguje?</h2>
+    <section className="mb-6">
+      <p className="text-xs text-muted-foreground text-center mb-3">Jak to probíhá?</p>
       
-      {/* Timeline for desktop */}
-      <div className="hidden md:block relative">
-        {/* Connecting line */}
-        <div className="absolute top-7 left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-emerald-200 via-emerald-400 to-emerald-200 dark:from-emerald-800 dark:via-emerald-600 dark:to-emerald-800" />
-        
-        <div className="grid grid-cols-4 gap-3">
-          {PROCESS_STEPS.map((step, idx) => (
-            <div key={idx} className="relative text-center">
-              {/* Step circle */}
-              <div className="relative z-10 w-14 h-14 mx-auto rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-md">
-                <step.icon className="h-6 w-6 text-white" />
-              </div>
-              
-              {/* Step number */}
-              <div className="absolute top-0 right-1/2 translate-x-9 -translate-y-0.5 w-5 h-5 rounded-full bg-background border-2 border-emerald-500 flex items-center justify-center text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                {step.number}
-              </div>
-              
-              {/* Content */}
-              <div className="mt-3">
-                <p className="font-semibold text-sm mb-0.5">{step.title}</p>
-                <p className="text-xs text-muted-foreground">{step.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Timeline for mobile */}
-      <div className="md:hidden space-y-3">
+      {/* Compact horizontal timeline */}
+      <div className="flex items-center justify-between gap-2 px-2">
         {PROCESS_STEPS.map((step, idx) => (
-          <div key={idx} className="flex gap-3">
-            {/* Left side - line and circle */}
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-sm shrink-0">
-                <step.icon className="h-4 w-4 text-white" />
+          <div key={idx} className="flex items-center gap-2 flex-1">
+            <div className="flex flex-col items-center text-center flex-1">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center mb-1">
+                <step.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
-              {idx < PROCESS_STEPS.length - 1 && (
-                <div className="w-0.5 flex-1 bg-gradient-to-b from-emerald-400 to-emerald-200 dark:from-emerald-600 dark:to-emerald-800 mt-1" />
-              )}
+              <p className="text-xs font-medium leading-tight">{step.title}</p>
+              <p className="text-[10px] text-muted-foreground">{step.description}</p>
             </div>
-            
-            {/* Right side - content */}
-            <div className="pb-4 pt-0.5">
-              <p className="font-semibold text-sm">{step.title}</p>
-              <p className="text-xs text-muted-foreground">{step.description}</p>
-            </div>
+            {idx < PROCESS_STEPS.length - 1 && (
+              <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0 hidden sm:block" />
+            )}
           </div>
         ))}
-      </div>
-      
-      {/* Estimated time */}
-      <div className="mt-4 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center">
-        <div className="flex items-center justify-center gap-2 text-sm">
-          <span>⏱️</span>
-          <span className="font-medium text-emerald-700 dark:text-emerald-300">
-            {estimatedStart || 'Od vyplnění formuláře ke startu: cca 3-5 pracovních dnů'}
-          </span>
-        </div>
       </div>
     </section>
   );
@@ -458,83 +391,68 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 py-6 md:py-10">
-        {/* Hero Section */}
-        <section className="text-center mb-8">
-          <p className="text-muted-foreground mb-2 text-sm uppercase tracking-wider">
-            👋 Nabídka připravená speciálně pro
+      <main className="max-w-3xl mx-auto px-4 py-6 md:py-8">
+        {/* Hero Section - Consultative approach */}
+        <section className="text-center mb-6">
+          <p className="text-muted-foreground mb-1 text-sm">
+            Na základě poznání vaší firmy jsme připravili strategii
           </p>
-          <h1 className="text-2xl md:text-4xl font-bold mb-2 flex items-center justify-center gap-2">
-            <Building2 className="h-6 w-6 md:h-8 md:w-8 text-emerald-600" />
-            {offer.company_name}
+          <h1 className="text-xl md:text-3xl font-bold mb-1">
+            Návrh spolupráce pro {offer.company_name}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Připraveno pro: <span className="font-medium text-foreground">{offer.contact_name}</span>
-          </p>
-          
-          {/* Validity badge */}
-          {offer.valid_until && !isExpired && (
-            <div className="inline-flex items-center gap-2 mt-3 px-3 py-1.5 rounded-full bg-muted text-xs">
-              <span>📅</span>
-              <span className="text-muted-foreground">
-                Platí do: {new Date(offer.valid_until).toLocaleDateString('cs-CZ', {
+            Pro: {offer.contact_name}
+            {offer.valid_until && !isExpired && (
+              <span className="mx-2">•</span>
+            )}
+            {offer.valid_until && !isExpired && (
+              <span>
+                Platí do {new Date(offer.valid_until).toLocaleDateString('cs-CZ', {
                   day: 'numeric',
                   month: 'long',
-                  year: 'numeric',
                 })}
               </span>
-            </div>
-          )}
+            )}
+          </p>
         </section>
 
         {/* Validity warning */}
         {isExpired && (
-          <div className="mb-8 p-4 rounded-xl border border-destructive/50 bg-destructive/10 text-center">
-            <p className="text-destructive font-medium">
-              ⚠️ Platnost této nabídky vypršela
+          <div className="mb-6 p-3 rounded-lg border border-destructive/50 bg-destructive/10 text-center">
+            <p className="text-destructive font-medium text-sm">
+              Platnost této nabídky vypršela
             </p>
           </div>
         )}
 
-        {/* Value Proposition */}
-        <section className="mb-8">
-          <h2 className="text-lg md:text-xl font-bold mb-3 text-center">✨ Proč spolupracovat se Socials?</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {VALUE_PROPS.map((prop, idx) => (
-              <div 
-                key={idx}
-                className="flex items-start gap-3 p-3 rounded-lg border bg-card"
-              >
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-                  <prop.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">{prop.title}</p>
-                  <p className="text-xs text-muted-foreground">{prop.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Audit Summary */}
+        {/* Audit - What we found */}
         {offer.audit_summary && (
           <section className="mb-6">
-            <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-              📊 Výstup z auditu
-            </h2>
-            <div className="p-4 rounded-lg border bg-card">
-              <p className="text-muted-foreground text-sm whitespace-pre-line leading-relaxed">
+            <div className="p-4 rounded-xl bg-muted/50 border">
+              <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                Co jsme zjistili
+              </h2>
+              <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
                 {offer.audit_summary}
               </p>
+              
+              {/* Recommendation intro */}
+              {offer.recommendation_intro && (
+                <div className="mt-4 pt-3 border-t border-border/50">
+                  <p className="text-sm font-medium text-foreground">
+                    {offer.recommendation_intro}
+                  </p>
+                </div>
+              )}
             </div>
           </section>
         )}
 
-        {/* Services */}
-        <section className="mb-8">
-          <h2 className="text-lg md:text-xl font-bold mb-3 flex items-center gap-2">
-            📦 Služby v nabídce
+        {/* Services - As recommendations */}
+        <section className="mb-6">
+          <h2 className="text-base font-semibold mb-3">
+            Služby navržené pro {offer.company_name}
           </h2>
           <div className="space-y-3">
             {offer.services.map((service, idx) => (
@@ -543,53 +461,59 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           </div>
         </section>
 
-        {/* Portfolio Section */}
-        {offer.portfolio_links && offer.portfolio_links.length > 0 && (
-          <section className="mb-6">
-            <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-              🎨 Ukázky naší práce
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {offer.portfolio_links.map((link) => (
-                <PortfolioCard key={link.id} link={link} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Pricing Summary */}
+        {/* Pricing Summary - Clean */}
         <section className="mb-6">
-          <div className="p-4 md:p-5 rounded-xl border bg-gradient-to-br from-muted/30 to-muted/50">
-            <h3 className="text-lg font-semibold mb-3 text-center">💰 Souhrn nabídky</h3>
-            <div className="space-y-2">
-              {totalMonthly > 0 && (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-card border">
-                  <span className="text-muted-foreground text-sm">Měsíční poplatek</span>
-                  <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
-                    <span className="text-sm font-normal text-muted-foreground">/měs</span>
-                  </span>
-                </div>
-              )}
-              {totalOneOff > 0 && (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-card border">
-                  <span className="text-muted-foreground text-sm">Jednorázově</span>
-                  <span className="text-lg font-bold">
-                    {totalOneOff.toLocaleString('cs-CZ')} {offer.currency}
-                  </span>
-                </div>
-              )}
+          <div className="p-4 rounded-xl border bg-card">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="space-y-1">
+                {totalMonthly > 0 && (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-foreground">
+                      {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
+                    </span>
+                    <span className="text-sm text-muted-foreground">/měsíc</span>
+                  </div>
+                )}
+                {totalOneOff > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    + jednorázově {totalOneOff.toLocaleString('cs-CZ')} {offer.currency}
+                  </p>
+                )}
+              </div>
+              <Button 
+                asChild 
+                size="lg" 
+                className="bg-foreground hover:bg-foreground/90 text-background font-medium"
+              >
+                <Link to={onboardingUrl}>
+                  Začít spolupráci
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>
 
-        {/* Custom Note */}
-        {offer.custom_note && (
+        {/* How it works - Compact */}
+        <NextStepsSection />
+
+        {/* Portfolio - Mini version */}
+        {offer.portfolio_links && offer.portfolio_links.length > 0 && (
           <section className="mb-6">
-            <div className="p-4 rounded-lg border bg-card">
-              <p className="text-muted-foreground text-sm whitespace-pre-line italic">
-                💬 "{offer.custom_note}"
-              </p>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <span className="text-muted-foreground">Ukázky práce:</span>
+              {offer.portfolio_links.map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                >
+                  {link.title}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              ))}
             </div>
           </section>
         )}
@@ -601,49 +525,52 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               href={offer.notion_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors group"
+              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
             >
-              <span>📄</span>
-              <span className="font-medium text-emerald-700 dark:text-emerald-300 text-sm">Detailní nabídka a vysvětlení</span>
-              <ExternalLink className="h-3 w-3 text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+              <FileText className="h-4 w-4" />
+              Detailní nabídka
+              <ExternalLink className="h-3 w-3" />
             </a>
           </section>
         )}
 
-        {/* How it works / Next Steps */}
-        <NextStepsSection estimatedStart={offer.estimated_start_date} />
-
-        {/* CTA Section */}
+        {/* CTA Section - Confident tone */}
         <section className="mb-8">
-          <div className="p-5 md:p-6 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200/50 dark:border-emerald-800 text-center">
-            <h2 className="text-xl md:text-2xl font-bold mb-2">
-              🚀 Připraveni začít?
+          <div className="p-5 rounded-xl bg-muted/30 border text-center">
+            <h2 className="text-lg font-semibold mb-1">
+              Pojďme do toho
             </h2>
-            <p className="mb-4 text-muted-foreground max-w-md mx-auto text-sm">
-              Vyplňte krátký formulář a do 5 minut vám připravíme smlouvu k podpisu ✨
+            <p className="mb-4 text-muted-foreground text-sm max-w-sm mx-auto">
+              Vyplníte krátký formulář a my se o zbytek postaráme
             </p>
             <Button 
               asChild 
               size="lg" 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-8"
+              className="bg-foreground hover:bg-foreground/90 text-background font-medium px-8"
             >
               <Link to={onboardingUrl}>
-                <Play className="h-5 w-5 mr-2" />
-                Zahájit spolupráci
+                Začít spolupráci
+                <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
             </Button>
             <p className="mt-3 text-xs text-muted-foreground">
-              ⏱️ Zabere to jen 5 minut
+              Bez závazků • Smlouva do 5 minut
             </p>
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="text-center pt-8 border-t">
-          <img src={socialsLogo} alt="Socials" className="h-6 mx-auto mb-3 opacity-50" />
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Socials. Všechna práva vyhrazena.
-          </p>
+        {/* Footer - Credibility badges */}
+        <footer className="pt-6 border-t">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-4">
+              <span>Meta Business Partner</span>
+              <span>•</span>
+              <span>Google Partner</span>
+              <span>•</span>
+              <span>150+ klientů</span>
+            </div>
+            <img src={socialsLogo} alt="Socials" className="h-5 opacity-50" />
+          </div>
         </footer>
       </main>
 
@@ -651,13 +578,15 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur border-t shadow-lg sm:hidden safe-area-bottom">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="font-bold text-emerald-600 dark:text-emerald-400">{(totalMonthly + totalOneOff).toLocaleString('cs-CZ')} {offer.currency}</p>
-            <p className="text-xs text-muted-foreground">celkem</p>
+            <p className="font-bold">{(totalMonthly + totalOneOff).toLocaleString('cs-CZ')} {offer.currency}</p>
+            <p className="text-xs text-muted-foreground">
+              {totalMonthly > 0 ? '/měsíc' : 'celkem'}
+            </p>
           </div>
-          <Button asChild className="flex-1 max-w-[180px] bg-emerald-600 hover:bg-emerald-700">
+          <Button asChild className="flex-1 max-w-[160px] bg-foreground hover:bg-foreground/90 text-background">
             <Link to={onboardingUrl}>
-              <Play className="h-4 w-4 mr-2" />
-              Zahájit 🚀
+              Začít spolupráci
+              <ArrowRight className="h-4 w-4 ml-1" />
             </Link>
           </Button>
         </div>
