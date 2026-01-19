@@ -33,6 +33,7 @@ export interface PublicOffer {
   lead_id: string;
   token: string;
   company_name: string;
+  website: string | null;
   contact_name: string;
   audit_summary: string | null;
   recommendation_intro: string | null;  // Why we recommend these services

@@ -8,6 +8,7 @@ const TEST_OFFER: PublicOffer = {
   token: 'test-nabidka-123',
   lead_id: 'test-lead',
   company_name: 'Testovací Firma s.r.o.',
+  website: 'https://www.example-eshop.cz',
   contact_name: 'Jan Novák',
   services: [
     {

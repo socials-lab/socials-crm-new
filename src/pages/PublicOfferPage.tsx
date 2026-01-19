@@ -398,7 +398,12 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             Na základě poznání vaší firmy jsme připravili strategii
           </p>
           <h1 className="text-xl md:text-3xl font-bold mb-1">
-            Návrh spolupráce pro {offer.company_name}
+            Návrh spolupráce pro{' '}
+            <span className="text-primary">
+              {offer.website 
+                ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+                : offer.company_name}
+            </span>
           </h1>
           <p className="text-muted-foreground text-sm">
             Pro: {offer.contact_name}
@@ -452,7 +457,12 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* Services - As recommendations */}
         <section className="mb-6">
           <h2 className="text-base font-semibold mb-3">
-            Služby navržené pro {offer.company_name}
+            Služby navržené pro{' '}
+            <span className="text-primary">
+              {offer.website 
+                ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+                : offer.company_name}
+            </span>
           </h2>
           <div className="space-y-3">
             {offer.services.map((service, idx) => (
