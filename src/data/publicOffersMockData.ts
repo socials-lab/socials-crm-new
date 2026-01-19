@@ -21,6 +21,7 @@ const TEST_OFFER: PublicOffer = {
       currency: 'CZK',
       billing_type: 'monthly',
       selected_tier: 'pro',
+      service_type: 'core',
       deliverables: [
         '8 postů měsíčně (FB, IG, LinkedIn)',
         'Grafické návrhy v brand identity',
@@ -47,6 +48,7 @@ const TEST_OFFER: PublicOffer = {
       currency: 'CZK',
       billing_type: 'monthly',
       selected_tier: 'growth',
+      service_type: 'core',
       deliverables: [
         'Kompletní správa reklamních účtů',
         'Nastavení a optimalizace kampaní',
@@ -72,7 +74,8 @@ const TEST_OFFER: PublicOffer = {
       price: 8000,
       currency: 'CZK',
       billing_type: 'one_off',
-      selected_tier: 'growth',
+      selected_tier: null,
+      service_type: 'addon',
       deliverables: [
         'Analýza současného stavu sociálních sítí',
         'Audit PPC kampaní a výkonnosti',
