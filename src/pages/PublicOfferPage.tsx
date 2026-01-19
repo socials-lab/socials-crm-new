@@ -32,6 +32,8 @@ import {
   FileSignature,
   UserCheck,
   Phone,
+  Mail,
+  MessageCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
@@ -392,6 +394,54 @@ function PortfolioCard({ link }: { link: PortfolioLink }) {
   );
 }
 
+// Contact section - shows lead owner's contact info
+function ContactSection({ offer }: { offer: PublicOffer }) {
+  if (!offer.owner_name && !offer.owner_email) return null;
+  
+  return (
+    <section className="mb-6">
+      <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <MessageCircle className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-sm mb-1">
+              Máte dotaz? Ozvěte se mi
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Pokud vám cokoliv není jasné nebo potřebujete něco upřesnit, neváhejte mě kontaktovat.
+            </p>
+            <div className="space-y-1.5">
+              {offer.owner_name && (
+                <p className="text-sm font-medium">{offer.owner_name}</p>
+              )}
+              {offer.owner_email && (
+                <a 
+                  href={`mailto:${offer.owner_email}`}
+                  className="text-sm text-primary hover:underline flex items-center gap-1.5"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  {offer.owner_email}
+                </a>
+              )}
+              {offer.owner_phone && (
+                <a 
+                  href={`tel:${offer.owner_phone}`}
+                  className="text-sm text-primary hover:underline flex items-center gap-1.5"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                  {offer.owner_phone}
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const params = useParams<{ token: string }>();
   const rawToken = testToken || params.token || '';
@@ -698,6 +748,9 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </a>
           </section>
         )}
+
+        {/* Contact Section */}
+        <ContactSection offer={offer} />
 
         {/* CTA Section - Confident tone */}
         <section className="mb-8">

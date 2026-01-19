@@ -130,6 +130,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
       const offerUrl = `${window.location.origin}/offer/${token}`;
       const now = new Date().toISOString();
 
+      // Find lead owner for contact info
+      const leadOwner = colleagues.find(c => c.id === lead.owner_id);
+
       // Create offer object for mock store
       const newOffer: PublicOffer = {
         id: crypto.randomUUID(),
@@ -154,6 +157,10 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         created_by: currentColleague?.id || null,
         created_at: now,
         updated_at: now,
+        // Contact person info (lead owner)
+        owner_name: leadOwner?.full_name || undefined,
+        owner_email: leadOwner?.email || undefined,
+        owner_phone: leadOwner?.phone || undefined,
       };
 
       // Add to mock store

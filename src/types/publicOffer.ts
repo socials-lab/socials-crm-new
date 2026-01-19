@@ -55,6 +55,10 @@ export interface PublicOffer {
   created_at: string;
   updated_at: string;
   estimated_start_date?: string;  // When collaboration can start
+  // Contact person info (lead owner)
+  owner_name?: string;       // Name of assigned colleague
+  owner_email?: string;      // Email of assigned colleague
+  owner_phone?: string;      // Phone (optional)
 }
 
 // Form data for creating offer
