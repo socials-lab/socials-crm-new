@@ -1,5 +1,13 @@
 import type { ServiceTier, LeadOfferType } from './crm';
 
+// Portfolio link for showcasing work
+export interface PortfolioLink {
+  id: string;
+  title: string;
+  url: string;
+  type: 'case_study' | 'presentation' | 'reference' | 'video';
+}
+
 // Service snapshot for public offer
 export interface PublicOfferService {
   id: string;
@@ -24,6 +32,7 @@ export interface PublicOffer {
   custom_note: string | null;
   notion_url: string | null;
   services: PublicOfferService[];
+  portfolio_links: PortfolioLink[];
   total_price: number;
   currency: string;
   offer_type: LeadOfferType;
@@ -42,4 +51,5 @@ export interface CreateOfferFormData {
   custom_note: string;
   notion_url: string;
   valid_until: string;
+  portfolio_links: PortfolioLink[];
 }
