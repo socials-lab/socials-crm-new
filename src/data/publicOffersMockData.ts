@@ -121,6 +121,10 @@ const TEST_OFFER: PublicOffer = {
   viewed_at: null,
   view_count: 0,
   estimated_start_date: 'Do 5 pracovních dnů od podpisu smlouvy',
+  // Contact person info
+  owner_name: 'Jan Novák',
+  owner_email: 'jan.novak@socials.cz',
+  owner_phone: '+420 123 456 789',
 };
 
 function getStoredOffers(): PublicOffer[] {
