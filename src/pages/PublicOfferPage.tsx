@@ -34,6 +34,9 @@ import {
   Phone,
   Mail,
   MessageCircle,
+  Copy,
+  Check,
+  Share2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
@@ -452,6 +455,14 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const [offer, setOffer] = useState<PublicOffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = async () => {
+    const url = window.location.href;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     function fetchOffer() {
@@ -586,6 +597,23 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               </span>
             )}
           </p>
+          {/* Share button */}
+          <button
+            onClick={handleCopyLink}
+            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted/50 hover:bg-muted rounded-full transition-colors"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3 text-green-600" />
+                <span>Odkaz zkopírován</span>
+              </>
+            ) : (
+              <>
+                <Share2 className="h-3 w-3" />
+                <span>Sdílet nabídku</span>
+              </>
+            )}
+          </button>
         </section>
 
         {/* Validity warning */}
