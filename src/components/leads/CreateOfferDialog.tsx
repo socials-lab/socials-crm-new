@@ -108,6 +108,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         company_name: lead.company_name,
         contact_name: lead.contact_name,
         audit_summary: auditSummary.trim() || null,
+        recommendation_intro: null,
         custom_note: customNote.trim() || null,
         notion_url: notionUrl.trim() || null,
         services: offerServices,
