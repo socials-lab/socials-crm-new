@@ -23,8 +23,11 @@ import {
   FileSignature,
   CheckCircle2,
   Send,
-  Check
+  Check,
+  Link2,
+  Eye
 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import {
   Sheet,
   SheetContent,
@@ -54,16 +57,16 @@ import {
 } from '@/components/ui/select';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
-import { useDigiSign } from '@/hooks/useDigiSign';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
 import { RequestAccessDialog } from './RequestAccessDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
+import { CreateOfferDialog } from './CreateOfferDialog';
 import type { Lead, LeadStage, LeadService } from '@/types/crm';
 import { cn } from '@/lib/utils';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 interface LeadDetailSheetProps {
   lead: Lead | null;
@@ -94,10 +97,9 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
   other: 'Jiný',
 };
 
-export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
-  const { updateLeadStage, updateLead, addNote, getLeadHistory } = useLeadsData();
+export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
+  const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services } = useCRMData();
-  const { createContract, isLoading: isCreatingContract } = useDigiSign();
   const [noteText, setNoteText] = useState('');
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -106,18 +108,16 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetail
   const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
   const [isOnboardingFormOpen, setIsOnboardingFormOpen] = useState(false);
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
+  const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
+  const [sharedOfferUrl, setSharedOfferUrl] = useState<string | null>(null);
   const [showContractWarning, setShowContractWarning] = useState(false);
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const isProcessingWarning = useRef(false);
 
-  const handleCreateContract = async () => {
-    if (!lead) return;
-    await createContract(lead.id);
-    // Lead data refreshes automatically via useLeadsData query invalidation
-  };
+  // Use fresh lead data from context to reflect updates immediately
+  const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
 
   if (!lead) return null;
-
 
   const owner = colleagues.find(c => c.id === lead.owner_id);
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
@@ -689,53 +689,65 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetail
                 📄 Nabídka
               </h4>
 
-              {/* Notion offer */}
+              {/* Shared offer - NEW */}
               <div className={cn(
                 "p-3 rounded-lg border",
-                lead.offer_url ? "border-green-500/30 bg-green-500/5" : "bg-card"
+                sharedOfferUrl || lead.offer_url ? "border-green-500/30 bg-green-500/5" : "bg-card"
               )}>
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Nabídka v Notion</span>
-                  {lead.offer_url && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                  <Link2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Sdílená nabídka</span>
+                  {(sharedOfferUrl || lead.offer_url) && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                 </div>
                 
-                {lead.offer_url ? (
+                {sharedOfferUrl || lead.offer_url ? (
                   <div className="space-y-2">
-                    <a
-                      href={lead.offer_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-primary hover:underline"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Otevřít nabídku v Notion
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={sharedOfferUrl || lead.offer_url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Otevřít nabídku
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7"
+                        onClick={() => {
+                          navigator.clipboard.writeText(sharedOfferUrl || lead.offer_url || '');
+                          toast.success('Odkaz zkopírován');
+                        }}
+                      >
+                        Kopírovat link
+                      </Button>
+                    </div>
                     {lead.offer_created_at && (
                       <p className="text-xs text-muted-foreground">
                         Vytvořeno: {new Date(lead.offer_created_at).toLocaleDateString('cs-CZ')}
                       </p>
                     )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => setIsCreateOfferOpen(true)}
+                    >
+                      Vytvořit novou nabídku
+                    </Button>
                   </div>
                 ) : (
                   <>
                     <Button
                       variant="default"
                       className="w-full"
-                      onClick={handleCreateOffer}
-                      disabled={isCreatingOffer || (lead.potential_services?.length || 0) === 0}
+                      onClick={() => setIsCreateOfferOpen(true)}
+                      disabled={(lead.potential_services?.length || 0) === 0}
                     >
-                      {isCreatingOffer ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Vytvářím nabídku...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Vytvořit nabídku v Notion
-                        </>
-                      )}
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Vytvořit sdílenou nabídku
                     </Button>
                     {(lead.potential_services?.length || 0) === 0 && (
                       <p className="text-xs text-muted-foreground text-center mt-2">
@@ -858,62 +870,40 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetail
                 "p-3 rounded-lg border",
                 lead.contract_url ? "border-green-500/30 bg-green-500/5" : "bg-card"
               )}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 flex-1">
-                    <FileSignature className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">Smlouva vytvořena</p>
-                        {lead.contract_url && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                      </div>
-                      {lead.contract_url ? (
-                        <div className="space-y-1">
-                          <p className="text-xs text-green-700">
-                            ✓ Vytvořeno {lead.contract_created_at && new Date(lead.contract_created_at).toLocaleDateString('cs-CZ', {
-                              day: 'numeric',
-                              month: 'numeric',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                          <a
-                            href={lead.contract_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-sm text-primary hover:underline"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            Otevřít smlouvu
-                          </a>
-                        </div>
-                      ) : lead.onboarding_form_completed_at ? (
-                        <p className="text-xs text-amber-600">⏳ Čeká na vytvoření</p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Bude vytvořena po vyplnění formuláře</p>
-                      )}
+                <div className="flex items-center gap-2">
+                  <FileSignature className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">Smlouva vytvořena</p>
+                      {lead.contract_url && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                     </div>
+                    {lead.contract_url ? (
+                      <div className="space-y-1">
+                        <p className="text-xs text-green-700">
+                          ✓ Vytvořeno {lead.contract_created_at && new Date(lead.contract_created_at).toLocaleDateString('cs-CZ', {
+                            day: 'numeric',
+                            month: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                        <a
+                          href={lead.contract_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-sm text-primary hover:underline"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Otevřít smlouvu
+                        </a>
+                      </div>
+                    ) : lead.onboarding_form_completed_at ? (
+                      <p className="text-xs text-amber-600">⏳ Čeká na vytvoření</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Bude vytvořena po vyplnění formuláře</p>
+                    )}
                   </div>
-                  {!lead.contract_url && lead.onboarding_form_completed_at && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleCreateContract}
-                      disabled={isCreatingContract}
-                    >
-                      {isCreatingContract ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                          Vytváření...
-                        </>
-                      ) : (
-                        <>
-                          <FileSignature className="h-4 w-4 mr-1" />
-                          Vytvořit smlouvu
-                        </>
-                      )}
-                    </Button>
-                  )}
                 </div>
               </div>
 
@@ -1187,6 +1177,19 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetail
             offer_sent_at: new Date().toISOString(),
             offer_sent_by_id: ownerId,
             stage: 'offer_sent' as LeadStage,
+          });
+        }}
+      />
+
+      <CreateOfferDialog
+        open={isCreateOfferOpen}
+        onOpenChange={setIsCreateOfferOpen}
+        lead={lead}
+        onSuccess={(token, offerUrl) => {
+          setSharedOfferUrl(offerUrl);
+          updateLead(lead.id, {
+            offer_url: offerUrl,
+            offer_created_at: new Date().toISOString(),
           });
         }}
       />

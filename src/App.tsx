@@ -1,8 +1,8 @@
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, RouterProvider, Outlet, createRoutesFromElements, Route } from "react-router-dom";
-import * as Sentry from "@sentry/react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -35,89 +35,66 @@ import Notifications from "./pages/Notifications";
 import Feedback from "./pages/Feedback";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
+import PublicOfferPage from "./pages/PublicOfferPage";
 
 const queryClient = new QueryClient();
 
-const router = createBrowserRouter(
-  createRoutesFromElements(
-    <>
-      {/* Public routes */}
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
-      <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
-      
-      {/* Protected routes */}
-      <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/my-work" element={<MyWork />} />
-        <Route path="/leads" element={<Leads />} />
-        <Route path="/clients" element={<Clients />} />
-        <Route path="/contacts" element={<Contacts />} />
-        <Route path="/engagements" element={<Engagements />} />
-        <Route path="/extra-work" element={<ExtraWork />} />
-        <Route path="/invoicing" element={<Invoicing />} />
-        <Route path="/creative-boost" element={<CreativeBoost />} />
-        <Route path="/meetings" element={<Meetings />} />
-        <Route path="/services" element={<Services />} />
-        <Route path="/colleagues" element={<Colleagues />} />
-        <Route path="/recruitment" element={<Recruitment />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/feedback" element={<Feedback />} />
-      </Route>
-      <Route path="*" element={<NotFound />} />
-    </>
-  ),
-  {
-    future: {
-      v7_startTransition: true,
-      v7_relativeSplatPath: true,
-    },
-  }
-);
-
-const ErrorFallback = ({ error, resetError }: { error: Error; resetError: () => void }) => (
-  <div className="flex min-h-screen items-center justify-center bg-muted">
-    <div className="text-center">
-      <h1 className="mb-4 text-4xl font-bold">Something went wrong</h1>
-      <p className="mb-4 text-xl text-muted-foreground">{error.message}</p>
-      <button
-        onClick={resetError}
-        className="rounded bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
-      >
-        Try again
-      </button>
-    </div>
-  </div>
-);
-
 const App = () => (
-  <Sentry.ErrorBoundary fallback={ErrorFallback}>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <UserRoleProvider>
-          <CRMDataProvider>
-            <CreativeBoostProvider>
-              <LeadsDataProvider>
-                <ApplicantsDataProvider>
-                  <MeetingsDataProvider>
-                    <FeedbackProvider>
-                      <TooltipProvider>
-                        <Toaster />
-                        <RouterProvider router={router} future={{ v7_startTransition: true }} />
-                      </TooltipProvider>
-                    </FeedbackProvider>
-                  </MeetingsDataProvider>
-                </ApplicantsDataProvider>
-              </LeadsDataProvider>
-            </CreativeBoostProvider>
-          </CRMDataProvider>
-        </UserRoleProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  </Sentry.ErrorBoundary>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <UserRoleProvider>
+        <CRMDataProvider>
+          <CreativeBoostProvider>
+            <LeadsDataProvider>
+              <ApplicantsDataProvider>
+                <MeetingsDataProvider>
+                  <FeedbackProvider>
+                    <TooltipProvider>
+                      <Toaster />
+                      <Sonner />
+                      <BrowserRouter>
+                        <Routes>
+                          {/* Public routes */}
+                          <Route path="/auth" element={<Auth />} />
+                          <Route path="/auth/callback" element={<AuthCallback />} />
+                          <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
+                          <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
+                          <Route path="/offer/:token" element={<PublicOfferPage />} />
+                          <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
+                          
+                          {/* Protected routes */}
+                          <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/my-work" element={<MyWork />} />
+                            <Route path="/leads" element={<Leads />} />
+                            <Route path="/clients" element={<Clients />} />
+                            <Route path="/contacts" element={<Contacts />} />
+                            <Route path="/engagements" element={<Engagements />} />
+                            <Route path="/extra-work" element={<ExtraWork />} />
+                            <Route path="/invoicing" element={<Invoicing />} />
+                            <Route path="/creative-boost" element={<CreativeBoost />} />
+                            <Route path="/meetings" element={<Meetings />} />
+                            <Route path="/services" element={<Services />} />
+                            <Route path="/colleagues" element={<Colleagues />} />
+                            <Route path="/recruitment" element={<Recruitment />} />
+                            <Route path="/analytics" element={<Analytics />} />
+                            <Route path="/settings" element={<Settings />} />
+                            <Route path="/notifications" element={<Notifications />} />
+                            <Route path="/feedback" element={<Feedback />} />
+                          </Route>
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </BrowserRouter>
+                    </TooltipProvider>
+                  </FeedbackProvider>
+                </MeetingsDataProvider>
+              </ApplicantsDataProvider>
+            </LeadsDataProvider>
+          </CreativeBoostProvider>
+        </CRMDataProvider>
+      </UserRoleProvider>
+    </AuthProvider>
+  </QueryClientProvider>
 );
 
 export default App;

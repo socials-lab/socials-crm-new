@@ -99,10 +99,42 @@ const onboardingSchema = z.object({
 
 type OnboardingFormData = z.infer<typeof onboardingSchema>;
 
+// Mock lead pro testování (odpovídá TEST_OFFER v publicOffersMockData.ts)
+const TEST_LEAD = {
+  id: 'test-lead',
+  company_name: 'Testovací Firma s.r.o.',
+  ico: '12345678',
+  dic: 'CZ12345678',
+  website: 'https://www.example-eshop.cz',
+  industry: 'E-commerce',
+  contact_name: 'Jan Novák',
+  contact_email: 'jan.novak@example.cz',
+  contact_phone: '+420 123 456 789',
+  contact_position: 'Jednatel',
+  billing_street: 'Václavské náměstí 1',
+  billing_city: 'Praha',
+  billing_zip: '11000',
+  billing_country: 'Česká republika',
+  billing_email: 'fakturace@example.cz',
+  stage: 'offer_sent' as const,
+  owner_id: 'test-owner',
+  owner_name: 'Petr Svoboda',
+  owner_email: 'petr.svoboda@socials.cz',
+  source: 'website' as const,
+  potential_services: [
+    { id: 'svc-1', name: 'Meta Ads Management', price: 25000, currency: 'CZK', billing_type: 'monthly' as const, selected_tier: 'pro' as const },
+    { id: 'svc-2', name: 'Google Ads PPC', price: 18000, currency: 'CZK', billing_type: 'monthly' as const, selected_tier: 'growth' as const },
+    { id: 'svc-3', name: 'Kreativní produkce', price: 15000, currency: 'CZK', billing_type: 'monthly' as const, selected_tier: 'pro' as const },
+    { id: 'svc-4', name: 'Úvodní Audit & Strategie', price: 12000, currency: 'CZK', billing_type: 'one_off' as const, selected_tier: null },
+  ],
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export default function OnboardingForm() {
   const { leadId } = useParams<{ leadId: string }>();
   const { getLeadById, markLeadAsConverted, updateLead } = useLeadsData();
-  const { addClient, addContact, addEngagement } = useCRMData();
+  const { addClient, addContact, getColleagueById } = useCRMData();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,8 +144,14 @@ export default function OnboardingForm() {
   const [icoChanged, setIcoChanged] = useState(false);
   const [originalIco, setOriginalIco] = useState<string>('');
 
+  // Get lead from database or use test lead for development
+  const dbLead = leadId ? getLeadById(leadId) : undefined;
+  const lead = dbLead || (leadId === 'test-lead' ? TEST_LEAD : undefined);
   
-  const lead = leadId ? getLeadById(leadId) : undefined;
+  // Get owner colleague info for contact display
+  const ownerColleague = lead?.owner_id ? getColleagueById(lead.owner_id) : null;
+  const ownerEmail = ownerColleague?.email || (lead as any)?.owner_email || 'info@socials.cz';
+  const ownerName = ownerColleague?.full_name || (lead as any)?.owner_name || 'tým Socials';
   
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
@@ -182,17 +220,11 @@ export default function OnboardingForm() {
         orderConfirmed: false,
       });
       setIsLoading(false);
-    } else if (leadId) {
-      // Lead ID provided but lead not found - wait a bit for data to load
-      const timer = setTimeout(() => {
-        if (!getLeadById(leadId)) {
-          setLeadNotFound(true);
-          setIsLoading(false);
-        }
-      }, 2000);
-      return () => clearTimeout(timer);
+    } else {
+      setLeadNotFound(true);
+      setIsLoading(false);
     }
-  }, [leadId, lead, form, getLeadById]);
+  }, [leadId, lead, form]);
 
   // Watch IČO for changes
   const watchedIco = form.watch('ico');
@@ -229,11 +261,7 @@ export default function OnboardingForm() {
   };
 
   const onSubmit = async (data: OnboardingFormData) => {
-    if (!lead) {
-      console.error('Lead not found');
-      setLeadNotFound(true);
-      return;
-    }
+    if (!lead) return;
     
     setIsSubmitting(true);
     
@@ -272,11 +300,10 @@ export default function OnboardingForm() {
         pinned_notes: '',
       });
       
-      // Create signatory contacts and capture primary contact
-      let primaryContactRecord = null;
+      // Create signatory contacts
       for (let index = 0; index < data.signatories.length; index++) {
         const signatory = data.signatories[index];
-        const contact = await addContact({
+        await addContact({
           client_id: newClient.id,
           name: signatory.name,
           position: signatory.position || null,
@@ -286,9 +313,6 @@ export default function OnboardingForm() {
           is_decision_maker: true,
           notes: 'Osoba pro podpis smlouvy',
         });
-        if (index === 0) {
-          primaryContactRecord = contact;
-        }
       }
       
       // Create project contacts
@@ -312,59 +336,19 @@ export default function OnboardingForm() {
         }
       }
       
-      if (!primaryContactRecord) {
-        throw new Error('Primary contact was not created');
-      }
-
       // Generate contract URL (mock - prepared for PandaDoc integration)
       const contractSlug = data.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const mockContractUrl = `https://app.pandadoc.com/documents/smlouva-${contractSlug}-${Date.now()}`;
       
-      // Update lead with onboarding completion and contract info first
+      // Update lead with onboarding completion and contract info
       await updateLead(lead.id, {
         onboarding_form_completed_at: new Date().toISOString(),
         contract_url: mockContractUrl,
         contract_created_at: new Date().toISOString(),
       });
-
-      // Determine engagement type and pricing from lead
-      const hasMonthlyServices = lead.potential_services?.some(s => s.billing_type === 'monthly') || false;
-      const hasOneOffServices = lead.potential_services?.some(s => s.billing_type === 'one_off') || false;
-      const engagementType = hasMonthlyServices ? 'retainer' : 'one_off';
-      const totalMonthlyPrice = lead.potential_services
-        ?.filter(s => s.billing_type === 'monthly')
-        .reduce((sum, s) => sum + s.price, 0) || 0;
-      const totalOneOffPrice = lead.potential_services
-        ?.filter(s => s.billing_type === 'one_off')
-        .reduce((sum, s) => sum + s.price, 0) || 0;
-
-      // Create engagement with contract URL from lead
-      const newEngagement = await addEngagement({
-        client_id: newClient.id,
-        contact_person_id: primaryContactRecord.id,
-        name: `${lead.potential_service || 'Hlavní zakázka'} - ${data.company_name}`,
-        type: engagementType,
-        billing_model: 'fixed_fee',
-        currency: lead.currency || 'CZK',
-        monthly_fee: totalMonthlyPrice,
-        one_off_fee: totalOneOffPrice,
-        status: 'active',
-        start_date: format(data.startDate, 'yyyy-MM-dd'),
-        end_date: null,
-        notice_period_months: 1,
-        freelo_url: null,
-        platforms: [],
-        notes: lead.summary || '',
-        offer_url: lead.offer_url || null,
-        contract_url: mockContractUrl,
-      });
-
-      // Update engagement with contract URL
-      // Note: We need to update the engagement after lead is updated
-      // This is a workaround - ideally we'd pass contract_url when creating engagement
       
       // Mark lead as converted
-      await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
+      await markLeadAsConverted(lead.id, newClient.id, '');
       
       setIsSubmitted(true);
     } catch (error) {
@@ -431,29 +415,76 @@ export default function OnboardingForm() {
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
+        <Card className="max-w-lg w-full">
           <CardHeader className="text-center">
             <img src={socialsLogo} alt="Socials" className="h-10 mx-auto mb-4" />
             <div className="flex justify-center mb-4">
-              <CheckCircle2 className="h-16 w-16 text-green-500 animate-bounce" />
+              <CheckCircle2 className="h-16 w-16 text-green-500" />
             </div>
             <CardTitle className="text-2xl">🎉 Děkujeme!</CardTitle>
             <CardDescription className="text-base">
               Vaše údaje byly úspěšně odeslány.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Náš tým se vám brzy ozve s dalšími kroky pro zahájení spolupráce.
-            </p>
-            <a 
-              href="https://socials.cz" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-block text-primary hover:underline"
-            >
-              Navštívit socials.cz →
-            </a>
+          <CardContent className="space-y-6">
+            {/* Co bude následovat */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-center text-lg">Co bude následovat?</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold shrink-0 text-sm">1</div>
+                  <div>
+                    <p className="font-medium">📧 Smlouva k podpisu</p>
+                    <p className="text-sm text-muted-foreground">
+                      Do 24 hodin vám na e-mail dorazí smlouva ke kontrole a podpisu přes DigiSign.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">2</div>
+                  <div>
+                    <p className="font-medium">📞 Osobní kontakt</p>
+                    <p className="text-sm text-muted-foreground">
+                      Po podpisu smlouvy vás bude kontaktovat <strong>{ownerName}</strong>, 
+                      se kterým budete řešit celý projekt.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">3</div>
+                  <div>
+                    <p className="font-medium">🚀 Zahájení spolupráce</p>
+                    <p className="text-sm text-muted-foreground">
+                      Společně naplánujeme první kroky a pustíme se do práce!
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center pt-4 border-t">
+              <p className="text-sm text-muted-foreground mb-2">
+                Máte dotazy? {ownerName} je tu pro vás.
+              </p>
+              <a 
+                href={`mailto:${ownerEmail}`}
+                className="text-primary hover:underline"
+              >
+                {ownerEmail}
+              </a>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -468,9 +499,42 @@ export default function OnboardingForm() {
           <img src={socialsLogo} alt="Socials" className="h-12 mx-auto" />
           <h1 className="text-2xl font-bold">Onboarding formulář</h1>
           <p className="text-muted-foreground">
-            Vyplňte prosím vaše údaje pro dokončení registrace.
+            Zkontrolujte a doplňte vaše údaje pro zahájení spolupráce.
           </p>
         </div>
+
+        {/* Process Steps */}
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+          <CardContent className="pt-6 pb-5">
+            <h3 className="text-center font-semibold mb-4">📋 Jak to bude probíhat?</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col items-center text-center p-3">
+                <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold mb-2">1</div>
+                <p className="font-medium">Vyplníte formulář</p>
+                <p className="text-sm text-muted-foreground">Zkontrolujte a doplňte údaje (2 min)</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dotazy? <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                </p>
+              </div>
+              <div className="flex flex-col items-center text-center p-3">
+                <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold mb-2">2</div>
+                <p className="font-medium">Smlouva k podpisu</p>
+                <p className="text-sm text-muted-foreground">Do 24h vám dorazí smlouva přes DigiSign</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dotazy? <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                </p>
+              </div>
+              <div className="flex flex-col items-center text-center p-3">
+                <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold mb-2">3</div>
+                <p className="font-medium">Osobní kontakt</p>
+                <p className="text-sm text-muted-foreground">{ownerName} vás bude kontaktovat</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dotazy? <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -990,6 +1054,7 @@ export default function OnboardingForm() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
                       🔄 MĚSÍČNÍ SLUŽBY
+                      MĚSÍČNÍ SLUŽBY
                     </div>
                     <div className="border rounded-lg overflow-hidden">
                       <div className="divide-y">
@@ -1086,7 +1151,7 @@ export default function OnboardingForm() {
                           Souhlasím s objednávkou výše uvedených služeb *
                         </FormLabel>
                         <p className="text-sm text-muted-foreground">
-                          Odesláním formuláře potvrzujete zájem o spolupráci na uvedených službách.
+                          Odesláním formuláře potvrzujete zájem o spolupráci. <strong className="text-foreground">Tímto krokem spolupráce ještě nezačíná</strong> – do 24 hodin vám zašleme smlouvu k podpisu přes DigiSign.
                         </p>
                       </div>
                     </FormItem>

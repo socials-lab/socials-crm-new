@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { serviceTierConfigs } from '@/constants/services';
 import type { Service, ServiceCategory, ServiceType, CoreServicePricing } from '@/types/crm';
 
@@ -32,10 +34,12 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
   const [serviceType, setServiceType] = useState<ServiceType>('addon');
   const [category, setCategory] = useState<ServiceCategory>('performance');
   const [description, setDescription] = useState('');
+  const [offerDescription, setOfferDescription] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
-  const [basePrice, setBasePrice] = useState<string>('');
+  const [basePrice, setBasePrice] = useState<number>(0);
   const [currency, setCurrency] = useState('CZK');
   const [isActive, setIsActive] = useState(true);
+  const [showOfferDefaults, setShowOfferDefaults] = useState(false);
   
   // Tier pricing for Core services
   const [tierPricing, setTierPricing] = useState<CoreServicePricing[]>([
@@ -43,6 +47,12 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
     { tier: 'pro', price: null },
     { tier: 'elite', price: null },
   ]);
+  
+  // Default values for offers
+  const [defaultDeliverables, setDefaultDeliverables] = useState<string[]>([]);
+  const [defaultFrequency, setDefaultFrequency] = useState('');
+  const [defaultTurnaround, setDefaultTurnaround] = useState('');
+  const [defaultRequirements, setDefaultRequirements] = useState<string[]>([]);
 
   const isEditing = !!service;
 
@@ -52,9 +62,10 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       setCode(service.code);
       setServiceType(service.service_type);
       setCategory(service.category);
-      setDescription(service.description || '');
+      setDescription(service.description);
+      setOfferDescription(service.offer_description || '');
       setExternalUrl(service.external_url || '');
-      setBasePrice(service.base_price > 0 ? String(service.base_price) : '');
+      setBasePrice(service.base_price);
       setCurrency(service.currency);
       setIsActive(service.is_active);
       setTierPricing(service.tier_pricing || [
@@ -62,14 +73,19 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
         { tier: 'pro', price: null },
         { tier: 'elite', price: null },
       ]);
+      setDefaultDeliverables(service.default_deliverables || []);
+      setDefaultFrequency(service.default_frequency || '');
+      setDefaultTurnaround(service.default_turnaround || '');
+      setDefaultRequirements(service.default_requirements || []);
     } else {
       setName('');
       setCode('');
       setServiceType('addon');
       setCategory('performance');
       setDescription('');
+      setOfferDescription('');
       setExternalUrl('');
-      setBasePrice('');
+      setBasePrice(0);
       setCurrency('CZK');
       setIsActive(true);
       setTierPricing([
@@ -77,6 +93,10 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
         { tier: 'pro', price: null },
         { tier: 'elite', price: null },
       ]);
+      setDefaultDeliverables([]);
+      setDefaultFrequency('');
+      setDefaultTurnaround('');
+      setDefaultRequirements([]);
     }
   }, [service, open]);
 
@@ -87,11 +107,33 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
         : tp
     ));
   };
+  
+  const handleAddDeliverable = () => {
+    setDefaultDeliverables(prev => [...prev, '']);
+  };
+  
+  const handleDeliverableChange = (index: number, value: string) => {
+    setDefaultDeliverables(prev => prev.map((d, i) => i === index ? value : d));
+  };
+  
+  const handleRemoveDeliverable = (index: number) => {
+    setDefaultDeliverables(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  const handleAddRequirement = () => {
+    setDefaultRequirements(prev => [...prev, '']);
+  };
+  
+  const handleRequirementChange = (index: number, value: string) => {
+    setDefaultRequirements(prev => prev.map((r, i) => i === index ? value : r));
+  };
+  
+  const handleRemoveRequirement = (index: number) => {
+    setDefaultRequirements(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSave = () => {
     if (!name.trim() || !code.trim()) return;
-
-    const parsedBasePrice = basePrice === '' ? 0 : Number(basePrice);
 
     onSave({
       name: name.trim(),
@@ -99,18 +141,23 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       service_type: serviceType,
       category,
       description: description.trim(),
+      offer_description: offerDescription.trim() || null,
       external_url: externalUrl.trim() || null,
-      base_price: serviceType === 'core' ? (tierPricing.find(t => t.tier === 'growth')?.price || 0) : parsedBasePrice,
+      base_price: serviceType === 'core' ? (tierPricing.find(t => t.tier === 'growth')?.price || 0) : basePrice,
       currency,
       tier_pricing: serviceType === 'core' ? tierPricing : null,
       is_active: isActive,
+      default_deliverables: defaultDeliverables.filter(d => d.trim()) || null,
+      default_frequency: defaultFrequency.trim() || null,
+      default_turnaround: defaultTurnaround.trim() || null,
+      default_requirements: defaultRequirements.filter(r => r.trim()) || null,
     });
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Upravit službu' : 'Přidat službu'}</DialogTitle>
         </DialogHeader>
@@ -185,9 +232,8 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
                   id="basePrice"
                   type="number"
                   min={0}
-                  step={0.01}
                   value={basePrice}
-                  onChange={(e) => setBasePrice(e.target.value)}
+                  onChange={(e) => setBasePrice(Number(e.target.value))}
                   placeholder="25000"
                 />
               </div>
@@ -240,9 +286,122 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Krátký popis služby..."
-              rows={3}
+              rows={2}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="offerDescription">Popis pro nabídky</Label>
+            <Textarea
+              id="offerDescription"
+              value={offerDescription}
+              onChange={(e) => setOfferDescription(e.target.value)}
+              placeholder="Co vše služba zahrnuje? Tento text se zobrazí klientům v nabídce..."
+              rows={4}
+            />
+            <p className="text-xs text-muted-foreground">
+              Detailní popis co služba obsahuje - zobrazí se ve sdílených nabídkách pro klienty
+            </p>
+          </div>
+          
+          {/* Collapsible section for offer defaults */}
+          <Collapsible open={showOfferDefaults} onOpenChange={setShowOfferDefaults}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <span>📦 Výchozí hodnoty pro nabídky</span>
+                {showOfferDefaults ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4">
+              {/* Deliverables */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Co klient dostane (deliverables)</Label>
+                <div className="space-y-2">
+                  {defaultDeliverables.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        value={item}
+                        onChange={(e) => handleDeliverableChange(index, e.target.value)}
+                        placeholder="např. Správa kampaní na Meta platformách"
+                        className="flex-1"
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleRemoveDeliverable(index)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddDeliverable}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Přidat položku
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Frequency & Turnaround */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="frequency">Frekvence</Label>
+                  <Input
+                    id="frequency"
+                    value={defaultFrequency}
+                    onChange={(e) => setDefaultFrequency(e.target.value)}
+                    placeholder="např. 8 kampaní/měsíc"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="turnaround">Doba dodání</Label>
+                  <Input
+                    id="turnaround"
+                    value={defaultTurnaround}
+                    onChange={(e) => setDefaultTurnaround(e.target.value)}
+                    placeholder="např. Do 14 dnů od startu"
+                  />
+                </div>
+              </div>
+              
+              {/* Requirements */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Co potřebujeme od klienta</Label>
+                <div className="space-y-2">
+                  {defaultRequirements.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        value={item}
+                        onChange={(e) => handleRequirementChange(index, e.target.value)}
+                        placeholder="např. Přístupy do Business Manageru"
+                        className="flex-1"
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleRemoveRequirement(index)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddRequirement}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Přidat požadavek
+                  </Button>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <div className="space-y-2">
             <Label htmlFor="externalUrl">Externí URL</Label>
