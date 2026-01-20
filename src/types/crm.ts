@@ -143,7 +143,6 @@ export interface Service {
   service_type: ServiceType;
   category: ServiceCategory;
   description: string;
-  offer_description: string | null; // Detailní popis pro nabídky
   external_url: string | null;
   base_price: number;
   currency: string;
@@ -153,9 +152,6 @@ export interface Service {
   updated_at: string;
   // Default values for offer generation
   default_deliverables: string[] | null;     // Co klient dostane
-  default_frequency: string | null;          // Jak často (např. "8 příspěvků/měsíc")
-  default_turnaround: string | null;         // Doba dodání
-  default_requirements: string[] | null;     // Co potřebujeme od klienta
 }
 
 export interface ClientService {

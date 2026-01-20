@@ -69,21 +69,17 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
       const initialServices: PublicOfferService[] = lead.potential_services.map(ls => {
         const serviceDetails = services.find(s => s.id === ls.service_id);
         
-        // Get merged defaults (service-specific or intelligent fallbacks)
-        const mergedDefaults = mergeWithDefaults(
-          ls.name,
-          serviceDetails?.default_deliverables,
-          serviceDetails?.default_frequency,
-          serviceDetails?.default_turnaround,
-          serviceDetails?.default_requirements,
-        );
+        // Get deliverables from service defaults or use intelligent fallbacks
+        const deliverables = serviceDetails?.default_deliverables?.length 
+          ? serviceDetails.default_deliverables 
+          : mergeWithDefaults(ls.name, null, null, null, null).deliverables;
         
         return {
           id: ls.id,
           service_id: ls.service_id,
           name: ls.name,
           description: serviceDetails?.description || '',
-          offer_description: serviceDetails?.offer_description || null,
+          offer_description: null,
           selected_tier: ls.selected_tier,
           price: ls.price,
           original_price: ls.price,
@@ -92,11 +88,11 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           billing_type: ls.billing_type,
           // Pass service_type from service definition
           service_type: serviceDetails?.service_type,
-          // Pre-fill with merged defaults (custom from DB or intelligent fallbacks)
-          deliverables: mergedDefaults.deliverables,
-          frequency: mergedDefaults.frequency,
-          turnaround: mergedDefaults.turnaround,
-          requirements: mergedDefaults.requirements,
+          // Pre-fill with deliverables from DB or intelligent fallbacks
+          deliverables,
+          frequency: '',
+          turnaround: '',
+          requirements: [],
           start_timeline: '',
         };
       });
