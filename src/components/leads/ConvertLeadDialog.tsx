@@ -90,7 +90,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       pinned_notes: '',
       client_notes: '',
       engagement_name: '',
-      start_date: new Date().toISOString().split('T')[0],
+      start_date: '',
       end_date: '',
       notice_period_months: 3,
       engagement_notes: '',
@@ -111,7 +111,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         engagement_name: lead.potential_services?.[0]?.name 
           ? `${lead.potential_services[0].name} - ${lead.company_name}`
           : `${lead.company_name}`,
-        start_date: lead.onboarding_start_date || new Date().toISOString().split('T')[0],
+        start_date: lead.contract_signed_at ? new Date(lead.contract_signed_at).toISOString().split('T')[0] : '',
         end_date: '',
         notice_period_months: 3,
         engagement_notes: lead.summary,
@@ -629,19 +629,21 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="start_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Začátek *</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Začátek *</p>
+                  <div className="p-3 rounded-lg bg-muted/30 border">
+                    <p className="text-sm font-medium">
+                      {lead.contract_signed_at 
+                        ? new Date(lead.contract_signed_at).toLocaleDateString('cs-CZ', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })
+                        : 'Datum podpisu smlouvy'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Datum podpisu smlouvy</p>
+                  </div>
+                </div>
                 <FormField
                   control={form.control}
                   name="end_date"
