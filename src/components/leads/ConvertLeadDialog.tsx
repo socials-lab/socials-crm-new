@@ -13,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -38,44 +37,19 @@ import type { Lead, CostModel, ClientTier, BillingModel, LeadSource, Client } fr
 import { toast } from '@/components/ui/sonner';
 
 const convertSchema = z.object({
-  // Client info
-  client_name: z.string().min(1, 'Název firmy je povinný'),
+  // Editable client fields
   brand_name: z.string().min(1, 'Brand je povinný'),
-  ico: z.string().min(1, 'IČO je povinné'),
-  dic: z.string().optional(),
   website: z.string().optional(),
   industry: z.string().optional(),
-  country: z.string().optional(),
   tier: z.enum(['standard', 'gold', 'platinum', 'diamond'] as const),
   acquisition_channel: z.string().min(1, 'Zdroj je povinný'),
   pinned_notes: z.string().optional(),
   client_notes: z.string().optional(),
-  // Billing
-  billing_street: z.string().optional(),
-  billing_city: z.string().optional(),
-  billing_zip: z.string().optional(),
-  billing_country: z.string().optional(),
-  billing_email: z.string().email().or(z.literal('')).optional(),
-  // Contact
-  contact_name: z.string().min(1, 'Jméno kontaktu je povinné'),
-  contact_position: z.string().optional(),
-  contact_email: z.string().email().or(z.literal('')).optional(),
-  contact_phone: z.string().optional(),
-  contact_is_primary: z.boolean(),
-  contact_is_decision_maker: z.boolean(),
-  contact_notes: z.string().optional(),
   // Engagement
   engagement_name: z.string().min(1, 'Název zakázky je povinný'),
-  engagement_type: z.enum(['retainer', 'one_off'] as const),
-  billing_model: z.enum(['fixed_fee', 'spend_based', 'hybrid'] as const),
-  currency: z.string().min(1, 'Měna je povinná'),
-  monthly_fee: z.coerce.number().min(0),
-  one_off_fee: z.coerce.number().min(0),
-  target_margin_percent: z.coerce.number().min(0).max(100),
   start_date: z.string().min(1, 'Datum je povinné'),
   end_date: z.string().optional(),
   notice_period_months: z.coerce.number().optional(),
-  primary_service_id: z.string().optional(),
   engagement_notes: z.string().optional(),
 });
 
@@ -99,50 +73,26 @@ interface ConvertLeadDialogProps {
 
 export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: ConvertLeadDialogProps) {
   const { markLeadAsConverted } = useLeadsData();
-  const { addClient, addContact, addEngagement, addAssignment, addEngagementService, deleteClient, colleagues, services } = useCRMData();
+  const { addClient, addContact, addEngagement, addAssignment, addEngagementService, deleteClient, colleagues } = useCRMData();
   const { user } = useAuth();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
-  const activeServices = services.filter(s => s.is_active);
 
   const form = useForm<ConvertFormData>({
     resolver: zodResolver(convertSchema),
     defaultValues: {
-      client_name: '',
       brand_name: '',
-      ico: '',
-      dic: '',
       website: '',
       industry: '',
-      country: 'Czech Republic',
       tier: 'standard',
       acquisition_channel: 'inbound',
       pinned_notes: '',
       client_notes: '',
-      billing_street: '',
-      billing_city: '',
-      billing_zip: '',
-      billing_country: 'Czech Republic',
-      billing_email: '',
-      contact_name: '',
-      contact_position: '',
-      contact_email: '',
-      contact_phone: '',
-      contact_is_primary: true,
-      contact_is_decision_maker: true,
-      contact_notes: '',
       engagement_name: '',
-      engagement_type: 'retainer',
-      billing_model: 'fixed_fee',
-      currency: 'CZK',
-      monthly_fee: 0,
-      one_off_fee: 0,
-      target_margin_percent: 40,
       start_date: new Date().toISOString().split('T')[0],
       end_date: '',
-      notice_period_months: 1,
-      primary_service_id: '',
+      notice_period_months: 3,
       engagement_notes: '',
     },
   });
@@ -151,56 +101,19 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   useEffect(() => {
     if (lead && open) {
       form.reset({
-        client_name: lead.company_name,
         brand_name: lead.company_name,
-        ico: lead.ico,
-        dic: lead.dic || '',
         website: lead.website || '',
         industry: lead.industry || '',
-        country: lead.billing_country || 'Czech Republic',
         tier: 'standard',
         acquisition_channel: lead.source === 'other' ? (lead.source_custom || 'Jiný') : lead.source,
         pinned_notes: '',
         client_notes: '',
-        billing_street: lead.billing_street || '',
-        billing_city: lead.billing_city || '',
-        billing_zip: lead.billing_zip || '',
-        billing_country: lead.billing_country || 'Czech Republic',
-        billing_email: lead.billing_email || lead.contact_email || '',
-        contact_name: lead.contact_name,
-        contact_position: lead.contact_position || '',
-        contact_email: lead.contact_email || '',
-        contact_phone: lead.contact_phone || '',
-        contact_is_primary: true,
-        contact_is_decision_maker: true,
-        contact_notes: '',
         engagement_name: lead.potential_services?.[0]?.name 
           ? `${lead.potential_services[0].name} - ${lead.company_name}`
           : `${lead.company_name}`,
-        engagement_type: (() => {
-          if (!lead.potential_services?.length) return 'retainer';
-          const hasMonthly = lead.potential_services.some(s => s.billing_type === 'monthly');
-          return hasMonthly ? 'retainer' : 'one_off';
-        })(),
-        billing_model: 'fixed_fee',
-        currency: lead.currency,
-        monthly_fee: (() => {
-          if (!lead.potential_services?.length) return lead.estimated_price;
-          return lead.potential_services
-            .filter(s => s.billing_type === 'monthly')
-            .reduce((sum, s) => sum + s.price, 0) || lead.estimated_price;
-        })(),
-        one_off_fee: (() => {
-          if (!lead.potential_services?.length) return 0;
-          return lead.potential_services
-            .filter(s => s.billing_type === 'one_off')
-            .reduce((sum, s) => sum + s.price, 0);
-        })(),
-        target_margin_percent: 40,
         start_date: lead.onboarding_start_date || new Date().toISOString().split('T')[0],
         end_date: '',
-        notice_period_months: 1,
-        primary_service_id: '',
+        notice_period_months: 3,
         engagement_notes: lead.summary,
       });
       setTeamMembers([]);
@@ -234,23 +147,33 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
     let newClient: Client | null = null;
 
     try {
-      // 1. Create Client (without legacy contact fields)
+      // Derive engagement type and fees from services
+      const hasMonthlyServices = lead.potential_services?.some(s => s.billing_type === 'monthly') || false;
+      const engagementType = hasMonthlyServices ? 'retainer' : 'one_off';
+      const monthlyFee = lead.potential_services
+        ?.filter(s => s.billing_type === 'monthly')
+        .reduce((sum, s) => sum + s.price, 0) || lead.estimated_price || 0;
+      const oneOffFee = lead.potential_services
+        ?.filter(s => s.billing_type === 'one_off')
+        .reduce((sum, s) => sum + s.price, 0) || 0;
+
+      // 1. Create Client (contract-bound data from lead, editable from form)
       newClient = await addClient({
-        name: data.client_name,
-        brand_name: data.brand_name,
-        ico: data.ico,
-        dic: data.dic || null,
+        name: lead.company_name,  // FROM LEAD (contract-bound)
+        brand_name: data.brand_name,  // FROM FORM (editable)
+        ico: lead.ico,  // FROM LEAD (contract-bound)
+        dic: lead.dic || null,  // FROM LEAD (contract-bound)
         website: data.website || '',
-        country: data.country || 'Czech Republic',
+        country: lead.billing_country || 'Czech Republic',  // FROM LEAD
         industry: data.industry || '',
         status: 'active',
         tier: data.tier as ClientTier,
         sales_representative_id: lead.owner_id,
-        billing_street: data.billing_street || null,
-        billing_city: data.billing_city || null,
-        billing_zip: data.billing_zip || null,
-        billing_country: data.billing_country || null,
-        billing_email: data.billing_email || null,
+        billing_street: lead.billing_street || null,  // FROM LEAD (contract-bound)
+        billing_city: lead.billing_city || null,  // FROM LEAD (contract-bound)
+        billing_zip: lead.billing_zip || null,  // FROM LEAD (contract-bound)
+        billing_country: lead.billing_country || null,  // FROM LEAD (contract-bound)
+        billing_email: lead.billing_email || lead.contact_email || null,  // FROM LEAD
         main_contact_name: '',  // Legacy - empty
         main_contact_email: '', // Legacy - empty
         main_contact_phone: '', // Legacy - empty
@@ -262,16 +185,16 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         created_by: user?.id || null,
       });
 
-      // 2. Create Primary ClientContact
+      // 2. Create Primary ClientContact (from lead)
       const newContact = await addContact({
         client_id: newClient.id,
-        name: data.contact_name,
-        position: data.contact_position || null,
-        email: data.contact_email || null,
-        phone: data.contact_phone || null,
-        is_primary: data.contact_is_primary,
-        is_decision_maker: data.contact_is_decision_maker,
-        notes: data.contact_notes || '',
+        name: lead.contact_name,  // FROM LEAD (contract-bound)
+        position: lead.contact_position || null,  // FROM LEAD
+        email: lead.contact_email || null,  // FROM LEAD (contract-bound)
+        phone: lead.contact_phone || null,  // FROM LEAD (contract-bound)
+        is_primary: true,
+        is_decision_maker: true,
+        notes: '',
       });
 
       // 2.1 Create Fakturoid subject (non-blocking, don't fail conversion)
@@ -279,7 +202,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       try {
         const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
           'fakturoid-create-subject',
-          { body: { client_id: newClient.id, phone: data.contact_phone || undefined } }
+          { body: { client_id: newClient.id, phone: lead.contact_phone || undefined } }
         );
 
         if (fakturoidError || !fakturoidResult?.success) {
@@ -292,7 +215,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       }
 
       // 2.5 Create contacts from onboarding signatories
-      const addedEmails = new Set<string>([data.contact_email || ''].filter(Boolean));
+      const addedEmails = new Set<string>([lead.contact_email || ''].filter(Boolean));
       
       for (const signatory of lead.onboarding_signatories || []) {
         if (!signatory.email || addedEmails.has(signatory.email)) continue;
@@ -325,16 +248,16 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         });
       }
 
-      // 3. Create Engagement
+      // 3. Create Engagement (derived values from services)
       const newEngagement = await addEngagement({
         client_id: newClient.id,
         contact_person_id: newContact.id,
         name: data.engagement_name,
-        type: data.engagement_type,
-        billing_model: data.billing_model as BillingModel,
-        currency: data.currency,
-        monthly_fee: data.monthly_fee,
-        one_off_fee: data.one_off_fee,
+        type: engagementType as 'retainer' | 'one_off',
+        billing_model: 'fixed_fee' as BillingModel,  // Always fixed_fee for service-based pricing
+        currency: lead.currency,  // FROM LEAD
+        monthly_fee: monthlyFee,
+        one_off_fee: oneOffFee,
         status: 'active',
         start_date: data.start_date,
         end_date: data.end_date || null,
@@ -419,6 +342,21 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
   const watchCostModel = (index: number) => teamMembers[index]?.cost_model || 'fixed_monthly';
 
+  // Calculate service totals for display
+  const monthlyTotal = lead.potential_services
+    ?.filter(s => s.billing_type === 'monthly')
+    .reduce((sum, s) => sum + s.price, 0) || 0;
+  const oneOffTotal = lead.potential_services
+    ?.filter(s => s.billing_type === 'one_off')
+    .reduce((sum, s) => sum + s.price, 0) || 0;
+  const currency = lead.currency || 'CZK';
+
+  // Count contacts that will be created
+  const totalContacts = 1 + // Primary contact
+    (lead.onboarding_signatories?.filter(s => s.email && s.email !== lead.contact_email).length || 0) +
+    (lead.onboarding_project_contacts?.filter(pc => pc.email && pc.email !== lead.contact_email && 
+      !lead.onboarding_signatories?.some(s => s.email === pc.email)).length || 0);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -484,101 +422,180 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            {/* Client Section */}
+            {/* Section 1: Verification - READ ONLY */}
             <div className="space-y-4">
-              <h4 className="font-medium text-sm border-b pb-2">Klient</h4>
+              <h4 className="font-medium text-sm border-b pb-2">Ověření údajů ze smlouvy</h4>
+              
+              <div className="p-4 rounded-lg bg-muted/30 border space-y-3">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Název firmy</p>
+                    <p className="text-sm font-medium">{lead.company_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Brand</p>
+                    <FormField
+                      control={form.control}
+                      name="brand_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">IČO</p>
+                    <p className="text-sm font-medium">{lead.ico}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">DIČ</p>
+                    <p className="text-sm font-medium">{lead.dic || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Měna</p>
+                    <p className="text-sm font-medium">{currency}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Fakturační adresa</p>
+                  <p className="text-sm">
+                    {lead.billing_street || '-'}
+                    {lead.billing_street && lead.billing_city && ', '}
+                    {lead.billing_city || ''}
+                    {lead.billing_zip && ` ${lead.billing_zip}`}
+                    {lead.billing_country && `, ${lead.billing_country}`}
+                    {!lead.billing_street && !lead.billing_city && '-'}
+                  </p>
+                  {lead.billing_email && (
+                    <p className="text-xs text-muted-foreground mt-1">Email: {lead.billing_email}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Services Preview - READ ONLY */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm border-b pb-2">Služby k převodu</h4>
+              
+              {lead.potential_services && lead.potential_services.length > 0 ? (
+                <div className="p-4 rounded-lg bg-muted/30 border space-y-2">
+                  {lead.potential_services.map((service, idx) => (
+                    <div key={idx} className="flex items-center justify-between py-2 border-b last:border-0">
+                      <div>
+                        <p className="text-sm font-medium">{service.name}</p>
+                        {service.selected_tier && (
+                          <p className="text-xs text-muted-foreground">Tier: {service.selected_tier}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          {service.price.toLocaleString('cs-CZ')} {service.currency}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {service.billing_type === 'monthly' ? 'měsíčně' : 'jednorázově'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t space-y-1">
+                    {monthlyTotal > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Měsíční celkem:</span>
+                        <span className="font-medium">{monthlyTotal.toLocaleString('cs-CZ')} {currency}/měsíc</span>
+                      </div>
+                    )}
+                    {oneOffTotal > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Jednorázové celkem:</span>
+                        <span className="font-medium">{oneOffTotal.toLocaleString('cs-CZ')} {currency}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-lg bg-muted/30 border text-sm text-muted-foreground">
+                  Žádné služby k převodu
+                </div>
+              )}
+            </div>
+
+            {/* Section 3: Contacts Preview - READ ONLY */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm border-b pb-2">Kontakty k vytvoření</h4>
+              
+              <div className="p-4 rounded-lg bg-muted/30 border space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Primární kontakt</p>
+                  <p className="text-sm font-medium">{lead.contact_name}</p>
+                  {lead.contact_position && (
+                    <p className="text-xs text-muted-foreground">{lead.contact_position}</p>
+                  )}
+                  {lead.contact_email && (
+                    <p className="text-xs text-muted-foreground">{lead.contact_email}</p>
+                  )}
+                  {lead.contact_phone && (
+                    <p className="text-xs text-muted-foreground">{lead.contact_phone}</p>
+                  )}
+                </div>
+
+                {lead.onboarding_signatories && lead.onboarding_signatories.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Podpisující osoby (rozhodovatelé)</p>
+                    {lead.onboarding_signatories
+                      .filter(s => s.email && s.email !== lead.contact_email)
+                      .map((signatory, idx) => (
+                        <div key={idx} className="text-sm py-1">
+                          <p className="font-medium">{signatory.name}</p>
+                          {signatory.position && (
+                            <p className="text-xs text-muted-foreground">{signatory.position}</p>
+                          )}
+                          {signatory.email && (
+                            <p className="text-xs text-muted-foreground">{signatory.email}</p>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+
+                {lead.onboarding_project_contacts && lead.onboarding_project_contacts.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Projektové kontakty</p>
+                    {lead.onboarding_project_contacts
+                      .filter(pc => pc.email && 
+                        pc.email !== lead.contact_email &&
+                        !lead.onboarding_signatories?.some(s => s.email === pc.email))
+                      .map((contact, idx) => (
+                        <div key={idx} className="text-sm py-1">
+                          <p className="font-medium">{contact.name}</p>
+                          {contact.email && (
+                            <p className="text-xs text-muted-foreground">{contact.email}</p>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Section 4: Editable Fields */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm border-b pb-2">Nastavení převodu</h4>
               
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="client_name"
+                  name="engagement_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Název firmy *</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="brand_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Brand *</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-4">
-                <FormField
-                  control={form.control}
-                  name="ico"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>IČO *</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="dic"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>DIČ</FormLabel>
-                      <FormControl>
-                        <Input placeholder="CZ12345678" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="website"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Web</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="industry"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Odvětví</FormLabel>
-                      <FormControl>
-                        <Input placeholder="E-commerce" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <FormField
-                  control={form.control}
-                  name="country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Země</FormLabel>
+                      <FormLabel>Název zakázky *</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -609,361 +626,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="acquisition_channel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Akvizice</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="referral">Doporučení</SelectItem>
-                          <SelectItem value="inbound">Inbound</SelectItem>
-                          <SelectItem value="cold_outreach">Cold outreach</SelectItem>
-                          <SelectItem value="event">Event</SelectItem>
-                          <SelectItem value="linkedin">LinkedIn</SelectItem>
-                          <SelectItem value="website">Web</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="pinned_notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Připnutá poznámka</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Důležité info viditelné v přehledu..." {...field} rows={2} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="client_notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Interní poznámky</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Detailní poznámky ke klientovi..." {...field} rows={2} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Billing Address */}
-              <div className="space-y-2">
-                <h5 className="text-sm text-muted-foreground font-medium">Fakturační adresa</h5>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="billing_street"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Ulice a číslo</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Příkladná 123" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="billing_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fakturační email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="fakturace@firma.cz" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="billing_city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Město</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Praha" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="billing_zip"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>PSČ</FormLabel>
-                        <FormControl>
-                          <Input placeholder="110 00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="billing_country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fakturační země</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Contact Section */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm border-b pb-2">Kontaktní osoba</h4>
-              
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="contact_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Jméno *</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contact_position"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pozice</FormLabel>
-                      <FormControl>
-                        <Input placeholder="CEO, Marketing Manager..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="contact_email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contact_phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefon</FormLabel>
-                      <FormControl>
-                        <Input placeholder="+420..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="flex flex-wrap gap-6">
-                <FormField
-                  control={form.control}
-                  name="contact_is_primary"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Primární kontakt</FormLabel>
-                        <FormDescription>Hlavní osoba pro komunikaci</FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contact_is_decision_maker"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Rozhodovatel</FormLabel>
-                        <FormDescription>Schvaluje rozpočty a smlouvy</FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="contact_notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Poznámky ke kontaktu</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Preferuje komunikaci přes email..." {...field} rows={2} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Engagement Section */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm border-b pb-2">Zakázka</h4>
-              
-              <FormField
-                control={form.control}
-                name="engagement_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Název zakázky *</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid gap-4 sm:grid-cols-4">
-                <FormField
-                  control={form.control}
-                  name="engagement_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Typ</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="retainer">Paušál</SelectItem>
-                          <SelectItem value="one_off">Jednorázová</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="billing_model"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Model fakturace</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="fixed_fee">Fixní fee</SelectItem>
-                          <SelectItem value="spend_based">% ze spendu</SelectItem>
-                          <SelectItem value="hybrid">Hybridní</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="primary_service_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Služba</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Vyberte" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {activeServices.map(s => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="currency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Měna</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="CZK">CZK</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                          <SelectItem value="USD">USD</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-4">
                 <FormField
                   control={form.control}
                   name="start_date"
@@ -990,14 +655,23 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="p-3 rounded-lg bg-muted/30 border">
+                <p className="text-xs text-muted-foreground mb-1">Výpovědní lhůta (ze smlouvy)</p>
+                <p className="text-sm font-medium">3 měsíce</p>
+                <p className="text-xs text-muted-foreground mt-1">Dle standardní smlouvy</p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="notice_period_months"
+                  name="website"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Výpovědní lhůta</FormLabel>
+                      <FormLabel>Web</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="měsíce" {...field} />
+                        <Input placeholder="https://" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1005,12 +679,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 />
                 <FormField
                   control={form.control}
-                  name="target_margin_percent"
+                  name="industry"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cílová marže (%)</FormLabel>
+                      <FormLabel>Odvětví</FormLabel>
                       <FormControl>
-                        <Input type="number" min={0} max={100} {...field} />
+                        <Input placeholder="E-commerce" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1018,50 +692,93 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                {form.watch('engagement_type') === 'retainer' ? (
-                  <FormField
-                    control={form.control}
-                    name="monthly_fee"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Měsíční fee</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="one_off_fee"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Jednorázová částka</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="acquisition_channel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Akvizice</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="referral">Doporučení</SelectItem>
+                        <SelectItem value="inbound">Inbound</SelectItem>
+                        <SelectItem value="cold_outreach">Cold outreach</SelectItem>
+                        <SelectItem value="event">Event</SelectItem>
+                        <SelectItem value="linkedin">LinkedIn</SelectItem>
+                        <SelectItem value="website">Web</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
                 )}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="engagement_notes"
+                  name="pinned_notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Poznámky k zakázce</FormLabel>
+                      <FormLabel>Připnutá poznámka</FormLabel>
                       <FormControl>
-                        <Textarea {...field} rows={2} />
+                        <Textarea placeholder="Důležité info viditelné v přehledu..." {...field} rows={2} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="client_notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Interní poznámky ke klientovi</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Detailní poznámky..." {...field} rows={2} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="engagement_notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Poznámky k zakázce</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Poznámky k zakázce..." {...field} rows={2} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Section 5: Conversion Summary */}
+            <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+              <h4 className="font-medium text-sm mb-3">Co bude vytvořeno:</h4>
+              <ul className="space-y-1 text-sm">
+                <li>• 1 klient ({lead.company_name})</li>
+                <li>• {totalContacts} {totalContacts === 1 ? 'kontakt' : totalContacts < 5 ? 'kontakty' : 'kontaktů'}</li>
+                <li>• 1 zakázka ({form.watch('engagement_name') || lead.company_name})</li>
+                {lead.potential_services && lead.potential_services.length > 0 && (
+                  <li>
+                    • {lead.potential_services.length} {lead.potential_services.length === 1 ? 'služba' : lead.potential_services.length < 5 ? 'služby' : 'služeb'}
+                    {monthlyTotal > 0 && ` (${monthlyTotal.toLocaleString('cs-CZ')} ${currency}/měsíc`}
+                    {monthlyTotal > 0 && oneOffTotal > 0 && ' + '}
+                    {oneOffTotal > 0 && `${oneOffTotal.toLocaleString('cs-CZ')} ${currency} jednorázově`}
+                    {monthlyTotal > 0 || oneOffTotal > 0 ? ')' : ''}
+                  </li>
+                )}
+              </ul>
             </div>
 
             {/* Team Section */}
