@@ -853,16 +853,17 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                       className="mt-1"
                       type="number"
                       value={
-                        watchCostModel(index) === 'hourly' ? member.hourly_cost :
-                        watchCostModel(index) === 'percentage' ? member.percentage_of_revenue : 
-                        member.monthly_cost
+                        watchCostModel(index) === 'hourly' ? (member.hourly_cost || '') :
+                        watchCostModel(index) === 'percentage' ? (member.percentage_of_revenue || '') : 
+                        (member.monthly_cost || '')
                       }
                       onChange={(e) => {
                         const field = watchCostModel(index) === 'hourly' ? 'hourly_cost' :
                                       watchCostModel(index) === 'percentage' ? 'percentage_of_revenue' : 
                                       'monthly_cost';
-                        updateTeamMember(index, field, Number(e.target.value));
+                        updateTeamMember(index, field, e.target.value === '' ? 0 : Number(e.target.value));
                       }}
+                      placeholder="0"
                     />
                   </div>
                   <div className="flex items-end">
