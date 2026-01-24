@@ -156,9 +156,12 @@ const transformService = (row: Record<string, unknown>): Service => ({
   description: row.description ?? '',
   base_price: row.base_price ?? 0,
   currency: row.currency ?? 'CZK',
+  billing_type: (row.billing_type || 'monthly') as 'monthly' | 'one_off',
   is_active: row.is_active ?? true,
   created_at: row.created_at || new Date().toISOString(),
   updated_at: row.updated_at || new Date().toISOString(),
+  // Default values for offer generation
+  default_deliverables: row.default_deliverables ?? null,
 });
 
 export function CRMDataProvider({ children }: { children: ReactNode }) {

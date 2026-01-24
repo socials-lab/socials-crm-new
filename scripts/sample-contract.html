@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Smlouva o poskytování služeb - Test Company s.r.o.</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 10pt;
+      line-height: 1.5;
+      color: #1a1a1a;
+      padding: 0;
+      margin: 0;
+    }
+
+    .page {
+      padding: 25mm;
+      max-width: 210mm;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 16pt;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 8pt;
+      color: #000;
+    }
+
+    h2 {
+      font-size: 11pt;
+      font-weight: 600;
+      margin-top: 16pt;
+      margin-bottom: 8pt;
+      color: #000;
+    }
+
+    h3 {
+      font-size: 10pt;
+      font-weight: 600;
+      margin-top: 12pt;
+      margin-bottom: 6pt;
+    }
+
+    p {
+      margin-bottom: 8pt;
+      text-align: left;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 9pt;
+      color: #666;
+      margin-bottom: 20pt;
+    }
+
+    .parties {
+      margin: 20pt 0;
+    }
+
+    .party {
+      margin-bottom: 16pt;
+    }
+
+    .party-name {
+      font-weight: 600;
+      font-size: 11pt;
+    }
+
+    .party-details {
+      margin-left: 20pt;
+      font-size: 10pt;
+    }
+
+    .party-role {
+      font-style: italic;
+      margin-top: 4pt;
+    }
+
+    ol {
+      margin-left: 20pt;
+      margin-bottom: 8pt;
+    }
+
+    ol li {
+      margin-bottom: 4pt;
+    }
+
+    ol.alpha {
+      list-style-type: lower-alpha;
+    }
+
+    .whereas {
+      margin: 16pt 0;
+    }
+
+    .article {
+      margin-top: 20pt;
+      page-break-inside: avoid;
+    }
+
+    .article-title {
+      font-size: 11pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 10pt;
+      color: #000;
+    }
+
+    .signature-section {
+      margin-top: 40pt;
+      page-break-inside: avoid;
+    }
+
+    .signature-date {
+      margin-bottom: 30pt;
+      font-weight: 500;
+    }
+
+    .signatures {
+      display: flex;
+      justify-content: space-between;
+      gap: 40pt;
+    }
+
+    .signature-block {
+      flex: 1;
+      text-align: center;
+    }
+
+    .signature-placeholder {
+      font-size: 12pt;
+      font-weight: 600;
+      color: #0066cc;
+      margin-bottom: 8pt;
+      padding: 20pt 0;
+      border-bottom: 1px solid #000;
+    }
+
+    .signature-name {
+      font-weight: 500;
+      margin-top: 8pt;
+    }
+
+    .signature-role {
+      font-size: 9pt;
+      color: #666;
+    }
+
+    .dpa-section {
+      margin-top: 40pt;
+      border-top: 2px solid #000;
+      padding-top: 20pt;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .page {
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>SMLOUVA O POSKYTOVÁNÍ SLUŽEB ONLINE PROPAGACE</h1>
+    <p class="subtitle">v souladu s ustanovením § 1746 odst. 2 zákona č. 89/2012 Sb., občanský zákoník, ve znění pozdějších předpisů</p>
+
+    <h2>SMLUVNÍ STRANY</h2>
+
+    <div class="parties">
+      <div class="party">
+        <p class="party-name">Socials Advertising s.r.o.</p>
+        <div class="party-details">
+          <p>se sídlem na adrese Praha 10 – Vinohrady, Korunní 2569/108, PSČ 101 00, Česká republika</p>
+          <p>IČO: 081 864 64</p>
+          <p>DIČ: CZ08186464</p>
+          <p>zapsaná v obchodním rejstříku vedeném Městským soudem v Praze, sp. zn. C 314420</p>
+          <p>zastoupena: Daniel Bauer, jednatel</p>
+          <p>kontakt: danny@socials.cz</p>
+          <p class="party-role">(„<strong>Dodavatel</strong>")</p>
+        </div>
+      </div>
+
+      <p style="text-align: center; font-size: 12pt; margin: 16pt 0;">a</p>
+
+      <div class="party">
+        <p class="party-name">Test Company s.r.o.</p>
+        <div class="party-details">
+          <p>se sídlem na adrese Testovací 123, Praha 1 110 00</p>
+          <p>IČO: 12345678</p>
+          <p>DIČ: CZ12345678</p>
+          <p>zapsaná v obchodním rejstříku vedeném u soudu: Městským soudem v Praze pod spisovou značkou: C 123456</p>
+          <p>zastoupena: Jan Novák, jednatel</p>
+          <p>kontakt: jan@testcompany.cz</p>
+          <p class="party-role">(„<strong>Objednatel</strong>")</p>
+        </div>
+      </div>
+    </div>
+
+    <p>(Dodavatel a Objednatel společně jako „<strong>Strany</strong>", každý samostatně jako „<strong>Strana</strong>")</p>
+
+    <div class="whereas">
+      <p><strong>VZHLEDEM K TOMU, ŽE</strong></p>
+      <p>Dodavatel je digitální agenturou, která v rámci své podnikatelské činnosti poskytuje svým klientům služby marketingu a online propagace pro e-commerce řešení;</p>
+      <p>Objednatel je podnikatelem, který v rámci své podnikatelské činnosti provozuje https://www.testcompany.cz („<strong>Web</strong>");</p>
+      <p>Objednatel má zájem za podmínek této Smlouvy na spolupráci s Dodavatelem v oblasti marketingu a propagace, zejména pak správy online marketingu Objednatele.</p>
+    </div>
+
+    <p style="font-weight: 600; margin-top: 16pt;">SE DOHODLY NA NÁSLEDUJÍCÍM ZNĚNÍ TÉTO SMLOUVY („Smlouva")</p>
+
+    <div class="article">
+      <p class="article-title">A) PŘEDMĚT SMLOUVY</p>
+      <p>Dodavatel se zavazuje za podmínek dle Smlouvy poskytnout Objednateli následující služby digitálního marketingu a propagace:</p>
+      <ol class="alpha">
+        <li>tvorba kreativních reklamních kampaní, obsahu a výkonnostní reklamy ve vztahu k Webu;</li>
+        <li>tvorba, nastavení a správa bannerové reklamy;</li>
+        <li>příprava reklamní strategie, klíčových slov, cílení, nastavení kampaní či reklamních textů ve vztahu k Webu;</li>
+        <li>konzultace, zpracování stanovisek, vysvětlení, doporučení nebo rozborů týkající se výše uvedených služeb;</li>
+        <li>další činnosti a služby, na kterých se Strany dohodnou,</li>
+      </ol>
+      <p>(„<strong>Služby</strong>").</p>
+      <p>Za provedené plnění Služeb se Objednatel zavazuje uhradit Dodavateli odměnu podle této Smlouvy.</p>
+    </div>
+
+    <div class="article">
+      <p class="article-title">B) PODMÍNKY POSKYTOVÁNÍ SLUŽEB</p>
+      <p>Obě Strany se zavazují:</p>
+      <ol class="alpha">
+        <li>poskytnout druhé Straně veškerou možnou a potřebnou součinnost k naplnění účelu Smlouvy;</li>
+        <li>vzájemně se informovat o všech důležitých skutečnostech pro plnění Smlouvy, včetně možných překážek plnění;</li>
+        <li>chránit práva duševního vlastnictví náležející druhé Straně, jakož i práva třetích osob, která by mohla být plněním Smlouvy dotčena;</li>
+        <li>chovat se při plnění Smlouvy takovým způsobem, aby nebyla poškozena dobrá pověst druhé Strany;</li>
+        <li>v případě změny adresy pro doručování písemností nebo kontaktních, bankovních a jiných údajů relevantních pro plnění Smlouvy, informovat bez zbytečného odkladu druhou Stranu o této změně.</li>
+      </ol>
+    </div>
+
+    <div class="article">
+      <p class="article-title">C) SPRÁVA A OPTIMALIZACE ONLINE KAMPANÍ</p>
+      <p>Dodavatel se zavazuje zajistit správu reklamních účtů Objednatele na platformách Meta (Facebook, Instagram) a Google Ads („<strong>Reklamní systémy</strong>").</p>
+      <p>Dodavatel je oprávněn využít přístupové údaje k Reklamním systémům pouze pro účely plnění této Smlouvy.</p>
+    </div>
+
+    <div class="article">
+      <p class="article-title">D) REPORTING A PLÁNOVÁNÍ</p>
+      <p>Dodavatel se zavazuje předkládat Objednateli pravidelný měsíční report o výsledcích online kampaní obsahující klíčové metriky, přehled nákladů a doporučení pro další období.</p>
+    </div>
+
+    <div class="article">
+      <p class="article-title">E) CENA A PLATEBNÍ PODMÍNKY</p>
+      <p>Objednatel se zavazuje za Služby podle této Smlouvy hradit Dodavateli odměnu, která se skládá z:</p>
+      <ol class="alpha">
+        <li>paušální ceny za každý měsíc poskytování Služeb ve výši: <strong>50 000 Kč bez DPH</strong>.</li>
+        <li>jednorázového poplatku za úvodní nastavení sestav, nastavení systému, konzultace k připravovaným kampaním na nadcházející období, který činí: <strong>25 000 Kč bez DPH</strong>.</li>
+      </ol>
+      <p>(„<strong>Odměna</strong>").</p>
+      <p>Na úhradu paušální měsíční ceny má Dodavatel právo bez ohledu na skutečný objem čerpaných služeb, tedy i v případě, že Objednatel služby nevyužije. V takovém případě se jedná o paušální odměnu za vyhrazené kapacity týmu Dodavatele.</p>
+      <p>Dodavatel je oprávněn po uplynutí každého kalendářního měsíce fakturovat Objednateli Odměnu. Odměna nezahrnuje spotřebované inzertní náklady v Reklamních systémech.</p>
+      <p>Strany se dohodly, že faktury budou zasílány e-mailem na e-mailovou adresu: <strong>fakturace@testcompany.cz</strong></p>
+      <p>K Odměně bude účtována DPH v zákonné výši, pokud je Dodavatel jejím plátcem.</p>
+    </div>
+
+    <div class="article">
+      <p class="article-title">F) MLČENLIVOST</p>
+      <p>Strany potvrzují, že všechny informace, které se Strany při plnění nebo v souvislosti s plněním této Smlouvy dozví, jsou důvěrné povahy nebo představují obchodní tajemství („<strong>Důvěrné informace</strong>"). Strany jsou o Důvěrných informacích povinny zachovávat mlčenlivost a zajistit jejich utajení.</p>
+      <p>Strany se zavazují dodržovat závazky plynoucí z tohoto článku Smlouvy bez časového omezení i po zániku Smlouvy.</p>
+    </div>
+
+    <div class="article">
+      <p class="article-title">G) TRVÁNÍ SMLOUVY A JEJÍ UKONČENÍ</p>
+      <p>Smlouva se uzavírá na dobu neurčitou. Smlouva nabývá platnosti a účinnosti dnem podpisu oběma Stranami.</p>
+      <p>Smlouva může být ukončena:</p>
+      <ol class="alpha">
+        <li>písemnou dohodou Stran;</li>
+        <li>písemnou výpovědí kterékoliv ze Stran bez udání důvodu s výpovědní dobou 3 měsíce, která počíná běžet prvního dne měsíce následujícího po měsíci, v němž byla výpověď doručena druhé Straně;</li>
+        <li>písemnou výpovědí kterékoliv ze Stran z důvodu podstatného porušení Smlouvy druhou Stranou s okamžitou účinností.</li>
+      </ol>
+    </div>
+
+    <div class="article">
+      <p class="article-title">H) KOMUNIKACE MEZI STRANAMI</p>
+      <p>Smluvní strany se dohodly, že ve věci realizace této Smlouvy budou mezi sebou komunikovat písemně, a to formou e-mailových zpráv.</p>
+      <p>Kontaktní údaje:</p>
+      <p>u Dodavatele jsou: danny@socials.cz, otas@socials.cz</p>
+      <p>u Objednatele jsou: <strong>marketing@testcompany.cz</strong></p>
+    </div>
+
+    <div class="article">
+      <p class="article-title">I) ZÁVĚREČNÁ UJEDNÁNÍ</p>
+      <p>Tato Smlouva a její ujednání se vykládají v souladu právním řádem České republiky. Pro případné spory Stran z této Smlouvy se sjednává pravomoc a příslušnost soudů České republiky podle adresy sídla Dodavatele.</p>
+      <p>Tuto Smlouvu je možné měnit pouze písemnou dohodou Stran ve formě číslovaných dodatků této Smlouvy, podepsaných oprávněnými zástupci obou Stran.</p>
+      <p>Je-li nebo stane-li se kdykoli jakékoli ustanovení této Smlouvy nezákonným, neplatným či nevynutitelným, zákonnost, platnost a vynutitelnost ostatních ustanovení nebude jakkoli dotčena či omezena.</p>
+    </div>
+
+    <div class="signature-section">
+      <p class="signature-date"><strong>TATO SMLOUVA BYLA UZAVŘENA:</strong> 22. ledna 2026, Praha</p>
+
+      <div class="signatures">
+        <div class="signature-block">
+          <div class="signature-placeholder">PODPIS1</div>
+          <p class="signature-name">Daniel Bauer, jednatel</p>
+          <p class="signature-role">[Dodavatel]</p>
+        </div>
+
+        <div class="signature-block">
+          <div class="signature-placeholder">PODPIS2</div>
+          <p class="signature-name">Jan Novák, jednatel</p>
+          <p class="signature-role">[Objednatel]</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="dpa-section page-break">
+      <h1>SMLOUVA O ZPRACOVÁNÍ OSOBNÍCH ÚDAJŮ</h1>
+      <p class="subtitle">(příloha č. 1 ke Smlouvě o poskytování služeb online propagace)</p>
+
+      <div class="parties">
+        <p><strong>Správce:</strong> Test Company s.r.o., IČO: 12345678</p>
+        <p><strong>Zpracovatel:</strong> Socials Advertising s.r.o., IČO: 081 864 64</p>
+      </div>
+
+      <div class="article">
+        <p class="article-title">1. PŘEDMĚT SMLOUVY</p>
+        <p>Zpracovatel se zavazuje pro Správce zpracovávat osobní údaje v rozsahu a za podmínek stanovených touto smlouvou a v souladu s Nařízením Evropského parlamentu a Rady (EU) 2016/679 (GDPR).</p>
+      </div>
+
+      <div class="article">
+        <p class="article-title">2. ÚČEL ZPRACOVÁNÍ</p>
+        <p>Osobní údaje budou zpracovávány za účelem plnění Smlouvy o poskytování služeb online propagace, zejména pro správu reklamních kampaní a analýzu jejich výkonnosti.</p>
+      </div>
+
+      <div class="article">
+        <p class="article-title">3. KATEGORIE OSOBNÍCH ÚDAJŮ</p>
+        <p>Zpracovatel bude zpracovávat následující kategorie osobních údajů: kontaktní údaje, údaje o chování uživatelů na webu, údaje z reklamních systémů.</p>
+      </div>
+
+      <div class="article">
+        <p class="article-title">4. POVINNOSTI ZPRACOVATELE</p>
+        <p>Zpracovatel se zavazuje:</p>
+        <ol class="alpha">
+          <li>zpracovávat osobní údaje pouze na základě doložených pokynů Správce;</li>
+          <li>zajistit, aby se osoby oprávněné zpracovávat osobní údaje zavázaly k mlčenlivosti;</li>
+          <li>přijmout veškerá technická a organizační opatření k zabezpečení osobních údajů;</li>
+          <li>po ukončení poskytování služeb všechny osobní údaje vymazat nebo vrátit Správci.</li>
+        </ol>
+      </div>
+
+      <div class="article">
+        <p class="article-title">5. TRVÁNÍ SMLOUVY</p>
+        <p>Tato smlouva nabývá účinnosti dnem podpisu a trvá po celou dobu trvání Smlouvy o poskytování služeb online propagace. Povinnost zachovávat mlčenlivost trvá i po skončení tohoto smluvního vztahu.</p>
+      </div>
+
+      <div class="signature-section">
+        <p class="signature-date"><strong>TATO SMLOUVA BYLA UZAVŘENA:</strong> 22. ledna 2026, Praha</p>
+
+        <div class="signatures">
+          <div class="signature-block">
+            <div class="signature-placeholder">PODPIS1</div>
+            <p class="signature-name">Daniel Bauer, jednatel</p>
+            <p class="signature-role">[Zpracovatel]</p>
+          </div>
+
+          <div class="signature-block">
+            <div class="signature-placeholder">PODPIS2</div>
+            <p class="signature-name">Jan Novák, jednatel</p>
+            <p class="signature-role">[Správce]</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

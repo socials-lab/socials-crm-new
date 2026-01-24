@@ -1,0 +1,1003 @@
+{
+    "name": "DIgisign -> Raynet | Obálka Hotova -> označ u OP",
+    "flow": [
+        {
+            "id": 5,
+            "module": "digisign:watchEnvelopeEvent",
+            "version": 1,
+            "parameters": {
+                "__IMTHOOK__": 2049016
+            },
+            "mapper": {},
+            "metadata": {
+                "designer": {
+                    "x": 0,
+                    "y": 0
+                },
+                "restore": {
+                    "parameters": {
+                        "__IMTHOOK__": {
+                            "data": {
+                                "editable": "false"
+                            },
+                            "label": "Digisign | Obálka hotová"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTHOOK__",
+                        "type": "hook:digisign",
+                        "label": "Webhook",
+                        "required": true
+                    }
+                ]
+            }
+        },
+        {
+            "id": 7,
+            "module": "http:ActionSendDataBasicAuth",
+            "version": 3,
+            "parameters": {
+                "key": 40502,
+                "handleErrors": false,
+                "useNewZLibDeCompress": true
+            },
+            "mapper": {
+                "ca": "",
+                "qs": [],
+                "url": "https://app.raynet.cz/api/v2/businessCase/?businessCasePhase[IN]=15,3,9,5",
+                "gzip": true,
+                "method": "get",
+                "headers": [
+                    {
+                        "name": "X-Instance-Name",
+                        "value": "socialscz"
+                    }
+                ],
+                "timeout": "",
+                "useMtls": false,
+                "bodyType": "",
+                "serializeUrl": false,
+                "shareCookies": false,
+                "parseResponse": true,
+                "followRedirect": true,
+                "useQuerystring": false,
+                "followAllRedirects": false,
+                "rejectUnauthorized": true
+            },
+            "metadata": {
+                "designer": {
+                    "x": 300,
+                    "y": 0,
+                    "name": "OP | Stav = SmlouvaOdeslána"
+                },
+                "restore": {
+                    "expect": {
+                        "qs": {
+                            "mode": "chose"
+                        },
+                        "method": {
+                            "mode": "chose",
+                            "label": "GET"
+                        },
+                        "headers": {
+                            "mode": "chose",
+                            "items": [
+                                null
+                            ]
+                        },
+                        "bodyType": {
+                            "label": "Empty"
+                        }
+                    },
+                    "parameters": {
+                        "key": {
+                            "label": "Raynet HTTP Basic Auth key"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "key",
+                        "type": "keychain:basicauth",
+                        "label": "Credentials",
+                        "required": true
+                    },
+                    {
+                        "name": "handleErrors",
+                        "type": "boolean",
+                        "label": "Evaluate all states as errors (except for 2xx and 3xx )",
+                        "required": true
+                    },
+                    {
+                        "name": "useNewZLibDeCompress",
+                        "type": "hidden"
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "url",
+                        "type": "url",
+                        "label": "URL",
+                        "required": true
+                    },
+                    {
+                        "name": "serializeUrl",
+                        "type": "boolean",
+                        "label": "Serialize URL",
+                        "required": true
+                    },
+                    {
+                        "name": "method",
+                        "type": "select",
+                        "label": "Method",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "get",
+                                "head",
+                                "post",
+                                "put",
+                                "patch",
+                                "delete",
+                                "options"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "headers",
+                        "spec": [
+                            {
+                                "name": "name",
+                                "type": "text",
+                                "label": "Name",
+                                "required": true
+                            },
+                            {
+                                "name": "value",
+                                "type": "text",
+                                "label": "Value"
+                            }
+                        ],
+                        "type": "array",
+                        "label": "Headers"
+                    },
+                    {
+                        "name": "qs",
+                        "spec": [
+                            {
+                                "name": "name",
+                                "type": "text",
+                                "label": "Name",
+                                "required": true
+                            },
+                            {
+                                "name": "value",
+                                "type": "text",
+                                "label": "Value"
+                            }
+                        ],
+                        "type": "array",
+                        "label": "Query String"
+                    },
+                    {
+                        "name": "bodyType",
+                        "type": "select",
+                        "label": "Body type",
+                        "validate": {
+                            "enum": [
+                                "raw",
+                                "x_www_form_urlencoded",
+                                "multipart_form_data"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "parseResponse",
+                        "type": "boolean",
+                        "label": "Parse response",
+                        "required": true
+                    },
+                    {
+                        "name": "timeout",
+                        "type": "uinteger",
+                        "label": "Timeout",
+                        "validate": {
+                            "max": 300,
+                            "min": 1
+                        }
+                    },
+                    {
+                        "name": "shareCookies",
+                        "type": "boolean",
+                        "label": "Share cookies with other HTTP modules",
+                        "required": true
+                    },
+                    {
+                        "name": "ca",
+                        "type": "cert",
+                        "label": "Self-signed certificate"
+                    },
+                    {
+                        "name": "rejectUnauthorized",
+                        "type": "boolean",
+                        "label": "Reject connections that are using unverified (self-signed) certificates",
+                        "required": true
+                    },
+                    {
+                        "name": "followRedirect",
+                        "type": "boolean",
+                        "label": "Follow redirect",
+                        "required": true
+                    },
+                    {
+                        "name": "useQuerystring",
+                        "type": "boolean",
+                        "label": "Disable serialization of multiple same query string keys as arrays",
+                        "required": true
+                    },
+                    {
+                        "name": "gzip",
+                        "type": "boolean",
+                        "label": "Request compressed content",
+                        "required": true
+                    },
+                    {
+                        "name": "useMtls",
+                        "type": "boolean",
+                        "label": "Use Mutual TLS",
+                        "required": true
+                    },
+                    {
+                        "name": "followAllRedirects",
+                        "type": "boolean",
+                        "label": "Follow all redirect",
+                        "required": true
+                    }
+                ]
+            }
+        },
+        {
+            "id": 8,
+            "module": "builtin:BasicFeeder",
+            "version": 1,
+            "parameters": {},
+            "mapper": {
+                "array": "{{7.data.data}}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 600,
+                    "y": 0
+                },
+                "restore": {
+                    "expect": {
+                        "array": {
+                            "mode": "edit"
+                        }
+                    }
+                },
+                "expect": [
+                    {
+                        "mode": "edit",
+                        "name": "array",
+                        "spec": [],
+                        "type": "array",
+                        "label": "Array"
+                    }
+                ]
+            }
+        },
+        {
+            "id": 9,
+            "module": "raynetcrm:UpravitExistujiciZaznam",
+            "version": 1,
+            "parameters": {
+                "__IMTCONN__": 2586092
+            },
+            "filter": {
+                "name": "Obálka ID ✅",
+                "conditions": [
+                    [
+                        {
+                            "a": "{{8.customFields.Digisign_O_8d459}}",
+                            "b": "{{5.id}}",
+                            "o": "text:equal"
+                        }
+                    ]
+                ]
+            },
+            "mapper": {
+                "name": "",
+                "tags": "",
+                "owner": "",
+                "person": "",
+                "source": "",
+                "company": "",
+                "category": "",
+                "currency": "",
+                "recordId": "{{8.id}}",
+                "validFrom": "",
+                "entityName": "businessCase",
+                "description": "",
+                "probability": "",
+                "totalAmount": "",
+                "customFields": {
+                    "PPC_c5379": "",
+                    "SEO_05336": "",
+                    "Share_1929b": "",
+                    "Grafika_dba2a": "",
+                    "Meta_Ads_1f0a5": "",
+                    "Projektak_4bf22": "",
+                    "Airtable_I_2fbb8": "",
+                    "Datum_ukon_3777f": "",
+                    "Datum_zaca_cd58f": "",
+                    "Digisign_O_8d459": "",
+                    "Digisign_o_ad2e9": "",
+                    "Grafika_od_6c80f": "",
+                    "Meta_Ads_o_5dbb0": "",
+                    "Nazev_tymu_5029c": "",
+                    "Odkaz_na_L_fad9b": "",
+                    "Odkaz_na_s_71eab": "",
+                    "PPC_odmena_b1f32": "",
+                    "Pocet_kred_b8cb7": "",
+                    "Podepsana__3c004": "https://api.digisign.org{{5.documents[].`_links`.self}}",
+                    "Prijemce_p_ed468": true,
+                    "Projektak__f71fc": "",
+                    "SEO_odmena_38074": "",
+                    "Ukonceni_p_39c7a": "",
+                    "Video_edit_9704a": "",
+                    "Video_edit_bd925": "",
+                    "Zeme_ktere_6ee4d": ""
+                },
+                "exchangeRate": "",
+                "estimatedValue": "",
+                "businessCasePhase": "",
+                "businessCaseClassification1": "",
+                "businessCaseClassification2": "",
+                "businessCaseClassification3": ""
+            },
+            "metadata": {
+                "designer": {
+                    "x": 900,
+                    "y": 0,
+                    "name": "SmlouvaPodepsaná+Odkaz"
+                },
+                "restore": {
+                    "expect": {
+                        "owner": {
+                            "mode": "chose",
+                            "label": "Empty"
+                        },
+                        "source": {
+                            "mode": "chose",
+                            "label": "Empty"
+                        },
+                        "category": {
+                            "mode": "chose",
+                            "label": "Empty"
+                        },
+                        "currency": {
+                            "mode": "chose",
+                            "label": "Empty"
+                        },
+                        "entityName": {
+                            "label": "Obchodní případ"
+                        },
+                        "customFields": {
+                            "nested": {
+                                "PPC_c5379": {
+                                    "mode": "chose",
+                                    "label": "Empty"
+                                },
+                                "SEO_05336": {
+                                    "mode": "chose",
+                                    "label": "Empty"
+                                },
+                                "Freelo_7b68d": {
+                                    "mode": "chose"
+                                },
+                                "Grafika_dba2a": {
+                                    "mode": "chose",
+                                    "label": "Empty"
+                                },
+                                "Airtable_b195d": {
+                                    "mode": "chose"
+                                },
+                                "Meta_Ads_1f0a5": {
+                                    "mode": "chose",
+                                    "label": "Empty"
+                                },
+                                "Projektak_4bf22": {
+                                    "mode": "chose",
+                                    "label": "Empty"
+                                },
+                                "Klientovi__dfc3f": {
+                                    "mode": "chose"
+                                },
+                                "Klientovi__e601c": {
+                                    "mode": "chose"
+                                },
+                                "Prijemce_p_ed468": {
+                                    "mode": "chose"
+                                },
+                                "Slack_a_Fr_e9d8d": {
+                                    "mode": "chose"
+                                },
+                                "Tym_pozvan_d0840": {
+                                    "mode": "chose"
+                                },
+                                "Video_edit_9704a": {
+                                    "mode": "chose",
+                                    "label": "Empty"
+                                }
+                            }
+                        },
+                        "businessCasePhase": {
+                            "mode": "chose",
+                            "label": "Empty"
+                        },
+                        "businessCaseClassification1": {
+                            "mode": "chose",
+                            "label": "Empty"
+                        },
+                        "businessCaseClassification2": {
+                            "mode": "chose",
+                            "label": "Empty"
+                        },
+                        "businessCaseClassification3": {
+                            "mode": "chose",
+                            "label": "Empty"
+                        }
+                    },
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "data": {
+                                "scoped": "true",
+                                "connection": "raynetcrmtest-16104"
+                            },
+                            "label": "My RAYNET CRM"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTCONN__",
+                        "type": "account:raynetcrmtest-16104",
+                        "label": "Connection",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "recordId",
+                        "type": "uinteger",
+                        "label": "ID záznamu",
+                        "required": true
+                    },
+                    {
+                        "name": "entityName",
+                        "type": "select",
+                        "label": "Vyber entitu",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "lead",
+                                "company",
+                                "person",
+                                "businessCase",
+                                "offer",
+                                "salesOrder",
+                                "project",
+                                "product",
+                                "priceList",
+                                "invoiceLight",
+                                "task",
+                                "meeting",
+                                "event",
+                                "email",
+                                "phonecall",
+                                "letter"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "type": "text",
+                        "label": "Předmět"
+                    },
+                    {
+                        "name": "company",
+                        "type": "uinteger",
+                        "label": "Klient (ID)"
+                    },
+                    {
+                        "name": "person",
+                        "type": "uinteger",
+                        "label": "Osoba (ID)"
+                    },
+                    {
+                        "name": "owner",
+                        "type": "select",
+                        "label": "Vlastník"
+                    },
+                    {
+                        "name": "totalAmount",
+                        "type": "number",
+                        "label": "Konečná cena"
+                    },
+                    {
+                        "name": "estimatedValue",
+                        "type": "number",
+                        "label": "Předpokládané náklady"
+                    },
+                    {
+                        "name": "probability",
+                        "type": "uinteger",
+                        "label": "Pravděpodbnost (%)"
+                    },
+                    {
+                        "name": "validFrom",
+                        "time": false,
+                        "type": "date",
+                        "label": "Otevřeno od"
+                    },
+                    {
+                        "name": "description",
+                        "type": "text",
+                        "label": "Poznámka"
+                    },
+                    {
+                        "name": "currency",
+                        "type": "select",
+                        "label": "Měna"
+                    },
+                    {
+                        "name": "exchangeRate",
+                        "type": "uinteger",
+                        "label": "Kurz"
+                    },
+                    {
+                        "name": "businessCasePhase",
+                        "type": "select",
+                        "label": "Stav"
+                    },
+                    {
+                        "name": "category",
+                        "type": "select",
+                        "label": "Kategorie"
+                    },
+                    {
+                        "name": "source",
+                        "type": "select",
+                        "label": "Zdroj"
+                    },
+                    {
+                        "name": "businessCaseClassification1",
+                        "type": "select",
+                        "label": "Klasifikace 1"
+                    },
+                    {
+                        "name": "businessCaseClassification2",
+                        "type": "select",
+                        "label": "Klasifikace 2"
+                    },
+                    {
+                        "name": "businessCaseClassification3",
+                        "type": "select",
+                        "label": "Klasifikace 3"
+                    },
+                    {
+                        "name": "customFields",
+                        "spec": [
+                            {
+                                "name": "Share_1929b",
+                                "type": "text",
+                                "label": "Odkaz na nabídku"
+                            },
+                            {
+                                "name": "Odkaz_na_L_fad9b",
+                                "type": "text",
+                                "label": "Task audit Freelo"
+                            },
+                            {
+                                "name": "Odkaz_na_s_71eab",
+                                "type": "text",
+                                "label": "Odeslaná smlouva"
+                            },
+                            {
+                                "name": "Digisign_o_ad2e9",
+                                "type": "text",
+                                "label": "Digisign obálka"
+                            },
+                            {
+                                "name": "Digisign_O_8d459",
+                                "type": "text",
+                                "label": "Digisign Obálka ID"
+                            },
+                            {
+                                "name": "Prijemce_p_ed468",
+                                "type": "boolean",
+                                "label": "Příjemce podepsal"
+                            },
+                            {
+                                "name": "Podepsana__3c004",
+                                "type": "text",
+                                "label": "Podepsaná smlouva"
+                            },
+                            {
+                                "name": "Nazev_tymu_5029c",
+                                "type": "text",
+                                "label": "Název týmu (Freelo)"
+                            },
+                            {
+                                "name": "Slack_a_Fr_e9d8d",
+                                "type": "boolean",
+                                "label": "Slack"
+                            },
+                            {
+                                "name": "Freelo_7b68d",
+                                "type": "boolean",
+                                "label": "Freelo"
+                            },
+                            {
+                                "name": "Airtable_b195d",
+                                "type": "boolean",
+                                "label": "Airtable"
+                            },
+                            {
+                                "name": "Tym_pozvan_d0840",
+                                "type": "boolean",
+                                "label": "Tým pozvaný do Freelo a Slack"
+                            },
+                            {
+                                "name": "Klientovi__dfc3f",
+                                "type": "boolean",
+                                "label": "Klientovi vystavujeme faktury v EUR"
+                            },
+                            {
+                                "name": "Klientovi__e601c",
+                                "type": "boolean",
+                                "label": "Klientovi vystavujeme faktury v EN"
+                            },
+                            {
+                                "name": "Projektak_4bf22",
+                                "type": "select",
+                                "label": "Projekťák",
+                                "validate": {
+                                    "enum": [
+                                        "Daniel Bauer",
+                                        "Helena Píšová",
+                                        "Jaroslav Bobák",
+                                        "Otakar Lucák",
+                                        "Radka Hrejzková",
+                                        "David Hála",
+                                        "Eva Veselá"
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "Meta_Ads_1f0a5",
+                                "type": "select",
+                                "label": "Meta Ads",
+                                "validate": {
+                                    "enum": [
+                                        "Daniel Bauer",
+                                        "Helena Píšová",
+                                        "Ivana Šimková",
+                                        "Jan Hrabiec",
+                                        "Jaroslav Bobák",
+                                        "Radka Hrejzková",
+                                        "David Hála",
+                                        "Eva Veselá"
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "PPC_c5379",
+                                "type": "select",
+                                "label": "PPC",
+                                "validate": {
+                                    "enum": [
+                                        "Jan Březovský",
+                                        "Dan Sedláček"
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "Grafika_dba2a",
+                                "type": "select",
+                                "label": "Grafika",
+                                "validate": {
+                                    "enum": [
+                                        "Kateřina Faix",
+                                        "Ivana Šimková",
+                                        "Alexandra Štancelová"
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "SEO_05336",
+                                "type": "select",
+                                "label": "SEO",
+                                "validate": {
+                                    "enum": [
+                                        "Martin Tomčík"
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "Video_edit_9704a",
+                                "type": "select",
+                                "label": "Video editor",
+                                "validate": {
+                                    "enum": [
+                                        "Jan Bečvář"
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "Zeme_ktere_6ee4d",
+                                "type": "text",
+                                "label": "Země, které pro klienta spravujeme"
+                            },
+                            {
+                                "name": "Pocet_kred_b8cb7",
+                                "type": "number",
+                                "label": "Počet kreditů / měsíc"
+                            },
+                            {
+                                "name": "Airtable_I_2fbb8",
+                                "type": "text",
+                                "label": "Airtable ID"
+                            },
+                            {
+                                "name": "Ukonceni_p_39c7a",
+                                "type": "text",
+                                "label": "Ukončení projektu (Make)"
+                            },
+                            {
+                                "name": "Datum_zaca_cd58f",
+                                "type": "text",
+                                "label": "Datum začátku projektu"
+                            },
+                            {
+                                "name": "Datum_ukon_3777f",
+                                "type": "text",
+                                "label": "Datum ukončení projektu"
+                            },
+                            {
+                                "name": "Projektak__f71fc",
+                                "type": "number",
+                                "label": "Projekťák (odměna)"
+                            },
+                            {
+                                "name": "Meta_Ads_o_5dbb0",
+                                "type": "number",
+                                "label": "Meta Ads (odměna)"
+                            },
+                            {
+                                "name": "PPC_odmena_b1f32",
+                                "type": "number",
+                                "label": "PPC (odměna)"
+                            },
+                            {
+                                "name": "Grafika_od_6c80f",
+                                "type": "number",
+                                "label": "Grafika (odměna)"
+                            },
+                            {
+                                "name": "SEO_odmena_38074",
+                                "type": "number",
+                                "label": "SEO (odměna)"
+                            },
+                            {
+                                "name": "Video_edit_bd925",
+                                "type": "number",
+                                "label": "Video editor (odměna)"
+                            }
+                        ],
+                        "type": "collection",
+                        "label": "Volitelná pole"
+                    },
+                    {
+                        "name": "tags",
+                        "type": "text",
+                        "label": "Štítky"
+                    }
+                ],
+                "advanced": true
+            }
+        },
+        {
+            "id": 10,
+            "module": "digisign:downloadADocument",
+            "version": 1,
+            "parameters": {
+                "__IMTCONN__": 3113794
+            },
+            "mapper": {
+                "document": "{{5.documents[].id}}",
+                "envelope": "{{5.id}}",
+                "fileName": "{{5.documents[].name}}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 1200,
+                    "y": 0,
+                    "name": "StáhnoutSmlouvu"
+                },
+                "restore": {
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "data": {
+                                "scoped": "true",
+                                "connection": "digisign"
+                            },
+                            "label": "Socials | Digisign (danny@socials.cz)"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTCONN__",
+                        "type": "account:digisign",
+                        "label": "Connection",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "envelope",
+                        "type": "text",
+                        "label": "Envelope ID",
+                        "required": true
+                    },
+                    {
+                        "name": "document",
+                        "type": "text",
+                        "label": "Document ID",
+                        "required": true
+                    },
+                    {
+                        "name": "fileName",
+                        "type": "text",
+                        "label": "File Name",
+                        "required": true
+                    },
+                    {
+                        "name": "envelope",
+                        "type": "text",
+                        "label": "Envelope ID",
+                        "required": true
+                    },
+                    {
+                        "name": "document",
+                        "type": "text",
+                        "label": "Document ID",
+                        "required": true
+                    },
+                    {
+                        "name": "fileName",
+                        "type": "text",
+                        "label": "File Name",
+                        "required": true
+                    }
+                ]
+            }
+        },
+        {
+            "id": 11,
+            "module": "raynetcrm:uploadFile",
+            "version": 1,
+            "parameters": {
+                "__IMTCONN__": 2586092
+            },
+            "mapper": {
+                "id": "{{8.id}}",
+                "file": "{{10.data}}",
+                "fileName": "{{10.fileName}}",
+                "entityName": "businessCase"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 1500,
+                    "y": 0,
+                    "name": "NahrátSmlouvuOP"
+                },
+                "restore": {
+                    "expect": {
+                        "entityName": {
+                            "label": "Obchodní případ"
+                        }
+                    },
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "data": {
+                                "scoped": "true",
+                                "connection": "raynetcrmtest-16104"
+                            },
+                            "label": "My RAYNET CRM"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTCONN__",
+                        "type": "account:raynetcrmtest-16104",
+                        "label": "Connection",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "file",
+                        "type": "buffer",
+                        "label": "Soubor",
+                        "required": true
+                    },
+                    {
+                        "name": "fileName",
+                        "type": "text",
+                        "label": "Název souboru",
+                        "required": true
+                    },
+                    {
+                        "name": "entityName",
+                        "type": "select",
+                        "label": "Vyber entitu",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "company",
+                                "person",
+                                "lead",
+                                "businessCase",
+                                "offer",
+                                "salesOrder",
+                                "project",
+                                "product",
+                                "priceList",
+                                "invoice",
+                                "task",
+                                "meeting",
+                                "event",
+                                "email",
+                                "phonecall",
+                                "letter"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "type": "uinteger",
+                        "label": "ID záznamu",
+                        "required": true
+                    }
+                ]
+            }
+        }
+    ],
+    "metadata": {
+        "instant": true,
+        "version": 1,
+        "scenario": {
+            "roundtrips": 1,
+            "maxErrors": 3,
+            "autoCommit": true,
+            "autoCommitTriggerLast": true,
+            "sequential": false,
+            "slots": null,
+            "confidential": false,
+            "dataloss": false,
+            "dlq": false,
+            "freshVariables": false
+        },
+        "designer": {
+            "orphans": []
+        },
+        "zone": "eu1.make.com",
+        "notes": []
+    }
+}

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import nodemailer from "npm:nodemailer@6.9.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,9 +19,11 @@ serve(async (req) => {
   }
 
   try {
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY not configured");
+    const SMTP_USER = Deno.env.get("SMTP_USER");
+    const SMTP_PASS = Deno.env.get("SMTP_PASS");
+    
+    if (!SMTP_USER || !SMTP_PASS) {
+      throw new Error("SMTP credentials not configured");
     }
 
     const { to, subject, html, from }: EmailRequest = await req.json();
@@ -32,29 +35,31 @@ serve(async (req) => {
       );
     }
 
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
+    console.log(`Attempting to send email to: ${to}, subject: ${subject}`);
+
+    // Create transporter with Google Workspace SMTP
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false, // Use STARTTLS
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
       },
-      body: JSON.stringify({
-        from: from || Deno.env.get("FROM_EMAIL") || "noreply@example.com",
-        to,
-        subject,
-        html,
-      }),
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Resend error: ${error}`);
-    }
+    // Send email
+    const info = await transporter.sendMail({
+      from: from || SMTP_USER,
+      to: to,
+      subject: subject,
+      html: html,
+    });
 
-    const result = await response.json();
+    console.log(`Email sent successfully: ${info.messageId}`);
     
     return new Response(
-      JSON.stringify({ success: true, id: result.id }),
+      JSON.stringify({ success: true, messageId: info.messageId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

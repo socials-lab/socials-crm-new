@@ -23,10 +23,6 @@ This document provides a comprehensive overview of all external service integrat
 ### Overview
 Fakturoid is the Czech invoicing system used to create, manage, and track invoices. The integration allows automatic creation of invoices from CRM data and receives status updates via webhooks.
 
-### Documentation Reference
-- API Docs: `docs/api-references/fakturoid/`
-- Base URL: `https://app.fakturoid.cz/api/v3`
-
 ### Implementation Components
 
 #### Supabase Edge Functions
@@ -94,10 +90,6 @@ UI reflects new status (paid/overdue)
 ### Overview
 DigiSign is an electronic signature platform used to send contracts for signing. The integration creates envelopes from lead data and tracks signing status via webhooks.
 
-### Documentation Reference
-- API Docs: `docs/api-references/digisign/`
-- Base URL: `https://api.digisign.org` (production)
-
 ### Implementation Components
 
 #### Supabase Edge Functions
@@ -128,23 +120,23 @@ DigiSign is an electronic signature platform used to send contracts for signing.
 digisign_id TEXT           -- DigiSign envelope ID
 contract_url TEXT          -- URL to contract/signing page
 contract_created_at TIMESTAMPTZ  -- When contract was created
-contract_sent_at TIMESTAMPTZ     -- When sent for signing
 contract_signed_at TIMESTAMPTZ   -- When fully signed
 ```
 
 #### Environment Variables
 ```
-DIGISIGN_API_KEY            -- Bearer token for API auth
-DIGISIGN_WEBHOOK_SECRET     -- Secret for webhook signature verification
-DIGISIGN_DEFAULT_TEMPLATE_ID -- Default contract template ID
+DIGISIGN_ACCESS_KEY         -- Access key for API auth (exchanged for bearer token)
+DIGISIGN_SECRET_KEY         -- Secret key for API auth (exchanged for bearer token)
+DIGISIGN_WEBHOOK_SECRET     -- Secret for webhook signature verification (REQUIRED)
+PDF_GENERATOR_URL           -- URL of PDF generator service
 ```
 
 #### Data Flow
 ```
 Lead has onboarding completed → User clicks "Create Contract" →
-Edge Function creates envelope in DigiSign →
+Edge Function creates envelope in DigiSign and sends automatically →
 digisign_id + contract_url saved to DB →
-UI shows contract link
+UI shows contract link and "Waiting for signature" status
 
 Client signs contract → Webhook fires →
 Edge Function updates contract_signed_at →
@@ -152,8 +144,9 @@ UI shows "Signed" status
 ```
 
 #### Webhook Events Handled
-- `envelope.signed` - Contract signed by recipient
-- `envelope.completed` - All signatures collected
+- `envelopeCompleted` - All signatures collected (updates `contract_signed_at`)
+- `envelopeDeclined` - Signer declined to sign (logged only)
+- `envelopeExpired` - Envelope expired before completion (logged only)
 
 #### Contract Data Sent
 ```typescript
@@ -166,11 +159,18 @@ UI shows "Signed" status
 }
 ```
 
+#### Implementation Details
+- Uses correct API URL: `https://api.digisign.org/api`
+- Implements full 7-step workflow (auth → envelope → upload → document → recipients → tags → send)
+- HMAC-SHA256 webhook signature verification with 5-minute replay protection
+- Supports 2 signers per contract (Socials representative + client signatory)
+- Uses placeholder-based signature tags (`PODPIS1`, `PODPIS2`)
+- PDF generated dynamically from contract template with client data
+
 #### Current Limitations
-- Uses placeholder API URL (`https://api.digisign.cz/v1/envelopes`)
-- Signature verification not fully implemented
-- Single signer per contract
-- Requires template setup in DigiSign dashboard
+- Hardcoded Socials signer info (should be environment variables)
+- Only 2 signers supported (limited by PDF template placeholders)
+- No contract template selection (templateId parameter unused)
 
 ---
 
@@ -178,10 +178,6 @@ UI shows "Signed" status
 
 ### Overview
 Google Calendar integration enables syncing meetings from CRM to users' Google Calendars and sending calendar invitations to participants.
-
-### Documentation Reference
-- API Docs: `docs/api-references/google-calendar/`
-- Base URL: `https://www.googleapis.com/calendar/v3`
 
 ### Implementation Components
 
@@ -288,10 +284,6 @@ UI shows "Sent" status
 
 ### Overview
 ARES (Administrativní registr ekonomických subjektů) is the Czech business registry. The integration allows automatic lookup of company data by IČO (registration number).
-
-### Documentation Reference
-- API Docs: `docs/api-references/ares/`
-- Base URL: `https://ares.gov.cz/ekonomicke-subjekty-v-be/rest`
 
 ### Implementation Components
 
@@ -421,9 +413,10 @@ FAKTUROID_API_KEY=your-api-key
 FAKTUROID_WEBHOOK_SECRET=webhook-secret
 
 # DigiSign
-DIGISIGN_API_KEY=your-api-key
-DIGISIGN_WEBHOOK_SECRET=webhook-secret
-DIGISIGN_DEFAULT_TEMPLATE_ID=template-uuid
+DIGISIGN_ACCESS_KEY=your-access-key
+DIGISIGN_SECRET_KEY=your-secret-key
+DIGISIGN_WEBHOOK_SECRET=webhook-secret  # REQUIRED for security
+PDF_GENERATOR_URL=http://your-pdf-generator:8094
 
 # Google Calendar
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
@@ -507,10 +500,12 @@ Configure these URLs in each service's dashboard:
 - [ ] Automatic subject creation when client is created
 
 ### DigiSign
-- [ ] Verify correct API endpoint URL
-- [ ] Implement proper webhook signature verification
-- [ ] Support multiple signers per contract
+- [x] ~~Verify correct API endpoint URL~~ (Fixed: uses `api.digisign.org`)
+- [x] ~~Implement proper webhook signature verification~~ (Fixed: HMAC-SHA256 with replay protection, now required)
+- [x] ~~Support multiple signers per contract~~ (Fixed: supports 2 signers)
+- [ ] Move hardcoded signer info to environment variables
 - [ ] Template selection UI
+- [ ] Support more than 2 signers (requires PDF template changes)
 
 ### Google Calendar
 - [ ] Automatic token refresh before operations

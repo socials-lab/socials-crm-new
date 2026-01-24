@@ -115,7 +115,7 @@ export default function Meetings() {
             {!isConnected && (
               <Button variant="outline" onClick={connectGoogleCalendar}>
                 <CalendarCheck className="h-4 w-4 mr-2" />
-                Propojit Google kalendář
+                Propojit Google účet
               </Button>
             )}
             <AddMeetingDialog />

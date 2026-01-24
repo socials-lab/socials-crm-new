@@ -41,7 +41,8 @@ import {
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
 import socialsLogo from '@/assets/socials-logo.png';
-import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
+import { supabase } from '@/integrations/supabase/client';
+import { TEST_OFFER } from '@/data/publicOffersMockData';
 
 // Portfolio icon by type
 function getPortfolioIcon(type: PortfolioLink['type']) {
@@ -312,7 +313,7 @@ function ServiceStructureExplanation() {
       <div className="space-y-3 text-sm">
         {/* Core služby */}
         <div className="flex items-start gap-3">
-          <Badge className="bg-primary/20 text-primary border-primary/30 shrink-0 mt-0.5">Core</Badge>
+          <Badge className="bg-primary/20 text-primary border-primary/30 shrink-0 mt-0.5 w-20 justify-center">Core</Badge>
           <div>
             <p className="font-medium">Hlavní služby</p>
             <p className="text-muted-foreground text-xs leading-relaxed">
@@ -327,7 +328,7 @@ function ServiceStructureExplanation() {
         
         {/* Add-on služby */}
         <div className="flex items-start gap-3">
-          <Badge variant="outline" className="shrink-0 mt-0.5">Doplněk</Badge>
+          <Badge variant="outline" className="shrink-0 mt-0.5 w-20 justify-center">Doplněk</Badge>
           <div>
             <p className="font-medium">Doplňkové služby</p>
             <p className="text-muted-foreground text-xs leading-relaxed">
@@ -465,7 +466,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   };
 
   useEffect(() => {
-    function fetchOffer() {
+    async function fetchOffer() {
       // Check for invalid/placeholder tokens
       if (!token || token === ':token' || token.length < 3) {
         setError('Neplatný odkaz na nabídku');
@@ -473,21 +474,69 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         return;
       }
 
-      // Fetch from mock store
-      const foundOffer = getPublicOfferByToken(token);
-
-      if (!foundOffer) {
-        setError('Nabídka nebyla nalezena nebo již není platná');
+      // Test offer fallback
+      if (token === 'test-nabidka-123') {
+        setOffer(TEST_OFFER);
         setLoading(false);
         return;
       }
 
-      setOffer(foundOffer);
+      try {
+        // Fetch from Supabase
+        const { data, error } = await supabase
+          .from('public_offers')
+          .select('*')
+          .eq('token', token)
+          .eq('is_active', true)
+          .single();
 
-      // Track view in mock store
-      incrementOfferView(token);
-      
-      setLoading(false);
+        if (error || !data) {
+          setError('Nabídka nebyla nalezena nebo již není platná');
+          setLoading(false);
+          return;
+        }
+
+        // Convert database row to PublicOffer type
+        const foundOffer: PublicOffer = {
+          id: data.id,
+          lead_id: data.lead_id,
+          token: data.token,
+          company_name: data.company_name,
+          website: data.website,
+          contact_name: data.contact_name,
+          audit_summary: data.audit_summary,
+          recommendation_intro: data.recommendation_intro,
+          custom_note: data.custom_note,
+          notion_url: data.notion_url,
+          services: (data.services as any) || [],
+          portfolio_links: (data.portfolio_links as any) || [],
+          total_price: data.total_price || 0,
+          currency: data.currency || 'CZK',
+          offer_type: (data.offer_type as any) || 'retainer',
+          valid_until: data.valid_until,
+          is_active: data.is_active ?? true,
+          viewed_at: data.viewed_at,
+          view_count: data.view_count || 0,
+          created_by: data.created_by,
+          created_at: data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString(),
+          estimated_start_date: data.estimated_start_date || undefined,
+          owner_name: data.owner_name || undefined,
+          owner_email: data.owner_email || undefined,
+          owner_phone: data.owner_phone || undefined,
+        };
+
+        setOffer(foundOffer);
+
+        // Track view via RPC
+        await supabase.rpc('increment_offer_view', { offer_token: token });
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching offer:', err);
+        setError('Chyba při načítání nabídky');
+        setLoading(false);
+      }
     }
 
     fetchOffer();

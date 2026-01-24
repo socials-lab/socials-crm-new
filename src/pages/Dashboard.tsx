@@ -389,7 +389,7 @@ export default function Dashboard() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-medium text-sm truncate">{lead.company_name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{lead.potential_service}</p>
+                      <p className="text-xs text-muted-foreground truncate">{lead.potential_services?.[0]?.name || '-'}</p>
                     </div>
                   </div>
                   {canSeeFinancials && lead.estimated_price && (

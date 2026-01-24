@@ -9,9 +9,10 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Send, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Loader2, Send, CheckCircle2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCRMData } from '@/hooks/useCRMData';
+import { supabase } from '@/integrations/supabase/client';
 import type { MonthlyEngagementInvoice, IssuedInvoice } from '@/types/crm';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -29,7 +30,8 @@ interface IssuedInvoiceInfo {
   invoice_number: string;
   engagement_name: string;
   amount: number;
-  fakturoid_url: string;
+  fakturoid_url: string | null;
+  fakturoid_failed: boolean;
 }
 
 export function IssueInvoicesDialog({ 
@@ -69,43 +71,22 @@ export function IssueInvoicesDialog({
   };
 
   const handleIssue = async () => {
-    // Store data BEFORE clearing selection
     const count = invoices.length;
     const amount = invoices.reduce((sum, inv) => sum + inv.total_amount, 0);
-    
+
     setIsSubmitting(true);
 
-    // Simulate sending to invoicing system
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Simulate Fakturoid API response - invoice numbers come from Fakturoid
-    const simulateFakturoidResponse = (index: number) => {
-      // Fakturoid generates sequential invoice numbers in format YYYY-NNNN
-      const randomSequence = Math.floor(Math.random() * 9000) + 1000;
-      const invoiceNumber = `${year}-${String(randomSequence + index).padStart(4, '0')}`;
-      const fakturoidId = `${Date.now()}-${randomSequence + index}`;
-      
-      return {
-        invoice_number: invoiceNumber,
-        fakturoid_id: fakturoidId,
-        fakturoid_url: `https://app.fakturoid.cz/socials/invoices/${fakturoidId}`,
-      };
-    };
-
-    // Create issued invoices with data from Fakturoid
     const issuedInvoiceInfos: IssuedInvoiceInfo[] = [];
-    
+    let fakturoidFailures = 0;
+
     for (let i = 0; i < invoices.length; i++) {
       const invoice = invoices[i];
       const client = getClientById(invoice.client_id);
-      
-      // Get invoice number and ID from Fakturoid (simulated)
-      const fakturoidData = simulateFakturoidResponse(i);
-      
+
       // Extract extra work IDs and one-off service IDs from line items
       const extraWorkIds: string[] = [];
       const oneOffServiceIds: string[] = [];
-      
+
       invoice.line_items.forEach(item => {
         if (item.extra_work_id) {
           extraWorkIds.push(item.extra_work_id);
@@ -114,13 +95,14 @@ export function IssueInvoicesDialog({
           oneOffServiceIds.push(item.engagement_service_id);
         }
       });
-      
+
       // Prepare line items without invoice_id (will be set by createInvoiceWithLineItems)
       const lineItemsWithoutInvoiceId = invoice.line_items.map(item => {
         const { id, invoice_id, created_at, updated_at, ...rest } = item;
         return rest;
       });
-      
+
+      // First create the invoice locally (without Fakturoid IDs yet)
       const invoiceData: Omit<IssuedInvoice, 'id' | 'created_at' | 'invoice_number'> = {
         engagement_id: invoice.engagement_id,
         engagement_name: invoice.engagement_name,
@@ -128,32 +110,56 @@ export function IssueInvoicesDialog({
         client_name: client?.brand_name || client?.name || 'Neznámý klient',
         year: invoice.year,
         month: invoice.month,
-        fakturoid_id: fakturoidData.fakturoid_id,
-        fakturoid_url: fakturoidData.fakturoid_url,
+        fakturoid_id: null,
+        fakturoid_url: null,
         line_items: invoice.line_items,
         total_amount: invoice.total_amount,
         currency: invoice.currency,
         issued_at: new Date().toISOString(),
-        issued_by: null, // Will be set by createInvoiceWithLineItems
+        issued_by: null,
       };
-      
+
       const createdInvoice = await createInvoiceWithLineItems(
         invoiceData,
         lineItemsWithoutInvoiceId,
         extraWorkIds,
         oneOffServiceIds
       );
-      
+
+      // Now push to Fakturoid
+      let fakturoidUrl: string | null = null;
+      let fakturoidFailed = false;
+
+      try {
+        const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
+          'fakturoid-create-invoice',
+          { body: { invoice_id: createdInvoice.id } }
+        );
+
+        if (fakturoidError || fakturoidResult?.error) {
+          console.warn(`Fakturoid failed for invoice ${createdInvoice.invoice_number}:`, fakturoidError || fakturoidResult?.error);
+          fakturoidFailed = true;
+          fakturoidFailures++;
+        } else if (fakturoidResult?.success) {
+          fakturoidUrl = fakturoidResult.fakturoid_url;
+        }
+      } catch (err) {
+        console.warn(`Fakturoid error for invoice ${createdInvoice.invoice_number}:`, err);
+        fakturoidFailed = true;
+        fakturoidFailures++;
+      }
+
       issuedInvoiceInfos.push({
         invoice_number: createdInvoice.invoice_number,
         engagement_name: invoice.engagement_name,
         amount: invoice.total_amount,
-        fakturoid_url: fakturoidData.fakturoid_url,
+        fakturoid_url: fakturoidUrl,
+        fakturoid_failed: fakturoidFailed,
       });
     }
 
     setIsSubmitting(false);
-    
+
     // Store data for success screen
     setSuccessData({ count, amount, issuedInvoices: issuedInvoiceInfos });
     setIsSuccess(true);
@@ -163,10 +169,18 @@ export function IssueInvoicesDialog({
       onIssueSuccess(invoices.map(inv => inv.id));
     }
 
-    toast({
-      title: 'Faktury vystaveny',
-      description: `Úspěšně vystaveno ${count} faktur a uloženo do historie.`,
-    });
+    if (fakturoidFailures > 0) {
+      toast({
+        title: 'Faktury vystaveny s varováním',
+        description: `Vystaveno ${count} faktur, ale ${fakturoidFailures} se nepodařilo odeslat do Fakturoid.`,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Faktury vystaveny',
+        description: `Úspěšně vystaveno ${count} faktur do Fakturoid.`,
+      });
+    }
   };
 
   const handleClose = () => {
@@ -212,9 +226,9 @@ export function IssueInvoicesDialog({
             {/* List of issued invoices with Fakturoid links */}
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {successData.issuedInvoices.map((inv) => (
-                <div 
+                <div
                   key={inv.invoice_number}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  className={`flex items-center justify-between p-3 rounded-lg ${inv.fakturoid_failed ? 'bg-orange-50 border border-orange-200' : 'bg-muted/50'}`}
                 >
                   <div>
                     <p className="font-medium text-sm">{inv.invoice_number}</p>
@@ -222,15 +236,22 @@ export function IssueInvoicesDialog({
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-sm">{formatCurrency(inv.amount)}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-7 px-2"
-                      onClick={() => window.open(inv.fakturoid_url, '_blank')}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                      Fakturoid
-                    </Button>
+                    {inv.fakturoid_url ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2"
+                        onClick={() => window.open(inv.fakturoid_url!, '_blank')}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                        Fakturoid
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-orange-600 flex items-center gap-1">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Nutno odeslat ručně
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}

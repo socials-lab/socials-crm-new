@@ -73,10 +73,6 @@ Auth: API key in header
 - [ ] Return contract ID
 - [ ] Update lead.contract_url
 
-#### Edge Function: digisign-send-for-signing
-- [ ] Send contract to signatories
-- [ ] Track contract_sent_at
-
 #### Webhook: digisign-webhook
 - [ ] Receive signing status updates
 - [ ] Update contract_signed_at when complete

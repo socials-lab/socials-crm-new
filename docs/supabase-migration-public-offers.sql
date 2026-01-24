@@ -21,15 +21,18 @@ CREATE TABLE IF NOT EXISTS public.public_offers (
   
   -- Obsah nabídky (snapshot dat)
   company_name TEXT NOT NULL,
+  website TEXT,
   contact_name TEXT NOT NULL,
   
   -- Hlavní texty
   audit_summary TEXT,
+  recommendation_intro TEXT,
   custom_note TEXT,
   notion_url TEXT,
   
   -- Služby (JSON snapshot)
   services JSONB NOT NULL DEFAULT '[]',
+  portfolio_links JSONB DEFAULT '[]',
   
   -- Cenové údaje
   total_price NUMERIC NOT NULL DEFAULT 0,
@@ -38,6 +41,7 @@ CREATE TABLE IF NOT EXISTS public.public_offers (
   
   -- Validita a stav
   valid_until DATE,
+  estimated_start_date TEXT,
   is_active BOOLEAN DEFAULT TRUE,
   viewed_at TIMESTAMP WITH TIME ZONE,
   view_count INTEGER DEFAULT 0,
@@ -45,7 +49,12 @@ CREATE TABLE IF NOT EXISTS public.public_offers (
   -- Tracking
   created_by UUID REFERENCES colleagues(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  
+  -- Contact person info (lead owner)
+  owner_name TEXT,
+  owner_email TEXT,
+  owner_phone TEXT
 );
 
 -- 3. Přidat index pro rychlé vyhledávání podle tokenu

@@ -11,24 +11,42 @@ export function useGoogleCalendar() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [hasGmailScope, setHasGmailScope] = useState(false);
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
+
   const checkConnection = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setIsCheckingConnection(false);
+      return;
+    }
     
+    setIsCheckingConnection(true);
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('calendar_tokens')
-        .select('expires_at')
+        .select('expires_at, scopes, refresh_token')
         .eq('user_id', user.id)
         .single();
 
       if (data) {
-        const expiresAt = new Date(data.expires_at);
-        setIsConnected(expiresAt > new Date());
+        // User is considered "connected" if they have a refresh_token
+        // (access_token expires after ~1 hour, but can be refreshed by Edge Functions)
+        const hasRefreshToken = !!data.refresh_token;
+        setIsConnected(hasRefreshToken);
+        
+        // Check if user has Gmail send scope
+        const hasGmail = data.scopes && Array.isArray(data.scopes) && 
+          data.scopes.includes('https://www.googleapis.com/auth/gmail.send');
+        setHasGmailScope(hasGmail && hasRefreshToken);
       } else {
         setIsConnected(false);
+        setHasGmailScope(false);
       }
     } catch {
       setIsConnected(false);
+      setHasGmailScope(false);
+    } finally {
+      setIsCheckingConnection(false);
     }
   }, [user?.id]);
 
@@ -55,7 +73,7 @@ export function useGoogleCalendar() {
       }
       
       setIsConnected(true);
-      toast.success('Google kalendář byl úspěšně propojen');
+      toast.success('Google účet byl úspěšně propojen (kalendář a email)');
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Chyba při propojování kalendáře';
@@ -79,7 +97,7 @@ export function useGoogleCalendar() {
     }
     
     const redirectUri = `${window.location.origin}/auth/callback`;
-    const scope = 'https://www.googleapis.com/auth/calendar';
+    const scope = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send';
     const responseType = 'code';
     const accessType = 'offline';
     const prompt = 'consent';
@@ -116,12 +134,41 @@ export function useGoogleCalendar() {
     }
   };
 
+  const sendEmail = async (to: string, subject: string, html: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('gmail-send-email', {
+        body: { to, subject, html },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Chyba při odesílání emailu';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return { 
     connectGoogleCalendar, 
     handleOAuthCallback,
-    createCalendarEvent, 
+    createCalendarEvent,
+    sendEmail,
     checkConnection,
-    isConnected, 
+    isConnected,
+    hasGmailScope,
+    isCheckingConnection,
     isLoading, 
     error 
   };

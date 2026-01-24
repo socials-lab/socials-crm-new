@@ -36,10 +36,10 @@ const clientSchema = z.object({
   billing_city: z.string().nullable(),
   billing_zip: z.string().nullable(),
   billing_country: z.string().nullable(),
-  // Contact (legacy, for backwards compatibility)
-  main_contact_name: z.string().min(1, 'Jméno kontaktu je povinné'),
-  main_contact_email: z.string().email('Zadejte platný email'),
-  main_contact_phone: z.string().min(1, 'Telefon je povinný'),
+  // Contact (legacy, kept for backwards compatibility - now managed via ClientContact records)
+  main_contact_name: z.string().optional(),
+  main_contact_email: z.string().optional(),
+  main_contact_phone: z.string().optional(),
   acquisition_channel: z.string(),
   start_date: z.string().min(1, 'Datum je povinné'),
   notes: z.string(),
@@ -88,6 +88,10 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
       billing_city: data.billing_city || null,
       billing_zip: data.billing_zip || null,
       billing_country: data.billing_country || null,
+      // Legacy contact fields - kept for backwards compatibility, now managed via ClientContact records
+      main_contact_name: data.main_contact_name || '',
+      main_contact_email: data.main_contact_email || '',
+      main_contact_phone: data.main_contact_phone || '',
       end_date: client?.end_date || null,
       created_by: client?.created_by || 'user-1',
     });
@@ -299,54 +303,6 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
               )}
             />
           </div>
-        </div>
-
-        {/* Kontaktní osoba */}
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm border-b pb-2">Hlavní kontaktní osoba</h4>
-          <p className="text-xs text-muted-foreground -mt-2">Další kontakty lze spravovat v detailu klienta</p>
-          
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="main_contact_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Jméno *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Jan Novák" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="main_contact_email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email *</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="jan@firma.cz" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <FormField
-            control={form.control}
-            name="main_contact_phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Telefon *</FormLabel>
-                <FormControl>
-                  <Input placeholder="+420 777 123 456" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
 
         {/* Další údaje */}

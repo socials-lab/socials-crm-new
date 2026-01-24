@@ -7,11 +7,20 @@ const corsHeaders = {
 };
 
 interface FakturoidWebhookPayload {
-  event: string;
-  invoice: {
-    id: number;
-    status: string;
-    paid_at?: string;
+  webhook_id: number;
+  event_name: string;
+  created_at: string;
+  body: {
+    invoice: {
+      id: number;
+      status: string;
+      paid_at?: string;
+    };
+    payment?: {
+      id: number;
+      paid_on: string;
+      amount: string;
+    };
   };
 }
 
@@ -33,20 +42,20 @@ serve(async (req) => {
     const bodyText = await req.text();
     const payload: FakturoidWebhookPayload = JSON.parse(bodyText);
 
+    // Verify webhook authorization header
     const WEBHOOK_SECRET = Deno.env.get("FAKTUROID_WEBHOOK_SECRET");
-    const signature = req.headers.get("X-Fakturoid-Signature");
-
-    // Verify webhook signature if configured
-    if (WEBHOOK_SECRET && signature) {
-      // Simple signature verification - adjust based on Fakturoid's actual method
-      const expectedSignature = await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(WEBHOOK_SECRET + bodyText)
-      );
-      // Note: This is a simplified check. Fakturoid may use a different signature method.
+    if (WEBHOOK_SECRET) {
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader !== WEBHOOK_SECRET) {
+        console.error("Webhook authorization failed");
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
-    if (payload.event !== "invoice.paid" && payload.event !== "invoice.updated") {
+    if (payload.event_name !== "invoice_paid" && payload.event_name !== "invoice_updated") {
       return new Response(
         JSON.stringify({ success: true, message: "Event ignored" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -57,7 +66,7 @@ serve(async (req) => {
     const { data: invoice, error: findError } = await supabaseAdmin
       .from("issued_invoices")
       .select("id, status")
-      .eq("fakturoid_id", String(payload.invoice.id))
+      .eq("fakturoid_id", String(payload.body.invoice.id))
       .single();
 
     if (findError || !invoice) {
@@ -86,12 +95,13 @@ serve(async (req) => {
     // Update invoice status
     const updates: Record<string, unknown> = {};
     
-    if (payload.invoice.status === "paid" && payload.invoice.paid_at) {
+    if (payload.body.invoice.status === "paid") {
       updates.status = "paid";
-      updates.paid_at = payload.invoice.paid_at;
-    } else if (payload.invoice.status === "sent") {
+      // Payment date comes from payment object, not invoice
+      updates.paid_at = payload.body.payment?.paid_on || new Date().toISOString().split('T')[0];
+    } else if (payload.body.invoice.status === "sent") {
       updates.status = "sent";
-    } else if (payload.invoice.status === "overdue") {
+    } else if (payload.body.invoice.status === "overdue") {
       updates.status = "overdue";
     }
 

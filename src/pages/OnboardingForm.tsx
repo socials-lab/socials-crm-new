@@ -15,63 +15,81 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Loader2, Building2, MapPin, CheckCircle2, AlertTriangle, Search, Plus, X, PenLine, Users, CalendarIcon, FileText, Zap, MessageSquare } from 'lucide-react';
-import { useLeadsData } from '@/hooks/useLeadsData';
-import { useCRMData } from '@/hooks/useCRMData';
+import { useAresLookup } from '@/hooks/useAresLookup';
 import { cn } from '@/lib/utils';
 import socialsLogo from '@/assets/socials-logo.png';
 import { LeadService } from '@/types/crm';
+import { supabase } from '@/integrations/supabase/client';
 
-// Mock ARES lookup - will be replaced with Edge Function
-const mockAresLookup = async (ico: string): Promise<{
+// Type for lead data from Edge Function
+interface OnboardingLead {
+  id: string;
   company_name: string;
-  dic: string;
-  street: string;
-  city: string;
-  zip: string;
-  country: string;
-} | null> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Mock data based on IČO
-  if (ico.length === 8 && /^\d+$/.test(ico)) {
-    return {
-      company_name: `Společnost ${ico.slice(0, 4)} s.r.o.`,
-      dic: `CZ${ico}`,
-      street: 'Václavské náměstí 1',
-      city: 'Praha',
-      zip: '11000',
-      country: 'Česká republika'
-    };
-  }
-  return null;
-};
+  ico: string;
+  dic?: string;
+  website?: string;
+  industry?: string;
+  billing_street?: string;
+  billing_city?: string;
+  billing_zip?: string;
+  billing_country?: string;
+  billing_email?: string;
+  contact_name: string;
+  contact_position?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  owner_id?: string;
+  owner_name?: string;
+  owner_email?: string;
+  potential_services?: LeadService[];
+}
+
 
 const signatorySchema = z.object({
   name: z.string().min(1, 'Jméno je povinné'),
   position: z.string().optional(),
   email: z.string().email('Neplatný formát e-mailu'),
-  phone: z.string().optional(),
+  phone: z.string()
+    .optional()
+    .refine(val => !val || val.length === 0 || val.length >= 9, {
+      message: 'Telefon musí mít alespoň 9 číslic',
+    }),
 });
 
 const projectContactSchema = z.object({
   name: z.string().min(1, 'Jméno je povinné'),
   email: z.string().email('Neplatný formát e-mailu'),
-  phone: z.string().optional(),
+  phone: z.string()
+    .optional()
+    .refine(val => !val || val.length === 0 || val.length >= 9, {
+      message: 'Telefon musí mít alespoň 9 číslic',
+    }),
 });
 
 const onboardingSchema = z.object({
   // Company
   company_name: z.string().min(1, 'Název společnosti je povinný'),
   ico: z.string().length(8, 'IČO musí mít 8 číslic').regex(/^\d+$/, 'IČO musí obsahovat pouze číslice'),
-  dic: z.string().optional(),
-  website: z.string().optional(),
+  dic: z.string()
+    .optional()
+    .refine(val => !val || val.length === 0 || /^[A-Z]{2}\d{8,10}$/.test(val), {
+      message: 'DIČ musí být ve formátu CZ12345678',
+    }),
+  website: z.string()
+    .optional()
+    .refine(val => !val || val.length === 0 || /^https?:\/\/.+\..+/.test(val), {
+      message: 'Zadejte platnou URL (např. https://example.cz)',
+    }),
   industry: z.string().optional(),
   
   // Billing address
   billing_street: z.string().optional(),
   billing_city: z.string().optional(),
-  billing_zip: z.string().optional(),
+  billing_zip: z.string()
+    .optional()
+    .refine(val => !val || val.length === 0 || /^\d{3}\s?\d{2}$/.test(val), {
+      message: 'PSČ musí mít formát 12345 nebo 123 45',
+    }),
   billing_country: z.string().optional(),
   billing_email: z.string().email('Neplatný formát e-mailu').optional().or(z.literal('')),
   
@@ -95,6 +113,15 @@ const onboardingSchema = z.object({
 }, {
   message: 'Musíte potvrdit objednávku',
   path: ['orderConfirmed']
+}).refine(data => {
+  // If not using signatories for project, must have at least 1 project contact
+  if (!data.useSignatoriesForProject) {
+    return data.projectContacts.length >= 1;
+  }
+  return true;
+}, {
+  message: 'Přidejte alespoň jednu kontaktní osobu pro projekt',
+  path: ['projectContacts']
 });
 
 type OnboardingFormData = z.infer<typeof onboardingSchema>;
@@ -133,25 +160,19 @@ const TEST_LEAD = {
 
 export default function OnboardingForm() {
   const { leadId } = useParams<{ leadId: string }>();
-  const { getLeadById, markLeadAsConverted, updateLead } = useLeadsData();
-  const { addClient, addContact, getColleagueById } = useCRMData();
+  const { lookupCompany, isLoading: isAresLoading } = useAresLookup();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAresLoading, setIsAresLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [leadNotFound, setLeadNotFound] = useState(false);
   const [icoChanged, setIcoChanged] = useState(false);
   const [originalIco, setOriginalIco] = useState<string>('');
+  const [lead, setLead] = useState<OnboardingLead | null>(null);
 
-  // Get lead from database or use test lead for development
-  const dbLead = leadId ? getLeadById(leadId) : undefined;
-  const lead = dbLead || (leadId === 'test-lead' ? TEST_LEAD : undefined);
-  
-  // Get owner colleague info for contact display
-  const ownerColleague = lead?.owner_id ? getColleagueById(lead.owner_id) : null;
-  const ownerEmail = ownerColleague?.email || (lead as any)?.owner_email || 'info@socials.cz';
-  const ownerName = ownerColleague?.full_name || (lead as any)?.owner_name || 'tým Socials';
+  // Owner info from lead data
+  const ownerEmail = lead?.owner_email || 'info@socials.cz';
+  const ownerName = lead?.owner_name || 'tým Socials';
   
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
@@ -187,44 +208,93 @@ export default function OnboardingForm() {
   const watchUseSignatories = form.watch('useSignatoriesForProject');
   const watchSignatories = form.watch('signatories');
 
-  // Load lead data
+  // Load lead data from Edge Function
   useEffect(() => {
-    if (!leadId) {
-      setLeadNotFound(true);
-      setIsLoading(false);
-      return;
+    async function fetchLead() {
+      if (!leadId) {
+        setLeadNotFound(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle test lead for development
+      if (leadId === 'test-lead') {
+        const testLead = TEST_LEAD as unknown as OnboardingLead;
+        setLead(testLead);
+        setOriginalIco(testLead.ico);
+        form.reset({
+          company_name: testLead.company_name,
+          ico: testLead.ico,
+          dic: testLead.dic || '',
+          website: testLead.website || '',
+          industry: testLead.industry || '',
+          billing_street: testLead.billing_street || '',
+          billing_city: testLead.billing_city || '',
+          billing_zip: testLead.billing_zip || '',
+          billing_country: testLead.billing_country || 'Česká republika',
+          billing_email: testLead.billing_email || '',
+          signatories: [{
+            name: testLead.contact_name,
+            position: testLead.contact_position || '',
+            email: testLead.contact_email || '',
+            phone: testLead.contact_phone || '',
+          }],
+          useSignatoriesForProject: true,
+          projectContacts: [],
+          startDate: startOfMonth(addMonths(new Date(), 1)),
+          orderConfirmed: false,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke('get-onboarding-lead', {
+          body: { leadId },
+        });
+
+        if (error || data?.error) {
+          console.error('Failed to fetch lead:', error || data?.error);
+          setLeadNotFound(true);
+          setIsLoading(false);
+          return;
+        }
+
+        const fetchedLead = data.lead as OnboardingLead;
+        setLead(fetchedLead);
+        setOriginalIco(fetchedLead.ico);
+        form.reset({
+          company_name: fetchedLead.company_name,
+          ico: fetchedLead.ico,
+          dic: fetchedLead.dic || '',
+          website: fetchedLead.website || '',
+          industry: fetchedLead.industry || '',
+          billing_street: fetchedLead.billing_street || '',
+          billing_city: fetchedLead.billing_city || '',
+          billing_zip: fetchedLead.billing_zip || '',
+          billing_country: fetchedLead.billing_country || 'Česká republika',
+          billing_email: fetchedLead.billing_email || '',
+          signatories: [{
+            name: fetchedLead.contact_name,
+            position: fetchedLead.contact_position || '',
+            email: fetchedLead.contact_email || '',
+            phone: fetchedLead.contact_phone || '',
+          }],
+          useSignatoriesForProject: true,
+          projectContacts: [],
+          startDate: startOfMonth(addMonths(new Date(), 1)),
+          orderConfirmed: false,
+        });
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error fetching lead:', err);
+        setLeadNotFound(true);
+        setIsLoading(false);
+      }
     }
-    
-    if (lead) {
-      setOriginalIco(lead.ico);
-      form.reset({
-        company_name: lead.company_name,
-        ico: lead.ico,
-        dic: lead.dic || '',
-        website: lead.website || '',
-        industry: lead.industry || '',
-        billing_street: lead.billing_street || '',
-        billing_city: lead.billing_city || '',
-        billing_zip: lead.billing_zip || '',
-        billing_country: lead.billing_country || 'Česká republika',
-        billing_email: lead.billing_email || '',
-        signatories: [{
-          name: lead.contact_name,
-          position: lead.contact_position || '',
-          email: lead.contact_email || '',
-          phone: lead.contact_phone || '',
-        }],
-        useSignatoriesForProject: true,
-        projectContacts: [],
-        startDate: startOfMonth(addMonths(new Date(), 1)),
-        orderConfirmed: false,
-      });
-      setIsLoading(false);
-    } else {
-      setLeadNotFound(true);
-      setIsLoading(false);
-    }
-  }, [leadId, lead, form]);
+
+    fetchLead();
+  }, [leadId, form]);
 
   // Watch IČO for changes
   const watchedIco = form.watch('ico');
@@ -242,21 +312,26 @@ export default function OnboardingForm() {
       return;
     }
     
-    setIsAresLoading(true);
-    try {
-      const data = await mockAresLookup(ico);
-      if (data) {
-        form.setValue('company_name', data.company_name);
+    const data = await lookupCompany(ico);
+    if (data) {
+      form.setValue('company_name', data.name);
+      if (data.dic) {
         form.setValue('dic', data.dic);
-        form.setValue('billing_street', data.street);
-        form.setValue('billing_city', data.city);
-        form.setValue('billing_zip', data.zip);
-        form.setValue('billing_country', data.country);
       }
-    } catch (error) {
-      console.error('ARES lookup failed:', error);
-    } finally {
-      setIsAresLoading(false);
+      // Parse address - ARES returns full address as string
+      if (data.address) {
+        // Try to parse Czech address format: "Street Number, ZIP City"
+        const addressMatch = data.address.match(/^(.+?),?\s*(\d{3}\s?\d{2})\s+(.+)$/);
+        if (addressMatch) {
+          form.setValue('billing_street', addressMatch[1].trim());
+          form.setValue('billing_zip', addressMatch[2].replace(/\s/g, ''));
+          form.setValue('billing_city', addressMatch[3].trim());
+        } else {
+          // Fallback: put entire address in street field
+          form.setValue('billing_street', data.address);
+        }
+        form.setValue('billing_country', 'Česká republika');
+      }
     }
   };
 
@@ -266,89 +341,35 @@ export default function OnboardingForm() {
     setIsSubmitting(true);
     
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Get primary signatory
-      const primarySignatory = data.signatories[0];
-      
-      // Create new client
-      const newClient = await addClient({
-        name: data.company_name,
-        brand_name: data.company_name,
-        ico: data.ico,
-        dic: data.dic || null,
-        website: data.website || '',
-        country: data.billing_country || 'Česká republika',
-        industry: data.industry || '',
-        status: 'active',
-        tier: 'standard',
-        sales_representative_id: lead.owner_id,
-        billing_street: data.billing_street || null,
-        billing_city: data.billing_city || null,
-        billing_zip: data.billing_zip || null,
-        billing_country: data.billing_country || null,
-        billing_email: data.billing_email || null,
-        main_contact_name: primarySignatory.name,
-        main_contact_email: primarySignatory.email,
-        main_contact_phone: primarySignatory.phone || '',
-        acquisition_channel: lead.source,
-        start_date: format(data.startDate, 'yyyy-MM-dd'),
-        created_by: lead.owner_id,
-        end_date: null,
-        notes: '',
-        pinned_notes: '',
+      // Prepare project contacts
+      const projectContacts = data.useSignatoriesForProject 
+        ? data.signatories.map(s => ({ name: s.name, email: s.email, phone: s.phone }))
+        : data.projectContacts;
+
+      // Submit form via Edge Function
+      const { data: result, error } = await supabase.functions.invoke('submit-onboarding-form', {
+        body: {
+          leadId: lead.id,
+          company_name: data.company_name,
+          ico: data.ico,
+          dic: data.dic || null,
+          website: data.website || null,
+          industry: data.industry || null,
+          billing_street: data.billing_street || null,
+          billing_city: data.billing_city || null,
+          billing_zip: data.billing_zip || null,
+          billing_country: data.billing_country || null,
+          billing_email: data.billing_email || null,
+          signatories: data.signatories,
+          projectContacts,
+          startDate: format(data.startDate, 'yyyy-MM-dd'),
+        },
       });
-      
-      // Create signatory contacts
-      for (let index = 0; index < data.signatories.length; index++) {
-        const signatory = data.signatories[index];
-        await addContact({
-          client_id: newClient.id,
-          name: signatory.name,
-          position: signatory.position || null,
-          email: signatory.email,
-          phone: signatory.phone || null,
-          is_primary: index === 0,
-          is_decision_maker: true,
-          notes: 'Osoba pro podpis smlouvy',
-        });
+
+      if (error || result?.error) {
+        console.error('Submission failed:', error || result?.error);
+        return;
       }
-      
-      // Create project contacts
-      if (!data.useSignatoriesForProject) {
-        // Create separate project contacts
-        for (const contact of data.projectContacts) {
-          // Check if not duplicate of signatory
-          const isDuplicate = data.signatories.some(s => s.email === contact.email);
-          if (!isDuplicate) {
-            await addContact({
-              client_id: newClient.id,
-              name: contact.name,
-              position: null,
-              email: contact.email,
-              phone: contact.phone || null,
-              is_primary: false,
-              is_decision_maker: false,
-              notes: 'Projektový kontakt pro Freelo',
-            });
-          }
-        }
-      }
-      
-      // Generate contract URL (mock - prepared for PandaDoc integration)
-      const contractSlug = data.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const mockContractUrl = `https://app.pandadoc.com/documents/smlouva-${contractSlug}-${Date.now()}`;
-      
-      // Update lead with onboarding completion and contract info
-      await updateLead(lead.id, {
-        onboarding_form_completed_at: new Date().toISOString(),
-        contract_url: mockContractUrl,
-        contract_created_at: new Date().toISOString(),
-      });
-      
-      // Mark lead as converted
-      await markLeadAsConverted(lead.id, newClient.id, '');
       
       setIsSubmitted(true);
     } catch (error) {

@@ -33,7 +33,8 @@ import {
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
-import type { Lead, CostModel, ClientTier, BillingModel, LeadSource } from '@/types/crm';
+import { supabase } from '@/integrations/supabase/client';
+import type { Lead, CostModel, ClientTier, BillingModel, LeadSource, Client } from '@/types/crm';
 import { toast } from '@/components/ui/sonner';
 
 const convertSchema = z.object({
@@ -98,7 +99,7 @@ interface ConvertLeadDialogProps {
 
 export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: ConvertLeadDialogProps) {
   const { markLeadAsConverted } = useLeadsData();
-  const { addClient, addContact, addEngagement, addAssignment, colleagues, services } = useCRMData();
+  const { addClient, addContact, addEngagement, addAssignment, addEngagementService, deleteClient, colleagues, services } = useCRMData();
   const { user } = useAuth();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
@@ -173,14 +174,30 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         contact_is_primary: true,
         contact_is_decision_maker: true,
         contact_notes: '',
-        engagement_name: `${lead.potential_service} - ${lead.company_name}`,
-        engagement_type: lead.offer_type,
+        engagement_name: lead.potential_services?.[0]?.name 
+          ? `${lead.potential_services[0].name} - ${lead.company_name}`
+          : `${lead.company_name}`,
+        engagement_type: (() => {
+          if (!lead.potential_services?.length) return 'retainer';
+          const hasMonthly = lead.potential_services.some(s => s.billing_type === 'monthly');
+          return hasMonthly ? 'retainer' : 'one_off';
+        })(),
         billing_model: 'fixed_fee',
         currency: lead.currency,
-        monthly_fee: lead.offer_type === 'retainer' ? lead.estimated_price : 0,
-        one_off_fee: lead.offer_type === 'one_off' ? lead.estimated_price : 0,
+        monthly_fee: (() => {
+          if (!lead.potential_services?.length) return lead.estimated_price;
+          return lead.potential_services
+            .filter(s => s.billing_type === 'monthly')
+            .reduce((sum, s) => sum + s.price, 0) || lead.estimated_price;
+        })(),
+        one_off_fee: (() => {
+          if (!lead.potential_services?.length) return 0;
+          return lead.potential_services
+            .filter(s => s.billing_type === 'one_off')
+            .reduce((sum, s) => sum + s.price, 0);
+        })(),
         target_margin_percent: 40,
-        start_date: new Date().toISOString().split('T')[0],
+        start_date: lead.onboarding_start_date || new Date().toISOString().split('T')[0],
         end_date: '',
         notice_period_months: 1,
         primary_service_id: '',
@@ -214,9 +231,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const executeConversion = async (data: ConvertFormData) => {
     if (!lead) return;
 
+    let newClient: Client | null = null;
+
     try {
-      // 1. Create Client
-      const newClient = await addClient({
+      // 1. Create Client (without legacy contact fields)
+      newClient = await addClient({
         name: data.client_name,
         brand_name: data.brand_name,
         ico: data.ico,
@@ -232,9 +251,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         billing_zip: data.billing_zip || null,
         billing_country: data.billing_country || null,
         billing_email: data.billing_email || null,
-        main_contact_name: data.contact_name,
-        main_contact_email: data.contact_email || '',
-        main_contact_phone: data.contact_phone || '',
+        main_contact_name: '',  // Legacy - empty
+        main_contact_email: '', // Legacy - empty
+        main_contact_phone: '', // Legacy - empty
         acquisition_channel: data.acquisition_channel,
         start_date: data.start_date,
         end_date: data.end_date || null,
@@ -243,7 +262,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         created_by: user?.id || null,
       });
 
-      // 2. Create ClientContact
+      // 2. Create Primary ClientContact
       const newContact = await addContact({
         client_id: newClient.id,
         name: data.contact_name,
@@ -255,7 +274,58 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         notes: data.contact_notes || '',
       });
 
-      // 3. Create Engagement with document links from lead
+      // 2.1 Create Fakturoid subject (non-blocking, don't fail conversion)
+      // Called AFTER contact creation so we can pass the phone number
+      try {
+        const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
+          'fakturoid-create-subject',
+          { body: { client_id: newClient.id, phone: data.contact_phone || undefined } }
+        );
+
+        if (fakturoidError || !fakturoidResult?.success) {
+          console.warn('Fakturoid subject creation failed:', fakturoidError || fakturoidResult?.error);
+          toast.warning('Klient vytvořen, ale nepodařilo se vytvořit kontakt ve Fakturoid. Můžete to zkusit později.');
+        }
+      } catch (fakturoidErr) {
+        console.warn('Fakturoid integration error:', fakturoidErr);
+        toast.warning('Klient vytvořen, ale Fakturoid integrace selhala.');
+      }
+
+      // 2.5 Create contacts from onboarding signatories
+      const addedEmails = new Set<string>([data.contact_email || ''].filter(Boolean));
+      
+      for (const signatory of lead.onboarding_signatories || []) {
+        if (!signatory.email || addedEmails.has(signatory.email)) continue;
+        addedEmails.add(signatory.email);
+        await addContact({
+          client_id: newClient.id,
+          name: signatory.name,
+          position: signatory.position || null,
+          email: signatory.email,
+          phone: signatory.phone || null,
+          is_primary: false,
+          is_decision_maker: true,
+          notes: 'Z onboarding formuláře - podpisující osoba',
+        });
+      }
+
+      // 2.6 Create contacts from onboarding project contacts
+      for (const projectContact of lead.onboarding_project_contacts || []) {
+        if (!projectContact.email || addedEmails.has(projectContact.email)) continue;
+        addedEmails.add(projectContact.email);
+        await addContact({
+          client_id: newClient.id,
+          name: projectContact.name,
+          position: null,
+          email: projectContact.email,
+          phone: projectContact.phone || null,
+          is_primary: false,
+          is_decision_maker: false,
+          notes: 'Z onboarding formuláře - projektový kontakt',
+        });
+      }
+
+      // 3. Create Engagement
       const newEngagement = await addEngagement({
         client_id: newClient.id,
         contact_person_id: newContact.id,
@@ -272,10 +342,33 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         freelo_url: null,
         platforms: [],
         notes: data.engagement_notes || '',
-        // Copy document links from lead
         offer_url: lead.offer_url || null,
         contract_url: lead.contract_url || null,
       });
+
+      // 3.5 Create EngagementServices from lead's potential_services
+      for (const leadService of lead.potential_services || []) {
+        await addEngagementService({
+          engagement_id: newEngagement.id,
+          service_id: leadService.service_id,
+          name: leadService.name,
+          price: leadService.price,
+          billing_type: leadService.billing_type,
+          currency: leadService.currency,
+          is_active: true,
+          notes: '',
+          selected_tier: leadService.selected_tier,
+          creative_boost_min_credits: null,
+          creative_boost_max_credits: null,
+          creative_boost_price_per_credit: null,
+          invoicing_status: leadService.billing_type === 'one_off' ? 'pending' : 'not_applicable',
+          invoiced_at: null,
+          invoiced_in_period: null,
+          invoice_id: null,
+          upsold_by_id: null,
+          upsell_commission_percent: null,
+        });
+      }
 
       // 4. Create Assignments for team members
       for (const member of teamMembers.filter(m => m.colleague_id && m.role)) {
@@ -294,14 +387,26 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         });
       }
 
-      // 5. Mark lead as converted
+      // 5. Mark lead as converted (LAST - so failure above keeps lead unconverted)
       await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
 
       toast.success('Lead byl úspěšně převeden na zakázku');
       onSuccess();
     } catch (error) {
       console.error('Error converting lead:', error);
-      toast.error('Chyba při převodu leadu');
+      
+      // Attempt rollback - delete client (cascades to contacts, engagements, etc.)
+      if (newClient) {
+        try {
+          await deleteClient(newClient.id);
+          toast.error('Chyba při převodu leadu. Změny byly vráceny zpět.');
+        } catch (rollbackError) {
+          console.error('Rollback failed:', rollbackError);
+          toast.error('Chyba při převodu leadu. Některé záznamy mohly být vytvořeny - kontaktujte admina.');
+        }
+      } else {
+        toast.error('Chyba při vytváření klienta');
+      }
     }
   };
 

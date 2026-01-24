@@ -107,7 +107,9 @@ export interface Client {
   end_date: string | null;
   notes: string;
   pinned_notes: string;
-  created_by: string;
+  // External integrations
+  fakturoid_subject_id: number | null;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -143,19 +145,16 @@ export interface Service {
   service_type: ServiceType;
   category: ServiceCategory;
   description: string;
-  offer_description: string | null; // Detailní popis pro nabídky
   external_url: string | null;
   base_price: number;
   currency: string;
+  billing_type: 'monthly' | 'one_off';
   tier_pricing: CoreServicePricing[] | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
   // Default values for offer generation
   default_deliverables: string[] | null;     // Co klient dostane
-  default_frequency: string | null;          // Jak často (např. "8 příspěvků/měsíc")
-  default_turnaround: string | null;         // Doba dodání
-  default_requirements: string[] | null;     // Co potřebujeme od klienta
 }
 
 export interface ClientService {
@@ -366,6 +365,9 @@ export interface InvoiceLineItem {
   hourly_rate: number | null;
   currency: string;
   is_reverse_charge: boolean;
+  // Fakturoid fields
+  vat_rate: number;
+  unit_name: string;
   // Timestamps
   created_at: string;
   updated_at: string;
@@ -431,8 +433,6 @@ export type LeadSource =
   | 'website'
   | 'other';
 
-export type LeadOfferType = 'retainer' | 'one_off';
-
 // Service in a lead offer
 export interface LeadService {
   id: string;
@@ -462,6 +462,10 @@ export interface Lead {
   website: string | null;
   industry: string | null;
   
+  // Court registration info (from ARES)
+  court_name: string | null;
+  court_file_number: string | null;
+  
   // Billing address
   billing_street: string | null;
   billing_city: string | null;
@@ -485,9 +489,7 @@ export interface Lead {
   summary: string;
   
   // Offer
-  potential_service: string;
   potential_services: LeadService[];
-  offer_type: LeadOfferType;
   estimated_price: number;
   currency: string;
   probability_percent: number;
@@ -514,10 +516,24 @@ export interface Lead {
   onboarding_form_url: string | null;
   onboarding_form_completed_at: string | null;
   
+  // Onboarding form data
+  onboarding_signatories: Array<{
+    name: string;
+    position?: string;
+    email: string;
+    phone?: string;
+  }> | null;
+  onboarding_project_contacts: Array<{
+    name: string;
+    email: string;
+    phone?: string;
+  }> | null;
+  onboarding_start_date: string | null;
+  
   // Contract tracking
+  digisign_id: string | null;
   contract_url: string | null;
   contract_created_at: string | null;
-  contract_sent_at: string | null;
   contract_signed_at: string | null;
   
   // Meta

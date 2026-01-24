@@ -1,4 +1,4 @@
-import type { ServiceTier, LeadOfferType } from './crm';
+import type { ServiceTier } from './crm';
 
 // Portfolio link for showcasing work
 export interface PortfolioLink {
@@ -46,7 +46,7 @@ export interface PublicOffer {
   portfolio_links: PortfolioLink[];
   total_price: number;
   currency: string;
-  offer_type: LeadOfferType;
+  offer_type: 'retainer' | 'one_off'; // Derived from services' billing_type
   valid_until: string | null;
   is_active: boolean;
   viewed_at: string | null;

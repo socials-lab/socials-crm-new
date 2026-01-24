@@ -124,7 +124,7 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
                 <TableCell>{getOwnerName(lead.owner_id)}</TableCell>
                 <TableCell>
                   <Badge variant="secondary" className="text-xs">
-                    {lead.potential_service}
+                    {lead.potential_services?.[0]?.name || '-'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">

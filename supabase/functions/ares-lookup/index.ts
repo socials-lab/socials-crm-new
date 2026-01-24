@@ -12,7 +12,23 @@ interface AresResponse {
   sidlo?: { textovaAdresa: string };
   dic?: string;
   pravniForma?: string;
+  // Court registration info is in dalsiUdaje
+  dalsiUdaje?: Array<{
+    datovyZdroj: string;
+    spisovaZnacka?: string;
+  }>;
 }
+
+// Map court codes to full names
+const COURT_NAMES: Record<string, string> = {
+  MSPH: "Městský soud v Praze",
+  KSOS: "Krajský soud v Ostravě",
+  KSCB: "Krajský soud v Českých Budějovicích",
+  KSHK: "Krajský soud v Hradci Králové",
+  KSBR: "Krajský soud v Brně",
+  KSPL: "Krajský soud v Plzni",
+  KSUL: "Krajský soud v Ústí nad Labem",
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -109,6 +125,24 @@ serve(async (req) => {
       duration_ms: durationMs,
     });
     
+    // Extract court registration info from dalsiUdaje (vr = veřejný rejstřík)
+    const vrData = data.dalsiUdaje?.find(d => d.datovyZdroj === "vr");
+    
+    let courtName: string | null = null;
+    let courtFileNumber: string | null = null;
+    
+    if (vrData?.spisovaZnacka) {
+      // spisovaZnacka format: "C 223554/MSPH"
+      courtFileNumber = vrData.spisovaZnacka;
+      
+      // Extract court code from the end (e.g., MSPH)
+      const match = vrData.spisovaZnacka.match(/\/([A-Z]+)$/);
+      if (match) {
+        const courtCode = match[1];
+        courtName = COURT_NAMES[courtCode] || null;
+      }
+    }
+    
     return new Response(
       JSON.stringify({
         ico: data.ico,
@@ -116,6 +150,8 @@ serve(async (req) => {
         address: data.sidlo?.textovaAdresa || '',
         dic: data.dic || null,
         legal_form: data.pravniForma || null,
+        court_name: courtName,
+        court_file_number: courtFileNumber,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

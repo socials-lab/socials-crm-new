@@ -88,7 +88,6 @@ new_lead → meeting_done → waiting_access → access_received
 ### Contract Tracking
 - [ ] Track contract_url
 - [ ] Track contract_created_at
-- [ ] Track contract_sent_at
 - [ ] Track contract_signed_at
 
 ### Lead Conversion

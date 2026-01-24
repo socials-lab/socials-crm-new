@@ -85,16 +85,40 @@ serve(async (req) => {
 
     const tokenData = await tokenResponse.json();
     
+    console.log("Token response:", JSON.stringify({ 
+      hasAccessToken: !!tokenData.access_token, 
+      hasRefreshToken: !!tokenData.refresh_token,
+      scope: tokenData.scope,
+      error: tokenData.error,
+      error_description: tokenData.error_description
+    }));
+    
+    if (tokenData.error) {
+      return new Response(
+        JSON.stringify({ error: `Google OAuth chyba: ${tokenData.error_description || tokenData.error}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
     if (!tokenData.access_token || !tokenData.refresh_token) {
       return new Response(
-        JSON.stringify({ error: "Neplatná odpověď z Google OAuth" }),
+        JSON.stringify({ error: "Neplatná odpověď z Google OAuth - chybí tokeny" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
 
-    // Upsert calendar tokens
+    // Parse granted scopes from token response
+    // Google returns scope as space-separated string in the response
+    const grantedScopes = tokenData.scope 
+      ? tokenData.scope.split(' ').filter((s: string) => s.length > 0)
+      : ['https://www.googleapis.com/auth/calendar']; // Default fallback
+
+    console.log("Attempting to upsert tokens for user:", user.id);
+    console.log("Scopes to store:", JSON.stringify(grantedScopes));
+
+    // Upsert calendar tokens with scopes
     const { error: upsertError } = await supabaseAdmin
       .from("calendar_tokens")
       .upsert({
@@ -102,16 +126,21 @@ serve(async (req) => {
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
         expires_at: expiresAt.toISOString(),
+        scopes: grantedScopes,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id'
       });
 
     if (upsertError) {
-      console.error("Token storage error:", upsertError);
+      console.error("Token storage error - full details:", JSON.stringify(upsertError, null, 2));
       return new Response(
-        JSON.stringify({ error: "Nepodařilo se uložit tokeny" }),
+        JSON.stringify({ error: `Nepodařilo se uložit tokeny: ${upsertError.message || upsertError.code || 'Unknown error'}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    console.log("Tokens stored successfully");
 
     return new Response(
       JSON.stringify({ 

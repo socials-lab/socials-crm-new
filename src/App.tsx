@@ -50,8 +50,6 @@ const App = () => (
                 <MeetingsDataProvider>
                   <FeedbackProvider>
                     <TooltipProvider>
-                      <Toaster />
-                      <Sonner />
                       <BrowserRouter>
                         <Routes>
                           {/* Public routes */}
@@ -85,6 +83,7 @@ const App = () => (
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </BrowserRouter>
+                      <Sonner />
                     </TooltipProvider>
                   </FeedbackProvider>
                 </MeetingsDataProvider>

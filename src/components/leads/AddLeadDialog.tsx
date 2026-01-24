@@ -58,12 +58,13 @@ const leadSchema = z.object({
   client_message: z.string().optional().nullable(),
   ad_spend_monthly: z.coerce.number().min(0).optional().nullable(),
   summary: z.string(),
-  potential_service: z.string().min(1, 'Služba je povinná'),
-  offer_type: z.enum(['retainer', 'one_off'] as const),
   estimated_price: z.coerce.number().min(0, 'Cena musí být kladná'),
   currency: z.string().default('CZK'),
   probability_percent: z.coerce.number().min(0).max(100),
   offer_url: z.string().url('Zadejte platnou URL').or(z.literal('')).optional().nullable(),
+  // Court registration info from ARES (hidden fields)
+  court_name: z.string().optional().nullable(),
+  court_file_number: z.string().optional().nullable(),
 });
 
 type LeadFormData = z.infer<typeof leadSchema>;
@@ -84,15 +85,14 @@ const SOURCE_OPTIONS: { value: LeadSource; label: string }[] = [
   { value: 'other', label: 'Jiný' },
 ];
 
-const SERVICE_OPTIONS = [
-  'Performance Boost',
-  'Socials Boost',
-  'Creative Boost',
-  'Lead Gen Funnel',
-  'Analytics Setup',
-  'Strategy Consulting',
-];
-
+// Helper function to derive offer type from services
+function getOfferTypeFromServices(services: Array<{ billing_type: 'monthly' | 'one_off' }>): 'retainer' | 'one_off' {
+  if (!services?.length) return 'retainer';
+  const hasMonthly = services.some(s => s.billing_type === 'monthly');
+  const hasOneOff = services.some(s => s.billing_type === 'one_off');
+  if (hasMonthly && hasOneOff) return 'retainer'; // Mixed: default to retainer
+  return hasMonthly ? 'retainer' : 'one_off';
+}
 
 export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) {
   const { addLead, updateLead } = useLeadsData();
@@ -129,6 +129,13 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
           form.setValue('billing_street', result.address);
         }
         form.setValue('billing_country', 'Česká republika');
+      }
+      // Set court registration info
+      if (result.court_name) {
+        form.setValue('court_name', result.court_name);
+      }
+      if (result.court_file_number) {
+        form.setValue('court_file_number', result.court_file_number);
       }
       toast.success('Údaje načteny z ARES');
     }
@@ -170,12 +177,12 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       client_message: '',
       ad_spend_monthly: null,
       summary: '',
-      potential_service: '',
-      offer_type: 'retainer',
       estimated_price: 0,
       currency: 'CZK',
       probability_percent: 30,
       offer_url: '',
+      court_name: '',
+      court_file_number: '',
     },
   });
 
@@ -203,12 +210,12 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         client_message: lead.client_message || '',
         ad_spend_monthly: lead.ad_spend_monthly,
         summary: lead.summary,
-        potential_service: lead.potential_service,
-        offer_type: lead.offer_type,
         estimated_price: lead.estimated_price,
         currency: lead.currency,
         probability_percent: lead.probability_percent,
         offer_url: lead.offer_url || '',
+        court_name: lead.court_name || '',
+        court_file_number: lead.court_file_number || '',
       });
     } else {
       form.reset({
@@ -233,12 +240,12 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         client_message: '',
         ad_spend_monthly: null,
         summary: '',
-        potential_service: '',
-        offer_type: 'retainer',
         estimated_price: 0,
         currency: 'CZK',
         probability_percent: 30,
         offer_url: '',
+        court_name: '',
+        court_file_number: '',
       });
     }
   }, [lead, form]);
@@ -266,8 +273,6 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       client_message: data.client_message || null,
       ad_spend_monthly: data.ad_spend_monthly || null,
       summary: data.summary,
-      potential_service: data.potential_service,
-      offer_type: data.offer_type,
       estimated_price: data.estimated_price,
       currency: data.currency,
       probability_percent: data.probability_percent,
@@ -282,12 +287,14 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       onboarding_form_completed_at: lead?.onboarding_form_completed_at || null,
       contract_url: lead?.contract_url || null,
       contract_created_at: lead?.contract_created_at || null,
-      contract_sent_at: lead?.contract_sent_at || null,
       contract_signed_at: lead?.contract_signed_at || null,
       offer_sent_at: lead?.offer_sent_at || null,
       offer_sent_by_id: lead?.offer_sent_by_id || null,
       created_by: user?.id || null,
       updated_by: user?.id || null,
+      // Court registration info from ARES
+      court_name: data.court_name || lead?.court_name || null,
+      court_file_number: data.court_file_number || lead?.court_file_number || null,
     };
 
     if (lead) {
@@ -694,109 +701,6 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
               />
             </div>
 
-            {/* Offer Section */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm border-b pb-2">Nabídka</h4>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="potential_service"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Služba *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Vyberte službu" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {SERVICE_OPTIONS.map(s => (
-                            <SelectItem key={s} value={s}>
-                              {s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="offer_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Typ nabídky</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="retainer">Paušál</SelectItem>
-                          <SelectItem value="one_off">Jednorázová zakázka</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <FormField
-                  control={form.control}
-                  name="estimated_price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Odhadovaná cena</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="50000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="currency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Měna</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="CZK">CZK</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="offer_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Odkaz na nabídku</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://freelo.io/project/..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

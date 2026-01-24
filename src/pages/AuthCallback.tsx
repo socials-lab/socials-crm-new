@@ -81,11 +81,26 @@ export default function AuthCallback() {
             body: { code, redirect_uri: redirectUri },
           });
           
-          if (error || data?.error) {
-            console.error('[AuthCallback] Google OAuth error:', error || data?.error);
-            toast.error('Chyba při propojování Google kalendáře: ' + (error?.message || data?.error));
+          console.log('[AuthCallback] OAuth response:', { data, error });
+          
+          if (error) {
+            console.error('[AuthCallback] Google OAuth error object:', error);
+            // Try to get error message - it might be in different places depending on error type
+            let errorDetail = error.message;
+            try {
+              if (error.context?.json) {
+                const jsonError = await error.context.json();
+                errorDetail = jsonError.error || error.message;
+              }
+            } catch {
+              // Ignore JSON parsing errors
+            }
+            toast.error('Chyba: ' + errorDetail);
+          } else if (data?.error) {
+            console.error('[AuthCallback] Google OAuth error from data:', data.error);
+            toast.error('Chyba: ' + data.error);
           } else {
-            toast.success('Google kalendář byl úspěšně propojen!');
+            toast.success('Google účet byl úspěšně propojen (kalendář a email)!');
           }
           
           // Redirect back to meetings page

@@ -21,8 +21,6 @@ const LEAD_FIELD_LABELS: Record<string, string> = {
   client_message: 'Zpráva od klienta',
   ad_spend_monthly: 'Měsíční investice do reklamy',
   summary: 'Shrnutí',
-  potential_service: 'Potenciální služba',
-  offer_type: 'Typ nabídky',
   estimated_price: 'Odhadovaná cena',
   probability_percent: 'Pravděpodobnost',
   offer_url: 'URL nabídky',

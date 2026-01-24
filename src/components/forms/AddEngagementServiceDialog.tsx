@@ -39,7 +39,6 @@ const engagementServiceSchema = z.object({
   service_id: z.string().min(1, 'Vyberte službu'),
   name: z.string().min(1, 'Název je povinný'),
   price: z.coerce.number().min(0, 'Cena musí být kladná'),
-  billing_type: z.enum(['monthly', 'one_off'] as const),
   currency: z.string().min(1, 'Měna je povinná'),
   notes: z.string(),
   // Core service tier
@@ -78,7 +77,6 @@ export function AddEngagementServiceDialog({
       service_id: '',
       name: '',
       price: 0,
-      billing_type: 'monthly',
       currency: 'CZK',
       notes: '',
       selected_tier: null,
@@ -147,16 +145,18 @@ export function AddEngagementServiceDialog({
   };
 
   const handleSubmit = (data: EngagementServiceFormData) => {
-    const isOneOff = data.billing_type === 'one_off';
     const selectedService = services.find(s => s.id === data.service_id);
-    const isCore = selectedService?.service_type === 'core';
+    if (!selectedService) return;
+    
+    const isOneOff = selectedService.billing_type === 'one_off';
+    const isCore = selectedService.service_type === 'core';
     
     onSubmit({
       engagement_id: engagementId,
       service_id: data.service_id,
       name: data.name,
       price: data.price,
-      billing_type: data.billing_type,
+      billing_type: selectedService.billing_type,
       currency: data.currency,
       is_active: true,
       notes: data.notes,
@@ -359,27 +359,6 @@ export function AddEngagementServiceDialog({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="billing_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Typ fakturace</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="monthly">Měsíčně</SelectItem>
-                          <SelectItem value="one_off">Jednorázově</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
             )}
 

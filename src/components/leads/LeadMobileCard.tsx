@@ -108,7 +108,7 @@ export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps
               ~{lead.estimated_price.toLocaleString()} {lead.currency}
             </span>
             <Badge variant="secondary" className="text-xs ml-2">
-              {lead.potential_service}
+              {lead.potential_services?.[0]?.name || '-'}
             </Badge>
           </div>
           {lead.offer_url && (

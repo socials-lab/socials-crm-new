@@ -13,14 +13,52 @@ export function useDigiSign() {
     setError(null);
     
     try {
+      console.log('Creating contract for lead:', leadId);
       const { data, error } = await supabase.functions.invoke('digisign-create-contract', {
         body: { lead_id: leadId, template_id: templateId },
       });
       
-      if (error) throw error;
+      console.log('Edge Function response:', { data, error });
       
+      // Check for error in response data first (Edge Function error messages)
       if (data?.error) {
         throw new Error(data.error);
+      }
+      
+      // Then check for Supabase client error
+      if (error) {
+        // Extract detailed error info
+        const context = (error as any).context;
+        
+        // If context is a Response, try to read the body
+        if (context instanceof Response) {
+          try {
+            const responseBody = await context.json();
+            console.error('Edge Function error response:', responseBody);
+            if (responseBody?.error) {
+              throw new Error(responseBody.error);
+            }
+          } catch (parseError) {
+            // Try to read as text if JSON parsing fails
+            try {
+              const textBody = await context.text();
+              console.error('Edge Function error response (text):', textBody);
+              if (textBody) {
+                throw new Error(textBody);
+              }
+            } catch {
+              // Ignore if we can't read the body
+            }
+          }
+        }
+        
+        console.error('Supabase function error details:', {
+          message: error.message,
+          name: error.name,
+          status: (error as any).status,
+        });
+        
+        throw new Error(error.message || 'Edge Function error');
       }
       
       // Invalidate leads cache to refresh with new contract data
@@ -32,6 +70,7 @@ export function useDigiSign() {
       const errorMessage = err instanceof Error ? err.message : 'Chyba při vytváření smlouvy';
       setError(errorMessage);
       toast.error(errorMessage);
+      console.error('DigiSign contract creation error:', err);
       return null;
     } finally {
       setIsLoading(false);

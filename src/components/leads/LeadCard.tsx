@@ -9,10 +9,13 @@ interface LeadCardProps {
   onClick: () => void;
 }
 
-const OFFER_TYPE_LABELS: Record<Lead['offer_type'], string> = {
-  retainer: '/ měsíc',
-  one_off: 'jednorázově',
-};
+function getOfferTypeLabel(services: Array<{ billing_type: 'monthly' | 'one_off' }>): string {
+  if (!services?.length) return '/ měsíc';
+  const hasMonthly = services.some(s => s.billing_type === 'monthly');
+  const hasOneOff = services.some(s => s.billing_type === 'one_off');
+  if (hasMonthly && hasOneOff) return '/ měsíc'; // Mixed: default to monthly
+  return hasMonthly ? '/ měsíc' : 'jednorázově';
+}
 
 export function LeadCard({ lead, onClick }: LeadCardProps) {
   const isConverted = !!lead.converted_to_client_id;
@@ -92,7 +95,7 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
           const totalPrice = hasServices
             ? lead.potential_services.reduce((sum, s) => sum + s.price, 0)
             : 0;
-          const firstServiceName = hasServices ? lead.potential_services[0].name : lead.potential_service;
+          const firstServiceName = hasServices ? lead.potential_services[0].name : '-';
           const serviceCount = hasServices ? lead.potential_services.length : 0;
 
           return (
@@ -106,7 +109,7 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
                         ~{totalPrice.toLocaleString()} {lead.currency}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {OFFER_TYPE_LABELS[lead.offer_type]}
+                        {getOfferTypeLabel(lead.potential_services)}
                       </span>
                     </>
                   ) : (

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ExternalLink, ChevronDown, ChevronUp, Mail, Phone, Calendar, Users, Pencil, Building2, FileText, UserPlus, Star, Key, Trash2, StickyNote, Crown, Database, Briefcase, Check, X } from 'lucide-react';
+import { Search, Plus, ExternalLink, ChevronDown, ChevronUp, Mail, Phone, Calendar, Users, Pencil, Building2, FileText, UserPlus, Star, Key, Trash2, StickyNote, Crown, Database, Briefcase, Check, X, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useFakturoid } from '@/hooks/useFakturoid';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { AddContactDialog } from '@/components/clients/AddContactDialog';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -69,7 +70,9 @@ export default function Clients() {
   } = useCRMData();
   
   const { isSuperAdmin: superAdmin } = useUserRole();
-  
+  const { createSubjectInFakturoid } = useFakturoid();
+  const [creatingSubjectForClient, setCreatingSubjectForClient] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
   const [tierFilter, setTierFilter] = useState<ClientTier | 'all'>('all');
@@ -555,6 +558,45 @@ export default function Clients() {
                             {client.billing_country && <p>{client.billing_country}</p>}
                           </div>
                         )}
+                        {/* Fakturoid connection status */}
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+                          <span className="text-muted-foreground text-sm">Fakturoid:</span>
+                          {client.fakturoid_subject_id ? (
+                            <Badge variant="outline" className="text-green-600 border-green-300">
+                              Propojeno (ID: {client.fakturoid_subject_id})
+                            </Badge>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-orange-600 border-orange-300">
+                                Nepropojeno
+                              </Badge>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 px-2 text-xs"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  setCreatingSubjectForClient(client.id);
+                                  try {
+                                    const result = await createSubjectInFakturoid(client.id);
+                                    if (result?.fakturoid_subject_id) {
+                                      updateClient(client.id, { fakturoid_subject_id: result.fakturoid_subject_id });
+                                    }
+                                  } finally {
+                                    setCreatingSubjectForClient(null);
+                                  }
+                                }}
+                                disabled={creatingSubjectForClient === client.id}
+                              >
+                                {creatingSubjectForClient === client.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  'Vytvořit'
+                                )}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
