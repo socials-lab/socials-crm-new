@@ -29,12 +29,10 @@ interface CreateOfferDialogProps {
 }
 
 function generateToken(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 12; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  // Use cryptographically secure random values
+  const array = new Uint8Array(24);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 function getOfferTypeFromServices(services: Array<{ billing_type: 'monthly' | 'one_off' }>): 'retainer' | 'one_off' {
@@ -156,8 +154,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           recommendation_intro: null,
           custom_note: customNote.trim() || null,
           notion_url: notionUrl.trim() || null,
-          services: editableServices as any,
-          portfolio_links: portfolioLinks as any,
+          // Cast to unknown to satisfy Supabase's JSONB column type (typed arrays -> Json)
+          services: editableServices as unknown as Record<string, unknown>[],
+          portfolio_links: portfolioLinks as unknown as Record<string, unknown>[],
           total_price: totals.totalFinal,
           currency: lead.currency || 'CZK',
           offer_type: getOfferTypeFromServices(editableServices),

@@ -120,6 +120,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
 
   // Use fresh lead data from context to reflect updates immediately
   const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
+  const isContractCreated = !!lead?.contract_created_at;
 
   // Contract readiness validation
   const contractReadiness = useMemo(() => {
@@ -512,6 +513,8 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                   variant="outline"
                   size="sm"
                   onClick={() => setIsAddServiceOpen(true)}
+                  disabled={isContractCreated}
+                  title={isContractCreated ? 'Služby nelze upravovat po vytvoření smlouvy' : undefined}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Přidat
@@ -550,6 +553,8 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                           size="sm"
                           className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                           onClick={() => handleRemoveService(service.id)}
+                          disabled={isContractCreated}
+                          title={isContractCreated ? 'Služby nelze upravovat po vytvoření smlouvy' : undefined}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

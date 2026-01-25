@@ -27,9 +27,10 @@ export function useDigiSign() {
       
       // Then check for Supabase client error
       if (error) {
-        // Extract detailed error info
-        const context = (error as any).context;
-        
+        // Extract detailed error info - error may have a context property with Response
+        const errorWithContext = error as Error & { context?: unknown; status?: number };
+        const context = errorWithContext.context;
+
         // If context is a Response, try to read the body
         if (context instanceof Response) {
           try {
@@ -51,13 +52,13 @@ export function useDigiSign() {
             }
           }
         }
-        
+
         console.error('Supabase function error details:', {
           message: error.message,
           name: error.name,
-          status: (error as any).status,
+          status: errorWithContext.status,
         });
-        
+
         throw new Error(error.message || 'Edge Function error');
       }
       

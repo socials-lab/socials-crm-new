@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KPICard } from '@/components/shared/KPICard';
 import {
@@ -35,12 +35,19 @@ interface ActiveClientData {
 }
 
 export function ClientHistory() {
-  const { clients, engagements, getClientById } = useCRMData();
+  const { clients, engagements } = useCRMData();
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
 
-  const getActiveClientsForMonth = (year: number, month: number): ActiveClientData[] => {
+  // Pre-compute client lookup map for faster access
+  const clientMap = useMemo(() => {
+    const map = new Map<string, Client>();
+    clients.forEach(c => map.set(c.id, c));
+    return map;
+  }, [clients]);
+
+  const getActiveClientsForMonth = useCallback((year: number, month: number): ActiveClientData[] => {
     const periodStart = new Date(year, month - 1, 1);
     const periodEnd = new Date(year, month, 0);
 
@@ -55,7 +62,7 @@ export function ClientHistory() {
       const isActiveEngagement = engagement.status === 'active' || engagement.status === 'completed';
 
       if (startedBeforeOrDuring && didntEndBeforePeriod && isActiveEngagement) {
-        const client = getClientById(engagement.client_id);
+        const client = clientMap.get(engagement.client_id);
         if (client) {
           if (!activeClientMap.has(client.id)) {
             activeClientMap.set(client.id, {
@@ -72,39 +79,48 @@ export function ClientHistory() {
     });
 
     return Array.from(activeClientMap.values()).sort((a, b) => b.totalMonthlyFee - a.totalMonthlyFee);
-  };
+  }, [engagements, clientMap]);
 
-  const getNewClientsForMonth = (year: number, month: number): Client[] => {
+  // Memoize active clients for selected period
+  const activeClients = useMemo(
+    () => getActiveClientsForMonth(selectedYear, selectedMonth),
+    [getActiveClientsForMonth, selectedYear, selectedMonth]
+  );
+
+  // Memoize new clients for selected period
+  const newClients = useMemo(() => {
     return clients.filter(client => {
       if (!client.start_date) return false;
       const startDate = new Date(client.start_date);
-      return startDate.getFullYear() === year && startDate.getMonth() + 1 === month;
+      return startDate.getFullYear() === selectedYear && startDate.getMonth() + 1 === selectedMonth;
     });
-  };
+  }, [clients, selectedYear, selectedMonth]);
 
-  const getLostClientsForMonth = (year: number, month: number): Client[] => {
+  // Memoize lost clients for selected period
+  const lostClients = useMemo(() => {
     return clients.filter(client => {
       if (!client.end_date) return false;
       const endDate = new Date(client.end_date);
-      return endDate.getFullYear() === year && endDate.getMonth() + 1 === month;
+      return endDate.getFullYear() === selectedYear && endDate.getMonth() + 1 === selectedMonth;
     });
-  };
+  }, [clients, selectedYear, selectedMonth]);
 
-  const getYearlyClientCounts = (year: number): { month: string; count: number }[] => {
+  // Memoize MRR calculation
+  const mrr = useMemo(
+    () => activeClients.reduce((sum, c) => sum + c.totalMonthlyFee, 0),
+    [activeClients]
+  );
+
+  // Memoize yearly data for chart
+  const yearlyData = useMemo(() => {
     return monthNames.map((name, index) => {
-      const activeClients = getActiveClientsForMonth(year, index + 1);
+      const monthActiveClients = getActiveClientsForMonth(selectedYear, index + 1);
       return {
         month: name.substring(0, 3),
-        count: activeClients.length,
+        count: monthActiveClients.length,
       };
     });
-  };
-
-  const activeClients = getActiveClientsForMonth(selectedYear, selectedMonth);
-  const newClients = getNewClientsForMonth(selectedYear, selectedMonth);
-  const lostClients = getLostClientsForMonth(selectedYear, selectedMonth);
-  const mrr = activeClients.reduce((sum, c) => sum + c.totalMonthlyFee, 0);
-  const yearlyData = getYearlyClientCounts(selectedYear);
+  }, [getActiveClientsForMonth, selectedYear]);
 
   return (
     <div className="space-y-6">

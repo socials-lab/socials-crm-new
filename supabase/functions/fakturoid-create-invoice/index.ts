@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import {
   getFakturoidAccessToken,
   getAccountSlug,
@@ -148,22 +148,40 @@ serve(async (req) => {
       .eq("id", invoice_id);
 
     if (updateError) {
+      // Invoice was created in Fakturoid but DB update failed
+      // Log detailed error for recovery and return Fakturoid IDs to user
       await supabaseAdmin.from('integration_log').insert({
         service: 'fakturoid',
-        action: 'create_invoice',
+        action: 'create_invoice_db_update_failed',
         related_table: 'issued_invoices',
         related_record_id: invoiceId,
         request_payload: payload,
-        response_payload: fakturoidInvoice,
+        response_payload: {
+          fakturoid_invoice: fakturoidInvoice,
+          db_error: updateError.message,
+          recovery_info: {
+            fakturoid_id: fakturoidInvoice.id,
+            fakturoid_url: fakturoidInvoiceUrl,
+            local_invoice_id: invoiceId,
+          }
+        },
         is_success: false,
-        error_message: `Update failed: ${updateError.message}`,
+        error_message: `ORPHAN RISK: Invoice created in Fakturoid (ID: ${fakturoidInvoice.id}) but DB update failed: ${updateError.message}`,
         triggered_by: userId,
         duration_ms: durationMs,
       });
 
+      // Return partial success with Fakturoid IDs so user can manually link
       return new Response(
-        JSON.stringify({ error: "Faktura vytvořena ve Fakturoid, ale nepodařilo se uložit ID" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          partial_success: true,
+          error: "Faktura byla vytvořena ve Fakturoid, ale nepodařilo se propojit s CRM. Prosím, propojte manuálně.",
+          fakturoid_id: fakturoidInvoice.id,
+          fakturoid_url: fakturoidInvoiceUrl,
+          local_invoice_id: invoiceId,
+          requires_manual_link: true,
+        }),
+        { status: 207, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

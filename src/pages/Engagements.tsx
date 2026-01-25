@@ -46,6 +46,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { EngagementForm } from '@/components/forms/EngagementForm';
 import { AssignmentForm } from '@/components/forms/AssignmentForm';
 import { AddEngagementServiceDialog } from '@/components/forms/AddEngagementServiceDialog';
@@ -69,9 +70,7 @@ function EngagementsContent() {
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
   const highlightedRef = useRef<HTMLDivElement>(null);
-  // For now, allow all (will be role-based later)
-  const canSeeFinancials = true;
-  const superAdmin = true;
+  const { isSuperAdmin, canSeeFinancials } = useUserRole();
 
   const { 
     clients, 
@@ -309,7 +308,7 @@ function EngagementsContent() {
         titleAccent="& projekty"
         description="Správa kontraktů a projektů"
         actions={
-          superAdmin && (
+          isSuperAdmin && (
             <Button className="gap-2" onClick={handleAddEngagement}>
               <Plus className="h-4 w-4" />
               Přidat zakázku
@@ -473,7 +472,7 @@ function EngagementsContent() {
                     </span>
                   )}
                   <StatusBadge status={engagement.status} />
-                  {superAdmin && (
+                  {isSuperAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
@@ -1257,6 +1256,7 @@ function EngagementsContent() {
               engagement={editingEngagement || undefined}
               clients={clients}
               contacts={clientContacts}
+              isSuperAdmin={isSuperAdmin}
               onSubmit={handleFormSubmit}
               onCancel={() => setIsFormOpen(false)}
             />

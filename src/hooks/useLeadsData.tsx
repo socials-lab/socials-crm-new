@@ -215,7 +215,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     });
     
     // Wait for history entries to be logged (non-blocking)
-    Promise.all(historyPromises).catch(console.error);
+    Promise.all(historyPromises).then(() => {}).catch(e => console.error('History logging error:', e));
     
     await updateLeadMutation.mutateAsync({ id, data });
   }, [leads, updateLeadMutation, addHistoryEntry]);

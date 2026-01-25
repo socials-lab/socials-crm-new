@@ -11,7 +11,15 @@ export interface FakturoidSubject {
   name: string;
   registration_no?: string;
   vat_no?: string;
+  street?: string;
+  city?: string;
+  zip?: string;
+  country?: string;
+  email?: string;
+  phone?: string;
+  web?: string;
   html_url?: string;
+  updated_at?: string;
 }
 
 export interface FakturoidInvoice {
@@ -73,16 +81,17 @@ export async function getFakturoidAccessToken(): Promise<string> {
     throw new Error("Fakturoid OAuth credentials not configured");
   }
 
+  const basicAuth = btoa(`${clientId}:${clientSecret}`);
   const response = await fetch("https://app.fakturoid.cz/api/v3/oauth/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
+      "Accept": "application/json",
+      "Authorization": `Basic ${basicAuth}`,
       "User-Agent": USER_AGENT,
     },
     body: new URLSearchParams({
       grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
     }),
   });
 
@@ -121,6 +130,7 @@ export async function searchSubjectByIco(
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      "Accept": "application/json",
       "User-Agent": USER_AGENT,
     },
   });
@@ -148,6 +158,7 @@ export async function createSubject(
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
+      "Accept": "application/json",
       "User-Agent": USER_AGENT,
     },
     body: JSON.stringify(subjectData),
@@ -156,6 +167,57 @@ export async function createSubject(
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Fakturoid create subject failed: ${errorText}`);
+  }
+
+  return await response.json();
+}
+
+export async function updateSubject(
+  accessToken: string,
+  accountSlug: string,
+  subjectId: number,
+  subjectData: Record<string, unknown>
+): Promise<FakturoidSubject> {
+  const url = `https://app.fakturoid.cz/api/v3/accounts/${accountSlug}/subjects/${subjectId}.json`;
+
+  const response = await fakturoidFetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "User-Agent": USER_AGENT,
+    },
+    body: JSON.stringify(subjectData),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Fakturoid update subject failed: ${errorText}`);
+  }
+
+  return await response.json();
+}
+
+export async function getSubjectById(
+  accessToken: string,
+  accountSlug: string,
+  subjectId: number
+): Promise<FakturoidSubject> {
+  const url = `https://app.fakturoid.cz/api/v3/accounts/${accountSlug}/subjects/${subjectId}.json`;
+
+  const response = await fakturoidFetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Accept": "application/json",
+      "User-Agent": USER_AGENT,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Fakturoid get subject failed: ${errorText}`);
   }
 
   return await response.json();
@@ -173,6 +235,7 @@ export async function createInvoice(
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
+      "Accept": "application/json",
       "User-Agent": USER_AGENT,
     },
     body: JSON.stringify(invoiceData),

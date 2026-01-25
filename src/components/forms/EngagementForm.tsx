@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Engagement, Client, ClientContact } from '@/types/crm';
+import type { Engagement, Client, ClientContact, EngagementStatus } from '@/types/crm';
+import { getAvailableEngagementStatuses, ENGAGEMENT_STATUS_LABELS } from '@/lib/statusTransitions';
 
 const engagementSchema = z.object({
   name: z.string().min(1, 'Název je povinný'),
@@ -35,7 +36,27 @@ const engagementSchema = z.object({
   end_date: z.string().optional(),
   notice_period_months: z.coerce.number().min(0).nullable(),
   notes: z.string(),
-});
+}).refine(
+  (data) => {
+    if (!data.end_date || data.end_date === '') return true;
+    return new Date(data.start_date) <= new Date(data.end_date);
+  },
+  { message: 'Datum ukončení musí být po datu zahájení', path: ['end_date'] }
+);
+
+// Helper function to create a schema that validates contact belongs to client
+function createEngagementSchemaWithContactValidation(contacts: ClientContact[]) {
+  return engagementSchema.refine(
+    (data) => {
+      // If no contact selected, it's valid
+      if (!data.contact_person_id) return true;
+      // Check contact belongs to selected client
+      const contact = contacts.find(c => c.id === data.contact_person_id);
+      return contact ? contact.client_id === data.client_id : false;
+    },
+    { message: 'Vybraný kontakt nepatří k vybranému klientovi', path: ['contact_person_id'] }
+  );
+}
 
 type EngagementFormData = z.infer<typeof engagementSchema>;
 
@@ -44,20 +65,29 @@ interface EngagementFormProps {
   clients: Client[];
   contacts: ClientContact[];
   defaultClientId?: string;
+  isSuperAdmin?: boolean;
   onSubmit: (data: EngagementFormData) => void;
   onCancel: () => void;
 }
 
-export function EngagementForm({ 
-  engagement, 
-  clients, 
+export function EngagementForm({
+  engagement,
+  clients,
   contacts,
   defaultClientId,
-  onSubmit, 
-  onCancel 
+  isSuperAdmin = false,
+  onSubmit,
+  onCancel
 }: EngagementFormProps) {
+  // Get available status options based on current status and user role
+  const currentStatus: EngagementStatus = engagement?.status || 'planned';
+  const availableStatuses = getAvailableEngagementStatuses(currentStatus, isSuperAdmin);
+
+  // Use schema with contact-client validation
+  const schemaWithContactValidation = createEngagementSchemaWithContactValidation(contacts);
+
   const form = useForm<EngagementFormData>({
-    resolver: zodResolver(engagementSchema),
+    resolver: zodResolver(schemaWithContactValidation),
     defaultValues: {
       name: engagement?.name || '',
       client_id: engagement?.client_id || defaultClientId || '',
@@ -142,7 +172,10 @@ export function EngagementForm({
                 <SelectContent>
                   {clientContacts.map(contact => (
                     <SelectItem key={contact.id} value={contact.id}>
-                      {contact.name} {contact.position ? `(${contact.position})` : ''}
+                      {contact.name}
+                      {contact.is_decision_maker && ' 🔑'}
+                      {contact.is_primary && ' ⭐'}
+                      {contact.position && ` (${contact.position})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -189,13 +222,19 @@ export function EngagementForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="planned">Plánováno</SelectItem>
-                    <SelectItem value="active">Aktivní</SelectItem>
-                    <SelectItem value="paused">Pozastaveno</SelectItem>
-                    <SelectItem value="completed">Dokončeno</SelectItem>
-                    <SelectItem value="cancelled">Zrušeno</SelectItem>
+                    {availableStatuses.map(status => (
+                      <SelectItem key={status} value={status}>
+                        {ENGAGEMENT_STATUS_LABELS[status]}
+                        {status === currentStatus && engagement && ' (aktuální)'}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {engagement && (currentStatus === 'completed' || currentStatus === 'cancelled') && !isSuperAdmin && (
+                  <p className="text-xs text-muted-foreground">
+                    Dokončenou/zrušenou zakázku nelze reaktivovat.
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>
             )}

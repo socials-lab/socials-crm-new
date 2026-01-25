@@ -1,3 +1,4 @@
+Initialising login role...
 export type Json =
   | string
   | number
@@ -11,6 +12,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -169,6 +195,44 @@ export type Database = {
           },
         ]
       }
+      billing_change_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          client_id: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          client_id: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          client_id?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_change_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_tokens: {
         Row: {
           access_token: string
@@ -200,7 +264,8 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string | null
-          email: string | null
+          deleted_at: string | null
+          email: string
           id: string
           is_decision_maker: boolean | null
           is_primary: boolean | null
@@ -213,7 +278,8 @@ export type Database = {
         Insert: {
           client_id: string
           created_at?: string | null
-          email?: string | null
+          deleted_at?: string | null
+          email: string
           id?: string
           is_decision_maker?: boolean | null
           is_primary?: boolean | null
@@ -226,7 +292,8 @@ export type Database = {
         Update: {
           client_id?: string
           created_at?: string | null
-          email?: string | null
+          deleted_at?: string | null
+          email?: string
           id?: string
           is_decision_maker?: boolean | null
           is_primary?: boolean | null
@@ -293,57 +360,6 @@ export type Database = {
           },
         ]
       }
-      client_services: {
-        Row: {
-          client_id: string
-          created_at: string | null
-          end_date: string | null
-          id: string
-          is_active: boolean | null
-          notes: string | null
-          service_id: string
-          start_date: string
-          updated_at: string | null
-        }
-        Insert: {
-          client_id: string
-          created_at?: string | null
-          end_date?: string | null
-          id?: string
-          is_active?: boolean | null
-          notes?: string | null
-          service_id: string
-          start_date: string
-          updated_at?: string | null
-        }
-        Update: {
-          client_id?: string
-          created_at?: string | null
-          end_date?: string | null
-          id?: string
-          is_active?: boolean | null
-          notes?: string | null
-          service_id?: string
-          start_date?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_services_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_services_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       clients: {
         Row: {
           acquisition_channel: string | null
@@ -356,15 +372,13 @@ export type Database = {
           country: string | null
           created_at: string | null
           created_by: string | null
+          deleted_at: string | null
           dic: string | null
           end_date: string | null
           fakturoid_subject_id: number | null
           ico: string
           id: string
           industry: string | null
-          main_contact_email: string | null
-          main_contact_name: string | null
-          main_contact_phone: string | null
           name: string
           notes: string | null
           pinned_notes: string | null
@@ -386,15 +400,13 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           dic?: string | null
           end_date?: string | null
           fakturoid_subject_id?: number | null
           ico: string
           id?: string
           industry?: string | null
-          main_contact_email?: string | null
-          main_contact_name?: string | null
-          main_contact_phone?: string | null
           name: string
           notes?: string | null
           pinned_notes?: string | null
@@ -416,15 +428,13 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           dic?: string | null
           end_date?: string | null
           fakturoid_subject_id?: number | null
           ico?: string
           id?: string
           industry?: string | null
-          main_contact_email?: string | null
-          main_contact_name?: string | null
-          main_contact_phone?: string | null
           name?: string
           notes?: string | null
           pinned_notes?: string | null
@@ -2362,6 +2372,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_client_lock: { Args: { p_client_id: string }; Returns: undefined }
+      acquire_invoice_number_lock: { Args: never; Returns: undefined }
       can_edit_page: { Args: { page_name: string }; Returns: boolean }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_view_page: { Args: { page_name: string }; Returns: boolean }
@@ -2381,12 +2393,64 @@ export type Database = {
         Args: { check_user_id: string }
         Returns: boolean
       }
+      convert_lead_to_client: {
+        Args: {
+          p_additional_contacts?: Json
+          p_assignments?: Json
+          p_client_data: Json
+          p_engagement_data: Json
+          p_lead_id: string
+          p_primary_contact: Json
+          p_services?: Json
+        }
+        Returns: Json
+      }
+      create_invoice_with_items: {
+        Args: {
+          p_client_id: string
+          p_client_name: string
+          p_currency: string
+          p_engagement_id: string
+          p_engagement_name: string
+          p_issued_by: string
+          p_line_items: Json
+          p_month: number
+          p_total_amount: number
+          p_year: number
+        }
+        Returns: {
+          client_id: string | null
+          client_name: string | null
+          created_at: string | null
+          currency: string | null
+          engagement_id: string | null
+          engagement_name: string | null
+          fakturoid_id: string | null
+          fakturoid_url: string | null
+          id: string
+          invoice_number: string
+          issued_at: string
+          issued_by: string | null
+          line_items: Json | null
+          month: number
+          total_amount: number
+          year: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "issued_invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      generate_invoice_number: { Args: { p_year?: number }; Returns: string }
       get_colleague_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
       has_crm_access: { Args: { _user_id: string }; Returns: boolean }
+      has_full_client_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
@@ -2396,11 +2460,16 @@ export type Database = {
         Returns: undefined
       }
       is_admin_or_management: { Args: { _user_id: string }; Returns: boolean }
+      is_assigned_to_client: {
+        Args: { _client_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin_bypass_rls: {
         Args: { check_user_id: string }
         Returns: boolean
       }
+      is_user_super_admin: { Args: never; Returns: boolean }
       log_applicant_change: {
         Args: {
           _applicant_id: string
@@ -2468,6 +2537,17 @@ export type Database = {
           _old_value?: string
         }
         Returns: undefined
+      }
+      release_invoice_number_lock: { Args: never; Returns: undefined }
+      set_contact_as_primary: { Args: { p_contact_id: string }; Returns: Json }
+      soft_delete_client: { Args: { p_client_id: string }; Returns: undefined }
+      soft_delete_contact: { Args: { p_contact_id: string }; Returns: Json }
+      try_set_fakturoid_subject_id: {
+        Args: { p_client_id: string; p_fakturoid_subject_id: number }
+        Returns: {
+          existing_subject_id: number
+          success: boolean
+        }[]
       }
     }
     Enums: {
@@ -2758,6 +2838,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: [

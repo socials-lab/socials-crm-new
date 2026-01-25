@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import socialsLogo from '@/assets/socials-logo.png';
 import { LeadService } from '@/types/crm';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Type for lead data from Edge Function
 interface OnboardingLead {
@@ -114,13 +115,15 @@ const onboardingSchema = z.object({
   message: 'Musíte potvrdit objednávku',
   path: ['orderConfirmed']
 }).refine(data => {
-  // If not using signatories for project, must have at least 1 project contact
-  if (!data.useSignatoriesForProject) {
-    return data.projectContacts.length >= 1;
+  // If using signatories for project, at least one signatory must have valid email
+  if (data.useSignatoriesForProject) {
+    const signatoryWithEmail = data.signatories.some(s => s.email && s.email.trim() !== '');
+    return signatoryWithEmail;
   }
-  return true;
+  // Otherwise must have at least 1 project contact with email
+  return data.projectContacts.length >= 1 && data.projectContacts.some(pc => pc.email && pc.email.trim() !== '');
 }, {
-  message: 'Přidejte alespoň jednu kontaktní osobu pro projekt',
+  message: 'Pro vytvoření projektu ve Freelu je potřeba alespoň jeden kontakt s e-mailovou adresou',
   path: ['projectContacts']
 });
 
@@ -367,13 +370,17 @@ export default function OnboardingForm() {
       });
 
       if (error || result?.error) {
-        console.error('Submission failed:', error || result?.error);
+        const errorMessage = error?.message || result?.error || 'Neznámá chyba';
+        console.error('Submission failed:', errorMessage);
+        toast.error(`Nepodařilo se odeslat formulář: ${errorMessage}`);
         return;
       }
-      
+
       setIsSubmitted(true);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Neznámá chyba';
       console.error('Submission failed:', error);
+      toast.error(`Nepodařilo se odeslat formulář: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }

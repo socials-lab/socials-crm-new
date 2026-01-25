@@ -101,6 +101,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
   const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
+  const isContractCreated = !!lead?.contract_created_at;
   
   const handleAresLookup = async () => {
     const ico = form.getValues('ico');
@@ -316,6 +317,13 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            {isContractCreated && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  ⚠️ Některá pole jsou uzamčena - smlouva byla odeslána
+                </p>
+              </div>
+            )}
             {/* Company Section */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm border-b pb-2">Firma a kontakt</h4>
@@ -333,6 +341,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                           onChange={field.onChange}
                           onSelect={handleCompanySelect}
                           placeholder="Zadejte název firmy (min. 3 znaky)..."
+                          disabled={isContractCreated}
                         />
                       </FormControl>
                       <FormMessage />
@@ -347,14 +356,14 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                       <FormLabel>IČO *</FormLabel>
                       <div className="flex gap-2">
                         <FormControl>
-                          <Input placeholder="12345678" {...field} />
+                          <Input placeholder="12345678" {...field} disabled={isContractCreated} />
                         </FormControl>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={handleAresLookup}
-                          disabled={isLoadingAres}
+                          disabled={isLoadingAres || isContractCreated}
                           className="shrink-0"
                         >
                           {isLoadingAres ? (
@@ -379,7 +388,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormItem>
                       <FormLabel>DIČ</FormLabel>
                       <FormControl>
-                        <Input placeholder="CZ12345678" {...field} value={field.value || ''} />
+                        <Input placeholder="CZ12345678" {...field} value={field.value || ''} disabled={isContractCreated} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -426,7 +435,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                   <FormItem>
                     <FormLabel>Ulice a číslo popisné</FormLabel>
                     <FormControl>
-                      <Input placeholder="Václavské náměstí 1" {...field} value={field.value || ''} />
+                      <Input placeholder="Václavské náměstí 1" {...field} value={field.value || ''} disabled={isContractCreated} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -441,7 +450,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormItem>
                       <FormLabel>Město</FormLabel>
                       <FormControl>
-                        <Input placeholder="Praha" {...field} value={field.value || ''} />
+                        <Input placeholder="Praha" {...field} value={field.value || ''} disabled={isContractCreated} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -454,7 +463,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormItem>
                       <FormLabel>PSČ</FormLabel>
                       <FormControl>
-                        <Input placeholder="110 00" {...field} value={field.value || ''} />
+                        <Input placeholder="110 00" {...field} value={field.value || ''} disabled={isContractCreated} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -467,7 +476,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormItem>
                       <FormLabel>Země</FormLabel>
                       <FormControl>
-                        <Input placeholder="Česká republika" {...field} value={field.value || ''} />
+                        <Input placeholder="Česká republika" {...field} value={field.value || ''} disabled={isContractCreated} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -482,7 +491,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                   <FormItem>
                     <FormLabel>Fakturační email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="fakturace@firma.cz" {...field} value={field.value || ''} />
+                      <Input type="email" placeholder="fakturace@firma.cz" {...field} value={field.value || ''} disabled={isContractCreated} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
