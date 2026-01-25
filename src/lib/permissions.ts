@@ -9,7 +9,7 @@ import type { Profile, UserRole } from '@/types/crm';
  * Roles that are allowed to modify contacts (add, edit, delete).
  * This should match the RLS policies in the database.
  */
-const CONTACT_MODIFY_ROLES: UserRole[] = ['admin', 'management'];
+const CONTACT_MODIFY_ROLES: UserRole[] = ['admin', 'management', 'project_manager', 'specialist'];
 
 /**
  * Checks if a user can modify contacts (add, edit, delete).
