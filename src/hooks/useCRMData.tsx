@@ -418,7 +418,8 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       return result;
     },
     onSuccess: () => {
-      // Cache invalidation handled by real-time subscription (Issue #16)
+      // Explicitly invalidate cache (realtime may have latency or be disabled)
+      queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
       toast.success('Kontakt byl přidán');
     },
     onError: (error) => {
@@ -460,7 +461,8 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       }
     },
     onSuccess: () => {
-      // Cache invalidation handled by real-time subscription (Issue #16)
+      // Explicitly invalidate cache (realtime may have latency or be disabled)
+      queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
       toast.success('Kontakt byl uložen');
     },
     onError: (error) => {
@@ -482,7 +484,8 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       return result;
     },
     onSuccess: (result) => {
-      // Cache invalidation handled by real-time subscription (Issue #16)
+      // Explicitly invalidate cache (realtime may have latency or be disabled)
+      queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
       toast.success(result?.message || 'Primární kontakt byl změněn');
     },
     onError: (error) => {
@@ -504,7 +507,8 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       return result;
     },
     onSuccess: (result) => {
-      // Cache invalidation handled by real-time subscription (Issue #16)
+      // Explicitly invalidate cache (realtime may have latency or be disabled)
+      queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
       toast.success(result?.message || 'Kontakt byl smazán');
     },
     onError: (error) => {
