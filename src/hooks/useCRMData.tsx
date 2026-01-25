@@ -1,6 +1,8 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { getErrorMessage, isPrimaryContactConstraintError, isEngagementReferenceError } from '@/lib/errorUtils';
 import type { 
   Client, 
   ClientContact,
@@ -35,12 +37,14 @@ interface CRMDataContextType {
   // Client operations
   addClient: (client: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => Promise<Client>;
   updateClient: (id: string, data: Partial<Client>) => Promise<void>;
-  deleteClient: (id: string) => Promise<void>;
+  softDeleteClient: (id: string) => Promise<void>;
   
   // Client Contact operations
   addContact: (contact: Omit<ClientContact, 'id' | 'created_at' | 'updated_at'>) => Promise<ClientContact>;
   updateContact: (id: string, data: Partial<ClientContact>) => Promise<void>;
   deleteContact: (id: string) => Promise<void>;
+  setContactAsPrimary: (contactId: string) => Promise<void>;
+  canDeleteContact: (contactId: string) => Promise<{ allowed: boolean; reason?: string }>;
   getContactsByClientId: (clientId: string) => ClientContact[];
   getPrimaryContact: (clientId: string) => ClientContact | undefined;
   getDecisionMaker: (clientId: string) => ClientContact | undefined;
@@ -121,14 +125,35 @@ interface CRMDataContextType {
 const CRMDataContext = createContext<CRMDataContextType | null>(null);
 
 // Helper function to transform DB row to Client type
+// Handles all nullable fields from Supabase to match application types
 const transformClient = (row: Record<string, unknown>): Client => ({
   ...row,
-  status: row.status || 'active',
-  tier: row.tier || 'standard',
-  start_date: row.start_date || '',
-  created_at: row.created_at || new Date().toISOString(),
-  updated_at: row.updated_at || new Date().toISOString(),
-});
+  // Required string fields that might be null in DB
+  brand_name: (row.brand_name as string) || '',
+  country: (row.country as string) || 'Czech Republic',
+  industry: (row.industry as string) || '',
+  // Enum fields with defaults
+  status: (row.status as Client['status']) || 'active',
+  tier: (row.tier as Client['tier']) || 'standard',
+  // Other potentially null string fields
+  acquisition_channel: (row.acquisition_channel as string) || '',
+  start_date: (row.start_date as string) || new Date().toISOString().split('T')[0],
+  notes: (row.notes as string) || '',
+  pinned_notes: (row.pinned_notes as string) || '',
+  // Timestamps
+  created_at: (row.created_at as string) || new Date().toISOString(),
+  updated_at: (row.updated_at as string) || new Date().toISOString(),
+}) as Client;
+
+// Helper function to transform DB row to ClientContact type
+const transformClientContact = (row: Record<string, unknown>): ClientContact => ({
+  ...row,
+  is_primary: (row.is_primary as boolean) ?? false,
+  is_decision_maker: (row.is_decision_maker as boolean) ?? false,
+  notes: (row.notes as string) || '',
+  created_at: (row.created_at as string) || new Date().toISOString(),
+  updated_at: (row.updated_at as string) || new Date().toISOString(),
+}) as ClientContact;
 
 const transformEngagement = (row: Record<string, unknown>): Engagement => ({
   ...row,
@@ -169,11 +194,16 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
 
   // Note: Using 'as any' because Supabase types are auto-generated and tables may not exist yet
   // After running migration, regenerate types with: npx supabase gen types typescript
-  
+
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('clients').select('*').order('name');
+      // Filter out soft-deleted clients (deleted_at IS NULL)
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .is('deleted_at', null)
+        .order('name');
       if (error) throw error;
       return (data || []).map(transformClient);
     },
@@ -182,9 +212,15 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
   const { data: clientContacts = [], isLoading: contactsLoading } = useQuery({
     queryKey: ['client_contacts'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('client_contacts').select('*').order('name');
+      // Join with clients to filter out contacts of soft-deleted clients
+      const { data, error } = await supabase
+        .from('client_contacts')
+        .select('*, clients!inner(deleted_at)')
+        .is('clients.deleted_at', null)
+        .order('name');
       if (error) throw error;
-      return data || [];
+      // Remove the clients join data from result
+      return (data || []).map(({ clients, ...contact }) => transformClientContact(contact));
     },
   });
 
@@ -278,10 +314,50 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const isLoading = clientsLoading || contactsLoading || engagementsLoading || 
-                    engServicesLoading || colleaguesLoading || assignmentsLoading || 
-                    extraWorksLoading || servicesLoading || invoicesLoading || 
+  const isLoading = clientsLoading || contactsLoading || engagementsLoading ||
+                    engServicesLoading || colleaguesLoading || assignmentsLoading ||
+                    extraWorksLoading || servicesLoading || invoicesLoading ||
                     metricsLoading || historyLoading || lineItemsLoading;
+
+  // Real-time subscriptions for contacts and clients
+  useEffect(() => {
+    // Subscribe to client_contacts changes
+    const contactsChannel = supabase
+      .channel('client_contacts_realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'client_contacts' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Failed to subscribe to contacts realtime:', err);
+        }
+      });
+
+    // Subscribe to clients changes (for soft-delete sync)
+    const clientsChannel = supabase
+      .channel('clients_realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'clients' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['clients'] });
+          // Also refresh contacts since they filter by client deleted_at
+          queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Failed to subscribe to clients realtime:', err);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(contactsChannel);
+      supabase.removeChannel(clientsChannel);
+    };
+  }, [queryClient]);
 
   // Mutations
   const addClientMutation = useMutation({
@@ -290,7 +366,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return transformClient(result);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      toast.success('Klient byl vytvořen');
+    },
+    onError: (error) => {
+      console.error('Failed to create client:', error);
+      toast.error('Nepodařilo se vytvořit klienta');
+    },
   });
 
   const updateClientMutation = useMutation({
@@ -298,15 +381,34 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('clients').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      toast.success('Klient byl uložen');
+    },
+    onError: (error) => {
+      console.error('Failed to update client:', error);
+      toast.error('Nepodařilo se uložit klienta');
+    },
   });
 
-  const deleteClientMutation = useMutation({
+  // Soft delete client - sets deleted_at timestamp instead of actually deleting
+  const softDeleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('clients').delete().eq('id', id);
+      const { error } = await supabase.rpc('soft_delete_client', { p_client_id: id });
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      // Also invalidate contacts cache since contacts of soft-deleted clients should be hidden
+      queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
+      // Invalidate engagements as they reference clients
+      queryClient.invalidateQueries({ queryKey: ['engagements'] });
+      toast.success('Klient byl archivován');
+    },
+    onError: (error) => {
+      console.error('Failed to soft delete client:', error);
+      toast.error('Nepodařilo se archivovat klienta');
+    },
   });
 
   const addContactMutation = useMutation({
@@ -315,33 +417,170 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['client_contacts'] }),
+    onSuccess: () => {
+      // Cache invalidation handled by real-time subscription (Issue #16)
+      toast.success('Kontakt byl přidán');
+    },
+    onError: (error) => {
+      console.error('Failed to add contact:', error);
+      toast.error(getErrorMessage(error, 'Nepodařilo se přidat kontakt'));
+    },
   });
 
   const updateContactMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ClientContact> }) => {
-      const { error } = await supabase.from('client_contacts').update(data).eq('id', id);
-      if (error) throw error;
+      // If setting is_primary, use the atomic RPC instead
+      if (data.is_primary === true) {
+        const { data: result, error } = await supabase.rpc('set_contact_as_primary', {
+          p_contact_id: id,
+        });
+        if (error) throw error;
+        if (result && !result.success) {
+          throw new Error(result.error || 'Nepodařilo se nastavit primární kontakt');
+        }
+        // Update other fields if any
+        const otherData = { ...data };
+        delete otherData.is_primary;
+        if (Object.keys(otherData).length > 0) {
+          const { error: updateError } = await supabase.from('client_contacts').update(otherData).eq('id', id);
+          if (updateError) throw updateError;
+        }
+      } else {
+        // Use .select().single() to verify the contact still exists and was updated
+        const { data: result, error } = await supabase
+          .from('client_contacts')
+          .update(data)
+          .eq('id', id)
+          .select()
+          .single();
+        if (error) throw error;
+        if (!result) {
+          throw new Error('Kontakt nebyl nalezen - možná byl smazán jiným uživatelem.');
+        }
+      }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['client_contacts'] }),
+    onSuccess: () => {
+      // Cache invalidation handled by real-time subscription (Issue #16)
+      toast.success('Kontakt byl uložen');
+    },
+    onError: (error) => {
+      console.error('Failed to update contact:', error);
+      toast.error(getErrorMessage(error, 'Nepodařilo se uložit kontakt'));
+    },
+  });
+
+  // Dedicated mutation for setting primary contact atomically
+  const setContactAsPrimaryMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const { data: result, error } = await supabase.rpc('set_contact_as_primary', {
+        p_contact_id: contactId,
+      });
+      if (error) throw error;
+      if (result && !result.success) {
+        throw new Error(result.error || 'Nepodařilo se nastavit primární kontakt');
+      }
+      return result;
+    },
+    onSuccess: (result) => {
+      // Cache invalidation handled by real-time subscription (Issue #16)
+      toast.success(result?.message || 'Primární kontakt byl změněn');
+    },
+    onError: (error) => {
+      console.error('Failed to set primary contact:', error);
+      toast.error(getErrorMessage(error, 'Nepodařilo se nastavit primární kontakt'));
+    },
   });
 
   const deleteContactMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('client_contacts').delete().eq('id', id);
+      // Use soft delete RPC function
+      const { data: result, error } = await supabase.rpc('soft_delete_contact', {
+        p_contact_id: id,
+      });
       if (error) throw error;
+      if (result && !result.success) {
+        throw new Error(result.error || 'Nepodařilo se smazat kontakt');
+      }
+      return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['client_contacts'] }),
+    onSuccess: (result) => {
+      // Cache invalidation handled by real-time subscription (Issue #16)
+      toast.success(result?.message || 'Kontakt byl smazán');
+    },
+    onError: (error) => {
+      console.error('Failed to delete contact:', error);
+      // Provide specific error for engagement reference
+      if (isEngagementReferenceError(error)) {
+        toast.error('Kontakt nelze smazat, protože je přiřazen k zakázce');
+      } else {
+        toast.error(getErrorMessage(error, 'Nepodařilo se smazat kontakt'));
+      }
+    },
   });
+
+  // Utility function to check if a contact can be deleted
+  // Issue #9: Query DB directly instead of using potentially stale cache
+  const canDeleteContact = useCallback(async (contactId: string): Promise<{ allowed: boolean; reason?: string }> => {
+    // Fetch fresh contact data from database
+    const { data: contact, error: contactError } = await supabase
+      .from('client_contacts')
+      .select('*')
+      .eq('id', contactId)
+      .is('deleted_at', null)
+      .single();
+
+    if (contactError || !contact) {
+      return { allowed: false, reason: 'Kontakt nebyl nalezen' };
+    }
+
+    // Fetch fresh count of contacts for this client
+    const { count: contactCount, error: countError } = await supabase
+      .from('client_contacts')
+      .select('*', { count: 'exact', head: true })
+      .eq('client_id', contact.client_id)
+      .is('deleted_at', null);
+
+    if (countError) {
+      console.error('Error checking contact count:', countError);
+      return { allowed: false, reason: 'Nepodařilo se ověřit počet kontaktů' };
+    }
+
+    // Check if it's the only contact for the client
+    if (contactCount === 1) {
+      return { allowed: false, reason: 'Nelze smazat jediný kontakt klienta. Každý klient musí mít alespoň jeden kontakt.' };
+    }
+
+    // Check if it's primary
+    if (contact.is_primary) {
+      return { allowed: false, reason: 'Nelze smazat primární kontakt. Nejprve nastavte jiný kontakt jako primární.' };
+    }
+
+    // Check if contact is used in any engagement
+    const { count: engagementCount, error: engError } = await supabase
+      .from('engagements')
+      .select('id', { count: 'exact', head: true })
+      .eq('contact_person_id', contactId);
+
+    if (engError) {
+      console.error('Error checking engagement references:', engError);
+      return { allowed: false, reason: 'Nepodařilo se ověřit použití kontaktu' };
+    }
+
+    if (engagementCount && engagementCount > 0) {
+      return { allowed: false, reason: `Kontakt je přiřazen k ${engagementCount} zakázce/zakázkám a nelze ho smazat.` };
+    }
+
+    return { allowed: true };
+  }, []); // No dependencies - uses fresh DB queries
 
   const addEngagementMutation = useMutation({
     mutationFn: async (data: Omit<Engagement, 'id' | 'created_at' | 'updated_at'>) => {
       const { data: result, error } = await supabase.from('engagements').insert(data).select().single();
       if (error) throw error;
       const engagement = transformEngagement(result);
-      
-      // Log creation in history
-      await supabase.rpc('log_engagement_change', {
+
+      // Log creation in history (non-blocking, errors silently logged)
+      supabase.rpc('log_engagement_change', {
         _engagement_id: engagement.id,
         _change_type: 'created',
         _field_name: null,
@@ -350,21 +589,32 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
         _new_value: engagement.name,
         _related_entity_id: null,
         _related_entity_name: null,
-      }).catch(console.error);
-      
+      }).then(({ error }) => { if (error) console.error('log_engagement_change error:', error); });
+
       return engagement;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engagements'] });
       queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+      toast.success('Engagement byl vytvořen');
+    },
+    onError: (error) => {
+      console.error('Failed to create engagement:', error);
+      toast.error('Nepodařilo se vytvořit engagement');
     },
   });
 
   const updateEngagementMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Engagement> }) => {
-      const engagement = engagements.find(e => e.id === id);
-      if (!engagement) throw new Error('Engagement not found');
-      
+      // Fetch fresh engagement data to avoid stale closure issues
+      const { data: engagementData, error: fetchError } = await supabase
+        .from('engagements')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchError || !engagementData) throw new Error('Engagement not found');
+      const engagement = transformEngagement(engagementData);
+
       // Log field changes before updating
       const historyPromises: Promise<void>[] = [];
       Object.keys(data).forEach(key => {
@@ -384,20 +634,25 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
               _new_value: newVal,
               _related_entity_id: null,
               _related_entity_name: null,
-            }).then(() => {}).catch(console.error)
+            }).then(({ error }) => { if (error) console.error('log_engagement_change error:', error); })
           );
         }
       });
-      
+
       // Wait for history entries (non-blocking)
-      Promise.all(historyPromises).catch(console.error);
-      
+      Promise.all(historyPromises).then(() => {}).catch(e => console.error('History logging error:', e));
+
       const { error } = await supabase.from('engagements').update(data).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engagements'] });
       queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+      toast.success('Engagement byl uložen');
+    },
+    onError: (error) => {
+      console.error('Failed to update engagement:', error);
+      toast.error('Nepodařilo se uložit engagement');
     },
   });
 
@@ -406,7 +661,19 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('engagements').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagements'] }),
+    onSuccess: () => {
+      // Cascade invalidation for related entities
+      queryClient.invalidateQueries({ queryKey: ['engagements'] });
+      queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
+      queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['extra_works'] });
+      queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+      toast.success('Engagement byl smazán');
+    },
+    onError: (error) => {
+      console.error('Failed to delete engagement:', error);
+      toast.error('Nepodařilo se smazat engagement');
+    },
   });
 
   const addEngagementServiceMutation = useMutation({
@@ -414,8 +681,8 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { data: result, error } = await supabase.from('engagement_services').insert(data).select().single();
       if (error) throw error;
       
-      // Log service addition in history
-      await supabase.rpc('log_engagement_change', {
+      // Log service addition in history (non-blocking)
+      supabase.rpc('log_engagement_change', {
         _engagement_id: data.engagement_id,
         _change_type: 'service_added',
         _field_name: null,
@@ -424,25 +691,36 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
         _new_value: data.name,
         _related_entity_id: result.id,
         _related_entity_name: data.name,
-      }).catch(console.error);
+      }).then(({ error }) => { if (error) console.error('log_engagement_change error:', error); });
       
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
       queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+      toast.success('Služba byla přidána');
+    },
+    onError: (error) => {
+      console.error('Failed to add service:', error);
+      toast.error('Nepodařilo se přidat službu');
     },
   });
 
   const updateEngagementServiceMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<EngagementService> }) => {
-      const service = engagementServices.find(s => s.id === id);
-      if (!service) throw new Error('Service not found');
+      // Fetch fresh service data to avoid stale closure issues
+      const { data: serviceData, error: fetchError } = await supabase
+        .from('engagement_services')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchError || !serviceData) throw new Error('Service not found');
+      const service = serviceData as EngagementService;
       
-      // Log service update in history
+      // Log service update in history (non-blocking)
       const changedFields = Object.keys(data).filter(key => key !== 'updated_at' && key !== 'created_at');
       if (changedFields.length > 0) {
-        await supabase.rpc('log_engagement_change', {
+        supabase.rpc('log_engagement_change', {
           _engagement_id: service.engagement_id,
           _change_type: 'service_updated',
           _field_name: null,
@@ -451,7 +729,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
           _new_value: `Aktualizována služba: ${service.name}`,
           _related_entity_id: id,
           _related_entity_name: service.name,
-        }).catch(console.error);
+        }).then(({ error }) => { if (error) console.error('log_engagement_change error:', error); });
       }
       
       const { error } = await supabase.from('engagement_services').update(data).eq('id', id);
@@ -460,16 +738,27 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
       queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+      toast.success('Služba byla uložena');
+    },
+    onError: (error) => {
+      console.error('Failed to update service:', error);
+      toast.error('Nepodařilo se uložit službu');
     },
   });
 
   const deleteEngagementServiceMutation = useMutation({
     mutationFn: async (id: string) => {
-      const service = engagementServices.find(s => s.id === id);
-      if (!service) throw new Error('Service not found');
-      
-      // Log service removal in history
-      await supabase.rpc('log_engagement_change', {
+      // Fetch fresh service data to avoid stale closure issues
+      const { data: serviceData, error: fetchError } = await supabase
+        .from('engagement_services')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchError || !serviceData) throw new Error('Service not found');
+      const service = serviceData as EngagementService;
+
+      // Log service removal in history (non-blocking)
+      supabase.rpc('log_engagement_change', {
         _engagement_id: service.engagement_id,
         _change_type: 'service_removed',
         _field_name: null,
@@ -478,14 +767,19 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
         _new_value: null,
         _related_entity_id: id,
         _related_entity_name: service.name,
-      }).catch(console.error);
-      
+      }).then(({ error }) => { if (error) console.error('log_engagement_change error:', error); });
+
       const { error } = await supabase.from('engagement_services').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
       queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+      toast.success('Služba byla odebrána');
+    },
+    onError: (error) => {
+      console.error('Failed to delete service:', error);
+      toast.error('Nepodařilo se odebrat službu');
     },
   });
 
@@ -495,7 +789,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return transformColleague(result);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['colleagues'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['colleagues'] });
+      toast.success('Kolega byl přidán');
+    },
+    onError: (error) => {
+      console.error('Failed to add colleague:', error);
+      toast.error('Nepodařilo se přidat kolegu');
+    },
   });
 
   const updateColleagueMutation = useMutation({
@@ -503,7 +804,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('colleagues').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['colleagues'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['colleagues'] });
+      toast.success('Kolega byl uložen');
+    },
+    onError: (error) => {
+      console.error('Failed to update colleague:', error);
+      toast.error('Nepodařilo se uložit kolegu');
+    },
   });
 
   const deleteColleagueMutation = useMutation({
@@ -511,7 +819,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('colleagues').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['colleagues'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['colleagues'] });
+      toast.success('Kolega byl smazán');
+    },
+    onError: (error) => {
+      console.error('Failed to delete colleague:', error);
+      toast.error('Nepodařilo se smazat kolegu');
+    },
   });
 
   const addAssignmentMutation = useMutation({
@@ -519,9 +834,9 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const colleague = colleagues.find(c => c.id === data.colleague_id);
       const { data: result, error } = await supabase.from('engagement_assignments').insert(data).select().single();
       if (error) throw error;
-      
-      // Log assignment in history
-      await supabase.rpc('log_engagement_change', {
+
+      // Log assignment in history (non-blocking)
+      supabase.rpc('log_engagement_change', {
         _engagement_id: data.engagement_id,
         _change_type: 'colleague_assigned',
         _field_name: null,
@@ -530,23 +845,34 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
         _new_value: colleague?.full_name || 'Unknown',
         _related_entity_id: data.colleague_id,
         _related_entity_name: colleague?.full_name || 'Unknown',
-      }).catch(console.error);
-      
+      }).then(({ error }) => { if (error) console.error('log_engagement_change error:', error); });
+
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
       queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+      toast.success('Kolega byl přiřazen');
+    },
+    onError: (error) => {
+      console.error('Failed to add assignment:', error);
+      toast.error('Nepodařilo se přiřadit kolegu');
     },
   });
 
   const updateAssignmentMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<EngagementAssignment> }) => {
-      const assignment = assignments.find(a => a.id === id);
-      if (!assignment) throw new Error('Assignment not found');
-      
-      // Log assignment update in history
-      await supabase.rpc('log_engagement_change', {
+      // Fetch fresh assignment data to avoid stale closure issues
+      const { data: assignmentData, error: fetchError } = await supabase
+        .from('engagement_assignments')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchError || !assignmentData) throw new Error('Assignment not found');
+      const assignment = assignmentData as EngagementAssignment;
+
+      // Log assignment update in history (non-blocking)
+      supabase.rpc('log_engagement_change', {
         _engagement_id: assignment.engagement_id,
         _change_type: 'colleague_updated',
         _field_name: null,
@@ -555,42 +881,64 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
         _new_value: 'Aktualizováno přiřazení kolegy',
         _related_entity_id: assignment.colleague_id,
         _related_entity_name: null,
-      }).catch(console.error);
-      
+      }).then(({ error }) => { if (error) console.error('log_engagement_change error:', error); });
+
       const { error } = await supabase.from('engagement_assignments').update(data).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
       queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+      toast.success('Přiřazení bylo uloženo');
+    },
+    onError: (error) => {
+      console.error('Failed to update assignment:', error);
+      toast.error('Nepodařilo se uložit přiřazení');
     },
   });
 
   const removeAssignmentMutation = useMutation({
     mutationFn: async (id: string) => {
-      const assignment = assignments.find(a => a.id === id);
-      if (!assignment) throw new Error('Assignment not found');
-      
-      const colleague = colleagues.find(c => c.id === assignment.colleague_id);
-      
-      // Log assignment removal in history
-      await supabase.rpc('log_engagement_change', {
+      // Fetch fresh assignment data to avoid stale closure issues
+      const { data: assignmentData, error: fetchError } = await supabase
+        .from('engagement_assignments')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchError || !assignmentData) throw new Error('Assignment not found');
+      const assignment = assignmentData as EngagementAssignment;
+
+      // Fetch colleague name for history logging
+      const { data: colleagueData } = await supabase
+        .from('colleagues')
+        .select('full_name')
+        .eq('id', assignment.colleague_id)
+        .single();
+      const colleagueName = colleagueData?.full_name || 'Unknown';
+
+      // Log assignment removal in history (non-blocking)
+      supabase.rpc('log_engagement_change', {
         _engagement_id: assignment.engagement_id,
         _change_type: 'colleague_removed',
         _field_name: null,
         _field_label: null,
-        _old_value: colleague?.full_name || 'Unknown',
+        _old_value: colleagueName,
         _new_value: null,
         _related_entity_id: assignment.colleague_id,
-        _related_entity_name: colleague?.full_name || 'Unknown',
-      }).catch(console.error);
-      
+        _related_entity_name: colleagueName,
+      }).then(({ error }) => { if (error) console.error('log_engagement_change error:', error); });
+
       const { error } = await supabase.from('engagement_assignments').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
       queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+      toast.success('Kolega byl odebrán');
+    },
+    onError: (error) => {
+      console.error('Failed to remove assignment:', error);
+      toast.error('Nepodařilo se odebrat kolegu');
     },
   });
 
@@ -603,7 +951,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['extra_works'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['extra_works'] });
+      toast.success('Extra práce byla vytvořena');
+    },
+    onError: (error) => {
+      console.error('Failed to add extra work:', error);
+      toast.error('Nepodařilo se vytvořit extra práci');
+    },
   });
 
   const updateExtraWorkMutation = useMutation({
@@ -611,14 +966,21 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('extra_works').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['extra_works'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['extra_works'] });
+      toast.success('Extra práce byla uložena');
+    },
+    onError: (error) => {
+      console.error('Failed to update extra work:', error);
+      toast.error('Nepodařilo se uložit extra práci');
+    },
   });
 
   const approveExtraWorkMutation = useMutation({
     mutationFn: async (id: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
-      
+
       const { error } = await supabase.from('extra_works').update({
         status: 'in_progress',
         approval_date: new Date().toISOString(),
@@ -626,7 +988,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       }).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['extra_works'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['extra_works'] });
+      toast.success('Extra práce byla schválena');
+    },
+    onError: (error) => {
+      console.error('Failed to approve extra work:', error);
+      toast.error('Nepodařilo se schválit extra práci');
+    },
   });
 
   const completeExtraWorkMutation = useMutation({
@@ -636,7 +1005,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       }).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['extra_works'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['extra_works'] });
+      toast.success('Extra práce je připravena k fakturaci');
+    },
+    onError: (error) => {
+      console.error('Failed to complete extra work:', error);
+      toast.error('Nepodařilo se dokončit extra práci');
+    },
   });
 
   const deleteExtraWorkMutation = useMutation({
@@ -644,7 +1020,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('extra_works').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['extra_works'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['extra_works'] });
+      toast.success('Extra práce byla smazána');
+    },
+    onError: (error) => {
+      console.error('Failed to delete extra work:', error);
+      toast.error('Nepodařilo se smazat extra práci');
+    },
   });
 
   const addServiceMutation = useMutation({
@@ -653,7 +1036,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return transformService(result);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['services'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      toast.success('Služba byla vytvořena');
+    },
+    onError: (error) => {
+      console.error('Failed to add service:', error);
+      toast.error('Nepodařilo se vytvořit službu');
+    },
   });
 
   const updateServiceMutation = useMutation({
@@ -661,7 +1051,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('services').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['services'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      toast.success('Služba byla uložena');
+    },
+    onError: (error) => {
+      console.error('Failed to update service:', error);
+      toast.error('Nepodařilo se uložit službu');
+    },
   });
 
   const deleteServiceMutation = useMutation({
@@ -669,7 +1066,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('services').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['services'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      toast.success('Služba byla smazána');
+    },
+    onError: (error) => {
+      console.error('Failed to delete service:', error);
+      toast.error('Nepodařilo se smazat službu');
+    },
   });
 
   const addIssuedInvoiceMutation = useMutation({
@@ -678,7 +1082,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issued_invoices'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issued_invoices'] });
+      toast.success('Faktura byla vytvořena');
+    },
+    onError: (error) => {
+      console.error('Failed to create invoice:', error);
+      toast.error('Nepodařilo se vytvořit fakturu');
+    },
   });
 
   const addEngagementMetricMutation = useMutation({
@@ -687,7 +1098,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagement_monthly_metrics'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['engagement_monthly_metrics'] });
+      toast.success('Metrika byla uložena');
+    },
+    onError: (error) => {
+      console.error('Failed to add engagement metric:', error);
+      toast.error('Nepodařilo se uložit metriku');
+    },
   });
 
   const updateEngagementMetricMutation = useMutation({
@@ -695,7 +1113,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('engagement_monthly_metrics').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagement_monthly_metrics'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['engagement_monthly_metrics'] });
+      toast.success('Metrika byla aktualizována');
+    },
+    onError: (error) => {
+      console.error('Failed to update engagement metric:', error);
+      toast.error('Nepodařilo se aktualizovat metriku');
+    },
   });
 
   const addInvoiceLineItemMutation = useMutation({
@@ -704,7 +1129,14 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoice_line_items'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice_line_items'] });
+      toast.success('Položka faktury byla přidána');
+    },
+    onError: (error) => {
+      console.error('Failed to add invoice line item:', error);
+      toast.error('Nepodařilo se přidat položku faktury');
+    },
   });
 
   // Helper functions
@@ -872,126 +1304,148 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     return createdInvoice;
   };
 
+  // Memoize context value to prevent unnecessary re-renders
+  // Note: Helper functions that filter data will be recreated when data changes,
+  // but mutation functions are stable references from useMutation
+  const contextValue = useMemo<CRMDataContextType>(() => ({
+    clients,
+    clientContacts,
+    engagements,
+    engagementServices,
+    colleagues,
+    assignments,
+    extraWorks,
+    services,
+    issuedInvoices,
+    engagementMetrics,
+    engagementHistory,
+    invoiceLineItems,
+    isLoading,
+
+    // Client operations
+    addClient: (data) => addClientMutation.mutateAsync(data),
+    updateClient: (id, data) => updateClientMutation.mutateAsync({ id, data }),
+    softDeleteClient: (id) => softDeleteClientMutation.mutateAsync(id),
+
+    // Contact operations
+    addContact: (data) => addContactMutation.mutateAsync(data),
+    updateContact: (id, data) => updateContactMutation.mutateAsync({ id, data }),
+    deleteContact: (id) => deleteContactMutation.mutateAsync(id),
+    setContactAsPrimary: (contactId) => setContactAsPrimaryMutation.mutateAsync(contactId),
+    canDeleteContact,
+    getContactsByClientId,
+    getPrimaryContact,
+    getDecisionMaker,
+
+    // Engagement operations
+    addEngagement: (data) => addEngagementMutation.mutateAsync(data),
+    updateEngagement: (id, data) => updateEngagementMutation.mutateAsync({ id, data }),
+    deleteEngagement: (id) => deleteEngagementMutation.mutateAsync(id),
+
+    // Engagement Service operations
+    addEngagementService: (data) => addEngagementServiceMutation.mutateAsync(data),
+    updateEngagementService: (id, data) => updateEngagementServiceMutation.mutateAsync({ id, data }),
+    deleteEngagementService: (id) => deleteEngagementServiceMutation.mutateAsync(id),
+    getEngagementServicesByEngagementId,
+    getUnbilledOneOffServices,
+    markEngagementServiceAsInvoiced: async (id, invoiceId, invoicePeriod) => {
+      await updateEngagementServiceMutation.mutateAsync({
+        id,
+        data: {
+          invoicing_status: 'invoiced',
+          invoiced_at: new Date().toISOString(),
+          invoiced_in_period: invoicePeriod,
+          invoice_id: invoiceId,
+        },
+      });
+    },
+
+    // Colleague operations
+    addColleague: (data) => addColleagueMutation.mutateAsync(data),
+    updateColleague: (id, data) => updateColleagueMutation.mutateAsync({ id, data }),
+    deleteColleague: (id) => deleteColleagueMutation.mutateAsync(id),
+
+    // Assignment operations
+    addAssignment: (data) => addAssignmentMutation.mutateAsync(data),
+    updateAssignment: (id, data) => updateAssignmentMutation.mutateAsync({ id, data }),
+    removeAssignment: (id) => removeAssignmentMutation.mutateAsync(id),
+    getAssignmentsByServiceId,
+
+    // Extra Work operations
+    addExtraWork: (data) => addExtraWorkMutation.mutateAsync(data),
+    updateExtraWork: (id, data) => updateExtraWorkMutation.mutateAsync({ id, data }),
+    deleteExtraWork: (id) => deleteExtraWorkMutation.mutateAsync(id),
+    getExtraWorksReadyToInvoice,
+    getExtraWorksByEngagementId,
+    approveExtraWork,
+    completeExtraWork,
+    markExtraWorkAsInvoiced: async (id, invoiceId, invoiceNumber) => {
+      await updateExtraWorkMutation.mutateAsync({
+        id,
+        data: {
+          status: 'invoiced',
+          invoice_id: invoiceId,
+          invoice_number: invoiceNumber,
+          invoiced_at: new Date().toISOString(),
+        },
+      });
+    },
+
+    // Service operations
+    addService: (data) => addServiceMutation.mutateAsync(data),
+    updateService: (id, data) => updateServiceMutation.mutateAsync({ id, data }),
+    deleteService: (id) => deleteServiceMutation.mutateAsync(id),
+    toggleServiceActive: async (id) => {
+      const service = services.find(s => s.id === id);
+      if (service) {
+        await updateServiceMutation.mutateAsync({ id, data: { is_active: !service.is_active } });
+      }
+    },
+
+    // Issued Invoice operations
+    addIssuedInvoice: (data) => addIssuedInvoiceMutation.mutateAsync(data),
+    getIssuedInvoicesByYear,
+    getInvoicesByEngagementId,
+    getNextInvoiceNumber,
+    createInvoiceWithLineItems,
+
+    // Invoice Line Items operations
+    addInvoiceLineItem,
+    getLineItemsByInvoiceId,
+
+    // Engagement Monthly Metrics operations
+    addEngagementMetric,
+    updateEngagementMetric,
+    getMetricsByEngagementId,
+
+    // Engagement History
+    getEngagementHistory,
+
+    // Helper functions
+    getClientById,
+    getEngagementById,
+    getColleagueById,
+    getEngagementsByClientId,
+    getAssignmentsByEngagementId,
+  }), [
+    // Data dependencies
+    clients, clientContacts, engagements, engagementServices, colleagues,
+    assignments, extraWorks, services, issuedInvoices, engagementMetrics,
+    engagementHistory, invoiceLineItems, isLoading,
+    // Helper functions that depend on data
+    getContactsByClientId, getPrimaryContact, getDecisionMaker,
+    getEngagementServicesByEngagementId, getUnbilledOneOffServices,
+    getAssignmentsByServiceId, getExtraWorksReadyToInvoice, getExtraWorksByEngagementId,
+    getIssuedInvoicesByYear, getInvoicesByEngagementId, getNextInvoiceNumber,
+    getLineItemsByInvoiceId, getMetricsByEngagementId, getEngagementHistory,
+    getClientById, getEngagementById, getColleagueById, getEngagementsByClientId,
+    getAssignmentsByEngagementId, approveExtraWork, completeExtraWork,
+    addEngagementMetric, updateEngagementMetric, addInvoiceLineItem, createInvoiceWithLineItems,
+    canDeleteContact,
+  ]);
+
   return (
-    <CRMDataContext.Provider value={{
-      clients,
-      clientContacts,
-      engagements,
-      engagementServices,
-      colleagues,
-      assignments,
-      extraWorks,
-      services,
-      issuedInvoices,
-      engagementMetrics,
-      engagementHistory,
-      invoiceLineItems,
-      isLoading,
-      
-      // Client operations
-      addClient: async (data) => addClientMutation.mutateAsync(data),
-      updateClient: async (id, data) => updateClientMutation.mutateAsync({ id, data }),
-      deleteClient: async (id) => deleteClientMutation.mutateAsync(id),
-      
-      // Contact operations
-      addContact: async (data) => addContactMutation.mutateAsync(data),
-      updateContact: async (id, data) => updateContactMutation.mutateAsync({ id, data }),
-      deleteContact: async (id) => deleteContactMutation.mutateAsync(id),
-      getContactsByClientId,
-      getPrimaryContact,
-      getDecisionMaker,
-      
-      // Engagement operations
-      addEngagement: async (data) => addEngagementMutation.mutateAsync(data),
-      updateEngagement: async (id, data) => updateEngagementMutation.mutateAsync({ id, data }),
-      deleteEngagement: async (id) => deleteEngagementMutation.mutateAsync(id),
-      
-      // Engagement Service operations
-      addEngagementService: async (data) => addEngagementServiceMutation.mutateAsync(data),
-      updateEngagementService: async (id, data) => updateEngagementServiceMutation.mutateAsync({ id, data }),
-      deleteEngagementService: async (id) => deleteEngagementServiceMutation.mutateAsync(id),
-      getEngagementServicesByEngagementId,
-      getUnbilledOneOffServices,
-      markEngagementServiceAsInvoiced: async (id, invoiceId, invoicePeriod) => {
-        await updateEngagementServiceMutation.mutateAsync({
-          id,
-          data: {
-            invoicing_status: 'invoiced',
-            invoiced_at: new Date().toISOString(),
-            invoiced_in_period: invoicePeriod,
-            invoice_id: invoiceId,
-          },
-        });
-      },
-      
-      // Colleague operations
-      addColleague: async (data) => addColleagueMutation.mutateAsync(data),
-      updateColleague: async (id, data) => updateColleagueMutation.mutateAsync({ id, data }),
-      deleteColleague: async (id) => deleteColleagueMutation.mutateAsync(id),
-      
-      // Assignment operations
-      addAssignment: async (data) => addAssignmentMutation.mutateAsync(data),
-      updateAssignment: async (id, data) => updateAssignmentMutation.mutateAsync({ id, data }),
-      removeAssignment: async (id) => removeAssignmentMutation.mutateAsync(id),
-      getAssignmentsByServiceId,
-      
-      // Extra Work operations
-      addExtraWork: async (data) => addExtraWorkMutation.mutateAsync(data),
-      updateExtraWork: async (id, data) => updateExtraWorkMutation.mutateAsync({ id, data }),
-      deleteExtraWork: async (id) => deleteExtraWorkMutation.mutateAsync(id),
-      getExtraWorksReadyToInvoice,
-      getExtraWorksByEngagementId,
-      approveExtraWork,
-      completeExtraWork,
-      markExtraWorkAsInvoiced: async (id, invoiceId, invoiceNumber) => {
-        await updateExtraWorkMutation.mutateAsync({
-          id,
-          data: {
-            status: 'invoiced',
-            invoice_id: invoiceId,
-            invoice_number: invoiceNumber,
-            invoiced_at: new Date().toISOString(),
-          },
-        });
-      },
-      
-      // Service operations
-      addService: async (data) => addServiceMutation.mutateAsync(data),
-      updateService: async (id, data) => updateServiceMutation.mutateAsync({ id, data }),
-      deleteService: async (id) => deleteServiceMutation.mutateAsync(id),
-      toggleServiceActive: async (id) => {
-        const service = services.find(s => s.id === id);
-        if (service) {
-          await updateServiceMutation.mutateAsync({ id, data: { is_active: !service.is_active } });
-        }
-      },
-      
-      // Issued Invoice operations
-      addIssuedInvoice: async (data) => addIssuedInvoiceMutation.mutateAsync(data),
-      getIssuedInvoicesByYear,
-      getInvoicesByEngagementId,
-      getNextInvoiceNumber,
-      createInvoiceWithLineItems,
-      
-      // Invoice Line Items operations
-      addInvoiceLineItem,
-      getLineItemsByInvoiceId,
-      
-      // Engagement Monthly Metrics operations
-      addEngagementMetric,
-      updateEngagementMetric,
-      getMetricsByEngagementId,
-      
-      // Engagement History
-      getEngagementHistory,
-      
-      // Helper functions
-      getClientById,
-      getEngagementById,
-      getColleagueById,
-      getEngagementsByClientId,
-      getAssignmentsByEngagementId,
-    }}>
+    <CRMDataContext.Provider value={contextValue}>
       {children}
     </CRMDataContext.Provider>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Plus, Trash2, FileText, ExternalLink, AlertTriangle } from 'lucide-react';
 import {
@@ -29,11 +30,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import type { Lead, CostModel, ClientTier, BillingModel, LeadSource, Client } from '@/types/crm';
+import type { Lead, CostModel, ClientTier } from '@/types/crm';
 import { toast } from '@/components/ui/sonner';
 
 const convertSchema = z.object({
@@ -72,10 +72,11 @@ interface ConvertLeadDialogProps {
 }
 
 export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: ConvertLeadDialogProps) {
-  const { markLeadAsConverted } = useLeadsData();
-  const { addClient, addContact, addEngagement, addAssignment, addEngagementService, deleteClient, colleagues } = useCRMData();
+  const { colleagues } = useCRMData();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [isConverting, setIsConverting] = useState(false);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
 
@@ -144,7 +145,13 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const executeConversion = async (data: ConvertFormData) => {
     if (!lead) return;
 
-    let newClient: Client | null = null;
+    // Validate contact_name exists (Fix #2)
+    if (!lead.contact_name || lead.contact_name.trim() === '') {
+      toast.error('Chybí jméno kontaktní osoby. Doplňte ho před převodem.');
+      return;
+    }
+
+    setIsConverting(true);
 
     try {
       // Derive engagement type and fees from services
@@ -157,149 +164,67 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         ?.filter(s => s.billing_type === 'one_off')
         .reduce((sum, s) => sum + s.price, 0) || 0;
 
-      // 1. Create Client (contract-bound data from lead, editable from form)
-      newClient = await addClient({
-        name: lead.company_name,  // FROM LEAD (contract-bound)
-        brand_name: data.brand_name,  // FROM FORM (editable)
-        ico: lead.ico,  // FROM LEAD (contract-bound)
-        dic: lead.dic || null,  // FROM LEAD (contract-bound)
-        website: data.website || '',
-        country: lead.billing_country || 'Czech Republic',  // FROM LEAD
-        industry: data.industry || '',
-        status: 'active',
-        tier: data.tier as ClientTier,
-        sales_representative_id: lead.owner_id,
-        billing_street: lead.billing_street || null,  // FROM LEAD (contract-bound)
-        billing_city: lead.billing_city || null,  // FROM LEAD (contract-bound)
-        billing_zip: lead.billing_zip || null,  // FROM LEAD (contract-bound)
-        billing_country: lead.billing_country || null,  // FROM LEAD (contract-bound)
-        billing_email: lead.billing_email || lead.contact_email || null,  // FROM LEAD
-        main_contact_name: '',  // Legacy - empty
-        main_contact_email: '', // Legacy - empty
-        main_contact_phone: '', // Legacy - empty
-        acquisition_channel: data.acquisition_channel,
-        start_date: data.start_date,
-        end_date: data.end_date || null,
-        notes: data.client_notes || '',
-        pinned_notes: data.pinned_notes || '',
-        created_by: user?.id || null,
-      });
+      // NOTE: Fakturoid subject creation is now done AFTER client creation
+      // to prevent orphaned subjects if the database transaction fails.
+      // The fakturoid_subject_id will be updated after successful client creation.
 
-      // 2. Create Primary ClientContact (from lead)
-      const newContact = await addContact({
-        client_id: newClient.id,
-        name: lead.contact_name,  // FROM LEAD (contract-bound)
-        position: lead.contact_position || null,  // FROM LEAD
-        email: lead.contact_email || null,  // FROM LEAD (contract-bound)
-        phone: lead.contact_phone || null,  // FROM LEAD (contract-bound)
-        is_primary: true,
-        is_decision_maker: true,
-        notes: '',
-      });
-
-      // 2.1 Create Fakturoid subject (non-blocking, don't fail conversion)
-      // Called AFTER contact creation so we can pass the phone number
-      try {
-        const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
-          'fakturoid-create-subject',
-          { body: { client_id: newClient.id, phone: lead.contact_phone || undefined } }
-        );
-
-        if (fakturoidError || !fakturoidResult?.success) {
-          console.warn('Fakturoid subject creation failed:', fakturoidError || fakturoidResult?.error);
-          toast.warning('Klient vytvořen, ale nepodařilo se vytvořit kontakt ve Fakturoid. Můžete to zkusit později.');
-        }
-      } catch (fakturoidErr) {
-        console.warn('Fakturoid integration error:', fakturoidErr);
-        toast.warning('Klient vytvořen, ale Fakturoid integrace selhala.');
-      }
-
-      // 2.5 Create contacts from onboarding signatories
+      // STEP 2: Prepare additional contacts (from onboarding)
       const addedEmails = new Set<string>([lead.contact_email || ''].filter(Boolean));
-      
+      const additionalContacts: Array<{
+        name: string;
+        position: string | null;
+        email: string | null;
+        phone: string | null;
+        is_decision_maker: boolean;
+        notes: string;
+      }> = [];
+
+      // Add signatories
       for (const signatory of lead.onboarding_signatories || []) {
         if (!signatory.email || addedEmails.has(signatory.email)) continue;
         addedEmails.add(signatory.email);
-        await addContact({
-          client_id: newClient.id,
+        additionalContacts.push({
           name: signatory.name,
           position: signatory.position || null,
           email: signatory.email,
           phone: signatory.phone || null,
-          is_primary: false,
           is_decision_maker: true,
           notes: 'Z onboarding formuláře - podpisující osoba',
         });
       }
 
-      // 2.6 Create contacts from onboarding project contacts
+      // Add project contacts
+      // Issue #14: Preserve position from project contacts
       for (const projectContact of lead.onboarding_project_contacts || []) {
         if (!projectContact.email || addedEmails.has(projectContact.email)) continue;
         addedEmails.add(projectContact.email);
-        await addContact({
-          client_id: newClient.id,
+        additionalContacts.push({
           name: projectContact.name,
-          position: null,
+          position: (projectContact as { position?: string }).position || 'Projektový kontakt',
           email: projectContact.email,
           phone: projectContact.phone || null,
-          is_primary: false,
           is_decision_maker: false,
           notes: 'Z onboarding formuláře - projektový kontakt',
         });
       }
 
-      // 3. Create Engagement (derived values from services)
-      const newEngagement = await addEngagement({
-        client_id: newClient.id,
-        contact_person_id: newContact.id,
-        name: data.engagement_name,
-        type: engagementType as 'retainer' | 'one_off',
-        billing_model: 'fixed_fee' as BillingModel,  // Always fixed_fee for service-based pricing
-        currency: lead.currency,  // FROM LEAD
-        monthly_fee: monthlyFee,
-        one_off_fee: oneOffFee,
-        status: 'active',
-        start_date: data.start_date,
-        end_date: data.end_date || null,
-        notice_period_months: data.notice_period_months || null,
-        freelo_url: null,
-        platforms: [],
-        notes: data.engagement_notes || '',
-        offer_url: lead.offer_url || null,
-        contract_url: lead.contract_url || null,
-      });
+      // STEP 3: Prepare services data
+      const servicesData = (lead.potential_services || []).map(ls => ({
+        service_id: ls.service_id,
+        name: ls.name,
+        price: ls.price,
+        billing_type: ls.billing_type,
+        currency: ls.currency,
+        selected_tier: ls.selected_tier,
+        notes: '',
+      }));
 
-      // 3.5 Create EngagementServices from lead's potential_services
-      for (const leadService of lead.potential_services || []) {
-        await addEngagementService({
-          engagement_id: newEngagement.id,
-          service_id: leadService.service_id,
-          name: leadService.name,
-          price: leadService.price,
-          billing_type: leadService.billing_type,
-          currency: leadService.currency,
-          is_active: true,
-          notes: '',
-          selected_tier: leadService.selected_tier,
-          creative_boost_min_credits: null,
-          creative_boost_max_credits: null,
-          creative_boost_price_per_credit: null,
-          invoicing_status: leadService.billing_type === 'one_off' ? 'pending' : 'not_applicable',
-          invoiced_at: null,
-          invoiced_in_period: null,
-          invoice_id: null,
-          upsold_by_id: null,
-          upsell_commission_percent: null,
-        });
-      }
-
-      // 4. Create Assignments for team members
-      for (const member of teamMembers.filter(m => m.colleague_id && m.role)) {
-        await addAssignment({
-          engagement_id: newEngagement.id,
-          engagement_service_id: null,
+      // STEP 4: Prepare assignments data
+      const assignmentsData = teamMembers
+        .filter(m => m.colleague_id && m.role)
+        .map(member => ({
           colleague_id: member.colleague_id,
-          role_on_engagement: member.role,
+          role: member.role,
           cost_model: member.cost_model,
           hourly_cost: member.cost_model === 'hourly' ? member.hourly_cost : null,
           monthly_cost: member.cost_model === 'fixed_monthly' ? member.monthly_cost : null,
@@ -307,29 +232,117 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           start_date: data.start_date,
           end_date: null,
           notes: '',
-        });
+        }));
+
+      // STEP 5: Call atomic conversion stored procedure
+      // All DB operations happen in a single transaction
+      const { data: conversionResult, error: conversionError } = await supabase.rpc(
+        'convert_lead_to_client',
+        {
+          p_lead_id: lead.id,
+          p_client_data: {
+            name: lead.company_name,
+            brand_name: data.brand_name,
+            ico: lead.ico,
+            dic: lead.dic || null,
+            website: data.website || '',
+            country: lead.billing_country || 'Czech Republic',
+            industry: data.industry || '',
+            tier: data.tier,
+            sales_representative_id: lead.owner_id,
+            billing_street: lead.billing_street || null,
+            billing_city: lead.billing_city || null,
+            billing_zip: lead.billing_zip || null,
+            billing_country: lead.billing_country || null,
+            billing_email: lead.billing_email || lead.contact_email || null,
+            // NOTE: main_contact_* fields removed - contacts now stored in client_contacts table
+            acquisition_channel: data.acquisition_channel,
+            start_date: data.start_date,
+            end_date: data.end_date || null,
+            notes: data.client_notes || '',
+            pinned_notes: data.pinned_notes || '',
+            fakturoid_subject_id: null, // Will be set after Fakturoid sync
+            created_by: user?.id || null,
+          },
+          p_primary_contact: {
+            name: lead.contact_name,
+            position: lead.contact_position || null,
+            email: lead.contact_email || null,
+            phone: lead.contact_phone || null,
+            notes: '',
+            is_primary: true,
+            is_decision_maker: true, // Primary contact from lead is always decision maker
+          },
+          p_additional_contacts: additionalContacts,
+          p_engagement_data: {
+            name: data.engagement_name,
+            type: engagementType,
+            billing_model: 'fixed_fee',
+            currency: lead.currency,
+            monthly_fee: monthlyFee,
+            one_off_fee: oneOffFee,
+            start_date: data.start_date,
+            end_date: data.end_date || null,
+            notice_period_months: data.notice_period_months || null,
+            offer_url: lead.offer_url || null,
+            contract_url: lead.contract_url || null,
+            notes: data.engagement_notes || '',
+          },
+          p_services: servicesData,
+          p_assignments: assignmentsData,
+        }
+      );
+
+      if (conversionError) {
+        console.error('Conversion RPC error:', conversionError);
+        throw new Error(conversionError.message || 'Chyba při převodu leadu');
       }
 
-      // 5. Mark lead as converted (LAST - so failure above keeps lead unconverted)
-      await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
+      if (!conversionResult?.success) {
+        throw new Error('Převod selhal - neočekávaná odpověď');
+      }
+
+      // STEP 6: Create Fakturoid subject AFTER successful conversion
+      // This prevents orphaned subjects - if this fails, client exists and can be synced later manually
+      const clientId = conversionResult.client_id;
+      try {
+        const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
+          'fakturoid-create-subject',
+          {
+            body: {
+              client_id: clientId, // Use the newly created client ID
+            }
+          }
+        );
+
+        if (fakturoidError || !fakturoidResult?.success) {
+          console.warn('Fakturoid subject creation failed (non-blocking):', fakturoidError || fakturoidResult?.error);
+          toast.warning('Klient vytvořen, ale propojení s Fakturoid selhalo. Propojte manuálně v kartě klienta.');
+        }
+      } catch (fakturoidErr) {
+        console.warn('Fakturoid subject creation error (non-blocking):', fakturoidErr);
+        toast.warning('Klient vytvořen, ale propojení s Fakturoid selhalo. Propojte manuálně v kartě klienta.');
+      }
+
+      // Invalidate all affected caches
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leads'] }),
+        queryClient.invalidateQueries({ queryKey: ['lead_history'] }),
+        queryClient.invalidateQueries({ queryKey: ['clients'] }),
+        queryClient.invalidateQueries({ queryKey: ['client_contacts'] }),
+        queryClient.invalidateQueries({ queryKey: ['engagements'] }),
+        queryClient.invalidateQueries({ queryKey: ['engagement_services'] }),
+        queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] }),
+      ]);
 
       toast.success('Lead byl úspěšně převeden na zakázku');
       onSuccess();
     } catch (error) {
       console.error('Error converting lead:', error);
-      
-      // Attempt rollback - delete client (cascades to contacts, engagements, etc.)
-      if (newClient) {
-        try {
-          await deleteClient(newClient.id);
-          toast.error('Chyba při převodu leadu. Změny byly vráceny zpět.');
-        } catch (rollbackError) {
-          console.error('Rollback failed:', rollbackError);
-          toast.error('Chyba při převodu leadu. Některé záznamy mohly být vytvořeny - kontaktujte admina.');
-        }
-      } else {
-        toast.error('Chyba při vytváření klienta');
-      }
+      const message = error instanceof Error ? error.message : 'Neznámá chyba';
+      toast.error(`Chyba při převodu leadu: ${message}`);
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -350,6 +363,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
     ?.filter(s => s.billing_type === 'one_off')
     .reduce((sum, s) => sum + s.price, 0) || 0;
   const currency = lead.currency || 'CZK';
+
+  // Check if lead has at least one service
+  const hasServices = (lead.potential_services?.length ?? 0) > 0;
 
   // Count contacts that will be created
   const totalContacts = 1 + // Primary contact
@@ -882,11 +898,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isConverting}>
                 Zrušit
               </Button>
-              <Button type="submit">
-                Převést na zakázku
+              <Button type="submit" disabled={isConverting || !hasServices}>
+                {isConverting ? 'Převádím...' : !hasServices ? 'Přidejte služby' : 'Převést na zakázku'}
               </Button>
             </div>
           </form>

@@ -63,6 +63,8 @@ export interface Profile {
 }
 
 // Client Contact - for multiple contacts per client
+// Note: Email is required for NEW contacts (enforced by DB constraint and frontend validation)
+// but kept as string | null for backward compatibility with existing data
 export interface ClientContact {
   id: string;
   client_id: string;
@@ -75,6 +77,7 @@ export interface ClientContact {
   notes: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null; // Soft delete timestamp
 }
 
 export type ClientTier = 'standard' | 'gold' | 'platinum' | 'diamond';
@@ -85,7 +88,7 @@ export interface Client {
   brand_name: string;
   ico: string;
   dic: string | null;
-  website: string;
+  website: string | null;
   country: string;
   industry: string;
   status: ClientStatus;
@@ -98,13 +101,11 @@ export interface Client {
   billing_zip: string | null;
   billing_country: string | null;
   billing_email: string | null;
-  // Legacy main contact (deprecated, use ClientContact instead)
-  main_contact_name: string;
-  main_contact_email: string;
-  main_contact_phone: string;
+  // Acquisition tracking - nullable in DB, but UI provides defaults
   acquisition_channel: string;
   start_date: string;
   end_date: string | null;
+  // Notes - nullable in DB, but UI provides empty string defaults
   notes: string;
   pinned_notes: string;
   // External integrations
@@ -112,6 +113,8 @@ export interface Client {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  // Soft delete
+  deleted_at: string | null;
 }
 
 export type ServiceCategory = 'performance' | 'creative' | 'lead_gen' | 'analytics' | 'consulting';
@@ -155,19 +158,13 @@ export interface Service {
   updated_at: string;
   // Default values for offer generation
   default_deliverables: string[] | null;     // Co klient dostane
+  default_frequency: string | null;
+  default_requirements: string[] | null;
+  default_turnaround: string | null;
+  offer_description: string | null;
 }
 
-export interface ClientService {
-  id: string;
-  client_id: string;
-  service_id: string;
-  start_date: string;
-  end_date: string | null;
-  is_active: boolean;
-  notes: string;
-  created_at: string;
-  updated_at: string;
-}
+// ClientService removed - services are now tracked via engagement_services instead
 
 // Advertising platforms
 export const ADVERTISING_PLATFORMS = [
@@ -625,7 +622,6 @@ export interface IssuedInvoice {
 // Extended types with relations
 export interface ClientWithEngagements extends Client {
   engagements: Engagement[];
-  services: (ClientService & { service: Service })[];
 }
 
 export interface ClientWithContacts extends Client {
