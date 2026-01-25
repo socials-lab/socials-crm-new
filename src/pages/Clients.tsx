@@ -49,11 +49,9 @@ import { useFakturoid, type FakturoidSubjectData } from '@/hooks/useFakturoid';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { AddContactDialog } from '@/components/clients/AddContactDialog';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useAuth } from '@/hooks/useAuth';
 import type { ClientStatus, Client, ClientContact, ClientTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/sonner';
-import { canModifyContacts } from '@/lib/permissions';
 
 const tierConfig: Record<ClientTier, { label: string; color: string; icon: string }> = {
   standard: { label: 'Standard', color: 'bg-muted text-muted-foreground', icon: '' },
@@ -109,10 +107,9 @@ export default function Clients() {
     getEngagementsByClientId,
   } = useCRMData();
 
-  const { isSuperAdmin: superAdmin } = useUserRole();
-  const { profile } = useAuth();
-  // Use permission helper for contact modification (aligns with RLS)
-  const canModifyContactsFlag = canModifyContacts(profile);
+  const { isSuperAdmin: superAdmin, role } = useUserRole();
+  // Allow editing for super admin or roles: admin, management, project_manager, specialist
+  const canModifyContactsFlag = superAdmin || ['admin', 'management', 'project_manager', 'specialist'].includes(role || '');
   const { createSubjectInFakturoid, syncSubjectToFakturoid, getSubjectFromFakturoid, isLoading: isFakturoidLoading } = useFakturoid();
   const [creatingSubjectForClient, setCreatingSubjectForClient] = useState<string | null>(null);
 

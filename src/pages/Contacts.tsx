@@ -38,8 +38,7 @@ import { AddContactDialog } from '@/components/clients/AddContactDialog';
 import type { ClientContact } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { canModifyContacts } from '@/lib/permissions';
-import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 
 // Copy button component
 function CopyButton({ value, className }: { value: string; className?: string }) {
@@ -88,8 +87,9 @@ export default function Contacts() {
     [clients]
   );
 
-  const { profile } = useAuth();
-  const canModify = canModifyContacts(profile);
+  const { role, isSuperAdmin } = useUserRole();
+  // Allow editing for super admin or roles: admin, management, project_manager, specialist
+  const canModify = isSuperAdmin || ['admin', 'management', 'project_manager', 'specialist'].includes(role || '');
 
   // State
   const [searchQuery, setSearchQuery] = useState('');
