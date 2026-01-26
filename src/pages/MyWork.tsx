@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -17,6 +17,7 @@ import {
   Clock,
   Package,
   GraduationCap,
+  ListTodo,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,10 +30,14 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useMeetingsData } from '@/hooks/useMeetingsData';
 import { useCreativeBoostData, CreativeBoostProvider } from '@/hooks/useCreativeBoostData';
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
+import { useActivityRewards } from '@/hooks/useActivityRewards';
+import { AddActivityRewardDialog } from '@/components/my-work/AddActivityRewardDialog';
+import { ActivityRewardsHistory } from '@/components/my-work/ActivityRewardsHistory';
 
 function MyWorkContent() {
   const navigate = useNavigate();
   const { colleagueId } = useUserRole();
+  const [showAddActivityDialog, setShowAddActivityDialog] = useState(false);
   
   const { 
     colleagues,
@@ -47,6 +52,16 @@ function MyWorkContent() {
   const { getTodaysMeetings, getUpcomingMeetings } = useMeetingsData();
   const { getColleagueCredits, getColleagueCreditsByClient } = useCreativeBoostData();
   const { getApprovedCommissionsForColleague } = useUpsellApprovals();
+  
+  // Activity rewards hook
+  const {
+    rewards: activityRewards,
+    currentMonthTotal: activityCurrentMonthTotal,
+    getRewardsByMonth,
+    getMonthlyTotals,
+    addReward,
+    deleteReward,
+  } = useActivityRewards(colleagueId);
 
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
@@ -112,7 +127,7 @@ function MyWorkContent() {
   const totalApprovedCommission = approvedCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
 
   // Total earnings this month
-  const totalMonthlyEarnings = myWorkData.totalMonthlyEarnings + totalCreativeBoostReward + totalApprovedCommission;
+  const totalMonthlyEarnings = myWorkData.totalMonthlyEarnings + totalCreativeBoostReward + totalApprovedCommission + activityCurrentMonthTotal;
 
   // No colleague linked
   if (!currentColleague) {
@@ -273,6 +288,16 @@ function MyWorkContent() {
                 <span className="font-medium text-primary">{totalApprovedCommission.toLocaleString()} Kč</span>
               </div>
             )}
+
+            {activityCurrentMonthTotal > 0 && (
+              <div className="flex items-center justify-between py-2 border-t">
+                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                  <ListTodo className="h-3 w-3" />
+                  Ostatní činnosti
+                </span>
+                <span className="font-medium text-primary">{activityCurrentMonthTotal.toLocaleString()} Kč</span>
+              </div>
+            )}
             
             <Separator />
             
@@ -374,6 +399,16 @@ function MyWorkContent() {
         </Card>
       </div>
 
+      {/* Activity Rewards History */}
+      <ActivityRewardsHistory
+        rewards={activityRewards}
+        currentMonthTotal={activityCurrentMonthTotal}
+        getRewardsByMonth={getRewardsByMonth}
+        getMonthlyTotals={getMonthlyTotals}
+        onAddClick={() => setShowAddActivityDialog(true)}
+        onDelete={deleteReward}
+      />
+
       {/* Socials HUB */}
       <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
         <CardContent className="p-6">
@@ -430,6 +465,16 @@ function MyWorkContent() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Activity Reward Dialog */}
+      {currentColleague && (
+        <AddActivityRewardDialog
+          open={showAddActivityDialog}
+          onOpenChange={setShowAddActivityDialog}
+          onAdd={addReward}
+          colleagueId={currentColleague.id}
+        />
+      )}
     </div>
   );
 }
