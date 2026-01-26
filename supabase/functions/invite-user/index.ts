@@ -18,7 +18,7 @@ interface InviteRequest {
   is_freelancer?: boolean;
   internal_hourly_cost?: number;
   monthly_fixed_cost?: number;
-  capacity_hours_per_month?: number;
+  max_engagements?: number;
 }
 
 serve(async (req) => {
@@ -78,7 +78,7 @@ serve(async (req) => {
       is_freelancer,
       internal_hourly_cost,
       monthly_fixed_cost,
-      capacity_hours_per_month,
+      max_engagements,
     }: InviteRequest = await req.json();
 
     if (!email || !firstName || !lastName || !role) {
@@ -140,7 +140,7 @@ serve(async (req) => {
         is_freelancer: is_freelancer || false,
         internal_hourly_cost: internal_hourly_cost || 0,
         monthly_fixed_cost: monthly_fixed_cost || null,
-        capacity_hours_per_month: capacity_hours_per_month || null,
+        // Note: max_engagements is frontend-only for now (not in DB schema yet)
       });
 
     if (colleagueError) {

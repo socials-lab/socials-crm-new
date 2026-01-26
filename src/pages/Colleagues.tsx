@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ChevronDown, ChevronUp, Mail, CreditCard, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus, History, Clock } from 'lucide-react';
+import { Search, Plus, ChevronDown, ChevronUp, Mail, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus, BarChart3 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { ColleagueForm } from '@/components/forms/ColleagueForm';
 import { UserManagement } from '@/components/settings/UserManagement';
-import { CapacityHistoryDialog } from '@/components/colleagues/CapacityHistoryDialog';
+import { Progress } from '@/components/ui/progress';
 import type { ColleagueStatus, Seniority, Colleague } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -72,7 +72,6 @@ function ColleaguesContent() {
   const [expandedColleagueId, setExpandedColleagueId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingColleague, setEditingColleague] = useState<Colleague | null>(null);
-  const [capacityHistoryColleague, setCapacityHistoryColleague] = useState<Colleague | null>(null);
   
   // Inline editing for assignment costs (super admin only)
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
@@ -174,7 +173,7 @@ function ColleaguesContent() {
               is_freelancer: colleagueData.is_freelancer,
               internal_hourly_cost: colleagueData.internal_hourly_cost,
               monthly_fixed_cost: colleagueData.monthly_fixed_cost,
-              capacity_hours_per_month: colleagueData.capacity_hours_per_month,
+              max_engagements: colleagueData.max_engagements,
             },
           });
           
@@ -378,44 +377,43 @@ function ColleaguesContent() {
                       
                     </div>
 
+                    {/* Workload and Earnings - for super admin */}
                     {superAdmin && (
                       <div className="space-y-3">
                         <h4 className="font-medium text-sm flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-muted-foreground" />
-                          Finanční údaje
+                          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                          Vytížení a odměna
                         </h4>
                         <div className="space-y-2">
                           <div className="p-3 rounded-lg bg-background border">
-                            <p className="text-xs text-muted-foreground">Hodinová sazba</p>
-                            <p className="text-lg font-semibold">
-                              {colleague.internal_hourly_cost.toLocaleString()} CZK/hod
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs text-muted-foreground">Vytížení</p>
+                              <p className="text-sm font-medium">
+                                {details.assignmentCount} z {colleague.max_engagements ?? 5} zakázek
+                              </p>
+                            </div>
+                            <Progress 
+                              value={((details.assignmentCount / (colleague.max_engagements ?? 5)) * 100)} 
+                              className="h-2"
+                            />
+                            <p className="text-xs text-muted-foreground text-right mt-1">
+                              {Math.round((details.assignmentCount / (colleague.max_engagements ?? 5)) * 100)}%
                             </p>
                           </div>
                           <div className="p-3 rounded-lg bg-background border">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  Kapacita
-                                </p>
-                                <p className="text-lg font-semibold">
-                                  {colleague.capacity_hours_per_month ?? '—'} hod/měs
-                                </p>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 gap-1 text-xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCapacityHistoryColleague(colleague);
-                                }}
-                              >
-                                <History className="h-3.5 w-3.5" />
-                                Historie
-                              </Button>
-                            </div>
+                            <p className="text-xs text-muted-foreground">Celková měsíční odměna</p>
+                            <p className="text-lg font-semibold text-primary">
+                              {details.totalMonthlyEarnings.toLocaleString()} CZK
+                            </p>
                           </div>
+                          {canSeeFinancials && (
+                            <div className="p-3 rounded-lg bg-background border">
+                              <p className="text-xs text-muted-foreground">Hodinová sazba (vícepráce)</p>
+                              <p className="text-sm font-medium">
+                                {colleague.internal_hourly_cost.toLocaleString()} CZK/hod
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -455,104 +453,112 @@ function ColleaguesContent() {
                     )}
                   </div>
 
-                  {/* Assigned Engagements - Super Admin Only with editable costs */}
-                  {superAdmin && details.clientData.length > 0 && (
+                  {/* Assigned Engagements - Always visible for super admin */}
+                  {superAdmin && (
                     <div className="mt-6 space-y-3">
                       <h4 className="font-medium text-sm flex items-center gap-2">
                         <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        Přiřazené zakázky ({details.clientData.length})
+                        Přiřazené zakázky ({details.assignmentCount})
                       </h4>
-                      <div className="space-y-2">
-                        {details.clientData.map(({ client, engagement, assignment }) => (
-                          <div 
-                            key={assignment.id} 
-                            className="flex items-center justify-between p-3 rounded-lg bg-background border"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
-                                {client.brand_name.charAt(0)}
-                              </div>
-                              <div>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/engagements?highlight=${engagement.id}`);
-                                  }}
-                                  className="font-medium text-sm text-primary hover:underline flex items-center gap-1"
-                                >
-                                  {engagement.name}
-                                  <ExternalLink className="h-3 w-3" />
-                                </button>
-                                <p className="text-xs text-muted-foreground">
-                                  {client.brand_name} • {assignment.role_on_engagement}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              {editingAssignmentId === assignment.id ? (
-                                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                  <Input
-                                    type="number"
-                                    value={tempCost}
-                                    onChange={(e) => setTempCost(e.target.value)}
-                                    className="h-7 w-24 text-sm"
-                                    placeholder="0"
-                                    autoFocus
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        handleSaveAssignmentCost(assignment.id);
-                                      } else if (e.key === 'Escape') {
-                                        setEditingAssignmentId(null);
-                                      }
-                                    }}
-                                  />
-                                  <span className="text-xs text-muted-foreground">CZK</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 text-status-active"
-                                    onClick={() => handleSaveAssignmentCost(assignment.id)}
-                                  >
-                                    <Check className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6"
-                                    onClick={() => setEditingAssignmentId(null)}
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </Button>
+                      {details.clientData.length > 0 ? (
+                        <>
+                          <div className="space-y-2">
+                            {details.clientData.map(({ client, engagement, assignment }) => (
+                              <div 
+                                key={assignment.id} 
+                                className="flex items-center justify-between p-3 rounded-lg bg-background border"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                                    {client.brand_name.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/engagements?highlight=${engagement.id}`);
+                                      }}
+                                      className="font-medium text-sm text-primary hover:underline flex items-center gap-1"
+                                    >
+                                      {engagement.name}
+                                      <ExternalLink className="h-3 w-3" />
+                                    </button>
+                                    <p className="text-xs text-muted-foreground">
+                                      {client.brand_name} • {assignment.role_on_engagement}
+                                    </p>
+                                  </div>
                                 </div>
-                              ) : (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingAssignmentId(assignment.id);
-                                    setTempCost(String(assignment.monthly_cost || 0));
-                                  }}
-                                  className="flex items-center gap-1 px-2 py-1 rounded text-sm font-medium hover:bg-muted transition-colors group"
-                                  title="Klikněte pro úpravu odměny"
-                                >
-                                  <span>{(assignment.monthly_cost || 0).toLocaleString()} CZK/měs</span>
-                                  <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </button>
-                              )}
+                                
+                                <div className="flex items-center gap-2">
+                                  {editingAssignmentId === assignment.id ? (
+                                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                      <Input
+                                        type="number"
+                                        value={tempCost}
+                                        onChange={(e) => setTempCost(e.target.value)}
+                                        className="h-7 w-24 text-sm"
+                                        placeholder="0"
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            handleSaveAssignmentCost(assignment.id);
+                                          } else if (e.key === 'Escape') {
+                                            setEditingAssignmentId(null);
+                                          }
+                                        }}
+                                      />
+                                      <span className="text-xs text-muted-foreground">CZK</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-status-active"
+                                        onClick={() => handleSaveAssignmentCost(assignment.id)}
+                                      >
+                                        <Check className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6"
+                                        onClick={() => setEditingAssignmentId(null)}
+                                      >
+                                        <X className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingAssignmentId(assignment.id);
+                                        setTempCost(String(assignment.monthly_cost || 0));
+                                      }}
+                                      className="flex items-center gap-1 px-2 py-1 rounded text-sm font-medium hover:bg-muted transition-colors group"
+                                      title="Klikněte pro úpravu odměny"
+                                    >
+                                      <span>{(assignment.monthly_cost || 0).toLocaleString()} CZK/měs</span>
+                                      <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Total summary */}
+                          <div className="flex justify-end pt-2 border-t">
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Celková měsíční odměna</p>
+                              <p className="text-lg font-bold text-primary">
+                                {details.totalMonthlyEarnings.toLocaleString()} CZK
+                              </p>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                      
-                      {/* Total summary */}
-                      <div className="flex justify-end pt-2 border-t">
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Celková měsíční odměna</p>
-                          <p className="text-lg font-bold text-primary">
-                            {details.totalMonthlyEarnings.toLocaleString()} CZK
-                          </p>
+                        </>
+                      ) : (
+                        <div className="p-4 rounded-lg border border-dashed text-center text-muted-foreground text-sm">
+                          Žádné přiřazené zakázky
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -584,11 +590,6 @@ function ColleaguesContent() {
         </SheetContent>
       </Sheet>
 
-      <CapacityHistoryDialog
-        colleague={capacityHistoryColleague}
-        open={!!capacityHistoryColleague}
-        onOpenChange={(open) => !open && setCapacityHistoryColleague(null)}
-      />
 
         </TabsContent>
 

@@ -163,6 +163,7 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
       is_freelancer: true,
       internal_hourly_cost: data.hourly_rate,
       capacity_hours_per_month: null,
+      max_engagements: 5,
       monthly_fixed_cost: null,
       notes: `IČO: ${data.ico}\nFirma: ${data.company_name}${data.dic ? `\nDIČ: ${data.dic}` : ''}\nAdresa: ${data.billing_street}, ${data.billing_zip} ${data.billing_city}\nÚčet: ${data.bank_account}`,
       profile_id: null,
