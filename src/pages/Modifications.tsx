@@ -1,15 +1,20 @@
+import { useState } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ModificationRequestCard } from '@/components/engagements/ModificationRequestCard';
+import { ProposeModificationDialog } from '@/components/engagements/ProposeModificationDialog';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, CheckCircle, XCircle, FileEdit } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, FileEdit, Plus } from 'lucide-react';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges } from '@/types/crm';
 
 export default function Modifications() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  
   const { 
     pendingRequests, 
     isLoadingPending, 
@@ -93,10 +98,18 @@ export default function Modifications() {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Úpravy zakázek" 
-        description="Přehled a schvalování požadavků na změny zakázek"
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader 
+          title="Úpravy zakázek" 
+          description="Přehled a schvalování požadavků na změny zakázek"
+        />
+        <Button onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Navrhnout úpravu
+        </Button>
+      </div>
+
+      <ProposeModificationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
 
       {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-3">
