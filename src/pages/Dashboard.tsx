@@ -20,21 +20,24 @@ import { KPICard } from '@/components/shared/KPICard';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useMeetingsData } from '@/hooks/useMeetingsData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
+import { PendingModificationsSection } from '@/components/dashboard/PendingModificationsSection';
 
 export default function Dashboard() {
   const { leads } = useLeadsData();
   const { clients, engagements, colleagues, getClientById } = useCRMData();
   const { getTodaysMeetings, getUpcomingMeetings } = useMeetingsData();
+  const { isSuperAdmin, canSeeFinancials: userCanSeeFinancials, colleagueId } = useUserRole();
   
-  // For now, always show financials (will be role-based later)
-  const canSeeFinancials = true;
-  const hasColleagueId = true;
+  // Use user role permissions
+  const canSeeFinancials = userCanSeeFinancials || isSuperAdmin;
+  const hasColleagueId = !!colleagueId;
 
   // Calculate KPIs
   const activeClients = clients.filter(c => c.status === 'active');
@@ -162,6 +165,11 @@ export default function Dashboard() {
           icon={Users}
         />
       </div>
+
+      {/* Pending Modifications - only for admins */}
+      {isSuperAdmin && (
+        <PendingModificationsSection />
+      )}
 
       {/* Today's Meetings */}
       <div className="grid gap-6 lg:grid-cols-2">
