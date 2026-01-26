@@ -908,6 +908,99 @@ function EngagementsContent() {
                       </div>
                     </div>
 
+                    {/* Profitability Section */}
+                    {canSeeFinancials && (() => {
+                      const engServices = getEngagementServicesByEngagementId(engagement.id);
+                      const engAssignments = getAssignmentsByEngagementId(engagement.id).filter(a => !a.end_date);
+                      
+                      // Calculate total revenue from services
+                      const totalRevenue = engServices
+                        .filter(s => s.is_active)
+                        .reduce((sum, s) => {
+                          // For Creative Boost, use estimated invoice from filtered month
+                          if (s.service_id === CREATIVE_BOOST_SERVICE_ID) {
+                            const cbSummary = getClientMonthSummaryByEngagementServiceId(s.id, filterYear, filterMonth);
+                            if (cbSummary) {
+                              return sum + cbSummary.estimatedInvoice;
+                            }
+                            // Fallback to max credits * price per credit
+                            const maxCredits = s.creative_boost_max_credits || 0;
+                            const pricePerCredit = s.creative_boost_price_per_credit || 400;
+                            return sum + (maxCredits * pricePerCredit);
+                          }
+                          return sum + s.price;
+                        }, 0);
+                      
+                      // Calculate total colleague costs from assignments
+                      const totalColleagueCosts = engAssignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
+                      
+                      // Calculate profit and margin
+                      const profit = totalRevenue - totalColleagueCosts;
+                      const marginPercent = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+                      
+                      // Determine color based on margin
+                      const marginColor = marginPercent >= 30 
+                        ? 'text-status-active' 
+                        : marginPercent >= 15 
+                          ? 'text-chart-4' 
+                          : 'text-destructive';
+
+                      return (
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-sm flex items-center gap-2">
+                            📊 Profitabilita zakázky
+                          </h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Revenue card */}
+                            <div className="p-3 rounded-lg bg-status-active/5 border border-status-active/20">
+                              <div className="text-xs text-muted-foreground mb-1">💰 Příjmy</div>
+                              <div className="text-lg font-bold text-status-active">
+                                {totalRevenue.toLocaleString()} {engagement.currency}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                z {engServices.filter(s => s.is_active).length} služeb
+                              </div>
+                            </div>
+                            
+                            {/* Costs card */}
+                            <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                              <div className="text-xs text-muted-foreground mb-1">🎨 Náklady na kolegy</div>
+                              <div className="text-lg font-bold text-destructive">
+                                {totalColleagueCosts.toLocaleString()} {engagement.currency}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                {engAssignments.length} přiřazených kolegů
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Profit summary */}
+                          <div className="p-3 rounded-lg bg-muted/50 border">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">📈 Čistý zisk</div>
+                                <div className={cn("text-xl font-bold", marginColor)}>
+                                  {profit.toLocaleString()} {engagement.currency}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-xs text-muted-foreground mb-1">Marže</div>
+                                <div className={cn("text-xl font-bold", marginColor)}>
+                                  {marginPercent.toFixed(1)}%
+                                </div>
+                              </div>
+                            </div>
+                            {marginPercent < 15 && (
+                              <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                Nízká marže - zvažte úpravu cen nebo snížení nákladů
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Invoicing history section */}
                     <EngagementInvoicingSection 
                       engagement={engagement} 
