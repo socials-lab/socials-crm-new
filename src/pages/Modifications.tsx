@@ -30,10 +30,12 @@ export default function Modifications() {
     rejectRequest,
     applyRequest,
     updateRequest,
+    deleteRequest,
     isApproving,
     isRejecting,
     isApplying,
     isUpdating,
+    isDeleting,
     refresh
   } = useModificationRequests();
   const { addEngagementService, updateEngagementService } = useCRMData();
@@ -129,6 +131,10 @@ export default function Modifications() {
     upsell_commission_percent?: number;
   }) => {
     await updateRequest(requestId, updates);
+  };
+
+  const handleDelete = async (requestId: string) => {
+    await deleteRequest(requestId);
   };
 
   const handleCopyLink = async () => {
@@ -263,8 +269,10 @@ export default function Modifications() {
                   onApprove={handleApprove}
                   onReject={handleReject}
                   onEdit={handleEdit}
+                  onDelete={handleDelete}
                   isApproving={isApproving}
                   isRejecting={isRejecting}
+                  isDeleting={isDeleting}
                 />
               ))}
             </div>
@@ -288,6 +296,8 @@ export default function Modifications() {
                   key={request.id}
                   request={request}
                   onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  isDeleting={isDeleting}
                 />
               ))}
             </div>
@@ -356,6 +366,8 @@ export default function Modifications() {
                 <ModificationRequestCard
                   key={request.id}
                   request={request}
+                  onDelete={handleDelete}
+                  isDeleting={isDeleting}
                 />
               ))}
             </div>

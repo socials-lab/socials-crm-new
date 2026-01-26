@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Clock,
   Pencil,
+  Trash2,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,9 +48,11 @@ interface ModificationRequestCardProps {
   onReject?: (requestId: string, reason: string) => Promise<void>;
   onApply?: (requestId: string) => Promise<void>;
   onEdit?: (request: StoredModificationRequest) => void;
+  onDelete?: (requestId: string) => Promise<void>;
   isApproving?: boolean;
   isRejecting?: boolean;
   isApplying?: boolean;
+  isDeleting?: boolean;
 }
 
 const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
@@ -85,11 +88,14 @@ export function ModificationRequestCard({
   onReject,
   onApply,
   onEdit,
+  onDelete,
   isApproving,
   isRejecting,
   isApplying,
+  isDeleting,
 }: ModificationRequestCardProps) {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
   
@@ -120,6 +126,13 @@ export function ModificationRequestCard({
       await onApply(request.id);
     }
   };
+
+  const handleDelete = async () => {
+    if (onDelete) {
+      await onDelete(request.id);
+      setIsDeleteDialogOpen(false);
+    }
+  };
   
   const handleCopyLink = async () => {
     if (request.upgrade_offer_token) {
@@ -142,6 +155,9 @@ export function ModificationRequestCard({
   
   // Show edit button for pending or approved (waiting for client) requests
   const canEdit = onEdit && ['pending', 'approved'].includes(request.status) && !isApplied;
+  
+  // Show delete button for pending, approved (waiting), or rejected requests
+  const canDelete = onDelete && ['pending', 'approved', 'rejected'].includes(request.status) && !isApplied && !isClientApproved;
 
   // Render proposed changes based on request type
   const renderChanges = () => {
@@ -355,15 +371,39 @@ export function ModificationRequestCard({
                   </Badge>
                 )}
                 {request.status === 'rejected' && (
-                  <Badge variant="destructive">
-                    <X className="h-3 w-3 mr-1" />
-                    Zamítnuto
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="destructive">
+                      <X className="h-3 w-3 mr-1" />
+                      Zamítnuto
+                    </Badge>
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-destructive hover:text-destructive"
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 )}
 
                 {/* Copy link button for approved requests waiting for client */}
                 {showCopyLinkOnly && (
                   <div className="flex items-center gap-2">
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-destructive hover:text-destructive"
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                     {canEdit && (
                       <Button
                         variant="ghost"
@@ -403,6 +443,18 @@ export function ModificationRequestCard({
                 {/* Actions for pending requests */}
                 {showActions && (
                   <div className="flex items-center gap-2">
+                    {/* Delete button */}
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-destructive hover:text-destructive"
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                     {/* Edit button */}
                     {canEdit && (
                       <Button
@@ -482,6 +534,38 @@ export function ModificationRequestCard({
               disabled={!rejectionReason.trim() || isRejecting}
             >
               {isRejecting ? 'Zamítám...' : 'Zamítnout'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Smazat návrh změny</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Opravdu chcete smazat tento návrh změny? Tuto akci nelze vrátit zpět.
+            </p>
+            <div className="bg-muted p-3 rounded-md text-sm">
+              <p><span className="text-muted-foreground">Typ:</span> {typeLabel}</p>
+              <p><span className="text-muted-foreground">Klient:</span> {request.client_brand_name || request.client_name}</p>
+              <p><span className="text-muted-foreground">Zakázka:</span> {request.engagement_name}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Zrušit
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {isDeleting ? 'Mažu...' : 'Smazat'}
             </Button>
           </DialogFooter>
         </DialogContent>
