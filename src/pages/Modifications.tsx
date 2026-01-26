@@ -84,7 +84,7 @@ export default function Modifications() {
 
   if (isLoadingPending) {
     return (
-      <div className="space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader 
           title="Úpravy zakázek" 
           description="Správa požadavků na změny zakázek"
@@ -97,7 +97,7 @@ export default function Modifications() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader 
           title="Úpravy zakázek" 
