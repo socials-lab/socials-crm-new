@@ -668,3 +668,129 @@ export interface EngagementWithDetails extends Engagement {
   assignments: (EngagementAssignment & { colleague: Colleague })[];
   monthly_metrics: EngagementMonthlyMetrics[];
 }
+
+// ============= Modification Request Types =============
+
+// Request type for engagement modifications
+export type ModificationRequestType = 
+  | 'add_service'
+  | 'update_service_price'
+  | 'deactivate_service'
+  | 'add_assignment'
+  | 'update_assignment'
+  | 'remove_assignment';
+
+// Status for modification requests
+export type ModificationRequestStatus = 'pending' | 'approved' | 'rejected';
+
+// Labels for request types
+export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+  add_service: 'Přidání služby',
+  update_service_price: 'Změna ceny služby',
+  deactivate_service: 'Ukončení služby',
+  add_assignment: 'Přiřazení kolegy',
+  update_assignment: 'Změna odměny kolegy',
+  remove_assignment: 'Odebrání kolegy',
+};
+
+// Status labels
+export const MODIFICATION_REQUEST_STATUS_LABELS: Record<ModificationRequestStatus, string> = {
+  pending: 'Čeká na schválení',
+  approved: 'Schváleno',
+  rejected: 'Zamítnuto',
+};
+
+// Proposed changes structure for different request types
+export interface AddServiceProposedChanges {
+  service_id: string | null;
+  name: string;
+  price: number;
+  currency: string;
+  billing_type: 'monthly' | 'one_off';
+  selected_tier?: ServiceTier | null;
+  // Creative Boost specific
+  creative_boost_min_credits?: number | null;
+  creative_boost_max_credits?: number | null;
+  creative_boost_price_per_credit?: number | null;
+}
+
+export interface UpdateServicePriceProposedChanges {
+  service_name: string;
+  old_price: number;
+  new_price: number;
+  currency: string;
+}
+
+export interface DeactivateServiceProposedChanges {
+  service_name: string;
+  price: number;
+  currency: string;
+}
+
+export interface AddAssignmentProposedChanges {
+  colleague_id: string;
+  colleague_name: string;
+  role_on_engagement: string;
+  cost_model: CostModel;
+  hourly_cost?: number | null;
+  monthly_cost?: number | null;
+  percentage_of_revenue?: number | null;
+}
+
+export interface UpdateAssignmentProposedChanges {
+  colleague_name: string;
+  old_cost_model?: CostModel;
+  new_cost_model: CostModel;
+  old_hourly_cost?: number | null;
+  new_hourly_cost?: number | null;
+  old_monthly_cost?: number | null;
+  new_monthly_cost?: number | null;
+  old_percentage?: number | null;
+  new_percentage?: number | null;
+  old_role?: string;
+  new_role?: string;
+}
+
+export interface RemoveAssignmentProposedChanges {
+  colleague_name: string;
+  role_on_engagement: string;
+}
+
+export type ModificationProposedChanges = 
+  | AddServiceProposedChanges
+  | UpdateServicePriceProposedChanges
+  | DeactivateServiceProposedChanges
+  | AddAssignmentProposedChanges
+  | UpdateAssignmentProposedChanges
+  | RemoveAssignmentProposedChanges;
+
+// Main modification request interface
+export interface ModificationRequest {
+  id: string;
+  engagement_id: string;
+  request_type: ModificationRequestType;
+  status: ModificationRequestStatus;
+  proposed_changes: ModificationProposedChanges;
+  engagement_service_id: string | null;
+  engagement_assignment_id: string | null;
+  effective_from: string | null;
+  upsold_by_id: string | null;
+  upsell_commission_percent: number;
+  requested_by: string | null;
+  requested_at: string;
+  note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Extended with relations for display
+export interface ModificationRequestWithDetails extends ModificationRequest {
+  engagement: Engagement;
+  client: Client;
+  requested_by_profile: Profile | null;
+  reviewed_by_profile: Profile | null;
+  upsold_by_colleague: Colleague | null;
+}
