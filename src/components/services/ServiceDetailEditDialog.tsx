@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { getServiceDetail } from '@/constants/serviceDetails';
 import type { Service } from '@/types/crm';
 
@@ -352,12 +352,12 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col" aria-describedby={undefined}>
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col overflow-hidden p-0" aria-describedby={undefined}>
+        <DialogHeader className="shrink-0 p-6 pb-4">
           <DialogTitle>Upravit detaily služby: {service.name}</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="basic" className="flex-1 min-h-0 flex flex-col">
+        <Tabs defaultValue="basic" className="flex-1 min-h-0 flex flex-col px-6">
           <TabsList className="grid grid-cols-5 w-full shrink-0">
             <TabsTrigger value="basic">Základní</TabsTrigger>
             <TabsTrigger value="benefits">Benefity</TabsTrigger>
@@ -366,7 +366,7 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
             <TabsTrigger value="pricing">Ceník</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 h-[60vh] pr-4">
+          <div className="flex-1 overflow-y-auto pr-2 pb-4">
             <TabsContent value="basic" className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label>Tagline (krátký popis)</Label>
@@ -780,10 +780,10 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
                 )}
               </Card>
             </TabsContent>
-          </ScrollArea>
+          </div>
         </Tabs>
 
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="shrink-0 p-6 pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
           </Button>
