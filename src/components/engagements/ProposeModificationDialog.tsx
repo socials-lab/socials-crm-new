@@ -49,6 +49,11 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
   const [serviceBillingType, setServiceBillingType] = useState<'monthly' | 'one_off'>('monthly');
   const [selectedTier, setSelectedTier] = useState<ServiceTier | 'none'>('none');
 
+  // Creative Boost specific fields
+  const [cbMaxCredits, setCbMaxCredits] = useState<number>(50);
+  const [cbPricePerCredit, setCbPricePerCredit] = useState<number>(400);
+  const [cbColleagueReward, setCbColleagueReward] = useState<number>(80);
+
   // For update_service_price
   const [selectedEngagementServiceId, setSelectedEngagementServiceId] = useState<string>('');
   const [newPrice, setNewPrice] = useState<number>(0);
@@ -64,6 +69,12 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
   // For update_assignment / remove_assignment
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
 
+  // Detect Creative Boost
+  const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
+  const selectedService = services.find(s => s.id === selectedServiceId);
+  const isCreativeBoost = selectedService?.code === CREATIVE_BOOST_CODE;
+  const isCoreService = selectedService?.service_type === 'core' && !isCreativeBoost;
+
   // Get engagement-specific services and assignments
   const currentEngagementServices = selectedEngagementId 
     ? getEngagementServicesByEngagementId(selectedEngagementId)
@@ -74,15 +85,22 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
 
   // Calculate prorated amount
   const calculateProratedAmount = () => {
-    if (!effectiveFrom || servicePrice <= 0 || serviceBillingType !== 'monthly') return null;
+    if (!effectiveFrom) return null;
+    
+    // Get the effective monthly price
+    const monthlyPrice = isCreativeBoost 
+      ? cbMaxCredits * cbPricePerCredit 
+      : servicePrice;
+    
+    if (monthlyPrice <= 0 || (!isCreativeBoost && serviceBillingType !== 'monthly')) return null;
     
     const daysInMonth = getDaysInMonth(effectiveFrom);
     const startDay = effectiveFrom.getDate();
     const remainingDays = daysInMonth - startDay + 1;
-    const proratedAmount = (servicePrice / daysInMonth) * remainingDays;
+    const proratedAmount = (monthlyPrice / daysInMonth) * remainingDays;
     
     return {
-      fullAmount: servicePrice,
+      fullAmount: monthlyPrice,
       proratedAmount: Math.round(proratedAmount),
       remainingDays,
       daysInMonth,
@@ -105,6 +123,9 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
       setServiceCurrency('CZK');
       setServiceBillingType('monthly');
       setSelectedTier('none');
+      setCbMaxCredits(50);
+      setCbPricePerCredit(400);
+      setCbColleagueReward(80);
       setSelectedEngagementServiceId('');
       setNewPrice(0);
       setSelectedColleagueId('');
@@ -123,7 +144,23 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
       const service = services.find(s => s.id === selectedServiceId);
       if (service) {
         setServiceName(service.name);
-        setServicePrice(service.base_price || 0);
+        if (service.code === CREATIVE_BOOST_CODE) {
+          // Creative Boost: set defaults, price is calculated from credits
+          setCbMaxCredits(50);
+          setCbPricePerCredit(400);
+          setCbColleagueReward(80);
+          setServicePrice(0); // Price is calculated
+          setSelectedTier('none');
+        } else if (service.service_type === 'core') {
+          // Core service with tiers
+          setSelectedTier('growth');
+          const growthPricing = service.tier_pricing?.find((p: any) => p.tier === 'growth');
+          setServicePrice(growthPricing?.price ?? service.base_price ?? 0);
+        } else {
+          // Addon or other service
+          setServicePrice(service.base_price || 0);
+          setSelectedTier('none');
+        }
       }
     }
   }, [selectedServiceId, services]);
@@ -145,14 +182,29 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
 
     switch (requestType) {
       case 'add_service':
-        proposed_changes = {
-          service_id: selectedServiceId === 'custom' ? null : selectedServiceId,
-          name: serviceName,
-          price: servicePrice,
-          currency: serviceCurrency,
-          billing_type: serviceBillingType,
-          selected_tier: selectedTier === 'none' ? null : selectedTier,
-        };
+        if (isCreativeBoost) {
+          // Creative Boost: credit-based pricing
+          proposed_changes = {
+            service_id: selectedServiceId,
+            name: serviceName,
+            price: cbMaxCredits * cbPricePerCredit, // Calculated price
+            currency: serviceCurrency,
+            billing_type: 'monthly',
+            selected_tier: null,
+            creative_boost_max_credits: cbMaxCredits,
+            creative_boost_price_per_credit: cbPricePerCredit,
+            creative_boost_colleague_reward_per_credit: cbColleagueReward,
+          };
+        } else {
+          proposed_changes = {
+            service_id: selectedServiceId === 'custom' ? null : selectedServiceId,
+            name: serviceName,
+            price: servicePrice,
+            currency: serviceCurrency,
+            billing_type: serviceBillingType,
+            selected_tier: selectedTier === 'none' ? null : selectedTier,
+          };
+        }
         break;
       case 'update_service_price':
         const oldService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
@@ -304,55 +356,122 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Cena *</Label>
-                  <Input 
-                    type="number" 
-                    value={servicePrice} 
-                    onChange={(e) => setServicePrice(Number(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Měna</Label>
-                  <Select value={serviceCurrency} onValueChange={setServiceCurrency}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CZK">CZK</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Fakturace</Label>
-                  <Select value={serviceBillingType} onValueChange={(v) => setServiceBillingType(v as 'monthly' | 'one_off')}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Měsíční</SelectItem>
-                      <SelectItem value="one_off">Jednorázová</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              {/* Creative Boost specific fields */}
+              {isCreativeBoost && (
+                <div className="space-y-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                  <h5 className="font-medium text-sm flex items-center gap-2">🎨 Nastavení Creative Boost</h5>
+                  
+                  <div className="space-y-2">
+                    <Label>Měsíční kreditový balíček</Label>
+                    <Input 
+                      type="number" 
+                      value={cbMaxCredits} 
+                      onChange={(e) => setCbMaxCredits(Number(e.target.value))}
+                      min={0}
+                    />
+                    <p className="text-xs text-muted-foreground">Kolik kreditů má klient k dispozici měsíčně</p>
+                  </div>
 
-              <div className="space-y-2">
-                <Label>Tier</Label>
-                <Select value={selectedTier} onValueChange={(v) => setSelectedTier(v as ServiceTier | 'none')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Vyberte tier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Žádný</SelectItem>
-                    <SelectItem value="growth">GROWTH</SelectItem>
-                    <SelectItem value="pro">PRO</SelectItem>
-                    <SelectItem value="elite">ELITE</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label>💰 Cena za kredit pro klienta (CZK)</Label>
+                    <Input 
+                      type="number" 
+                      value={cbPricePerCredit} 
+                      onChange={(e) => setCbPricePerCredit(Number(e.target.value))}
+                      min={0}
+                    />
+                    <p className="text-xs text-muted-foreground">Doporučeno: 400 Kč</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>🎨 Odměna za kredit pro grafika (CZK)</Label>
+                    <Input 
+                      type="number" 
+                      value={cbColleagueReward} 
+                      onChange={(e) => setCbColleagueReward(Number(e.target.value))}
+                      min={0}
+                    />
+                    <p className="text-xs text-muted-foreground">Doporučeno: 80 Kč</p>
+                  </div>
+
+                  <div className="pt-2 border-t space-y-1">
+                    <p className="text-sm font-medium">
+                      Měsíční fakturace: <span className="text-primary">{(cbMaxCredits * cbPricePerCredit).toLocaleString('cs-CZ')} CZK</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      = {cbMaxCredits} kreditů × {cbPricePerCredit} Kč/kredit
+                    </p>
+                    {cbColleagueReward > 0 && (
+                      <>
+                        <p className="text-sm font-medium mt-2">
+                          Odměna pro grafika: <span className="text-green-600">{(cbMaxCredits * cbColleagueReward).toLocaleString('cs-CZ')} CZK/měsíc</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          = {cbMaxCredits} kreditů × {cbColleagueReward} Kč/kredit
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Standard service fields (non-Creative Boost) */}
+              {!isCreativeBoost && (
+                <>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Cena *</Label>
+                      <Input 
+                        type="number" 
+                        value={servicePrice} 
+                        onChange={(e) => setServicePrice(Number(e.target.value))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Měna</Label>
+                      <Select value={serviceCurrency} onValueChange={setServiceCurrency}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CZK">CZK</SelectItem>
+                          <SelectItem value="EUR">EUR</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fakturace</Label>
+                      <Select value={serviceBillingType} onValueChange={(v) => setServiceBillingType(v as 'monthly' | 'one_off')}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Měsíční</SelectItem>
+                          <SelectItem value="one_off">Jednorázová</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Tier selector only for core services */}
+                  {isCoreService && (
+                    <div className="space-y-2">
+                      <Label>Tier</Label>
+                      <Select value={selectedTier} onValueChange={(v) => setSelectedTier(v as ServiceTier | 'none')}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Vyberte tier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Žádný</SelectItem>
+                          <SelectItem value="growth">GROWTH</SelectItem>
+                          <SelectItem value="pro">PRO</SelectItem>
+                          <SelectItem value="elite">ELITE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
