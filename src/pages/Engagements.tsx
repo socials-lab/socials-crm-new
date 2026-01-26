@@ -1357,11 +1357,13 @@ function EngagementsContent() {
       )}
 
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <SheetContent className="sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
+        <SheetContent className="sm:max-w-lg h-full flex flex-col">
+          <SheetHeader className="shrink-0">
             <SheetTitle>{editingEngagement ? 'Upravit zakázku' : 'Nová zakázka'}</SheetTitle>
           </SheetHeader>
-          <div className="mt-6">
+
+          {/* Scroll container (fixes non-scrollable sheet on smaller viewports) */}
+          <div className="mt-6 flex-1 min-h-0 overflow-y-auto pr-2">
             <EngagementForm
               engagement={editingEngagement || undefined}
               clients={clients}

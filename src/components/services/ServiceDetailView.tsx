@@ -306,7 +306,6 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
                   <TableRow className="bg-muted/50">
                     <TableHead className="text-xs font-medium">Typ výstupu</TableHead>
                     <TableHead className="text-xs font-medium text-center w-20">Kredity</TableHead>
-                    <TableHead className="text-xs font-medium text-right w-24">Cena</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -317,9 +316,6 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
                       </TableCell>
                       <TableCell className="text-xs text-center font-medium">
                         {output.credits}
-                      </TableCell>
-                      <TableCell className="text-xs text-right">
-                        {(output.credits * data.credit_pricing!.basePrice).toLocaleString('cs-CZ')} Kč
                       </TableCell>
                     </TableRow>
                   ))}
