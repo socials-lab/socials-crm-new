@@ -1,0 +1,302 @@
+import { useState, useCallback, useMemo } from 'react';
+import { useCRMData } from '@/hooks/useCRMData';
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+
+const STORAGE_KEY = 'upsell_commission_approvals';
+
+interface ApprovalData {
+  approved: boolean;
+  approvedAt: string;
+  approvedBy: string;
+}
+
+interface ApprovalStore {
+  [key: string]: ApprovalData;
+}
+
+export interface UpsellItem {
+  id: string;
+  type: 'extra_work' | 'service';
+  clientId: string;
+  clientName: string;
+  brandName: string;
+  engagementId: string;
+  engagementName: string;
+  itemName: string;
+  amount: number;
+  currency: string;
+  upsoldById: string;
+  upsoldByName: string;
+  commissionPercent: number;
+  commissionAmount: number;
+  isApproved: boolean;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  createdAt: string;
+}
+
+const getStorageKey = (type: 'extra_work' | 'service', id: string) => `${type}_${id}`;
+
+const getApprovals = (): ApprovalStore => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+};
+
+const saveApprovals = (approvals: ApprovalStore) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(approvals));
+};
+
+export function useUpsellApprovals() {
+  const { 
+    extraWorks, 
+    engagementServices, 
+    engagements, 
+    clients, 
+    colleagues,
+    getClientById,
+    getEngagementById,
+    getColleagueById,
+  } = useCRMData();
+  
+  const [version, setVersion] = useState(0);
+  const forceUpdate = useCallback(() => setVersion(v => v + 1), []);
+
+  // Get approval status for an item
+  const getApprovalStatus = useCallback((type: 'extra_work' | 'service', id: string): ApprovalData | null => {
+    const approvals = getApprovals();
+    const key = getStorageKey(type, id);
+    return approvals[key] || null;
+  }, [version]);
+
+  // Approve a commission
+  const approveCommission = useCallback((type: 'extra_work' | 'service', id: string, approvedBy: string) => {
+    const approvals = getApprovals();
+    const key = getStorageKey(type, id);
+    approvals[key] = {
+      approved: true,
+      approvedAt: new Date().toISOString(),
+      approvedBy,
+    };
+    saveApprovals(approvals);
+    forceUpdate();
+  }, [forceUpdate]);
+
+  // Revoke approval
+  const revokeApproval = useCallback((type: 'extra_work' | 'service', id: string) => {
+    const approvals = getApprovals();
+    const key = getStorageKey(type, id);
+    delete approvals[key];
+    saveApprovals(approvals);
+    forceUpdate();
+  }, [forceUpdate]);
+
+  // Get all upsells for a specific month
+  const getUpsellsForMonth = useCallback((year: number, month: number): UpsellItem[] => {
+    const monthStart = startOfMonth(new Date(year, month - 1));
+    const monthEnd = endOfMonth(new Date(year, month - 1));
+    const results: UpsellItem[] = [];
+
+    // Get extra works with upsold_by_id in this month
+    extraWorks.forEach(ew => {
+      if (!ew.upsold_by_id || !ew.upsell_commission_percent) return;
+      
+      const workDate = parseISO(ew.work_date);
+      if (!isWithinInterval(workDate, { start: monthStart, end: monthEnd })) return;
+
+      const engagement = getEngagementById(ew.engagement_id);
+      const client = getClientById(ew.client_id);
+      const seller = getColleagueById(ew.upsold_by_id);
+      
+      if (!client) return;
+
+      const approval = getApprovalStatus('extra_work', ew.id);
+      const commissionAmount = ew.amount * (ew.upsell_commission_percent / 100);
+
+      results.push({
+        id: ew.id,
+        type: 'extra_work',
+        clientId: client.id,
+        clientName: client.name,
+        brandName: client.brand_name || client.name,
+        engagementId: engagement?.id || '',
+        engagementName: engagement?.name || 'N/A',
+        itemName: ew.name,
+        amount: ew.amount,
+        currency: ew.currency || 'CZK',
+        upsoldById: ew.upsold_by_id,
+        upsoldByName: seller?.full_name || 'Neznámý',
+        commissionPercent: ew.upsell_commission_percent,
+        commissionAmount,
+        isApproved: approval?.approved || false,
+        approvedAt: approval?.approvedAt || null,
+        approvedBy: approval?.approvedBy || null,
+        createdAt: ew.created_at,
+      });
+    });
+
+    // Get engagement services with upsold_by_id created in this month
+    engagementServices.forEach(es => {
+      if (!es.upsold_by_id || !es.upsell_commission_percent) return;
+
+      const createdAt = parseISO(es.created_at);
+      if (!isWithinInterval(createdAt, { start: monthStart, end: monthEnd })) return;
+
+      const engagement = getEngagementById(es.engagement_id);
+      if (!engagement) return;
+      
+      const client = getClientById(engagement.client_id);
+      const seller = getColleagueById(es.upsold_by_id);
+      
+      if (!client) return;
+
+      const approval = getApprovalStatus('service', es.id);
+      
+      // Calculate amount - for Creative Boost use max_credits * price_per_credit
+      let amount = es.price;
+      if (es.creative_boost_max_credits && es.creative_boost_price_per_credit) {
+        amount = es.creative_boost_max_credits * es.creative_boost_price_per_credit;
+      }
+      
+      const commissionAmount = amount * (es.upsell_commission_percent / 100);
+
+      results.push({
+        id: es.id,
+        type: 'service',
+        clientId: client.id,
+        clientName: client.name,
+        brandName: client.brand_name || client.name,
+        engagementId: engagement.id,
+        engagementName: engagement.name,
+        itemName: es.name,
+        amount,
+        currency: es.currency || 'CZK',
+        upsoldById: es.upsold_by_id,
+        upsoldByName: seller?.full_name || 'Neznámý',
+        commissionPercent: es.upsell_commission_percent,
+        commissionAmount,
+        isApproved: approval?.approved || false,
+        approvedAt: approval?.approvedAt || null,
+        approvedBy: approval?.approvedBy || null,
+        createdAt: es.created_at,
+      });
+    });
+
+    // Sort by created_at descending
+    return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [extraWorks, engagementServices, getClientById, getEngagementById, getColleagueById, getApprovalStatus, version]);
+
+  // Get approved commissions for a specific colleague
+  const getApprovedCommissionsForColleague = useCallback((colleagueId: string, year?: number, month?: number): UpsellItem[] => {
+    const allUpsells: UpsellItem[] = [];
+    
+    // Get all extra works and services with upsold_by matching colleagueId
+    extraWorks.forEach(ew => {
+      if (ew.upsold_by_id !== colleagueId || !ew.upsell_commission_percent) return;
+      
+      const approval = getApprovalStatus('extra_work', ew.id);
+      if (!approval?.approved) return;
+
+      // Filter by month if specified
+      if (year && month) {
+        const workDate = parseISO(ew.work_date);
+        const monthStart = startOfMonth(new Date(year, month - 1));
+        const monthEnd = endOfMonth(new Date(year, month - 1));
+        if (!isWithinInterval(workDate, { start: monthStart, end: monthEnd })) return;
+      }
+
+      const engagement = getEngagementById(ew.engagement_id);
+      const client = getClientById(ew.client_id);
+      const seller = getColleagueById(ew.upsold_by_id);
+      
+      if (!client) return;
+
+      const commissionAmount = ew.amount * (ew.upsell_commission_percent / 100);
+
+      allUpsells.push({
+        id: ew.id,
+        type: 'extra_work',
+        clientId: client.id,
+        clientName: client.name,
+        brandName: client.brand_name || client.name,
+        engagementId: engagement?.id || '',
+        engagementName: engagement?.name || 'N/A',
+        itemName: ew.name,
+        amount: ew.amount,
+        currency: ew.currency || 'CZK',
+        upsoldById: ew.upsold_by_id,
+        upsoldByName: seller?.full_name || 'Neznámý',
+        commissionPercent: ew.upsell_commission_percent,
+        commissionAmount,
+        isApproved: true,
+        approvedAt: approval.approvedAt,
+        approvedBy: approval.approvedBy,
+        createdAt: ew.created_at,
+      });
+    });
+
+    engagementServices.forEach(es => {
+      if (es.upsold_by_id !== colleagueId || !es.upsell_commission_percent) return;
+      
+      const approval = getApprovalStatus('service', es.id);
+      if (!approval?.approved) return;
+
+      // Filter by month if specified
+      if (year && month) {
+        const createdAt = parseISO(es.created_at);
+        const monthStart = startOfMonth(new Date(year, month - 1));
+        const monthEnd = endOfMonth(new Date(year, month - 1));
+        if (!isWithinInterval(createdAt, { start: monthStart, end: monthEnd })) return;
+      }
+
+      const engagement = getEngagementById(es.engagement_id);
+      if (!engagement) return;
+      
+      const client = getClientById(engagement.client_id);
+      const seller = getColleagueById(es.upsold_by_id);
+      
+      if (!client) return;
+
+      let amount = es.price;
+      if (es.creative_boost_max_credits && es.creative_boost_price_per_credit) {
+        amount = es.creative_boost_max_credits * es.creative_boost_price_per_credit;
+      }
+      
+      const commissionAmount = amount * (es.upsell_commission_percent / 100);
+
+      allUpsells.push({
+        id: es.id,
+        type: 'service',
+        clientId: client.id,
+        clientName: client.name,
+        brandName: client.brand_name || client.name,
+        engagementId: engagement.id,
+        engagementName: engagement.name,
+        itemName: es.name,
+        amount,
+        currency: es.currency || 'CZK',
+        upsoldById: es.upsold_by_id,
+        upsoldByName: seller?.full_name || 'Neznámý',
+        commissionPercent: es.upsell_commission_percent,
+        commissionAmount,
+        isApproved: true,
+        approvedAt: approval.approvedAt,
+        approvedBy: approval.approvedBy,
+        createdAt: es.created_at,
+      });
+    });
+
+    return allUpsells.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [extraWorks, engagementServices, getClientById, getEngagementById, getColleagueById, getApprovalStatus, version]);
+
+  return {
+    getApprovalStatus,
+    approveCommission,
+    revokeApproval,
+    getUpsellsForMonth,
+    getApprovedCommissionsForColleague,
+  };
+}
