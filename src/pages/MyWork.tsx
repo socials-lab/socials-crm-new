@@ -16,8 +16,6 @@ import {
   Users,
   Clock,
   Package,
-  KeyRound,
-  LockKeyhole,
   GraduationCap,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -376,55 +374,27 @@ function MyWorkContent() {
         </Card>
       </div>
 
-      {/* Account Access Info */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <KeyRound className="h-4 w-4 text-primary" />
-            Přístupové údaje
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-            <div className="flex items-start gap-2">
-              <div className="p-1.5 rounded bg-primary/10 mt-0.5">
-                <Mail className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Hlavní Google účet</p>
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-mono bg-muted px-1 rounded">analytics@socials.cz</span> — přístup k většině nástrojů
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-            <div className="flex items-start gap-2">
-              <div className="p-1.5 rounded bg-primary/10 mt-0.5">
-                <LockKeyhole className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">NordPass (hesla)</p>
-                <p className="text-xs text-muted-foreground">
-                  Přístup přes Gmail: <span className="font-mono bg-muted px-1 rounded">ano@socials.cz</span>
-                </p>
-              </div>
-            </div>
-          </div>
-
+      {/* Socials HUB */}
+      <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+        <CardContent className="p-6">
           <a 
-            href="https://notion.so/your-alex-account-guide" 
+            href="https://notion.so/socials-hub" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="flex items-center gap-2 p-3 rounded-lg border border-dashed hover:bg-muted/50 transition-colors"
+            className="flex items-center gap-4 group"
           >
-            <FileText className="h-4 w-4 text-primary" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">Návod: Přístup do alex@socials.cz</p>
-              <p className="text-xs text-muted-foreground">Včetně verifikačního kódu</p>
+            <div className="p-4 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <FileText className="h-8 w-8 text-primary" />
             </div>
-            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                Socials HUB
+                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Přístupové údaje • SOP & Procesy • Mise & Vize • Hodnoty • Principy rozhodování
+              </p>
+            </div>
           </a>
         </CardContent>
       </Card>
@@ -457,12 +427,6 @@ function MyWorkContent() {
                 Akademie
               </Button>
             </Link>
-            <a href="https://notion.so/your-sop-page" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-2">
-                <ExternalLink className="h-4 w-4" />
-                SOP & Procesy
-              </Button>
-            </a>
           </div>
         </CardContent>
       </Card>
