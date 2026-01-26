@@ -231,9 +231,9 @@ export function AddEngagementServiceDialog({
             {/* Creative Boost specific fields */}
             {isCreativeBoost && (
               <div className="space-y-4 p-4 rounded-lg bg-muted/50 border">
-                <h4 className="font-medium text-sm">Nastavení Creative Boost</h4>
+                <h4 className="font-medium text-sm">🎨 Nastavení Creative Boost</h4>
                 <FormDescription className="text-xs">
-                  Nastavte maximální počet kreditů a cenu za kredit. Cena služby bude automaticky počítána podle spotřebovaných kreditů.
+                  Nastavte kreditový balíček pro klienta. Fakturace probíhá měsíčně na základě dohodnutého balíčku.
                 </FormDescription>
                 
                 <FormField
@@ -241,7 +241,7 @@ export function AddEngagementServiceDialog({
                   name="creative_boost_max_credits"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max. kreditů</FormLabel>
+                      <FormLabel>Měsíční kreditový balíček</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
@@ -252,6 +252,9 @@ export function AddEngagementServiceDialog({
                           onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
                         />
                       </FormControl>
+                      <FormDescription className="text-xs">
+                        Kolik kreditů má klient k dispozici měsíčně
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -262,27 +265,42 @@ export function AddEngagementServiceDialog({
                   name="creative_boost_price_per_credit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cena za kredit (CZK)</FormLabel>
+                      <FormLabel>💰 Cena za kredit pro klienta</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={0} 
-                          placeholder="400"
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                        />
+                        <div className="relative">
+                          <Input 
+                            type="number" 
+                            min={0} 
+                            placeholder="400"
+                            className="pr-12"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            CZK
+                          </span>
+                        </div>
                       </FormControl>
                       <FormDescription className="text-xs">
-                        Odhad fakturace při max. kreditech: {' '}
-                        <span className="font-medium">
-                          {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)).toLocaleString()} CZK
-                        </span>
+                        Kolik klient zaplatí za jeden kredit (doporučeno: 400 Kč)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                <div className="pt-2 border-t">
+                  <p className="text-sm font-medium">
+                    Měsíční fakturace: {' '}
+                    <span className="text-primary">
+                      {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)).toLocaleString('cs-CZ')} CZK
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    = {form.watch('creative_boost_max_credits') ?? 0} kreditů × {form.watch('creative_boost_price_per_credit') ?? 0} Kč/kredit
+                  </p>
+                </div>
               </div>
             )}
 
