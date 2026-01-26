@@ -1,122 +1,245 @@
 
-# Plán: Oprava schvalovacího workflow pro frontend-only systém
+# Plán: Detailní popis služby na upgrade stránce pro klienta
 
-## Identifikovaný problém
+## Cíl
+Když klient otevře odkaz na potvrzení změny (`/upgrade/:token`), uvidí kompletní popis služby včetně:
+- Co služba obsahuje (deliverables)
+- Benefity služby
+- Případně tier porovnání (pro GROWTH/PRO/ELITE)
 
-Tlačítka "Schválit" a "Zamítnout" jsou podmíněna hodnotou `isSuperAdmin` z databáze Supabase:
-```typescript
-onApprove={isSuperAdmin ? handleApprove : undefined}
-onReject={isSuperAdmin ? handleReject : undefined}
-```
-
-Protože systém má fungovat čistě na frontendu bez závislosti na databázi, je nutné tuto podmínku upravit.
-
-## Workflow po opravě
+## Zdroje popisu služby
 
 ```text
-1. KOLEGA navrhne přidání služby
-       ↓
-2. ADMIN vidí požadavek v "Čekající" a klikne "Schválit"
-       ↓
-3. Systém:
-   - Pro služby (add_service, update_service_price, deactivate_service):
-     → Vygeneruje token + odkaz pro klienta
-     → Zobrazí dialog s odkazem k odeslání/zkopírování
-   - Pro interní změny (assignment):
-     → Rovnou označí jako schváleno
-       ↓
-4. KLIENT obdrží odkaz, otevře /upgrade/:token
-   - Vidí detaily změny + poměrnou fakturaci
-   - Vyplní email, zaškrtne souhlas, klikne "Potvrdit"
-       ↓
-5. V ADMINU se požadavek zobrazí s badge "Klient potvrdil"
-   - Admin vidí kdy a kdo (email) potvrdil
-   - Může se pustit do práce
+1. STANDARDNÍ SLUŽBA z katalogu:
+   → Automaticky načte popis z SERVICE_DETAILS (serviceDetails.ts)
+   → Admin může text před odesláním upravit
+
+2. VLASTNÍ SLUŽBA:
+   → Admin vyplní popis ručně v dialogu
 ```
 
-## Technické změny
+## Změny v datové struktuře
 
-### 1. Modifications.tsx - Odstranit závislost na isSuperAdmin
+### 1. Rozšířit AddServiceProposedChanges (src/types/crm.ts)
 
-Nahradit podmínku `isSuperAdmin` jednodušší logikou - např. povolit všem přihlášeným uživatelům:
+Přidat nová pole pro uložení popisu služby:
 
-```typescript
-// Před:
-onApprove={isSuperAdmin ? handleApprove : undefined}
+| Pole | Typ | Popis |
+|------|-----|-------|
+| `description` | `string` | Hlavní popis služby |
+| `deliverables` | `string[]` | Co klient dostane (bullet points) |
+| `benefits` | `string[]` | Benefity služby (volitelné) |
+| `tier_comparison` | `TierFeature[]` | Porovnání tier úrovní (volitelné) |
 
-// Po:
-onApprove={handleApprove}
+## Změny v UI
+
+### 2. ProposeModificationDialog - Přidat editaci popisu
+
+**Nový krok ve formuláři pro `add_service`:**
+
+1. Po výběru služby z katalogu:
+   - Automaticky načíst popis z `SERVICE_DETAILS[code]` nebo `services.description`
+   - Zobrazit náhled: tagline, benefits, deliverables
+   - Umožnit editaci textu v textarea
+
+2. Pro vlastní službu:
+   - Textové pole pro popis
+   - Textarea pro deliverables (každý řádek = 1 položka)
+
+**UI návrh:**
+```text
+┌─────────────────────────────────────────────────┐
+│ 📝 Popis služby pro klienta                     │
+├─────────────────────────────────────────────────┤
+│ Stručný popis:                                  │
+│ ┌─────────────────────────────────────────────┐ │
+│ │ Reklama na Facebooku a Instagramu...        │ │
+│ └─────────────────────────────────────────────┘ │
+│                                                 │
+│ Co klient dostane (každý řádek = 1 bod):        │
+│ ┌─────────────────────────────────────────────┐ │
+│ │ • Kompletní správa Meta Ads                 │ │
+│ │ • Looker Studio reporting 24/7              │ │
+│ │ • Měsíční strategické konzultace            │ │
+│ └─────────────────────────────────────────────┘ │
+│                                                 │
+│ ⓘ Pro služby z katalogu se popis načte         │
+│   automaticky - můžete ho upravit               │
+└─────────────────────────────────────────────────┘
 ```
 
-### 2. Modifications.tsx - Přidat success dialog po schválení
+### 3. UpgradeOfferPage - Zobrazit detaily služby
 
-Po kliknutí na "Schválit" pro služby zobrazit dialog s:
-- Potvrzením že požadavek byl schválen
-- Odkazem pro klienta (pokud je client-facing typ)
-- Tlačítkem pro zkopírování odkazu
+**Rozšířit renderChangeDetails()** aby pro `add_service` zobrazil:
 
-### 3. ModificationRequestCard.tsx - Zobrazit odkaz pro schválené požadavky
+1. **Název služby + tier badge** (již existuje)
+2. **Popis služby** - nový odstavec pod názvem
+3. **Co dostanete** - zelený box s deliverables (jako na PublicOfferPage)
+4. **Benefity** - volitelný seznam výhod
+5. **Cena + efektivní datum** (již existuje)
 
-Pro schválené požadavky se statusem `approved` a existujícím tokenem zobrazit:
-- Tlačítko "Zkopírovat odkaz" (aktuálně se zobrazuje jen pro pending)
-- Badge "Čeká na klienta"
+**Vizuální návrh pro klienta:**
+```text
+┌─────────────────────────────────────────────────┐
+│ 📦 Přidání nové služby                          │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│ ┌─ Meta Ads Management ──────────────── PRO ─┐  │
+│ │                                            │  │
+│ │ Komplexní správa reklamních kampaní        │  │
+│ │ na Facebooku a Instagramu                  │  │
+│ │                                            │  │
+│ │ ┌────────────────────────────────────────┐ │  │
+│ │ │ ✅ Co dostanete:                       │ │  │
+│ │ │ • Kompletní správa Meta Ads            │ │  │
+│ │ │ • Looker Studio reporting 24/7         │ │  │
+│ │ │ • Měsíční strategické konzultace       │ │  │
+│ │ │ • Optimalizace 2-3x týdně              │ │  │
+│ │ └────────────────────────────────────────┘ │  │
+│ │                                            │  │
+│ │ Měsíční cena: 25 000 CZK                   │  │
+│ │ Platnost od: 1. února 2025                 │  │
+│ └────────────────────────────────────────────┘  │
+│                                                 │
+│ Fakturace za únor: 22 580 CZK (28 dní z 28)     │
+└─────────────────────────────────────────────────┘
+```
 
-### 4. Přidat záložku "Čeká na klienta" do Modifications
+## Technická implementace
 
-Nová záložka pro požadavky se statusem `approved` kde:
-- Token existuje (client-facing)
-- Klient ještě nepotvrdil
-
-## Soubory k úpravě
+### Soubory k úpravě
 
 | Soubor | Změna |
 |--------|-------|
-| `src/pages/Modifications.tsx` | Odstranit isSuperAdmin podmínku, přidat success dialog, přidat záložku "Čeká na klienta" |
-| `src/components/engagements/ModificationRequestCard.tsx` | Zobrazit odkaz i pro approved status, přidat badge "Čeká na klienta" |
+| `src/types/crm.ts` | Rozšířit `AddServiceProposedChanges` o description, deliverables, benefits |
+| `src/components/engagements/ProposeModificationDialog.tsx` | Přidat sekci pro editaci popisu služby |
+| `src/pages/UpgradeOfferPage.tsx` | Zobrazit detailní popis služby pro klienta |
 
-## Detailní implementace
+### Detaily implementace
 
-### Modifications.tsx
+**1. src/types/crm.ts**
+```typescript
+export interface AddServiceProposedChanges {
+  service_id: string | null;
+  name: string;
+  price: number;
+  currency: string;
+  billing_type: 'monthly' | 'one_off';
+  selected_tier?: ServiceTier | null;
+  // NEW: Service description for client
+  description?: string;
+  deliverables?: string[];
+  benefits?: string[];
+  // Creative Boost specific
+  creative_boost_min_credits?: number | null;
+  creative_boost_max_credits?: number | null;
+  creative_boost_price_per_credit?: number | null;
+}
+```
 
-1. **Odebrat závislost na isSuperAdmin:**
-   - Řádky 180-181: změnit na `onApprove={handleApprove}` a `onReject={handleReject}`
+**2. ProposeModificationDialog.tsx**
 
-2. **Přidat state pro success dialog:**
-   ```typescript
-   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
-   const [approvedRequest, setApprovedRequest] = useState<StoredModificationRequest | null>(null);
-   ```
+Přidat nové state proměnné:
+```typescript
+const [serviceDescription, setServiceDescription] = useState('');
+const [serviceDeliverables, setServiceDeliverables] = useState('');
+const [serviceBenefits, setServiceBenefits] = useState('');
+```
 
-3. **Upravit handleApprove:**
-   - Po úspěšném schválení nastavit `approvedRequest` a otevřít dialog
-   - Refresh dat pro aktualizaci seznamu
+Při výběru služby z katalogu automaticky načíst:
+```typescript
+useEffect(() => {
+  if (selectedServiceId && selectedServiceId !== 'custom') {
+    const service = services.find(s => s.id === selectedServiceId);
+    if (service) {
+      // Načíst z SERVICE_DETAILS nebo services table
+      const details = SERVICE_DETAILS[service.code];
+      if (details) {
+        setServiceDescription(details.tagline);
+        setServiceDeliverables(details.benefits?.slice(0, 4).join('\n') || '');
+        setServiceBenefits(details.benefits?.join('\n') || '');
+      } else {
+        setServiceDescription(service.description || '');
+      }
+    }
+  }
+}, [selectedServiceId]);
+```
 
-4. **Přidat success dialog UI:**
-   - Zobrazit odkaz pro klienta (pokud existuje token)
-   - Tlačítko pro zkopírování
-   - Info o dalším kroku
+Přidat do proposed_changes při odeslání:
+```typescript
+proposed_changes = {
+  // ...existing
+  description: serviceDescription,
+  deliverables: serviceDeliverables.split('\n').filter(Boolean),
+  benefits: serviceBenefits.split('\n').filter(Boolean),
+};
+```
 
-5. **Přidat novou kategorii požadavků:**
-   ```typescript
-   const waitingForClient = pendingRequests?.filter(
-     r => r.status === 'approved' && r.upgrade_offer_token && !r.client_approved_at
-   ) || [];
-   ```
+**3. UpgradeOfferPage.tsx**
 
-### ModificationRequestCard.tsx
+V `renderChangeDetails()` pro `add_service` přidat:
+```typescript
+case 'add_service': {
+  const c = changes as AddServiceProposedChanges;
+  return (
+    <div className="space-y-4">
+      {/* Header s názvem a tier badge */}
+      {/* ... existing code ... */}
+      
+      {/* Popis služby */}
+      {c.description && (
+        <p className="text-muted-foreground">{c.description}</p>
+      )}
+      
+      {/* Co dostanete */}
+      {c.deliverables && c.deliverables.length > 0 && (
+        <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+          <div className="flex items-center gap-2 mb-3">
+            <Package className="h-4 w-4 text-emerald-600" />
+            <p className="text-sm font-semibold text-emerald-900">
+              Co dostanete:
+            </p>
+          </div>
+          <ul className="space-y-2">
+            {c.deliverables.map((item, idx) => (
+              <li key={idx} className="flex items-start gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      {/* Cena a datum - existing code */}
+    </div>
+  );
+}
+```
 
-1. **Zobrazit tlačítko "Odkaz" i pro approved status:**
-   ```typescript
-   // Aktuálně: showActions = onApprove && onReject && request.status === 'pending'
-   // Změnit logiku pro zobrazení kopírování odkazu nezávisle na showActions
-   ```
+## Workflow po implementaci
 
-2. **Přidat badge "Čeká na klienta":**
-   ```typescript
-   {request.status === 'approved' && hasUpgradeToken && !isClientApproved && (
-     <Badge variant="outline" className="text-amber-600">
-       <Clock className="h-3 w-3 mr-1" />
-       Čeká na klienta
-     </Badge>
-   )}
-   ```
+```text
+1. KOLEGA v ProposeModificationDialog:
+   - Vybere službu z katalogu → popis se načte automaticky
+   - NEBO zvolí "Vlastní služba" → vyplní popis ručně
+   - Může editovat deliverables před odesláním
+   
+2. ADMIN schválí požadavek:
+   - Vygeneruje se odkaz pro klienta
+   
+3. KLIENT na /upgrade/:token vidí:
+   - Název služby + tier (pokud relevantní)
+   - Popis co služba obnáší
+   - Zelený box "Co dostanete" s bullet pointy
+   - Cenu a od kdy platí
+   - Formulář pro potvrzení
+```
+
+## Poznámky
+
+- Popis se ukládá přímo do `proposed_changes` v localStorage
+- Pro služby z katalogu se jako výchozí použije `SERVICE_DETAILS[code]`
+- Admin může popis před odesláním libovolně upravit
+- Klient vidí finální verzi textu schválenou adminem
