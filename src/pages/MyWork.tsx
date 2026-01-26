@@ -511,31 +511,6 @@ function MyWorkContent() {
         </CardContent>
       </Card>
 
-      {/* Quick Links */}
-      <Card className="bg-muted/30">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-2 justify-center">
-            <Link to="/extra-work">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Package className="h-4 w-4" />
-                Vícepráce
-              </Button>
-            </Link>
-            <Link to="/creative-boost">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Sparkles className="h-4 w-4" />
-                Creative Boost
-              </Button>
-            </Link>
-            <Link to="/academy">
-              <Button variant="outline" size="sm" className="gap-2">
-                <GraduationCap className="h-4 w-4" />
-                Akademie
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Add Activity Reward Dialog */}
       {currentColleague && (
