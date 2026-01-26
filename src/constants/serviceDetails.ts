@@ -40,8 +40,8 @@ export interface ServiceDetail {
 }
 
 export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
-  META_ADS: {
-    code: 'META_ADS',
+  SOCIALS_BOOST: {
+    code: 'SOCIALS_BOOST',
     tagline: 'Reklama na Facebooku a Instagramu pro e-shopy a služby',
     platforms: ['Meta Ads (Facebook, Instagram, Messenger)'],
     targetAudience: 'E-shopy a služby, které chtějí získat více zákazníků z Facebooku a Instagramu',
