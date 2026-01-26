@@ -33,7 +33,7 @@ import { useCreativeBoostData, CreativeBoostProvider } from '@/hooks/useCreative
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { useActivityRewards } from '@/hooks/useActivityRewards';
 import { AddActivityRewardDialog } from '@/components/my-work/AddActivityRewardDialog';
-import { ActivityRewardsHistory } from '@/components/my-work/ActivityRewardsHistory';
+import { InvoicingOverview } from '@/components/my-work/InvoicingOverview';
 import { calculateProratedReward, type ProratedRewardResult } from '@/utils/proratedRewardUtils';
 import { CATEGORY_LABELS } from '@/hooks/useActivityRewards';
 
@@ -166,6 +166,26 @@ function MyWorkContent() {
 
   // Total client earnings this month (WITHOUT internal work)
   const totalClientEarnings = myWorkData.totalMonthlyProrated + totalCreativeBoostReward + totalApprovedCommission;
+
+  // Prepare data for invoicing overview
+  const clientRewardsForInvoice = myWorkData.clientRewards.map((cr) => ({
+    clientName: cr.clientName,
+    engagementId: cr.engagementId,
+    amount: cr.prorated.proratedAmount,
+    isProrated: cr.prorated.isProrated,
+    startDay: cr.prorated.startDay,
+  }));
+
+  const creativeBoostForInvoice = creditsByClient.map((cb) => ({
+    clientName: cb.clientName,
+    credits: cb.totalCredits,
+    reward: cb.totalReward,
+  }));
+
+  const commissionsForInvoice = approvedCommissions.map((comm) => ({
+    clientName: comm.clientName,
+    amount: comm.commissionAmount,
+  }));
 
   // No colleague linked
   if (!currentColleague) {
@@ -509,15 +529,15 @@ function MyWorkContent() {
         </Card>
       </div>
 
-      {/* Activity Rewards History - Invoicing */}
-      <ActivityRewardsHistory
-        rewards={activityRewards}
-        currentMonthTotal={activityCurrentMonthTotal}
+      {/* Invoicing Overview - Complete invoice items */}
+      <InvoicingOverview
+        clientRewards={clientRewardsForInvoice}
+        creativeBoostItems={creativeBoostForInvoice}
+        commissionItems={commissionsForInvoice}
+        internalRewards={activityRewards}
         getRewardsByMonth={getRewardsByMonth}
         getRewardsByCategory={getRewardsByCategory}
-        getMonthlyTotals={getMonthlyTotals}
-        onAddClick={() => setShowAddActivityDialog(true)}
-        onDelete={deleteReward}
+        onAddInternalWork={() => setShowAddActivityDialog(true)}
       />
 
       {/* Socials HUB */}
