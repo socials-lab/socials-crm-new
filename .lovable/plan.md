@@ -1,80 +1,180 @@
 
-# Plan: Odměna za kredit pro grafika v Creative Boost
+
+# Plán: Upsell Summary Card s workflow schvalování provizí (Frontend-only)
 
 ## Přehled
-Přidání nového pole do formuláře pro nastavení Creative Boost služby, které umožní definovat odměnu (v CZK) za každý kredit pro přiřazeného grafika/kolegu.
+Vytvoření karty pro měsíční přehled všech upsellů (vícepráce + nové služby) s provizemi a workflow schvalování. Schválené provize se zobrazí v "Můj přehled" u daného kolegy. Vše pouze ve frontendu bez databázových změn.
 
-## Změny
+## Současný stav
+- `ExtraWork` a `EngagementService` mají pole `upsold_by_id` a `upsell_commission_percent`
+- Upselly zobrazují badge "💰 Upsell", ale chybí workflow schvalování
+- Není rozlišení mezi čekajícími a schválenými provizemi
 
-### 1. Databázová migrace
-Přidání nového sloupce do tabulky `engagement_services`:
+## Řešení
 
-```sql
-ALTER TABLE public.engagement_services
-ADD COLUMN IF NOT EXISTS creative_boost_colleague_reward_per_credit NUMERIC DEFAULT NULL;
+### 1. LocalStorage pro stav schválení
 
-COMMENT ON COLUMN public.engagement_services.creative_boost_colleague_reward_per_credit 
-IS 'Reward per credit for the assigned colleague (graphic designer) in Creative Boost service';
-```
+Ukládání schválených provizí do localStorage:
 
-### 2. TypeScript typy
-Aktualizace `src/types/crm.ts` - přidání pole do interface `EngagementService`:
-
-```typescript
-export interface EngagementService {
-  // ... existující pole ...
-  creative_boost_min_credits: number | null;
-  creative_boost_max_credits: number | null;
-  creative_boost_price_per_credit: number | null;
-  creative_boost_colleague_reward_per_credit: number | null;  // NOVÉ
-  // ...
+```text
+Key: "upsell_commission_approvals"
+Value: {
+  "extra_work_123": {
+    approved: true,
+    approvedAt: "2026-01-26T14:30:00Z",
+    approvedBy: "admin-user-id"
+  },
+  "service_456": {
+    approved: true,
+    approvedAt: "2026-01-25T10:15:00Z", 
+    approvedBy: "admin-user-id"
+  }
 }
 ```
 
-### 3. Formulář pro přidání služby
-Aktualizace `src/components/forms/AddEngagementServiceDialog.tsx`:
+### 2. Nový Hook: useUpsellApprovals
 
-**Schema:**
-```typescript
-creative_boost_colleague_reward_per_credit: z.coerce.number().nullable(),
-```
+Soubor: `src/hooks/useUpsellApprovals.tsx`
 
-**Nové pole v Creative Boost sekci:**
+Funkce:
+- `getApprovalStatus(type, id)` - vrátí stav schválení
+- `approveCommission(type, id, userId)` - schválí provizi
+- `revokeApproval(type, id)` - zruší schválení
+- `getUpsellsForMonth(year, month)` - všechny upselly za měsíc
+- `getApprovedCommissionsForColleague(colleagueId, year, month)` - schválené provize kolegy
+
+### 3. Nová Komponenta: UpsellSummaryCard
+
+Soubor: `src/components/upsells/UpsellSummaryCard.tsx`
+
 ```text
-┌─────────────────────────────────────────────┐
-│ 🎨 Nastavení Creative Boost                 │
-├─────────────────────────────────────────────┤
-│ Měsíční kreditový balíček: [50]             │
-│ 💰 Cena za kredit pro klienta: [400] CZK    │
-│ 🎨 Odměna za kredit pro grafika: [80] CZK   │  ← NOVÉ
-├─────────────────────────────────────────────┤
-│ Měsíční fakturace: 20 000 CZK               │
-│ = 50 kreditů × 400 Kč/kredit                │
-│                                             │
-│ Odměna pro grafika: 4 000 CZK/měsíc         │  ← NOVÉ
-│ = 50 kreditů × 80 Kč/kredit                 │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│ 💰 Přehled upsellů - Leden 2026                    [<] [>] měsíc   │
+├─────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────────┐ │
+│ │ 🏢 ACME Corp • Performance Marketing                           │ │
+│ │ ────────────────────────────────────────────────────────────── │ │
+│ │ 📋 Extra Work: Bannery pro kampaň                              │ │
+│ │ 💵 Částka: 15 000 CZK                                          │ │
+│ │ 👤 Prodal: Jan Novák                                           │ │
+│ │ 💰 Provize: 1 500 CZK (10%)                                    │ │
+│ │ ⏳ Čeká na schválení              [✓ Schválit] (admin only)   │ │
+│ └─────────────────────────────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────────────────────────────┐ │
+│ │ 🏢 Beta s.r.o. • Creative Boost                                │ │
+│ │ ────────────────────────────────────────────────────────────── │ │
+│ │ 🆕 Nová služba: Creative Boost                                 │ │
+│ │ 💵 Částka: 50 × 400 = 20 000 CZK                               │ │
+│ │ 👤 Prodal: Petr Svoboda                                        │ │
+│ │ 💰 Provize: 2 000 CZK (10%)                                    │ │
+│ │ ✅ Schváleno 15.1.2026                                         │ │
+│ └─────────────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────┤
+│ 📊 SOUHRN                                                          │
+│ Celkem provize: 3 500 CZK   │   Schváleno: 2 000 CZK              │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Form submission:**
-Přidání `creative_boost_colleague_reward_per_credit` do objektu odesílaného na server.
+### 4. Integrace do stránek
+
+**A) Stránka Zakázky (`src/pages/Engagements.tsx`)**
+- Přidání UpsellSummaryCard jako nové sekce (viditelné pro adminy/uživatele s `can_see_financials`)
+- Navigace mezi měsíci
+
+**B) Stránka Můj přehled (`src/pages/MyWork.tsx`)**
+- Nová sekce "💰 Schválené provize"
+- Zobrazí pouze schválené provize pro přihlášeného kolegu
+- Seskupeno podle měsíce
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│ 💰 Schválené provize                                               │
+├─────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────────┐ │
+│ │ Leden 2026                                                      │ │
+│ │ ──────────────────────────────────────────────────────────────  │ │
+│ │ • Beta s.r.o. - Creative Boost           2 000 CZK ✅          │ │
+│ │ • Gamma a.s. - Extra bannery             1 200 CZK ✅          │ │
+│ │                                                                 │ │
+│ │ Celkem: 3 200 CZK                                              │ │
+│ └─────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Technické detaily
 
-### Soubory k úpravě
-| Soubor | Změna |
-|--------|-------|
-| `engagement_services` (DB) | Nový sloupec `creative_boost_colleague_reward_per_credit` |
-| `src/types/crm.ts` | Nové pole v `EngagementService` interface |
-| `src/components/forms/AddEngagementServiceDialog.tsx` | Nové form field + výpočet odměny |
+### Soubory k vytvoření/úpravě
 
-### Výchozí hodnota
-- Doporučená výchozí hodnota: **80 CZK** za kredit (jako příklad, lze upravit)
-- Pole je nullable - pokud není vyplněno, grafik nemá nastavenou odměnu per credit
+| Soubor | Akce | Popis |
+|--------|------|-------|
+| `src/hooks/useUpsellApprovals.tsx` | VYTVOŘIT | Hook pro správu schválení (localStorage) |
+| `src/components/upsells/UpsellSummaryCard.tsx` | VYTVOŘIT | Hlavní komponenta přehledu |
+| `src/pages/Engagements.tsx` | UPRAVIT | Přidat sekci s UpsellSummaryCard |
+| `src/pages/MyWork.tsx` | UPRAVIT | Přidat sekci schválených provizí |
 
-### Zobrazení v souhrnu
-V Creative Boost sekci bude zobrazen:
-- Měsíční fakturace klientovi (kredity × cena/kredit)
-- Měsíční odměna pro grafika (kredity × odměna/kredit)
+### Interface pro UpsellItem
+
+```typescript
+interface UpsellItem {
+  id: string;
+  type: 'extra_work' | 'service';
+  clientId: string;
+  clientName: string;
+  brandName: string;
+  engagementId: string;
+  engagementName: string;
+  itemName: string;
+  amount: number;
+  currency: string;
+  upsoldById: string;
+  upsoldByName: string;
+  commissionPercent: number;
+  commissionAmount: number;
+  // Frontend-only approval state
+  isApproved: boolean;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  createdAt: string;
+}
+```
+
+### Logika výpočtu provize
+
+**Extra Work:**
+```typescript
+commission = amount * (upsell_commission_percent / 100)
+```
+
+**Engagement Service (běžná):**
+```typescript
+commission = price * (upsell_commission_percent / 100)
+```
+
+**Creative Boost Service:**
+```typescript
+firstBilling = creative_boost_max_credits * creative_boost_price_per_credit
+commission = firstBilling * (upsell_commission_percent / 100)
+```
+
+### Oprávnění
+
+| Akce | Oprávnění |
+|------|-----------|
+| Zobrazit UpsellSummaryCard | `can_see_financials` |
+| Schválit provizi | `is_super_admin` nebo role = 'admin' |
+| Zobrazit vlastní schválené provize | Všichni uživatelé (filtrováno na vlastní) |
+
+### Stavy provize (Badge)
+
+| Stav | Badge | Barva |
+|------|-------|-------|
+| Čeká na schválení | ⏳ "Čeká na schválení" | Žlutá/amber |
+| Schváleno | ✅ "Schváleno [datum]" | Zelená |
+
+### Empty State
+
+Pokud nejsou žádné upselly v daném měsíci:
+> "Žádné upselly v tomto měsíci"
+
