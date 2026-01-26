@@ -5,6 +5,8 @@ import { cs } from 'date-fns/locale';
 import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { UpsellSummaryCard } from '@/components/upsells/UpsellSummaryCard';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -69,9 +71,11 @@ function EngagementsContent() {
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
   const highlightedRef = useRef<HTMLDivElement>(null);
-  // For now, allow all (will be role-based later)
-  const canSeeFinancials = true;
-  const superAdmin = true;
+  const { isSuperAdmin, canSeeFinancials: userCanSeeFinancials } = useUserRole();
+  
+  // Use user role permissions
+  const canSeeFinancials = userCanSeeFinancials || isSuperAdmin;
+  const superAdmin = isSuperAdmin;
 
   const { 
     clients, 
@@ -359,6 +363,11 @@ function EngagementsContent() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Upsell Summary Card - visible for users with financial access */}
+      {canSeeFinancials && (
+        <UpsellSummaryCard className="mb-4" />
+      )}
 
       <div className="space-y-3">
         {filteredEngagements.length === 0 ? (

@@ -1,12 +1,16 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, CreditCard, ExternalLink, Sparkles, Zap, Palette, Coins } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { Briefcase, CreditCard, ExternalLink, Sparkles, Zap, Palette, Coins, CheckCircle, FileText } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCreativeBoostData, CreativeBoostProvider } from '@/hooks/useCreativeBoostData';
+import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { cn } from '@/lib/utils';
 
 function MyWorkContent() {
@@ -24,6 +28,7 @@ function MyWorkContent() {
   } = useCRMData();
   
   const { getColleagueCredits, getColleagueCreditsYear, getColleagueCreditsDetail, getColleagueCreditsByClient } = useCreativeBoostData();
+  const { getApprovedCommissionsForColleague } = useUpsellApprovals();
 
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
@@ -76,6 +81,12 @@ function MyWorkContent() {
   
   // Total reward from Creative Boost
   const totalCreativeBoostReward = creditsByClient.reduce((sum, c) => sum + c.totalReward, 0);
+
+  // Approved upsell commissions for current colleague
+  const approvedCommissions = currentColleague 
+    ? getApprovedCommissionsForColleague(currentColleague.id, currentYear, currentMonth) 
+    : [];
+  const totalApprovedCommission = approvedCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
 
   // If no colleague is linked, show message
   if (!currentColleague) {
@@ -320,6 +331,73 @@ function MyWorkContent() {
               </Card>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Approved Upsell Commissions */}
+      {approvedCommissions.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            💰 Schválené provize - tento měsíc
+          </h2>
+          <div className="grid gap-3">
+            {approvedCommissions.map((commission) => (
+              <Card key={`${commission.type}-${commission.id}`} className="overflow-hidden">
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+                          {commission.type === 'extra_work' ? (
+                            <FileText className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Sparkles className="h-4 w-4 text-green-600" />
+                          )}
+                        </div>
+                        <div>
+                          <button
+                            onClick={() => commission.engagementId && navigate(`/engagements?highlight=${commission.engagementId}`)}
+                            className="font-medium text-primary hover:underline flex items-center gap-1"
+                          >
+                            {commission.brandName}
+                            <ExternalLink className="h-3 w-3" />
+                          </button>
+                          <p className="text-xs text-muted-foreground">
+                            {commission.type === 'extra_work' ? 'Vícepráce' : 'Nová služba'}: {commission.itemName}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right space-y-1">
+                      <p className="text-lg font-bold text-green-600">
+                        {commission.commissionAmount.toLocaleString()} {commission.currency}
+                      </p>
+                      <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                        ✅ Schváleno
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+          
+          {/* Total summary */}
+          <Card className="bg-green-500/5 border-green-500/20">
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Coins className="h-5 w-5 text-green-600" />
+                  <span className="font-medium">Celkem schválené provize</span>
+                </div>
+                <span className="text-xl font-bold text-green-600">
+                  {totalApprovedCommission.toLocaleString()} CZK
+                </span>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
     </div>
