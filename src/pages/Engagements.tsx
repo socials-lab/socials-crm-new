@@ -887,6 +887,17 @@ function EngagementsContent() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                  {canSeeFinancials && (
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                      {assignment.cost_model === 'fixed_monthly' && assignment.monthly_cost 
+                                        ? `${assignment.monthly_cost.toLocaleString('cs-CZ')} Kč/měs`
+                                        : assignment.cost_model === 'hourly' && assignment.hourly_cost
+                                        ? `${assignment.hourly_cost.toLocaleString('cs-CZ')} Kč/h`
+                                        : assignment.cost_model === 'percentage' && assignment.percentage_of_revenue
+                                        ? `${assignment.percentage_of_revenue}%`
+                                        : '–'}
+                                    </span>
+                                  )}
                                   <Button
                                     variant="ghost" 
                                     size="icon" 
