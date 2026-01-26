@@ -31,8 +31,9 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCreativeBoostData, CreativeBoostProvider } from '@/hooks/useCreativeBoostData';
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
-import { useActivityRewards } from '@/hooks/useActivityRewards';
+import { useActivityRewards, type ActivityReward } from '@/hooks/useActivityRewards';
 import { AddActivityRewardDialog } from '@/components/my-work/AddActivityRewardDialog';
+import { EditActivityRewardDialog } from '@/components/my-work/EditActivityRewardDialog';
 import { InvoicingOverview } from '@/components/my-work/InvoicingOverview';
 import { calculateProratedReward, type ProratedRewardResult } from '@/utils/proratedRewardUtils';
 import { CATEGORY_LABELS } from '@/hooks/useActivityRewards';
@@ -50,6 +51,7 @@ function MyWorkContent() {
   const navigate = useNavigate();
   const { colleagueId } = useUserRole();
   const [showAddActivityDialog, setShowAddActivityDialog] = useState(false);
+  const [editingReward, setEditingReward] = useState<ActivityReward | null>(null);
   
   const { 
     colleagues,
@@ -70,6 +72,7 @@ function MyWorkContent() {
     getRewardsByCategory,
     getMonthlyTotals,
     addReward,
+    updateReward,
     deleteReward,
   } = useActivityRewards(colleagueId);
 
@@ -487,6 +490,7 @@ function MyWorkContent() {
         getRewardsByMonth={getRewardsByMonth}
         getRewardsByCategory={getRewardsByCategory}
         onAddInternalWork={() => setShowAddActivityDialog(true)}
+        onEditReward={(reward) => setEditingReward(reward)}
       />
 
       {/* Socials HUB */}
@@ -524,6 +528,15 @@ function MyWorkContent() {
           colleagueId={currentColleague.id}
         />
       )}
+
+      {/* Edit Activity Reward Dialog */}
+      <EditActivityRewardDialog
+        open={!!editingReward}
+        onOpenChange={(open) => !open && setEditingReward(null)}
+        reward={editingReward}
+        onUpdate={updateReward}
+        onDelete={deleteReward}
+      />
     </div>
   );
 }
