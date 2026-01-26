@@ -257,6 +257,18 @@ export interface Colleague {
   updated_at: string;
 }
 
+// Colleague Capacity History - for tracking capacity changes over time
+export interface ColleagueCapacityRecord {
+  id: string;
+  colleague_id: string;
+  capacity_hours: number;
+  previous_capacity_hours: number | null;
+  effective_from: string;
+  reason: string;
+  changed_by: string | null;
+  created_at: string;
+}
+
 export interface EngagementAssignment {
   id: string;
   engagement_id: string;
