@@ -309,6 +309,25 @@ export function updateModificationRequest(
   return requests[index];
 }
 
+// Delete a modification request
+export function deleteModificationRequest(requestId: string): boolean {
+  const requests = getModificationRequests();
+  const index = requests.findIndex(r => r.id === requestId);
+  
+  if (index === -1) return false;
+  
+  const request = requests[index];
+  
+  // Only allow deleting pending, approved (waiting for client), or rejected requests
+  if (!['pending', 'approved', 'rejected'].includes(request.status)) {
+    return false;
+  }
+  
+  requests.splice(index, 1);
+  saveRequests(requests);
+  return true;
+}
+
 // Filter requests by status
 export function getRequestsByStatus(status?: ModificationRequestStatus): StoredModificationRequest[] {
   const requests = getModificationRequests();

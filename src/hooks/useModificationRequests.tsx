@@ -9,6 +9,7 @@ import {
   rejectModificationRequest,
   applyModificationRequest,
   updateModificationRequest,
+  deleteModificationRequest,
   type StoredModificationRequest,
 } from '@/data/modificationRequestsMockData';
 import type { 
@@ -232,6 +233,29 @@ export function useModificationRequests() {
     }
   }, [user, refresh]);
 
+  // Delete a modification request
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const deleteRequest = useCallback(async (requestId: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    setIsDeleting(true);
+    try {
+      const result = deleteModificationRequest(requestId);
+      if (!result) throw new Error('Request not found or cannot be deleted');
+      
+      toast.success('Návrh změny byl smazán');
+      refresh();
+      return result;
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      toast.error('Nepodařilo se smazat návrh');
+      throw error;
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [user, refresh]);
+
   return {
     pendingRequests,
     isLoadingPending: false,
@@ -245,6 +269,8 @@ export function useModificationRequests() {
     isApplying,
     updateRequest,
     isUpdating,
+    deleteRequest,
+    isDeleting,
     refresh,
   };
 }
