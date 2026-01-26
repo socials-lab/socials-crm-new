@@ -152,8 +152,8 @@ export default function Modifications() {
     return (
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader 
-          title="Úpravy zakázek" 
-          description="Správa požadavků na změny zakázek"
+          title="Návrhy změn" 
+          description="Přidání nových služeb, změny cen, deaktivace služeb a další úpravy zakázek"
         />
         <div className="flex items-center justify-center py-12">
           <p className="text-muted-foreground">Načítání...</p>
@@ -166,8 +166,8 @@ export default function Modifications() {
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader 
-          title="Úpravy zakázek" 
-          description="Přehled a schvalování požadavků na změny zakázek"
+          title="Návrhy změn" 
+          description="Přidání nových služeb, změny cen, deaktivace služeb a další úpravy zakázek"
         />
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
