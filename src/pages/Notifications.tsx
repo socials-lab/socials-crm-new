@@ -28,6 +28,7 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   offer_sent: 'Nabídka odeslána',
   colleague_birthday: 'Narozeniny kolegy',
   new_feedback_idea: 'Nový nápad',
+  client_approved_modification: 'Klient potvrdil změnu',
 };
 
 export default function Notifications() {

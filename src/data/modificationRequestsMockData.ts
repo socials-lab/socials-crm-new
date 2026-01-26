@@ -3,8 +3,10 @@ import type {
   ModificationRequestStatus,
   ModificationProposedChanges,
 } from '@/types/crm';
+import type { Notification } from '@/types/notifications';
 
 const STORAGE_KEY = 'modification_requests';
+const NOTIFICATIONS_STORAGE_KEY = 'crm_notifications';
 
 // Simplified interface for localStorage storage
 export interface StoredModificationRequest {
@@ -185,8 +187,10 @@ export function clientAcceptOffer(token: string, email: string): StoredModificat
   
   if (index === -1) return null;
   
+  const request = requests[index];
+  
   requests[index] = {
-    ...requests[index],
+    ...request,
     status: 'client_approved',
     client_email: email,
     client_approved_at: new Date().toISOString(),
@@ -194,7 +198,63 @@ export function clientAcceptOffer(token: string, email: string): StoredModificat
   };
   
   saveRequests(requests);
+  
+  // Create notification for the person who created the request
+  createClientApprovedNotification(requests[index]);
+  
   return requests[index];
+}
+
+// Create notification when client approves modification
+function createClientApprovedNotification(request: StoredModificationRequest): void {
+  const notifications = getStoredNotifications();
+  
+  const changeTypeLabels: Record<ModificationRequestType, string> = {
+    add_service: 'přidání služby',
+    update_service_price: 'změnu ceny',
+    deactivate_service: 'deaktivaci služby',
+    add_assignment: 'přiřazení kolegy',
+    update_assignment: 'změnu odměny',
+    remove_assignment: 'odebrání kolegy',
+  };
+  
+  const clientName = request.client_brand_name || request.client_name;
+  const changeType = changeTypeLabels[request.request_type] || 'změnu';
+  
+  const newNotification: Notification = {
+    id: `notif-approval-${request.id}`,
+    type: 'client_approved_modification',
+    title: '✅ Klient potvrdil změnu!',
+    message: `${clientName} potvrdil ${changeType} pro zakázku "${request.engagement_name}". Můžete se pustit do práce!`,
+    link: '/modifications',
+    read: false,
+    created_at: new Date().toISOString(),
+    metadata: {
+      modification_request_id: request.id,
+      client_id: request.client_id,
+      company_name: clientName,
+      engagement_name: request.engagement_name,
+    },
+  };
+  
+  notifications.unshift(newNotification);
+  saveStoredNotifications(notifications);
+}
+
+// Get notifications from localStorage
+export function getStoredNotifications(): Notification[] {
+  const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}
+
+// Save notifications to localStorage
+function saveStoredNotifications(notifications: Notification[]): void {
+  localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
 }
 
 // Apply the change (final step)
