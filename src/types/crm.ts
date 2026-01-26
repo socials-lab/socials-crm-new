@@ -681,7 +681,12 @@ export type ModificationRequestType =
   | 'remove_assignment';
 
 // Status for modification requests
-export type ModificationRequestStatus = 'pending' | 'approved' | 'rejected';
+export type ModificationRequestStatus = 
+  | 'pending'          // Čeká na interní schválení
+  | 'approved'         // Interně schváleno, čeká na klienta (pro client-facing změny)
+  | 'client_approved'  // Klient potvrdil, připraveno k aplikaci
+  | 'applied'          // Změna byla aplikována
+  | 'rejected';        // Zamítnuto
 
 // Labels for request types
 export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
@@ -696,7 +701,9 @@ export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, s
 // Status labels
 export const MODIFICATION_REQUEST_STATUS_LABELS: Record<ModificationRequestStatus, string> = {
   pending: 'Čeká na schválení',
-  approved: 'Schváleno',
+  approved: 'Čeká na klienta',
+  client_approved: 'Klient potvrdil',
+  applied: 'Aplikováno',
   rejected: 'Zamítnuto',
 };
 
@@ -782,6 +789,11 @@ export interface ModificationRequest {
   reviewed_by: string | null;
   reviewed_at: string | null;
   rejection_reason: string | null;
+  // Client approval fields
+  upgrade_offer_token: string | null;
+  upgrade_offer_valid_until: string | null;
+  client_email: string | null;
+  client_approved_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -793,4 +805,9 @@ export interface ModificationRequestWithDetails extends ModificationRequest {
   requested_by_profile: Profile | null;
   reviewed_by_profile: Profile | null;
   upsold_by_colleague: Colleague | null;
+}
+
+// Helper to check if a request type is client-facing
+export function isClientFacingRequestType(type: ModificationRequestType): boolean {
+  return ['add_service', 'update_service_price', 'deactivate_service'].includes(type);
 }

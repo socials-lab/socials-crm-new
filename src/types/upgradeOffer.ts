@@ -1,9 +1,13 @@
 import type { ModificationRequestType, ModificationProposedChanges } from './crm';
 
+// Re-export from crm.ts for backwards compatibility
+export { isClientFacingRequestType } from './crm';
+
 export type UpgradeOfferChangeType = 'add_service' | 'update_service_price' | 'deactivate_service';
 
 export type UpgradeOfferStatus = 'pending' | 'accepted' | 'expired';
 
+// This interface is for display purposes - data comes from modification_requests table
 export interface EngagementUpgradeOffer {
   id: string;
   token: string;
@@ -40,9 +44,4 @@ export interface EngagementUpgradeOffer {
   contact_phone?: string;
   
   created_at: string;
-}
-
-// Helper to check if a request type supports upgrade offers
-export function isClientFacingRequestType(type: ModificationRequestType): type is UpgradeOfferChangeType {
-  return ['add_service', 'update_service_price', 'deactivate_service'].includes(type);
 }
