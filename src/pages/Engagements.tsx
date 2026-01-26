@@ -56,6 +56,7 @@ import { CreateInvoiceFromEngagementDialog } from '@/components/engagements/Crea
 import { EngagementInvoicingSection } from '@/components/engagements/EngagementInvoicingStatus';
 import { EndEngagementDialog } from '@/components/engagements/EndEngagementDialog';
 import { EngagementHistoryDialog } from '@/components/engagements/EngagementHistoryDialog';
+import { EditAssignmentDialog } from '@/components/engagements/EditAssignmentDialog';
 import { LeadOriginSection } from '@/components/engagements/LeadOriginSection';
 import { serviceTierConfigs } from '@/constants/services';
 import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier } from '@/types/crm';
@@ -134,9 +135,9 @@ function EngagementsContent() {
   const [endEngagementDialogOpen, setEndEngagementDialogOpen] = useState(false);
   const [engagementToEnd, setEngagementToEnd] = useState<Engagement | null>(null);
 
-  // Inline editing state for assignment costs
-  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
-  const [tempCost, setTempCost] = useState<string>('');
+  // Edit assignment dialog state
+  const [editingAssignment, setEditingAssignment] = useState<EngagementAssignment | null>(null);
+  const [isEditAssignmentDialogOpen, setIsEditAssignmentDialogOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<EngagementStatus | 'all'>('all');
@@ -901,15 +902,26 @@ function EngagementsContent() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {canSeeFinancials && (
-                                    <span className="text-xs font-medium text-muted-foreground">
-                                      {assignment.cost_model === 'fixed_monthly' && assignment.monthly_cost 
-                                        ? `${assignment.monthly_cost.toLocaleString('cs-CZ')} Kč/měs`
-                                        : assignment.cost_model === 'hourly' && assignment.hourly_cost
-                                        ? `${assignment.hourly_cost.toLocaleString('cs-CZ')} Kč/h`
-                                        : assignment.cost_model === 'percentage' && assignment.percentage_of_revenue
-                                        ? `${assignment.percentage_of_revenue}%`
-                                        : '–'}
-                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingAssignment(assignment);
+                                        setIsEditAssignmentDialogOpen(true);
+                                      }}
+                                      className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors group"
+                                      title="Klikněte pro úpravu odměny"
+                                    >
+                                      <span>
+                                        {assignment.cost_model === 'fixed_monthly' && assignment.monthly_cost 
+                                          ? `${assignment.monthly_cost.toLocaleString('cs-CZ')} Kč/měs`
+                                          : assignment.cost_model === 'hourly' && assignment.hourly_cost
+                                          ? `${assignment.hourly_cost.toLocaleString('cs-CZ')} Kč/h`
+                                          : assignment.cost_model === 'percentage' && assignment.percentage_of_revenue
+                                          ? `${assignment.percentage_of_revenue}%`
+                                          : '–'}
+                                      </span>
+                                      <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </button>
                                   )}
                                   <Button
                                     variant="ghost" 
@@ -1503,6 +1515,24 @@ function EngagementsContent() {
           onOpenChange={setIsHistoryOpen}
           history={getEngagementHistory(historyEngagement.id)}
           engagementName={historyEngagement.name}
+        />
+      )}
+
+      {/* Edit Assignment Dialog */}
+      {editingAssignment && (
+        <EditAssignmentDialog
+          open={isEditAssignmentDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditAssignmentDialogOpen(open);
+            if (!open) setEditingAssignment(null);
+          }}
+          assignment={editingAssignment}
+          colleagueName={getColleagueById(editingAssignment.colleague_id)?.full_name || ''}
+          onSave={(data) => {
+            updateAssignment(editingAssignment.id, data);
+            toast.success('Odměna kolegy byla upravena');
+            setEditingAssignment(null);
+          }}
         />
       )}
     </div>
