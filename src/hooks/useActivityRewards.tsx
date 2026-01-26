@@ -28,14 +28,96 @@ export function generateInvoiceItemName(category: ActivityCategory, description:
 
 const STORAGE_KEY = 'activity-rewards';
 
+// Sample data for testing - uses a fixed colleague ID for demo
+const SAMPLE_REWARDS: ActivityReward[] = [
+  {
+    id: 'sample-1',
+    colleague_id: 'demo-colleague',
+    category: 'marketing',
+    description: 'tvorba video obsahu pro sociální sítě',
+    invoice_item_name: 'Marketing – tvorba video obsahu pro sociální sítě',
+    billing_type: 'hourly',
+    amount: 4000,
+    hours: 8,
+    hourly_rate: 500,
+    activity_date: '2026-01-05',
+    created_at: '2026-01-05T10:00:00Z',
+  },
+  {
+    id: 'sample-2',
+    colleague_id: 'demo-colleague',
+    category: 'marketing',
+    description: 'správa contentu Socials',
+    invoice_item_name: 'Marketing – správa contentu Socials',
+    billing_type: 'hourly',
+    amount: 3000,
+    hours: 6,
+    hourly_rate: 500,
+    activity_date: '2026-01-12',
+    created_at: '2026-01-12T14:00:00Z',
+  },
+  {
+    id: 'sample-3',
+    colleague_id: 'demo-colleague',
+    category: 'overhead',
+    description: 'interní reportingová šablona',
+    invoice_item_name: 'Režijní služby – interní reportingová šablona',
+    billing_type: 'fixed',
+    amount: 8000,
+    hours: null,
+    hourly_rate: null,
+    activity_date: '2026-01-10',
+    created_at: '2026-01-10T09:00:00Z',
+  },
+  {
+    id: 'sample-4',
+    colleague_id: 'demo-colleague',
+    category: 'overhead',
+    description: 'sales aktivity a příprava nabídek',
+    invoice_item_name: 'Režijní služby – sales aktivity a příprava nabídek',
+    billing_type: 'hourly',
+    amount: 2500,
+    hours: 5,
+    hourly_rate: 500,
+    activity_date: '2026-01-18',
+    created_at: '2026-01-18T11:00:00Z',
+  },
+  {
+    id: 'sample-5',
+    colleague_id: 'demo-colleague',
+    category: 'marketing',
+    description: 'podcast Socials Insider',
+    invoice_item_name: 'Marketing – podcast Socials Insider',
+    billing_type: 'fixed',
+    amount: 5000,
+    hours: null,
+    hourly_rate: null,
+    activity_date: '2025-12-15',
+    created_at: '2025-12-15T16:00:00Z',
+  },
+  {
+    id: 'sample-6',
+    colleague_id: 'demo-colleague',
+    category: 'overhead',
+    description: 'automatizace interních procesů',
+    invoice_item_name: 'Režijní služby – automatizace interních procesů',
+    billing_type: 'hourly',
+    amount: 6000,
+    hours: 12,
+    hourly_rate: 500,
+    activity_date: '2025-12-20',
+    created_at: '2025-12-20T10:00:00Z',
+  },
+];
+
 function getStoredRewards(): ActivityReward[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
+    if (!stored) return [...SAMPLE_REWARDS]; // Return sample data if nothing stored
     
     // Migrate old data without category
     const rewards = JSON.parse(stored) as ActivityReward[];
-    return rewards.map(r => {
+    const migratedRewards = rewards.map(r => {
       if (!r.category) {
         return {
           ...r,
@@ -45,8 +127,14 @@ function getStoredRewards(): ActivityReward[] {
       }
       return r;
     });
+    
+    // Merge with sample data if not already present
+    const existingIds = new Set(migratedRewards.map(r => r.id));
+    const samplesToAdd = SAMPLE_REWARDS.filter(s => !existingIds.has(s.id));
+    
+    return [...migratedRewards, ...samplesToAdd];
   } catch {
-    return [];
+    return [...SAMPLE_REWARDS];
   }
 }
 
