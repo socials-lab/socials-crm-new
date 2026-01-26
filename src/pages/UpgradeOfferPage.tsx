@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Check, Clock, Mail, Phone, AlertCircle, Package, DollarSign, X as XIcon, CheckCircle2, Calendar, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,34 +11,121 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { 
-  getUpgradeOfferByToken, 
-  acceptUpgradeOffer,
-  isOfferValid,
-  calculateProratedAmount,
-} from '@/data/upgradeOffersMockData';
-import type { EngagementUpgradeOffer } from '@/types/upgradeOffer';
+import { supabase } from '@/integrations/supabase/client';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, DeactivateServiceProposedChanges } from '@/types/crm';
 import socialsLogo from '@/assets/socials-logo.png';
 
+interface UpgradeOfferData {
+  id: string;
+  engagement_id: string;
+  request_type: string;
+  status: string;
+  proposed_changes: Record<string, unknown>;
+  effective_from: string | null;
+  upgrade_offer_token: string;
+  upgrade_offer_valid_until: string | null;
+  client_email: string | null;
+  client_approved_at: string | null;
+  engagement: {
+    id: string;
+    name: string;
+    client: {
+      id: string;
+      name: string;
+      brand_name: string;
+    };
+  };
+}
+
+// Helper to calculate prorated amount
+function calculateProratedAmount(monthlyPrice: number, effectiveFrom: string) {
+  const startDate = new Date(effectiveFrom);
+  const daysInMonth = getDaysInMonth(startDate);
+  const startDay = startDate.getDate();
+  const remainingDays = daysInMonth - startDay + 1;
+  const proratedAmount = (monthlyPrice / daysInMonth) * remainingDays;
+  
+  return {
+    fullAmount: monthlyPrice,
+    proratedAmount: Math.round(proratedAmount),
+    remainingDays,
+    daysInMonth,
+  };
+}
+
 export default function UpgradeOfferPage() {
   const { token } = useParams<{ token: string }>();
-  const [offer, setOffer] = useState<EngagementUpgradeOffer | null>(null);
+  const [offer, setOffer] = useState<UpgradeOfferData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [agreedToChange, setAgreedToChange] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAccepted, setIsAccepted] = useState(false);
 
   useEffect(() => {
-    if (token) {
-      const foundOffer = getUpgradeOfferByToken(token);
-      setOffer(foundOffer);
-      if (foundOffer?.status === 'accepted') {
-        setIsAccepted(true);
+    const fetchOffer = async () => {
+      if (!token) {
+        setIsLoading(false);
+        return;
       }
-    }
-    setIsLoading(false);
+
+      try {
+        const { data, error } = await supabase
+          .from('engagement_modification_requests' as any)
+          .select(`
+            id,
+            engagement_id,
+            request_type,
+            status,
+            proposed_changes,
+            effective_from,
+            upgrade_offer_token,
+            upgrade_offer_valid_until,
+            client_email,
+            client_approved_at,
+            engagements!inner (
+              id,
+              name,
+              clients!inner (
+                id,
+                name,
+                brand_name
+              )
+            )
+          `)
+          .eq('upgrade_offer_token', token)
+          .single();
+
+        if (error) {
+          console.error('Error fetching upgrade offer:', error);
+          setOffer(null);
+        } else if (data) {
+          const rawData = data as any;
+          setOffer({
+            id: rawData.id,
+            engagement_id: rawData.engagement_id,
+            request_type: rawData.request_type,
+            status: rawData.status,
+            proposed_changes: rawData.proposed_changes,
+            effective_from: rawData.effective_from,
+            upgrade_offer_token: rawData.upgrade_offer_token,
+            upgrade_offer_valid_until: rawData.upgrade_offer_valid_until,
+            client_email: rawData.client_email,
+            client_approved_at: rawData.client_approved_at,
+            engagement: {
+              id: rawData.engagements.id,
+              name: rawData.engagements.name,
+              client: rawData.engagements.clients,
+            },
+          });
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      }
+      
+      setIsLoading(false);
+    };
+
+    fetchOffer();
   }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,17 +134,32 @@ export default function UpgradeOfferPage() {
 
     setIsSubmitting(true);
     
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const result = acceptUpgradeOffer(offer.token, email);
-    
-    if (result) {
-      setOffer(result);
-      setIsAccepted(true);
+    try {
+      const { error } = await supabase
+        .from('engagement_modification_requests' as any)
+        .update({
+          status: 'client_approved',
+          client_email: email,
+          client_approved_at: new Date().toISOString(),
+        } as any)
+        .eq('id', offer.id)
+        .eq('upgrade_offer_token', token);
+
+      if (error) {
+        throw error;
+      }
+
+      setOffer({
+        ...offer,
+        status: 'client_approved',
+        client_email: email,
+        client_approved_at: new Date().toISOString(),
+      });
+      
       toast.success('Změna byla úspěšně potvrzena');
-    } else {
-      toast.error('Nepodařilo se potvrdit změnu. Nabídka možná vypršela.');
+    } catch (err) {
+      console.error('Error accepting offer:', err);
+      toast.error('Nepodařilo se potvrdit změnu. Zkuste to prosím znovu.');
     }
     
     setIsSubmitting(false);
@@ -87,22 +189,26 @@ export default function UpgradeOfferPage() {
     );
   }
 
-  const isExpired = !isOfferValid(offer) && offer.status !== 'accepted';
+  const isAccepted = offer.status === 'client_approved' || offer.status === 'applied';
+  const isExpired = offer.upgrade_offer_valid_until && new Date(offer.upgrade_offer_valid_until) < new Date() && !isAccepted;
+  const clientName = offer.engagement.client.brand_name || offer.engagement.client.name;
 
   // Get change-specific icon and label
   const getChangeIcon = () => {
-    switch (offer.change_type) {
+    switch (offer.request_type) {
       case 'add_service': return <Package className="h-5 w-5" />;
       case 'update_service_price': return <DollarSign className="h-5 w-5" />;
       case 'deactivate_service': return <XIcon className="h-5 w-5" />;
+      default: return <Package className="h-5 w-5" />;
     }
   };
 
   const getChangeLabel = () => {
-    switch (offer.change_type) {
+    switch (offer.request_type) {
       case 'add_service': return 'Přidání nové služby';
       case 'update_service_price': return 'Změna ceny služby';
       case 'deactivate_service': return 'Ukončení služby';
+      default: return 'Změna';
     }
   };
 
@@ -110,11 +216,11 @@ export default function UpgradeOfferPage() {
   const renderChangeDetails = () => {
     const changes = offer.proposed_changes;
     
-    switch (offer.change_type) {
+    switch (offer.request_type) {
       case 'add_service': {
-        const c = changes as AddServiceProposedChanges;
-        const prorationInfo = offer.new_monthly_price && offer.effective_from
-          ? calculateProratedAmount(offer.new_monthly_price, offer.effective_from)
+        const c = changes as unknown as AddServiceProposedChanges;
+        const prorationInfo = c.price && offer.effective_from
+          ? calculateProratedAmount(c.price, offer.effective_from)
           : null;
         
         return (
@@ -127,7 +233,7 @@ export default function UpgradeOfferPage() {
                 <h3 className="font-semibold text-lg">{c.name}</h3>
                 {c.selected_tier && (
                   <Badge variant="outline" className="mt-1">
-                    Tier: {c.selected_tier.toUpperCase()}
+                    Tier: {String(c.selected_tier).toUpperCase()}
                   </Badge>
                 )}
               </div>
@@ -137,26 +243,28 @@ export default function UpgradeOfferPage() {
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Měsíční cena:</span>
                 <span className="font-semibold text-lg">
-                  {c.price.toLocaleString('cs-CZ')} {c.currency}
+                  {c.price?.toLocaleString('cs-CZ')} {c.currency}
                 </span>
               </div>
               
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  Platnost od:
-                </span>
-                <span className="font-medium">
-                  {format(new Date(offer.effective_from), 'd. MMMM yyyy', { locale: cs })}
-                </span>
-              </div>
+              {offer.effective_from && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    Platnost od:
+                  </span>
+                  <span className="font-medium">
+                    {format(new Date(offer.effective_from), 'd. MMMM yyyy', { locale: cs })}
+                  </span>
+                </div>
+              )}
             </div>
             
             {prorationInfo && (
               <Alert className="bg-primary/5 border-primary/20">
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Fakturace za {format(new Date(offer.effective_from), 'LLLL', { locale: cs })}:</strong>{' '}
+                  <strong>Fakturace za {format(new Date(offer.effective_from!), 'LLLL', { locale: cs })}:</strong>{' '}
                   {prorationInfo.proratedAmount.toLocaleString('cs-CZ')} {c.currency}{' '}
                   ({prorationInfo.remainingDays} dní z {prorationInfo.daysInMonth})
                   <br />
@@ -169,7 +277,7 @@ export default function UpgradeOfferPage() {
       }
       
       case 'update_service_price': {
-        const c = changes as UpdateServicePriceProposedChanges;
+        const c = changes as unknown as UpdateServicePriceProposedChanges;
         return (
           <div className="space-y-4">
             <div className="flex items-start gap-3">
@@ -185,32 +293,34 @@ export default function UpgradeOfferPage() {
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Původní cena:</span>
                 <span className="line-through text-muted-foreground">
-                  {c.old_price.toLocaleString('cs-CZ')} {c.currency}
+                  {c.old_price?.toLocaleString('cs-CZ')} {c.currency}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Nová cena:</span>
                 <span className="font-semibold text-lg text-primary">
-                  {c.new_price.toLocaleString('cs-CZ')} {c.currency}
+                  {c.new_price?.toLocaleString('cs-CZ')} {c.currency}
                 </span>
               </div>
               
-              <div className="flex justify-between items-center pt-2">
-                <span className="text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  Platnost od:
-                </span>
-                <span className="font-medium">
-                  {format(new Date(offer.effective_from), 'd. MMMM yyyy', { locale: cs })}
-                </span>
-              </div>
+              {offer.effective_from && (
+                <div className="flex justify-between items-center pt-2">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    Platnost od:
+                  </span>
+                  <span className="font-medium">
+                    {format(new Date(offer.effective_from), 'd. MMMM yyyy', { locale: cs })}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );
       }
       
       case 'deactivate_service': {
-        const c = changes as DeactivateServiceProposedChanges;
+        const c = changes as unknown as DeactivateServiceProposedChanges;
         return (
           <div className="space-y-4">
             <div className="flex items-start gap-3">
@@ -223,19 +333,24 @@ export default function UpgradeOfferPage() {
             </div>
             
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  Ukončení od:
-                </span>
-                <span className="font-medium">
-                  {format(new Date(offer.effective_from), 'd. MMMM yyyy', { locale: cs })}
-                </span>
-              </div>
+              {offer.effective_from && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    Ukončení od:
+                  </span>
+                  <span className="font-medium">
+                    {format(new Date(offer.effective_from), 'd. MMMM yyyy', { locale: cs })}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );
       }
+      
+      default:
+        return <p>Detaily změny nejsou k dispozici</p>;
     }
   };
 
@@ -275,7 +390,7 @@ export default function UpgradeOfferPage() {
                 <div>
                   <h2 className="font-semibold text-lg">Nabídka vypršela</h2>
                   <p className="text-sm">
-                    Platnost této nabídky skončila {format(new Date(offer.valid_until), 'd. MMMM yyyy', { locale: cs })}.
+                    Platnost této nabídky skončila {offer.upgrade_offer_valid_until && format(new Date(offer.upgrade_offer_valid_until), 'd. MMMM yyyy', { locale: cs })}.
                     Kontaktujte nás pro novou nabídku.
                   </p>
                 </div>
@@ -288,9 +403,9 @@ export default function UpgradeOfferPage() {
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">Návrh úpravy spolupráce</h1>
           <p className="text-muted-foreground">
-            Pro: <span className="font-medium text-foreground">{offer.client_name}</span>
+            Pro: <span className="font-medium text-foreground">{clientName}</span>
             {' – '}
-            <span className="font-medium text-foreground">{offer.engagement_name}</span>
+            <span className="font-medium text-foreground">{offer.engagement.name}</span>
           </p>
         </div>
 
@@ -348,10 +463,12 @@ export default function UpgradeOfferPage() {
                   {isSubmitting ? 'Potvrzuji...' : 'Potvrdit změnu'}
                 </Button>
                 
-                <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  Platnost nabídky: do {format(new Date(offer.valid_until), 'd. MMMM yyyy', { locale: cs })}
-                </p>
+                {offer.upgrade_offer_valid_until && (
+                  <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Platnost nabídky: do {format(new Date(offer.upgrade_offer_valid_until), 'd. MMMM yyyy', { locale: cs })}
+                  </p>
+                )}
               </form>
             </CardContent>
           </Card>
@@ -359,25 +476,15 @@ export default function UpgradeOfferPage() {
 
         {/* Contact section */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-muted-foreground mb-2">Máte dotazy? Kontaktujte mě</p>
+          <p className="text-sm text-muted-foreground mb-2">Máte dotazy? Kontaktujte nás</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
-            <span className="font-medium">{offer.contact_name}</span>
             <a 
-              href={`mailto:${offer.contact_email}`} 
+              href="mailto:info@socials.cz" 
               className="flex items-center gap-1 text-primary hover:underline"
             >
               <Mail className="h-4 w-4" />
-              {offer.contact_email}
+              info@socials.cz
             </a>
-            {offer.contact_phone && (
-              <a 
-                href={`tel:${offer.contact_phone}`} 
-                className="flex items-center gap-1 text-primary hover:underline"
-              >
-                <Phone className="h-4 w-4" />
-                {offer.contact_phone}
-              </a>
-            )}
           </div>
         </div>
       </main>

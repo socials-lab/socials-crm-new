@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { 
@@ -13,7 +13,6 @@ import {
   User,
   Building2,
   Copy,
-  Link2,
   CheckCircle2,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,10 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { getUpgradeOfferByModificationId } from '@/data/upgradeOffersMockData';
-import type { EngagementUpgradeOffer } from '@/types/upgradeOffer';
 import type { 
   ModificationRequestWithDetails, 
   ModificationRequestType,
@@ -87,18 +83,15 @@ export function ModificationRequestCard({
 }: ModificationRequestCardProps) {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [upgradeOffer, setUpgradeOffer] = useState<EngagementUpgradeOffer | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
-  
-  // Fetch upgrade offer for this request
-  useEffect(() => {
-    const offer = getUpgradeOfferByModificationId(request.id);
-    setUpgradeOffer(offer);
-  }, [request.id]);
   
   const Icon = REQUEST_TYPE_ICONS[request.request_type];
   const colorClass = REQUEST_TYPE_COLORS[request.request_type];
   const typeLabel = REQUEST_TYPE_LABELS[request.request_type];
+  
+  // Check if client has approved
+  const isClientApproved = request.status === 'client_approved' || !!request.client_approved_at;
+  const hasUpgradeToken = !!request.upgrade_offer_token;
   
   const handleApprove = async () => {
     if (onApprove) {
@@ -114,8 +107,8 @@ export function ModificationRequestCard({
   };
   
   const handleCopyLink = async () => {
-    if (upgradeOffer) {
-      const link = `${window.location.origin}/upgrade/${upgradeOffer.token}`;
+    if (request.upgrade_offer_token) {
+      const link = `${window.location.origin}/upgrade/${request.upgrade_offer_token}`;
       await navigator.clipboard.writeText(link);
       setLinkCopied(true);
       toast.success('Odkaz zkopírován');
@@ -256,7 +249,7 @@ export function ModificationRequestCard({
                       {typeLabel}
                     </Badge>
                     {/* Client confirmation badge */}
-                    {upgradeOffer?.status === 'accepted' && (
+                    {isClientApproved && (
                       <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         Klient potvrdil
@@ -301,9 +294,9 @@ export function ModificationRequestCard({
               )}
               
               {/* Client acceptance info */}
-              {upgradeOffer?.status === 'accepted' && upgradeOffer.accepted_at && (
+              {isClientApproved && request.client_approved_at && (
                 <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
-                  📧 Klient potvrdil: {format(new Date(upgradeOffer.accepted_at), 'd.M.yyyy v H:mm')} ({upgradeOffer.accepted_by_email})
+                  📧 Klient potvrdil: {format(new Date(request.client_approved_at), 'd.M.yyyy v H:mm')} ({request.client_email})
                 </div>
               )}
               
@@ -333,8 +326,8 @@ export function ModificationRequestCard({
                 {/* Actions for pending requests */}
                 {showActions && (
                   <div className="flex items-center gap-2">
-                    {/* Copy link button */}
-                    {upgradeOffer && (
+                    {/* Copy link button - only shown if there's a token */}
+                    {hasUpgradeToken && (
                       <Button
                         variant="ghost"
                         size="sm"

@@ -39,6 +39,10 @@ function rowToModificationRequest(row: ModificationRequestRow): ModificationRequ
     request_type: row.request_type as ModificationRequestType,
     status: row.status as ModificationRequestStatus,
     proposed_changes: row.proposed_changes as unknown as ModificationProposedChanges,
+    upgrade_offer_token: (row as any).upgrade_offer_token || null,
+    upgrade_offer_valid_until: (row as any).upgrade_offer_valid_until || null,
+    client_email: (row as any).client_email || null,
+    client_approved_at: (row as any).client_approved_at || null,
   };
 }
 
