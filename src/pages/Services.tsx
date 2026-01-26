@@ -15,6 +15,7 @@ import { DeleteServiceDialog } from '@/components/services/DeleteServiceDialog';
 import { ServiceDetailView, type ServiceDetailData } from '@/components/services/ServiceDetailView';
 import { ServiceDetailEditDialog } from '@/components/services/ServiceDetailEditDialog';
 import { serviceTierConfigs } from '@/constants/services';
+import { getServiceDetail } from '@/constants/serviceDetails';
 import { toast } from 'sonner';
 import type { Service, ServiceCategory, ServiceType } from '@/types/crm';
 
@@ -153,24 +154,19 @@ export default function Services() {
     const activeClients = getActiveClientsForService(service.id);
     const activeClientCount = getActiveClientCount(service.id);
     
-    // Build service detail data from database fields
-    const extendedService = service as Service & Partial<ServiceDetailData>;
-    const serviceDetailData: ServiceDetailData = {
-      tagline: extendedService.tagline || '',
-      platforms: extendedService.platforms || [],
-      target_audience: extendedService.target_audience || '',
-      benefits: extendedService.benefits || [],
-      setup_items: extendedService.setup_items || [],
-      management_items: extendedService.management_items || [],
-      tier_comparison: extendedService.tier_comparison || [],
-      tier_prices: extendedService.tier_prices || null,
-      credit_pricing: extendedService.credit_pricing || null,
-    };
-    
-    const hasDetailContent = serviceDetailData.tagline || 
-      (serviceDetailData.platforms && serviceDetailData.platforms.length > 0) ||
-      (serviceDetailData.benefits && serviceDetailData.benefits.length > 0) ||
-      (serviceDetailData.setup_items && serviceDetailData.setup_items.length > 0);
+    // Get service detail from constants
+    const constantDetail = getServiceDetail(service.code);
+    const serviceDetailData: ServiceDetailData | undefined = constantDetail ? {
+      tagline: constantDetail.tagline,
+      platforms: constantDetail.platforms,
+      target_audience: constantDetail.targetAudience,
+      benefits: constantDetail.benefits,
+      setup_items: constantDetail.setup,
+      management_items: constantDetail.management,
+      tier_comparison: constantDetail.tierComparison,
+      tier_prices: constantDetail.tierPricing || null,
+      credit_pricing: constantDetail.creditPricing || null,
+    } : undefined;
 
     return (
       <Card key={service.id} className="overflow-hidden">
