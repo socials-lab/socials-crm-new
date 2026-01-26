@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ChevronDown, ChevronUp, Mail, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus, BarChart3 } from 'lucide-react';
+import { Search, Plus, ChevronDown, ChevronUp, Mail, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus, BarChart3, Coins } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CreativeBoostProvider, useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { supabase } from '@/integrations/supabase/client';
+import { TeamEarningsOverview } from '@/components/colleagues/TeamEarningsOverview';
 
 const seniorityColors: Record<Seniority, string> = {
   junior: 'bg-chart-3/10 text-chart-3 border-chart-3/20',
@@ -217,12 +218,18 @@ function ColleaguesContent() {
         description="Kolegové, přístupy a oprávnění"
       />
 
-      <Tabs defaultValue={tabParam === 'access' && superAdmin ? 'access' : 'team'} className="w-full">
+      <Tabs defaultValue={tabParam === 'access' && superAdmin ? 'access' : tabParam === 'earnings' && superAdmin ? 'earnings' : 'team'} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="team" className="gap-2">
             <Users className="h-4 w-4" />
             Přehled týmu
           </TabsTrigger>
+          {superAdmin && (
+            <TabsTrigger value="earnings" className="gap-2">
+              <Coins className="h-4 w-4" />
+              Odměny týmu
+            </TabsTrigger>
+          )}
           {superAdmin && (
             <TabsTrigger value="access" className="gap-2">
               <Shield className="h-4 w-4" />
@@ -592,6 +599,12 @@ function ColleaguesContent() {
 
 
         </TabsContent>
+
+        {superAdmin && (
+          <TabsContent value="earnings" className="space-y-4">
+            <TeamEarningsOverview />
+          </TabsContent>
+        )}
 
         {superAdmin && (
           <TabsContent value="access" className="space-y-4">
