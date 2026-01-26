@@ -184,7 +184,7 @@ export function InvoicingOverview({
       items.push({
         id: r.id,
         category: 'marketing',
-        invoiceName: r.invoice_item_name,
+        invoiceName: `Režijní služba – ${r.invoice_item_name}`,
         amount: r.amount,
       });
     });
@@ -193,7 +193,7 @@ export function InvoicingOverview({
       items.push({
         id: r.id,
         category: 'overhead',
-        invoiceName: r.invoice_item_name,
+        invoiceName: `Režijní služba – ${r.invoice_item_name}`,
         amount: r.amount,
       });
     });
@@ -239,17 +239,11 @@ export function InvoicingOverview({
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" />
-            Fakturace – položky pro fakturu
-          </CardTitle>
-          <Button size="sm" onClick={onAddInternalWork} className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            Přidat interní práci
-          </Button>
-        </div>
+  <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <FileText className="h-4 w-4 text-primary" />
+          Fakturace – položky pro fakturu
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Month/Year filter */}
