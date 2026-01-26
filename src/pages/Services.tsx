@@ -297,7 +297,7 @@ export default function Services() {
                       className="flex items-center gap-1 text-xs font-medium hover:text-primary transition-colors"
                     >
                       {service.base_price > 0
-                        ? `${service.base_price.toLocaleString('cs-CZ')} ${service.currency}`
+                        ? `${service.base_price.toLocaleString('cs-CZ')} ${service.currency}${service.code === 'CREATIVE_BOOST' ? '/kredit' : ''}`
                         : 'Nenastaveno'}
                       <Pencil className="h-3 w-3" />
                     </button>
