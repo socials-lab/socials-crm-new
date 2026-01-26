@@ -46,6 +46,15 @@ interface ServiceDetailViewProps {
 }
 
 export function ServiceDetailView({ data }: ServiceDetailViewProps) {
+  // Guard against undefined or null data
+  if (!data) {
+    return (
+      <p className="text-xs text-muted-foreground italic">
+        Detailní popis služby zatím nebyl nastaven. Klikněte na "Upravit detaily" pro přidání informací.
+      </p>
+    );
+  }
+
   const hasContent = data.tagline || (data.platforms && data.platforms.length > 0) || 
                      (data.benefits && data.benefits.length > 0) ||
                      (data.setup_items && data.setup_items.length > 0) ||
