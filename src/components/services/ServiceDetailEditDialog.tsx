@@ -34,6 +34,7 @@ interface CreditPricing {
   basePrice: number;
   currency: string;
   expressMultiplier: number;
+  colleagueRewardPerCredit: number;
   outputTypes: { name: string; credits: number; description: string }[];
 }
 
@@ -298,7 +299,7 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
   const enableCreditPricing = () => {
     setData(prev => ({
       ...prev,
-      credit_pricing: { basePrice: 400, currency: 'CZK', expressMultiplier: 1.5, outputTypes: [] },
+      credit_pricing: { basePrice: 400, currency: 'CZK', expressMultiplier: 1.5, colleagueRewardPerCredit: 80, outputTypes: [] },
     }));
   };
 
@@ -689,15 +690,33 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
                 </CardHeader>
                 {data.credit_pricing && (
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Základní cena za kredit</Label>
+                        <Label>💰 Výchozí cena za kredit (klient)</Label>
                         <Input
                           type="number"
                           value={data.credit_pricing.basePrice}
                           onChange={(e) => updateCreditPricing('basePrice', Number(e.target.value))}
+                          placeholder="400"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          Výchozí cena, kterou platí klient za 1 kredit
+                        </p>
                       </div>
+                      <div className="space-y-2">
+                        <Label>🎨 Výchozí odměna grafika za kredit</Label>
+                        <Input
+                          type="number"
+                          value={data.credit_pricing.colleagueRewardPerCredit}
+                          onChange={(e) => updateCreditPricing('colleagueRewardPerCredit', Number(e.target.value))}
+                          placeholder="80"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Výchozí odměna pro grafika/kolegu za 1 kredit
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Měna</Label>
                         <Input

@@ -26,6 +26,7 @@ interface CreditPricing {
   basePrice: number;
   currency: string;
   expressMultiplier: number;
+  colleagueRewardPerCredit?: number;
   outputTypes: { name: string; credits: number; description: string }[];
 }
 
@@ -266,23 +267,33 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
             Ceník kreditů
           </h4>
           
-          <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="grid grid-cols-3 gap-2 mb-3">
             <Card className="bg-primary/5 border-primary/20">
               <CardContent className="p-3">
-                <div className="text-xs text-muted-foreground">Základní cena</div>
-                <div className="text-xl font-bold text-primary">
-                  {data.credit_pricing.basePrice} {data.credit_pricing.currency}/kredit
+                <div className="text-xs text-muted-foreground">💰 Cena pro klienta</div>
+                <div className="text-lg font-bold text-primary">
+                  {data.credit_pricing.basePrice} {data.credit_pricing.currency}
                 </div>
+                <div className="text-[10px] text-muted-foreground">za kredit</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-status-active/5 border-status-active/20">
+              <CardContent className="p-3">
+                <div className="text-xs text-muted-foreground">🎨 Odměna grafika</div>
+                <div className="text-lg font-bold text-status-active">
+                  {data.credit_pricing.colleagueRewardPerCredit || 80} {data.credit_pricing.currency}
+                </div>
+                <div className="text-[10px] text-muted-foreground">za kredit</div>
               </CardContent>
             </Card>
             <Card className="bg-chart-4/5 border-chart-4/20">
               <CardContent className="p-3">
-                <div className="text-xs text-muted-foreground">Express dodání</div>
-                <div className="text-xl font-bold text-chart-4">
+                <div className="text-xs text-muted-foreground">⚡ Express</div>
+                <div className="text-lg font-bold text-chart-4">
                   +{((data.credit_pricing.expressMultiplier - 1) * 100).toFixed(0)}%
                 </div>
                 <div className="text-[10px] text-muted-foreground">
-                  ({data.credit_pricing.basePrice * data.credit_pricing.expressMultiplier} {data.credit_pricing.currency}/kredit)
+                  ({data.credit_pricing.basePrice * data.credit_pricing.expressMultiplier} {data.credit_pricing.currency})
                 </div>
               </CardContent>
             </Card>
