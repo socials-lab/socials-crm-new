@@ -715,6 +715,10 @@ export interface AddServiceProposedChanges {
   currency: string;
   billing_type: 'monthly' | 'one_off';
   selected_tier?: ServiceTier | null;
+  // Service description for client-facing offer
+  description?: string;
+  deliverables?: string[];
+  benefits?: string[];
   // Creative Boost specific
   creative_boost_min_credits?: number | null;
   creative_boost_max_credits?: number | null;

@@ -152,7 +152,32 @@ export default function UpgradeOfferPage() {
               </div>
             </div>
             
-            <div className="space-y-2">
+            {/* Service description */}
+            {c.description && (
+              <p className="text-muted-foreground">{c.description}</p>
+            )}
+            
+            {/* Deliverables - what client gets */}
+            {c.deliverables && c.deliverables.length > 0 && (
+              <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-300">
+                    Co dostanete:
+                  </p>
+                </div>
+                <ul className="space-y-2">
+                  {c.deliverables.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            <div className="space-y-2 pt-2 border-t">
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Měsíční cena:</span>
                 <span className="font-semibold text-lg">
