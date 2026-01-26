@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { 
   Briefcase, 
@@ -11,13 +11,15 @@ import {
   CheckCircle, 
   Mail,
   Phone,
-  Calendar,
   FileText,
   Users,
-  Clock,
   Package,
   GraduationCap,
-  ListTodo,
+  Building2,
+  Plus,
+  CalendarDays,
+  AlertCircle,
+  Megaphone,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,12 +29,22 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useMeetingsData } from '@/hooks/useMeetingsData';
 import { useCreativeBoostData, CreativeBoostProvider } from '@/hooks/useCreativeBoostData';
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { useActivityRewards } from '@/hooks/useActivityRewards';
 import { AddActivityRewardDialog } from '@/components/my-work/AddActivityRewardDialog';
 import { ActivityRewardsHistory } from '@/components/my-work/ActivityRewardsHistory';
+import { calculateProratedReward, type ProratedRewardResult } from '@/utils/proratedRewardUtils';
+import { CATEGORY_LABELS } from '@/hooks/useActivityRewards';
+
+interface ClientRewardItem {
+  clientName: string;
+  engagementId: string;
+  role: string;
+  fullMonthlyAmount: number;
+  prorated: ProratedRewardResult;
+  startDate: string | null;
+}
 
 function MyWorkContent() {
   const navigate = useNavigate();
@@ -45,11 +57,8 @@ function MyWorkContent() {
     assignments, 
     clients,
     getColleagueById,
-    getEngagementServicesByEngagementId,
-    services,
   } = useCRMData();
   
-  const { getTodaysMeetings, getUpcomingMeetings } = useMeetingsData();
   const { getColleagueCredits, getColleagueCreditsByClient } = useCreativeBoostData();
   const { getApprovedCommissionsForColleague } = useUpsellApprovals();
   
@@ -89,32 +98,56 @@ function MyWorkContent() {
     );
   }, [assignments, currentColleague]);
 
-  // Calculate earnings and client data
+  // Calculate earnings and client data with prorated rewards
   const myWorkData = useMemo(() => {
-    let totalMonthlyEarnings = 0;
+    let totalMonthlyFull = 0;
+    let totalMonthlyProrated = 0;
     const clientData: { 
       client: typeof clients[0], 
       engagement: typeof engagements[0], 
       assignment: typeof assignments[0],
+      startDate: string | null,
     }[] = [];
+    
+    const clientRewards: ClientRewardItem[] = [];
     
     myAssignments.forEach(assignment => {
       const engagement = engagements.find(e => e.id === assignment.engagement_id);
       if (engagement && engagement.status === 'active') {
         const client = clients.find(c => c.id === engagement.client_id);
         if (client) {
-          clientData.push({ client, engagement, assignment });
-          totalMonthlyEarnings += assignment.monthly_cost || 0;
+          const monthlyAmount = assignment.monthly_cost || 0;
+          const prorated = calculateProratedReward(
+            monthlyAmount,
+            assignment.start_date,
+            currentYear,
+            currentMonth
+          );
+          
+          clientData.push({ 
+            client, 
+            engagement, 
+            assignment,
+            startDate: assignment.start_date || null,
+          });
+          
+          clientRewards.push({
+            clientName: client.brand_name || client.name,
+            engagementId: engagement.id,
+            role: assignment.role_on_engagement || 'Specialista',
+            fullMonthlyAmount: monthlyAmount,
+            prorated,
+            startDate: assignment.start_date || null,
+          });
+          
+          totalMonthlyFull += monthlyAmount;
+          totalMonthlyProrated += prorated.proratedAmount;
         }
       }
     });
     
-    return { totalMonthlyEarnings, clientData };
-  }, [myAssignments, engagements, clients]);
-
-  // Meetings
-  const todaysMeetings = getTodaysMeetings();
-  const upcomingMeetings = getUpcomingMeetings(7);
+    return { totalMonthlyFull, totalMonthlyProrated, clientData, clientRewards };
+  }, [myAssignments, engagements, clients, currentYear, currentMonth]);
 
   // Creative Boost
   const monthCredits = currentColleague ? getColleagueCredits(currentColleague.id, currentYear, currentMonth) : 0;
@@ -127,8 +160,12 @@ function MyWorkContent() {
     : [];
   const totalApprovedCommission = approvedCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
 
-  // Total earnings this month
-  const totalMonthlyEarnings = myWorkData.totalMonthlyEarnings + totalCreativeBoostReward + totalApprovedCommission + activityCurrentMonthTotal;
+  // Internal work this month
+  const internalWorkThisMonth = getRewardsByMonth(currentYear, currentMonth);
+  const categorizedInternalWork = getRewardsByCategory(currentYear, currentMonth);
+
+  // Total client earnings this month (WITHOUT internal work)
+  const totalClientEarnings = myWorkData.totalMonthlyProrated + totalCreativeBoostReward + totalApprovedCommission;
 
   // No colleague linked
   if (!currentColleague) {
@@ -161,7 +198,7 @@ function MyWorkContent() {
         </div>
       </div>
 
-      {/* Quick Summary Cards */}
+      {/* Quick Summary Cards - WITHOUT meetings */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <Card className="p-3">
           <div className="flex items-center gap-3">
@@ -181,23 +218,25 @@ function MyWorkContent() {
               <CreditCard className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-primary">{(totalMonthlyEarnings / 1000).toFixed(0)}k</p>
-              <p className="text-xs text-muted-foreground">měsíčně</p>
+              <p className="text-2xl font-bold text-primary">{(totalClientEarnings / 1000).toFixed(0)}k</p>
+              <p className="text-xs text-muted-foreground">za klienty</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Calendar className="h-4 w-4 text-primary" />
+        {activityCurrentMonthTotal > 0 && (
+          <Card className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Building2 className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{(activityCurrentMonthTotal / 1000).toFixed(0)}k</p>
+                <p className="text-xs text-muted-foreground">interní práce</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold">{todaysMeetings.length}</p>
-              <p className="text-xs text-muted-foreground">meetingů dnes</p>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {monthCredits > 0 && (
           <Card className="p-3">
@@ -217,7 +256,7 @@ function MyWorkContent() {
       {/* Main Content Grid */}
       <div className="grid gap-4 lg:grid-cols-2">
         
-        {/* My Engagements - Compact */}
+        {/* My Engagements - with start dates */}
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -234,7 +273,7 @@ function MyWorkContent() {
             {myWorkData.clientData.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">Nemáte aktivní zakázky</p>
             ) : (
-              myWorkData.clientData.slice(0, 5).map(({ client, engagement, assignment }) => (
+              myWorkData.clientData.slice(0, 5).map(({ client, engagement, assignment, startDate }) => (
                 <button
                   key={assignment.id}
                   onClick={() => navigate(`/engagements?highlight=${engagement.id}`)}
@@ -245,7 +284,18 @@ function MyWorkContent() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{client.brand_name || client.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{assignment.role_on_engagement}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="truncate">{assignment.role_on_engagement}</span>
+                      {startDate && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1 shrink-0">
+                            <CalendarDays className="h-3 w-3" />
+                            od {format(parseISO(startDate), 'd. M. yyyy')}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <span className="text-sm font-semibold text-primary whitespace-nowrap">
                     {(assignment.monthly_cost || 0).toLocaleString()} Kč
@@ -256,22 +306,40 @@ function MyWorkContent() {
           </CardContent>
         </Card>
 
-        {/* Earnings Summary */}
+        {/* Earnings Summary - CLIENT WORK ONLY */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Coins className="h-4 w-4 text-primary" />
               Odměny tento měsíc
+              <Badge variant="outline" className="text-xs font-normal">za klientskou práci</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between py-2">
-              <span className="text-sm text-muted-foreground">Fixní odměna ze zakázek</span>
-              <span className="font-medium">{myWorkData.totalMonthlyEarnings.toLocaleString()} Kč</span>
-            </div>
+          <CardContent className="space-y-2">
+            {/* Client rewards breakdown */}
+            {myWorkData.clientRewards.length > 0 && (
+              <div className="space-y-1.5">
+                {myWorkData.clientRewards.map((item) => (
+                  <div key={item.engagementId} className="flex items-center justify-between py-1.5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-sm truncate">{item.clientName}</span>
+                      {item.prorated.isProrated && item.prorated.startDay && (
+                        <Badge variant="secondary" className="text-xs shrink-0 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          od {item.prorated.startDay}.
+                        </Badge>
+                      )}
+                    </div>
+                    <span className={`font-medium whitespace-nowrap ${item.prorated.isProrated ? 'text-amber-600' : ''}`}>
+                      {item.prorated.proratedAmount.toLocaleString()} Kč
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             
             {totalCreativeBoostReward > 0 && (
-              <div className="flex items-center justify-between py-2 border-t">
+              <div className="flex items-center justify-between py-1.5 border-t">
                 <span className="text-sm text-muted-foreground flex items-center gap-1">
                   <Sparkles className="h-3 w-3" />
                   Creative Boost ({monthCredits} kr)
@@ -281,7 +349,7 @@ function MyWorkContent() {
             )}
             
             {totalApprovedCommission > 0 && (
-              <div className="flex items-center justify-between py-2 border-t">
+              <div className="flex items-center justify-between py-1.5 border-t">
                 <span className="text-sm text-muted-foreground flex items-center gap-1">
                   <CheckCircle className="h-3 w-3" />
                   Schválené provize
@@ -289,62 +357,103 @@ function MyWorkContent() {
                 <span className="font-medium text-primary">{totalApprovedCommission.toLocaleString()} Kč</span>
               </div>
             )}
-
-            {activityCurrentMonthTotal > 0 && (
-              <div className="flex items-center justify-between py-2 border-t">
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
-                  <ListTodo className="h-3 w-3" />
-                  Ostatní činnosti
-                </span>
-                <span className="font-medium text-primary">{activityCurrentMonthTotal.toLocaleString()} Kč</span>
-              </div>
-            )}
             
             <Separator />
             
-            <div className="flex items-center justify-between">
-              <span className="font-medium">Celkem</span>
-              <span className="text-xl font-bold text-primary">{totalMonthlyEarnings.toLocaleString()} Kč</span>
+            <div className="flex items-center justify-between pt-1">
+              <span className="font-medium">Celkem za klientskou práci</span>
+              <span className="text-xl font-bold text-primary">{totalClientEarnings.toLocaleString()} Kč</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Today's Meetings */}
+        {/* NEW: Internal Work Section */}
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                Dnešní meetingy
+                <Building2 className="h-4 w-4 text-primary" />
+                Interní práce
               </CardTitle>
-              <Link to="/meetings">
-                <Button variant="ghost" size="sm" className="text-xs h-7">Všechny</Button>
-              </Link>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="gap-1.5 h-7"
+                onClick={() => setShowAddActivityDialog(true)}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Přidat
+              </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            {todaysMeetings.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Žádné meetingy na dnes</p>
-            ) : (
-              <div className="space-y-2">
-                {todaysMeetings.slice(0, 4).map((meeting) => {
-                  const client = meeting.client_id ? clients.find(c => c.id === meeting.client_id) : null;
-                  return (
-                    <div key={meeting.id} className="flex items-center gap-3 p-2 rounded-lg border">
-                      <div className="p-1.5 rounded bg-primary/10">
-                        <Clock className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{meeting.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(meeting.scheduled_at), 'HH:mm')} • {meeting.duration_minutes} min
-                          {client && ` • ${client.brand_name || client.name}`}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Práce mimo klienty (marketing, režijní služby) – pro fakturaci
+            </p>
+            
+            {internalWorkThisMonth.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">Žádná interní práce tento měsíc</p>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="mt-2"
+                  onClick={() => setShowAddActivityDialog(true)}
+                >
+                  Přidat činnost
+                </Button>
               </div>
+            ) : (
+              <>
+                {/* Marketing */}
+                {categorizedInternalWork.marketing.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Megaphone className="h-3 w-3" />
+                      <span>{CATEGORY_LABELS.marketing}</span>
+                    </div>
+                    {categorizedInternalWork.marketing.slice(0, 3).map((item) => (
+                      <div key={item.id} className="flex items-center justify-between py-1 pl-5">
+                        <span className="text-sm truncate">{item.invoice_item_name}</span>
+                        <span className="font-medium">{item.amount.toLocaleString()} Kč</span>
+                      </div>
+                    ))}
+                    {categorizedInternalWork.marketing.length > 3 && (
+                      <p className="text-xs text-muted-foreground pl-5">
+                        +{categorizedInternalWork.marketing.length - 3} dalších položek
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {/* Overhead */}
+                {categorizedInternalWork.overhead.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Building2 className="h-3 w-3" />
+                      <span>{CATEGORY_LABELS.overhead}</span>
+                    </div>
+                    {categorizedInternalWork.overhead.slice(0, 3).map((item) => (
+                      <div key={item.id} className="flex items-center justify-between py-1 pl-5">
+                        <span className="text-sm truncate">{item.invoice_item_name}</span>
+                        <span className="font-medium">{item.amount.toLocaleString()} Kč</span>
+                      </div>
+                    ))}
+                    {categorizedInternalWork.overhead.length > 3 && (
+                      <p className="text-xs text-muted-foreground pl-5">
+                        +{categorizedInternalWork.overhead.length - 3} dalších položek
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Celkem interní práce</span>
+                  <span className="text-lg font-bold text-primary">{activityCurrentMonthTotal.toLocaleString()} Kč</span>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -400,7 +509,7 @@ function MyWorkContent() {
         </Card>
       </div>
 
-      {/* Activity Rewards History */}
+      {/* Activity Rewards History - Invoicing */}
       <ActivityRewardsHistory
         rewards={activityRewards}
         currentMonthTotal={activityCurrentMonthTotal}
@@ -450,12 +559,6 @@ function MyWorkContent() {
               <Button variant="outline" size="sm" className="gap-2">
                 <Sparkles className="h-4 w-4" />
                 Creative Boost
-              </Button>
-            </Link>
-            <Link to="/meetings">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Calendar className="h-4 w-4" />
-                Meetingy
               </Button>
             </Link>
             <Link to="/academy">
