@@ -1,55 +1,55 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useCallback } from 'react';
 import type { ColleagueCapacityRecord } from '@/types/crm';
 
+// Local storage key for capacity history
+const STORAGE_KEY = 'colleague-capacity-history';
+
+function getStoredHistory(): ColleagueCapacityRecord[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(history: ColleagueCapacityRecord[]): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+}
+
 export function useColleagueCapacityHistory(colleagueId: string | null) {
-  const queryClient = useQueryClient();
+  const [allHistory, setAllHistory] = useState<ColleagueCapacityRecord[]>(getStoredHistory);
 
-  const { data: history = [], isLoading, error } = useQuery({
-    queryKey: ['colleague-capacity-history', colleagueId],
-    queryFn: async (): Promise<ColleagueCapacityRecord[]> => {
-      if (!colleagueId) return [];
+  const history = colleagueId 
+    ? allHistory
+        .filter(h => h.colleague_id === colleagueId)
+        .sort((a, b) => new Date(b.effective_from).getTime() - new Date(a.effective_from).getTime())
+    : [];
 
-      // Direct query - table may not be in generated types yet
-      const { data, error } = await (supabase as any)
-        .from('colleague_capacity_history')
-        .select('*')
-        .eq('colleague_id', colleagueId)
-        .order('effective_from', { ascending: false })
-        .order('created_at', { ascending: false });
+  const addHistoryRecord = useCallback((record: {
+    colleague_id: string;
+    capacity_hours: number;
+    previous_capacity_hours: number | null;
+    effective_from: string;
+    reason: string;
+  }) => {
+    const newRecord: ColleagueCapacityRecord = {
+      id: crypto.randomUUID(),
+      ...record,
+      changed_by: null,
+      created_at: new Date().toISOString(),
+    };
 
-      if (error) throw error;
-      return (data || []) as ColleagueCapacityRecord[];
-    },
-    enabled: !!colleagueId,
-  });
-
-  const addHistoryRecord = useMutation({
-    mutationFn: async (record: {
-      colleague_id: string;
-      capacity_hours: number;
-      previous_capacity_hours: number | null;
-      effective_from: string;
-      reason: string;
-    }) => {
-      const { data, error } = await (supabase as any)
-        .from('colleague_capacity_history')
-        .insert(record)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['colleague-capacity-history', colleagueId] });
-    },
-  });
+    const updated = [newRecord, ...allHistory];
+    setAllHistory(updated);
+    saveHistory(updated);
+    return newRecord;
+  }, [allHistory]);
 
   return {
     history,
-    isLoading,
-    error,
-    addHistoryRecord,
+    isLoading: false,
+    error: null,
+    addHistoryRecord: { mutate: addHistoryRecord, isPending: false },
   };
 }
