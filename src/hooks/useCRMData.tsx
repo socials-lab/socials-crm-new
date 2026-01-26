@@ -206,9 +206,9 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     name: 'Creative Boost',
     service_type: 'addon',
     category: 'creative',
-    base_price: 400, // price per credit
+    base_price: 400, // base price per credit
     currency: 'CZK',
-    description: 'Kreditový systém pro tvorbu kreativ (bannery, videa, AI foto). Cena za kredit: 400 Kč.',
+    description: 'Kreditový systém pro tvorbu kreativ (bannery, videa, AI foto). Základní cena: 400 Kč/kredit. Cena za kredit se upravuje na úrovni zakázky.',
     is_active: true,
     tier_pricing: null,
     external_url: null,
