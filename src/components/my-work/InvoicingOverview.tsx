@@ -11,11 +11,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
-  FileText, Copy, Plus, Briefcase, Building2, Sparkles, 
-  CheckCircle, Megaphone, AlertCircle 
+  FileText, Copy, Briefcase, Building2, Sparkles, 
+  CheckCircle, Megaphone, AlertCircle, Pencil
 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-import { cs } from 'date-fns/locale';
+import { parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import type { ActivityReward, ActivityCategory } from '@/hooks/useActivityRewards';
 import { CATEGORY_LABELS } from '@/hooks/useActivityRewards';
@@ -27,6 +26,7 @@ export interface InvoiceLineItem {
   invoiceName: string;
   amount: number;
   note?: string; // e.g. "od 15." for prorated
+  isEditable?: boolean;
 }
 
 interface ClientRewardForInvoice {
@@ -59,6 +59,7 @@ interface InvoicingOverviewProps {
   getRewardsByCategory: (year: number, month: number) => { marketing: ActivityReward[]; overhead: ActivityReward[] };
   // Actions
   onAddInternalWork: () => void;
+  onEditReward?: (reward: ActivityReward) => void;
 }
 
 const MONTHS = [
@@ -68,10 +69,12 @@ const MONTHS = [
 
 function InvoiceLineItemRow({ 
   item, 
-  onCopy 
+  onCopy,
+  onEdit,
 }: { 
   item: InvoiceLineItem; 
   onCopy: (text: string) => void;
+  onEdit?: () => void;
 }) {
   const getCategoryIcon = () => {
     switch (item.category) {
@@ -96,15 +99,28 @@ function InvoiceLineItemRow({
             {item.note}
           </Badge>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-          onClick={() => onCopy(item.invoiceName)}
-          title="Kopírovat název položky"
-        >
-          <Copy className="h-3 w-3" />
-        </Button>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 flex-shrink-0"
+            onClick={() => onCopy(item.invoiceName)}
+            title="Kopírovat název položky"
+          >
+            <Copy className="h-3 w-3" />
+          </Button>
+          {item.isEditable && onEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 flex-shrink-0"
+              onClick={onEdit}
+              title="Upravit položku"
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
       </div>
       <span className="font-medium whitespace-nowrap text-sm">
         {item.amount.toLocaleString('cs-CZ')} Kč
@@ -121,6 +137,7 @@ export function InvoicingOverview({
   getRewardsByMonth,
   getRewardsByCategory,
   onAddInternalWork,
+  onEditReward,
 }: InvoicingOverviewProps) {
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -186,6 +203,7 @@ export function InvoicingOverview({
         category: 'marketing',
         invoiceName: `Režijní služba – ${r.invoice_item_name}`,
         amount: r.amount,
+        isEditable: true,
       });
     });
     
@@ -195,6 +213,7 @@ export function InvoicingOverview({
         category: 'overhead',
         invoiceName: `Režijní služba – ${r.invoice_item_name}`,
         amount: r.amount,
+        isEditable: true,
       });
     });
 
@@ -236,6 +255,18 @@ export function InvoicingOverview({
 
   const hasClientWork = groupedItems.client.length > 0 || groupedItems.creativeBoost.length > 0 || groupedItems.commission.length > 0;
   const hasInternalWork = groupedItems.marketing.length > 0 || groupedItems.overhead.length > 0;
+
+  // Helper to find reward by ID for editing
+  const getRewardById = (id: string): ActivityReward | undefined => {
+    return internalRewards.find(r => r.id === id);
+  };
+
+  const handleEditReward = (itemId: string) => {
+    const reward = getRewardById(itemId);
+    if (reward && onEditReward) {
+      onEditReward(reward);
+    }
+  };
 
   return (
     <Card>
@@ -334,7 +365,12 @@ export function InvoicingOverview({
                         {CATEGORY_LABELS.marketing}
                       </div>
                       {groupedItems.marketing.map((item) => (
-                        <InvoiceLineItemRow key={item.id} item={item} onCopy={handleCopy} />
+                        <InvoiceLineItemRow 
+                          key={item.id} 
+                          item={item} 
+                          onCopy={handleCopy} 
+                          onEdit={() => handleEditReward(item.id)}
+                        />
                       ))}
                     </div>
                   )}
@@ -347,7 +383,12 @@ export function InvoicingOverview({
                         {CATEGORY_LABELS.overhead}
                       </div>
                       {groupedItems.overhead.map((item) => (
-                        <InvoiceLineItemRow key={item.id} item={item} onCopy={handleCopy} />
+                        <InvoiceLineItemRow 
+                          key={item.id} 
+                          item={item} 
+                          onCopy={handleCopy} 
+                          onEdit={() => handleEditReward(item.id)}
+                        />
                       ))}
                     </div>
                   )}

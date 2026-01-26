@@ -212,6 +212,24 @@ export function useActivityRewards(colleagueId: string | null) {
     return newReward;
   }, [allRewards]);
 
+  const updateReward = useCallback((rewardId: string, updates: Partial<Omit<ActivityReward, 'id' | 'created_at'>>) => {
+    const updated = allRewards.map(r => {
+      if (r.id !== rewardId) return r;
+      
+      const updatedReward = { ...r, ...updates };
+      // Regenerate invoice_item_name if category or description changed
+      if (updates.category || updates.description) {
+        updatedReward.invoice_item_name = generateInvoiceItemName(
+          updates.category || r.category,
+          updates.description || r.description
+        );
+      }
+      return updatedReward;
+    });
+    setAllRewards(updated);
+    saveRewards(updated);
+  }, [allRewards]);
+
   const deleteReward = useCallback((rewardId: string) => {
     const updated = allRewards.filter(r => r.id !== rewardId);
     setAllRewards(updated);
@@ -231,6 +249,7 @@ export function useActivityRewards(colleagueId: string | null) {
     getRewardsByCategory,
     getMonthlyTotals,
     addReward,
+    updateReward,
     deleteReward,
   };
 }
