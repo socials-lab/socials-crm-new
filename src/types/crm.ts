@@ -544,6 +544,9 @@ export interface LeadHistoryEntry {
   created_at: string;
 }
 
+// Entity types for engagement history
+export type EngagementHistoryEntityType = 'assignment' | 'service' | 'engagement';
+
 // Engagement change types
 export type EngagementChangeType = 
   | 'created'
@@ -557,6 +560,7 @@ export type EngagementChangeType =
   | 'colleague_updated'
   | 'end_date_set';
 
+// Legacy interface for mock data compatibility
 export interface EngagementHistoryEntry {
   id: string;
   engagement_id: string;
@@ -570,6 +574,34 @@ export interface EngagementHistoryEntry {
   changed_by: string;
   changed_by_name: string;
   created_at: string;
+}
+
+// New Supabase-backed engagement history
+export interface EngagementHistoryRecord {
+  id: string;
+  engagement_id: string;
+  entity_type: EngagementHistoryEntityType;
+  entity_id: string | null;
+  change_type: 'created' | 'updated' | 'deleted';
+  field_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  changed_by: string | null;
+  changed_at: string;
+  metadata: {
+    colleague_name?: string;
+    colleague_id?: string;
+    service_name?: string;
+    cost_model?: string;
+    monthly_cost?: number;
+    hourly_cost?: number;
+    percentage_of_revenue?: number;
+    role_on_engagement?: string;
+    price?: number;
+    currency?: string;
+    billing_type?: string;
+    selected_tier?: string;
+  };
 }
 
 // Issued Invoice - stored when invoice is actually issued

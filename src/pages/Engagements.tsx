@@ -1492,7 +1492,7 @@ function EngagementsContent() {
         <EngagementHistoryDialog
           open={isHistoryOpen}
           onOpenChange={setIsHistoryOpen}
-          history={getEngagementHistory(historyEngagement.id)}
+          engagementId={historyEngagement.id}
           engagementName={historyEngagement.name}
         />
       )}
