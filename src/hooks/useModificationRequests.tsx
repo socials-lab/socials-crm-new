@@ -12,6 +12,7 @@ import {
   deleteModificationRequest,
   type StoredModificationRequest,
 } from '@/data/modificationRequestsMockData';
+import { addAppliedModificationToHistory } from '@/data/appliedModificationsHistory';
 import type { 
   ModificationRequestType,
   ModificationProposedChanges,
@@ -134,7 +135,7 @@ export function useModificationRequests() {
     }
   }, [user, refresh]);
 
-  // Apply a client-approved modification (just mark as applied in localStorage - no DB changes)
+  // Apply a client-approved modification (save to history - frontend only)
   const applyRequest = useCallback(async (requestId: string) => {
     if (!user) throw new Error('User not authenticated');
     
@@ -147,12 +148,14 @@ export function useModificationRequests() {
         throw new Error('Request must be client-approved before applying');
       }
 
-      // Just mark as applied in localStorage - no actual DB changes
-      // In production, this would call addEngagementService/updateEngagementService
+      // Mark as applied in localStorage
       const result = applyModificationRequest(requestId);
       if (!result) throw new Error('Failed to apply request');
       
-      toast.success('Změna byla označena jako aktivovaná (pouze frontend)');
+      // Save to applied modifications history (linked to engagement)
+      addAppliedModificationToHistory(result, user.id);
+      
+      toast.success('Změna byla aktivována a uložena do historie zakázky');
       refresh();
       return result;
     } catch (error) {
