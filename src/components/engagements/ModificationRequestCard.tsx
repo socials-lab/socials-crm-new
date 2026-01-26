@@ -14,6 +14,7 @@ import {
   Building2,
   Copy,
   CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -118,6 +119,9 @@ export function ModificationRequestCard({
 
   // Check if actions should be shown
   const showActions = onApprove && onReject && request.status === 'pending';
+  
+  // Show copy link for approved requests that are waiting for client
+  const showCopyLinkOnly = request.status === 'approved' && hasUpgradeToken && !isClientApproved;
 
   // Render proposed changes based on request type
   const renderChanges = () => {
@@ -244,7 +248,7 @@ export function ModificationRequestCard({
               {/* Header */}
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Badge variant="outline">
                       {typeLabel}
                     </Badge>
@@ -253,6 +257,13 @@ export function ModificationRequestCard({
                       <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         Klient potvrdil
+                      </Badge>
+                    )}
+                    {/* Waiting for client badge */}
+                    {showCopyLinkOnly && (
+                      <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Čeká na klienta
                       </Badge>
                     )}
                   </div>
@@ -309,8 +320,8 @@ export function ModificationRequestCard({
                   <span>{requestedAt}</span>
                 </div>
                 
-                {/* Status badge for reviewed requests */}
-                {request.status === 'approved' && (
+              {/* Status badge for reviewed requests */}
+                {request.status === 'approved' && !showCopyLinkOnly && (
                   <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-100">
                     <Check className="h-3 w-3 mr-1" />
                     Schváleno
@@ -321,6 +332,19 @@ export function ModificationRequestCard({
                     <X className="h-3 w-3 mr-1" />
                     Zamítnuto
                   </Badge>
+                )}
+
+                {/* Copy link button for approved requests waiting for client */}
+                {showCopyLinkOnly && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={handleCopyLink}
+                  >
+                    {linkCopied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                    {linkCopied ? 'Zkopírováno' : 'Zkopírovat odkaz'}
+                  </Button>
                 )}
                 
                 {/* Actions for pending requests */}

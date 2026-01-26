@@ -7,13 +7,18 @@ import { ModificationRequestCard } from '@/components/engagements/ModificationRe
 import { ProposeModificationDialog } from '@/components/engagements/ProposeModificationDialog';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
-import { useUserRole } from '@/hooks/useUserRole';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, CheckCircle, XCircle, FileEdit, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send } from 'lucide-react';
+import { toast } from 'sonner';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges } from '@/types/crm';
+import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
 
 export default function Modifications() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [approvedRequest, setApprovedRequest] = useState<StoredModificationRequest | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   
   const { 
     pendingRequests, 
@@ -21,58 +26,76 @@ export default function Modifications() {
     approveRequest, 
     rejectRequest,
     isApproving,
-    isRejecting 
+    isRejecting,
+    refresh
   } = useModificationRequests();
   const { addEngagementService, updateEngagementService } = useCRMData();
-  const { isSuperAdmin } = useUserRole();
 
   // Filter requests by status
   const pending = pendingRequests?.filter(r => r.status === 'pending') || [];
-  const approved = pendingRequests?.filter(r => r.status === 'approved') || [];
+  const waitingForClient = pendingRequests?.filter(r => r.status === 'approved' && r.upgrade_offer_token && !r.client_approved_at) || [];
+  const clientApproved = pendingRequests?.filter(r => r.status === 'client_approved' || r.client_approved_at) || [];
+  const approved = pendingRequests?.filter(r => r.status === 'approved' && (!r.upgrade_offer_token || r.client_approved_at)) || [];
   const rejected = pendingRequests?.filter(r => r.status === 'rejected') || [];
+
+  const isClientFacingType = (type: string) => {
+    return ['add_service', 'update_service_price', 'deactivate_service'].includes(type);
+  };
 
   const handleApprove = async (requestId: string) => {
     const request = pendingRequests?.find(r => r.id === requestId);
     if (!request) return;
 
     try {
-      // Execute the actual change based on request type
-      if (request.request_type === 'add_service') {
-        const changes = request.proposed_changes as AddServiceProposedChanges;
-        await addEngagementService({
-          engagement_id: request.engagement_id,
-          service_id: changes.service_id || null,
-          name: changes.name,
-          price: changes.price,
-          currency: changes.currency,
-          billing_type: changes.billing_type,
-          is_active: true,
-          notes: '',
-          selected_tier: changes.selected_tier || null,
-          creative_boost_min_credits: changes.creative_boost_min_credits || null,
-          creative_boost_max_credits: changes.creative_boost_max_credits || null,
-          creative_boost_price_per_credit: changes.creative_boost_price_per_credit || null,
-          creative_boost_colleague_reward_per_credit: null,
-          invoicing_status: 'not_applicable',
-          invoiced_at: null,
-          invoiced_in_period: null,
-          invoice_id: null,
-          effective_from: request.effective_from,
-          upsold_by_id: request.upsold_by_id,
-          upsell_commission_percent: request.upsell_commission_percent,
-        });
-      } else if (request.request_type === 'update_service_price') {
-        const changes = request.proposed_changes as UpdateServicePriceProposedChanges;
-        // Use engagement_service_id from the request itself, not from proposed_changes
-        if (request.engagement_service_id) {
-          await updateEngagementService(request.engagement_service_id, {
-            price: changes.new_price,
+      // For client-facing changes, just approve and show dialog with link
+      // The actual service change will be applied after client confirms
+      if (isClientFacingType(request.request_type)) {
+        // Mark request as approved (this generates the token)
+        const updatedRequest = await approveRequest(requestId);
+        
+        // Refresh to get updated request with token
+        refresh();
+        
+        // Find the updated request
+        const freshRequests = pendingRequests?.find(r => r.id === requestId);
+        setApprovedRequest(updatedRequest || freshRequests || request);
+        setSuccessDialogOpen(true);
+      } else {
+        // For internal changes (assignments), execute immediately
+        if (request.request_type === 'add_service') {
+          const changes = request.proposed_changes as AddServiceProposedChanges;
+          await addEngagementService({
+            engagement_id: request.engagement_id,
+            service_id: changes.service_id || null,
+            name: changes.name,
+            price: changes.price,
+            currency: changes.currency,
+            billing_type: changes.billing_type,
+            is_active: true,
+            notes: '',
+            selected_tier: changes.selected_tier || null,
+            creative_boost_min_credits: changes.creative_boost_min_credits || null,
+            creative_boost_max_credits: changes.creative_boost_max_credits || null,
+            creative_boost_price_per_credit: changes.creative_boost_price_per_credit || null,
+            creative_boost_colleague_reward_per_credit: null,
+            invoicing_status: 'not_applicable',
+            invoiced_at: null,
+            invoiced_in_period: null,
+            invoice_id: null,
+            effective_from: request.effective_from,
+            upsold_by_id: request.upsold_by_id,
+            upsell_commission_percent: request.upsell_commission_percent,
           });
+        } else if (request.request_type === 'update_service_price') {
+          const changes = request.proposed_changes as UpdateServicePriceProposedChanges;
+          if (request.engagement_service_id) {
+            await updateEngagementService(request.engagement_service_id, {
+              price: changes.new_price,
+            });
+          }
         }
+        await approveRequest(requestId);
       }
-
-      // Mark request as approved
-      await approveRequest(requestId);
     } catch (error) {
       console.error('Error approving request:', error);
     }
@@ -80,6 +103,23 @@ export default function Modifications() {
 
   const handleReject = async (requestId: string, reason: string) => {
     await rejectRequest({ requestId, reason });
+  };
+
+  const handleCopyLink = async () => {
+    if (approvedRequest?.upgrade_offer_token) {
+      const link = `${window.location.origin}/upgrade/${approvedRequest.upgrade_offer_token}`;
+      await navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      toast.success('Odkaz zkopírován do schránky');
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  };
+
+  const getClientLink = () => {
+    if (approvedRequest?.upgrade_offer_token) {
+      return `${window.location.origin}/upgrade/${approvedRequest.upgrade_offer_token}`;
+    }
+    return '';
   };
 
   if (isLoadingPending) {
@@ -143,7 +183,7 @@ export default function Modifications() {
       </div>
 
       <Tabs defaultValue="pending" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="pending" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Čekající
@@ -151,9 +191,19 @@ export default function Modifications() {
               <Badge variant="secondary" className="ml-1">{pending.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="approved" className="flex items-center gap-2">
+          <TabsTrigger value="waiting-client" className="flex items-center gap-2">
+            <Send className="h-4 w-4" />
+            Čeká na klienta
+            {waitingForClient.length > 0 && (
+              <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-700">{waitingForClient.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="client-approved" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
-            Schválené
+            Klient potvrdil
+            {clientApproved.length > 0 && (
+              <Badge variant="secondary" className="ml-1 bg-green-100 text-green-700">{clientApproved.length}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="rejected" className="flex items-center gap-2">
             <XCircle className="h-4 w-4" />
@@ -177,8 +227,8 @@ export default function Modifications() {
                 <ModificationRequestCard
                   key={request.id}
                   request={request}
-                  onApprove={isSuperAdmin ? handleApprove : undefined}
-                  onReject={isSuperAdmin ? handleReject : undefined}
+                  onApprove={handleApprove}
+                  onReject={handleReject}
                   isApproving={isApproving}
                   isRejecting={isRejecting}
                 />
@@ -187,19 +237,41 @@ export default function Modifications() {
           )}
         </TabsContent>
 
-        <TabsContent value="approved" className="space-y-4">
-          {approved.length === 0 ? (
+        <TabsContent value="waiting-client" className="space-y-4">
+          {waitingForClient.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <CheckCircle className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <Send className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground text-center">
-                  Žádné schválené požadavky
+                  Žádné požadavky čekající na klienta
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4">
-              {approved.map((request) => (
+              {waitingForClient.map((request) => (
+                <ModificationRequestCard
+                  key={request.id}
+                  request={request}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="client-approved" className="space-y-4">
+          {clientApproved.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <CheckCircle className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground text-center">
+                  Žádné požadavky potvrzené klientem
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {clientApproved.map((request) => (
                 <ModificationRequestCard
                   key={request.id}
                   request={request}
@@ -231,6 +303,59 @@ export default function Modifications() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Success dialog after approval */}
+      <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              Požadavek schválen
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Požadavek byl interně schválen. Nyní je potřeba odeslat odkaz klientovi k potvrzení.
+            </p>
+            
+            {approvedRequest?.upgrade_offer_token && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Odkaz pro klienta:</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={getClientLink()}
+                    className="flex-1 px-3 py-2 text-sm border rounded-md bg-muted"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyLink}
+                    className="shrink-0"
+                  >
+                    {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-sm">
+              <p className="font-medium text-amber-700 dark:text-amber-400">Další kroky:</p>
+              <ol className="list-decimal list-inside mt-1 text-amber-600 dark:text-amber-300 space-y-1">
+                <li>Zkopírujte odkaz a odešlete ho klientovi</li>
+                <li>Klient potvrdí změnu na stránce</li>
+                <li>Požadavek se přesune do "Klient potvrdil"</li>
+              </ol>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setSuccessDialogOpen(false)}>
+              Zavřít
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
