@@ -28,7 +28,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingUp } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { Service, EngagementService, ServiceTier } from '@/types/crm';
@@ -185,13 +184,13 @@ export function AddEngagementServiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-lg h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Přidat službu k zakázce</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 pr-4">
+        <div className="flex-1 overflow-y-auto pr-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pb-6">
             <FormField
               control={form.control}
               name="service_id"
@@ -497,7 +496,7 @@ export function AddEngagementServiceDialog({
             </div>
             </form>
           </Form>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
