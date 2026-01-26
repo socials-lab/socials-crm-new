@@ -20,6 +20,7 @@ import {
   Sparkles,
   ArrowUp,
   ArrowDown,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -31,6 +32,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+const TIER_COLORS: Record<string, string> = {
+  'standard': 'hsl(var(--muted-foreground))',
+  'gold': 'hsl(45, 100%, 50%)',
+  'platinum': 'hsl(220, 20%, 65%)',
+  'diamond': 'hsl(200, 100%, 60%)',
+};
+
 interface EngagementMargin {
   id: string;
   name: string;
@@ -41,6 +49,13 @@ interface EngagementMargin {
   marginPercent: number;
 }
 
+interface MarginByTier {
+  tier: string;
+  avgMargin: number;
+  totalRevenue: number;
+  count: number;
+}
+
 interface FinanceAnalyticsProps {
   year: number;
   month: number;
@@ -49,17 +64,25 @@ interface FinanceAnalyticsProps {
   marginAbsolute: number;
   extraWorkCount: number;
   extraWorkAmount: number;
+  revenuePerColleague: number;
   invoicingChange: number;
   marginChange: number;
   engagementMargins: EngagementMargin[];
   marginTrend: { month: string; percent: number; absolute: number }[];
   marginDistribution: { range: string; count: number }[];
   extraWorkTrend: { month: string; count: number; amount: number }[];
+  marginByTier: MarginByTier[];
   creativeBoostStats: {
     totalCredits: number;
     creditsByType: { type: string; credits: number }[];
     creditsByColleague: { name: string; credits: number }[];
     creditsTrend: { month: string; credits: number }[];
+  };
+  revenueBreakdown: {
+    retainers: number;
+    extraWork: number;
+    oneOff: number;
+    creativeBoost: number;
   };
 }
 
@@ -69,21 +92,18 @@ export function FinanceAnalytics({
   marginAbsolute,
   extraWorkCount,
   extraWorkAmount,
+  revenuePerColleague,
   invoicingChange,
   engagementMargins,
   marginTrend,
   marginDistribution,
   extraWorkTrend,
+  marginByTier,
   creativeBoostStats,
+  revenueBreakdown,
 }: FinanceAnalyticsProps) {
   const formatCurrency = (value: number) => `${(value / 1000).toFixed(0)}K`;
   
-  const getMarginColor = (margin: number) => {
-    if (margin >= 40) return 'text-status-active';
-    if (margin >= 20) return 'text-status-paused';
-    return 'text-status-lost';
-  };
-
   const getMarginBadgeVariant = (margin: number) => {
     if (margin >= 40) return 'default';
     if (margin >= 20) return 'secondary';
@@ -93,7 +113,7 @@ export function FinanceAnalytics({
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <KPICard
           title="Celková fakturace"
           value={`${formatCurrency(totalInvoicing)} Kč`}
@@ -119,6 +139,12 @@ export function FinanceAnalytics({
           icon={TrendingUp}
         />
         <KPICard
+          title="Revenue/Kolega"
+          value={`${formatCurrency(revenuePerColleague)} Kč`}
+          icon={Users}
+          subtitle="měsíční"
+        />
+        <KPICard
           title="Vícepráce"
           value={extraWorkCount}
           icon={Briefcase}
@@ -130,6 +156,33 @@ export function FinanceAnalytics({
           icon={Sparkles}
         />
       </div>
+
+      {/* Revenue Breakdown Summary */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Struktura příjmů (reálná data)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <p className="text-2xl font-bold text-primary">{formatCurrency(revenueBreakdown.retainers)} Kč</p>
+              <p className="text-sm text-muted-foreground">Retainery</p>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <p className="text-2xl font-bold text-chart-2">{formatCurrency(revenueBreakdown.extraWork)} Kč</p>
+              <p className="text-sm text-muted-foreground">Vícepráce</p>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <p className="text-2xl font-bold text-chart-3">{formatCurrency(revenueBreakdown.oneOff)} Kč</p>
+              <p className="text-sm text-muted-foreground">Jednorázové</p>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <p className="text-2xl font-bold text-chart-4">{formatCurrency(revenueBreakdown.creativeBoost)} Kč</p>
+              <p className="text-sm text-muted-foreground">Creative Boost</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Margin Table */}
       <Card>
@@ -249,6 +302,66 @@ export function FinanceAnalytics({
           </CardContent>
         </Card>
 
+        {/* Margin by Tier */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Marže podle tier klienta</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={marginByTier}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="tier" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                    tickFormatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
+                  />
+                  <YAxis 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                    tickFormatter={(value) => `${value}%`}
+                    domain={[0, 100]}
+                  />
+                  <Tooltip 
+                    formatter={(value: number, name: string) => {
+                      if (name === 'avgMargin') return [`${value.toFixed(1)}%`, 'Prům. marže'];
+                      return [value, name];
+                    }}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Bar dataKey="avgMargin" radius={[4, 4, 0, 0]}>
+                    {marginByTier.map((entry) => (
+                      <Bar key={entry.tier} dataKey="avgMargin" fill={TIER_COLORS[entry.tier] || 'hsl(var(--chart-1))'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-wrap justify-center gap-4 mt-2">
+              {marginByTier.map((entry) => (
+                <div key={entry.tier} className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: TIER_COLORS[entry.tier] || 'hsl(var(--chart-1))' }}
+                  />
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {entry.tier} ({entry.count})
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row 2 */}
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Margin Distribution */}
         <Card>
           <CardHeader className="pb-2">
@@ -282,59 +395,59 @@ export function FinanceAnalytics({
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Extra Work Trend */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium">Vývoj víceprací (12 měsíců)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={extraWorkTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis 
-                  dataKey="month" 
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                  axisLine={{ stroke: 'hsl(var(--border))' }}
-                />
-                <YAxis 
-                  yAxisId="left"
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                  axisLine={{ stroke: 'hsl(var(--border))' }}
-                />
-                <YAxis 
-                  yAxisId="right"
-                  orientation="right"
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                  axisLine={{ stroke: 'hsl(var(--border))' }}
-                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Bar yAxisId="left" dataKey="count" fill="hsl(var(--chart-1))" name="Počet" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="right" dataKey="amount" fill="hsl(var(--chart-2))" name="Částka" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-center gap-6 mt-2">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--chart-1))' }} />
-              <span className="text-xs text-muted-foreground">Počet</span>
+        {/* Extra Work Trend */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Vývoj víceprací (12 měsíců)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={extraWorkTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Bar yAxisId="left" dataKey="count" fill="hsl(var(--chart-1))" name="Počet" radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="right" dataKey="amount" fill="hsl(var(--chart-2))" name="Částka" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--chart-2))' }} />
-              <span className="text-xs text-muted-foreground">Částka</span>
+            <div className="flex justify-center gap-6 mt-2">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--chart-1))' }} />
+                <span className="text-xs text-muted-foreground">Počet</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--chart-2))' }} />
+                <span className="text-xs text-muted-foreground">Částka</span>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Creative Boost Section */}
       <Card>

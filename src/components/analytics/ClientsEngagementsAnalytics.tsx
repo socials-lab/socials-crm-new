@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KPICard } from '@/components/shared/KPICard';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   BarChart,
   Bar,
@@ -24,6 +25,7 @@ import {
   TrendingUp,
   ArrowUp,
   ArrowDown,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -37,6 +39,20 @@ const TIER_COLORS: Record<string, string> = {
   'platinum': 'hsl(220, 20%, 65%)',
   'diamond': 'hsl(200, 100%, 60%)',
 };
+
+const TENURE_LABELS: Record<string, string> = {
+  '0-3': '0-3 měs.',
+  '3-6': '3-6 měs.',
+  '6-12': '6-12 měs.',
+  '12+': '12+ měs.',
+};
+
+interface AtRiskClient {
+  id: string;
+  name: string;
+  reason: string;
+  riskLevel: 'high' | 'medium' | 'low';
+}
 
 interface ClientEngagementsAnalyticsProps {
   year: number;
@@ -53,6 +69,9 @@ interface ClientEngagementsAnalyticsProps {
   topClientsByRevenue: { name: string; revenue: number }[];
   topClientsByMargin: { name: string; margin: number }[];
   clientsByTier: { tier: string; count: number }[];
+  revenueByIndustry: { industry: string; revenue: number }[];
+  tenureDistribution: { range: string; count: number }[];
+  atRiskClients: AtRiskClient[];
 }
 
 export function ClientsEngagementsAnalytics({
@@ -68,8 +87,17 @@ export function ClientsEngagementsAnalytics({
   topClientsByRevenue,
   topClientsByMargin,
   clientsByTier,
+  revenueByIndustry,
+  tenureDistribution,
+  atRiskClients,
 }: ClientEngagementsAnalyticsProps) {
   const formatCurrency = (value: number) => `${(value / 1000).toFixed(0)}K`;
+  
+  const getRiskBadgeVariant = (level: string) => {
+    if (level === 'high') return 'destructive';
+    if (level === 'medium') return 'secondary';
+    return 'outline';
+  };
   
   return (
     <div className="space-y-6">
@@ -135,6 +163,18 @@ export function ClientsEngagementsAnalytics({
         />
       </div>
 
+      {/* At-Risk Clients Alert */}
+      {atRiskClients.length > 0 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>{atRiskClients.length} klientů vyžaduje pozornost:</strong>{' '}
+            {atRiskClients.slice(0, 3).map(c => c.name).join(', ')}
+            {atRiskClients.length > 3 && ` a ${atRiskClients.length - 3} dalších`}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Charts Row 1 */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Client Trend */}
@@ -172,6 +212,93 @@ export function ClientsEngagementsAnalytics({
                     name="Aktivní"
                   />
                 </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Revenue by Industry */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Příjmy podle odvětví</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={revenueByIndustry}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="revenue"
+                    nameKey="industry"
+                  >
+                    {revenueByIndustry.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: number) => [`${value.toLocaleString()} Kč`, 'Příjmy']}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-wrap justify-center gap-4 mt-2">
+              {revenueByIndustry.slice(0, 5).map((entry, index) => (
+                <div key={entry.industry} className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
+                  <span className="text-xs text-muted-foreground">{entry.industry || 'Neuvedeno'}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row 2 */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Tenure Distribution */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Délka spolupráce (tenure)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={tenureDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="range"
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                    tickFormatter={(value) => TENURE_LABELS[value] || value}
+                  />
+                  <YAxis 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [`${value} klientů`, 'Počet']}
+                    labelFormatter={(label) => TENURE_LABELS[label] || label}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Bar dataKey="count" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
@@ -226,7 +353,7 @@ export function ClientsEngagementsAnalytics({
         </Card>
       </div>
 
-      {/* Charts Row 2 */}
+      {/* Charts Row 3 */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Top Clients by Revenue */}
         <Card>
@@ -266,42 +393,34 @@ export function ClientsEngagementsAnalytics({
           </CardContent>
         </Card>
 
-        {/* Top Clients by Margin */}
+        {/* At-Risk Clients Table */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Top 10 klientů dle marže</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-status-paused" />
+              At-Risk klienti
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topClientsByMargin} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    type="number"
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                    domain={[0, 100]}
-                    tickFormatter={(value) => `${value}%`}
-                  />
-                  <YAxis 
-                    type="category"
-                    dataKey="name"
-                    width={100}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                  />
-                  <Tooltip 
-                    formatter={(value: number) => [`${value.toFixed(1)}%`, 'Marže']}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="margin" fill="hsl(var(--status-active))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {atRiskClients.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                Žádní klienti nevykazují rizikové signály 🎉
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {atRiskClients.slice(0, 8).map((client) => (
+                  <div key={client.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                    <div>
+                      <p className="font-medium text-sm">{client.name}</p>
+                      <p className="text-xs text-muted-foreground">{client.reason}</p>
+                    </div>
+                    <Badge variant={getRiskBadgeVariant(client.riskLevel)} className="text-xs capitalize">
+                      {client.riskLevel === 'high' ? 'Vysoké' : client.riskLevel === 'medium' ? 'Střední' : 'Nízké'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
