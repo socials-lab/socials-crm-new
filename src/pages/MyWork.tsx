@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, CreditCard, ExternalLink, Sparkles, Zap } from 'lucide-react';
+import { Briefcase, CreditCard, ExternalLink, Sparkles, Zap, Palette, Coins } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +23,7 @@ function MyWorkContent() {
     services,
   } = useCRMData();
   
-  const { getColleagueCredits, getColleagueCreditsYear, getColleagueCreditsDetail } = useCreativeBoostData();
+  const { getColleagueCredits, getColleagueCreditsYear, getColleagueCreditsDetail, getColleagueCreditsByClient } = useCreativeBoostData();
 
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
@@ -72,6 +72,10 @@ function MyWorkContent() {
   const monthCredits = currentColleague ? getColleagueCredits(currentColleague.id, currentYear, currentMonth) : 0;
   const yearCredits = currentColleague ? getColleagueCreditsYear(currentColleague.id, currentYear) : 0;
   const creditsDetail = currentColleague ? getColleagueCreditsDetail(currentColleague.id, currentYear, currentMonth) : [];
+  const creditsByClient = currentColleague ? getColleagueCreditsByClient(currentColleague.id, currentYear, currentMonth) : [];
+  
+  // Total reward from Creative Boost
+  const totalCreativeBoostReward = creditsByClient.reduce((sum, c) => sum + c.totalReward, 0);
 
   // If no colleague is linked, show message
   if (!currentColleague) {
@@ -144,6 +148,21 @@ function MyWorkContent() {
             </CardContent>
           </Card>
         )}
+
+        {totalCreativeBoostReward > 0 && (
+          <Card className="bg-green-500/5 border-green-500/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Coins className="h-4 w-4 text-green-600" />
+                Odměna za Creative Boost
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-green-600">{totalCreativeBoostReward.toLocaleString()} Kč</p>
+              <p className="text-xs text-muted-foreground">za {monthCredits} kreditů tento měsíc</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Assignments list */}
@@ -212,8 +231,69 @@ function MyWorkContent() {
         )}
       </div>
 
-      {/* Creative Boost detail */}
-      {creditsDetail.length > 0 && (
+      {/* Creative Boost rewards by client */}
+      {creditsByClient.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            🎨 Odměny za Creative Boost - tento měsíc
+          </h2>
+          <div className="grid gap-3">
+            {creditsByClient.map((clientReward) => (
+              <Card key={clientReward.clientId} className="overflow-hidden">
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Palette className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <button
+                            onClick={() => clientReward.engagementId && navigate(`/engagements?highlight=${clientReward.engagementId}`)}
+                            className="font-medium text-primary hover:underline flex items-center gap-1"
+                          >
+                            {clientReward.brandName || clientReward.clientName}
+                            <ExternalLink className="h-3 w-3" />
+                          </button>
+                          <p className="text-xs text-muted-foreground">{clientReward.engagementName}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right space-y-1">
+                      <p className="text-lg font-bold text-green-600">
+                        {clientReward.totalReward.toLocaleString()} Kč
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {clientReward.totalCredits} kr × {clientReward.rewardPerCredit} Kč
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+          
+          {/* Total summary */}
+          <Card className="bg-green-500/5 border-green-500/20">
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Coins className="h-5 w-5 text-green-600" />
+                  <span className="font-medium">Celková odměna za Creative Boost</span>
+                </div>
+                <span className="text-xl font-bold text-green-600">
+                  {totalCreativeBoostReward.toLocaleString()} Kč
+                </span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Creative Boost detail - only show if we have detail not covered by client summary */}
+      {creditsDetail.length > 0 && creditsByClient.length === 0 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
