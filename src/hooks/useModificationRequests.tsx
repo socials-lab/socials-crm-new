@@ -7,19 +7,23 @@ import {
   createModificationRequest,
   approveModificationRequest,
   rejectModificationRequest,
+  applyModificationRequest,
   type StoredModificationRequest,
 } from '@/data/modificationRequestsMockData';
 import type { 
   ModificationRequestType,
   ModificationProposedChanges,
+  AddServiceProposedChanges,
+  UpdateServicePriceProposedChanges,
 } from '@/types/crm';
 
 export function useModificationRequests() {
   const { user } = useAuth();
-  const { engagements, clients, colleagues } = useCRMData();
+  const { engagements, clients, colleagues, addEngagementService, updateEngagementService } = useCRMData();
   const [isCreating, setIsCreating] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
 
   // Get all requests with refreshing
   const [refreshKey, setRefreshKey] = useState(0);
@@ -130,6 +134,75 @@ export function useModificationRequests() {
     }
   }, [user, refresh]);
 
+  // Apply a client-approved modification (add service to engagement)
+  const applyRequest = useCallback(async (requestId: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    setIsApplying(true);
+    try {
+      const request = pendingRequests.find(r => r.id === requestId);
+      if (!request) throw new Error('Request not found');
+      
+      if (request.status !== 'client_approved') {
+        throw new Error('Request must be client-approved before applying');
+      }
+
+      // Apply changes based on request type
+      if (request.request_type === 'add_service') {
+        const changes = request.proposed_changes as AddServiceProposedChanges;
+        await addEngagementService({
+          engagement_id: request.engagement_id,
+          service_id: changes.service_id || null,
+          name: changes.name,
+          price: changes.price,
+          currency: changes.currency,
+          billing_type: changes.billing_type,
+          is_active: true,
+          notes: `Přidáno z upsell požadavku (schváleno klientem ${request.client_email})`,
+          selected_tier: changes.selected_tier || null,
+          creative_boost_min_credits: changes.creative_boost_min_credits || null,
+          creative_boost_max_credits: changes.creative_boost_max_credits || null,
+          creative_boost_price_per_credit: changes.creative_boost_price_per_credit || null,
+          creative_boost_colleague_reward_per_credit: null,
+          invoicing_status: 'pending', // Ready for invoicing
+          invoiced_at: null,
+          invoiced_in_period: null,
+          invoice_id: null,
+          effective_from: request.effective_from,
+          upsold_by_id: request.upsold_by_id,
+          upsell_commission_percent: request.upsell_commission_percent,
+        });
+      } else if (request.request_type === 'update_service_price') {
+        const changes = request.proposed_changes as UpdateServicePriceProposedChanges;
+        if (request.engagement_service_id) {
+          await updateEngagementService(request.engagement_service_id, {
+            price: changes.new_price,
+          });
+        }
+      } else if (request.request_type === 'deactivate_service') {
+        if (request.engagement_service_id) {
+          await updateEngagementService(request.engagement_service_id, {
+            is_active: false,
+          });
+        }
+      }
+
+      // Mark as applied in localStorage
+      const result = applyModificationRequest(requestId);
+      if (!result) throw new Error('Failed to apply request');
+      
+      toast.success('Změna byla aplikována do zakázky a připravena k fakturaci');
+      refresh();
+      return result;
+    } catch (error) {
+      console.error('Error applying request:', error);
+      toast.error('Nepodařilo se aplikovat změnu');
+      throw error;
+    } finally {
+      setIsApplying(false);
+    }
+  }, [user, pendingRequests, addEngagementService, updateEngagementService, refresh]);
+
   return {
     pendingRequests,
     isLoadingPending: false,
@@ -139,6 +212,8 @@ export function useModificationRequests() {
     isApproving,
     rejectRequest,
     isRejecting,
+    applyRequest,
+    isApplying,
     refresh,
   };
 }
