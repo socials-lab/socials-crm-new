@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,10 +12,128 @@ import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, ModificationProposedChanges } from '@/types/crm';
 import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
+import { getAppliedModificationsHistory, type AppliedModificationHistory } from '@/data/appliedModificationsHistory';
+
+// Helper to get month label
+function getMonthLabel(monthStr: string): string {
+  const [year, month] = monthStr.split('-');
+  const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+  return format(date, 'LLLL yyyy', { locale: cs });
+}
+
+// Generate available months (current + last 12 months)
+function generateAvailableMonths(): string[] {
+  const months: string[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return months;
+}
+
+// Component to display applied history entry with client confirmation details
+function AppliedHistoryCard({ entry }: { entry: AppliedModificationHistory }) {
+  const REQUEST_TYPE_LABELS: Record<string, string> = {
+    add_service: 'Přidání služby',
+    update_service_price: 'Změna ceny',
+    deactivate_service: 'Ukončení služby',
+    add_assignment: 'Přiřazení kolegy',
+    update_assignment: 'Změna odměny',
+    remove_assignment: 'Odebrání kolegy',
+  };
+
+  const typeLabel = REQUEST_TYPE_LABELS[entry.request_type] || entry.request_type;
+  const clientName = entry.client_brand_name || entry.client_name;
+  
+  return (
+    <Card className="border-l-4 border-l-primary">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge className="bg-primary/10 text-primary">
+                  <Check className="h-3 w-3 mr-1" />
+                  Aktivováno
+                </Badge>
+                <Badge variant="outline">{typeLabel}</Badge>
+              </div>
+              <h4 className="font-medium flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                {clientName}
+              </h4>
+              <p className="text-sm text-muted-foreground">{entry.engagement_name}</p>
+            </div>
+            <div className="text-right text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {format(new Date(entry.applied_at), 'd. M. yyyy', { locale: cs })}
+              </div>
+            </div>
+          </div>
+
+          {/* Proposed changes summary */}
+          <div className="bg-muted/50 rounded-md p-3 text-sm">
+            {entry.request_type === 'add_service' && (
+              <>
+                <p><span className="text-muted-foreground">Služba:</span> {(entry.proposed_changes as any).name}</p>
+                <p><span className="text-muted-foreground">Cena:</span> {((entry.proposed_changes as any).price || 0).toLocaleString('cs-CZ')} {(entry.proposed_changes as any).currency}</p>
+              </>
+            )}
+            {entry.request_type === 'update_service_price' && (
+              <p>
+                <span className="text-muted-foreground">Nová cena:</span> {((entry.proposed_changes as any).new_price || 0).toLocaleString('cs-CZ')} {(entry.proposed_changes as any).currency}
+              </p>
+            )}
+            {entry.request_type === 'deactivate_service' && (
+              <p><span className="text-muted-foreground">Služba:</span> {(entry.proposed_changes as any).service_name} (deaktivováno)</p>
+            )}
+          </div>
+
+          {/* Client confirmation details */}
+          {entry.client_email && entry.client_approved_at && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3 text-sm">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium mb-1">
+                <CheckCircle className="h-4 w-4" />
+                Potvrzeno klientem
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-green-600 dark:text-green-300">
+                <div className="flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  <span>{entry.client_email}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  <span>{format(new Date(entry.client_approved_at), 'd. M. yyyy v H:mm', { locale: cs })}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Effective from & commission info */}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            {entry.effective_from && (
+              <span>Účinnost od: {format(new Date(entry.effective_from), 'd. M. yyyy')}</span>
+            )}
+            {entry.upsold_by_name && (
+              <span>Upsell: {entry.upsold_by_name} ({entry.upsell_commission_percent}%)</span>
+            )}
+            {entry.note && (
+              <span className="italic">„{entry.note}"</span>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Modifications() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -22,6 +142,7 @@ export default function Modifications() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<StoredModificationRequest | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   
   const { 
     pendingRequests, 
@@ -40,6 +161,10 @@ export default function Modifications() {
   } = useModificationRequests();
   const { addEngagementService, updateEngagementService } = useCRMData();
 
+  // Get applied modifications history
+  const appliedHistory = useMemo(() => getAppliedModificationsHistory(), [pendingRequests]);
+  const availableMonths = useMemo(() => generateAvailableMonths(), []);
+
   // Filter requests by status
   const pending = pendingRequests?.filter(r => r.status === 'pending') || [];
   const waitingForClient = pendingRequests?.filter(r => r.status === 'approved' && r.upgrade_offer_token && !r.client_approved_at) || [];
@@ -47,6 +172,12 @@ export default function Modifications() {
   const applied = pendingRequests?.filter(r => r.status === 'applied') || [];
   const approved = pendingRequests?.filter(r => r.status === 'approved' && (!r.upgrade_offer_token || r.client_approved_at)) || [];
   const rejected = pendingRequests?.filter(r => r.status === 'rejected') || [];
+
+  // Filter applied history by month
+  const filteredHistory = useMemo(() => {
+    if (selectedMonth === 'all') return appliedHistory;
+    return appliedHistory.filter(h => h.applied_month === selectedMonth);
+  }, [appliedHistory, selectedMonth]);
 
   const isClientFacingType = (type: string) => {
     return ['add_service', 'update_service_price', 'deactivate_service'].includes(type);
@@ -329,18 +460,54 @@ export default function Modifications() {
         </TabsContent>
 
         <TabsContent value="applied" className="space-y-4">
-          {applied.length === 0 ? (
+          {/* Month filter */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Filtr podle měsíce:</span>
+            </div>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Vyberte měsíc" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Všechny měsíce</SelectItem>
+                {availableMonths.map(month => (
+                  <SelectItem key={month} value={month}>
+                    {getMonthLabel(month)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedMonth !== 'all' && (
+              <Badge variant="secondary">
+                {filteredHistory.length} záznamů
+              </Badge>
+            )}
+          </div>
+
+          {filteredHistory.length === 0 && applied.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <PackageCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground text-center">
-                  Žádné aktivované změny
+                  {selectedMonth === 'all' 
+                    ? 'Žádné aktivované změny' 
+                    : `Žádné aktivované změny v ${getMonthLabel(selectedMonth)}`}
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
-              {applied.map((request) => (
+            <div className="space-y-4">
+              {/* Show history entries with client confirmation details */}
+              {filteredHistory.map((historyEntry) => (
+                <AppliedHistoryCard key={historyEntry.id} entry={historyEntry} />
+              ))}
+              
+              {/* Also show applied requests that might not be in history yet */}
+              {selectedMonth === 'all' && applied.filter(r => 
+                !filteredHistory.some(h => h.modification_request_id === r.id)
+              ).map((request) => (
                 <ModificationRequestCard
                   key={request.id}
                   request={request}
