@@ -306,13 +306,28 @@ export default function UpgradeOfferPage() {
         {isAccepted && (
           <Card className="mb-8 border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-3 text-green-700 dark:text-green-400">
-                <CheckCircle2 className="h-8 w-8" />
-                <div>
-                  <h2 className="font-semibold text-lg">Změna potvrzena</h2>
-                  <p className="text-sm text-green-600 dark:text-green-500">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-8 w-8 text-green-700 dark:text-green-400 flex-shrink-0" />
+                <div className="flex-1">
+                  <h2 className="font-semibold text-lg text-green-700 dark:text-green-400">Změna potvrzena</h2>
+                  <p className="text-sm text-green-600 dark:text-green-500 mb-4">
                     Děkujeme za potvrzení. Budeme vás informovat o dalších krocích.
                   </p>
+                  
+                  {/* Confirmation details */}
+                  <div className="mt-4 p-3 rounded-lg bg-green-100/50 dark:bg-green-900/30 border border-green-200 dark:border-green-800">
+                    <p className="text-xs font-medium text-green-800 dark:text-green-300 mb-2">Potvrzení:</p>
+                    <div className="space-y-1 text-sm text-green-700 dark:text-green-400">
+                      {offer.client_email && (
+                        <p>📧 Email: <span className="font-medium">{offer.client_email}</span></p>
+                      )}
+                      {offer.client_approved_at && (
+                        <p>📅 Datum: <span className="font-medium">
+                          {format(new Date(offer.client_approved_at), "d. MMMM yyyy 'v' HH:mm", { locale: cs })}
+                        </span></p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
