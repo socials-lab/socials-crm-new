@@ -72,6 +72,9 @@ export interface CreativeBoostClientMonth {
   // Link to engagement service
   engagementServiceId: string | null;
   engagementId: string | null;
+  // Invoice customization
+  invoiceAmount: number | null;  // Custom invoice amount (overrides package)
+  invoiceNote: string | null;    // Invoice note for CB
   createdAt: string;
   updatedAt: string;
 }
@@ -97,7 +100,10 @@ export interface ClientMonthSummary {
   expressCredits: number;
   normalCredits: number;
   remainingCredits: number;
-  estimatedInvoice: number;
+  estimatedInvoice: number;      // Based on actual usage (for info)
+  packageInvoice: number;        // maxCredits × pricePerCredit
+  customInvoiceAmount: number | null;  // Custom amount if set
+  finalInvoiceAmount: number;    // Final amount to invoice
   pricePerCredit: number;
   status: MonthStatus;
   itemCount: number;

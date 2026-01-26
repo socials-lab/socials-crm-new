@@ -12,21 +12,7 @@ import { FileText, CheckCircle, Package, Briefcase, ChevronLeft, ChevronRight, P
 import { Button } from '@/components/ui/button';
 import {
   creativeBoostClientMonths,
-  clientMonthOutputs,
-  outputTypes,
 } from '@/data/creativeBoostMockData';
-
-// Helper to calculate Creative Boost credits
-function calculateOutputCredits(outputTypeId: string, normalCount: number, expressCount: number) {
-  const outputType = outputTypes.find(t => t.id === outputTypeId);
-  const baseCredits = outputType?.baseCredits ?? 0;
-  
-  const normalCredits = normalCount * baseCredits;
-  const expressCredits = Math.ceil(expressCount * baseCredits * 1.5);
-  const totalCredits = normalCredits + expressCredits;
-
-  return { normalCredits, expressCredits, totalCredits };
-}
 
 const Invoicing = () => {
   const currentDate = new Date();
@@ -68,22 +54,16 @@ const Invoicing = () => {
     const extraWorkCount = readyExtraWorks.length;
     const extraWorkAmount = readyExtraWorks.reduce((sum, ew) => sum + ew.amount, 0);
 
-    // Calculate Creative Boost amount for this period
+    // Calculate Creative Boost amount for this period (based on package, not usage)
     let creativeBoostAmount = 0;
     creativeBoostClientMonths
       .filter(cm => cm.year === selectedYear && cm.month === selectedMonth)
       .forEach(cm => {
-        const outputs = clientMonthOutputs.filter(
-          o => o.clientId === cm.clientId && o.year === selectedYear && o.month === selectedMonth
-        );
-        
-        let totalCredits = 0;
-        outputs.forEach(output => {
-          const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
-          totalCredits += credits.totalCredits;
-        });
-
-        creativeBoostAmount += totalCredits * cm.pricePerCredit;
+        // Package amount = maxCredits × pricePerCredit
+        const packageAmount = cm.maxCredits * cm.pricePerCredit;
+        // Use custom invoice amount if set, otherwise package amount
+        const invoiceAmount = cm.invoiceAmount ?? packageAmount;
+        creativeBoostAmount += invoiceAmount;
       });
 
     // Calculate retainer amount from individual engagement services (not engagement.monthly_fee)

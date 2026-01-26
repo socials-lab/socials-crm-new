@@ -71,8 +71,14 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     const periodEnd = endOfMonth(new Date(year, month - 1));
     const totalDays = getDaysInMonth(new Date(year, month - 1));
 
-    // Get Creative Boost data for the period (grouped by client for now, will associate with engagement)
-    const creativeBoostData = new Map<string, { usedCredits: number; pricePerCredit: number; totalAmount: number }>();
+    // Get Creative Boost data for the period (based on package, not usage)
+    const creativeBoostData = new Map<string, { 
+      usedCredits: number; 
+      maxCredits: number;
+      pricePerCredit: number; 
+      packageAmount: number;
+      invoiceAmount: number;
+    }>();
     
     creativeBoostClientMonths
       .filter(cm => cm.year === year && cm.month === month)
@@ -87,11 +93,17 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
           totalCredits += credits.totalCredits;
         });
 
-        if (totalCredits > 0) {
+        const packageAmount = cm.maxCredits * cm.pricePerCredit;
+        const invoiceAmount = cm.invoiceAmount ?? packageAmount;
+
+        // Only include if there's something to invoice
+        if (invoiceAmount > 0) {
           creativeBoostData.set(cm.clientId, {
             usedCredits: totalCredits,
+            maxCredits: cm.maxCredits,
             pricePerCredit: cm.pricePerCredit,
-            totalAmount: totalCredits * cm.pricePerCredit,
+            packageAmount,
+            invoiceAmount,
           });
         }
       });
@@ -197,19 +209,19 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             source: 'creative_boost' as const,
             engagement_id: engagement.id,
             extra_work_id: null,
-            source_description: `Creative Boost - ${cbData.usedCredits} kreditů × ${cbData.pricePerCredit.toLocaleString()} Kč`,
-            source_amount: cbData.totalAmount,
+            source_description: `Creative Boost - balíček ${cbData.maxCredits} kr. (čerpáno ${cbData.usedCredits} kr.)`,
+            source_amount: cbData.invoiceAmount,
             period_start: format(periodStart, 'yyyy-MM-dd'),
             period_end: format(periodEnd, 'yyyy-MM-dd'),
             prorated_days: totalDays,
             total_days_in_month: totalDays,
-            prorated_amount: cbData.totalAmount,
-            line_description: `Creative Boost - ${format(periodStart, 'LLLL yyyy', { locale: cs })} (${cbData.usedCredits} kreditů)`,
-            unit_price: cbData.pricePerCredit,
-            quantity: cbData.usedCredits,
+            prorated_amount: cbData.invoiceAmount,
+            line_description: `Creative Boost - ${format(periodStart, 'LLLL yyyy', { locale: cs })} (balíček ${cbData.maxCredits} kr., čerpáno ${cbData.usedCredits} kr.)`,
+            unit_price: cbData.invoiceAmount,
+            quantity: 1,
             adjustment_amount: 0,
             adjustment_reason: '',
-            final_amount: cbData.totalAmount,
+            final_amount: cbData.invoiceAmount,
             is_approved: false,
             note: '',
             hours: null,
