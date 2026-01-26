@@ -33,7 +33,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import type { Service, EngagementService, ServiceTier } from '@/types/crm';
 import { serviceTierConfigs } from '@/constants/services';
 
-const CREATIVE_BOOST_SERVICE_ID = 'srv-3';
+const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
 
 const engagementServiceSchema = z.object({
   service_id: z.string().min(1, 'Vyberte službu'),
@@ -90,9 +90,10 @@ export function AddEngagementServiceDialog({
 
   const selectedServiceId = form.watch('service_id');
   const selectedTier = form.watch('selected_tier');
-  const isCreativeBoost = selectedServiceId === CREATIVE_BOOST_SERVICE_ID;
   
   const selectedService = services.find(s => s.id === selectedServiceId);
+  // Detect Creative Boost by code, not by hardcoded ID
+  const isCreativeBoost = selectedService?.code === CREATIVE_BOOST_CODE;
   const isCoreService = selectedService?.service_type === 'core';
 
   // Auto-fill name and price when service is selected
@@ -103,8 +104,8 @@ export function AddEngagementServiceDialog({
       if (!form.getValues('name')) {
         form.setValue('name', service.name);
       }
-      // Set default values for Creative Boost
-      if (serviceId === CREATIVE_BOOST_SERVICE_ID) {
+      // Set default values for Creative Boost (detect by code)
+      if (service.code === CREATIVE_BOOST_CODE) {
         form.setValue('creative_boost_min_credits', 0);
         form.setValue('creative_boost_max_credits', 50);
         form.setValue('creative_boost_price_per_credit', 400);
@@ -463,11 +464,26 @@ export function AddEngagementServiceDialog({
                   </SelectContent>
                 </Select>
               </div>
-              {upsoldById && watchedPrice > 0 && (
-                <p className="text-sm text-green-600 font-medium">
-                  💰 Provize 10%: {watchedPrice * 0.1} {form.getValues('currency')}
-                </p>
-              )}
+              {upsoldById && (() => {
+                // Calculate commission base: for Creative Boost use credits × price/credit
+                const commissionBase = isCreativeBoost 
+                  ? (form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)
+                  : watchedPrice;
+                
+                if (commissionBase > 0) {
+                  return (
+                    <div className="text-sm space-y-1">
+                      <p className="text-muted-foreground">
+                        Provize 10% z první fakturace ({commissionBase.toLocaleString('cs-CZ')} {form.getValues('currency')}):
+                      </p>
+                      <p className="text-green-600 font-medium">
+                        💰 {(commissionBase * 0.1).toLocaleString('cs-CZ')} {form.getValues('currency')}
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
