@@ -8,6 +8,7 @@ import {
   approveModificationRequest,
   rejectModificationRequest,
   applyModificationRequest,
+  updateModificationRequest,
   type StoredModificationRequest,
 } from '@/data/modificationRequestsMockData';
 import type { 
@@ -203,6 +204,34 @@ export function useModificationRequests() {
     }
   }, [user, pendingRequests, addEngagementService, updateEngagementService, refresh]);
 
+  // Update a modification request (before final approval)
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  const updateRequest = useCallback(async (requestId: string, updates: {
+    proposed_changes?: ModificationProposedChanges;
+    effective_from?: string | null;
+    note?: string | null;
+    upsell_commission_percent?: number;
+  }) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    setIsUpdating(true);
+    try {
+      const result = updateModificationRequest(requestId, updates);
+      if (!result) throw new Error('Request not found or cannot be edited');
+      
+      toast.success('Požadavek byl upraven');
+      refresh();
+      return result;
+    } catch (error) {
+      console.error('Error updating request:', error);
+      toast.error('Nepodařilo se upravit požadavek');
+      throw error;
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [user, refresh]);
+
   return {
     pendingRequests,
     isLoadingPending: false,
@@ -214,6 +243,8 @@ export function useModificationRequests() {
     isRejecting,
     applyRequest,
     isApplying,
+    updateRequest,
+    isUpdating,
     refresh,
   };
 }

@@ -5,13 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ModificationRequestCard } from '@/components/engagements/ModificationRequestCard';
 import { ProposeModificationDialog } from '@/components/engagements/ProposeModificationDialog';
+import { EditModificationRequestDialog } from '@/components/engagements/EditModificationRequestDialog';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges } from '@/types/crm';
+import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, ModificationProposedChanges } from '@/types/crm';
 import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
 
 export default function Modifications() {
@@ -19,6 +20,8 @@ export default function Modifications() {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [approvedRequest, setApprovedRequest] = useState<StoredModificationRequest | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<StoredModificationRequest | null>(null);
   
   const { 
     pendingRequests, 
@@ -26,9 +29,11 @@ export default function Modifications() {
     approveRequest, 
     rejectRequest,
     applyRequest,
+    updateRequest,
     isApproving,
     isRejecting,
     isApplying,
+    isUpdating,
     refresh
   } = useModificationRequests();
   const { addEngagementService, updateEngagementService } = useCRMData();
@@ -110,6 +115,20 @@ export default function Modifications() {
 
   const handleApply = async (requestId: string) => {
     await applyRequest(requestId);
+  };
+
+  const handleEdit = (request: StoredModificationRequest) => {
+    setEditingRequest(request);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async (requestId: string, updates: {
+    proposed_changes?: ModificationProposedChanges;
+    effective_from?: string | null;
+    note?: string | null;
+    upsell_commission_percent?: number;
+  }) => {
+    await updateRequest(requestId, updates);
   };
 
   const handleCopyLink = async () => {
@@ -243,6 +262,7 @@ export default function Modifications() {
                   request={request}
                   onApprove={handleApprove}
                   onReject={handleReject}
+                  onEdit={handleEdit}
                   isApproving={isApproving}
                   isRejecting={isRejecting}
                 />
@@ -267,6 +287,7 @@ export default function Modifications() {
                 <ModificationRequestCard
                   key={request.id}
                   request={request}
+                  onEdit={handleEdit}
                 />
               ))}
             </div>
@@ -394,6 +415,15 @@ export default function Modifications() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit modification request dialog */}
+      <EditModificationRequestDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        request={editingRequest}
+        onSave={handleSaveEdit}
+        isSaving={isUpdating}
+      />
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   Copy,
   CheckCircle2,
   Clock,
+  Pencil,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ interface ModificationRequestCardProps {
   onApprove?: (requestId: string) => Promise<void>;
   onReject?: (requestId: string, reason: string) => Promise<void>;
   onApply?: (requestId: string) => Promise<void>;
+  onEdit?: (request: StoredModificationRequest) => void;
   isApproving?: boolean;
   isRejecting?: boolean;
   isApplying?: boolean;
@@ -82,6 +84,7 @@ export function ModificationRequestCard({
   onApprove,
   onReject,
   onApply,
+  onEdit,
   isApproving,
   isRejecting,
   isApplying,
@@ -136,6 +139,9 @@ export function ModificationRequestCard({
   
   // Show apply button for client-approved requests
   const showApplyButton = isClientApproved && onApply;
+  
+  // Show edit button for pending or approved (waiting for client) requests
+  const canEdit = onEdit && ['pending', 'approved'].includes(request.status) && !isApplied;
 
   // Render proposed changes based on request type
   const renderChanges = () => {
@@ -357,15 +363,28 @@ export function ModificationRequestCard({
 
                 {/* Copy link button for approved requests waiting for client */}
                 {showCopyLinkOnly && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    onClick={handleCopyLink}
-                  >
-                    {linkCopied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
-                    {linkCopied ? 'Zkopírováno' : 'Zkopírovat odkaz'}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => onEdit?.(request)}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                        Upravit
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={handleCopyLink}
+                    >
+                      {linkCopied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                      {linkCopied ? 'Zkopírováno' : 'Zkopírovat odkaz'}
+                    </Button>
+                  </div>
                 )}
 
                 {/* Apply button for client-approved requests */}
@@ -384,6 +403,18 @@ export function ModificationRequestCard({
                 {/* Actions for pending requests */}
                 {showActions && (
                   <div className="flex items-center gap-2">
+                    {/* Edit button */}
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => onEdit?.(request)}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                        Upravit
+                      </Button>
+                    )}
                     {/* Copy link button - only shown if there's a token */}
                     {hasUpgradeToken && (
                       <Button
