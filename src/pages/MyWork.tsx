@@ -218,60 +218,6 @@ function MyWorkContent() {
         </div>
       </div>
 
-      {/* Quick Summary Cards - WITHOUT meetings */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Card className="p-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Briefcase className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{myWorkData.clientData.length}</p>
-              <p className="text-xs text-muted-foreground">zakázek</p>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <CreditCard className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-primary">{(totalClientEarnings / 1000).toFixed(0)}k</p>
-              <p className="text-xs text-muted-foreground">za klienty</p>
-            </div>
-          </div>
-        </Card>
-
-        {activityCurrentMonthTotal > 0 && (
-          <Card className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Building2 className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{(activityCurrentMonthTotal / 1000).toFixed(0)}k</p>
-                <p className="text-xs text-muted-foreground">interní práce</p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {monthCredits > 0 && (
-          <Card className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Sparkles className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{monthCredits}</p>
-                <p className="text-xs text-muted-foreground">CB kreditů</p>
-              </div>
-            </div>
-          </Card>
-        )}
-      </div>
 
       {/* Main Content Grid */}
       <div className="grid gap-4 lg:grid-cols-2">
