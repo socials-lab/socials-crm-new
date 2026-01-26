@@ -225,6 +225,7 @@ export interface EngagementService {
   creative_boost_min_credits: number | null;
   creative_boost_max_credits: number | null;
   creative_boost_price_per_credit: number | null;
+  creative_boost_colleague_reward_per_credit: number | null;
   // One-off invoicing tracking
   invoicing_status: OneOffInvoicingStatus;
   invoiced_at: string | null;

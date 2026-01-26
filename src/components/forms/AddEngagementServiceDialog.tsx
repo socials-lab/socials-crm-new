@@ -48,6 +48,7 @@ const engagementServiceSchema = z.object({
   creative_boost_min_credits: z.coerce.number().nullable(),
   creative_boost_max_credits: z.coerce.number().nullable(),
   creative_boost_price_per_credit: z.coerce.number().nullable(),
+  creative_boost_colleague_reward_per_credit: z.coerce.number().nullable(),
 });
 
 type EngagementServiceFormData = z.infer<typeof engagementServiceSchema>;
@@ -85,6 +86,7 @@ export function AddEngagementServiceDialog({
       creative_boost_min_credits: null,
       creative_boost_max_credits: null,
       creative_boost_price_per_credit: null,
+      creative_boost_colleague_reward_per_credit: null,
     },
   });
 
@@ -109,6 +111,7 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_min_credits', 0);
         form.setValue('creative_boost_max_credits', 50);
         form.setValue('creative_boost_price_per_credit', 400);
+        form.setValue('creative_boost_colleague_reward_per_credit', 80);
         form.setValue('price', 0);
         form.setValue('selected_tier', null);
       } else if (service.service_type === 'core') {
@@ -116,6 +119,7 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_min_credits', null);
         form.setValue('creative_boost_max_credits', null);
         form.setValue('creative_boost_price_per_credit', null);
+        form.setValue('creative_boost_colleague_reward_per_credit', null);
         form.setValue('selected_tier', 'growth'); // Default to GROWTH
         // Auto-fill price from GROWTH tier
         const growthPricing = service.tier_pricing?.find(p => p.tier === 'growth');
@@ -126,6 +130,7 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_min_credits', null);
         form.setValue('creative_boost_max_credits', null);
         form.setValue('creative_boost_price_per_credit', null);
+        form.setValue('creative_boost_colleague_reward_per_credit', null);
         form.setValue('selected_tier', null);
         form.setValue('price', service.base_price);
         form.setValue('currency', service.currency);
@@ -166,6 +171,7 @@ export function AddEngagementServiceDialog({
       creative_boost_min_credits: data.creative_boost_min_credits,
       creative_boost_max_credits: data.creative_boost_max_credits,
       creative_boost_price_per_credit: data.creative_boost_price_per_credit,
+      creative_boost_colleague_reward_per_credit: data.creative_boost_colleague_reward_per_credit,
       // One-off invoicing tracking
       invoicing_status: isOneOff ? 'pending' : 'not_applicable',
       invoiced_at: null,
@@ -292,16 +298,61 @@ export function AddEngagementServiceDialog({
                   )}
                 />
 
-                <div className="pt-2 border-t">
-                  <p className="text-sm font-medium">
-                    Měsíční fakturace: {' '}
-                    <span className="text-primary">
-                      {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)).toLocaleString('cs-CZ')} CZK
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    = {form.watch('creative_boost_max_credits') ?? 0} kreditů × {form.watch('creative_boost_price_per_credit') ?? 0} Kč/kredit
-                  </p>
+                <FormField
+                  control={form.control}
+                  name="creative_boost_colleague_reward_per_credit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>🎨 Odměna za kredit pro grafika</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            type="number" 
+                            min={0} 
+                            placeholder="80"
+                            className="pr-12"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            CZK
+                          </span>
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Odměna pro přiřazeného kolegu/grafika za každý kredit (doporučeno: 80 Kč)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="pt-2 border-t space-y-2">
+                  <div>
+                    <p className="text-sm font-medium">
+                      Měsíční fakturace: {' '}
+                      <span className="text-primary">
+                        {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)).toLocaleString('cs-CZ')} CZK
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      = {form.watch('creative_boost_max_credits') ?? 0} kreditů × {form.watch('creative_boost_price_per_credit') ?? 0} Kč/kredit
+                    </p>
+                  </div>
+                  {(form.watch('creative_boost_colleague_reward_per_credit') ?? 0) > 0 && (
+                    <div>
+                      <p className="text-sm font-medium">
+                        Odměna pro grafika: {' '}
+                        <span className="text-green-600">
+                          {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_colleague_reward_per_credit') ?? 0)).toLocaleString('cs-CZ')} CZK/měsíc
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        = {form.watch('creative_boost_max_credits') ?? 0} kreditů × {form.watch('creative_boost_colleague_reward_per_credit') ?? 0} Kč/kredit
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
