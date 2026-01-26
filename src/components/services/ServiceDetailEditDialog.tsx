@@ -352,13 +352,13 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>Upravit detaily služby: {service.name}</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="basic" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid grid-cols-5 w-full">
+        <Tabs defaultValue="basic" className="flex-1 min-h-0 flex flex-col">
+          <TabsList className="grid grid-cols-5 w-full shrink-0">
             <TabsTrigger value="basic">Základní</TabsTrigger>
             <TabsTrigger value="benefits">Benefity</TabsTrigger>
             <TabsTrigger value="setup">Setup</TabsTrigger>
@@ -366,7 +366,7 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
             <TabsTrigger value="pricing">Ceník</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="flex-1 h-[60vh] pr-4">
             <TabsContent value="basic" className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label>Tagline (krátký popis)</Label>
