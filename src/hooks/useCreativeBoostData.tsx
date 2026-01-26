@@ -28,6 +28,17 @@ interface ColleagueCreditDetail {
   totalCredits: number;
 }
 
+interface ColleagueClientRewardSummary {
+  clientId: string;
+  clientName: string;
+  brandName: string;
+  engagementId: string | null;
+  engagementName: string;
+  totalCredits: number;
+  rewardPerCredit: number;
+  totalReward: number;
+}
+
 interface CreativeBoostContextType {
   // Data
   outputTypes: OutputType[];
@@ -67,6 +78,7 @@ interface CreativeBoostContextType {
   getColleagueCredits: (colleagueId: string, year: number, month: number) => number;
   getColleagueCreditsYear: (colleagueId: string, year: number) => number;
   getColleagueCreditsDetail: (colleagueId: string, year?: number, month?: number) => ColleagueCreditDetail[];
+  getColleagueCreditsByClient: (colleagueId: string, year: number, month: number) => ColleagueClientRewardSummary[];
 
   // Engagement service integration
   getClientMonthByEngagementServiceId: (engagementServiceId: string, year: number, month: number) => CreativeBoostClientMonth | undefined;
@@ -431,6 +443,71 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       });
   }, [outputs, getClientById, outputTypes, calculateOutputCredits]);
 
+  // Get colleague credits grouped by client with reward calculation
+  const getColleagueCreditsByClient = useCallback((colleagueId: string, year: number, month: number): ColleagueClientRewardSummary[] => {
+    // Group outputs by client
+    const clientOutputsMap = new Map<string, { outputs: typeof outputs, clientMonth: CreativeBoostClientMonth | undefined }>();
+    
+    outputs
+      .filter(o => o.colleagueId === colleagueId && o.year === year && o.month === month)
+      .forEach(output => {
+        if (!clientOutputsMap.has(output.clientId)) {
+          const clientMonth = clientMonths.find(
+            cm => cm.clientId === output.clientId && cm.year === year && cm.month === month
+          );
+          clientOutputsMap.set(output.clientId, { outputs: [], clientMonth });
+        }
+        clientOutputsMap.get(output.clientId)!.outputs.push(output);
+      });
+    
+    const results: ColleagueClientRewardSummary[] = [];
+    
+    clientOutputsMap.forEach(({ outputs: clientOutputs, clientMonth }, clientId) => {
+      const clientData = getClientById(clientId);
+      if (!clientData) return;
+      
+      // Calculate total credits for this client
+      let totalCredits = 0;
+      clientOutputs.forEach(output => {
+        const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
+        totalCredits += credits.totalCredits;
+      });
+      
+      // Get reward per credit from engagement service (default 80 CZK)
+      let rewardPerCredit = 80; // Default
+      let engagementId: string | null = null;
+      let engagementName = '';
+      
+      if (clientMonth?.engagementServiceId) {
+        const engService = engagementServices.find(es => es.id === clientMonth.engagementServiceId);
+        if (engService) {
+          // Use colleague reward if set, otherwise default
+          rewardPerCredit = (engService as any).creative_boost_colleague_reward_per_credit ?? 80;
+          engagementId = engService.engagement_id;
+          const engagement = engagements.find(e => e.id === engService.engagement_id);
+          engagementName = engagement?.name ?? '';
+        }
+      } else if (clientMonth?.engagementId) {
+        engagementId = clientMonth.engagementId;
+        const engagement = engagements.find(e => e.id === clientMonth.engagementId);
+        engagementName = engagement?.name ?? '';
+      }
+      
+      results.push({
+        clientId,
+        clientName: clientData.name,
+        brandName: clientData.brand_name ?? clientData.name,
+        engagementId,
+        engagementName,
+        totalCredits,
+        rewardPerCredit,
+        totalReward: totalCredits * rewardPerCredit,
+      });
+    });
+    
+    return results.sort((a, b) => b.totalReward - a.totalReward);
+  }, [outputs, clientMonths, engagementServices, engagements, getClientById, calculateOutputCredits]);
+
   // Helpers
   const getOutputTypeById = useCallback((id: string) => {
     return outputTypes.find(t => t.id === id);
@@ -609,6 +686,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       getColleagueCredits,
       getColleagueCreditsYear,
       getColleagueCreditsDetail,
+      getColleagueCreditsByClient,
       getClientMonthByEngagementServiceId,
       getClientMonthSummaryByEngagementServiceId,
       getSettingsHistory,
