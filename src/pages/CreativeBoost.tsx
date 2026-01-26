@@ -1,9 +1,7 @@
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientsOverview } from '@/components/creative-boost/ClientsOverview';
-import { OutputTypesConfig } from '@/components/creative-boost/OutputTypesConfig';
 import { format, addMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -40,44 +38,31 @@ function CreativeBoostContent() {
         description="Správa kreativních výstupů a čerpání kreditů. Karty se vytvářejí automaticky podle služeb v zakázkách."
       />
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <TabsList>
-            <TabsTrigger value="overview">Přehled</TabsTrigger>
-            <TabsTrigger value="output-types">Typy výstupů</TabsTrigger>
-          </TabsList>
+      <div className="flex justify-end">
+        <Select
+          value={`${selectedYear}-${selectedMonth}`}
+          onValueChange={handlePeriodChange}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-popover">
+            {monthOptions.map((option) => (
+              <SelectItem
+                key={`${option.year}-${option.month}`}
+                value={`${option.year}-${option.month}`}
+              >
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-          <Select
-            value={`${selectedYear}-${selectedMonth}`}
-            onValueChange={handlePeriodChange}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-popover">
-              {monthOptions.map((option) => (
-                <SelectItem
-                  key={`${option.year}-${option.month}`}
-                  value={`${option.year}-${option.month}`}
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <TabsContent value="overview" className="space-y-6">
-          <ClientsOverview
-            year={selectedYear}
-            month={selectedMonth}
-          />
-        </TabsContent>
-
-        <TabsContent value="output-types" className="space-y-6">
-          <OutputTypesConfig />
-        </TabsContent>
-      </Tabs>
+      <ClientsOverview
+        year={selectedYear}
+        month={selectedMonth}
+      />
     </div>
   );
 }
