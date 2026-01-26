@@ -56,10 +56,16 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
     );
   }
 
+  // Helper to check if setup/management items have actual content
+  const hasSetupContent = data.setup_items && data.setup_items.some(s => s.items && s.items.length > 0);
+  const hasManagementContent = data.management_items && data.management_items.some(s => s.items && s.items.length > 0);
+  const hasBenefits = data.benefits && data.benefits.length > 0;
+  const hasTierComparison = data.tier_comparison && data.tier_comparison.length > 0 && data.tier_prices;
+  const hasCreditPricing = data.credit_pricing && data.credit_pricing.outputTypes && data.credit_pricing.outputTypes.length > 0;
+
   const hasContent = data.tagline || (data.platforms && data.platforms.length > 0) || 
-                     (data.benefits && data.benefits.length > 0) ||
-                     (data.setup_items && data.setup_items.length > 0) ||
-                     (data.management_items && data.management_items.length > 0);
+                     hasBenefits || hasSetupContent || hasManagementContent ||
+                     hasTierComparison || hasCreditPricing;
   
   if (!hasContent) {
     return (
@@ -68,9 +74,6 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
       </p>
     );
   }
-
-  const hasTierComparison = data.tier_comparison && data.tier_comparison.length > 0;
-  const hasCreditPricing = !!data.credit_pricing;
 
   return (
     <div className="space-y-4">
@@ -99,7 +102,7 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
       )}
 
       {/* Benefits */}
-      {data.benefits && data.benefits.length > 0 && (
+      {hasBenefits && (
         <div className="space-y-2">
           <h4 className="text-sm font-semibold flex items-center gap-2">
             <Zap className="h-4 w-4 text-chart-4" />
@@ -117,9 +120,9 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
       )}
 
       {/* Setup and Management Accordions */}
-      {((data.setup_items && data.setup_items.length > 0) || (data.management_items && data.management_items.length > 0)) && (
+      {(hasSetupContent || hasManagementContent) && (
         <Accordion type="multiple" className="w-full">
-          {data.setup_items && data.setup_items.length > 0 && (
+          {hasSetupContent && (
             <AccordionItem value="setup" className="border-b-0">
               <AccordionTrigger className="text-sm font-medium py-2 hover:no-underline">
                 <span className="flex items-center gap-2">
@@ -128,7 +131,7 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-3 pl-2">
-                  {data.setup_items.map((section, sectionIndex) => (
+                  {data.setup_items!.filter(s => s.items && s.items.length > 0).map((section, sectionIndex) => (
                     <div key={sectionIndex} className="space-y-1.5">
                       <h5 className="text-xs font-semibold text-muted-foreground">{section.title}</h5>
                       <ul className="space-y-1">
@@ -146,7 +149,7 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
             </AccordionItem>
           )}
 
-          {data.management_items && data.management_items.length > 0 && (
+          {hasManagementContent && (
             <AccordionItem value="management" className="border-b-0">
               <AccordionTrigger className="text-sm font-medium py-2 hover:no-underline">
                 <span className="flex items-center gap-2">
@@ -155,7 +158,7 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-3 pl-2">
-                  {data.management_items.map((section, sectionIndex) => (
+                  {data.management_items!.filter(s => s.items && s.items.length > 0).map((section, sectionIndex) => (
                     <div key={sectionIndex} className="space-y-1.5">
                       <h5 className="text-xs font-semibold text-muted-foreground">{section.title}</h5>
                       <ul className="space-y-1">
@@ -176,7 +179,7 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
       )}
 
       {/* Tier Comparison Table for Core Services */}
-      {hasTierComparison && data.tier_prices && (
+      {hasTierComparison && (
         <div className="space-y-2">
           <h4 className="text-sm font-semibold flex items-center gap-2">
             📦 Balíčky dle rozpočtu
@@ -191,9 +194,9 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_prices.growth.spend}</div>
+                <div className="text-[10px] text-muted-foreground">{data.tier_prices!.growth.spend}</div>
                 <div className="text-lg font-bold text-chart-1">
-                  {data.tier_prices.growth.price.toLocaleString('cs-CZ')} Kč
+                  {data.tier_prices!.growth.price.toLocaleString('cs-CZ')} Kč
                 </div>
               </CardContent>
             </Card>
@@ -205,9 +208,9 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_prices.pro.spend}</div>
+                <div className="text-[10px] text-muted-foreground">{data.tier_prices!.pro.spend}</div>
                 <div className="text-lg font-bold text-chart-2">
-                  {data.tier_prices.pro.price.toLocaleString('cs-CZ')} Kč
+                  {data.tier_prices!.pro.price.toLocaleString('cs-CZ')} Kč
                 </div>
               </CardContent>
             </Card>
@@ -219,9 +222,9 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_prices.elite.spend}</div>
+                <div className="text-[10px] text-muted-foreground">{data.tier_prices!.elite.spend}</div>
                 <div className="text-lg font-bold text-chart-4">
-                  {data.tier_prices.elite.price.toLocaleString('cs-CZ')} Kč
+                  {data.tier_prices!.elite.price.toLocaleString('cs-CZ')} Kč
                 </div>
               </CardContent>
             </Card>
