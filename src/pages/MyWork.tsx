@@ -15,8 +15,10 @@ import {
   FileText,
   Users,
   Clock,
-  Target,
   Package,
+  KeyRound,
+  LockKeyhole,
+  GraduationCap,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -374,6 +376,59 @@ function MyWorkContent() {
         </Card>
       </div>
 
+      {/* Account Access Info */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-primary" />
+            Přístupové údaje
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+            <div className="flex items-start gap-2">
+              <div className="p-1.5 rounded bg-primary/10 mt-0.5">
+                <Mail className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Hlavní Google účet</p>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-mono bg-muted px-1 rounded">analytics@socials.cz</span> — přístup k většině nástrojů
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+            <div className="flex items-start gap-2">
+              <div className="p-1.5 rounded bg-primary/10 mt-0.5">
+                <LockKeyhole className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">NordPass (hesla)</p>
+                <p className="text-xs text-muted-foreground">
+                  Přístup přes Gmail: <span className="font-mono bg-muted px-1 rounded">ano@socials.cz</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <a 
+            href="https://notion.so/your-alex-account-guide" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 p-3 rounded-lg border border-dashed hover:bg-muted/50 transition-colors"
+          >
+            <FileText className="h-4 w-4 text-primary" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">Návod: Přístup do alex@socials.cz</p>
+              <p className="text-xs text-muted-foreground">Včetně verifikačního kódu</p>
+            </div>
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+          </a>
+        </CardContent>
+      </Card>
+
       {/* Quick Links */}
       <Card className="bg-muted/30">
         <CardContent className="p-4">
@@ -394,6 +449,12 @@ function MyWorkContent() {
               <Button variant="outline" size="sm" className="gap-2">
                 <Calendar className="h-4 w-4" />
                 Meetingy
+              </Button>
+            </Link>
+            <Link to="/academy">
+              <Button variant="outline" size="sm" className="gap-2">
+                <GraduationCap className="h-4 w-4" />
+                Akademie
               </Button>
             </Link>
             <a href="https://notion.so/your-sop-page" target="_blank" rel="noopener noreferrer">
