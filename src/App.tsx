@@ -35,6 +35,7 @@ import NotFound from "./pages/NotFound";
 import OnboardingForm from "./pages/OnboardingForm";
 import Notifications from "./pages/Notifications";
 import Feedback from "./pages/Feedback";
+import Academy from "./pages/Academy";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import PublicOfferPage from "./pages/PublicOfferPage";
@@ -87,6 +88,7 @@ const App = () => (
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/notifications" element={<Notifications />} />
                             <Route path="/feedback" element={<Feedback />} />
+                            <Route path="/academy" element={<Academy />} />
                           </Route>
                           <Route path="*" element={<NotFound />} />
                         </Routes>

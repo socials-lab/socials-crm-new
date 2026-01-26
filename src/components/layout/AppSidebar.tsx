@@ -36,6 +36,7 @@ const mainNavItems = [
   { title: '👥 Kolegové', url: '/colleagues', page: 'colleagues' },
   { title: '🎓 Nábor', url: '/recruitment', page: 'recruitment' },
   { title: '💡 Feedback Zone', url: '/feedback', page: 'feedback' },
+  { title: '📚 Akademie', url: '/academy', page: 'academy' },
   // Reporting
   { title: '📊 Analytika', url: '/analytics', page: 'analytics' },
 ];
