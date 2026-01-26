@@ -166,6 +166,8 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       status: settings?.status ?? 'active',
       engagementServiceId: settings?.engagementServiceId ?? null,
       engagementId: settings?.engagementId ?? null,
+      invoiceAmount: null,
+      invoiceNote: null,
       createdAt: now(),
       updatedAt: now(),
     };
@@ -356,6 +358,9 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         });
         
         const usedCredits = totalNormalCredits + totalExpressCredits;
+        const packageInvoice = monthData.maxCredits * monthData.pricePerCredit;
+        const customInvoiceAmount = monthData.invoiceAmount;
+        const finalInvoiceAmount = customInvoiceAmount ?? packageInvoice;
 
         return {
           clientId: monthData.clientId,
@@ -370,6 +375,9 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           expressCredits: totalExpressCredits,
           remainingCredits: monthData.maxCredits - usedCredits,
           estimatedInvoice: usedCredits * monthData.pricePerCredit,
+          packageInvoice,
+          customInvoiceAmount,
+          finalInvoiceAmount,
           pricePerCredit: monthData.pricePerCredit,
           status: monthData.status,
           itemCount: clientOutputs.length,
@@ -463,6 +471,9 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
     });
     
     const usedCredits = totalNormalCredits + totalExpressCredits;
+    const packageInvoice = monthData.maxCredits * monthData.pricePerCredit;
+    const customInvoiceAmount = monthData.invoiceAmount;
+    const finalInvoiceAmount = customInvoiceAmount ?? packageInvoice;
 
     return {
       clientId: monthData.clientId,
@@ -477,6 +488,9 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       expressCredits: totalExpressCredits,
       remainingCredits: monthData.maxCredits - usedCredits,
       estimatedInvoice: usedCredits * monthData.pricePerCredit,
+      packageInvoice,
+      customInvoiceAmount,
+      finalInvoiceAmount,
       pricePerCredit: monthData.pricePerCredit,
       status: monthData.status,
       itemCount: clientOutputs.length,
@@ -549,6 +563,8 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         status: 'active',
         engagementServiceId: cbService.id,
         engagementId: engagement.id,
+        invoiceAmount: null,
+        invoiceNote: null,
         createdAt: now(),
         updatedAt: now(),
       };

@@ -152,7 +152,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     updateClientOutput(clientId, outputTypeId, year, month, updateData);
   };
 
-  const handleSettingsChange = (clientId: string, field: 'maxCredits' | 'pricePerCredit' | 'status' | 'colleagueId', value: number | MonthStatus | string) => {
+  const handleSettingsChange = (clientId: string, field: 'maxCredits' | 'pricePerCredit' | 'status' | 'colleagueId' | 'invoiceAmount' | 'invoiceNote', value: number | MonthStatus | string | null) => {
     const monthData = clientMonths.find(cm => cm.clientId === clientId && cm.year === year && cm.month === month);
     if (monthData) {
       updateClientMonth(monthData.id, { [field]: value });
@@ -290,7 +290,14 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
 
                   {/* Invoice estimate */}
                   <div className="text-right shrink-0 min-w-[80px] hidden md:block">
-                    <span className="font-semibold text-sm">{formatCurrency(summary.estimatedInvoice)}</span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-semibold text-sm">{formatCurrency(summary.finalInvoiceAmount)}</span>
+                      {summary.customInvoiceAmount && (
+                        <span className="text-xs text-muted-foreground line-through">
+                          {formatCurrency(summary.packageInvoice)}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Status badge */}
@@ -623,6 +630,28 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Fakturovaná částka</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={monthData.invoiceAmount ?? ''}
+                      placeholder={(monthData.maxCredits * monthData.pricePerCredit).toString()}
+                      onChange={(e) => handleSettingsChange(
+                        summary.clientId, 
+                        'invoiceAmount', 
+                        e.target.value ? parseInt(e.target.value) : null
+                      )}
+                      className="w-32"
+                    />
+                    <span className="text-sm text-muted-foreground">Kč</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Balíček: {formatCurrency(summary.packageInvoice)} • Ponechte prázdné pro fakturaci balíčku
+                  </p>
                 </div>
 
                 <div className="pt-2 border-t flex justify-between items-center">
