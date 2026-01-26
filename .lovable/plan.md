@@ -1,108 +1,143 @@
 
-# Přesun informací z leadu na kartu klienta
+# Plán: Evidence historie kapacity kolegů
 
-## Přehled změn
+## Cíl
+Vytvořit systém pro sledování změn kapacity kolegů včetně historie, aby admin viděl, jak se kapacita vyvíjela v čase.
 
-Přesuneme sekci "Z leadu" (onboarding formulář + úvodní nabídka) z detailu zakázky na kartu klienta. Tím zajistíme, že všechny informace o konverzi leadu jsou centralizované u klienta, nikoliv u zakázky.
+## Co bude implementováno
+
+### 1. Databázová tabulka pro historii kapacity
+
+Nová tabulka `colleague_capacity_history`:
+- `id` - unikátní identifikátor
+- `colleague_id` - odkaz na kolegu
+- `capacity_hours` - nová hodnota kapacity
+- `previous_capacity_hours` - předchozí hodnota (pro snadné zobrazení změny)
+- `effective_from` - od kdy platí
+- `reason` - důvod změny (volitelné)
+- `changed_by` - kdo změnu provedl
+- `created_at` - časové razítko
+
+### 2. Automatický trigger
+
+Databázový trigger na tabulce `colleagues`, který při změně `capacity_hours_per_month` automaticky vytvoří záznam v historii.
+
+### 3. UI komponenty
+
+**Dialog historie kapacity** (přístupný z karty kolegy):
+- Tlačítko "Historie kapacity" v rozbalené kartě kolegy
+- Timeline zobrazení změn kapacity
+- Datum, předchozí hodnota, nová hodnota, důvod, autor
+
+**Rozšíření editačního formuláře kolegy**:
+- Pole "Důvod změny kapacity" (zobrazí se pouze při změně kapacity)
+
+### 4. Oprávnění
+
+- Pouze super admin může měnit kapacitu
+- Pouze super admin vidí historii kapacity
 
 ---
 
-## Vizuální změna
+## Technické detaily
+
+### SQL Migrace
+
+```sql
+-- Tabulka pro historii kapacity
+CREATE TABLE public.colleague_capacity_history (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    colleague_id uuid REFERENCES public.colleagues(id) ON DELETE CASCADE NOT NULL,
+    capacity_hours integer NOT NULL,
+    previous_capacity_hours integer,
+    effective_from date NOT NULL DEFAULT CURRENT_DATE,
+    reason text DEFAULT '',
+    changed_by uuid REFERENCES auth.users(id),
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+-- Index pro rychlé vyhledávání
+CREATE INDEX idx_capacity_history_colleague ON colleague_capacity_history(colleague_id);
+
+-- RLS politiky
+ALTER TABLE colleague_capacity_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "CRM users can read capacity history" 
+  ON colleague_capacity_history FOR SELECT 
+  USING (is_crm_user(auth.uid()));
+
+CREATE POLICY "Admins can manage capacity history"
+  ON colleague_capacity_history FOR ALL
+  USING (is_admin(auth.uid()));
+
+-- Trigger pro automatické logování
+CREATE OR REPLACE FUNCTION log_capacity_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'UPDATE' AND 
+        OLD.capacity_hours_per_month IS DISTINCT FROM NEW.capacity_hours_per_month) THEN
+        INSERT INTO colleague_capacity_history (
+            colleague_id, 
+            capacity_hours, 
+            previous_capacity_hours,
+            changed_by
+        ) VALUES (
+            NEW.id,
+            NEW.capacity_hours_per_month,
+            OLD.capacity_hours_per_month,
+            auth.uid()
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trigger_log_capacity_change
+    AFTER UPDATE ON colleagues
+    FOR EACH ROW
+    EXECUTE FUNCTION log_capacity_change();
+```
+
+### Nové soubory
+
+1. `src/hooks/useColleagueCapacityHistory.tsx` - hook pro načítání historie
+2. `src/components/colleagues/CapacityHistoryDialog.tsx` - dialog se zobrazením historie
+
+### Úpravy existujících souborů
+
+1. `src/pages/Colleagues.tsx` - přidání tlačítka "Historie kapacity" do rozbalené karty
+2. `src/types/crm.ts` - přidání typu `ColleagueCapacityRecord`
+
+---
+
+## Vizuální návrh
 
 ```text
-PŘED (zakázka):                      PO (klient):
-┌─────────────────────┐              ┌─────────────────────┐
-│ Detail zakázky      │              │ Karta klienta       │
-├─────────────────────┤              ├─────────────────────┤
-│ Služby              │              │ Připnutá poznámka   │
-│ Přiřazení kolegové  │              │ Firemní údaje       │
-│ Profitabilita       │              │ Fakturační údaje    │
-│ Platformy           │              │ Kontakty            │
-│ ┌─────────────────┐ │              │ ┌─────────────────┐ │
-│ │ 📋 Z leadu      │ │   ──────►   │ │ 📋 Z leadu      │ │
-│ │ - Formulář      │ │              │ │ - Formulář      │ │
-│ │ - Nabídka       │ │              │ │ - Nabídka       │ │
-│ │ - Smlouva       │ │              │ │ - Smlouva       │ │
-│ └─────────────────┘ │              │ └─────────────────┘ │
-│ Freelo             │              │ Zakázky             │
-└─────────────────────┘              └─────────────────────┘
++------------------------------------------+
+|  Historie kapacity - Jan Novák           |
++------------------------------------------+
+|                                          |
+|  15. 1. 2026                             |
+|  ├─ Kapacita: 160 → 140 hod/měs         |
+|  └─ Důvod: Snížení úvazku               |
+|                                          |
+|  1. 12. 2025                             |
+|  ├─ Kapacita: 120 → 160 hod/měs         |
+|  └─ Důvod: Návrat z rodičovské          |
+|                                          |
+|  1. 6. 2025                              |
+|  ├─ Kapacita: 160 → 120 hod/měs         |
+|  └─ Důvod: Rodičovská dovolená          |
+|                                          |
++------------------------------------------+
+|                            [ Zavřít ]    |
++------------------------------------------+
 ```
 
----
+## Sekvence implementace
 
-## Technické změny
-
-### 1. Upravit `src/pages/Clients.tsx`
-
-**Přidat importy:**
-- `useLeadsData` hook pro přístup k leadům
-- `LeadOriginSection` komponenta
-
-**Přidat helper funkci:**
-```typescript
-const getLeadByClientId = useCallback((clientId: string) => {
-  return leads.find(lead => lead.converted_to_client_id === clientId);
-}, [leads]);
-```
-
-**Přidat sekci do rozbalené karty klienta:**
-- Umístit mezi "Připnutá poznámka" a "Firemní údaje"
-- Zobrazit pouze pokud existuje konvertovaný lead s vyplněným formulářem nebo nabídkou
-
----
-
-### 2. Upravit `src/pages/Engagements.tsx`
-
-**Odstranit:**
-- Import `LeadOriginSection`
-- Import `useLeadsData` (pokud není používán jinde)
-- Helper funkci `getLeadByEngagementId`
-- Celý blok renderování `LeadOriginSection` (řádky 1368-1378)
-
----
-
-### 3. Přesunout komponentu (volitelné)
-
-Přesunout `LeadOriginSection.tsx` z:
-```
-src/components/engagements/LeadOriginSection.tsx
-```
-do:
-```
-src/components/clients/LeadOriginSection.tsx
-```
-
-Toto lépe reflektuje, kde je komponenta používána.
-
----
-
-## Logika propojení
-
-| Pole v Lead | Použití |
-|-------------|---------|
-| `converted_to_client_id` | Propojení lead → klient |
-| `onboarding_form_completed_at` | Kontrola, zda byl formulář vyplněn |
-| `offer_url`, `offer_sent_at` | Kontrola, zda existuje nabídka |
-| `contract_url`, `contract_signed_at` | Zobrazení smlouvy |
-| `potential_services` | Seznam služeb v nabídce |
-| `billing_*` | Fakturační údaje z formuláře |
-| `contact_*` | Kontaktní osoba z formuláře |
-
----
-
-## Pořadí implementace
-
-1. Přidat `useLeadsData` a helper do `Clients.tsx`
-2. Přesunout `LeadOriginSection.tsx` do složky clients
-3. Přidat renderování sekce do karty klienta
-4. Odstranit sekci z `Engagements.tsx`
-5. Vyčistit nepoužívané importy
-
----
-
-## Poznámky
-
-- Lead má oba klíče: `converted_to_client_id` i `converted_to_engagement_id`
-- Pro zobrazení u klienta použijeme `converted_to_client_id`
-- Stávající data v databázi se nemusí měnit
-- Komponenta `LeadOriginSection` zůstává funkčně stejná
+1. Vytvořit SQL migraci s tabulkou a triggerem
+2. Přidat TypeScript typ pro záznam historie
+3. Vytvořit hook pro načítání dat
+4. Vytvořit dialog komponentu
+5. Integrovat do stránky Kolegové
