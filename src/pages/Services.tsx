@@ -181,23 +181,6 @@ export default function Services() {
               {service.service_type === 'core' ? 'Core' : 'Add-on'}
             </Badge>
 
-            <Badge variant="outline" className={categoryColors[service.category] || 'bg-muted'}>
-              {categoryLabels[service.category] || service.category}
-            </Badge>
-            
-            {service.service_type === 'addon' && (
-              <span className="font-semibold text-sm whitespace-nowrap">
-                {service.base_price > 0
-                  ? `${service.base_price.toLocaleString('cs-CZ')} ${service.currency}`
-                  : '—'}
-              </span>
-            )}
-
-            <Badge variant="outline" className="gap-1">
-              <Users className="h-3 w-3" />
-              {activeClientCount}
-            </Badge>
-
             <Badge 
               variant="outline" 
               className={service.is_active 
