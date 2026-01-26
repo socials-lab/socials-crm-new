@@ -18,6 +18,7 @@ import Clients from "./pages/Clients";
 import Contacts from "./pages/Contacts";
 import Leads from "./pages/Leads";
 import Engagements from "./pages/Engagements";
+import Modifications from "./pages/Modifications";
 import Invoicing from "./pages/Invoicing";
 import CreativeBoost from "./pages/CreativeBoost";
 import Services from "./pages/Services";
@@ -71,6 +72,7 @@ const App = () => (
                             <Route path="/clients" element={<Clients />} />
                             <Route path="/contacts" element={<Contacts />} />
                             <Route path="/engagements" element={<Engagements />} />
+                            <Route path="/modifications" element={<Modifications />} />
                             <Route path="/extra-work" element={<ExtraWork />} />
                             <Route path="/upsells" element={<Upsells />} />
                             <Route path="/invoicing" element={<Invoicing />} />

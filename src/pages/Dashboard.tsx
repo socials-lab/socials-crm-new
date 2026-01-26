@@ -27,7 +27,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
-import { PendingModificationsSection } from '@/components/dashboard/PendingModificationsSection';
+// Modification requests moved to dedicated /modifications page
 
 export default function Dashboard() {
   const { leads } = useLeadsData();
@@ -165,11 +165,6 @@ export default function Dashboard() {
           icon={Users}
         />
       </div>
-
-      {/* Pending Modifications - only for admins */}
-      {isSuperAdmin && (
-        <PendingModificationsSection />
-      )}
 
       {/* Today's Meetings */}
       <div className="grid gap-6 lg:grid-cols-2">

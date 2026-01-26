@@ -38,8 +38,8 @@ import type {
 
 interface ModificationRequestCardProps {
   request: ModificationRequestWithDetails;
-  onApprove: (requestId: string) => Promise<void>;
-  onReject: (requestId: string, reason: string) => Promise<void>;
+  onApprove?: (requestId: string) => Promise<void>;
+  onReject?: (requestId: string, reason: string) => Promise<void>;
   isApproving?: boolean;
   isRejecting?: boolean;
 }
@@ -86,15 +86,20 @@ export function ModificationRequestCard({
   const typeLabel = REQUEST_TYPE_LABELS[request.request_type];
   
   const handleApprove = async () => {
-    await onApprove(request.id);
+    if (onApprove) {
+      await onApprove(request.id);
+    }
   };
   
   const handleReject = async () => {
-    if (!rejectionReason.trim()) return;
+    if (!rejectionReason.trim() || !onReject) return;
     await onReject(request.id, rejectionReason);
     setIsRejectDialogOpen(false);
     setRejectionReason('');
   };
+
+  // Check if actions should be shown
+  const showActions = onApprove && onReject && request.status === 'pending';
 
   // Render proposed changes based on request type
   const renderChanges = () => {
@@ -253,6 +258,13 @@ export function ModificationRequestCard({
                   "{request.note}"
                 </p>
               )}
+
+              {/* Rejection reason */}
+              {request.status === 'rejected' && request.rejection_reason && (
+                <p className="text-xs text-destructive">
+                  Důvod zamítnutí: {request.rejection_reason}
+                </p>
+              )}
               
               {/* Footer */}
               <div className="flex items-center justify-between pt-2">
@@ -263,28 +275,44 @@ export function ModificationRequestCard({
                   <span>{requestedAt}</span>
                 </div>
                 
-                {/* Actions */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-destructive hover:text-destructive"
-                    onClick={() => setIsRejectDialogOpen(true)}
-                    disabled={isApproving || isRejecting}
-                  >
-                    <X className="h-3.5 w-3.5 mr-1" />
-                    Zamítnout
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="h-8"
-                    onClick={handleApprove}
-                    disabled={isApproving || isRejecting}
-                  >
-                    <Check className="h-3.5 w-3.5 mr-1" />
-                    {isApproving ? 'Schvaluji...' : 'Schválit'}
-                  </Button>
-                </div>
+                {/* Status badge for reviewed requests */}
+                {request.status === 'approved' && (
+                  <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-100">
+                    <Check className="h-3 w-3 mr-1" />
+                    Schváleno
+                  </Badge>
+                )}
+                {request.status === 'rejected' && (
+                  <Badge variant="destructive">
+                    <X className="h-3 w-3 mr-1" />
+                    Zamítnuto
+                  </Badge>
+                )}
+                
+                {/* Actions for pending requests */}
+                {showActions && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-destructive hover:text-destructive"
+                      onClick={() => setIsRejectDialogOpen(true)}
+                      disabled={isApproving || isRejecting}
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Zamítnout
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-8"
+                      onClick={handleApprove}
+                      disabled={isApproving || isRejecting}
+                    >
+                      <Check className="h-3.5 w-3.5 mr-1" />
+                      {isApproving ? 'Schvaluji...' : 'Schválit'}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
