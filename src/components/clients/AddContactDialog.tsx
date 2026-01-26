@@ -56,6 +56,7 @@ interface AddContactDialogProps {
 const NOTES_MAX_LENGTH = 2000;
 
 // Helper to generate default form values - prevents duplication
+// Note: is_primary and is_decision_maker are handled via action buttons, not form fields
 const getDefaultValues = (
   contact: ClientContact | undefined,
   clientId: string | undefined
@@ -65,8 +66,8 @@ const getDefaultValues = (
   position: contact?.position || '',
   email: contact?.email || '',
   phone: contact?.phone || '',
-  is_primary: contact?.is_primary ?? false,
-  is_decision_maker: contact?.is_decision_maker ?? false,
+  is_primary: false, // Not used in form, handled by setContactAsPrimary action
+  is_decision_maker: false, // Not used in form, handled by toggle action
   notes: contact?.notes || '',
 });
 
@@ -80,9 +81,10 @@ export function AddContactDialog({
   contact,
   onSubmit,
 }: AddContactDialogProps) {
-  const { getPrimaryContact, getClientById, clients: allClients, setContactAsPrimary, updateContact } = useCRMData();
+  const { getClientById, clients: allClients, setContactAsPrimary, updateContact } = useCRMData();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSettingRole, setIsSettingRole] = useState(false);
+  // Track which specific role action is in progress
+  const [settingRole, setSettingRole] = useState<'primary' | 'decision_maker' | null>(null);
 
   // Filter clients to only show active ones (not lost/paused) when showing selector
   // Issue #18: Hide inactive clients from dropdown
@@ -108,7 +110,7 @@ export function AddContactDialog({
   // Handler for setting contact as primary
   const handleSetAsPrimary = async () => {
     if (!contact) return;
-    setIsSettingRole(true);
+    setSettingRole('primary');
     try {
       await setContactAsPrimary(contact.id);
       onOpenChange(false);
@@ -116,22 +118,22 @@ export function AddContactDialog({
       console.error('Failed to set primary:', error);
       toast.error('Nepodařilo se nastavit primární kontakt');
     } finally {
-      setIsSettingRole(false);
+      setSettingRole(null);
     }
   };
 
-  // Handler for setting contact as decision maker
-  const handleSetAsDecisionMaker = async () => {
+  // Handler for toggling decision maker status
+  const handleToggleDecisionMaker = async () => {
     if (!contact) return;
-    setIsSettingRole(true);
+    setSettingRole('decision_maker');
     try {
-      await updateContact(contact.id, { is_decision_maker: true });
+      await updateContact(contact.id, { is_decision_maker: !contact.is_decision_maker });
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to set decision maker:', error);
-      toast.error('Nepodařilo se nastavit decision maker');
+      console.error('Failed to toggle decision maker:', error);
+      toast.error('Nepodařilo se změnit decision maker');
     } finally {
-      setIsSettingRole(false);
+      setSettingRole(null);
     }
   };
 
@@ -291,10 +293,10 @@ export function AddContactDialog({
                     variant="outline"
                     size="sm"
                     onClick={handleSetAsPrimary}
-                    disabled={isSettingRole}
+                    disabled={settingRole !== null}
                     className="text-muted-foreground hover:text-yellow-600 hover:border-yellow-500/50"
                   >
-                    {isSettingRole ? (
+                    {settingRole === 'primary' ? (
                       <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                     ) : (
                       <Star className="h-3 w-3 mr-1" />
@@ -303,29 +305,25 @@ export function AddContactDialog({
                   </Button>
                 )}
 
-                {/* Decision Maker */}
-                {contact.is_decision_maker ? (
-                  <Badge variant="outline" className="border-blue-500/50 text-blue-600 dark:text-blue-400">
+                {/* Decision Maker - toggleable */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleDecisionMaker}
+                  disabled={settingRole !== null}
+                  className={contact.is_decision_maker
+                    ? "border-blue-500/50 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                    : "text-muted-foreground hover:text-blue-600 hover:border-blue-500/50"
+                  }
+                >
+                  {settingRole === 'decision_maker' ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
                     <Key className="h-3 w-3 mr-1" />
-                    Decision maker
-                  </Badge>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSetAsDecisionMaker}
-                    disabled={isSettingRole}
-                    className="text-muted-foreground hover:text-blue-600 hover:border-blue-500/50"
-                  >
-                    {isSettingRole ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <Key className="h-3 w-3 mr-1" />
-                    )}
-                    Nastavit jako decision maker
-                  </Button>
-                )}
+                  )}
+                  {contact.is_decision_maker ? 'Decision maker' : 'Nastavit jako decision maker'}
+                </Button>
               </div>
             )}
 
