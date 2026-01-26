@@ -426,7 +426,6 @@ export default function Clients() {
                   {/* Lead Origin Section - shows onboarding form data and offer from lead */}
                   {(() => {
                     const originLead = getLeadByClientId(client.id);
-                    console.log('Client ID:', client.id, 'Origin Lead:', originLead, 'All leads:', leads);
                     if (!originLead) return null;
                     return (
                       <div className="mb-6">
