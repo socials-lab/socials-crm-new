@@ -83,11 +83,11 @@ function MyWorkContent() {
     return getColleagueById(colleagueId);
   }, [colleagueId, getColleagueById]);
 
-  // Active colleagues for contacts (excluding current)
+  // Active colleagues for contacts (excluding current) - show ALL
   const activeColleagues = useMemo(() => {
     return colleagues
       .filter(c => c.status === 'active' && c.id !== colleagueId)
-      .slice(0, 6);
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, 'cs'));
   }, [colleagues, colleagueId]);
 
   // Get assignments for current colleague
@@ -424,48 +424,51 @@ function MyWorkContent() {
           </CardContent>
         </Card>
 
-        {/* Team Contacts */}
+        {/* Team Contacts - All colleagues with contact info */}
         <Card>
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
-                Kontakty kolegů
-              </CardTitle>
-              <Link to="/colleagues">
-                <Button variant="ghost" size="sm" className="text-xs h-7">Všichni</Button>
-              </Link>
-            </div>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              Kontakty kolegů
+              <Badge variant="outline" className="text-xs font-normal">{activeColleagues.length}</Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2 max-h-[400px] overflow-y-auto">
               {activeColleagues.map((colleague) => (
-                <div key={colleague.id} className="flex items-center gap-2 p-2 rounded-lg border">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                      {colleague.full_name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{colleague.full_name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{colleague.position}</p>
+                <div key={colleague.id} className="p-3 rounded-lg border space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                        {colleague.full_name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{colleague.full_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{colleague.position}</p>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="space-y-1 pl-10">
                     <a 
                       href={`mailto:${colleague.email}`} 
-                      className="p-1.5 rounded hover:bg-muted"
-                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors"
                     >
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Mail className="h-3 w-3" />
+                      <span className="truncate">{colleague.email}</span>
                     </a>
-                    {colleague.phone && (
+                    {colleague.phone ? (
                       <a 
                         href={`tel:${colleague.phone}`} 
-                        className="p-1.5 rounded hover:bg-muted"
-                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors"
                       >
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Phone className="h-3 w-3" />
+                        <span>{colleague.phone}</span>
                       </a>
+                    ) : (
+                      <span className="flex items-center gap-2 text-xs text-muted-foreground/50">
+                        <Phone className="h-3 w-3" />
+                        <span>—</span>
+                      </span>
                     )}
                   </div>
                 </div>
