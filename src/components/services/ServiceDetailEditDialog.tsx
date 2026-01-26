@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getServiceDetail } from '@/constants/serviceDetails';
 import type { Service } from '@/types/crm';
 
 interface SetupItem {
@@ -79,18 +80,35 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
 
   useEffect(() => {
     if (service) {
-      const serviceData = service as Service & Partial<ServiceDetailData>;
-      setData({
-        tagline: serviceData.tagline || '',
-        platforms: serviceData.platforms || [],
-        target_audience: serviceData.target_audience || '',
-        benefits: serviceData.benefits || [],
-        setup_items: serviceData.setup_items || [],
-        management_items: serviceData.management_items || [],
-        tier_comparison: serviceData.tier_comparison || [],
-        tier_prices: serviceData.tier_prices || null,
-        credit_pricing: serviceData.credit_pricing || null,
-      });
+      // Load data from constants based on service code
+      const constantDetail = getServiceDetail(service.code);
+      
+      if (constantDetail) {
+        setData({
+          tagline: constantDetail.tagline || '',
+          platforms: constantDetail.platforms || [],
+          target_audience: constantDetail.targetAudience || '',
+          benefits: constantDetail.benefits || [],
+          setup_items: constantDetail.setup || [],
+          management_items: constantDetail.management || [],
+          tier_comparison: constantDetail.tierComparison || [],
+          tier_prices: constantDetail.tierPricing || null,
+          credit_pricing: constantDetail.creditPricing || null,
+        });
+      } else {
+        // Reset to empty state if no constant found
+        setData({
+          tagline: '',
+          platforms: [],
+          target_audience: '',
+          benefits: [],
+          setup_items: [],
+          management_items: [],
+          tier_comparison: [],
+          tier_prices: null,
+          credit_pricing: null,
+        });
+      }
     }
   }, [service]);
 
