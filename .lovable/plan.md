@@ -1,180 +1,43 @@
 
+# Plán: Oprava scrollování v dialogu "Upravit zakázku"
 
-# Plán: Upsell Summary Card s workflow schvalování provizí (Frontend-only)
+## Problém
+Scroll v Sheet komponentě pro úpravu zakázky nefunguje. Přestože bylo přidáno `flex flex-col h-full` a `overflow-y-auto`, formulář přetéká a není scrollovatelný.
 
-## Přehled
-Vytvoření karty pro měsíční přehled všech upsellů (vícepráce + nové služby) s provizemi a workflow schvalování. Schválené provize se zobrazí v "Můj přehled" u daného kolegy. Vše pouze ve frontendu bez databázových změn.
-
-## Současný stav
-- `ExtraWork` a `EngagementService` mají pole `upsold_by_id` a `upsell_commission_percent`
-- Upselly zobrazují badge "💰 Upsell", ale chybí workflow schvalování
-- Není rozlišení mezi čekajícími a schválenými provizemi
+## Příčina
+Základní `SheetContent` komponenta má nastavené `p-6` (padding) a `h-full`, ale chybí `overflow-hidden` na kontejneru. Současný přístup s `flex-1 min-h-0 overflow-y-auto` nefunguje správně, protože:
+1. `SheetContent` má defaultní padding `p-6`, který zabírá místo
+2. Chybí `overflow-hidden` na `SheetContent`, takže flex layout nezná správné hranice
 
 ## Řešení
+Použít stejný pattern jako fungující `AddEngagementServiceDialog`:
 
-### 1. LocalStorage pro stav schválení
-
-Ukládání schválených provizí do localStorage:
-
-```text
-Key: "upsell_commission_approvals"
-Value: {
-  "extra_work_123": {
-    approved: true,
-    approvedAt: "2026-01-26T14:30:00Z",
-    approvedBy: "admin-user-id"
-  },
-  "service_456": {
-    approved: true,
-    approvedAt: "2026-01-25T10:15:00Z", 
-    approvedBy: "admin-user-id"
-  }
-}
+```tsx
+<SheetContent className="sm:max-w-lg flex flex-col overflow-hidden p-0">
+  <SheetHeader className="shrink-0 p-6 pb-0">
+    <SheetTitle>...</SheetTitle>
+  </SheetHeader>
+  <div className="flex-1 overflow-y-auto p-6 pt-4">
+    <EngagementForm ... />
+  </div>
+</SheetContent>
 ```
 
-### 2. Nový Hook: useUpsellApprovals
+### Klíčové změny:
+| Prvek | Současně | Nově |
+|-------|----------|------|
+| `SheetContent` | `h-full flex flex-col` | `flex flex-col overflow-hidden p-0` |
+| `SheetHeader` | `shrink-0` | `shrink-0 p-6 pb-0` |
+| Scroll wrapper | `mt-6 flex-1 min-h-0 overflow-y-auto pr-2` | `flex-1 overflow-y-auto p-6 pt-4` |
 
-Soubor: `src/hooks/useUpsellApprovals.tsx`
+## Soubory k úpravě
 
-Funkce:
-- `getApprovalStatus(type, id)` - vrátí stav schválení
-- `approveCommission(type, id, userId)` - schválí provizi
-- `revokeApproval(type, id)` - zruší schválení
-- `getUpsellsForMonth(year, month)` - všechny upselly za měsíc
-- `getApprovedCommissionsForColleague(colleagueId, year, month)` - schválené provize kolegy
+| Soubor | Změna |
+|--------|-------|
+| `src/pages/Engagements.tsx` | Přepsat Sheet strukturu pro scroll |
 
-### 3. Nová Komponenta: UpsellSummaryCard
-
-Soubor: `src/components/upsells/UpsellSummaryCard.tsx`
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│ 💰 Přehled upsellů - Leden 2026                    [<] [>] měsíc   │
-├─────────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────────────┐ │
-│ │ 🏢 ACME Corp • Performance Marketing                           │ │
-│ │ ────────────────────────────────────────────────────────────── │ │
-│ │ 📋 Extra Work: Bannery pro kampaň                              │ │
-│ │ 💵 Částka: 15 000 CZK                                          │ │
-│ │ 👤 Prodal: Jan Novák                                           │ │
-│ │ 💰 Provize: 1 500 CZK (10%)                                    │ │
-│ │ ⏳ Čeká na schválení              [✓ Schválit] (admin only)   │ │
-│ └─────────────────────────────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────────────────────────────┐ │
-│ │ 🏢 Beta s.r.o. • Creative Boost                                │ │
-│ │ ────────────────────────────────────────────────────────────── │ │
-│ │ 🆕 Nová služba: Creative Boost                                 │ │
-│ │ 💵 Částka: 50 × 400 = 20 000 CZK                               │ │
-│ │ 👤 Prodal: Petr Svoboda                                        │ │
-│ │ 💰 Provize: 2 000 CZK (10%)                                    │ │
-│ │ ✅ Schváleno 15.1.2026                                         │ │
-│ └─────────────────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────────────────┤
-│ 📊 SOUHRN                                                          │
-│ Celkem provize: 3 500 CZK   │   Schváleno: 2 000 CZK              │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 4. Integrace do stránek
-
-**A) Stránka Zakázky (`src/pages/Engagements.tsx`)**
-- Přidání UpsellSummaryCard jako nové sekce (viditelné pro adminy/uživatele s `can_see_financials`)
-- Navigace mezi měsíci
-
-**B) Stránka Můj přehled (`src/pages/MyWork.tsx`)**
-- Nová sekce "💰 Schválené provize"
-- Zobrazí pouze schválené provize pro přihlášeného kolegu
-- Seskupeno podle měsíce
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│ 💰 Schválené provize                                               │
-├─────────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────────────┐ │
-│ │ Leden 2026                                                      │ │
-│ │ ──────────────────────────────────────────────────────────────  │ │
-│ │ • Beta s.r.o. - Creative Boost           2 000 CZK ✅          │ │
-│ │ • Gamma a.s. - Extra bannery             1 200 CZK ✅          │ │
-│ │                                                                 │ │
-│ │ Celkem: 3 200 CZK                                              │ │
-│ └─────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Technické detaily
-
-### Soubory k vytvoření/úpravě
-
-| Soubor | Akce | Popis |
-|--------|------|-------|
-| `src/hooks/useUpsellApprovals.tsx` | VYTVOŘIT | Hook pro správu schválení (localStorage) |
-| `src/components/upsells/UpsellSummaryCard.tsx` | VYTVOŘIT | Hlavní komponenta přehledu |
-| `src/pages/Engagements.tsx` | UPRAVIT | Přidat sekci s UpsellSummaryCard |
-| `src/pages/MyWork.tsx` | UPRAVIT | Přidat sekci schválených provizí |
-
-### Interface pro UpsellItem
-
-```typescript
-interface UpsellItem {
-  id: string;
-  type: 'extra_work' | 'service';
-  clientId: string;
-  clientName: string;
-  brandName: string;
-  engagementId: string;
-  engagementName: string;
-  itemName: string;
-  amount: number;
-  currency: string;
-  upsoldById: string;
-  upsoldByName: string;
-  commissionPercent: number;
-  commissionAmount: number;
-  // Frontend-only approval state
-  isApproved: boolean;
-  approvedAt: string | null;
-  approvedBy: string | null;
-  createdAt: string;
-}
-```
-
-### Logika výpočtu provize
-
-**Extra Work:**
-```typescript
-commission = amount * (upsell_commission_percent / 100)
-```
-
-**Engagement Service (běžná):**
-```typescript
-commission = price * (upsell_commission_percent / 100)
-```
-
-**Creative Boost Service:**
-```typescript
-firstBilling = creative_boost_max_credits * creative_boost_price_per_credit
-commission = firstBilling * (upsell_commission_percent / 100)
-```
-
-### Oprávnění
-
-| Akce | Oprávnění |
-|------|-----------|
-| Zobrazit UpsellSummaryCard | `can_see_financials` |
-| Schválit provizi | `is_super_admin` nebo role = 'admin' |
-| Zobrazit vlastní schválené provize | Všichni uživatelé (filtrováno na vlastní) |
-
-### Stavy provize (Badge)
-
-| Stav | Badge | Barva |
-|------|-------|-------|
-| Čeká na schválení | ⏳ "Čeká na schválení" | Žlutá/amber |
-| Schváleno | ✅ "Schváleno [datum]" | Zelená |
-
-### Empty State
-
-Pokud nejsou žádné upselly v daném měsíci:
-> "Žádné upselly v tomto měsíci"
-
+## Technický detail
+- `p-0` na `SheetContent` odstraní defaultní padding a přesune ho na child elementy
+- `overflow-hidden` na kontejneru zajistí, že flex layout bude respektovat hranice
+- `flex-1 overflow-y-auto` na scroll wrapperu vytvoří scrollovatelnou oblast
+- Padding se přesune přímo na `SheetHeader` a scroll wrapper
