@@ -141,11 +141,11 @@ export function InvoicingOverview({
     
     // Only show client work for current month (we don't have historical client data)
     if (isCurrentMonth) {
-      // 1. Client rewards - fixed monthly fees
+      // 1. Client rewards - fixed monthly fees (format: "Přímá služba – [klient] – správa účtu")
       clientRewards.forEach((cr) => {
         const invoiceName = cr.isProrated 
-          ? `${cr.clientName} – správa účtu (poměrná část od ${cr.startDay}.)`
-          : `${cr.clientName} – správa účtu`;
+          ? `Přímá služba – ${cr.clientName} – správa účtu (poměrná část od ${cr.startDay}.)`
+          : `Přímá služba – ${cr.clientName} – správa účtu`;
         
         items.push({
           id: `client-${cr.engagementId}`,
@@ -156,22 +156,22 @@ export function InvoicingOverview({
         });
       });
 
-      // 2. Creative Boost rewards
+      // 2. Creative Boost rewards (format: "Přímá služba – [klient] – Creative Boost")
       creativeBoostItems.forEach((cb, idx) => {
         items.push({
           id: `cb-${idx}`,
           category: 'creative_boost',
-          invoiceName: `${cb.clientName} – Creative Boost (${cb.credits} kr.)`,
+          invoiceName: `Přímá služba – ${cb.clientName} – Creative Boost (${cb.credits} kr.)`,
           amount: cb.reward,
         });
       });
 
-      // 3. Approved commissions
+      // 3. Approved commissions (format: "Přímá služba – [klient] – provize za upsell")
       commissionItems.forEach((comm, idx) => {
         items.push({
           id: `comm-${idx}`,
           category: 'commission',
-          invoiceName: `${comm.clientName} – provize za upsell`,
+          invoiceName: `Přímá služba – ${comm.clientName} – provize za upsell`,
           amount: comm.amount,
         });
       });
@@ -287,18 +287,6 @@ export function InvoicingOverview({
           </Select>
         </div>
 
-        {/* Grand total */}
-        <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">
-              {isCurrentMonth ? 'Celkem k fakturaci tento měsíc' : `Celkem za ${MONTHS[selectedMonth - 1]} ${selectedYear}`}
-            </span>
-            <span className="text-xl font-bold text-primary">
-              {grandTotal.toLocaleString('cs-CZ')} Kč
-            </span>
-          </div>
-        </div>
-
         {/* Invoice line items */}
         <div className="space-y-4 max-h-[450px] overflow-y-auto">
           {invoiceLineItems.length === 0 ? (
@@ -310,12 +298,9 @@ export function InvoicingOverview({
               {/* CLIENT WORK SECTION */}
               {hasClientWork && isCurrentMonth && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">Klientská práce</span>
-                    </div>
-                    <span className="text-sm font-semibold">{clientTotal.toLocaleString('cs-CZ')} Kč</span>
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Klientská práce</span>
                   </div>
                   <div className="pl-2 border-l-2 border-primary/20 space-y-0.5">
                     {groupedItems.client.map((item) => (
@@ -342,12 +327,9 @@ export function InvoicingOverview({
               {/* INTERNAL WORK SECTION */}
               {hasInternalWork && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">Interní práce</span>
-                    </div>
-                    <span className="text-sm font-semibold">{internalTotal.toLocaleString('cs-CZ')} Kč</span>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Interní práce</span>
                   </div>
                   
                   {/* Marketing */}
@@ -381,23 +363,19 @@ export function InvoicingOverview({
           )}
         </div>
 
-        {/* Summary footer */}
+        {/* Grand total at the bottom */}
         {invoiceLineItems.length > 0 && (
           <>
             <Separator />
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {isCurrentMonth && hasClientWork && (
-                <div className="flex justify-between p-2 rounded bg-muted/30">
-                  <span className="text-muted-foreground">Klientská práce:</span>
-                  <span className="font-medium">{clientTotal.toLocaleString('cs-CZ')} Kč</span>
-                </div>
-              )}
-              {hasInternalWork && (
-                <div className="flex justify-between p-2 rounded bg-muted/30">
-                  <span className="text-muted-foreground">Interní práce:</span>
-                  <span className="font-medium">{internalTotal.toLocaleString('cs-CZ')} Kč</span>
-                </div>
-              )}
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  {isCurrentMonth ? 'Celkem k fakturaci' : `Celkem za ${MONTHS[selectedMonth - 1]} ${selectedYear}`}
+                </span>
+                <span className="text-xl font-bold text-primary">
+                  {grandTotal.toLocaleString('cs-CZ')} Kč
+                </span>
+              </div>
             </div>
           </>
         )}
