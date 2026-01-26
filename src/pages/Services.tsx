@@ -12,7 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useCRMData } from '@/hooks/useCRMData';
 import { ServiceFormDialog } from '@/components/services/ServiceFormDialog';
 import { DeleteServiceDialog } from '@/components/services/DeleteServiceDialog';
+import { ServiceDetailView } from '@/components/services/ServiceDetailView';
 import { serviceTierConfigs } from '@/constants/services';
+import { getServiceDetail } from '@/constants/serviceDetails';
 import { toast } from 'sonner';
 import type { Service, ServiceCategory, ServiceType } from '@/types/crm';
 
@@ -148,6 +150,7 @@ export default function Services() {
     const isExpanded = expandedServiceId === service.id;
     const activeClients = getActiveClientsForService(service.id);
     const activeClientCount = getActiveClientCount(service.id);
+    const serviceDetail = getServiceDetail(service.code);
 
     return (
       <Card key={service.id} className="overflow-hidden">
@@ -318,49 +321,58 @@ export default function Services() {
               )}
             </div>
 
-            {/* Tier Pricing Table for Core services */}
-            {service.service_type === 'core' && service.tier_pricing && (
+            {/* Service Detail View - shows detailed info if available */}
+            {serviceDetail ? (
               <div className="mt-3 pt-3 border-t">
-                <h5 className="text-xs font-medium mb-2">Ceník dle spendu klienta:</h5>
-                <div className="grid grid-cols-3 gap-2">
-                  {serviceTierConfigs.map((config) => {
-                    const pricing = service.tier_pricing?.find(p => p.tier === config.tier);
-                    return (
-                      <div key={config.tier} className="bg-muted rounded-lg p-2 text-center">
-                        <div className="text-xs font-semibold">{config.label}</div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {config.spend_description}
-                        </div>
-                        <div className="mt-1 font-bold text-sm">
-                          {pricing?.price !== null && pricing?.price !== undefined ? (
-                            <>
-                              {pricing.original_price && (
-                                <span className="line-through text-muted-foreground text-xs mr-1">
-                                  {pricing.original_price.toLocaleString('cs-CZ')} Kč
-                                </span>
+                <ServiceDetailView detail={serviceDetail} />
+              </div>
+            ) : (
+              <>
+                {/* Fallback: Tier Pricing Table for Core services */}
+                {service.service_type === 'core' && service.tier_pricing && (
+                  <div className="mt-3 pt-3 border-t">
+                    <h5 className="text-xs font-medium mb-2">Ceník dle spendu klienta:</h5>
+                    <div className="grid grid-cols-3 gap-2">
+                      {serviceTierConfigs.map((config) => {
+                        const pricing = service.tier_pricing?.find(p => p.tier === config.tier);
+                        return (
+                          <div key={config.tier} className="bg-muted rounded-lg p-2 text-center">
+                            <div className="text-xs font-semibold">{config.label}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {config.spend_description}
+                            </div>
+                            <div className="mt-1 font-bold text-sm">
+                              {pricing?.price !== null && pricing?.price !== undefined ? (
+                                <>
+                                  {pricing.original_price && (
+                                    <span className="line-through text-muted-foreground text-xs mr-1">
+                                      {pricing.original_price.toLocaleString('cs-CZ')} Kč
+                                    </span>
+                                  )}
+                                  <span className={pricing.original_price ? 'text-status-active' : ''}>
+                                    {pricing.price.toLocaleString('cs-CZ')} Kč
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">Individuální</span>
                               )}
-                              <span className={pricing.original_price ? 'text-status-active' : ''}>
-                                {pricing.price.toLocaleString('cs-CZ')} Kč
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">Individuální</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
-            {/* Description */}
-            {service.description && (
-              <div className="mt-3 pt-3 border-t">
-                <p className="text-xs text-muted-foreground">
-                  {service.description}
-                </p>
-              </div>
+                {/* Fallback: Description */}
+                {service.description && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-xs text-muted-foreground">
+                      {service.description}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Active Clients */}
