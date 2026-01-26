@@ -7,10 +7,8 @@ import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
 import { ModificationRequestCard } from '@/components/engagements/ModificationRequestCard';
 import { toast } from 'sonner';
-import type { 
-  ModificationRequestWithDetails,
-  AddServiceProposedChanges,
-} from '@/types/crm';
+import type { AddServiceProposedChanges } from '@/types/crm';
+import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
 
 export function PendingModificationsSection() {
   const { 
@@ -32,7 +30,7 @@ export function PendingModificationsSection() {
   } = useCRMData();
 
   // Handle approval with actual data modification
-  const handleApprove = async (request: ModificationRequestWithDetails) => {
+  const handleApprove = async (request: StoredModificationRequest) => {
     try {
       // Apply the change based on request type
       switch (request.request_type) {

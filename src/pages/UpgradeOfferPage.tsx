@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Check, Clock, Mail, Phone, AlertCircle, Package, DollarSign, X as XIcon, CheckCircle2, Calendar, Info } from 'lucide-react';
+import { Check, Clock, AlertCircle, Package, DollarSign, X as XIcon, CheckCircle2, Calendar, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,31 +11,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { 
+  getModificationRequestByToken, 
+  clientAcceptOffer,
+  type StoredModificationRequest 
+} from '@/data/modificationRequestsMockData';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, DeactivateServiceProposedChanges } from '@/types/crm';
 import socialsLogo from '@/assets/socials-logo.png';
-
-interface UpgradeOfferData {
-  id: string;
-  engagement_id: string;
-  request_type: string;
-  status: string;
-  proposed_changes: Record<string, unknown>;
-  effective_from: string | null;
-  upgrade_offer_token: string;
-  upgrade_offer_valid_until: string | null;
-  client_email: string | null;
-  client_approved_at: string | null;
-  engagement: {
-    id: string;
-    name: string;
-    client: {
-      id: string;
-      name: string;
-      brand_name: string;
-    };
-  };
-}
 
 // Helper to calculate prorated amount
 function calculateProratedAmount(monthlyPrice: number, effectiveFrom: string) {
@@ -55,108 +37,39 @@ function calculateProratedAmount(monthlyPrice: number, effectiveFrom: string) {
 
 export default function UpgradeOfferPage() {
   const { token } = useParams<{ token: string }>();
-  const [offer, setOffer] = useState<UpgradeOfferData | null>(null);
+  const [offer, setOffer] = useState<StoredModificationRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [agreedToChange, setAgreedToChange] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchOffer = async () => {
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('engagement_modification_requests' as any)
-          .select(`
-            id,
-            engagement_id,
-            request_type,
-            status,
-            proposed_changes,
-            effective_from,
-            upgrade_offer_token,
-            upgrade_offer_valid_until,
-            client_email,
-            client_approved_at,
-            engagements!inner (
-              id,
-              name,
-              clients!inner (
-                id,
-                name,
-                brand_name
-              )
-            )
-          `)
-          .eq('upgrade_offer_token', token)
-          .single();
-
-        if (error) {
-          console.error('Error fetching upgrade offer:', error);
-          setOffer(null);
-        } else if (data) {
-          const rawData = data as any;
-          setOffer({
-            id: rawData.id,
-            engagement_id: rawData.engagement_id,
-            request_type: rawData.request_type,
-            status: rawData.status,
-            proposed_changes: rawData.proposed_changes,
-            effective_from: rawData.effective_from,
-            upgrade_offer_token: rawData.upgrade_offer_token,
-            upgrade_offer_valid_until: rawData.upgrade_offer_valid_until,
-            client_email: rawData.client_email,
-            client_approved_at: rawData.client_approved_at,
-            engagement: {
-              id: rawData.engagements.id,
-              name: rawData.engagements.name,
-              client: rawData.engagements.clients,
-            },
-          });
-        }
-      } catch (err) {
-        console.error('Error:', err);
-      }
-      
+    if (!token) {
       setIsLoading(false);
-    };
+      return;
+    }
 
-    fetchOffer();
+    // Fetch from localStorage
+    const request = getModificationRequestByToken(token);
+    setOffer(request);
+    setIsLoading(false);
   }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!offer || !email || !agreedToChange) return;
+    if (!offer || !email || !agreedToChange || !token) return;
 
     setIsSubmitting(true);
     
     try {
-      const { error } = await supabase
-        .from('engagement_modification_requests' as any)
-        .update({
-          status: 'client_approved',
-          client_email: email,
-          client_approved_at: new Date().toISOString(),
-        } as any)
-        .eq('id', offer.id)
-        .eq('upgrade_offer_token', token);
-
-      if (error) {
-        throw error;
-      }
-
-      setOffer({
-        ...offer,
-        status: 'client_approved',
-        client_email: email,
-        client_approved_at: new Date().toISOString(),
-      });
+      const updatedOffer = clientAcceptOffer(token, email);
       
-      toast.success('Změna byla úspěšně potvrzena');
+      if (updatedOffer) {
+        setOffer(updatedOffer);
+        toast.success('Změna byla úspěšně potvrzena');
+      } else {
+        throw new Error('Failed to accept offer');
+      }
     } catch (err) {
       console.error('Error accepting offer:', err);
       toast.error('Nepodařilo se potvrdit změnu. Zkuste to prosím znovu.');
@@ -191,7 +104,7 @@ export default function UpgradeOfferPage() {
 
   const isAccepted = offer.status === 'client_approved' || offer.status === 'applied';
   const isExpired = offer.upgrade_offer_valid_until && new Date(offer.upgrade_offer_valid_until) < new Date() && !isAccepted;
-  const clientName = offer.engagement.client.brand_name || offer.engagement.client.name;
+  const clientName = offer.client_brand_name || offer.client_name;
 
   // Get change-specific icon and label
   const getChangeIcon = () => {
@@ -405,7 +318,7 @@ export default function UpgradeOfferPage() {
           <p className="text-muted-foreground">
             Pro: <span className="font-medium text-foreground">{clientName}</span>
             {' – '}
-            <span className="font-medium text-foreground">{offer.engagement.name}</span>
+            <span className="font-medium text-foreground">{offer.engagement_name}</span>
           </p>
         </div>
 
@@ -475,17 +388,8 @@ export default function UpgradeOfferPage() {
         )}
 
         {/* Contact section */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-muted-foreground mb-2">Máte dotazy? Kontaktujte nás</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
-            <a 
-              href="mailto:info@socials.cz" 
-              className="flex items-center gap-1 text-primary hover:underline"
-            >
-              <Mail className="h-4 w-4" />
-              info@socials.cz
-            </a>
-          </div>
+        <div className="mt-8 text-center text-sm text-muted-foreground">
+          <p>Máte dotazy? Kontaktujte nás na info@socials.cz</p>
         </div>
       </main>
     </div>

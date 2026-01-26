@@ -29,7 +29,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import type { 
-  ModificationRequestWithDetails, 
   ModificationRequestType,
   AddServiceProposedChanges,
   UpdateServicePriceProposedChanges,
@@ -38,9 +37,10 @@ import type {
   UpdateAssignmentProposedChanges,
   RemoveAssignmentProposedChanges,
 } from '@/types/crm';
+import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
 
 interface ModificationRequestCardProps {
-  request: ModificationRequestWithDetails;
+  request: StoredModificationRequest;
   onApprove?: (requestId: string) => Promise<void>;
   onReject?: (requestId: string, reason: string) => Promise<void>;
   isApproving?: boolean;
@@ -222,9 +222,9 @@ export function ModificationRequestCard({
     }
   };
 
-  const clientName = request.client?.brand_name || request.client?.name || 'Neznámý klient';
-  const engagementName = request.engagement?.name || 'Neznámá zakázka';
-  const requestedAt = formatDistanceToNow(new Date(request.requested_at), { 
+  const clientName = request.client_brand_name || request.client_name || 'Neznámý klient';
+  const engagementName = request.engagement_name || 'Neznámá zakázka';
+  const requestedAt = formatDistanceToNow(new Date(request.requested_at), {
     addSuffix: true, 
     locale: cs 
   });
@@ -304,7 +304,7 @@ export function ModificationRequestCard({
               <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <User className="h-3 w-3" />
-                  <span>Navrhl: {request.upsold_by_colleague?.full_name || 'Neznámý'}</span>
+                  <span>Navrhl: {request.upsold_by_name || 'Neznámý'}</span>
                   <span>•</span>
                   <span>{requestedAt}</span>
                 </div>
