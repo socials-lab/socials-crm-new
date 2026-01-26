@@ -38,6 +38,7 @@ import Feedback from "./pages/Feedback";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import PublicOfferPage from "./pages/PublicOfferPage";
+import UpgradeOfferPage from "./pages/UpgradeOfferPage";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ const App = () => (
                           <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
                           <Route path="/offer/:token" element={<PublicOfferPage />} />
                           <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
+                          <Route path="/upgrade/:token" element={<UpgradeOfferPage />} />
                           
                           {/* Protected routes */}
                           <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
