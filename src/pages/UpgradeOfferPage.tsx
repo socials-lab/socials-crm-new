@@ -304,30 +304,41 @@ export default function UpgradeOfferPage() {
       <main className="container max-w-3xl mx-auto px-4 py-8">
         {/* Success state */}
         {isAccepted && (
-          <Card className="mb-8 border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="h-8 w-8 text-green-700 dark:text-green-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <h2 className="font-semibold text-lg text-green-700 dark:text-green-400">Změna potvrzena</h2>
-                  <p className="text-sm text-green-600 dark:text-green-500 mb-4">
-                    Děkujeme za potvrzení. Budeme vás informovat o dalších krocích.
-                  </p>
-                  
-                  {/* Confirmation details */}
-                  <div className="mt-4 p-3 rounded-lg bg-green-100/50 dark:bg-green-900/30 border border-green-200 dark:border-green-800">
-                    <p className="text-xs font-medium text-green-800 dark:text-green-300 mb-2">Potvrzení:</p>
-                    <div className="space-y-1 text-sm text-green-700 dark:text-green-400">
-                      {offer.client_email && (
-                        <p>📧 Email: <span className="font-medium">{offer.client_email}</span></p>
-                      )}
-                      {offer.client_approved_at && (
-                        <p>📅 Datum: <span className="font-medium">
-                          {format(new Date(offer.client_approved_at), "d. MMMM yyyy 'v' HH:mm", { locale: cs })}
-                        </span></p>
-                      )}
+          <Card className="mb-8 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 dark:border-green-800">
+            <CardContent className="pt-8 pb-8">
+              {/* Big success icon and thank you */}
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/50 mb-4">
+                  <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">
+                  Děkujeme za potvrzení! 🎉
+                </h2>
+                <p className="text-green-600 dark:text-green-500">
+                  Vaše potvrzení bylo úspěšně zaznamenáno. Budeme vás informovat o dalších krocích.
+                </p>
+              </div>
+              
+              {/* Confirmation details */}
+              <div className="p-4 rounded-lg bg-white/60 dark:bg-green-900/30 border border-green-200 dark:border-green-800">
+                <p className="text-xs font-semibold text-green-800 dark:text-green-300 mb-3 uppercase tracking-wide">
+                  📋 Detail potvrzení
+                </p>
+                <div className="space-y-2 text-sm text-green-700 dark:text-green-400">
+                  {offer.client_email && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Email:</span>
+                      <span className="font-medium">{offer.client_email}</span>
                     </div>
-                  </div>
+                  )}
+                  {offer.client_approved_at && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Potvrzeno:</span>
+                      <span className="font-medium">
+                        {format(new Date(offer.client_approved_at), "d. MMMM yyyy 'v' HH:mm:ss", { locale: cs })}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
