@@ -199,12 +199,45 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Creative Boost mock service - will be merged with Supabase data
+  const CREATIVE_BOOST_SERVICE: Service = {
+    id: 'service-creative-boost-mock',
+    code: 'CREATIVE_BOOST',
+    name: 'Creative Boost',
+    service_type: 'addon',
+    category: 'creative',
+    base_price: 400, // price per credit
+    currency: 'CZK',
+    description: 'Kreditový systém pro tvorbu kreativ (bannery, videa, AI foto). Cena za kredit: 400 Kč.',
+    is_active: true,
+    tier_pricing: null,
+    external_url: null,
+    default_deliverables: [
+      'Kreativní výstupy dle kreditového systému',
+      'Bannery, videa, AI foto dle potřeby',
+      'Express dodání za příplatek 50%',
+    ],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
   const { data: services = [], isLoading: servicesLoading } = useQuery({
     queryKey: ['services'],
     queryFn: async () => {
       const { data, error } = await (supabase as any).from('services').select('*').order('name');
       if (error) throw error;
-      return (data || []).map(transformService);
+      const dbServices = (data || []).map(transformService);
+      
+      // Add Creative Boost if not already in DB
+      const hasCreativeBoost = dbServices.some((s: Service) => 
+        s.code === 'CREATIVE_BOOST' || s.name.toLowerCase().includes('creative boost')
+      );
+      
+      if (!hasCreativeBoost) {
+        return [...dbServices, CREATIVE_BOOST_SERVICE].sort((a, b) => a.name.localeCompare(b.name));
+      }
+      
+      return dbServices;
     },
   });
 
