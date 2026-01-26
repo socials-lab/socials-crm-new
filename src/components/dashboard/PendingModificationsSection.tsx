@@ -152,7 +152,7 @@ export function PendingModificationsSection() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Clock className="h-4 w-4 text-primary" />
-            Úpravy zakázek k schválení
+            Návrhy změn k schválení
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -173,7 +173,7 @@ export function PendingModificationsSection() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Clock className="h-4 w-4 text-primary" />
-            ⏳ Úpravy zakázek k schválení ({pendingRequests.length})
+            ⏳ Návrhy změn k schválení ({pendingRequests.length})
           </CardTitle>
           {pendingRequests.length > 3 && (
             <Link to="/engagements">

@@ -23,7 +23,7 @@ const mainNavItems = [
   { title: '🏢 Klienti', url: '/clients', page: 'clients' },
   { title: '📇 Kontakty', url: '/contacts', page: 'contacts' },
   { title: '📋 Zakázky', url: '/engagements', page: 'engagements' },
-  { title: '✏️ Úpravy zakázek', url: '/modifications', page: 'modifications' },
+  { title: '📝 Návrhy změn', url: '/modifications', page: 'modifications' },
   // Práce & dodávka
   { title: '🔧 Vícepráce', url: '/extra-work', page: 'extra-work' },
   { title: '💰 Provize', url: '/upsells', page: 'upsells' },
