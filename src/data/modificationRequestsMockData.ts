@@ -274,6 +274,41 @@ export function applyModificationRequest(requestId: string): StoredModificationR
   return requests[index];
 }
 
+// Update modification request (for editing before final approval)
+export function updateModificationRequest(
+  requestId: string,
+  updates: {
+    proposed_changes?: ModificationProposedChanges;
+    effective_from?: string | null;
+    note?: string | null;
+    upsell_commission_percent?: number;
+  }
+): StoredModificationRequest | null {
+  const requests = getModificationRequests();
+  const index = requests.findIndex(r => r.id === requestId);
+  
+  if (index === -1) return null;
+  
+  const request = requests[index];
+  
+  // Only allow editing pending or approved (waiting for client) requests
+  if (!['pending', 'approved'].includes(request.status)) {
+    return null;
+  }
+  
+  requests[index] = {
+    ...request,
+    proposed_changes: updates.proposed_changes ?? request.proposed_changes,
+    effective_from: updates.effective_from !== undefined ? updates.effective_from : request.effective_from,
+    note: updates.note !== undefined ? updates.note : request.note,
+    upsell_commission_percent: updates.upsell_commission_percent ?? request.upsell_commission_percent,
+    updated_at: new Date().toISOString(),
+  };
+  
+  saveRequests(requests);
+  return requests[index];
+}
+
 // Filter requests by status
 export function getRequestsByStatus(status?: ModificationRequestStatus): StoredModificationRequest[] {
   const requests = getModificationRequests();
