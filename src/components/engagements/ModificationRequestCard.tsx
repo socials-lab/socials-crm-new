@@ -44,8 +44,10 @@ interface ModificationRequestCardProps {
   request: StoredModificationRequest;
   onApprove?: (requestId: string) => Promise<void>;
   onReject?: (requestId: string, reason: string) => Promise<void>;
+  onApply?: (requestId: string) => Promise<void>;
   isApproving?: boolean;
   isRejecting?: boolean;
+  isApplying?: boolean;
 }
 
 const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
@@ -79,8 +81,10 @@ export function ModificationRequestCard({
   request,
   onApprove,
   onReject,
+  onApply,
   isApproving,
   isRejecting,
+  isApplying,
 }: ModificationRequestCardProps) {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -91,7 +95,8 @@ export function ModificationRequestCard({
   const typeLabel = REQUEST_TYPE_LABELS[request.request_type];
   
   // Check if client has approved
-  const isClientApproved = request.status === 'client_approved' || !!request.client_approved_at;
+  const isClientApproved = request.status === 'client_approved';
+  const isApplied = request.status === 'applied';
   const hasUpgradeToken = !!request.upgrade_offer_token;
   
   const handleApprove = async () => {
@@ -105,6 +110,12 @@ export function ModificationRequestCard({
     await onReject(request.id, rejectionReason);
     setIsRejectDialogOpen(false);
     setRejectionReason('');
+  };
+
+  const handleApply = async () => {
+    if (onApply) {
+      await onApply(request.id);
+    }
   };
   
   const handleCopyLink = async () => {
@@ -122,6 +133,9 @@ export function ModificationRequestCard({
   
   // Show copy link for approved requests that are waiting for client
   const showCopyLinkOnly = request.status === 'approved' && hasUpgradeToken && !isClientApproved;
+  
+  // Show apply button for client-approved requests
+  const showApplyButton = isClientApproved && onApply;
 
   // Render proposed changes based on request type
   const renderChanges = () => {
@@ -259,6 +273,13 @@ export function ModificationRequestCard({
                         Klient potvrdil
                       </Badge>
                     )}
+                    {/* Applied badge */}
+                    {isApplied && (
+                      <Badge className="bg-primary/10 text-primary">
+                        <Check className="h-3 w-3 mr-1" />
+                        Aktivováno
+                      </Badge>
+                    )}
                     {/* Waiting for client badge */}
                     {showCopyLinkOnly && (
                       <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
@@ -344,6 +365,19 @@ export function ModificationRequestCard({
                   >
                     {linkCopied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
                     {linkCopied ? 'Zkopírováno' : 'Zkopírovat odkaz'}
+                  </Button>
+                )}
+
+                {/* Apply button for client-approved requests */}
+                {showApplyButton && (
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={handleApply}
+                    disabled={isApplying}
+                  >
+                    <Check className="h-3.5 w-3.5 mr-1" />
+                    {isApplying ? 'Aktivuji...' : 'Aktivovat do zakázky'}
                   </Button>
                 )}
                 

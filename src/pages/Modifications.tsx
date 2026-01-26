@@ -9,7 +9,7 @@ import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges } from '@/types/crm';
 import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
@@ -25,8 +25,10 @@ export default function Modifications() {
     isLoadingPending, 
     approveRequest, 
     rejectRequest,
+    applyRequest,
     isApproving,
     isRejecting,
+    isApplying,
     refresh
   } = useModificationRequests();
   const { addEngagementService, updateEngagementService } = useCRMData();
@@ -34,7 +36,8 @@ export default function Modifications() {
   // Filter requests by status
   const pending = pendingRequests?.filter(r => r.status === 'pending') || [];
   const waitingForClient = pendingRequests?.filter(r => r.status === 'approved' && r.upgrade_offer_token && !r.client_approved_at) || [];
-  const clientApproved = pendingRequests?.filter(r => r.status === 'client_approved' || r.client_approved_at) || [];
+  const clientApproved = pendingRequests?.filter(r => r.status === 'client_approved') || [];
+  const applied = pendingRequests?.filter(r => r.status === 'applied') || [];
   const approved = pendingRequests?.filter(r => r.status === 'approved' && (!r.upgrade_offer_token || r.client_approved_at)) || [];
   const rejected = pendingRequests?.filter(r => r.status === 'rejected') || [];
 
@@ -103,6 +106,10 @@ export default function Modifications() {
 
   const handleReject = async (requestId: string, reason: string) => {
     await rejectRequest({ requestId, reason });
+  };
+
+  const handleApply = async (requestId: string) => {
+    await applyRequest(requestId);
   };
 
   const handleCopyLink = async () => {
@@ -205,6 +212,13 @@ export default function Modifications() {
               <Badge variant="secondary" className="ml-1 bg-green-100 text-green-700">{clientApproved.length}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="applied" className="flex items-center gap-2">
+            <PackageCheck className="h-4 w-4" />
+            Aktivované
+            {applied.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{applied.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="rejected" className="flex items-center gap-2">
             <XCircle className="h-4 w-4" />
             Zamítnuté
@@ -272,6 +286,30 @@ export default function Modifications() {
           ) : (
             <div className="grid gap-4">
               {clientApproved.map((request) => (
+                <ModificationRequestCard
+                  key={request.id}
+                  request={request}
+                  onApply={handleApply}
+                  isApplying={isApplying}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="applied" className="space-y-4">
+          {applied.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <PackageCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground text-center">
+                  Žádné aktivované změny
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {applied.map((request) => (
                 <ModificationRequestCard
                   key={request.id}
                   request={request}
