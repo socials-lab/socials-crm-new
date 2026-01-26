@@ -58,6 +58,7 @@ function MyWorkContent() {
     rewards: activityRewards,
     currentMonthTotal: activityCurrentMonthTotal,
     getRewardsByMonth,
+    getRewardsByCategory,
     getMonthlyTotals,
     addReward,
     deleteReward,
@@ -404,6 +405,7 @@ function MyWorkContent() {
         rewards={activityRewards}
         currentMonthTotal={activityCurrentMonthTotal}
         getRewardsByMonth={getRewardsByMonth}
+        getRewardsByCategory={getRewardsByCategory}
         getMonthlyTotals={getMonthlyTotals}
         onAddClick={() => setShowAddActivityDialog(true)}
         onDelete={deleteReward}

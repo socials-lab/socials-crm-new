@@ -1,10 +1,14 @@
 import { useState, useCallback, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
+export type ActivityCategory = 'marketing' | 'overhead';
+
 export interface ActivityReward {
   id: string;
   colleague_id: string;
+  category: ActivityCategory;
   description: string;
+  invoice_item_name: string;
   billing_type: 'fixed' | 'hourly';
   amount: number;
   hours: number | null;
@@ -13,12 +17,34 @@ export interface ActivityReward {
   created_at: string;
 }
 
+export const CATEGORY_LABELS: Record<ActivityCategory, string> = {
+  marketing: 'Marketing',
+  overhead: 'Režijní služby',
+};
+
+export function generateInvoiceItemName(category: ActivityCategory, description: string): string {
+  return `${CATEGORY_LABELS[category]} – ${description}`;
+}
+
 const STORAGE_KEY = 'activity-rewards';
 
 function getStoredRewards(): ActivityReward[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+    if (!stored) return [];
+    
+    // Migrate old data without category
+    const rewards = JSON.parse(stored) as ActivityReward[];
+    return rewards.map(r => {
+      if (!r.category) {
+        return {
+          ...r,
+          category: 'overhead' as ActivityCategory,
+          invoice_item_name: generateInvoiceItemName('overhead', r.description),
+        };
+      }
+      return r;
+    });
   } catch {
     return [];
   }
@@ -49,6 +75,14 @@ export function useActivityRewards(colleagueId: string | null) {
     });
   }, [rewards, colleagueId]);
 
+  const getRewardsByCategory = useCallback((year: number, month: number) => {
+    const monthRewards = getRewardsByMonth(year, month);
+    return {
+      marketing: monthRewards.filter(r => r.category === 'marketing'),
+      overhead: monthRewards.filter(r => r.category === 'overhead'),
+    };
+  }, [getRewardsByMonth]);
+
   const getMonthlyTotals = useCallback(() => {
     if (!colleagueId) return [];
     
@@ -73,9 +107,12 @@ export function useActivityRewards(colleagueId: string | null) {
     });
   }, [rewards, colleagueId]);
 
-  const addReward = useCallback((reward: Omit<ActivityReward, 'id' | 'created_at'>) => {
+  const addReward = useCallback((reward: Omit<ActivityReward, 'id' | 'created_at' | 'invoice_item_name'> & { invoice_item_name?: string }) => {
+    const invoiceItemName = reward.invoice_item_name || generateInvoiceItemName(reward.category, reward.description);
+    
     const newReward: ActivityReward = {
       ...reward,
+      invoice_item_name: invoiceItemName,
       id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
     };
@@ -102,6 +139,7 @@ export function useActivityRewards(colleagueId: string | null) {
     rewards,
     currentMonthTotal,
     getRewardsByMonth,
+    getRewardsByCategory,
     getMonthlyTotals,
     addReward,
     deleteReward,
