@@ -33,6 +33,7 @@ export interface UpsellItem {
   approvedAt: string | null;
   approvedBy: string | null;
   createdAt: string;
+  isOneOff?: boolean; // For distinguishing one-off vs monthly services
 }
 
 const getStorageKey = (type: 'extra_work' | 'service', id: string) => `${type}_${id}`;
@@ -228,12 +229,11 @@ export function useUpsellApprovals() {
       });
     });
 
-    // Get engagement services with upsold_by_id created in this month
+    // Get engagement services with upsold_by_id
+    // For monthly services with mid-month start (effective_from), commission is in the NEXT full month
+    // For one-off services, commission is immediate based on the creation date
     engagementServices.forEach(es => {
       if (!es.upsold_by_id || !es.upsell_commission_percent) return;
-
-      const createdAt = parseISO(es.created_at);
-      if (!isWithinInterval(createdAt, { start: monthStart, end: monthEnd })) return;
 
       const engagement = getEngagementById(es.engagement_id);
       if (!engagement) return;
@@ -243,9 +243,37 @@ export function useUpsellApprovals() {
       
       if (!client) return;
 
+      // Determine when commission should be counted
+      let commissionDate: Date;
+      const isOneOff = es.billing_type === 'one_off';
+      
+      if (isOneOff) {
+        // One-off: commission is immediate (based on creation date)
+        commissionDate = parseISO(es.created_at);
+      } else if (es.effective_from) {
+        // Monthly with effective_from: commission is in the first FULL month
+        const effectiveDate = parseISO(es.effective_from);
+        const dayOfMonth = effectiveDate.getDate();
+        
+        if (dayOfMonth === 1) {
+          // Starts on 1st - commission in the same month
+          commissionDate = effectiveDate;
+        } else {
+          // Starts mid-month - commission in the NEXT month (first full month)
+          commissionDate = new Date(effectiveDate.getFullYear(), effectiveDate.getMonth() + 1, 1);
+        }
+      } else {
+        // No effective_from - use creation date
+        commissionDate = parseISO(es.created_at);
+      }
+
+      // Check if this commission belongs to the requested month
+      if (!isWithinInterval(commissionDate, { start: monthStart, end: monthEnd })) return;
+
       const approval = getApprovalStatus('service', es.id);
       
-      // Calculate amount - for Creative Boost use max_credits * price_per_credit
+      // Calculate amount - always use FULL price (not prorated)
+      // For Creative Boost use max_credits * price_per_credit
       let amount = es.price;
       if (es.creative_boost_max_credits && es.creative_boost_price_per_credit) {
         amount = es.creative_boost_max_credits * es.creative_boost_price_per_credit;
@@ -272,6 +300,7 @@ export function useUpsellApprovals() {
         approvedAt: approval?.approvedAt || null,
         approvedBy: approval?.approvedBy || null,
         createdAt: es.created_at,
+        isOneOff,
       });
     });
 
@@ -334,14 +363,6 @@ export function useUpsellApprovals() {
       const approval = getApprovalStatus('service', es.id);
       if (!approval?.approved) return;
 
-      // Filter by month if specified
-      if (year && month) {
-        const createdAt = parseISO(es.created_at);
-        const monthStart = startOfMonth(new Date(year, month - 1));
-        const monthEnd = endOfMonth(new Date(year, month - 1));
-        if (!isWithinInterval(createdAt, { start: monthStart, end: monthEnd })) return;
-      }
-
       const engagement = getEngagementById(es.engagement_id);
       if (!engagement) return;
       
@@ -349,6 +370,32 @@ export function useUpsellApprovals() {
       const seller = getColleagueById(es.upsold_by_id);
       
       if (!client) return;
+
+      // Determine when commission should be counted (same logic as getUpsellsForMonth)
+      const isOneOff = es.billing_type === 'one_off';
+      let commissionDate: Date;
+      
+      if (isOneOff) {
+        commissionDate = parseISO(es.created_at);
+      } else if (es.effective_from) {
+        const effectiveDate = parseISO(es.effective_from);
+        const dayOfMonth = effectiveDate.getDate();
+        
+        if (dayOfMonth === 1) {
+          commissionDate = effectiveDate;
+        } else {
+          commissionDate = new Date(effectiveDate.getFullYear(), effectiveDate.getMonth() + 1, 1);
+        }
+      } else {
+        commissionDate = parseISO(es.created_at);
+      }
+
+      // Filter by month if specified
+      if (year && month) {
+        const monthStart = startOfMonth(new Date(year, month - 1));
+        const monthEnd = endOfMonth(new Date(year, month - 1));
+        if (!isWithinInterval(commissionDate, { start: monthStart, end: monthEnd })) return;
+      }
 
       let amount = es.price;
       if (es.creative_boost_max_credits && es.creative_boost_price_per_credit) {
@@ -376,6 +423,7 @@ export function useUpsellApprovals() {
         approvedAt: approval.approvedAt,
         approvedBy: approval.approvedBy,
         createdAt: es.created_at,
+        isOneOff,
       });
     });
 
