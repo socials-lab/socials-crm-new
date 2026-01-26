@@ -41,7 +41,7 @@ const colleagueSchema = z.object({
   is_freelancer: z.boolean(),
   internal_hourly_cost: z.coerce.number().min(0, 'Hodinová sazba musí být kladná'),
   monthly_fixed_cost: z.coerce.number().min(0).nullable(),
-  capacity_hours_per_month: z.coerce.number().min(0).nullable(),
+  max_engagements: z.coerce.number().min(0).nullable(),
   status: z.enum(['active', 'on_hold', 'left'] as const),
   notes: z.string(),
   birthday: z.date().nullable(),
@@ -70,7 +70,7 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
       is_freelancer: colleague?.is_freelancer || false,
       internal_hourly_cost: colleague?.internal_hourly_cost || 0,
       monthly_fixed_cost: colleague?.monthly_fixed_cost ?? null,
-      capacity_hours_per_month: colleague?.capacity_hours_per_month ?? null,
+      max_engagements: colleague?.max_engagements ?? 5,
       status: colleague?.status || 'active',
       notes: colleague?.notes || '',
       birthday: colleague?.birthday ? new Date(colleague.birthday) : null,
@@ -301,10 +301,10 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
             />
             <FormField
               control={form.control}
-              name="capacity_hours_per_month"
+              name="max_engagements"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Kapacita (hod/měs)</FormLabel>
+                  <FormLabel>Max. počet zakázek</FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 

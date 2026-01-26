@@ -249,7 +249,8 @@ export interface Colleague {
   is_freelancer: boolean;
   internal_hourly_cost: number;
   monthly_fixed_cost: number | null;
-  capacity_hours_per_month: number | null;
+  capacity_hours_per_month: number | null; // Legacy - kept for extra work calculations
+  max_engagements: number | null; // Max number of engagements colleague can handle
   status: ColleagueStatus;
   notes: string;
   birthday: string | null;
