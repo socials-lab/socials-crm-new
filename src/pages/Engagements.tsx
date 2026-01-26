@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isSameMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -47,6 +47,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { useLeadsData } from '@/hooks/useLeadsData';
 import { EngagementForm } from '@/components/forms/EngagementForm';
 import { AssignmentForm } from '@/components/forms/AssignmentForm';
 import { AddEngagementServiceDialog } from '@/components/forms/AddEngagementServiceDialog';
@@ -55,6 +56,7 @@ import { CreateInvoiceFromEngagementDialog } from '@/components/engagements/Crea
 import { EngagementInvoicingSection } from '@/components/engagements/EngagementInvoicingStatus';
 import { EndEngagementDialog } from '@/components/engagements/EndEngagementDialog';
 import { EngagementHistoryDialog } from '@/components/engagements/EngagementHistoryDialog';
+import { LeadOriginSection } from '@/components/engagements/LeadOriginSection';
 import { serviceTierConfigs } from '@/constants/services';
 import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier } from '@/types/crm';
 import { ADVERTISING_PLATFORMS } from '@/types/crm';
@@ -110,6 +112,14 @@ function EngagementsContent() {
     getClientMonthByClientId,
     updateClientMonth,
   } = useCreativeBoostData();
+
+  // Get leads data to display origin information
+  const { leads } = useLeadsData();
+  
+  // Helper to find the lead that was converted to this engagement
+  const getLeadByEngagementId = useCallback((engagementId: string) => {
+    return leads.find(lead => lead.converted_to_engagement_id === engagementId);
+  }, [leads]);
   
   // Current month for filters and Creative Boost overview
   const currentDate = new Date();
@@ -1342,6 +1352,18 @@ function EngagementsContent() {
                         </Button>
                       )}
                     </div>
+
+                    {/* Lead Origin Section - shows onboarding form data and offer from lead */}
+                    {(() => {
+                      const originLead = getLeadByEngagementId(engagement.id);
+                      if (!originLead) return null;
+                      return (
+                        <LeadOriginSection 
+                          lead={originLead} 
+                          onStopPropagation={(e) => e.stopPropagation()}
+                        />
+                      );
+                    })()}
                   </div>
                 </CardContent>
               )}
