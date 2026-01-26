@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Plus, ExternalLink, ChevronDown, ChevronUp, Mail, Phone, Calendar, Users, Pencil, Building2, FileText, UserPlus, Star, Key, Trash2, StickyNote, Crown, Database, Briefcase, Check, X } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -32,8 +32,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useLeadsData } from '@/hooks/useLeadsData';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { AddContactDialog } from '@/components/clients/AddContactDialog';
+import { LeadOriginSection } from '@/components/clients/LeadOriginSection';
 import { useUserRole } from '@/hooks/useUserRole';
 import type { ClientStatus, Client, ClientContact, ClientTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
@@ -67,6 +69,13 @@ export default function Clients() {
     updateContact,
     deleteContact,
   } = useCRMData();
+
+  const { leads } = useLeadsData();
+  
+  // Helper to find the lead that was converted to this client
+  const getLeadByClientId = useCallback((clientId: string) => {
+    return leads.find(lead => lead.converted_to_client_id === clientId);
+  }, [leads]);
   
   const { isSuperAdmin: superAdmin } = useUserRole();
   
@@ -413,6 +422,20 @@ export default function Clients() {
                       </p>
                     )}
                   </div>
+
+                  {/* Lead Origin Section - shows onboarding form data and offer from lead */}
+                  {(() => {
+                    const originLead = getLeadByClientId(client.id);
+                    if (!originLead) return null;
+                    return (
+                      <div className="mb-6">
+                        <LeadOriginSection 
+                          lead={originLead} 
+                          onStopPropagation={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    );
+                  })()}
 
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {/* Firemní údaje */}

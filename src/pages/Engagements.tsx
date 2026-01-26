@@ -47,7 +47,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
-import { useLeadsData } from '@/hooks/useLeadsData';
 import { EngagementForm } from '@/components/forms/EngagementForm';
 import { AssignmentForm } from '@/components/forms/AssignmentForm';
 import { AddEngagementServiceDialog } from '@/components/forms/AddEngagementServiceDialog';
@@ -57,7 +56,6 @@ import { EngagementInvoicingSection } from '@/components/engagements/EngagementI
 import { EndEngagementDialog } from '@/components/engagements/EndEngagementDialog';
 import { EngagementHistoryDialog } from '@/components/engagements/EngagementHistoryDialog';
 import { EditAssignmentDialog } from '@/components/engagements/EditAssignmentDialog';
-import { LeadOriginSection } from '@/components/engagements/LeadOriginSection';
 import { serviceTierConfigs } from '@/constants/services';
 import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier } from '@/types/crm';
 import { ADVERTISING_PLATFORMS } from '@/types/crm';
@@ -113,14 +111,6 @@ function EngagementsContent() {
     getClientMonthByClientId,
     updateClientMonth,
   } = useCreativeBoostData();
-
-  // Get leads data to display origin information
-  const { leads } = useLeadsData();
-  
-  // Helper to find the lead that was converted to this engagement
-  const getLeadByEngagementId = useCallback((engagementId: string) => {
-    return leads.find(lead => lead.converted_to_engagement_id === engagementId);
-  }, [leads]);
   
   // Current month for filters and Creative Boost overview
   const currentDate = new Date();
@@ -1365,17 +1355,6 @@ function EngagementsContent() {
                       )}
                     </div>
 
-                    {/* Lead Origin Section - shows onboarding form data and offer from lead */}
-                    {(() => {
-                      const originLead = getLeadByEngagementId(engagement.id);
-                      if (!originLead) return null;
-                      return (
-                        <LeadOriginSection 
-                          lead={originLead} 
-                          onStopPropagation={(e) => e.stopPropagation()}
-                        />
-                      );
-                    })()}
                   </div>
                 </CardContent>
               )}
