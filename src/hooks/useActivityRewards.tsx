@@ -147,8 +147,9 @@ export function useActivityRewards(colleagueId: string | null) {
 
   const rewards = useMemo(() => {
     if (!colleagueId) return [];
+    // Zahrnout jak položky přihlášeného kolegy, tak vzorová data s 'demo-colleague'
     return allRewards
-      .filter(r => r.colleague_id === colleagueId)
+      .filter(r => r.colleague_id === colleagueId || r.colleague_id === 'demo-colleague')
       .sort((a, b) => new Date(b.activity_date).getTime() - new Date(a.activity_date).getTime());
   }, [allRewards, colleagueId]);
 
