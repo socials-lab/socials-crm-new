@@ -429,14 +429,14 @@ export function AddEngagementServiceDialog({
               <div className="grid gap-2">
                 <Label className="text-sm text-muted-foreground">Prodal kolega</Label>
                 <Select 
-                  value={upsoldById || ''} 
-                  onValueChange={(val) => setUpsoldById(val || null)}
+                  value={upsoldById || 'none'} 
+                  onValueChange={(val) => setUpsoldById(val === 'none' ? null : val)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Žádný upsell" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Žádný upsell</SelectItem>
+                    <SelectItem value="none">Žádný upsell</SelectItem>
                     {activeColleagues.map(col => (
                       <SelectItem key={col.id} value={col.id}>
                         {col.full_name}
