@@ -10,13 +10,14 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Info, Plus } from 'lucide-react';
+import { CalendarIcon, Info, Plus, FileText } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useAuth } from '@/hooks/useAuth';
 import type { ModificationRequestType, ServiceTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { SERVICE_DETAILS } from '@/constants/serviceDetails';
 
 interface ProposeModificationDialogProps {
   open: boolean;
@@ -74,6 +75,10 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
 
   // For update_assignment / remove_assignment
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
+
+  // Service description fields for client-facing offer
+  const [serviceDescription, setServiceDescription] = useState('');
+  const [serviceDeliverables, setServiceDeliverables] = useState('');
 
   // Detect Creative Boost
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
@@ -141,15 +146,29 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
       setMonthlyCost(0);
       setPercentageOfRevenue(0);
       setSelectedAssignmentId('');
+      setServiceDescription('');
+      setServiceDeliverables('');
     }
   }, [open]);
 
-  // Auto-fill service name when selecting from catalog
+  // Auto-fill service name and description when selecting from catalog
   useEffect(() => {
     if (selectedServiceId && selectedServiceId !== 'custom') {
       const service = services.find(s => s.id === selectedServiceId);
       if (service) {
         setServiceName(service.name);
+        
+        // Load service description from SERVICE_DETAILS or service.description
+        const details = SERVICE_DETAILS[service.code];
+        if (details) {
+          setServiceDescription(details.tagline || '');
+          // Use benefits as deliverables (first 4-5 items)
+          setServiceDeliverables(details.benefits?.slice(0, 5).join('\n') || '');
+        } else {
+          setServiceDescription(service.description || '');
+          setServiceDeliverables('');
+        }
+        
         if (service.code === CREATIVE_BOOST_CODE) {
           // Creative Boost: set defaults, price is calculated from credits
           setCbMaxCredits(50);
@@ -168,6 +187,10 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
           setSelectedTier('none');
         }
       }
+    } else if (selectedServiceId === 'custom') {
+      // Custom service - clear description
+      setServiceDescription('');
+      setServiceDeliverables('');
     }
   }, [selectedServiceId, services]);
 
@@ -209,6 +232,8 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
             currency: serviceCurrency,
             billing_type: serviceBillingType,
             selected_tier: selectedTier === 'none' ? null : selectedTier,
+            description: serviceDescription || undefined,
+            deliverables: serviceDeliverables ? serviceDeliverables.split('\n').filter(Boolean) : undefined,
           };
         }
         break;
@@ -478,6 +503,40 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                       </Select>
                     </div>
                   )}
+
+                  {/* Service description for client */}
+                  <div className="space-y-4 mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <h5 className="font-medium text-sm text-blue-900 dark:text-blue-300">Popis služby pro klienta</h5>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm">Stručný popis</Label>
+                      <Textarea 
+                        value={serviceDescription}
+                        onChange={(e) => setServiceDescription(e.target.value)}
+                        placeholder="Např. Komplexní správa reklamních kampaní na Facebooku a Instagramu"
+                        rows={2}
+                        className="text-sm"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm">Co klient dostane (každý řádek = 1 bod)</Label>
+                      <Textarea 
+                        value={serviceDeliverables}
+                        onChange={(e) => setServiceDeliverables(e.target.value)}
+                        placeholder="• Kompletní správa Meta Ads&#10;• Looker Studio reporting 24/7&#10;• Měsíční strategické konzultace"
+                        rows={4}
+                        className="text-sm font-mono"
+                      />
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground">
+                      ⓘ Pro služby z katalogu se popis načte automaticky - můžete ho upravit
+                    </p>
+                  </div>
                 </>
               )}
             </div>
