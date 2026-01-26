@@ -234,6 +234,8 @@ export interface EngagementService {
   // Upsell tracking - who sold this service
   upsold_by_id: string | null;
   upsell_commission_percent: number | null;
+  // Effective date for prorated billing
+  effective_from: string | null; // Date when this service starts (for mid-month proration)
   created_at: string;
   updated_at: string;
 }

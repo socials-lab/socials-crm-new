@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format, getDaysInMonth, differenceInDays, startOfMonth, endOfMonth, isFirstDayOfMonth } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -27,8 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, CalendarIcon, Calculator, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { Service, EngagementService, ServiceTier } from '@/types/crm';
 import { serviceTierConfigs } from '@/constants/services';
@@ -49,6 +58,8 @@ const engagementServiceSchema = z.object({
   creative_boost_max_credits: z.coerce.number().nullable(),
   creative_boost_price_per_credit: z.coerce.number().nullable(),
   creative_boost_colleague_reward_per_credit: z.coerce.number().nullable(),
+  // Effective date for prorated billing
+  effective_from: z.date().nullable(),
 });
 
 type EngagementServiceFormData = z.infer<typeof engagementServiceSchema>;
@@ -59,6 +70,23 @@ interface AddEngagementServiceDialogProps {
   engagementId: string;
   services: Service[];
   onSubmit: (data: Omit<EngagementService, 'id' | 'created_at' | 'updated_at'>) => void;
+}
+
+// Proration calculation helper
+function calculateProration(effectiveFrom: Date, monthlyPrice: number) {
+  const daysInMonth = getDaysInMonth(effectiveFrom);
+  const monthEnd = endOfMonth(effectiveFrom);
+  const daysRemaining = differenceInDays(monthEnd, effectiveFrom) + 1; // Include start day
+  const proratedAmount = Math.round((monthlyPrice / daysInMonth) * daysRemaining);
+  const isProrated = !isFirstDayOfMonth(effectiveFrom);
+  
+  return {
+    daysInMonth,
+    daysRemaining,
+    proratedAmount,
+    isProrated,
+    percentOfMonth: Math.round((daysRemaining / daysInMonth) * 100),
+  };
 }
 
 export function AddEngagementServiceDialog({
@@ -87,16 +115,32 @@ export function AddEngagementServiceDialog({
       creative_boost_max_credits: null,
       creative_boost_price_per_credit: null,
       creative_boost_colleague_reward_per_credit: null,
+      effective_from: new Date(), // Default to today
     },
   });
 
   const selectedServiceId = form.watch('service_id');
   const selectedTier = form.watch('selected_tier');
+  const effectiveFrom = form.watch('effective_from');
+  const billingType = form.watch('billing_type');
   
   const selectedService = services.find(s => s.id === selectedServiceId);
-  // Detect Creative Boost by code, not by hardcoded ID
   const isCreativeBoost = selectedService?.code === CREATIVE_BOOST_CODE;
   const isCoreService = selectedService?.service_type === 'core';
+
+  // Calculate proration info
+  const prorationInfo = useMemo(() => {
+    if (!effectiveFrom || billingType === 'one_off') return null;
+    
+    // Get monthly price (for Creative Boost, calculate from credits)
+    const monthlyPrice = isCreativeBoost 
+      ? (form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)
+      : form.watch('price');
+    
+    if (monthlyPrice <= 0) return null;
+    
+    return calculateProration(effectiveFrom, monthlyPrice);
+  }, [effectiveFrom, billingType, isCreativeBoost, form.watch('price'), form.watch('creative_boost_max_credits'), form.watch('creative_boost_price_per_credit')]);
 
   // Auto-fill name and price when service is selected
   const handleServiceChange = (serviceId: string) => {
@@ -106,7 +150,6 @@ export function AddEngagementServiceDialog({
       if (!form.getValues('name')) {
         form.setValue('name', service.name);
       }
-      // Set default values for Creative Boost (detect by code)
       if (service.code === CREATIVE_BOOST_CODE) {
         form.setValue('creative_boost_min_credits', 0);
         form.setValue('creative_boost_max_credits', 50);
@@ -115,18 +158,15 @@ export function AddEngagementServiceDialog({
         form.setValue('price', 0);
         form.setValue('selected_tier', null);
       } else if (service.service_type === 'core') {
-        // Core service - reset and wait for tier selection
         form.setValue('creative_boost_min_credits', null);
         form.setValue('creative_boost_max_credits', null);
         form.setValue('creative_boost_price_per_credit', null);
         form.setValue('creative_boost_colleague_reward_per_credit', null);
-        form.setValue('selected_tier', 'growth'); // Default to GROWTH
-        // Auto-fill price from GROWTH tier
+        form.setValue('selected_tier', 'growth');
         const growthPricing = service.tier_pricing?.find(p => p.tier === 'growth');
         form.setValue('price', growthPricing?.price ?? 0);
         form.setValue('currency', service.currency);
       } else {
-        // Add-on service
         form.setValue('creative_boost_min_credits', null);
         form.setValue('creative_boost_max_credits', null);
         form.setValue('creative_boost_price_per_credit', null);
@@ -138,7 +178,6 @@ export function AddEngagementServiceDialog({
     }
   };
 
-  // Handle tier change for Core services
   const handleTierChange = (tier: string) => {
     form.setValue('selected_tier', tier);
     if (selectedService?.tier_pricing) {
@@ -146,7 +185,6 @@ export function AddEngagementServiceDialog({
       if (tierPricing?.price !== null && tierPricing?.price !== undefined) {
         form.setValue('price', tierPricing.price);
       } else {
-        // Individuální kalkulace - set to 0, user must enter manually
         form.setValue('price', 0);
       }
     }
@@ -166,20 +204,18 @@ export function AddEngagementServiceDialog({
       currency: data.currency,
       is_active: true,
       notes: data.notes,
-      // Core service tier selection
       selected_tier: isCore ? (data.selected_tier as ServiceTier || null) : null,
       creative_boost_min_credits: data.creative_boost_min_credits,
       creative_boost_max_credits: data.creative_boost_max_credits,
       creative_boost_price_per_credit: data.creative_boost_price_per_credit,
       creative_boost_colleague_reward_per_credit: data.creative_boost_colleague_reward_per_credit,
-      // One-off invoicing tracking
       invoicing_status: isOneOff ? 'pending' : 'not_applicable',
       invoiced_at: null,
       invoiced_in_period: null,
       invoice_id: null,
-      // Upsell tracking
       upsold_by_id: upsoldById,
       upsell_commission_percent: upsoldById ? 10 : null,
+      effective_from: data.effective_from ? format(data.effective_from, 'yyyy-MM-dd') : null,
     });
     form.reset();
     setUpsoldById(null);
@@ -477,6 +513,84 @@ export function AddEngagementServiceDialog({
               )}
             />
 
+            {/* Effective From Date - for prorated billing */}
+            {billingType === 'monthly' && (
+              <FormField
+                control={form.control}
+                name="effective_from"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Od kdy služba platí</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "d. MMMM yyyy", { locale: cs })
+                            ) : (
+                              <span>Vyberte datum</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ?? undefined}
+                          onSelect={field.onChange}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription className="text-xs">
+                      Pokud začátek není 1. den měsíce, bude fakturace poměrná.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Proration Calculator */}
+            {prorationInfo && prorationInfo.isProrated && (
+              <div className="p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 space-y-3">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <Calculator className="h-4 w-4" />
+                  <span className="font-medium text-sm">Kalkulace poměrné fakturace</span>
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Dní do konce měsíce:</span>
+                    <span className="font-medium">{prorationInfo.daysRemaining} z {prorationInfo.daysInMonth}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Procento měsíce:</span>
+                    <span className="font-medium">{prorationInfo.percentOfMonth}%</span>
+                  </div>
+                  <div className="pt-2 border-t border-amber-200 dark:border-amber-800 flex justify-between">
+                    <span className="font-medium">Fakturace za {effectiveFrom ? format(effectiveFrom, 'MMMM', { locale: cs }) : 'měsíc'}:</span>
+                    <span className="font-bold text-primary">
+                      {prorationInfo.proratedAmount.toLocaleString('cs-CZ')} {form.getValues('currency')}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span>Od následujícího měsíce bude fakturována plná částka.</span>
+                </div>
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="notes"
@@ -517,10 +631,14 @@ export function AddEngagementServiceDialog({
                 </Select>
               </div>
               {upsoldById && (() => {
-                // Calculate commission base: for Creative Boost use credits × price/credit
-                const commissionBase = isCreativeBoost 
+                // Calculate commission base - use prorated amount if applicable
+                const fullPrice = isCreativeBoost 
                   ? (form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)
                   : watchedPrice;
+                
+                const commissionBase = prorationInfo?.isProrated 
+                  ? prorationInfo.proratedAmount 
+                  : fullPrice;
                 
                 if (commissionBase > 0) {
                   return (
@@ -529,7 +647,7 @@ export function AddEngagementServiceDialog({
                         Provize 10% z první fakturace ({commissionBase.toLocaleString('cs-CZ')} {form.getValues('currency')}):
                       </p>
                       <p className="text-green-600 font-medium">
-                        💰 {(commissionBase * 0.1).toLocaleString('cs-CZ')} {form.getValues('currency')}
+                        💰 {Math.round(commissionBase * 0.1).toLocaleString('cs-CZ')} {form.getValues('currency')}
                       </p>
                     </div>
                   );
