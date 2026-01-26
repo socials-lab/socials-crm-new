@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { 
@@ -12,6 +12,9 @@ import {
   Calendar,
   User,
   Building2,
+  Copy,
+  Link2,
+  CheckCircle2,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +28,10 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { getUpgradeOfferByModificationId } from '@/data/upgradeOffersMockData';
+import type { EngagementUpgradeOffer } from '@/types/upgradeOffer';
 import type { 
   ModificationRequestWithDetails, 
   ModificationRequestType,
@@ -80,6 +87,14 @@ export function ModificationRequestCard({
 }: ModificationRequestCardProps) {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [upgradeOffer, setUpgradeOffer] = useState<EngagementUpgradeOffer | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  
+  // Fetch upgrade offer for this request
+  useEffect(() => {
+    const offer = getUpgradeOfferByModificationId(request.id);
+    setUpgradeOffer(offer);
+  }, [request.id]);
   
   const Icon = REQUEST_TYPE_ICONS[request.request_type];
   const colorClass = REQUEST_TYPE_COLORS[request.request_type];
@@ -96,6 +111,16 @@ export function ModificationRequestCard({
     await onReject(request.id, rejectionReason);
     setIsRejectDialogOpen(false);
     setRejectionReason('');
+  };
+  
+  const handleCopyLink = async () => {
+    if (upgradeOffer) {
+      const link = `${window.location.origin}/upgrade/${upgradeOffer.token}`;
+      await navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      toast.success('Odkaz zkopírován');
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
   };
 
   // Check if actions should be shown
@@ -226,9 +251,18 @@ export function ModificationRequestCard({
               {/* Header */}
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <Badge variant="outline" className="mb-1">
-                    {typeLabel}
-                  </Badge>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="outline">
+                      {typeLabel}
+                    </Badge>
+                    {/* Client confirmation badge */}
+                    {upgradeOffer?.status === 'accepted' && (
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Klient potvrdil
+                      </Badge>
+                    )}
+                  </div>
                   <h4 className="font-medium text-sm flex items-center gap-2">
                     <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                     {clientName}
@@ -266,6 +300,13 @@ export function ModificationRequestCard({
                 </p>
               )}
               
+              {/* Client acceptance info */}
+              {upgradeOffer?.status === 'accepted' && upgradeOffer.accepted_at && (
+                <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
+                  📧 Klient potvrdil: {format(new Date(upgradeOffer.accepted_at), 'd.M.yyyy v H:mm')} ({upgradeOffer.accepted_by_email})
+                </div>
+              )}
+              
               {/* Footer */}
               <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -292,6 +333,18 @@ export function ModificationRequestCard({
                 {/* Actions for pending requests */}
                 {showActions && (
                   <div className="flex items-center gap-2">
+                    {/* Copy link button */}
+                    {upgradeOffer && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8"
+                        onClick={handleCopyLink}
+                      >
+                        {linkCopied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                        {linkCopied ? 'Zkopírováno' : 'Odkaz'}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

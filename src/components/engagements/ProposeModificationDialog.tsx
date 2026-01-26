@@ -10,11 +10,15 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, getDaysInMonth, differenceInDays, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Info, Plus } from 'lucide-react';
+import { CalendarIcon, Info, Plus, Check, Copy, Link2, ExternalLink } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
+import { useAuth } from '@/hooks/useAuth';
 import type { ModificationRequestType, ServiceTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
+import { isClientFacingRequestType } from '@/types/upgradeOffer';
+import { createUpgradeOffer } from '@/data/upgradeOffersMockData';
+import { toast } from 'sonner';
 
 interface ProposeModificationDialogProps {
   open: boolean;
@@ -33,6 +37,10 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
 export function ProposeModificationDialog({ open, onOpenChange }: ProposeModificationDialogProps) {
   const { engagements, clients, services, colleagues, engagementServices, assignments, getEngagementServicesByEngagementId, getAssignmentsByEngagementId } = useCRMData();
   const { createRequest, isCreating } = useModificationRequests();
+  const { user } = useAuth();
+  
+  // Find colleague record for current user
+  const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
 
   // Form state
   const [selectedEngagementId, setSelectedEngagementId] = useState<string>('');
@@ -68,6 +76,12 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
 
   // For update_assignment / remove_assignment
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
+
+  // Success dialog state
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [generatedOfferLink, setGeneratedOfferLink] = useState<string | null>(null);
+  const [offerSummary, setOfferSummary] = useState<{ name: string; price: number; currency: string; effectiveFrom: string } | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Detect Creative Boost
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
@@ -135,6 +149,11 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
       setMonthlyCost(0);
       setPercentageOfRevenue(0);
       setSelectedAssignmentId('');
+      // Reset success dialog state
+      setShowSuccessDialog(false);
+      setGeneratedOfferLink(null);
+      setOfferSummary(null);
+      setLinkCopied(false);
     }
   }, [open]);
 
@@ -260,9 +279,70 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
         upsold_by_id: upsoldById === 'none' ? null : upsoldById,
         note: note || null,
       });
+      
+      // Check if this is a client-facing request type
+      if (isClientFacingRequestType(requestType) && effectiveFrom) {
+        const engagement = engagements.find(e => e.id === selectedEngagementId);
+        const client = engagement ? clients.find(c => c.id === engagement.client_id) : null;
+        
+        if (engagement && client) {
+          // Determine price and name for summary
+          let summaryPrice = 0;
+          let summaryName = '';
+          
+          if (requestType === 'add_service') {
+            summaryName = serviceName;
+            summaryPrice = isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice;
+          } else if (requestType === 'update_service_price') {
+            const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+            summaryName = engService?.name || 'Služba';
+            summaryPrice = newPrice;
+          } else if (requestType === 'deactivate_service') {
+            const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+            summaryName = engService?.name || 'Služba';
+          }
+          
+          // Create upgrade offer
+          const offer = createUpgradeOffer({
+            modificationRequestId: crypto.randomUUID(), // In production this would come from the created request
+            engagementId: selectedEngagementId,
+            engagementName: engagement.name,
+            clientName: client.brand_name || client.name,
+            changeType: requestType,
+            proposedChanges: proposed_changes as any,
+            effectiveFrom: format(effectiveFrom, 'yyyy-MM-dd'),
+            contactName: currentUserColleague?.full_name || 'Tým Socials.cz',
+            contactEmail: currentUserColleague?.email || 'info@socials.cz',
+            contactPhone: currentUserColleague?.phone || undefined,
+          });
+          
+          // Set success dialog state
+          const baseUrl = window.location.origin;
+          setGeneratedOfferLink(`${baseUrl}/upgrade/${offer.token}`);
+          setOfferSummary({
+            name: summaryName,
+            price: summaryPrice,
+            currency: serviceCurrency,
+            effectiveFrom: format(effectiveFrom, 'd. MMMM yyyy', { locale: cs }),
+          });
+          setShowSuccessDialog(true);
+          return; // Don't close the dialog yet - show success state
+        }
+      }
+      
+      // For non-client-facing requests, just close
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to create modification request:', error);
+    }
+  };
+  
+  const handleCopyLink = async () => {
+    if (generatedOfferLink) {
+      await navigator.clipboard.writeText(generatedOfferLink);
+      setLinkCopied(true);
+      toast.success('Odkaz zkopírován');
+      setTimeout(() => setLinkCopied(false), 2000);
     }
   };
 
@@ -277,6 +357,83 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
     const colleague = colleagues.find(c => c.id === colleagueId);
     return colleague?.full_name || 'Neznámý kolega';
   };
+
+  // Success dialog content
+  if (showSuccessDialog && generatedOfferLink) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <Check className="h-5 w-5" />
+              Požadavek na úpravu byl vytvořen
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Link2 className="h-4 w-4" />
+                Odkaz pro klienta
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Pošlete tento odkaz klientovi pro potvrzení změny:
+              </p>
+              
+              <div className="flex gap-2">
+                <Input 
+                  value={generatedOfferLink} 
+                  readOnly 
+                  className="font-mono text-xs"
+                />
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={handleCopyLink}
+                >
+                  {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => window.open(generatedOfferLink, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {offerSummary && (
+              <Alert className="bg-muted/50">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <p className="font-medium mb-1">Klient uvidí:</p>
+                  <ul className="text-sm space-y-1">
+                    <li>• Služba: {offerSummary.name}</li>
+                    {offerSummary.price > 0 && (
+                      <li>• Cena: {offerSummary.price.toLocaleString('cs-CZ')} {offerSummary.currency}/měs</li>
+                    )}
+                    <li>• Od: {offerSummary.effectiveFrom}</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <p className="text-sm text-muted-foreground">
+              Po potvrzení klientem se požadavek automaticky označí jako "Klient souhlasí" 
+              a můžete ho schválit.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => onOpenChange(false)}>
+              Zavřít
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
