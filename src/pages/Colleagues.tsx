@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ChevronDown, ChevronUp, Mail, CreditCard, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus } from 'lucide-react';
+import { Search, Plus, ChevronDown, ChevronUp, Mail, CreditCard, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus, History, Clock } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { ColleagueForm } from '@/components/forms/ColleagueForm';
 import { UserManagement } from '@/components/settings/UserManagement';
+import { CapacityHistoryDialog } from '@/components/colleagues/CapacityHistoryDialog';
 import type { ColleagueStatus, Seniority, Colleague } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -71,6 +72,7 @@ function ColleaguesContent() {
   const [expandedColleagueId, setExpandedColleagueId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingColleague, setEditingColleague] = useState<Colleague | null>(null);
+  const [capacityHistoryColleague, setCapacityHistoryColleague] = useState<Colleague | null>(null);
   
   // Inline editing for assignment costs (super admin only)
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
@@ -389,6 +391,31 @@ function ColleaguesContent() {
                               {colleague.internal_hourly_cost.toLocaleString()} CZK/hod
                             </p>
                           </div>
+                          <div className="p-3 rounded-lg bg-background border">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Kapacita
+                                </p>
+                                <p className="text-lg font-semibold">
+                                  {colleague.capacity_hours_per_month ?? '—'} hod/měs
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 gap-1 text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCapacityHistoryColleague(colleague);
+                                }}
+                              >
+                                <History className="h-3.5 w-3.5" />
+                                Historie
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -556,6 +583,12 @@ function ColleaguesContent() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <CapacityHistoryDialog
+        colleague={capacityHistoryColleague}
+        open={!!capacityHistoryColleague}
+        onOpenChange={(open) => !open && setCapacityHistoryColleague(null)}
+      />
 
         </TabsContent>
 
