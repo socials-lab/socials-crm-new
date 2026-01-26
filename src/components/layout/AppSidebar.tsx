@@ -25,6 +25,7 @@ const mainNavItems = [
   { title: '📋 Zakázky', url: '/engagements', page: 'engagements' },
   // Práce & dodávka
   { title: '🔧 Vícepráce', url: '/extra-work', page: 'extra-work' },
+  { title: '💰 Provize', url: '/upsells', page: 'upsells' },
   { title: '🎨 Creative Boost', url: '/creative-boost', page: 'creative-boost' },
   { title: '📅 Meetingy', url: '/meetings', page: 'meetings' },
   // Finance & služby

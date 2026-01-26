@@ -5,7 +5,6 @@ import { cs } from 'date-fns/locale';
 import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { UpsellSummaryCard } from '@/components/upsells/UpsellSummaryCard';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -363,11 +362,6 @@ function EngagementsContent() {
           </SelectContent>
         </Select>
       </div>
-
-      {/* Upsell Summary Card - visible for users with financial access */}
-      {canSeeFinancials && (
-        <UpsellSummaryCard className="mb-4" />
-      )}
 
       <div className="space-y-3">
         {filteredEngagements.length === 0 ? (
