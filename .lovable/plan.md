@@ -1,119 +1,164 @@
 
-# Plan: Fakturace dle SOP na stránce Můj přehled
+# Plán: Přehledné rozdělení klientské a interní práce
 
-## Shrnutí
-Upravíme sekci "Činnosti k fakturaci" na "Fakturace" s důrazem na správné pojmenování položek podle SOP. Přidáme výběr kategorie (Marketing, Režijní služby) a automatické generování názvů položek pro fakturu.
+## Shrnutí změn
+Přepracujeme stránku "Můj přehled" tak, aby jasně oddělovala:
+- **Klientská práce** = Moje zakázky + Odměny tento měsíc (s poměrnou částkou)
+- **Interní práce** = nová sekce pro marketing/režii (propojená s fakturací)
+- **Odstranění meetingů** = sekce "Dnešní meetingy" bude zcela odstraněna
 
-## Změny
-
-### 1. Aktualizace datového modelu činností
-**Soubor:** `src/hooks/useActivityRewards.tsx`
-
-Rozšíříme interface `ActivityReward` o nová pole:
-- `category`: typ kategorie ('marketing' | 'overhead') - pouze pro interní činnosti (ne přímé služby na klientech)
-- `invoice_item_name`: automaticky vygenerovaný název položky pro fakturu
-
-### 2. Aktualizace dialogu pro přidání činnosti
-**Soubor:** `src/components/my-work/AddActivityRewardDialog.tsx`
-
-- Přidáme výběr **kategorie** jako první krok:
-  - **Marketing** - činnosti pro Socials související s marketingem
-  - **Režijní služby** - interní projekty, sales, administrativa
-
-- Přidáme **informační box** vysvětlující SOP formát:
-  - Marketing: `Marketing – popis činnosti`
-  - Režijní služby: `Režijní služby – popis činnosti`
-
-- Automatické generování názvu položky pro fakturu na základě kategorie a popisu
-
-### 3. Přejmenování a redesign hlavní komponenty
-**Soubor:** `src/components/my-work/ActivityRewardsHistory.tsx`
-
-Přejmenujeme na **"Fakturace"** a upravíme:
-
-- **Hlavní sekce "Co fakturovat tento měsíc":**
-  - Zobrazíme seznam položek s přesným názvem pro fakturu
-  - Možnost kopírovat název položky do schránky
-  - Seskupení podle kategorie (Marketing, Režijní služby)
-
-- **Sekce historie:**
-  - Filtrování podle měsíce/roku
-  - Zobrazení položek s generovaným názvem pro fakturu
-
-### 4. Přidání SOP nápovědy
-Vytvoříme informační panel vysvětlující pravidla fakturace:
+## Nový layout stránky
 
 ```text
-Pravidla pro položky na faktuře:
-- Marketing – popis činnosti (např. Marketing – tvorba video obsahu)
-- Režijní služby – popis činnosti (např. Režijní služby – interní reportingová šablona)
++------------------------------------------+
+| 👋 Ahoj, [jméno]                         |
+| [Quick stats cards bez meetingů]         |
++------------------------------------------+
+
++------------------------------------------+
+| 📋 Moje zakázky                          |
+|   [Klient]     | 20 000 Kč / měsíc       |
+|                | Spolupráce od: 1.1.2025  |
+|   [Klient 2]   | 15 000 Kč / měsíc       |
+|                | Spolupráce od: 15.1.2026 |
++------------------------------------------+
+
++------------------------------------------+
+| 💰 Odměny tento měsíc (klientská práce)  |
+|   Klient X                     20 000 Kč |
+|   Klient Y (poměr. od 15.1.)    8 710 Kč |
+|   Creative Boost                3 000 Kč |
+|   Schválené provize             2 000 Kč |
+|   --------------------------------       |
+|   Celkem za klientskou práci   33 710 Kč |
++------------------------------------------+
+
++------------------------------------------+
+| 🏢 Interní práce                [Přidat] |
+|   (práce mimo klienty - marketing/režie) |
+|                                          |
+|   Marketing – tvorba videa     4 000 Kč  |
+|   Režijní služby – CRM         8 000 Kč  |
+|   --------------------------------       |
+|   Celkem                       12 000 Kč |
++------------------------------------------+
+
++------------------------------------------+
+| 📄 Fakturace                             |
+|   (historie a přehled pro fakturaci)     |
++------------------------------------------+
 ```
+
+## Detailní změny
+
+### 1. Moje zakázky - přidat datum začátku spolupráce
+**Soubor:** `src/pages/MyWork.tsx`
+
+- U každé zakázky zobrazit datum začátku spolupráce (`assignment.start_date`)
+- Celková cena zůstává plná měsíční odměna (bez poměru)
+
+### 2. Odměny tento měsíc - pouze klientská práce s poměrem
+**Soubor:** `src/pages/MyWork.tsx`
+
+- **ODSTRANIT** řádek "Ostatní činnosti" (interní práce sem nepatří!)
+- Přidat logiku poměrné odměny:
+  - Pokud `assignment.start_date` je v aktuálním měsíci = poměrná částka
+  - Zobrazit u každého klienta zvlášť s poznámkou o poměru
+- Aktualizovat celkový součet (bez interní práce)
+
+### 3. ODSTRANIT sekci "Dnešní meetingy"
+**Soubor:** `src/pages/MyWork.tsx`
+
+- Celá karta "Dnešní meetingy" bude odstraněna
+- Odstranit také import `useMeetingsData` pokud už není potřeba jinde
+- Odstranit quick stat kartu pro meetingy
+
+### 4. NOVÁ sekce "Interní práce"
+**Soubor:** `src/pages/MyWork.tsx`
+
+Nová karta místo meetingů:
+- Nadpis "Interní práce" s tlačítkem "Přidat"
+- Info text: "Práce mimo klienty (marketing, režijní služby)"
+- Seznam činností z aktuálního měsíce (z `activityRewards`)
+- Mezisoučet
+- Kliknutím na "Přidat" otevře `AddActivityRewardDialog`
+
+### 5. Fakturace - upřesnění účelu
+**Soubor:** `src/components/my-work/ActivityRewardsHistory.tsx`
+
+- Přejmenovat na "Fakturace – interní práce"
+- Přidat jasnější vysvětlení:
+  - "Zde je přehled interní práce pro fakturaci"
+  - "Klientská práce se fakturuje automaticky přes zakázky"
 
 ## Technické detaily
 
-### Aktualizovaný interface ActivityReward
+### Výpočet poměrné odměny
 ```typescript
-export type ActivityCategory = 'marketing' | 'overhead';
-
-export interface ActivityReward {
-  id: string;
-  colleague_id: string;
-  category: ActivityCategory;
-  description: string;
-  invoice_item_name: string; // Auto-generated
-  billing_type: 'fixed' | 'hourly';
-  amount: number;
-  hours: number | null;
-  hourly_rate: number | null;
-  activity_date: string;
-  created_at: string;
+function calculateProratedReward(
+  monthlyAmount: number,
+  startDate: string | null,
+  targetYear: number,
+  targetMonth: number
+): { amount: number; isProrated: boolean; startDay: number | null } {
+  if (!startDate) {
+    return { amount: monthlyAmount, isProrated: false, startDay: null };
+  }
+  
+  const start = parseISO(startDate);
+  const monthStart = startOfMonth(new Date(targetYear, targetMonth - 1));
+  const daysInMonth = getDaysInMonth(monthStart);
+  
+  // Pokud začátek je před tímto měsícem = plná odměna
+  if (isBefore(start, monthStart)) {
+    return { amount: monthlyAmount, isProrated: false, startDay: null };
+  }
+  
+  // Pokud začátek je v tomto měsíci
+  if (isSameMonth(start, monthStart)) {
+    const startDay = getDate(start);
+    if (startDay === 1) {
+      return { amount: monthlyAmount, isProrated: false, startDay: 1 };
+    }
+    const daysWorked = daysInMonth - startDay + 1;
+    const proratedAmount = Math.round((monthlyAmount / daysInMonth) * daysWorked);
+    return { amount: proratedAmount, isProrated: true, startDay };
+  }
+  
+  // Začátek je v budoucnosti
+  return { amount: 0, isProrated: true, startDay: null };
 }
 ```
 
-### Generování názvu položky
+### Struktura dat pro klientské odměny
 ```typescript
-function generateInvoiceItemName(category: ActivityCategory, description: string): string {
-  const categoryLabels = {
-    marketing: 'Marketing',
-    overhead: 'Režijní služby',
-  };
-  return `${categoryLabels[category]} – ${description}`;
+interface ClientRewardItem {
+  clientName: string;
+  fullMonthlyAmount: number;
+  proratedAmount: number;
+  isProrated: boolean;
+  startDate: string | null;
 }
 ```
 
-### UI layout sekce Fakturace
-```text
-+------------------------------------------+
-| 📄 Fakturace                    [Přidat] |
-+------------------------------------------+
-| ℹ️ Položky na faktuře musí začínat:      |
-|    Marketing – nebo Režijní služby –     |
-+------------------------------------------+
-| Co fakturovat za [Leden ▼] [2026 ▼]      |
-+------------------------------------------+
-| Celkem: 15 000 Kč                        |
-+------------------------------------------+
-| Marketing                                |
-| ┌────────────────────────────────────┐   |
-| │ Marketing – tvorba video obsahu    │📋 |
-| │ 5. 1. 2026 • 8h × 500 Kč           │   |
-| │                         4 000 Kč 🗑│   |
-| └────────────────────────────────────┘   |
-+------------------------------------------+
-| Režijní služby                           |
-| ┌────────────────────────────────────┐   |
-| │ Režijní služby – interní CRM       │📋 |
-| │ 10. 1. 2026 • Fixní                │   |
-| │                        11 000 Kč 🗑│   |
-| └────────────────────────────────────┘   |
-+------------------------------------------+
-| Historie po měsících                     |
-| Led 2026: 15 000 Kč | Pro 2025: 8 000 Kč |
-+------------------------------------------+
-```
+## Změny v souborech
 
-## Migrace existujících dat
-Pro zpětnou kompatibilitu - existující záznamy bez kategorie budou automaticky označeny jako "Režijní služby" a invoice_item_name bude vygenerován z popisu.
+| Soubor | Změna |
+|--------|-------|
+| `src/pages/MyWork.tsx` | Hlavní přepracování - odstranění meetingů, přidání interní práce, poměrné odměny |
+| `src/components/my-work/ActivityRewardsHistory.tsx` | Úprava nadpisu a vysvětlení |
 
-## Poznámka k přímým službám
-Přímé služby (práce na klientech) jsou již sledovány v sekci "Moje zakázky" a v systému engagements. Tato sekce "Fakturace" je určena pouze pro činnosti MIMO přímou práci na klientech (marketing a režie).
+## Vizuální změny
+
+### Quick stats (horní karty)
+- **Zachovat:** zakázky, měsíční příjem
+- **ODSTRANIT:** meetingy dnes
+- **Přidat:** případně "Interní práce" jako novou kartu
+
+### Grid layout
+Změna z `lg:grid-cols-2` na:
+- Moje zakázky (vlevo)
+- Odměny tento měsíc (vpravo)  
+- Interní práce (celá šířka nebo vlevo)
+- Kontakty kolegů (vpravo)
+- Fakturace (celá šířka)
