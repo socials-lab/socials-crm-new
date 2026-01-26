@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { Loader2, Star, Key } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -81,8 +80,9 @@ export function AddContactDialog({
   contact,
   onSubmit,
 }: AddContactDialogProps) {
-  const { getPrimaryContact, getClientById, clients: allClients } = useCRMData();
+  const { getPrimaryContact, getClientById, clients: allClients, setContactAsPrimary, updateContact } = useCRMData();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSettingRole, setIsSettingRole] = useState(false);
 
   // Filter clients to only show active ones (not lost/paused) when showing selector
   // Issue #18: Hide inactive clients from dropdown
@@ -102,15 +102,38 @@ export function AddContactDialog({
   });
 
   const { reset, watch } = form;
-  const watchClientId = watch('client_id');
-  const watchIsPrimary = watch('is_primary');
   const watchNotes = watch('notes');
   const notesLength = watchNotes?.length || 0;
 
-  // Determine which client to check for primary
-  const effectiveClientId = showClientSelector ? watchClientId : clientId;
-  const currentPrimary = effectiveClientId ? getPrimaryContact(effectiveClientId) : undefined;
-  const willChangePrimary = watchIsPrimary && currentPrimary && currentPrimary.id !== contact?.id;
+  // Handler for setting contact as primary
+  const handleSetAsPrimary = async () => {
+    if (!contact) return;
+    setIsSettingRole(true);
+    try {
+      await setContactAsPrimary(contact.id);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to set primary:', error);
+      toast.error('Nepodařilo se nastavit primární kontakt');
+    } finally {
+      setIsSettingRole(false);
+    }
+  };
+
+  // Handler for setting contact as decision maker
+  const handleSetAsDecisionMaker = async () => {
+    if (!contact) return;
+    setIsSettingRole(true);
+    try {
+      await updateContact(contact.id, { is_decision_maker: true });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to set decision maker:', error);
+      toast.error('Nepodařilo se nastavit decision maker');
+    } finally {
+      setIsSettingRole(false);
+    }
+  };
 
   // Reset form when contact prop changes or dialog opens
   useEffect(() => {
@@ -134,8 +157,10 @@ export function AddContactDialog({
         position: data.position || null,
         email: data.email || null,
         phone: data.phone || null,
-        is_primary: data.is_primary,
-        is_decision_maker: data.is_decision_maker,
+        // Preserve existing values when editing, use defaults for new contacts
+        // (first contact auto-becomes primary via DB trigger)
+        is_primary: contact?.is_primary ?? false,
+        is_decision_maker: contact?.is_decision_maker ?? false,
         notes: data.notes,
       });
       form.reset();
@@ -162,16 +187,6 @@ export function AddContactDialog({
             </DialogDescription>
           )}
         </DialogHeader>
-
-        {/* Warning when changing primary contact - Issue #24: Now shows in both modes */}
-        {willChangePrimary && (
-          <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-800 dark:text-amber-200">
-              Toto nastaví <strong>{form.getValues('name') || 'tento kontakt'}</strong> jako primární a odebere primární status z <strong>{currentPrimary?.name}</strong>.
-            </AlertDescription>
-          </Alert>
-        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -261,43 +276,58 @@ export function AddContactDialog({
               />
             </div>
 
-            <div className="flex gap-6">
-              <FormField
-                control={form.control}
-                name="is_primary"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal cursor-pointer">
-                      Primární kontakt
-                    </FormLabel>
-                  </FormItem>
+            {/* Role Status Section - only shown when editing existing contact */}
+            {contact && (
+              <div className="flex flex-wrap gap-2">
+                {/* Primary Contact */}
+                {contact.is_primary ? (
+                  <Badge variant="outline" className="border-yellow-500/50 text-yellow-600 dark:text-yellow-400">
+                    <Star className="h-3 w-3 mr-1 fill-current" />
+                    Primární kontakt
+                  </Badge>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSetAsPrimary}
+                    disabled={isSettingRole}
+                    className="text-muted-foreground hover:text-yellow-600 hover:border-yellow-500/50"
+                  >
+                    {isSettingRole ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Star className="h-3 w-3 mr-1" />
+                    )}
+                    Nastavit jako primární
+                  </Button>
                 )}
-              />
 
-              <FormField
-                control={form.control}
-                name="is_decision_maker"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal cursor-pointer">
-                      Decision maker
-                    </FormLabel>
-                  </FormItem>
+                {/* Decision Maker */}
+                {contact.is_decision_maker ? (
+                  <Badge variant="outline" className="border-blue-500/50 text-blue-600 dark:text-blue-400">
+                    <Key className="h-3 w-3 mr-1" />
+                    Decision maker
+                  </Badge>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSetAsDecisionMaker}
+                    disabled={isSettingRole}
+                    className="text-muted-foreground hover:text-blue-600 hover:border-blue-500/50"
+                  >
+                    {isSettingRole ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Key className="h-3 w-3 mr-1" />
+                    )}
+                    Nastavit jako decision maker
+                  </Button>
                 )}
-              />
-            </div>
+              </div>
+            )}
 
             <FormField
               control={form.control}
