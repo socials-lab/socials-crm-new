@@ -1,195 +1,241 @@
-# Plan: Feedback Zone - Napady od kolecu
 
-## Prehled
+# Implementace fakturace Creative Boost podle balíčku kreditů
 
-Vytvoreni nove funkce "Feedback Zone" kde kolegove mohou zadavat napady na zlepseni firmy (procesy, sluzby, komunikace, systemy). Kazdy napad je viditelny vsem kolegum, kteri mohou hlasovat palcem nahoru nebo dolu.
+## Přehled
+Úprava fakturace Creative Boost tak, aby se fakturovalo podle dohodnutého balíčku kreditů (maxCredits × pricePerCredit), nikoli podle skutečného čerpání. Zároveň přidáme možnost editace fakturované částky.
 
-## Pozadavky
+---
 
-1. Nova stranka "Feedback Zone" v navigaci
-2. Kolegove mohou zadat novy "ticket" (napad)
-3. Vsichni dostanou notifikaci pri novem napadu
-4. Viditelne jmeno autora napadu
-5. Hlasovani palcem nahoru/dolu
-6. Dummy data (bez databaze)
+## Klíčové změny
 
-## Datova struktura
+### 1. Rozšíření datového modelu
 
-### Typy (types/feedback.ts)
+**Soubor: `src/types/creativeBoost.ts`**
+
+Přidat nová pole do `CreativeBoostClientMonth`:
+- `invoiceAmount: number | null` - vlastní fakturovaná částka (pokud null, použije se balíček)
+- `invoiceNote: string | null` - poznámka k faktuře
 
 ```typescript
-export interface FeedbackIdea {
-  id: string;
-  title: string;
-  description: string;
-  category: FeedbackCategory;
-  author_id: string; // colleague_id
-  created_at: string;
-  updated_at: string;
-  status: FeedbackStatus;
-}
-
-export type FeedbackCategory = 
-  | 'process'      // Procesy
-  | 'service'      // Sluzby
-  | 'communication'// Komunikace
-  | 'system'       // System/CRM
-  | 'other';       // Ostatni
-
-export type FeedbackStatus = 
-  | 'new'          // Novy
-  | 'in_review'    // V hodnoceni
-  | 'accepted'     // Prijato
-  | 'rejected'     // Zamitnuto
-  | 'implemented'; // Implementovano
-
-export interface FeedbackVote {
-  id: string;
-  idea_id: string;
-  colleague_id: string;
-  vote_type: 'up' | 'down';
-  created_at: string;
+export interface CreativeBoostClientMonth {
+  // ... existující pole
+  invoiceAmount: number | null;  // Vlastní částka k fakturaci (přepíše balíček)
+  invoiceNote: string | null;    // Poznámka k faktuře CB
 }
 ```
 
-## Implementacni kroky
+Přidat do `ClientMonthSummary`:
+- `packageInvoice: number` - částka podle balíčku (maxCredits × pricePerCredit)
+- `customInvoiceAmount: number | null` - vlastní částka
+- `finalInvoiceAmount: number` - finální částka k fakturaci
 
-### 1. Vytvorit typy pro Feedback
+---
 
-**Soubor:** `src/types/feedback.ts`
+### 2. Aktualizace mock dat
 
-- Definovat `FeedbackIdea` interface
-- Definovat `FeedbackCategory` a `FeedbackStatus` typy
-- Definovat `FeedbackVote` interface
-- Exportovat konfiguraci kategorii (ikony, barvy)
+**Soubor: `src/data/creativeBoostMockData.ts`**
 
-### 2. Vytvorit hook useFeedbackData
-
-**Soubor:** `src/hooks/useFeedbackData.tsx`
-
-- Vytvorit context a provider podobne jako `useMeetingsData`
-- Drzet state pro `ideas` a `votes`
-- Generovat dummy data (3-5 ukazkových napadu)
-- Implementovat funkce:
-  - `addIdea(data)` - pridat novy napad
-  - `updateIdeaStatus(id, status)` - zmenit status (pro adminy)
-  - `vote(ideaId, voteType)` - hlasovat (kazdy kolega muze hlasovat jednou)
-  - `removeVote(ideaId)` - odebrat hlas
-  - `getVoteCounts(ideaId)` - pocet hlasu nahoru/dolu
-  - `getUserVote(ideaId)` - jak hlasoval aktualni uzivatel
-- Integrace s notifikacemi - pri pridani napadu vytvorit notifikaci
-
-### 3. Pridat typ notifikace
-
-**Soubor:** `src/types/notifications.ts`
-
-- Pridat `'new_feedback_idea'` do `NotificationType`
-- Pridat konfiguraci (ikona, barvy)
-
-### 4. Vytvorit komponenty pro Feedback
-
-**Slozka:** `src/components/feedback/`
-
-#### a) AddFeedbackDialog.tsx
-- Formular pro zadani noveho napadu
-- Pole: Nazev, Popis, Kategorie
-- Po odeslani zavola `addIdea` a prida notifikaci
-
-#### b) FeedbackCard.tsx
-- Karta zobrazujici jeden napad
-- Zobrazuje: nazev, popis (zkraceny), kategorii, autora, datum
-- Tlacitka pro hlasovani (palec nahoru/dolu s pocty)
-- Badge se statusem
-- Kliknuti otevre detail
-
-#### c) FeedbackDetailSheet.tsx
-- Sheet s plnym detailem napadu
-- Plny popis
-- Historie hlasovani
-- Pro adminy: moznost zmenit status
-
-### 5. Vytvorit stranku Feedback
-
-**Soubor:** `src/pages/Feedback.tsx`
-
-- PageHeader s titulkem a tlacitkem pro pridani
-- Filtry: kategorie, status
-- Razeni: nejnovejsi, nejvice hlasu
-- Grid s kartami napadu
-
-### 6. Pridat routu a navigaci
-
-**Soubor:** `src/App.tsx`
-- Import stranky Feedback
-- Pridat Route `/feedback`
-
-**Soubor:** `src/components/layout/AppSidebar.tsx`
-- Pridat polozku `{ title: '💡 Feedback Zone', url: '/feedback', page: 'feedback' }`
-
-### 7. Pridat provider do App
-
-**Soubor:** `src/App.tsx`
-- Obalit aplikaci `FeedbackProvider`
-
-## Struktura souboru
-
-```
-src/
-  types/
-    feedback.ts (novy)
-  hooks/
-    useFeedbackData.tsx (novy)
-  components/
-    feedback/ (nova slozka)
-      AddFeedbackDialog.tsx
-      FeedbackCard.tsx
-      FeedbackDetailSheet.tsx
-  pages/
-    Feedback.tsx (novy)
-```
-
-## UI/UX detaily
-
-### Kategorie s ikonami
-- Procesy
-- Sluzby  
-- Komunikace
-- System
-- Ostatni
-
-### Statusy s barvami
-- Novy - modra
-- V hodnoceni - zluta
-- Prijato - zelena
-- Zamitnuto - cervena
-- Implementovano - fialova
-
-### Hlasovaci tlacitka
-- Palec nahoru (zelena pri aktivnim hlasu)
-- Palec dolu (cervena pri aktivnim hlasu)
-- Zobrazit pocet hlasu vedle kazdeho tlacitka
-
-## Notifikace
-
-Pri pridani noveho napadu:
+Přidat nová pole do všech záznamů `creativeBoostClientMonths`:
 ```typescript
-addNotification({
-  type: 'new_feedback_idea',
-  title: 'Novy napad!',
-  message: `${authorName} pridal novy napad: "${ideaTitle}"`,
-  link: '/feedback',
-  metadata: {
-    idea_id: idea.id,
-    colleague_id: idea.author_id,
-    colleague_name: authorName,
+{
+  // ... existující data
+  invoiceAmount: null,  // null = použij balíček
+  invoiceNote: null,
+}
+```
+
+---
+
+### 3. Změna výpočtu v useCreativeBoostData
+
+**Soubor: `src/hooks/useCreativeBoostData.tsx`**
+
+#### a) Upravit `getClientMonthSummaries` funkci:
+
+```typescript
+// PŘED (řádek ~372):
+estimatedInvoice: usedCredits * monthData.pricePerCredit,
+
+// PO:
+packageInvoice: monthData.maxCredits * monthData.pricePerCredit,
+customInvoiceAmount: monthData.invoiceAmount,
+finalInvoiceAmount: monthData.invoiceAmount ?? (monthData.maxCredits * monthData.pricePerCredit),
+// Zachovat i původní pro info:
+estimatedInvoice: usedCredits * monthData.pricePerCredit, // jen pro info
+```
+
+#### b) Přidat funkci pro aktualizaci fakturované částky:
+
+```typescript
+const updateInvoiceAmount = useCallback((
+  clientId: string, 
+  year: number, 
+  month: number, 
+  amount: number | null,
+  note?: string
+) => {
+  const monthData = clientMonths.find(
+    cm => cm.clientId === clientId && cm.year === year && cm.month === month
+  );
+  if (monthData) {
+    updateClientMonth(monthData.id, { 
+      invoiceAmount: amount,
+      invoiceNote: note ?? monthData.invoiceNote,
+    });
   }
+}, [clientMonths, updateClientMonth]);
+```
+
+#### c) Přidat tracking změn do historie:
+
+Při změně `invoiceAmount` logovat do `settingsHistory`.
+
+---
+
+### 4. Aktualizace UI v ClientsOverview
+
+**Soubor: `src/components/creative-boost/ClientsOverview.tsx`**
+
+#### a) Změnit zobrazení "Odhad faktury":
+
+```typescript
+// PŘED:
+<span>{formatCurrency(summary.estimatedInvoice)}</span>
+
+// PO:
+<div className="flex flex-col items-end">
+  <span className="font-semibold">{formatCurrency(summary.finalInvoiceAmount)}</span>
+  {summary.customInvoiceAmount && (
+    <span className="text-xs text-muted-foreground line-through">
+      {formatCurrency(summary.packageInvoice)}
+    </span>
+  )}
+</div>
+```
+
+#### b) Přidat do Settings dialogu pole pro editaci částky:
+
+```tsx
+{/* V Settings dialogu */}
+<div className="space-y-2">
+  <Label>Fakturovaná částka</Label>
+  <div className="flex items-center gap-2">
+    <Input
+      type="number"
+      value={customAmount ?? ''}
+      placeholder={packageAmount.toString()}
+      onChange={(e) => setCustomAmount(e.target.value ? Number(e.target.value) : null)}
+    />
+    <span className="text-sm text-muted-foreground">Kč</span>
+  </div>
+  <p className="text-xs text-muted-foreground">
+    Balíček: {formatCurrency(packageAmount)} • Ponechte prázdné pro fakturaci balíčku
+  </p>
+</div>
+```
+
+---
+
+### 5. Aktualizace fakturace
+
+**Soubor: `src/pages/Invoicing.tsx`**
+
+Změnit výpočet Creative Boost částky:
+```typescript
+// PŘED (řádek ~86):
+creativeBoostAmount += totalCredits * cm.pricePerCredit;
+
+// PO:
+const packageAmount = cm.maxCredits * cm.pricePerCredit;
+const invoiceAmount = cm.invoiceAmount ?? packageAmount;
+creativeBoostAmount += invoiceAmount;
+```
+
+**Soubor: `src/components/invoicing/FutureInvoicing.tsx`**
+
+Upravit generování Creative Boost položky:
+```typescript
+// PŘED (řádky ~75-96):
+let totalCredits = 0;
+// ... počítání kreditů
+creativeBoostData.set(cm.clientId, {
+  usedCredits: totalCredits,
+  pricePerCredit: cm.pricePerCredit,
+  totalAmount: totalCredits * cm.pricePerCredit,
+});
+
+// PO:
+const packageAmount = cm.maxCredits * cm.pricePerCredit;
+const invoiceAmount = cm.invoiceAmount ?? packageAmount;
+creativeBoostData.set(cm.clientId, {
+  usedCredits: totalCredits,  // pro info
+  maxCredits: cm.maxCredits,
+  pricePerCredit: cm.pricePerCredit,
+  packageAmount,
+  invoiceAmount,  // finální částka k fakturaci
 });
 ```
 
-## Kriticke soubory pro implementaci
+Upravit popis položky na faktuře:
+```typescript
+// PŘED:
+source_description: `Creative Boost - ${cbData.usedCredits} kreditů × ${cbData.pricePerCredit.toLocaleString()} Kč`,
 
-- `src/types/feedback.ts` - Definice datovych typu pro feedback systém
-- `src/hooks/useFeedbackData.tsx` - Hlavni datovy hook s logikou a dummy daty
-- `src/pages/Feedback.tsx` - Stranka se seznamem napadu
-- `src/components/feedback/FeedbackCard.tsx` - Komponenta karty s hlasovanim
-- `src/types/notifications.ts` - Rozsireni o novy typ notifikace
+// PO:
+source_description: `Creative Boost - balíček ${cbData.maxCredits} kr. (čerpáno ${cbData.usedCredits} kr.)`,
+```
+
+---
+
+### 6. Přidat inline editaci v EngagementInvoiceCard
+
+**Soubor: `src/components/invoicing/EngagementInvoiceCard.tsx`**
+
+Pro Creative Boost položky přidat možnost rychlé editace částky přímo ve fakturační kartě:
+- Kliknutí na částku otevře inline input
+- Uložení aktualizuje `invoiceAmount` v mock datech
+
+---
+
+## Vizuální schéma
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│  CREATIVE BOOST - Karta klienta                           │
+├────────────────────────────────────────────────────────────┤
+│  Čerpání:    35 / 50 kreditů   [====----] 70%             │
+│  Balíček:    50 kr. × 1 500 Kč = 75 000 Kč                │
+│  K fakturaci: [  75 000  ] Kč  ← editovatelné pole        │
+│               └─ ponechte prázdné = fakturovat balíček    │
+└────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Logika fakturace
+
+| Scénář | Čerpání | Balíček | Custom částka | Fakturovaná částka |
+|--------|---------|---------|---------------|--------------------|
+| Normální | 35 kr. | 50 kr. | - | 75 000 Kč (balíček) |
+| Přečerpání | 60 kr. | 50 kr. | - | 75 000 Kč (balíček) |
+| Sleva | 35 kr. | 50 kr. | 60 000 Kč | 60 000 Kč (custom) |
+| Příplatek | 60 kr. | 50 kr. | 90 000 Kč | 90 000 Kč (custom) |
+
+---
+
+## Technická poznámka
+
+Všechna data zůstávají v mock datech (localStorage by se dalo přidat pro persistenci mezi reloady, ale pro teď ponecháme in-memory state pro jednoduchost).
+
+---
+
+## Soubory k úpravě
+
+| Soubor | Změna |
+|--------|-------|
+| `src/types/creativeBoost.ts` | Přidat `invoiceAmount`, `invoiceNote`, rozšířit `ClientMonthSummary` |
+| `src/data/creativeBoostMockData.ts` | Přidat nová pole do mock dat |
+| `src/hooks/useCreativeBoostData.tsx` | Upravit výpočty, přidat `updateInvoiceAmount` |
+| `src/components/creative-boost/ClientsOverview.tsx` | Zobrazit balíček vs. custom, přidat editaci |
+| `src/pages/Invoicing.tsx` | Změnit výpočet KPI na balíček |
+| `src/components/invoicing/FutureInvoicing.tsx` | Změnit generování položky na balíček |
