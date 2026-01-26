@@ -187,7 +187,7 @@ export function ActivityRewardsHistory({
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />
-            Fakturace
+            Fakturace – interní práce
           </CardTitle>
           <Button size="sm" onClick={onAddClick} className="gap-1.5">
             <Plus className="h-4 w-4" />
@@ -196,10 +196,11 @@ export function ActivityRewardsHistory({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* SOP Info */}
+        {/* SOP Info - Updated */}
         <Alert className="bg-muted/50 border-muted">
           <Info className="h-4 w-4" />
           <AlertDescription className="text-xs">
+            <strong>Pouze interní práce</strong> – klientská práce se fakturuje automaticky přes zakázky.<br/>
             Položky musí začínat: <strong>Marketing –</strong> nebo <strong>Režijní služby –</strong>
           </AlertDescription>
         </Alert>
