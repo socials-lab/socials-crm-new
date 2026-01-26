@@ -94,11 +94,101 @@ export function useUpsellApprovals() {
     forceUpdate();
   }, [forceUpdate]);
 
+  // Mock data for demonstration
+  const getMockUpsells = useCallback((year: number, month: number): UpsellItem[] => {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    // Only show mock data for current month
+    if (year !== currentYear || month !== currentMonth) {
+      return [];
+    }
+
+    const mockData: UpsellItem[] = [
+      {
+        id: 'mock-extra-work-1',
+        type: 'extra_work',
+        clientId: 'mock-client-1',
+        clientName: 'ACME Corporation s.r.o.',
+        brandName: 'ACME Corp',
+        engagementId: 'mock-engagement-1',
+        engagementName: 'Performance Marketing 2026',
+        itemName: 'Dodatečné bannery pro zimní kampaň',
+        amount: 15000,
+        currency: 'CZK',
+        upsoldById: 'mock-colleague-1',
+        upsoldByName: 'Jan Novák',
+        commissionPercent: 10,
+        commissionAmount: 1500,
+        isApproved: false,
+        approvedAt: null,
+        approvedBy: null,
+        createdAt: new Date(year, month - 1, 15).toISOString(),
+      },
+      {
+        id: 'mock-service-1',
+        type: 'service',
+        clientId: 'mock-client-2',
+        clientName: 'Beta Technologies a.s.',
+        brandName: 'BetaTech',
+        engagementId: 'mock-engagement-2',
+        engagementName: 'Creative Retainer',
+        itemName: 'Creative Boost',
+        amount: 20000, // 50 credits × 400 CZK
+        currency: 'CZK',
+        upsoldById: 'mock-colleague-2',
+        upsoldByName: 'Petra Svobodová',
+        commissionPercent: 10,
+        commissionAmount: 2000,
+        isApproved: false,
+        approvedAt: null,
+        approvedBy: null,
+        createdAt: new Date(year, month - 1, 10).toISOString(),
+      },
+      {
+        id: 'mock-extra-work-2',
+        type: 'extra_work',
+        clientId: 'mock-client-3',
+        clientName: 'Gamma Industries s.r.o.',
+        brandName: 'Gamma',
+        engagementId: 'mock-engagement-3',
+        engagementName: 'Social Media Management',
+        itemName: 'Urgentní video produkce',
+        amount: 25000,
+        currency: 'CZK',
+        upsoldById: 'mock-colleague-1',
+        upsoldByName: 'Jan Novák',
+        commissionPercent: 10,
+        commissionAmount: 2500,
+        isApproved: false,
+        approvedAt: null,
+        approvedBy: null,
+        createdAt: new Date(year, month - 1, 5).toISOString(),
+      },
+    ];
+
+    // Apply approval status from localStorage
+    return mockData.map(item => {
+      const approval = getApprovalStatus(item.type, item.id);
+      return {
+        ...item,
+        isApproved: approval?.approved || false,
+        approvedAt: approval?.approvedAt || null,
+        approvedBy: approval?.approvedBy || null,
+      };
+    });
+  }, [getApprovalStatus, version]);
+
   // Get all upsells for a specific month
   const getUpsellsForMonth = useCallback((year: number, month: number): UpsellItem[] => {
     const monthStart = startOfMonth(new Date(year, month - 1));
     const monthEnd = endOfMonth(new Date(year, month - 1));
     const results: UpsellItem[] = [];
+
+    // Add mock data for demonstration
+    const mockUpsells = getMockUpsells(year, month);
+    results.push(...mockUpsells);
 
     // Get extra works with upsold_by_id in this month
     extraWorks.forEach(ew => {
