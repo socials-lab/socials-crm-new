@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ExternalLink, ChevronDown, ChevronUp, Mail, Phone, Calendar, Users, Pencil, Building2, FileText, UserPlus, Star, Key, Trash2, StickyNote, Crown, Database, Briefcase, Check, X } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { Search, Plus, ExternalLink, ChevronDown, ChevronUp, Mail, Phone, Calendar, Users, Pencil, Building2, FileText, UserPlus, Star, Key, Trash2, StickyNote, Crown, Database, Briefcase, Check, X, MoreHorizontal, CalendarOff } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -31,13 +33,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { AddContactDialog } from '@/components/clients/AddContactDialog';
 import { LeadOriginSection } from '@/components/clients/LeadOriginSection';
+import { EndClientDialog } from '@/components/clients/EndClientDialog';
 import { useUserRole } from '@/hooks/useUserRole';
-import type { ClientStatus, Client, ClientContact, ClientTier } from '@/types/crm';
+import type { ClientStatus, Client, ClientContact, ClientTier, TerminationReason, TerminationInitiatedBy } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -64,6 +73,7 @@ export default function Clients() {
     services,
     addClient, 
     updateClient,
+    updateEngagement,
     getContactsByClientId,
     addContact,
     updateContact,
@@ -99,6 +109,10 @@ export default function Clients() {
   // Billing email editing state
   const [editingBillingEmailClientId, setEditingBillingEmailClientId] = useState<string | null>(null);
   const [tempBillingEmail, setTempBillingEmail] = useState('');
+
+  // End client dialog state
+  const [endClientDialogOpen, setEndClientDialogOpen] = useState(false);
+  const [clientToEnd, setClientToEnd] = useState<Client | null>(null);
 
   // Handle highlight from URL
   useEffect(() => {
@@ -337,14 +351,32 @@ export default function Clients() {
                   )}
                   <StatusBadge status={client.status} />
                   {superAdmin && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7"
-                      onClick={(e) => handleEditClient(client, e)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditClient(client, e as any);
+                        }}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Upravit klienta
+                        </DropdownMenuItem>
+                        {client.status === 'active' && !client.end_date && (
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            setClientToEnd(client);
+                            setEndClientDialogOpen(true);
+                          }}>
+                            <CalendarOff className="h-4 w-4 mr-2" />
+                            Ukončit spolupráci
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                   <Button variant="ghost" size="icon" className="h-7 w-7">
                     {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -769,6 +801,48 @@ export default function Clients() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* End Client Dialog */}
+      <EndClientDialog
+        client={clientToEnd}
+        engagements={engagements}
+        open={endClientDialogOpen}
+        onOpenChange={(open) => {
+          setEndClientDialogOpen(open);
+          if (!open) setClientToEnd(null);
+        }}
+        onConfirm={async (data) => {
+          if (clientToEnd) {
+            // Update client end_date and status
+            await updateClient(clientToEnd.id, { 
+              end_date: data.end_date,
+              status: 'lost',
+            });
+            
+            // If endAllEngagements is true, update all active engagements
+            if (data.endAllEngagements) {
+              const clientEngagements = engagements.filter(
+                e => e.client_id === clientToEnd.id && e.status === 'active' && !e.end_date
+              );
+              
+              // Update each engagement with termination data
+              for (const eng of clientEngagements) {
+                await updateEngagement(eng.id, {
+                  end_date: data.end_date,
+                  termination_reason: data.termination_reason,
+                  termination_initiated_by: data.termination_initiated_by,
+                  termination_notes: data.termination_notes,
+                });
+              }
+            }
+            
+            toast.success(
+              `Spolupráce s klientem ${clientToEnd.brand_name || clientToEnd.name} bude ukončena k ${format(parseISO(data.end_date), 'd. MMMM yyyy', { locale: cs })}`
+            );
+            setClientToEnd(null);
+          }
+        }}
+      />
     </div>
   );
 }

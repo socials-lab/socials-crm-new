@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { format, addMonths } from 'date-fns';
+import { useState, useEffect, useMemo } from 'react';
+import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, AlertTriangle, User, Building2 } from 'lucide-react';
+import { CalendarIcon, AlertTriangle, Briefcase } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -24,95 +24,123 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import type { Engagement, TerminationReason, TerminationInitiatedBy, TerminationData } from '@/types/crm';
+import type { Client, Engagement, TerminationReason, TerminationInitiatedBy } from '@/types/crm';
 import { TERMINATION_REASON_LABELS } from '@/types/crm';
 
-interface EndEngagementDialogProps {
-  engagement: Engagement | null;
+interface EndClientDialogProps {
+  client: Client | null;
+  engagements: Engagement[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (data: TerminationData) => void;
+  onConfirm: (data: {
+    end_date: string;
+    termination_reason: TerminationReason;
+    termination_initiated_by: TerminationInitiatedBy;
+    termination_notes: string;
+    endAllEngagements: boolean;
+  }) => void;
 }
 
-export function EndEngagementDialog({
-  engagement,
+export function EndClientDialog({
+  client,
+  engagements,
   open,
   onOpenChange,
   onConfirm,
-}: EndEngagementDialogProps) {
+}: EndClientDialogProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [initiatedBy, setInitiatedBy] = useState<TerminationInitiatedBy>('client');
   const [reason, setReason] = useState<TerminationReason | ''>('');
   const [notes, setNotes] = useState('');
+  const [endAllEngagements, setEndAllEngagements] = useState(true);
 
-  // Reset form when dialog opens with new engagement
+  // Get active engagements for this client
+  const activeEngagements = useMemo(() => {
+    if (!client) return [];
+    return engagements.filter(
+      (e) => e.client_id === client.id && e.status === 'active' && !e.end_date
+    );
+  }, [client, engagements]);
+
+  // Calculate total MRR from active engagements
+  const totalMRR = useMemo(() => {
+    return activeEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+  }, [activeEngagements]);
+
+  // Reset form when dialog opens
   useEffect(() => {
-    if (open && engagement) {
-      setSelectedDate(engagement.end_date ? new Date(engagement.end_date) : undefined);
-      setInitiatedBy(engagement.termination_initiated_by || 'client');
-      setReason(engagement.termination_reason || '');
-      setNotes(engagement.termination_notes || '');
+    if (open && client) {
+      setSelectedDate(client.end_date ? new Date(client.end_date) : undefined);
+      setReason('');
+      setNotes('');
+      setEndAllEngagements(true);
     }
-  }, [open, engagement]);
+  }, [open, client]);
 
   const handleConfirm = () => {
     if (selectedDate && reason) {
       onConfirm({
         end_date: selectedDate.toISOString().split('T')[0],
         termination_reason: reason as TerminationReason,
-        termination_initiated_by: initiatedBy,
+        termination_initiated_by: 'client', // Client-level termination is always initiated by client
         termination_notes: notes,
+        endAllEngagements,
       });
       onOpenChange(false);
     }
   };
 
-  // Calculate suggested end date based on notice period
-  const suggestedEndDate = engagement?.notice_period_months 
-    ? addMonths(new Date(), engagement.notice_period_months)
-    : undefined;
-
   const isFormValid = selectedDate && reason;
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('cs-CZ', {
+      style: 'currency',
+      currency: 'CZK',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Ukončit spolupráci</DialogTitle>
+          <DialogTitle>Ukončit spolupráci s klientem</DialogTitle>
           <DialogDescription>
-            Nastavte parametry ukončení zakázky "{engagement?.name}".
+            Ukončíte celou spolupráci s klientem "{client?.brand_name || client?.name}".
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Who is terminating */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Kdo ukončuje spolupráci? *</Label>
-            <RadioGroup
-              value={initiatedBy}
-              onValueChange={(value) => setInitiatedBy(value as TerminationInitiatedBy)}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="client" id="client" />
-                <Label htmlFor="client" className="flex items-center gap-2 cursor-pointer">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  Klient
-                </Label>
+          {/* Active engagements summary */}
+          {activeEngagements.length > 0 && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-destructive font-medium">
+                <AlertTriangle className="h-4 w-4" />
+                Aktivní zakázky ({activeEngagements.length})
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="agency" id="agency" />
-                <Label htmlFor="agency" className="flex items-center gap-2 cursor-pointer">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  Agentura
-                </Label>
+              <div className="space-y-2">
+                {activeEngagements.map((e) => (
+                  <div key={e.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>{e.name}</span>
+                    </div>
+                    <span className="text-muted-foreground">
+                      {formatCurrency(e.monthly_fee || 0)}/měsíc
+                    </span>
+                  </div>
+                ))}
               </div>
-            </RadioGroup>
-          </div>
+              <div className="pt-2 border-t border-destructive/20 flex justify-between font-medium">
+                <span>Celkové MRR k ukončení:</span>
+                <span className="text-destructive">{formatCurrency(totalMRR)}</span>
+              </div>
+            </div>
+          )}
 
           {/* Termination reason */}
           <div className="space-y-2">
@@ -166,21 +194,24 @@ export function EndEngagementDialog({
             </Popover>
           </div>
 
-          {/* Notice period info */}
-          {engagement?.notice_period_months && (
-            <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20 p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-yellow-800 dark:text-yellow-200">
-                    Výpovědní lhůta: {engagement.notice_period_months} {engagement.notice_period_months === 1 ? 'měsíc' : engagement.notice_period_months < 5 ? 'měsíce' : 'měsíců'}
-                  </p>
-                  {suggestedEndDate && (
-                    <p className="text-yellow-700 dark:text-yellow-300 mt-1">
-                      Doporučené datum ukončení: {format(suggestedEndDate, "d. MMMM yyyy", { locale: cs })}
-                    </p>
-                  )}
-                </div>
+          {/* End all engagements checkbox */}
+          {activeEngagements.length > 0 && (
+            <div className="flex items-start space-x-3 rounded-lg border p-4">
+              <Checkbox
+                id="endAllEngagements"
+                checked={endAllEngagements}
+                onCheckedChange={(checked) => setEndAllEngagements(checked === true)}
+              />
+              <div className="space-y-1">
+                <Label
+                  htmlFor="endAllEngagements"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Ukončit všechny aktivní zakázky ke stejnému datu
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Nastaví datum ukončení na všech {activeEngagements.length} aktivních zakázkách.
+                </p>
               </div>
             </div>
           )}
@@ -201,8 +232,12 @@ export function EndEngagementDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
           </Button>
-          <Button onClick={handleConfirm} disabled={!isFormValid}>
-            Potvrdit ukončení
+          <Button 
+            onClick={handleConfirm} 
+            disabled={!isFormValid}
+            variant="destructive"
+          >
+            Ukončit spolupráci
           </Button>
         </DialogFooter>
       </DialogContent>
