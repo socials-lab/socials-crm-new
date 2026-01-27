@@ -276,95 +276,107 @@ export function LeadsAnalytics({
         </Card>
       </div>
 
-      {/* Charts Row 2 */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Funnel */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Průchodnost funnelem</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={funnelData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    type="number"
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
+      {/* Pipeline Overview - Compact Design */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Přehled pipeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Active stages as horizontal compact cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+            {funnelData
+              .filter(item => !['won', 'lost', 'postponed'].includes(item.stage))
+              .map((item, index) => {
+                const maxCount = Math.max(...funnelData.filter(f => !['won', 'lost', 'postponed'].includes(f.stage)).map(f => f.count), 1);
+                const percentage = (item.count / maxCount) * 100;
+                return (
+                  <div
+                    key={item.stage}
+                    className="relative p-3 rounded-lg border bg-card overflow-hidden"
+                  >
+                    {/* Background progress bar */}
+                    <div
+                      className="absolute inset-0 opacity-15"
+                      style={{
+                        backgroundColor: STAGE_COLORS[item.stage],
+                        width: `${percentage}%`,
+                      }}
+                    />
+                    <div className="relative">
+                      <div className="text-2xl font-bold" style={{ color: STAGE_COLORS[item.stage] }}>
+                        {item.count}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                        {STAGE_LABELS[item.stage]}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+          
+          {/* Closed stages as compact row */}
+          <div className="flex items-center gap-4 pt-3 border-t">
+            <span className="text-xs text-muted-foreground">Uzavřené:</span>
+            {funnelData
+              .filter(item => ['won', 'lost', 'postponed'].includes(item.stage))
+              .map((item) => (
+                <div key={item.stage} className="flex items-center gap-1.5">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: STAGE_COLORS[item.stage] }}
                   />
-                  <YAxis 
-                    type="category"
-                    dataKey="stage"
-                    width={120}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                    tickFormatter={(value) => STAGE_LABELS[value] || value}
-                  />
-                  <Tooltip 
-                    formatter={(value: number) => [`${value} leadů`, 'Počet']}
-                    labelFormatter={(label) => STAGE_LABELS[label] || label}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                    {funnelData.map((entry) => (
-                      <Cell key={entry.stage} fill={STAGE_COLORS[entry.stage] || 'hsl(var(--chart-1))'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+                  <span className="text-sm font-medium">{item.count}</span>
+                  <span className="text-xs text-muted-foreground">{STAGE_LABELS[item.stage]}</span>
+                </div>
+              ))}
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Monthly Win/Loss */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Won vs Lost (12 měsíců)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyWinLoss}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="month" 
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                  />
-                  <YAxis 
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="won" fill="hsl(var(--status-active))" name="Vyhráno" stackId="a" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="lost" fill="hsl(var(--status-lost))" name="Ztraceno" stackId="a" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+      {/* Monthly Win/Loss */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium">Won vs Lost (12 měsíců)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyWinLoss}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis 
+                  dataKey="month" 
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                />
+                <YAxis 
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Bar dataKey="won" fill="hsl(var(--status-active))" name="Vyhráno" stackId="a" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="lost" fill="hsl(var(--status-lost))" name="Ztraceno" stackId="a" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex justify-center gap-6 mt-2">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--status-active))' }} />
+              <span className="text-xs text-muted-foreground">Vyhráno</span>
             </div>
-            <div className="flex justify-center gap-6 mt-2">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--status-active))' }} />
-                <span className="text-xs text-muted-foreground">Vyhráno</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--status-lost))' }} />
-                <span className="text-xs text-muted-foreground">Ztraceno</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--status-lost))' }} />
+              <span className="text-xs text-muted-foreground">Ztraceno</span>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Performance Tables */}
       <div className="grid gap-4 lg:grid-cols-2">
