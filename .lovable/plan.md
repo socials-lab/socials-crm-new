@@ -1,222 +1,196 @@
 
-# Plán: Nový tab "Forecast" v Analytice
 
-## Přehled
+# Implementace: Rozšířené časové filtry v Analytice
 
-Vytvoření nové komplexní sekce **Forecast** v Analytice, která kombinuje:
-1. **Revenue Forecast** - dopad končících zakázek na tržby
-2. **Capacity Forecast** - volná kapacita kolegů po ukončení zakázek
-3. **Planning Tools** - nástroje pro plánování nových klientů
+## Analýza současného stavu
 
-Tato sekce nahradí aktuální "Churn Impact" kartu v BusinessPlanTab (přesuneme logiku do Forecastu).
+### Aktuální implementace:
+- **Rok**: Select dropdown (2023-2026)
+- **Měsíc**: Navigace pomocí prev/next tlačítek
+- Všechny výpočty používají `selectedYear` a `selectedMonth` pro vytvoření `periodStart` a `periodEnd`
 
----
-
-## Struktura nového tabu
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  FORECAST - Únor 2026                                    [◀ Měsíc ▶]   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │ 📊 KPI SOUHRN                                                   │   │
-│  ├─────────────────────────────────────────────────────────────────┤   │
-│  │ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐        │   │
-│  │ │Aktuální   │ │Ztráta     │ │MRR po     │ │Gap do     │        │   │
-│  │ │MRR        │ │MRR        │ │churnu     │ │plánu      │        │   │
-│  │ │1,550k     │ │-80k       │ │1,470k     │ │+230k      │        │   │
-│  │ └───────────┘ └───────────┘ └───────────┘ └───────────┘        │   │
-│  │ ┌───────────┐ ┌───────────┐ ┌───────────┐                      │   │
-│  │ │Kolegy s   │ │Uvolněná   │ │Potenciální│                      │   │
-│  │ │kapacitou  │ │kapacita   │ │revenue    │                      │   │
-│  │ │3          │ │4 sloty    │ │~120k      │                      │   │
-│  │ └───────────┘ └───────────┘ └───────────┘                      │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │ 📉 KONČÍCÍ ZAKÁZKY (Únor 2026)                                  │   │
-│  ├─────────────────────────────────────────────────────────────────┤   │
-│  │ Zakázka          │ Klient    │ Datum   │ MRR   │ Přiřazení      │   │
-│  │ ─────────────────┼───────────┼─────────┼───────┼───────────────  │   │
-│  │ Social správa    │ Mall.cz   │ 8.2.    │ 32k   │ Jan N., Eva K. │   │
-│  │ PPC retainer     │ Datart    │ 24.2.   │ 48k   │ Petr S.        │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │ 👥 KAPACITA TÝMU PO UKONČENÍ                                    │   │
-│  ├─────────────────────────────────────────────────────────────────┤   │
-│  │                                                                 │   │
-│  │ ┌─────────────────────────────────────────────────────────────┐ │   │
-│  │ │ Jan Novák (Senior PPC Specialist)                           │ │   │
-│  │ │ ┌──────────────────────────────┐                            │ │   │
-│  │ │ │ Aktuální: 4/5 zakázek        │  ████████████░░░ 80%       │ │   │
-│  │ │ └──────────────────────────────┘                            │ │   │
-│  │ │ ⚠️ Po 8.2. končí: Mall.cz - Social správa                   │ │   │
-│  │ │ 📅 Od 9.2. volná kapacita: +1 zakázka                       │ │   │
-│  │ │ 💰 Průměrný MRR jeho zakázek: ~40k Kč                       │ │   │
-│  │ └─────────────────────────────────────────────────────────────┘ │   │
-│  │                                                                 │   │
-│  │ ┌─────────────────────────────────────────────────────────────┐ │   │
-│  │ │ Petr Svoboda (PPC Manager)                                  │ │   │
-│  │ │ ┌──────────────────────────────┐                            │ │   │
-│  │ │ │ Aktuální: 5/5 zakázek        │  ████████████████ 100%     │ │   │
-│  │ │ └──────────────────────────────┘                            │ │   │
-│  │ │ ⚠️ Po 24.2. končí: Datart - PPC retainer                    │ │   │
-│  │ │ 📅 Od 25.2. volná kapacita: +1 zakázka                      │ │   │
-│  │ │ 💰 Průměrný MRR jeho zakázek: ~35k Kč                       │ │   │
-│  │ └─────────────────────────────────────────────────────────────┘ │   │
-│  │                                                                 │   │
-│  │ ✅ Eva Králová - žádné končící zakázky (aktuálně 3/5)          │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │ 📅 TIMELINE KAPACITY (příštích 3 měsíce)                        │   │
-│  ├─────────────────────────────────────────────────────────────────┤   │
-│  │                                                                 │   │
-│  │  Únor          Březen         Duben                             │   │
-│  │  ──────────────────────────────────────                         │   │
-│  │  8.2. Jan +1   15.3. Eva +1   -                                 │   │
-│  │  24.2. Petr +1                                                  │   │
-│  │  ──────────────────────────────────────                         │   │
-│  │  Celkem: +2    Celkem: +1     Celkem: 0                         │   │
-│  │                                                                 │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │ 💡 DOPORUČENÍ                                                   │   │
-│  ├─────────────────────────────────────────────────────────────────┤   │
-│  │                                                                 │   │
-│  │ • Pro splnění plánu je potřeba +230k nového MRR                │   │
-│  │ • Od 9.2. bude Jan Novák volný pro nového klienta              │   │
-│  │ • V pipeline jsou 2 leady s odhadovaným MRR ~150k              │   │
-│  │ • Doporučujeme přiřadit lead "XYZ Corp" Janovi                 │   │
-│  │                                                                 │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+### Problém:
+- Nelze zobrazit data za delší období (kvartál, rok, YTD)
+- Chybí srovnání s minulým rokem
+- Každý tab pracuje pouze s jedním měsícem
 
 ---
 
-## Logika výpočtu kapacity
+## Navrhované řešení
 
-### Pro každého kolegu:
+### Nový "Period Mode" selektor
 
-```typescript
-interface ColleagueCapacityForecast {
-  colleague: Colleague;
-  currentEngagements: number;        // Aktuální počet přiřazených zakázek
-  maxEngagements: number;            // Limit z colleague.max_engagements (default 5)
-  currentUtilization: number;        // % vytížení (current/max)
-  
-  endingAssignments: {               // Zakázky které končí
-    engagement: Engagement;
-    endDate: string;
-    monthlyFee: number;
-    role: string;
-  }[];
-  
-  futureCapacity: {                  // Kapacita po ukončení
-    date: string;                    // Od kdy
-    freeSlots: number;               // Kolik zakázek může vzít
-    reason: string;                  // Proč (které zakázky skončí)
-  }[];
-  
-  avgRevenuePerEngagement: number;   // Průměr MRR jeho zakázek (pro odhad potenciálu)
-}
+Přidání nového dropdown selectu s možnostmi:
+
+| Režim | Popis | Období |
+|-------|-------|--------|
+| `month` | Měsíc | Konkrétní měsíc v roce |
+| `quarter` | Kvartál | Q1 (1-3), Q2 (4-6), Q3 (7-9), Q4 (10-12) |
+| `ytd` | Year to Date | Od 1.1. do aktuálního měsíce |
+| `year` | Celý rok | Celý vybraný rok |
+| `last_year` | Minulý rok | Celý předchozí rok |
+| `custom` | Vlastní období | Od-Do datepicker (volitelně) |
+
+### UI návrh
+
 ```
-
-### Propojení s leady:
-
-```typescript
-interface PipelineMatch {
-  lead: Lead;
-  suggestedColleague: Colleague;
-  availableFrom: string;
-  reason: string;
-}
+┌─────────────────────────────────────────────────────────────────────┐
+│ Období: [Měsíc ▼]  Rok: [2026 ▼]  [◀ Únor ▶]                       │
+│                                                                     │
+│ nebo při výběru "Kvartál":                                          │
+│ Období: [Kvartál ▼]  Rok: [2026 ▼]  [Q1 ▼]                         │
+│                                                                     │
+│ nebo při výběru "YTD":                                              │
+│ Období: [YTD ▼]  Rok: [2026 ▼]  (1.1. - 27.1.2026)                 │
+│                                                                     │
+│ nebo při výběru "Minulý rok":                                       │
+│ Období: [Minulý rok ▼]  (1.1.2025 - 31.12.2025)                    │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Technická implementace
 
-### Nový soubor: `src/components/analytics/ForecastTab.tsx`
+### 1. Nový typ pro období
 
-Obsahuje:
-1. **KPI Grid** - Souhrn klíčových metrik
-2. **EndingEngagementsTable** - Tabulka končících zakázek s přiřazenými kolegy
-3. **ColleagueCapacityCards** - Karty kolegů s kapacitou
-4. **CapacityTimeline** - Vizuální timeline příštích 3 měsíců
-5. **RecommendationsCard** - AI-like doporučení
+```typescript
+type PeriodMode = 'month' | 'quarter' | 'ytd' | 'year' | 'last_year';
 
-### Změny v Analytics.tsx
+interface PeriodConfig {
+  mode: PeriodMode;
+  year: number;
+  month?: number;      // pro mode 'month'
+  quarter?: 1 | 2 | 3 | 4;  // pro mode 'quarter'
+}
+```
 
-- Přidání nového tabu "Forecast" (před "Obchodní plán")
-- Nový `useMemo` blok `forecastData` s výpočty
-- Import nové komponenty
+### 2. Nový state v Analytics.tsx
 
-### Změny v BusinessPlanTab.tsx
+```typescript
+const [periodMode, setPeriodMode] = useState<PeriodMode>('month');
+const [selectedQuarter, setSelectedQuarter] = useState(1);
 
-- Odstranit "Churn Impact" kartu (přesunuto do Forecast)
-- Přidat odkaz/tlačítko na Forecast tab pro detailní analýzu
+// Vypočítané období podle režimu
+const { periodStart, periodEnd, periodLabel } = useMemo(() => {
+  switch (periodMode) {
+    case 'month':
+      return {
+        periodStart: new Date(selectedYear, selectedMonth - 1, 1),
+        periodEnd: endOfMonth(new Date(selectedYear, selectedMonth - 1)),
+        periodLabel: `${monthNames[selectedMonth - 1]} ${selectedYear}`,
+      };
+    case 'quarter':
+      const qStart = (selectedQuarter - 1) * 3;
+      return {
+        periodStart: new Date(selectedYear, qStart, 1),
+        periodEnd: endOfMonth(new Date(selectedYear, qStart + 2)),
+        periodLabel: `Q${selectedQuarter} ${selectedYear}`,
+      };
+    case 'ytd':
+      return {
+        periodStart: new Date(selectedYear, 0, 1),
+        periodEnd: new Date(),
+        periodLabel: `YTD ${selectedYear}`,
+      };
+    case 'year':
+      return {
+        periodStart: new Date(selectedYear, 0, 1),
+        periodEnd: new Date(selectedYear, 11, 31),
+        periodLabel: `Rok ${selectedYear}`,
+      };
+    case 'last_year':
+      const lastYear = new Date().getFullYear() - 1;
+      return {
+        periodStart: new Date(lastYear, 0, 1),
+        periodEnd: new Date(lastYear, 11, 31),
+        periodLabel: `Rok ${lastYear}`,
+      };
+  }
+}, [periodMode, selectedYear, selectedMonth, selectedQuarter]);
+```
+
+### 3. Úprava všech useMemo bloků
+
+Všechny výpočty v `overviewData`, `leadsData`, `clientsEngagementsData`, `financeData`, `teamData` budou refaktorovány:
+
+```typescript
+// Před:
+const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
+const periodEnd = new Date(selectedYear, selectedMonth, 0);
+
+// Po:
+// periodStart a periodEnd budou brány z centrálního useMemo
+```
+
+### 4. Srovnání s předchozím obdobím
+
+Pro delší období bude srovnání:
+- **Měsíc**: vs minulý měsíc
+- **Kvartál**: vs předchozí kvartál
+- **YTD**: vs stejné období minulého roku
+- **Rok**: vs minulý rok
+- **Minulý rok**: vs předminulý rok
 
 ---
 
-## Data flow
+## Změny v jednotlivých komponentách
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│ engagements │────▶│ assignments │────▶│ colleagues  │
-│ (end_date)  │     │ (end_date)  │     │(max_engage) │
-└─────────────┘     └─────────────┘     └─────────────┘
-       │                   │                   │
-       ▼                   ▼                   ▼
-┌─────────────────────────────────────────────────────┐
-│           FORECAST CALCULATIONS                     │
-│  • Ending engagements in selected period            │
-│  • Colleague capacity after endings                 │
-│  • Revenue impact (lost MRR)                        │
-│  • Target gap calculation                           │
-└─────────────────────────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────────────────────┐
-│           PLANNING RECOMMENDATIONS                   │
-│  • Match pipeline leads with available capacity     │
-│  • Suggest colleague assignments                    │
-│  • Calculate revenue potential                      │
-└─────────────────────────────────────────────────────┘
-```
+### AnalyticsOverview
+- Grafy "12 měsíců" se změní na "období + kontext" (např. pro rok zobrazí měsíce, pro kvartál týdny)
+- KPI budou agregovat celé období
+
+### LeadsAnalytics
+- Lead funnel za celé období
+- Trendy budou odpovídat délce období
+
+### FinanceAnalytics
+- Celková fakturace za období
+- Marže za období
+
+### ForecastTab
+- Zůstane primárně měsíční (forecasting dává smysl pro konkrétní měsíc)
+- Při jiném režimu zobrazí info "Pro forecast přepněte na měsíční zobrazení"
+
+### BusinessPlanTab
+- Při kvartálu/roce zobrazí souhrn za celé období
+- Plnění plánu se sečte za všechny měsíce v období
 
 ---
 
-## Soubory k úpravě/vytvoření
+## Soubory k úpravě
 
 | Soubor | Změna |
 |--------|-------|
-| `src/components/analytics/ForecastTab.tsx` | **Nový** - hlavní komponenta |
-| `src/pages/Analytics.tsx` | Přidat tab, useMemo pro forecastData |
-| `src/components/analytics/BusinessPlanTab.tsx` | Odstranit churn kartu, přidat odkaz na Forecast |
+| `src/pages/Analytics.tsx` | Přidat periodMode state, nový Period Selector UI, refaktor useMemo bloků |
+| `src/components/analytics/AnalyticsOverview.tsx` | Přijímat periodStart/periodEnd místo year/month, adaptivní grafy |
+| `src/components/analytics/LeadsAnalytics.tsx` | Přijímat periodStart/periodEnd |
+| `src/components/analytics/ClientsEngagementsAnalytics.tsx` | Přijímat periodStart/periodEnd |
+| `src/components/analytics/FinanceAnalytics.tsx` | Přijímat periodStart/periodEnd |
+| `src/components/analytics/TeamCapacityAnalytics.tsx` | Přijímat periodStart/periodEnd |
+| `src/components/analytics/ForecastTab.tsx` | Handling pro ne-měsíční režimy |
+| `src/components/analytics/BusinessPlanTab.tsx` | Agregace za období |
 
 ---
 
 ## Pořadí implementace
 
-1. Vytvořit `ForecastTab.tsx` s kompletní logikou
-2. Přidat forecastData useMemo do Analytics.tsx
-3. Přidat nový tab do TabsList
-4. Upravit BusinessPlanTab - odstranit duplicitní churn kartu
-5. Přidat demo data pro testování (pokud nejsou reálné končící zakázky)
+1. **Analytics.tsx** - Přidat Period Selector UI a centrální období logiku
+2. **Refaktor props** - Změnit všechny child komponenty na přijímání `periodStart`/`periodEnd` místo `year`/`month`
+3. **AnalyticsOverview** - Adaptovat grafy a KPI
+4. **LeadsAnalytics** - Adaptovat výpočty
+5. **FinanceAnalytics** - Adaptovat výpočty
+6. **ClientsEngagementsAnalytics** - Adaptovat výpočty
+7. **TeamCapacityAnalytics** - Adaptovat výpočty
+8. **ForecastTab + BusinessPlanTab** - Speciální handling
 
 ---
 
 ## Očekávaný výsledek
 
-1. **Nový tab "Forecast"** v Analytice s komplexním přehledem
-2. **Vizualizace končících zakázek** včetně přiřazených kolegů
-3. **Kapacitní forecast** - kdo a kdy bude mít volno
-4. **Timeline view** příštích 3 měsíců
-5. **Doporučení** pro přiřazení nových klientů
-6. **Propojení s pipeline** - které leady by mohly zaplnit kapacitu
+1. Nový dropdown "Období" s možnostmi: Měsíc, Kvartál, YTD, Rok, Minulý rok
+2. Dynamické UI podle vybraného režimu (kvartál selector, datum rozsah)
+3. Všechny analytiky agregují data za vybrané období
+4. Srovnání vždy s odpovídajícím předchozím obdobím
+5. Grafy se adaptují na délku období (měsíce/týdny/dny)
+
