@@ -132,6 +132,41 @@ export function useLeadTransitions() {
     return { totalLeads, qualifiedLeads, badFitLeads, qualificationRate };
   }, [newLeadEntries]);
 
+  // Get performance by source - which channels bring the best leads
+  const getSourcePerformance = useCallback(() => {
+    const sourceStats: Record<string, { 
+      total: number; 
+      qualified: number; 
+      won: number;
+      totalValue: number;
+      wonValue: number;
+    }> = {};
+    
+    newLeadEntries.forEach(entry => {
+      if (!sourceStats[entry.source]) {
+        sourceStats[entry.source] = { total: 0, qualified: 0, won: 0, totalValue: 0, wonValue: 0 };
+      }
+      sourceStats[entry.source].total++;
+      sourceStats[entry.source].totalValue += entry.value;
+      if (entry.is_qualified) sourceStats[entry.source].qualified++;
+      if (entry.is_won) {
+        sourceStats[entry.source].won++;
+        sourceStats[entry.source].wonValue += entry.value;
+      }
+    });
+    
+    return Object.entries(sourceStats).map(([source, stats]) => ({
+      source,
+      total: stats.total,
+      qualified: stats.qualified,
+      won: stats.won,
+      qualificationRate: stats.total > 0 ? (stats.qualified / stats.total) * 100 : 0,
+      conversionRate: stats.total > 0 ? (stats.won / stats.total) * 100 : 0,
+      avgValue: stats.total > 0 ? stats.totalValue / stats.total : 0,
+      wonValue: stats.wonValue,
+    })).sort((a, b) => b.conversionRate - a.conversionRate);
+  }, [newLeadEntries]);
+
   // Calculate conversion rates between consecutive stages
   const getConversionRates = useCallback((): StageConversionRate[] => {
     const rates: StageConversionRate[] = [];
@@ -246,6 +281,7 @@ export function useLeadTransitions() {
     getConversionRates,
     getOverallConversion,
     getQualificationRate,
+    getSourcePerformance,
     getMonthlyTrend,
     getSummary,
     stageLabels: STAGE_LABELS,
