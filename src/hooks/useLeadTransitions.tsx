@@ -103,11 +103,21 @@ export function useLeadTransitions() {
   const getConversionRates = useCallback((): StageConversionRate[] => {
     const rates: StageConversionRate[] = [];
     
-    // Count transitions TO each stage (entries into stage)
+    // Count transitions FROM each stage (how many leads left this stage)
+    const stageExits: Record<string, number> = {};
+    STAGE_ORDER.forEach(stage => {
+      stageExits[stage] = transitions.filter(t => t.from_stage === stage).length;
+    });
+    
+    // Count transitions TO each stage (entries into stage) - for calculating base
     const stageEntries: Record<string, number> = {};
     STAGE_ORDER.forEach(stage => {
       stageEntries[stage] = transitions.filter(t => t.to_stage === stage).length;
     });
+    
+    // For new_lead, the "entries" are all leads that ever moved to meeting_done
+    // (i.e., total leads that entered the funnel)
+    const totalNewLeads = stageEntries['meeting_done'] || 0;
     
     // Count transitions between consecutive stages
     for (let i = 0; i < STAGE_ORDER.length - 1; i++) {
@@ -119,8 +129,11 @@ export function useLeadTransitions() {
         t => t.from_stage === fromStage && t.to_stage === toStage
       ).length;
       
-      // Total that entered this stage
-      const totalFromStage = stageEntries[fromStage] || 0;
+      // For new_lead stage, use total new leads as base
+      // For other stages, use entries into that stage
+      const totalFromStage = fromStage === 'new_lead' 
+        ? totalNewLeads  // Use new leads count
+        : stageEntries[fromStage] || 0;
       
       // Calculate rate (if there were entries to this stage)
       const rate = totalFromStage > 0 
