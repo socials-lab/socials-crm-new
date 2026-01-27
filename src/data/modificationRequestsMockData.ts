@@ -239,7 +239,9 @@ function createClientApprovedNotification(request: StoredModificationRequest): v
     title: '✅ Klient potvrdil změnu!',
     message: `${clientName} potvrdil ${changeType} pro zakázku "${request.engagement_name}". Můžete se pustit do práce!`,
     link: '/modifications',
-    read: false,
+    is_read: false,
+    entity_type: 'modification',
+    entity_id: request.id,
     created_at: new Date().toISOString(),
     metadata: {
       modification_request_id: request.id,

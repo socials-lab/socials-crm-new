@@ -14,9 +14,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useNotifications } from '@/hooks/useNotifications';
-import { NOTIFICATION_CONFIG, NotificationType } from '@/types/notifications';
+import { NOTIFICATION_CONFIG, NOTIFICATION_FILTERS, type NotificationType, type NotificationFilterKey } from '@/types/notifications';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow, format, isToday, isYesterday, startOfDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
@@ -26,10 +26,43 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   lead_converted: 'Lead převeden',
   access_granted: 'Přístupy uděleny',
   offer_sent: 'Nabídka odeslána',
+  offer_viewed: 'Nabídka zobrazena',
   colleague_birthday: 'Narozeniny kolegy',
   new_feedback_idea: 'Nový nápad',
   client_approved_modification: 'Klient potvrdil změnu',
+  engagement_assigned: 'Přiřazení k zakázce',
+  engagement_service_added: 'Nová služba',
+  engagement_ending_soon: 'Zakázka končí',
+  extra_work_approved: 'Vícepráce schválena',
+  extra_work_ready_to_invoice: 'Vícepráce k fakturaci',
+  creative_boost_activated: 'Creative Boost aktivován',
+  creative_boost_deadline: 'Creative Boost deadline',
 };
+
+// Group notifications by date
+function groupByDate(notifications: typeof useNotifications extends () => { notifications: infer N } ? N : never) {
+  const groups: Map<string, typeof notifications> = new Map();
+  
+  notifications.forEach(notification => {
+    const date = startOfDay(new Date(notification.created_at));
+    let label: string;
+    
+    if (isToday(date)) {
+      label = 'Dnes';
+    } else if (isYesterday(date)) {
+      label = 'Včera';
+    } else {
+      label = format(date, 'd. MMMM yyyy', { locale: cs });
+    }
+    
+    if (!groups.has(label)) {
+      groups.set(label, []);
+    }
+    groups.get(label)!.push(notification);
+  });
+  
+  return groups;
+}
 
 export default function Notifications() {
   const navigate = useNavigate();
@@ -41,14 +74,20 @@ export default function Notifications() {
     deleteNotification 
   } = useNotifications();
   
-  const [filterType, setFilterType] = useState<NotificationType | 'all'>('all');
+  const [filterKey, setFilterKey] = useState<NotificationFilterKey>('all');
   const [tab, setTab] = useState<'all' | 'unread'>('all');
 
+  // Get current filter config
+  const currentFilter = NOTIFICATION_FILTERS.find(f => f.key === filterKey) || NOTIFICATION_FILTERS[0];
+
   const filteredNotifications = notifications.filter(n => {
-    if (tab === 'unread' && n.read) return false;
-    if (filterType !== 'all' && n.type !== filterType) return false;
+    if (tab === 'unread' && n.is_read) return false;
+    if (currentFilter.entityTypes && !currentFilter.entityTypes.includes(n.entity_type as any)) return false;
     return true;
   });
+
+  // Group filtered notifications by date
+  const groupedNotifications = groupByDate(filteredNotifications);
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -69,6 +108,87 @@ export default function Notifications() {
     if (notification.link) {
       navigate(notification.link);
     }
+  };
+
+  const renderNotificationCard = (notification: typeof notifications[0]) => {
+    const config = NOTIFICATION_CONFIG[notification.type];
+    return (
+      <Card 
+        key={notification.id}
+        className={cn(
+          'cursor-pointer hover:shadow-md transition-all hover:border-primary/30',
+          !notification.is_read && 'border-primary/30 bg-primary/5'
+        )}
+        onClick={() => handleNotificationClick(notification)}
+      >
+        <CardContent className="p-4 flex items-start gap-4">
+          {/* Icon */}
+          <div className={cn(
+            'flex items-center justify-center h-11 w-11 rounded-full shrink-0 text-xl',
+            config.bgColor
+          )}>
+            {config.icon}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="flex items-center gap-2">
+                <h3 className={cn(
+                  'font-medium',
+                  !notification.is_read && 'text-foreground',
+                  notification.is_read && 'text-muted-foreground'
+                )}>
+                  {notification.title}
+                </h3>
+                {!notification.is_read && (
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                )}
+              </div>
+              <Badge variant="outline" className="text-xs shrink-0">
+                {NOTIFICATION_TYPE_LABELS[notification.type]}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-2">
+              {notification.message}
+            </p>
+            <p className="text-xs text-muted-foreground/70">
+              {formatTime(notification.created_at)}
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-1 shrink-0">
+            {!notification.is_read && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  markAsRead(notification.id);
+                }}
+                title="Označit jako přečtené"
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteNotification(notification.id);
+              }}
+              title="Smazat"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -105,23 +225,22 @@ export default function Notifications() {
             </TabsTrigger>
           </TabsList>
 
-          <Select value={filterType} onValueChange={(v) => setFilterType(v as NotificationType | 'all')}>
+          <Select value={filterKey} onValueChange={(v) => setFilterKey(v as NotificationFilterKey)}>
             <SelectTrigger className="w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Filtrovat typ" />
+              <SelectValue placeholder="Filtrovat" />
             </SelectTrigger>
             <SelectContent className="bg-popover">
-              <SelectItem value="all">Všechny typy</SelectItem>
-              {Object.entries(NOTIFICATION_TYPE_LABELS).map(([type, label]) => (
-                <SelectItem key={type} value={type}>
-                  {NOTIFICATION_CONFIG[type as NotificationType].icon} {label}
+              {NOTIFICATION_FILTERS.map((filter) => (
+                <SelectItem key={filter.key} value={filter.key}>
+                  {filter.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        <TabsContent value="all" className="mt-4 space-y-3">
+        <TabsContent value="all" className="mt-4 space-y-6">
           {filteredNotifications.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-muted-foreground">
@@ -130,90 +249,18 @@ export default function Notifications() {
               </CardContent>
             </Card>
           ) : (
-            filteredNotifications.map((notification) => {
-              const config = NOTIFICATION_CONFIG[notification.type];
-              return (
-                <Card 
-                  key={notification.id}
-                  className={cn(
-                    'cursor-pointer hover:shadow-md transition-all hover:border-primary/30',
-                    !notification.read && 'border-primary/30 bg-primary/5'
-                  )}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <CardContent className="p-4 flex items-start gap-4">
-                    {/* Icon */}
-                    <div className={cn(
-                      'flex items-center justify-center h-11 w-11 rounded-full shrink-0 text-xl',
-                      config.bgColor
-                    )}>
-                      {config.icon}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className={cn(
-                            'font-medium',
-                            !notification.read && 'text-foreground',
-                            notification.read && 'text-muted-foreground'
-                          )}>
-                            {notification.title}
-                          </h3>
-                          {!notification.read && (
-                            <div className="h-2 w-2 rounded-full bg-primary" />
-                          )}
-                        </div>
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          {NOTIFICATION_TYPE_LABELS[notification.type]}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground/70">
-                        {formatTime(notification.created_at)}
-                      </p>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {!notification.read && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markAsRead(notification.id);
-                          }}
-                          title="Označit jako přečtené"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNotification(notification.id);
-                        }}
-                        title="Smazat"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
+            Array.from(groupedNotifications.entries()).map(([dateLabel, dayNotifications]) => (
+              <div key={dateLabel} className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground px-1">
+                  {dateLabel}
+                </h4>
+                {dayNotifications.map(notification => renderNotificationCard(notification))}
+              </div>
+            ))
           )}
         </TabsContent>
 
-        <TabsContent value="unread" className="mt-4 space-y-3">
+        <TabsContent value="unread" className="mt-4 space-y-6">
           {filteredNotifications.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-muted-foreground">
@@ -222,70 +269,14 @@ export default function Notifications() {
               </CardContent>
             </Card>
           ) : (
-            filteredNotifications.map((notification) => {
-              const config = NOTIFICATION_CONFIG[notification.type];
-              return (
-                <Card 
-                  key={notification.id}
-                  className="cursor-pointer hover:shadow-md transition-all hover:border-primary/30 border-primary/30 bg-primary/5"
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <CardContent className="p-4 flex items-start gap-4">
-                    <div className={cn(
-                      'flex items-center justify-center h-11 w-11 rounded-full shrink-0 text-xl',
-                      config.bgColor
-                    )}>
-                      {config.icon}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{notification.title}</h3>
-                          <div className="h-2 w-2 rounded-full bg-primary" />
-                        </div>
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          {NOTIFICATION_TYPE_LABELS[notification.type]}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground/70">
-                        {formatTime(notification.created_at)}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          markAsRead(notification.id);
-                        }}
-                        title="Označit jako přečtené"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNotification(notification.id);
-                        }}
-                        title="Smazat"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
+            Array.from(groupedNotifications.entries()).map(([dateLabel, dayNotifications]) => (
+              <div key={dateLabel} className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground px-1">
+                  {dateLabel}
+                </h4>
+                {dayNotifications.map(notification => renderNotificationCard(notification))}
+              </div>
+            ))
           )}
         </TabsContent>
       </Tabs>

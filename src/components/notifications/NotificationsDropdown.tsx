@@ -105,7 +105,7 @@ export function NotificationsDropdown() {
                     key={notification.id}
                     className={cn(
                       'flex items-start gap-3 p-3 hover:bg-muted/50 cursor-pointer transition-colors relative group',
-                      !notification.read && 'bg-primary/5'
+                      !notification.is_read && 'bg-primary/5'
                     )}
                     onClick={() => handleNotificationClick(notification)}
                   >
@@ -122,12 +122,12 @@ export function NotificationsDropdown() {
                       <div className="flex items-start justify-between gap-2">
                         <p className={cn(
                           'text-sm font-medium truncate',
-                          !notification.read && 'text-foreground',
-                          notification.read && 'text-muted-foreground'
+                          !notification.is_read && 'text-foreground',
+                          notification.is_read && 'text-muted-foreground'
                         )}>
                           {notification.title}
                         </p>
-                        {!notification.read && (
+                        {!notification.is_read && (
                           <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
                         )}
                       </div>
