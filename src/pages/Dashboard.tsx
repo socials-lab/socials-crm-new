@@ -507,9 +507,8 @@ export default function Dashboard() {
                   recentActivity.offersSent.length > 0 || recentActivity.contractsSigned.length > 0 || 
                   recentActivity.lostLeads.length > 0) && (
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
-                      <Target className="h-3.5 w-3.5" />
-                      Sales & Leady
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                      🎯 Sales & Leady
                     </p>
                     
                     {/* Noví klienti (won) */}
@@ -576,9 +575,8 @@ export default function Dashboard() {
                 {(recentActivity.newEngagements.length > 0 || recentActivity.endedEngagements.length > 0 ||
                   recentActivity.newExtraWorks.length > 0 || recentActivity.approvedExtraWorks.length > 0) && (
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
-                      <Briefcase className="h-3.5 w-3.5" />
-                      Zakázky & Vícepráce
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                      📁 Zakázky & Vícepráce
                     </p>
                     
                     {recentActivity.newEngagements.length > 0 && (
@@ -626,9 +624,8 @@ export default function Dashboard() {
                 {/* === NÁVRHY ZMĚN === */}
                 {(recentActivity.newModifications.length > 0 || recentActivity.approvedModifications.length > 0) && (
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
-                      <FileText className="h-3.5 w-3.5" />
-                      Návrhy změn
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                      ✏️ Návrhy změn
                     </p>
                     
                     {recentActivity.newModifications.length > 0 && (
@@ -656,9 +653,8 @@ export default function Dashboard() {
                 {/* === SCHŮZKY === */}
                 {(recentActivity.newMeetingsScheduled.length > 0 || recentActivity.completedMeetings.length > 0) && (
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      Schůzky
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                      📅 Schůzky
                     </p>
                     
                     {recentActivity.newMeetingsScheduled.length > 0 && (
@@ -686,9 +682,8 @@ export default function Dashboard() {
                 {/* === RECRUITMENT === */}
                 {(recentActivity.newApplicants.length > 0 || recentActivity.hiredApplicants.length > 0) && (
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5" />
-                      Recruitment
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                      👥 Recruitment
                     </p>
                     
                     {recentActivity.newApplicants.length > 0 && (
