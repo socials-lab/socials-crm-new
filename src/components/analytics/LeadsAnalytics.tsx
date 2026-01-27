@@ -299,96 +299,109 @@ export function LeadsAnalytics({
 
       {/* Performance Tables Section */}
 
-      {/* Performance Tables */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Source Performance */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium">Výkon podle zdroje</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+      {/* Source Quality Ranking - Full Width */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-status-active" />
+            Kvalita leadů podle zdroje (seřazeno dle Win Rate)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8">#</TableHead>
+                  <TableHead>Zdroj</TableHead>
+                  <TableHead className="text-right">Celkem leadů</TableHead>
+                  <TableHead className="text-right">Vyhráno</TableHead>
+                  <TableHead className="text-right">Win Rate</TableHead>
+                  <TableHead className="text-right">Prům. hodnota dealu</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sourcePerformance.length === 0 ? (
                   <TableRow>
-                    <TableHead>Zdroj</TableHead>
-                    <TableHead className="text-right">Leady</TableHead>
-                    <TableHead className="text-right">Konverze</TableHead>
-                    <TableHead className="text-right">Win Rate</TableHead>
-                    <TableHead className="text-right">Prům. Deal</TableHead>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      Žádná data o zdrojích
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sourcePerformance.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        Žádná data o zdrojích
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    sourcePerformance.map((source) => (
+                ) : (
+                  [...sourcePerformance]
+                    .sort((a, b) => b.conversionRate - a.conversionRate)
+                    .map((source, index) => (
                       <TableRow key={source.source}>
+                        <TableCell className="font-bold text-muted-foreground">
+                          {index + 1}
+                        </TableCell>
                         <TableCell className="font-medium">{source.source}</TableCell>
                         <TableCell className="text-right">{source.count}</TableCell>
                         <TableCell className="text-right">{source.converted}</TableCell>
                         <TableCell className="text-right">
-                          <Badge variant={source.conversionRate >= 20 ? 'default' : 'secondary'}>
+                          <Badge 
+                            variant={source.conversionRate >= 30 ? 'default' : source.conversionRate >= 15 ? 'secondary' : 'outline'}
+                            className={cn(
+                              source.conversionRate >= 30 && "bg-status-active text-white"
+                            )}
+                          >
                             {source.conversionRate.toFixed(1)}%
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">{formatCurrency(source.avgDealSize)} Kč</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Owner Performance */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium">Výkon obchodníků</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Obchodník</TableHead>
-                    <TableHead className="text-right">Leady</TableHead>
-                    <TableHead className="text-right">Konverze</TableHead>
-                    <TableHead className="text-right">Win Rate</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {ownerPerformance.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                        Žádná data o obchodnících
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    ownerPerformance.map((owner) => (
-                      <TableRow key={owner.owner}>
-                        <TableCell className="font-medium">{owner.owner}</TableCell>
-                        <TableCell className="text-right">{owner.count}</TableCell>
-                        <TableCell className="text-right">{owner.converted}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={owner.conversionRate >= 20 ? 'default' : 'secondary'}>
-                            {owner.conversionRate.toFixed(1)}%
-                          </Badge>
+                        <TableCell className="text-right font-medium">
+                          {source.avgDealSize > 0 ? `${formatCurrency(source.avgDealSize)} Kč` : '-'}
                         </TableCell>
                       </TableRow>
                     ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Owner Performance */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Výkon obchodníků</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Obchodník</TableHead>
+                  <TableHead className="text-right">Leady</TableHead>
+                  <TableHead className="text-right">Konverze</TableHead>
+                  <TableHead className="text-right">Win Rate</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ownerPerformance.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      Žádná data o obchodnících
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  ownerPerformance.map((owner) => (
+                    <TableRow key={owner.owner}>
+                      <TableCell className="font-medium">{owner.owner}</TableCell>
+                      <TableCell className="text-right">{owner.count}</TableCell>
+                      <TableCell className="text-right">{owner.converted}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant={owner.conversionRate >= 20 ? 'default' : 'secondary'}>
+                          {owner.conversionRate.toFixed(1)}%
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Won Deals Section */}
       <Card>
