@@ -1,5 +1,7 @@
 import type { Notification } from '@/types/notifications';
 
+// Mock data for notifications - will be replaced by Supabase data
+// Uses is_read for compatibility with new schema
 export const mockNotifications: Notification[] = [
   {
     id: 'notif-1',
@@ -7,7 +9,8 @@ export const mockNotifications: Notification[] = [
     title: 'Nový lead',
     message: 'Společnost ABC Solutions s.r.o. projevila zájem o Performance Boost.',
     link: '/leads',
-    read: false,
+    is_read: false,
+    entity_type: 'lead',
     created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(), // 15 min ago
     metadata: {
       lead_id: 'lead-1',
@@ -20,7 +23,8 @@ export const mockNotifications: Notification[] = [
     title: 'Onboarding formulář vyplněn',
     message: 'PetShop Online s.r.o. vyplnil onboarding formulář.',
     link: '/leads',
-    read: false,
+    is_read: false,
+    entity_type: 'lead',
     created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 min ago
     metadata: {
       lead_id: 'lead-2',
@@ -33,7 +37,8 @@ export const mockNotifications: Notification[] = [
     title: '🔑 Přístupy nasdíleny',
     message: 'LuxuryWatches s.r.o. nasdílel přístupy k Meta Ads, Google Ads, S-klik.',
     link: '/leads',
-    read: false,
+    is_read: false,
+    entity_type: 'lead',
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 1).toISOString(), // 1 hour ago
     metadata: {
       lead_id: 'lead-4',
@@ -46,7 +51,8 @@ export const mockNotifications: Notification[] = [
     title: '📤 Nabídka odeslána',
     message: 'Nabídka pro GreenEnergy CZ s.r.o. byla odeslána.',
     link: '/leads',
-    read: false,
+    is_read: false,
+    entity_type: 'lead',
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
     metadata: {
       lead_id: 'lead-3',
@@ -59,7 +65,8 @@ export const mockNotifications: Notification[] = [
     title: 'Smlouva podepsána',
     message: 'TechGadgets s.r.o. podepsal smlouvu o spolupráci.',
     link: '/clients',
-    read: false,
+    is_read: false,
+    entity_type: 'lead',
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
     metadata: {
       client_id: 'client-1',
@@ -72,7 +79,8 @@ export const mockNotifications: Notification[] = [
     title: 'Lead převeden na zakázku',
     message: 'FashionBrand a.s. byl úspěšně převeden na aktivního klienta.',
     link: '/engagements',
-    read: true,
+    is_read: true,
+    entity_type: 'engagement',
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
     metadata: {
       client_id: 'client-2',
@@ -85,7 +93,8 @@ export const mockNotifications: Notification[] = [
     title: 'Nový lead',
     message: 'SportEquip s.r.o. vyplnil kontaktní formulář na webu.',
     link: '/leads',
-    read: true,
+    is_read: true,
+    entity_type: 'lead',
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), // 3 days ago
     metadata: {
       lead_id: 'lead-4',
