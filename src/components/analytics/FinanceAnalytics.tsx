@@ -67,6 +67,7 @@ interface FinanceAnalyticsProps {
   invoicingChange: number;
   marginChange: number;
   avgMrrPerClient: number;
+  avgMarginPerClient: number;
   engagementMargins: EngagementMargin[];
   marginTrend: { month: string; percent: number; absolute: number }[];
   marginDistribution: { range: string; count: number }[];
@@ -88,6 +89,7 @@ export function FinanceAnalytics({
   revenuePerColleague,
   invoicingChange,
   avgMrrPerClient,
+  avgMarginPerClient,
   engagementMargins,
   marginTrend,
   marginDistribution,
@@ -106,7 +108,7 @@ export function FinanceAnalytics({
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <KPICard
           title="Celková fakturace"
           value={`${formatCurrency(totalInvoicing)} Kč`}
@@ -136,6 +138,12 @@ export function FinanceAnalytics({
           title="Marže absolutní"
           value={`${formatCurrency(marginAbsolute)} Kč`}
           icon={TrendingUp}
+        />
+        <KPICard
+          title="Marže/klient"
+          value={`${formatCurrency(avgMarginPerClient)} Kč`}
+          icon={TrendingUp}
+          subtitle="průměrná"
         />
         <KPICard
           title="Revenue/Kolega"

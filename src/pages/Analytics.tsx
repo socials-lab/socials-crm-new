@@ -865,6 +865,13 @@ export default function Analytics() {
       return sum + engAssignments.reduce((s, a) => s + (a.monthly_cost || 0), 0);
     }, 0);
     const marginAbsolute = totalInvoicing - totalCost;
+    
+    // Average margin per client
+    const activeClientsCount = activeEngs.reduce((set, e) => {
+      set.add(e.client_id);
+      return set;
+    }, new Set<string>()).size;
+    const avgMarginPerClient = activeClientsCount > 0 ? marginAbsolute / activeClientsCount : 0;
 
     const periodExtraWorks = extraWorks.filter(ew => {
       const date = new Date(ew.work_date);
@@ -1002,6 +1009,7 @@ export default function Analytics() {
       marginDistribution,
       extraWorkTrend,
       marginByTier,
+      avgMarginPerClient,
       revenueBreakdown: {
         retainers: retainersRevenue,
         extraWork: extraWorkRevenue,
