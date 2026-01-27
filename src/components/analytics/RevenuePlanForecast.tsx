@@ -107,7 +107,7 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
   const [plans, setPlans] = useState<MonthlyPlan[]>(() => getStoredPlans());
   const [editingMonth, setEditingMonth] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [showMonthlyTable, setShowMonthlyTable] = useState(false);
+  const [showMonthlyTable, setShowMonthlyTable] = useState(true);
   const [showTargetsDialog, setShowTargetsDialog] = useState(false);
 
   const monthStart = startOfMonth(new Date(selectedYear, selectedMonth - 1));
@@ -293,14 +293,34 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
     return data;
   }, [monthsData, selectedMonth, currentMRR, plannedEngagements, selectedYear]);
 
-  // Year totals
+  // Year totals + deficit calculation
   const yearTotals = useMemo(() => {
     const totalTarget = monthsData.reduce((sum, m) => sum + m.target, 0);
     const totalActual = monthsData.filter(m => m.isPast || m.isCurrentMonth).reduce((sum, m) => sum + m.actual, 0);
     const yearProgress = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
     const remaining = totalTarget - totalActual;
     
-    return { totalTarget, totalActual, yearProgress, remaining };
+    // Calculate YTD deficit (how much behind/ahead we are)
+    const pastMonthsTarget = monthsData
+      .filter(m => m.isPast || m.isCurrentMonth)
+      .reduce((sum, m) => sum + m.target, 0);
+    const pastMonthsActual = monthsData
+      .filter(m => m.isPast || m.isCurrentMonth)
+      .reduce((sum, m) => sum + m.actual, 0);
+    
+    const ytdDeficit = pastMonthsTarget - pastMonthsActual; // positive = behind, negative = ahead
+    const remainingMonths = monthsData.filter(m => !m.isPast && !m.isCurrentMonth).length;
+    const monthlyAdjustment = remainingMonths > 0 ? ytdDeficit / remainingMonths : 0;
+    
+    return { 
+      totalTarget, 
+      totalActual, 
+      yearProgress, 
+      remaining,
+      ytdDeficit,
+      remainingMonths,
+      monthlyAdjustment
+    };
   }, [monthsData]);
 
   const selectedMonthData = monthsData.find(m => m.month === selectedMonth);
@@ -676,37 +696,6 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
         </Card>
       </div>
 
-      {/* Pipeline */}
-      {leadsWithOfferSent.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              🎯 Pipeline (leady s nabídkou)
-              <span className="text-muted-foreground font-normal">
-                {leadsWithOfferSent.length} leadů • ~{formatCompact(pipelineMRR)} potenciální MRR
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {leadsWithOfferSent.slice(0, 6).map(lead => (
-                <div key={lead.id} className="p-3 rounded-lg border bg-amber-500/5">
-                  <div className="font-medium text-sm">{lead.company_name}</div>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-xs text-muted-foreground">Nabídka odeslaná</span>
-                    <span className="text-sm font-medium text-amber-600">{formatCompact(lead.estimated_price || 0)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {leadsWithOfferSent.length > 6 && (
-              <p className="text-xs text-muted-foreground text-center mt-3">
-                +{leadsWithOfferSent.length - 6} dalších leadů
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Monthly Plan Table */}
       <Card>
@@ -724,6 +713,39 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
         </CardHeader>
         {showMonthlyTable && (
           <CardContent>
+            {/* Deficit/Surplus Alert */}
+            {yearTotals.ytdDeficit > 0 ? (
+              <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                <div className="flex items-start gap-2">
+                  <TrendingDown className="h-5 w-5 text-destructive mt-0.5" />
+                  <div>
+                    <p className="font-medium text-destructive">
+                      Aktuální ztráta: {formatCurrency(yearTotals.ytdDeficit)}
+                    </p>
+                    {yearTotals.remainingMonths > 0 && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Pro dohnání cíle potřebujete každý ze zbývajících {yearTotals.remainingMonths} měsíců přeplnit o ~<strong>{formatCurrency(Math.ceil(yearTotals.monthlyAdjustment))}</strong>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : yearTotals.ytdDeficit < 0 ? (
+              <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="h-5 w-5 text-emerald-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-emerald-600">
+                      Jste {formatCurrency(Math.abs(yearTotals.ytdDeficit))} před plánem! 🎉
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Máte náskok, který můžete využít jako rezervu nebo investovat do růstu.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <Table>
               <TableHeader>
                 <TableRow>
