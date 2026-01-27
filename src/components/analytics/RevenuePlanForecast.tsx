@@ -11,15 +11,12 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, parseISO, isSameMonth, addMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { useCRMData } from '@/hooks/useCRMData';
-import { useLeadsData } from '@/hooks/useLeadsData';
 import { usePlannedEngagements } from '@/hooks/usePlannedEngagements';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { AddPlannedEngagementDialog } from './AddPlannedEngagementDialog';
 import { EditMonthlyTargetsDialog } from './EditMonthlyTargetsDialog';
 import { 
   getTargetForMonth, 
-  calculateActualRevenue, 
   getStoredPlans,
   DEFAULT_TARGETS_2026,
   type RevenueSource 
@@ -44,11 +41,67 @@ interface RevenuePlanForecastProps {
   selectedMonth: number;
 }
 
+// ============= MOCK DATA FOR DEMO =============
+
+const MOCK_COLLEAGUES = [
+  { id: 'col-1', full_name: 'Jan Novák', position: 'Account Manager', status: 'active' },
+  { id: 'col-2', full_name: 'Marie Svobodová', position: 'Graphic Designer', status: 'active' },
+  { id: 'col-3', full_name: 'Petr Kučera', position: 'Performance Specialist', status: 'active' },
+  { id: 'col-4', full_name: 'Eva Horáková', position: 'Copywriter', status: 'active' },
+];
+
+const MOCK_CLIENTS = [
+  { id: 'cli-1', name: 'ABC Electronics', brand_name: 'ABC' },
+  { id: 'cli-2', name: 'Fashion Store s.r.o.', brand_name: 'FashionHub' },
+  { id: 'cli-3', name: 'Foodie Restaurant', brand_name: 'Foodie' },
+  { id: 'cli-4', name: 'Tech Solutions a.s.', brand_name: 'TechSol' },
+  { id: 'cli-5', name: 'Beauty Brand', brand_name: 'GlowUp' },
+  { id: 'cli-6', name: 'Auto Dealer CZ', brand_name: 'AutoMax' },
+  { id: 'cli-7', name: 'Home Decor', brand_name: 'CozyHome' },
+  { id: 'cli-8', name: 'Sport Equipment', brand_name: 'FitGear' },
+];
+
+// Active engagements with MRR
+const MOCK_ENGAGEMENTS = [
+  { id: 'eng-1', client_id: 'cli-1', name: 'Full Service Retainer', monthly_fee: 85000, status: 'active', type: 'retainer', start_date: '2024-03-01', end_date: null },
+  { id: 'eng-2', client_id: 'cli-2', name: 'Social Media Management', monthly_fee: 45000, status: 'active', type: 'retainer', start_date: '2024-06-01', end_date: '2026-02-28' },
+  { id: 'eng-3', client_id: 'cli-3', name: 'Performance Ads', monthly_fee: 60000, status: 'active', type: 'retainer', start_date: '2024-09-01', end_date: null },
+  { id: 'eng-4', client_id: 'cli-4', name: 'B2B Lead Gen', monthly_fee: 120000, status: 'active', type: 'retainer', start_date: '2024-01-15', end_date: null },
+  { id: 'eng-5', client_id: 'cli-5', name: 'Instagram + TikTok', monthly_fee: 55000, status: 'active', type: 'retainer', start_date: '2024-11-01', end_date: '2026-01-31' },
+  { id: 'eng-6', client_id: 'cli-6', name: 'Automotive Campaign', monthly_fee: 95000, status: 'active', type: 'retainer', start_date: '2025-01-01', end_date: null },
+  // New engagement starting this month
+  { id: 'eng-7', client_id: 'cli-7', name: 'E-commerce Growth', monthly_fee: 70000, status: 'active', type: 'retainer', start_date: '2026-01-15', end_date: null },
+];
+
+// Leads with offer sent (pipeline)
+const MOCK_LEADS_PIPELINE = [
+  { id: 'lead-1', company_name: 'Startup XYZ', estimated_price: 45000, stage: 'offer_sent' },
+  { id: 'lead-2', company_name: 'BigCorp Industries', estimated_price: 150000, stage: 'offer_sent' },
+  { id: 'lead-3', company_name: 'Local Bakery', estimated_price: 25000, stage: 'offer_sent' },
+  { id: 'lead-4', company_name: 'Fitness Club Chain', estimated_price: 80000, stage: 'offer_sent' },
+];
+
+// Assignments (colleague to engagement)
+const MOCK_ASSIGNMENTS = [
+  { engagement_id: 'eng-1', colleague_id: 'col-1' },
+  { engagement_id: 'eng-1', colleague_id: 'col-2' },
+  { engagement_id: 'eng-2', colleague_id: 'col-3' },
+  { engagement_id: 'eng-3', colleague_id: 'col-3' },
+  { engagement_id: 'eng-4', colleague_id: 'col-1' },
+  { engagement_id: 'eng-5', colleague_id: 'col-2' },
+  { engagement_id: 'eng-5', colleague_id: 'col-4' },
+  { engagement_id: 'eng-6', colleague_id: 'col-3' },
+  { engagement_id: 'eng-7', colleague_id: 'col-1' },
+];
+
+// Mock actual revenue for past months (simulating invoiced data)
+const MOCK_MONTHLY_ACTUALS_2026: Record<number, { actual: number; source: RevenueSource }> = {
+  1: { actual: 1750000, source: 'estimated' }, // Current month - estimated
+};
+
 const STORAGE_KEY = 'crm-business-plan';
 
 export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlanForecastProps) {
-  const { engagements, extraWorks, engagementServices, issuedInvoices, clients, colleagues, assignments } = useCRMData();
-  const { leads } = useLeadsData();
   const { plannedEngagements, addPlannedEngagement, deletePlannedEngagement } = usePlannedEngagements();
   
   const [plans, setPlans] = useState<MonthlyPlan[]>(() => getStoredPlans());
@@ -85,39 +138,38 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
     return num.toLocaleString('cs-CZ');
   };
 
-  // Current MRR from active retainers
+  // Current MRR from active retainers (MOCK)
   const currentMRR = useMemo(() => {
-    return engagements
+    return MOCK_ENGAGEMENTS
       .filter(e => e.status === 'active' && e.type === 'retainer')
       .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
-  }, [engagements]);
+  }, []);
 
-  // Ending engagements this month
+  // Ending engagements this month (MOCK)
   const endingEngagements = useMemo(() => {
-    return engagements.filter(e => {
+    return MOCK_ENGAGEMENTS.filter(e => {
       if (!e.end_date || e.status !== 'active') return false;
       const endDate = parseISO(e.end_date);
       return isSameMonth(endDate, monthStart);
     }).map(eng => ({
       ...eng,
-      client: clients.find(c => c.id === eng.client_id)
+      client: MOCK_CLIENTS.find(c => c.id === eng.client_id)
     }));
-  }, [engagements, clients, monthStart]);
+  }, [monthStart]);
 
   const churnMRR = endingEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
 
-  // NEW: Engagements starting this month (from DB - actual new deals)
+  // NEW: Engagements starting this month (MOCK)
   const startingEngagements = useMemo(() => {
-    return engagements.filter(e => {
+    return MOCK_ENGAGEMENTS.filter(e => {
       if (!e.start_date || e.status !== 'active') return false;
       const startDate = parseISO(e.start_date);
-      // Only count if started this month AND is relatively new (within current month)
       return isSameMonth(startDate, monthStart);
     }).map(eng => ({
       ...eng,
-      client: clients.find(c => c.id === eng.client_id)
+      client: MOCK_CLIENTS.find(c => c.id === eng.client_id)
     }));
-  }, [engagements, clients, monthStart]);
+  }, [monthStart]);
 
   const startingMRR = startingEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
 
@@ -136,34 +188,38 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
   // Total new MRR = actual starting + planned
   const newMRR = startingMRR + plannedMRR;
 
-  // Leads with offer sent
-  const leadsWithOfferSent = useMemo(() => {
-    return leads.filter(l => l.stage === 'offer_sent');
-  }, [leads]);
+  // Leads with offer sent (MOCK)
+  const leadsWithOfferSent = MOCK_LEADS_PIPELINE;
 
-  const pipelineMRR = leadsWithOfferSent.reduce((sum, l) => {
-    if (l.potential_services && l.potential_services.length > 0) {
-      return sum + l.potential_services.reduce((s: number, ps: any) => s + ps.price, 0);
-    }
-    return sum + (l.estimated_price || 0);
-  }, 0);
+  const pipelineMRR = leadsWithOfferSent.reduce((sum, l) => sum + (l.estimated_price || 0), 0);
 
   // Projected MRR
   const projectedMRR = currentMRR - churnMRR + newMRR;
+
+  // Calculate actual revenue for a month (MOCK)
+  const calculateActual = (year: number, month: number): { actual: number; source: RevenueSource } => {
+    if (year === 2026 && MOCK_MONTHLY_ACTUALS_2026[month]) {
+      return MOCK_MONTHLY_ACTUALS_2026[month];
+    }
+    // For future months or missing data, estimate from current MRR
+    const monthDate = new Date(year, month - 1);
+    const now = new Date();
+    if (monthDate > now) {
+      return { actual: 0, source: 'estimated' };
+    }
+    // Past months without data - simulate growth
+    const baseMonthlyRevenue = 1500000;
+    const monthsFromBase = (year - 2025) * 12 + month;
+    const growthFactor = 1 + (monthsFromBase * 0.02); // 2% monthly growth
+    return { actual: Math.round(baseMonthlyRevenue * growthFactor), source: 'invoiced' };
+  };
 
   // Generate months data for the year
   const monthsData = useMemo(() => {
     return Array.from({ length: 12 }, (_, i) => {
       const month = i + 1;
       const target = getTargetForMonth(selectedYear, month);
-      const { actual, source } = calculateActualRevenue(
-        selectedYear, 
-        month, 
-        issuedInvoices || [], 
-        engagements, 
-        extraWorks || [], 
-        engagementServices || []
-      );
+      const { actual, source } = calculateActual(selectedYear, month);
       
       const progress = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
       const diff = actual - target;
@@ -185,43 +241,26 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
         isSelected: month === selectedMonth,
       };
     });
-  }, [selectedYear, selectedMonth, plans, engagements, extraWorks, engagementServices, issuedInvoices]);
+  }, [selectedYear, selectedMonth, plans]);
 
   // Build chart data: past 6 months + current + 3 future with projections
   const chartData = useMemo(() => {
     const data: any[] = [];
-    const now = new Date();
     
-    // Past months (current year's data)
     monthsData.forEach(m => {
       const isPastOrCurrent = m.isPast || m.isCurrentMonth;
       
       // Calculate projection for future months
       let projection = 0;
       if (!isPastOrCurrent) {
-        // Simple projection: current MRR adjusted for known churn/new
         const monthDate = new Date(selectedYear, m.month - 1);
-        const monthsAhead = (m.month - selectedMonth);
         
-        // Get churn for this specific month
-        const monthChurn = engagements.filter(e => {
-          if (!e.end_date || e.status !== 'active') return false;
-          const endDate = parseISO(e.end_date);
-          return isSameMonth(endDate, monthDate);
-        }).reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
-
-        // Get planned for this month
-        const monthPlanned = plannedEngagements.filter(p => {
-          const startDate = parseISO(p.start_date);
-          return isSameMonth(startDate, monthDate);
-        }).reduce((sum, p) => sum + (p.monthly_fee * (p.probability_percent / 100)), 0);
-
-        // Cumulative projection
+        // Get churn for months between now and target month
         let cumChurn = 0;
         let cumNew = 0;
         for (let i = selectedMonth; i <= m.month; i++) {
           const iDate = new Date(selectedYear, i - 1);
-          cumChurn += engagements.filter(e => {
+          cumChurn += MOCK_ENGAGEMENTS.filter(e => {
             if (!e.end_date || e.status !== 'active') return false;
             return isSameMonth(parseISO(e.end_date), iDate);
           }).reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
@@ -229,6 +268,12 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
           cumNew += plannedEngagements.filter(p => 
             isSameMonth(parseISO(p.start_date), iDate)
           ).reduce((sum, p) => sum + (p.monthly_fee * (p.probability_percent / 100)), 0);
+          
+          // Also add starting engagements from mock
+          cumNew += MOCK_ENGAGEMENTS.filter(e => {
+            if (!e.start_date) return false;
+            return isSameMonth(parseISO(e.start_date), iDate);
+          }).reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
         }
         
         projection = currentMRR - cumChurn + cumNew;
@@ -246,7 +291,7 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
     });
     
     return data;
-  }, [monthsData, selectedMonth, currentMRR, engagements, plannedEngagements, selectedYear]);
+  }, [monthsData, selectedMonth, currentMRR, plannedEngagements, selectedYear]);
 
   // Year totals
   const yearTotals = useMemo(() => {
@@ -279,11 +324,11 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
     setEditValue('');
   };
 
-  // Get assigned colleagues for an engagement
+  // Get assigned colleagues for an engagement (MOCK)
   const getAssignedColleagues = (engagementId: string) => {
-    return assignments
+    return MOCK_ASSIGNMENTS
       .filter(a => a.engagement_id === engagementId)
-      .map(a => colleagues.find(c => c.id === a.colleague_id))
+      .map(a => MOCK_COLLEAGUES.find(c => c.id === a.colleague_id))
       .filter(Boolean)
       .map(c => c!.full_name.split(' ').map(n => n[0]).join(''))
       .join(', ');
@@ -291,6 +336,14 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
 
   return (
     <div className="space-y-6">
+      {/* Demo Badge */}
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex items-center gap-2">
+        <Badge variant="outline" className="border-amber-500 text-amber-600">DEMO</Badge>
+        <span className="text-sm text-muted-foreground">
+          Zobrazená data jsou ukázková. Plánované zakázky se ukládají do localStorage.
+        </span>
+      </div>
+
       {/* Annual KPIs */}
       <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
         <CardHeader className="pb-3">
@@ -534,7 +587,7 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* Actual new deals from DB */}
+            {/* Actual new deals from mock data */}
             {startingEngagements.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nové zakázky (z CRM)</p>
@@ -567,7 +620,7 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
               )}
               {plannedForMonth.map(planned => {
                 const assignedNames = planned.assigned_colleague_ids
-                  .map(id => colleagues.find(c => c.id === id))
+                  .map(id => MOCK_COLLEAGUES.find(c => c.id === id))
                   .filter(Boolean)
                   .map(c => c!.full_name.split(' ')[0])
                   .join(', ');
@@ -613,7 +666,7 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
             )}
 
             <AddPlannedEngagementDialog
-              colleagues={colleagues as any}
+              colleagues={MOCK_COLLEAGUES as any}
               onAdd={addPlannedEngagement}
               defaultStartDate={monthStart}
             />
@@ -634,21 +687,15 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {leadsWithOfferSent.slice(0, 6).map(lead => {
-                const leadValue = lead.potential_services && lead.potential_services.length > 0
-                  ? lead.potential_services.reduce((s: number, ps: any) => s + ps.price, 0)
-                  : lead.estimated_price || 0;
-                
-                return (
-                  <div key={lead.id} className="p-3 rounded-lg border bg-amber-500/5">
-                    <div className="font-medium text-sm">{lead.company_name}</div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-xs text-muted-foreground">Nabídka odeslaná</span>
-                      <span className="text-sm font-medium text-amber-600">{formatCompact(leadValue)}</span>
-                    </div>
+              {leadsWithOfferSent.slice(0, 6).map(lead => (
+                <div key={lead.id} className="p-3 rounded-lg border bg-amber-500/5">
+                  <div className="font-medium text-sm">{lead.company_name}</div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs text-muted-foreground">Nabídka odeslaná</span>
+                    <span className="text-sm font-medium text-amber-600">{formatCompact(lead.estimated_price || 0)}</span>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
             {leadsWithOfferSent.length > 6 && (
               <p className="text-xs text-muted-foreground text-center mt-3">
@@ -669,7 +716,7 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
               size="sm"
               onClick={() => setShowMonthlyTable(!showMonthlyTable)}
             >
-              {showMonthlyTable ? 'Skrýt tabulku' : 'Nastavit cíle měsíců'}
+              {showMonthlyTable ? 'Skrýt tabulku' : 'Zobrazit tabulku'}
             </Button>
           </div>
         </CardHeader>
@@ -694,12 +741,11 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
                   // Calculate projection for this row
                   let rowProjection = 0;
                   if (showProjection) {
-                    const monthDate = new Date(selectedYear, m.month - 1);
                     let cumChurn = 0;
                     let cumNew = 0;
                     for (let i = selectedMonth; i <= m.month; i++) {
                       const iDate = new Date(selectedYear, i - 1);
-                      cumChurn += engagements.filter(e => {
+                      cumChurn += MOCK_ENGAGEMENTS.filter(e => {
                         if (!e.end_date || e.status !== 'active') return false;
                         return isSameMonth(parseISO(e.end_date), iDate);
                       }).reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
