@@ -15,6 +15,16 @@ import {
   Heart,
   Trophy,
   Pencil,
+  ExternalLink,
+  FileText,
+  Link2,
+  Coins,
+  ClipboardCheck,
+  Package,
+  Search,
+  Receipt,
+  BarChart3,
+  Calendar,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +35,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useAcademyData, AcademyModule, AcademyVideo } from '@/hooks/useAcademyData';
+import { useAcademyData, AcademyModule, AcademyVideo, AcademyLink } from '@/hooks/useAcademyData';
 import { AcademyAdminPanel } from '@/components/academy/AcademyAdminPanel';
 
 // Icon mapping
@@ -40,6 +50,45 @@ const ICON_MAP: Record<string, typeof BookOpen> = {
   Lightbulb,
   Rocket,
   Heart,
+  Coins,
+  FileText,
+  ClipboardCheck,
+  Package,
+  Search,
+  Receipt,
+  BarChart3,
+  Calendar,
+};
+
+// Link type styling
+const getLinkStyle = (type?: AcademyLink['type']) => {
+  switch (type) {
+    case 'sop':
+      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200';
+    case 'doc':
+      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200';
+    case 'video':
+      return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 hover:bg-purple-200';
+    case 'external':
+      return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 hover:bg-orange-200';
+    default:
+      return 'bg-muted hover:bg-muted/80';
+  }
+};
+
+const getLinkIcon = (type?: AcademyLink['type']) => {
+  switch (type) {
+    case 'sop':
+      return FileText;
+    case 'doc':
+      return BookOpen;
+    case 'video':
+      return Play;
+    case 'external':
+      return ExternalLink;
+    default:
+      return Link2;
+  }
 };
 
 // Local storage for progress
@@ -242,6 +291,32 @@ export default function Academy() {
               
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">{module.description}</p>
+
+                {/* Module links (SOP, docs) */}
+                {module.links && module.links.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {module.links.slice(0, 3).map((link, idx) => {
+                      const LinkIcon = getLinkIcon(link.type);
+                      return (
+                        <a
+                          key={idx}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors ${getLinkStyle(link.type)}`}
+                        >
+                          <LinkIcon className="h-3 w-3" />
+                          {link.label}
+                        </a>
+                      );
+                    })}
+                    {module.links.length > 3 && (
+                      <span className="text-xs text-muted-foreground px-2 py-1">
+                        +{module.links.length - 3} další
+                      </span>
+                    )}
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
@@ -326,6 +401,28 @@ export default function Academy() {
                 </div>
               )}
             </div>
+
+            {/* Video links */}
+            {selectedVideo?.links && selectedVideo.links.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-lg">
+                <span className="text-xs text-muted-foreground mr-2">📎 Materiály:</span>
+                {selectedVideo.links.map((link, idx) => {
+                  const LinkIcon = getLinkIcon(link.type);
+                  return (
+                    <a
+                      key={idx}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${getLinkStyle(link.type)}`}
+                    >
+                      <LinkIcon className="h-3 w-3" />
+                      {link.label}
+                    </a>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Video info and actions */}
             <div className="flex items-center justify-between">
