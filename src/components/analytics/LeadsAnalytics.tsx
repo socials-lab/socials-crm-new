@@ -180,81 +180,81 @@ export function LeadsAnalytics({
         />
       </div>
 
-      {/* Charts Row 1 */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Lead Trend */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Vývoj leadů (12 měsíců)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={leadTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="month" 
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                  />
-                  <YAxis 
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="new" 
-                    stackId="1"
-                    stroke="hsl(var(--chart-1))" 
-                    fill="hsl(var(--chart-1))"
-                    fillOpacity={0.6}
-                    name="Nové"
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="active" 
-                    stackId="1"
-                    stroke="hsl(var(--chart-2))" 
-                    fill="hsl(var(--chart-2))"
-                    fillOpacity={0.6}
-                    name="Aktivní"
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="closed" 
-                    stackId="1"
-                    stroke="hsl(var(--chart-3))" 
-                    fill="hsl(var(--chart-3))"
-                    fillOpacity={0.6}
-                    name="Uzavřené"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+      {/* Lead Trend - Full Width Large Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium">Vývoj leadů (12 měsíců)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={leadTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis 
+                  dataKey="month" 
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                />
+                <YAxis 
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="new" 
+                  stackId="1"
+                  stroke="hsl(var(--chart-1))" 
+                  fill="hsl(var(--chart-1))"
+                  fillOpacity={0.6}
+                  name="Nové"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="active" 
+                  stackId="1"
+                  stroke="hsl(var(--chart-2))" 
+                  fill="hsl(var(--chart-2))"
+                  fillOpacity={0.6}
+                  name="Aktivní"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="closed" 
+                  stackId="1"
+                  stroke="hsl(var(--chart-3))" 
+                  fill="hsl(var(--chart-3))"
+                  fillOpacity={0.6}
+                  name="Uzavřené"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex justify-center gap-6 mt-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-chart-1" />
+              <span className="text-xs text-muted-foreground">Nové</span>
             </div>
-            <div className="flex justify-center gap-6 mt-2">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-chart-1" />
-                <span className="text-xs text-muted-foreground">Nové</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-chart-2" />
-                <span className="text-xs text-muted-foreground">Aktivní</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-chart-3" />
-                <span className="text-xs text-muted-foreground">Uzavřené</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-chart-2" />
+              <span className="text-xs text-muted-foreground">Aktivní</span>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-chart-3" />
+              <span className="text-xs text-muted-foreground">Uzavřené</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Charts Row - Pipeline Velocity */}
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Pipeline Velocity */}
         <Card>
           <CardHeader className="pb-2">
