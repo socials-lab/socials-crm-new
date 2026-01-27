@@ -1,196 +1,219 @@
 
 
-# Implementace: Rozšířené časové filtry v Analytice
+# Plán: Vylepšení Forecast tabu - Plánované zakázky a kompaktní design
 
-## Analýza současného stavu
+## Přehled změn
 
-### Aktuální implementace:
-- **Rok**: Select dropdown (2023-2026)
-- **Měsíc**: Navigace pomocí prev/next tlačítek
-- Všechny výpočty používají `selectedYear` a `selectedMonth` pro vytvoření `periodStart` a `periodEnd`
+### 1. Přidání plánovaných zakázek do forecastu
+Nová funkcionalita umožní přidat "plánované příjmy" - zakázky, o kterých víte, že začnou v budoucnu, i když ještě nejsou v systému jako engagement.
 
-### Problém:
-- Nelze zobrazit data za delší období (kvartál, rok, YTD)
-- Chybí srovnání s minulým rokem
-- Každý tab pracuje pouze s jedním měsícem
+### 2. Kompaktnější a čitelnější design
+Redukce počtu KPI karet a zlepšení čitelnosti textů.
 
 ---
 
-## Navrhované řešení
-
-### Nový "Period Mode" selektor
-
-Přidání nového dropdown selectu s možnostmi:
-
-| Režim | Popis | Období |
-|-------|-------|--------|
-| `month` | Měsíc | Konkrétní měsíc v roce |
-| `quarter` | Kvartál | Q1 (1-3), Q2 (4-6), Q3 (7-9), Q4 (10-12) |
-| `ytd` | Year to Date | Od 1.1. do aktuálního měsíce |
-| `year` | Celý rok | Celý vybraný rok |
-| `last_year` | Minulý rok | Celý předchozí rok |
-| `custom` | Vlastní období | Od-Do datepicker (volitelně) |
-
-### UI návrh
+## Nový UI design
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ Období: [Měsíc ▼]  Rok: [2026 ▼]  [◀ Únor ▶]                       │
-│                                                                     │
-│ nebo při výběru "Kvartál":                                          │
-│ Období: [Kvartál ▼]  Rok: [2026 ▼]  [Q1 ▼]                         │
-│                                                                     │
-│ nebo při výběru "YTD":                                              │
-│ Období: [YTD ▼]  Rok: [2026 ▼]  (1.1. - 27.1.2026)                 │
-│                                                                     │
-│ nebo při výběru "Minulý rok":                                       │
-│ Období: [Minulý rok ▼]  (1.1.2025 - 31.12.2025)                    │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│  FORECAST - Únor 2026                                    [◀ Měsíc ▶]   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │ SOUHRN MĚSÍCE                                                      │ │
+│  │ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐              │ │
+│  │ │ MRR           │ │ Churn         │ │ Nové zakázky  │              │ │
+│  │ │ 1,550k → 1,470k │ │ -80k (5.2%)  │ │ +120k         │              │ │
+│  │ │ ↓ -80k churn   │ │ 2 zakázky    │ │ 1 plánovaná   │              │ │
+│  │ └───────────────┘ └───────────────┘ └───────────────┘              │ │
+│  │                                                                    │ │
+│  │ VÝSLEDNÝ STAV: 1,590k MRR | Gap do plánu: +110k | Kapacita: 3 sloty│ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌──────────────────────────────────┐ ┌──────────────────────────────┐ │
+│  │ 📉 ODCHODY (Únor)               │ │ ➕ PŘÍCHODY (Únor)           │ │
+│  ├──────────────────────────────────┤ ├──────────────────────────────┤ │
+│  │ Mall.cz          8.2.   -32k    │ │ [+ Přidat plánovanou zakázku]│ │
+│  │   └ Jan N., Eva K.              │ │                              │ │
+│  │ Datart          24.2.   -48k    │ │ ✦ NewCorp s.r.o.   od 15.2.  │ │
+│  │   └ Petr S.                     │ │   +120k MRR | Jan N.         │ │
+│  │                                 │ │   (plánovaná)                │ │
+│  │ Celkem: -80k                    │ │ Celkem: +120k                │ │
+│  └──────────────────────────────────┘ └──────────────────────────────┘ │
+│                                                                         │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │ 👥 KAPACITA TÝMU                              [Zobrazit vše ▼]    │ │
+│  │ ┌───────────┐ ┌───────────┐ ┌───────────┐                          │ │
+│  │ │Jan Novák  │ │Petr S.    │ │Eva K.     │                          │ │
+│  │ │4/5 → 3/5  │ │5/5 → 4/5  │ │3/5 (bez   │                          │ │
+│  │ │+1 od 8.2. │ │+1 od 24.2.│ │změny)     │                          │ │
+│  │ │-1 od 15.2.│ │           │ │           │                          │ │
+│  │ │= 4/5      │ │= 4/5      │ │= 3/5      │                          │ │
+│  │ └───────────┘ └───────────┘ └───────────┘                          │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Technická implementace
+## Technické řešení pro plánované zakázky
 
-### 1. Nový typ pro období
+### Možnost A: LocalStorage (jednodušší, bez DB)
+- Plánované zakázky se ukládají do localStorage
+- Data jsou pouze pro forecast, neovlivňují zbytek systému
+- Výhoda: Rychlá implementace, žádné DB změny
+- Nevýhoda: Data nejsou sdílená mezi uživateli
+
+### Možnost B: Nová tabulka "planned_engagements" (robustnější)
+- Nová tabulka v Supabase
+- Sdílené mezi uživateli, persistentní
+- Výhoda: Profesionální řešení, možnost reportingu
+- Nevýhoda: Vyžaduje DB migraci
+
+**Doporučení**: Začít s localStorage (Možnost A), později lze rozšířit na DB.
+
+---
+
+## Struktura plánované zakázky
 
 ```typescript
-type PeriodMode = 'month' | 'quarter' | 'ytd' | 'year' | 'last_year';
-
-interface PeriodConfig {
-  mode: PeriodMode;
-  year: number;
-  month?: number;      // pro mode 'month'
-  quarter?: 1 | 2 | 3 | 4;  // pro mode 'quarter'
+interface PlannedEngagement {
+  id: string;                    // UUID
+  name: string;                  // Název zakázky
+  client_name: string;           // Jméno klienta (textově)
+  lead_id?: string;              // Volitelně propojení s leadem
+  monthly_fee: number;           // Plánované MRR
+  start_date: string;            // Od kdy
+  assigned_colleague_ids: string[]; // Přiřazení kolegové
+  notes: string;                 // Poznámky
+  probability_percent: number;   // Pravděpodobnost (default 100%)
+  created_at: string;
 }
 ```
 
-### 2. Nový state v Analytics.tsx
+---
 
-```typescript
-const [periodMode, setPeriodMode] = useState<PeriodMode>('month');
-const [selectedQuarter, setSelectedQuarter] = useState(1);
+## Nové komponenty
 
-// Vypočítané období podle režimu
-const { periodStart, periodEnd, periodLabel } = useMemo(() => {
-  switch (periodMode) {
-    case 'month':
-      return {
-        periodStart: new Date(selectedYear, selectedMonth - 1, 1),
-        periodEnd: endOfMonth(new Date(selectedYear, selectedMonth - 1)),
-        periodLabel: `${monthNames[selectedMonth - 1]} ${selectedYear}`,
-      };
-    case 'quarter':
-      const qStart = (selectedQuarter - 1) * 3;
-      return {
-        periodStart: new Date(selectedYear, qStart, 1),
-        periodEnd: endOfMonth(new Date(selectedYear, qStart + 2)),
-        periodLabel: `Q${selectedQuarter} ${selectedYear}`,
-      };
-    case 'ytd':
-      return {
-        periodStart: new Date(selectedYear, 0, 1),
-        periodEnd: new Date(),
-        periodLabel: `YTD ${selectedYear}`,
-      };
-    case 'year':
-      return {
-        periodStart: new Date(selectedYear, 0, 1),
-        periodEnd: new Date(selectedYear, 11, 31),
-        periodLabel: `Rok ${selectedYear}`,
-      };
-    case 'last_year':
-      const lastYear = new Date().getFullYear() - 1;
-      return {
-        periodStart: new Date(lastYear, 0, 1),
-        periodEnd: new Date(lastYear, 11, 31),
-        periodLabel: `Rok ${lastYear}`,
-      };
-  }
-}, [periodMode, selectedYear, selectedMonth, selectedQuarter]);
-```
+### 1. AddPlannedEngagementDialog
+Dialog pro přidání plánované zakázky:
+- Název zakázky
+- Jméno klienta (text nebo select z leadů)
+- Očekávané MRR
+- Datum zahájení
+- Přiřazení kolegové (multi-select)
+- Pravděpodobnost (slider 0-100%)
 
-### 3. Úprava všech useMemo bloků
+### 2. PlannedEngagementCard
+Karta zobrazující plánovanou zakázku s možností:
+- Editace
+- Smazání
+- Převod na skutečnou zakázku
 
-Všechny výpočty v `overviewData`, `leadsData`, `clientsEngagementsData`, `financeData`, `teamData` budou refaktorovány:
-
-```typescript
-// Před:
-const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
-const periodEnd = new Date(selectedYear, selectedMonth, 0);
-
-// Po:
-// periodStart a periodEnd budou brány z centrálního useMemo
-```
-
-### 4. Srovnání s předchozím obdobím
-
-Pro delší období bude srovnání:
-- **Měsíc**: vs minulý měsíc
-- **Kvartál**: vs předchozí kvartál
-- **YTD**: vs stejné období minulého roku
-- **Rok**: vs minulý rok
-- **Minulý rok**: vs předminulý rok
+### 3. ForecastSummaryBar
+Kompaktní summary bar místo 7 KPI karet:
+- Tři hlavní metriky vedle sebe
+- Výsledný stav na jednom řádku
 
 ---
 
-## Změny v jednotlivých komponentách
+## Logika forecastu s plánovanými zakázkami
 
-### AnalyticsOverview
-- Grafy "12 měsíců" se změní na "období + kontext" (např. pro rok zobrazí měsíce, pro kvartál týdny)
-- KPI budou agregovat celé období
+```typescript
+// Výpočet dopadu na kapacitu
+const capacityImpact = useMemo(() => {
+  return colleagues.map(colleague => {
+    const current = getCurrentEngagementCount(colleague.id);
+    const endingThisMonth = getEndingAssignments(colleague.id, month);
+    const newPlanned = plannedEngagements
+      .filter(p => 
+        p.assigned_colleague_ids.includes(colleague.id) &&
+        isInMonth(p.start_date, month)
+      );
+    
+    return {
+      colleague,
+      current,
+      afterEndings: current - endingThisMonth.length,
+      afterNew: current - endingThisMonth.length + newPlanned.length,
+      capacityEvents: [
+        ...endingThisMonth.map(e => ({ date: e.end_date, type: 'freed', name: e.name })),
+        ...newPlanned.map(p => ({ date: p.start_date, type: 'filled', name: p.name }))
+      ].sort((a, b) => a.date.localeCompare(b.date))
+    };
+  });
+}, [colleagues, engagements, assignments, plannedEngagements, month]);
 
-### LeadsAnalytics
-- Lead funnel za celé období
-- Trendy budou odpovídat délce období
-
-### FinanceAnalytics
-- Celková fakturace za období
-- Marže za období
-
-### ForecastTab
-- Zůstane primárně měsíční (forecasting dává smysl pro konkrétní měsíc)
-- Při jiném režimu zobrazí info "Pro forecast přepněte na měsíční zobrazení"
-
-### BusinessPlanTab
-- Při kvartálu/roce zobrazí souhrn za celé období
-- Plnění plánu se sečte za všechny měsíce v období
+// Výpočet dopadu na revenue
+const revenueImpact = useMemo(() => {
+  const lostMRR = endingEngagements.reduce((sum, e) => sum + e.monthly_fee, 0);
+  const newMRR = plannedEngagements
+    .filter(p => isInMonth(p.start_date, month))
+    .reduce((sum, p) => sum + p.monthly_fee * (p.probability_percent / 100), 0);
+  
+  return {
+    currentMRR,
+    lostMRR,
+    newMRR,
+    projectedMRR: currentMRR - lostMRR + newMRR,
+    gapToPlan: target - (currentMRR - lostMRR + newMRR)
+  };
+}, [engagements, plannedEngagements, month, target]);
+```
 
 ---
 
-## Soubory k úpravě
+## Změny v existujícím kódu
+
+### ForecastTab.tsx - Refaktor
+
+1. **Redukce KPI karet z 7 na 3 hlavní metriky**:
+   - MRR (aktuální → po změnách)
+   - Churn (ztráta + počet zakázek)
+   - Nové (plánovaný přírůstek)
+
+2. **Přidání summary baru** místo gridu KPI karet
+
+3. **Dvousloupcový layout**:
+   - Levý sloupec: Odchody (končící zakázky)
+   - Pravý sloupec: Příchody (plánované zakázky + tlačítko přidat)
+
+4. **Zjednodušená kapacita**:
+   - Kompaktní karty kolegů s timeline změn
+   - Zobrazení: "4/5 → 3/5 → 4/5" namísto dlouhých textů
+
+5. **Odstranění**:
+   - Sekce "Doporučení" (informace budou v summary)
+   - Sekce "Timeline 3 měsíce" (zjednodušit do karet kolegů)
+
+---
+
+## Soubory k úpravě/vytvoření
 
 | Soubor | Změna |
 |--------|-------|
-| `src/pages/Analytics.tsx` | Přidat periodMode state, nový Period Selector UI, refaktor useMemo bloků |
-| `src/components/analytics/AnalyticsOverview.tsx` | Přijímat periodStart/periodEnd místo year/month, adaptivní grafy |
-| `src/components/analytics/LeadsAnalytics.tsx` | Přijímat periodStart/periodEnd |
-| `src/components/analytics/ClientsEngagementsAnalytics.tsx` | Přijímat periodStart/periodEnd |
-| `src/components/analytics/FinanceAnalytics.tsx` | Přijímat periodStart/periodEnd |
-| `src/components/analytics/TeamCapacityAnalytics.tsx` | Přijímat periodStart/periodEnd |
-| `src/components/analytics/ForecastTab.tsx` | Handling pro ne-měsíční režimy |
-| `src/components/analytics/BusinessPlanTab.tsx` | Agregace za období |
+| `src/components/analytics/ForecastTab.tsx` | Kompletní refaktor - kompaktnější design, přidání plánovaných zakázek |
+| `src/components/analytics/AddPlannedEngagementDialog.tsx` | **Nový** - dialog pro přidání plánované zakázky |
+| `src/hooks/usePlannedEngagements.tsx` | **Nový** - hook pro správu plánovaných zakázek (localStorage) |
 
 ---
 
 ## Pořadí implementace
 
-1. **Analytics.tsx** - Přidat Period Selector UI a centrální období logiku
-2. **Refaktor props** - Změnit všechny child komponenty na přijímání `periodStart`/`periodEnd` místo `year`/`month`
-3. **AnalyticsOverview** - Adaptovat grafy a KPI
-4. **LeadsAnalytics** - Adaptovat výpočty
-5. **FinanceAnalytics** - Adaptovat výpočty
-6. **ClientsEngagementsAnalytics** - Adaptovat výpočty
-7. **TeamCapacityAnalytics** - Adaptovat výpočty
-8. **ForecastTab + BusinessPlanTab** - Speciální handling
+1. Vytvořit `usePlannedEngagements` hook s localStorage persistencí
+2. Vytvořit `AddPlannedEngagementDialog` komponentu
+3. Refaktorovat `ForecastTab` - kompaktní design
+4. Přidat sekci "Příchody" s plánovanými zakázkami
+5. Aktualizovat logiku výpočtu kapacity a revenue
 
 ---
 
 ## Očekávaný výsledek
 
-1. Nový dropdown "Období" s možnostmi: Měsíc, Kvartál, YTD, Rok, Minulý rok
-2. Dynamické UI podle vybraného režimu (kvartál selector, datum rozsah)
-3. Všechny analytiky agregují data za vybrané období
-4. Srovnání vždy s odpovídajícím předchozím obdobím
-5. Grafy se adaptují na délku období (měsíce/týdny/dny)
+1. **Kompaktnější UI**: 3 hlavní metriky místo 7, čitelné texty
+2. **Plánované zakázky**: Možnost přidat budoucí klienty/zakázky
+3. **Dopad na kapacitu**: Viditelné, jak nová zakázka ovlivní vytížení kolegů
+4. **Dopad na revenue**: Projekce MRR včetně plánovaných příjmů
+5. **Vizuální srovnání**: Odchody vs Příchody vedle sebe
 
