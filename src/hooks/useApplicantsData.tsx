@@ -164,6 +164,7 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
       internal_hourly_cost: data.hourly_rate,
       capacity_hours_per_month: null,
       max_engagements: 5,
+      capacity_slots: { meta: 3, google: 2, graphics: 2 },
       monthly_fixed_cost: null,
       notes: `IČO: ${data.ico}\nFirma: ${data.company_name}${data.dic ? `\nDIČ: ${data.dic}` : ''}\nAdresa: ${data.billing_street}, ${data.billing_zip} ${data.billing_city}\nÚčet: ${data.bank_account}`,
       profile_id: null,

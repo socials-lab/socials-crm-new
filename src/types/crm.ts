@@ -295,6 +295,7 @@ export interface Colleague {
   monthly_fixed_cost: number | null;
   capacity_hours_per_month: number | null; // Legacy - kept for extra work calculations
   max_engagements: number | null; // Max number of engagements colleague can handle
+  capacity_slots: Record<string, number> | null; // Capacity slots per service type (meta, google, graphics)
   status: ColleagueStatus;
   notes: string;
   birthday: string | null;
