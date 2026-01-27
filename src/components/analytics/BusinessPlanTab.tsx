@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Target, TrendingUp, TrendingDown, Edit2, Save, X, FileText, Calculator } from 'lucide-react';
-import { format, startOfMonth } from 'date-fns';
+import { Target, TrendingUp, TrendingDown, Edit2, Save, X, FileText, Calculator, AlertTriangle, Lightbulb, Calendar } from 'lucide-react';
+import { format, startOfMonth, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useCRMData } from '@/hooks/useCRMData';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -31,7 +31,7 @@ interface BusinessPlanTabProps {
 const STORAGE_KEY = 'crm-business-plan';
 
 export function BusinessPlanTab({ selectedYear, selectedMonth }: BusinessPlanTabProps) {
-  const { engagements, extraWorks, engagementServices, issuedInvoices } = useCRMData();
+  const { engagements, extraWorks, engagementServices, issuedInvoices, clients } = useCRMData();
   
   // Load plans from localStorage
   const [plans, setPlans] = useState<MonthlyPlan[]>(() => getStoredPlans());
@@ -90,6 +90,61 @@ export function BusinessPlanTab({ selectedYear, selectedMonth }: BusinessPlanTab
 
   // Summary for selected month
   const selectedMonthData = monthsData.find(m => m.month === selectedMonth);
+
+  // Churn impact for selected month
+  const churnImpact = useMemo(() => {
+    const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
+    const monthEnd = new Date(selectedYear, selectedMonth, 0);
+    
+    // Engagements ending this month (active retainers with end_date in this month)
+    const endingThisMonth = engagements.filter(e => {
+      if (!e.end_date || e.type !== 'retainer') return false;
+      const endDate = parseISO(e.end_date);
+      return endDate >= monthStart && endDate <= monthEnd;
+    });
+    
+    // Calculate lost MRR
+    const lostMRR = endingThisMonth.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    
+    // Current MRR (all active retainers that will be active at the start of month)
+    const currentMRR = engagements
+      .filter(e => {
+        if (e.status !== 'active' || e.type !== 'retainer') return false;
+        const start = e.start_date ? parseISO(e.start_date) : null;
+        if (!start || start > monthEnd) return false;
+        // Include if no end_date or end_date is in or after this month
+        if (!e.end_date) return true;
+        return parseISO(e.end_date) >= monthStart;
+      })
+      .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    
+    // MRR after churn
+    const mrrAfterChurn = currentMRR - lostMRR;
+    
+    // Target for this month
+    const target = getTargetForMonth(selectedYear, selectedMonth);
+    
+    // Required increase to meet plan
+    const requiredIncrease = Math.max(0, target - mrrAfterChurn);
+    
+    // Churn severity
+    const churnPercent = currentMRR > 0 ? (lostMRR / currentMRR) * 100 : 0;
+    const severity: 'high' | 'medium' | 'low' = churnPercent > 20 ? 'high' : churnPercent > 10 ? 'medium' : 'low';
+    
+    return {
+      endingEngagements: endingThisMonth.map(e => ({
+        ...e,
+        client: clients.find(c => c.id === e.client_id),
+      })),
+      currentMRR,
+      lostMRR,
+      mrrAfterChurn,
+      target,
+      requiredIncrease,
+      churnPercent,
+      severity,
+    };
+  }, [selectedYear, selectedMonth, engagements, clients]);
 
   // Year totals
   const yearTotals = useMemo(() => {
@@ -267,6 +322,95 @@ export function BusinessPlanTab({ selectedYear, selectedMonth }: BusinessPlanTab
             </div>
             {selectedMonthData.target > 0 && (
               <Progress value={selectedMonthData.progress} className="h-2" />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Churn Impact Card */}
+      {(churnImpact.lostMRR > 0 || churnImpact.requiredIncrease > 0) && (
+        <Card className={`border-2 ${
+          churnImpact.severity === 'high' 
+            ? 'border-destructive/50 bg-destructive/5' 
+            : churnImpact.severity === 'medium' 
+              ? 'border-amber-500/50 bg-amber-500/5' 
+              : 'border-green-500/50 bg-green-500/5'
+        }`}>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className={`h-5 w-5 ${
+                churnImpact.severity === 'high' 
+                  ? 'text-destructive' 
+                  : churnImpact.severity === 'medium' 
+                    ? 'text-amber-500' 
+                    : 'text-green-500'
+              }`} />
+              Dopad ukončených spoluprací – {selectedMonthData?.monthName} {selectedYear}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Ending engagements list */}
+            {churnImpact.endingEngagements.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Zakázky končící tento měsíc:</p>
+                <div className="space-y-2">
+                  {churnImpact.endingEngagements.map((e) => (
+                    <div 
+                      key={e.id} 
+                      className="flex items-center justify-between p-2 rounded-lg bg-background/50 border"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          (e.monthly_fee || 0) >= 50000 ? 'bg-destructive' : 'bg-amber-500'
+                        }`} />
+                        <span className="font-medium">{e.client?.name || 'Neznámý klient'}</span>
+                        <span className="text-muted-foreground">–</span>
+                        <span className="text-sm text-muted-foreground">{e.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {e.end_date ? format(parseISO(e.end_date), 'd.M.', { locale: cs }) : '–'}
+                        </div>
+                        <span className="font-medium text-destructive">
+                          -{formatShortCurrency(e.monthly_fee || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* KPI Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 rounded-lg bg-background/50 border">
+                <p className="text-xs text-muted-foreground">Aktuální MRR</p>
+                <p className="text-lg font-bold">{formatShortCurrency(churnImpact.currentMRR)}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-background/50 border">
+                <p className="text-xs text-muted-foreground">Ztráta MRR</p>
+                <p className="text-lg font-bold text-destructive">-{formatShortCurrency(churnImpact.lostMRR)}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-background/50 border">
+                <p className="text-xs text-muted-foreground">MRR po churnu</p>
+                <p className="text-lg font-bold">{formatShortCurrency(churnImpact.mrrAfterChurn)}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-background/50 border border-primary/30">
+                <p className="text-xs text-muted-foreground">Potřebný nárůst</p>
+                <p className="text-lg font-bold text-primary">+{formatShortCurrency(churnImpact.requiredIncrease)}</p>
+              </div>
+            </div>
+
+            {/* Info box */}
+            {churnImpact.requiredIncrease > 0 && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <Lightbulb className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <p className="text-sm">
+                  Pro splnění plánu je potřeba získat nové zakázky nebo vícepráce v hodnotě minimálně{' '}
+                  <span className="font-semibold">{formatCurrency(churnImpact.requiredIncrease)}</span>
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
