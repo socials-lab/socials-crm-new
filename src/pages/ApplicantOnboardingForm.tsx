@@ -6,6 +6,12 @@ import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Form,
   FormControl,
@@ -15,7 +21,10 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { CheckCircle, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle } from 'lucide-react';
+import { CheckCircle, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle, CalendarIcon, Heart } from 'lucide-react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import socialsLogo from '@/assets/socials-logo.png';
 
@@ -25,6 +34,10 @@ const formSchema = z.object({
   email: z.string().email('Neplatný email'),
   phone: z.string().min(9, 'Telefon je povinný'),
   position: z.string().min(2, 'Pozice je povinná'),
+  
+  // Personal info (new section)
+  birthday: z.date({ required_error: 'Datum narození je povinné' }),
+  personal_email: z.string().email('Neplatný email').optional().or(z.literal('')),
   
   // Company info (ARES validated)
   ico: z.string().min(8, 'IČO musí mít 8 číslic').max(8, 'IČO musí mít 8 číslic'),
@@ -80,6 +93,8 @@ export default function ApplicantOnboardingForm() {
       email: '',
       phone: '',
       position: '',
+      birthday: undefined,
+      personal_email: '',
       ico: '',
       company_name: '',
       dic: '',
@@ -299,6 +314,79 @@ export default function ApplicantOnboardingForm() {
                           <FormControl>
                             <Input {...field} />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Personal info - NEW SECTION */}
+                <div className="space-y-4">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Heart className="h-4 w-4" />
+                    Osobní údaje
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="birthday"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Datum narození *</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "d. MMMM yyyy", { locale: cs })
+                                  ) : (
+                                    <span>Vybrat datum</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date > new Date()}
+                                initialFocus
+                                className="pointer-events-auto"
+                                captionLayout="dropdown-buttons"
+                                fromYear={1950}
+                                toYear={new Date().getFullYear()}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormDescription>
+                            Pro sledování narozenin v týmu
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="personal_email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Soukromý email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="jan@gmail.com" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Pro interní komunikaci (nepovinné)
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

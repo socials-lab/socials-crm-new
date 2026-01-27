@@ -3,7 +3,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Search, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -62,6 +63,15 @@ const colleagueSchema = z.object({
   birthday: z.date().nullable(),
   invite_to_crm: z.boolean(),
   role: z.enum(['admin', 'management', 'project_manager', 'specialist', 'finance'] as const).optional(),
+  // New personal & billing fields
+  personal_email: z.string().email('Neplatný email').optional().or(z.literal('')).nullable(),
+  ico: z.string().nullable(),
+  dic: z.string().nullable(),
+  company_name: z.string().nullable(),
+  billing_street: z.string().nullable(),
+  billing_city: z.string().nullable(),
+  billing_zip: z.string().nullable(),
+  bank_account: z.string().nullable(),
 });
 
 type ColleagueFormData = z.infer<typeof colleagueSchema>;
@@ -78,6 +88,10 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
   const existingSlots = colleague?.capacity_slots 
     ? getCapacitySlots(colleague.capacity_slots)
     : DEFAULT_CAPACITY_SLOTS;
+
+  const [isValidatingARES, setIsValidatingARES] = useState(false);
+  const [aresError, setAresError] = useState<string | null>(null);
+  const [aresValidated, setAresValidated] = useState(false);
 
   const form = useForm<ColleagueFormData>({
     resolver: zodResolver(colleagueSchema),
@@ -97,8 +111,53 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
       birthday: colleague?.birthday ? new Date(colleague.birthday) : null,
       invite_to_crm: showInviteOption,
       role: 'specialist',
+      // New personal & billing fields
+      personal_email: colleague?.personal_email || null,
+      ico: colleague?.ico || null,
+      dic: colleague?.dic || null,
+      company_name: colleague?.company_name || null,
+      billing_street: colleague?.billing_street || null,
+      billing_city: colleague?.billing_city || null,
+      billing_zip: colleague?.billing_zip || null,
+      bank_account: colleague?.bank_account || null,
     },
   });
+
+  // ARES validation function
+  const validateARES = async (ico: string) => {
+    if (!ico || ico.length !== 8) {
+      setAresError('IČO musí mít přesně 8 číslic');
+      return;
+    }
+
+    setIsValidatingARES(true);
+    setAresError(null);
+
+    try {
+      const response = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
+      
+      if (!response.ok) {
+        throw new Error('Subjekt nebyl nalezen v ARES');
+      }
+
+      const data = await response.json();
+      
+      form.setValue('company_name', data.obchodniJmeno || '');
+      if (data.dic) form.setValue('dic', data.dic);
+      if (data.sidlo?.textovaAdresa) {
+        form.setValue('billing_street', data.sidlo.textovaAdresa.split(',')[0] || '');
+      }
+      if (data.sidlo?.nazevObce) form.setValue('billing_city', data.sidlo.nazevObce);
+      if (data.sidlo?.psc) form.setValue('billing_zip', data.sidlo.psc.toString());
+
+      setAresValidated(true);
+    } catch (error) {
+      setAresError(error instanceof Error ? error.message : 'Chyba při validaci IČO');
+      setAresValidated(false);
+    } finally {
+      setIsValidatingARES(false);
+    }
+  };
 
   const inviteToCrm = form.watch('invite_to_crm');
 
@@ -351,6 +410,193 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
               )}
             />
           </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h4 className="font-medium text-sm mb-3">Osobní a fakturační údaje</h4>
+          <FormDescription className="mb-3">
+            Pro freelancery a fakturaci (volitelné)
+          </FormDescription>
+          
+          <div className="grid gap-4 sm:grid-cols-2 mb-4">
+            <FormField
+              control={form.control}
+              name="personal_email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Soukromý email</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="email" 
+                      placeholder="jan@gmail.com" 
+                      value={field.value || ''} 
+                      onChange={(e) => field.onChange(e.target.value || null)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="ico"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>IČO</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input 
+                        placeholder="12345678"
+                        maxLength={8}
+                        value={field.value || ''} 
+                        onChange={(e) => {
+                          field.onChange(e.target.value || null);
+                          setAresValidated(false);
+                          setAresError(null);
+                        }}
+                      />
+                    </FormControl>
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => validateARES(field.value || '')}
+                      disabled={isValidatingARES || (field.value?.length || 0) !== 8}
+                    >
+                      {isValidatingARES ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Search className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  {aresError && (
+                    <div className="flex items-center gap-1 text-sm text-destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      {aresError}
+                    </div>
+                  )}
+                  {aresValidated && (
+                    <div className="flex items-center gap-1 text-sm text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      ARES OK
+                    </div>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 mb-4">
+            <FormField
+              control={form.control}
+              name="company_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Název firmy</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Jan Novák OSVČ" 
+                      value={field.value || ''} 
+                      onChange={(e) => field.onChange(e.target.value || null)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="dic"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>DIČ</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="CZ12345678" 
+                      value={field.value || ''} 
+                      onChange={(e) => field.onChange(e.target.value || null)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="billing_street"
+            render={({ field }) => (
+              <FormItem className="mb-4">
+                <FormLabel>Ulice a číslo</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Příkladná 123" 
+                    value={field.value || ''} 
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2 mb-4">
+            <FormField
+              control={form.control}
+              name="billing_city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Město</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Praha" 
+                      value={field.value || ''} 
+                      onChange={(e) => field.onChange(e.target.value || null)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="billing_zip"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>PSČ</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="110 00" 
+                      value={field.value || ''} 
+                      onChange={(e) => field.onChange(e.target.value || null)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="bank_account"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Číslo účtu</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="123456789/0100" 
+                    value={field.value || ''} 
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <FormField

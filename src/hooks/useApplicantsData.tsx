@@ -71,6 +71,9 @@ export interface OnboardingData {
   billing_city: string;
   billing_zip: string;
   bank_account: string;
+  // New personal fields
+  birthday?: string;
+  personal_email?: string;
 }
 
 const ApplicantsDataContext = createContext<ApplicantsDataContextType | undefined>(undefined);
@@ -166,9 +169,18 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
       max_engagements: 5,
       capacity_slots: { meta: 3, google: 2, graphics: 2 },
       monthly_fixed_cost: null,
-      notes: `IČO: ${data.ico}\nFirma: ${data.company_name}${data.dic ? `\nDIČ: ${data.dic}` : ''}\nAdresa: ${data.billing_street}, ${data.billing_zip} ${data.billing_city}\nÚčet: ${data.bank_account}`,
+      notes: '',
       profile_id: null,
-      birthday: null,
+      birthday: data.birthday || null,
+      // New personal & billing fields
+      personal_email: data.personal_email || null,
+      ico: data.ico,
+      dic: data.dic || null,
+      company_name: data.company_name,
+      billing_street: data.billing_street,
+      billing_city: data.billing_city,
+      billing_zip: data.billing_zip,
+      bank_account: data.bank_account,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
