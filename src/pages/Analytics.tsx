@@ -7,8 +7,8 @@ import { ClientsEngagementsAnalytics } from '@/components/analytics/ClientsEngag
 import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
 import { CreativeBoostAnalytics } from '@/components/analytics/CreativeBoostAnalytics';
 import { TeamCapacityAnalytics } from '@/components/analytics/TeamCapacityAnalytics';
-import { BusinessPlanTab } from '@/components/analytics/BusinessPlanTab';
-import { ForecastTab } from '@/components/analytics/ForecastTab';
+import { RevenuePlanForecast } from '@/components/analytics/RevenuePlanForecast';
+import { TeamCapacityForecast } from '@/components/analytics/TeamCapacityForecast';
 import { ExtraWorkMarginSection } from '@/components/analytics/ExtraWorkMarginSection';
 import { UpsellCommissionsAnalytics } from '@/components/analytics/UpsellCommissionsAnalytics';
 import { PeriodSelector, type PeriodMode } from '@/components/analytics/PeriodSelector';
@@ -1281,7 +1281,7 @@ export default function Analytics() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex lg:grid-cols-9">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex lg:grid-cols-8">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
           <TabsTrigger value="leads">Leady</TabsTrigger>
           <TabsTrigger value="clients">Klienti</TabsTrigger>
@@ -1289,8 +1289,7 @@ export default function Analytics() {
           <TabsTrigger value="upsells">Upselly</TabsTrigger>
           <TabsTrigger value="creative-boost">Creative Boost</TabsTrigger>
           <TabsTrigger value="team">Tým</TabsTrigger>
-          <TabsTrigger value="forecast">Forecast</TabsTrigger>
-          <TabsTrigger value="plan">Obchodní plán</TabsTrigger>
+          <TabsTrigger value="plan-forecast">Plán & Forecast</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -1357,23 +1356,20 @@ export default function Analytics() {
           />
         </TabsContent>
 
-        <TabsContent value="forecast" className="mt-6">
-          <ForecastTab
-            engagements={engagements}
-            clients={clients}
-            colleagues={colleagues}
-            assignments={assignments}
-            leads={leads}
-            selectedYear={selectedYear}
-            selectedMonth={selectedMonth}
-          />
-        </TabsContent>
-
-        <TabsContent value="plan" className="mt-6">
-          <BusinessPlanTab
-            selectedYear={selectedYear}
-            selectedMonth={selectedMonth}
-          />
+        <TabsContent value="plan-forecast" className="mt-6">
+          <div className="space-y-6">
+            <RevenuePlanForecast
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+            />
+            <TeamCapacityForecast
+              engagements={engagements}
+              colleagues={colleagues}
+              assignments={assignments}
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
