@@ -1,141 +1,147 @@
 
-# Plan: Analytics Dashboard Updates
+# Plan: Rozšíření osobních údajů kolegů (frontend only)
 
-## Summary
-Three changes to the Analytics dashboard:
-1. Odebrat kartu "MoM změna fakturace" ze sekce Klienti & Zakázky
-2. Přidat graf "Vývoj počtu zakázek" (12 měsíců)
-3. Přidat KPI "Průměrný MRR na klienta" do sekce Finance
+## Shrnutí
+Přidám nové osobní a fakturační údaje ke kolegům pouze na úrovni frontendu:
+- Datum narození (birthday) - již existuje v typu
+- Telefonní číslo (phone) - již existuje
+- Soukromý email (personal_email) - nové
+- IČO, DIČ, název firmy - nové
+- Kompletní fakturační adresa - nové
+- Číslo bankovního účtu - nové
 
----
-
-## 1. Odstranění karty "MoM změna fakturace"
-
-V sekci **Klienti & Zakázky** odeberu třetí KPI kartu, která zobrazuje procentní změnu fakturace oproti minulému měsíci. Tato informace zůstane dostupná v sekci Finance.
-
-**Změna v souboru:** `src/components/analytics/ClientsEngagementsAnalytics.tsx`
-- Odstraním `KPICard` s title "MoM změna fakturace" (řádky 151-163)
-- Grid zůstane se 2 kartami: "Aktivní zakázky" a "Celková fakturace"
+Všechny údaje budou sbírány v onboarding formuláři a uloženy v lokálním stavu (mock data).
 
 ---
 
-## 2. Přidání grafu "Vývoj počtu zakázek"
+## 1. Aktualizace TypeScript typu Colleague
 
-Nový AreaChart zobrazující počet aktivních zakázek za posledních 12 měsíců.
+**Soubor:** `src/types/crm.ts`
 
-**Změny:**
-
-### A. Data (`src/pages/Analytics.tsx`)
-V `clientsEngagementsData` přidám nový trend `engagementTrend`:
+Rozšířím interface `Colleague` o nová pole:
 ```typescript
-const engagementTrend = Array.from({ length: 12 }, (_, i) => {
-  const date = subMonths(periodStart, 11 - i);
-  const monthStart = startOfMonth(date);
-  const monthEnd = endOfMonth(date);
-  
-  const activeInMonth = engagements.filter(e => {
-    if (!e.start_date) return false;
-    const start = new Date(e.start_date);
-    const end = e.end_date ? new Date(e.end_date) : null;
-    return e.status === 'active' && start <= monthEnd && (!end || end >= monthStart);
-  }).length;
-
-  return {
-    month: format(date, 'MMM', { locale: cs }),
-    count: activeInMonth,
-  };
-});
-```
-
-### B. Component Props
-Přidám `engagementTrend` do interface `ClientEngagementsAnalyticsProps` a předám jako prop.
-
-### C. Graf (`src/components/analytics/ClientsEngagementsAnalytics.tsx`)
-Přidám nový graf vedle "Vývoj počtu klientů":
-```typescript
-<Card>
-  <CardHeader className="pb-2">
-    <CardTitle className="text-base font-medium">
-      Vývoj počtu zakázek (12 měsíců)
-    </CardTitle>
-  </CardHeader>
-  <CardContent>
-    <AreaChart data={engagementTrend}>
-      <Area 
-        type="monotone" 
-        dataKey="count" 
-        stroke="hsl(var(--chart-2))" 
-        fill="hsl(var(--chart-2))"
-        fillOpacity={0.3}
-        name="Aktivní zakázky"
-      />
-    </AreaChart>
-  </CardContent>
-</Card>
+export interface Colleague {
+  // ... existující pole ...
+  personal_email: string | null;  // Soukromý email
+  ico: string | null;             // IČO
+  dic: string | null;             // DIČ
+  company_name: string | null;    // Název firmy/OSVČ
+  billing_street: string | null;  // Ulice a číslo
+  billing_city: string | null;    // Město
+  billing_zip: string | null;     // PSČ
+  bank_account: string | null;    // Číslo účtu
+}
 ```
 
 ---
 
-## 3. Přidání KPI "Průměrný MRR na klienta"
+## 2. Aktualizace mock dat v useCRMData
 
-Nová metrika ukazující průměrnou měsíční tržbu na klienta.
+**Soubor:** `src/hooks/useCRMData.tsx`
 
-**Změny:**
+Přidám výchozí hodnoty `null` pro nová pole v mock datech kolegů.
 
-### A. Výpočet (`src/pages/Analytics.tsx`)
-V `financeData` přidám:
-```typescript
-// Počet aktivních klientů pro období
-const activeClientsForPeriod = clients.filter(c => {
-  if (!c.start_date) return c.status === 'active';
-  const start = new Date(c.start_date);
-  const end = c.end_date ? new Date(c.end_date) : null;
-  return start <= periodEnd && (!end || end >= periodStart);
-}).length;
+---
 
-// Průměrný MRR na klienta
-const avgMrrPerClient = activeClientsForPeriod > 0 
-  ? totalInvoicing / activeClientsForPeriod 
-  : 0;
-```
+## 3. Applicant Onboarding Form - přidání nových polí
 
-### B. Props a Interface
-Přidám `avgMrrPerClient` do `FinanceAnalyticsProps` interface a předám jako prop.
+**Soubor:** `src/pages/ApplicantOnboardingForm.tsx`
 
-### C. KPI Karta (`src/components/analytics/FinanceAnalytics.tsx`)
-Přidám novou kartu do gridu KPI karet:
-```typescript
-<KPICard
-  title="Prům. MRR na klienta"
-  value={`${formatCurrency(avgMrrPerClient)} Kč`}
-  icon={Users}
-  subtitle="měsíční"
-/>
-```
+### Změny ve validačním schématu:
+- Přidám pole `birthday` (datum narození) - povinné
+- Přidám pole `personal_email` (soukromý email) - volitelné
+
+### Nová sekce "Osobní údaje":
+Formulář bude rozdělen do sekcí:
+1. **Základní údaje** (jméno, pracovní email, telefon, pozice)
+2. **Osobní údaje** (datum narození, soukromý email) - NOVÁ SEKCE
+3. **Fakturační údaje** (IČO, firma, DIČ, adresa)
+4. **Platební údaje** (hodinová sazba, číslo účtu)
+
+---
+
+## 4. ColleagueForm - přidání nových polí
+
+**Soubor:** `src/components/forms/ColleagueForm.tsx`
+
+Přidám novou sekci "Osobní a fakturační údaje" s poli:
+- Soukromý email
+- Datum narození (datepicker)
+- IČO s ARES validací (tlačítko pro načtení dat)
+- Název firmy
+- DIČ
+- Fakturační adresa (ulice, město, PSČ)
+- Číslo účtu
+
+Tato sekce bude viditelná pouze pro adminy/uživatele s finančními právy.
+
+---
+
+## 5. Colleagues page - zobrazení osobních údajů
+
+**Soubor:** `src/pages/Colleagues.tsx`
+
+V rozbalené kartě kolegy přidám novou sekci "Fakturační údaje" (viditelnou pouze pro adminy):
+
+Zobrazené informace:
+- Datum narození s ikonou dortu
+- Soukromý email
+- IČO a DIČ
+- Název firmy
+- Fakturační adresa
+- Číslo bankovního účtu
+
+---
+
+## 6. Aktualizace konverze uchazeče na kolegu
+
+**Soubory:** 
+- `src/components/recruitment/ConvertApplicantDialog.tsx`
+- `src/hooks/useApplicantsData.tsx`
+
+Při konverzi uchazeče na kolegu zajistím přenos všech nových údajů do záznamu kolegy.
 
 ---
 
 ## Přehled souborů k úpravě
 
-| Soubor | Úpravy |
-|--------|--------|
-| `src/pages/Analytics.tsx` | Přidat `engagementTrend` data, přidat `avgMrrPerClient` výpočet |
-| `src/components/analytics/ClientsEngagementsAnalytics.tsx` | Odstranit "MoM změna fakturace" kartu, přidat graf zakázek |
-| `src/components/analytics/FinanceAnalytics.tsx` | Přidat KPI kartu pro průměrný MRR na klienta |
+| Soubor | Změny |
+|--------|-------|
+| `src/types/crm.ts` | Rozšíření Colleague interface o 8 nových polí |
+| `src/hooks/useCRMData.tsx` | Přidání výchozích null hodnot do mock dat |
+| `src/pages/ApplicantOnboardingForm.tsx` | Přidání birthday a personal_email do formuláře |
+| `src/components/forms/ColleagueForm.tsx` | Přidání sekce s osobními a fakturačními údaji |
+| `src/pages/Colleagues.tsx` | Zobrazení nových údajů v rozbalené kartě |
+| `src/components/recruitment/ConvertApplicantDialog.tsx` | Přidání personal_email a birthday polí |
+| `src/hooks/useApplicantsData.tsx` | Aktualizace OnboardingData a completeOnboarding |
 
 ---
 
-## Technical Details
+## Vizuální náhled
 
-### Nová data struktura pro engagementTrend
-```typescript
-interface EngagementTrendItem {
-  month: string;  // např. "led", "úno", "bře"
-  count: number;  // počet aktivních zakázek
-}
+### Onboarding formulář - nová sekce "Osobní údaje":
+```text
+┌─────────────────────────────────────────────┐
+│ 👤 Osobní údaje                             │
+├─────────────────────────────────────────────┤
+│ Datum narození *        Soukromý email      │
+│ [📅 Vyberte datum  ]    [jan@gmail.com   ]  │
+│                                             │
+│ Pro sledování           Pro interní         │
+│ narozenin v týmu        komunikaci          │
+└─────────────────────────────────────────────┘
 ```
 
-### Výpočet avgMrrPerClient
-- Vzorec: `totalInvoicing / activeClientsCount`
-- Pokud není žádný aktivní klient, vrátí 0
-- Zobrazeno ve formátu "XXK Kč" (zaokrouhleno na tisíce)
+### Karta kolegy - nová sekce (pro adminy):
+```text
+┌─────────────────────────────────────────────┐
+│ 🏢 Fakturační údaje                         │
+├─────────────────────────────────────────────┤
+│ 🎂 Narozeniny: 15. března                   │
+│ ✉️  Osobní email: jan.novak@gmail.com       │
+│ 🆔 IČO: 12345678 · DIČ: CZ12345678          │
+│ 🏢 Firma: Jan Novák OSVČ                    │
+│ 🏠 Adresa: Příkladná 123, Praha, 110 00     │
+│ 💳 Účet: 123456789/0100                     │
+└─────────────────────────────────────────────┘
+```
