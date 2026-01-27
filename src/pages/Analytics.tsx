@@ -247,22 +247,46 @@ export default function Analytics() {
       { name: 'Creative Boost', value: cbRevenue },
     ].filter(r => r.value > 0);
 
-    // Client concentration (top 5)
+    // Client concentration (all clients)
     const totalRevenue = retainersRevenue;
     const clientRevenues = activeClientsForPeriod.map(c => {
       const clientEngs = activeEngs.filter(e => e.client_id === c.id);
       const revenue = clientEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
       return { name: c.brand_name || c.name, revenue };
-    }).sort((a, b) => b.revenue - a.revenue);
+    }).filter(c => c.revenue > 0).sort((a, b) => b.revenue - a.revenue);
 
-    const clientConcentration = clientRevenues.slice(0, 5).map(c => ({
+    const clientConcentration = clientRevenues.map(c => ({
       name: c.name,
       revenue: c.revenue,
       percentage: totalRevenue > 0 ? (c.revenue / totalRevenue) * 100 : 0,
     }));
 
-    const top5Revenue = clientConcentration.reduce((sum, c) => sum + c.revenue, 0);
+    const top5Revenue = clientRevenues.slice(0, 5).reduce((sum, c) => sum + c.revenue, 0);
     const concentrationRisk = totalRevenue > 0 && (top5Revenue / totalRevenue) > 0.5;
+
+    // Service type breakdown (from engagement_services)
+    const serviceTypeBreakdown: { name: string; value: number }[] = [];
+    const serviceMap = new Map<string, number>();
+    
+    activeEngs.forEach(eng => {
+      const engServices = (engagementServices || []).filter(es => es.engagement_id === eng.id && es.is_active);
+      if (engServices.length > 0) {
+        engServices.forEach(es => {
+          const serviceName = es.name || 'Ostatní';
+          serviceMap.set(serviceName, (serviceMap.get(serviceName) || 0) + (es.price || 0));
+        });
+      } else {
+        // No services defined, count as engagement fee
+        serviceMap.set('Retainer', (serviceMap.get('Retainer') || 0) + (eng.monthly_fee || 0));
+      }
+    });
+    
+    serviceMap.forEach((value, name) => {
+      if (value > 0) {
+        serviceTypeBreakdown.push({ name, value });
+      }
+    });
+    serviceTypeBreakdown.sort((a, b) => b.value - a.value);
 
     // Monthly revenue + margin trend
     const monthlyRevenueMargin = Array.from({ length: 12 }, (_, i) => {
@@ -337,6 +361,7 @@ export default function Analytics() {
       clientChange: activeClientsForPeriod.length - prevActiveClients.length,
       mrrTrend,
       revenueBreakdown,
+      serviceTypeBreakdown,
       clientConcentration,
       concentrationRisk,
       monthlyRevenueMargin,
