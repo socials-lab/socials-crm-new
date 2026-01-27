@@ -407,8 +407,15 @@ export default function Analytics() {
       ? Math.round(conversionDays.reduce((a, b) => a + b, 0) / conversionDays.length)
       : 0;
 
-    const expectedValue = activeLeads.reduce(
-      (sum, l) => sum + ((l.estimated_price || 0) * (l.probability_percent || 50) / 100), 
+    // Pipeline hodnota = leady ve stádiu offer_sent s vyplněnými službami (potential_services)
+    const pipelineLeads = leads.filter(l => 
+      l.stage === 'offer_sent' && 
+      l.potential_services && 
+      Array.isArray(l.potential_services) && 
+      l.potential_services.length > 0
+    );
+    const expectedValue = pipelineLeads.reduce(
+      (sum, l) => sum + (l.estimated_price || 0), 
       0
     );
 

@@ -22,10 +22,10 @@ export function KPICard({ title, value, subtitle, icon: Icon, trend, className }
     )}>
       <div className="flex items-start justify-between">
         <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
-          <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">{title}</p>
-          <p className="text-xl md:text-2xl font-semibold tracking-tight truncate">{value}</p>
+          <p className="text-xs md:text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-xl md:text-2xl font-semibold tracking-tight">{value}</p>
           {subtitle && (
-            <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           )}
           {trend && (
             <p className={cn(

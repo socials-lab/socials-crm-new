@@ -111,8 +111,8 @@ export function LeadsAnalytics({
   
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+      {/* KPI Cards - 2 rows for better readability */}
+      <div className="grid gap-4 md:grid-cols-3">
         <KPICard
           title="Celkem leadů"
           value={totalLeads}
@@ -139,13 +139,16 @@ export function LeadsAnalytics({
           icon={Target}
           subtitle="lead → klient"
         />
+      </div>
+      
+      <div className="grid gap-4 md:grid-cols-3">
         <KPICard
-          title="Prům. doba konverze"
+          title="Průměrná doba konverze"
           value={`${avgConversionDays} dní`}
           icon={Clock}
         />
         <KPICard
-          title="Prům. deal size"
+          title="Průměrný deal size"
           value={`${formatCurrency(avgDealSize)} Kč`}
           icon={TrendingUp}
           subtitle="vyhrané dealy"
@@ -154,7 +157,7 @@ export function LeadsAnalytics({
           title="Pipeline hodnota"
           value={`${formatCurrency(expectedValue)} Kč`}
           icon={DollarSign}
-          subtitle="vážená pravděpodobností"
+          subtitle="leady s odeslanou nabídkou"
         />
       </div>
 
