@@ -11,6 +11,7 @@ interface UserRoleContextType {
   isLoading: boolean;
   colleagueId: string | null;
   canSeeFinancials: boolean;
+  canEditAcademy: boolean;
   allowedPages: string[];
   canAccessPage: (page: string) => boolean;
   hasRole: (role: AppRole) => boolean;
@@ -25,6 +26,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const [colleagueId, setColleagueId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [canSeeFinancials, setCanSeeFinancials] = useState(false);
+  const [canEditAcademy, setCanEditAcademy] = useState(false);
   const [allowedPages, setAllowedPages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -35,6 +37,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       setIsSuperAdmin(false);
       setColleagueId(null);
       setCanSeeFinancials(false);
+      setCanEditAcademy(false);
       setAllowedPages([]);
       setIsLoading(false);
       return;
@@ -60,12 +63,14 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
           // Handle new columns that might not exist yet
           const data = roleData as Record<string, unknown>;
           setCanSeeFinancials((data.can_see_financials as boolean) || false);
+          setCanEditAcademy((data.can_edit_academy as boolean) || false);
           setAllowedPages((data.allowed_pages as string[]) || []);
         } else {
           // User has no role assigned yet
           setRole(null);
           setIsSuperAdmin(false);
           setCanSeeFinancials(false);
+          setCanEditAcademy(false);
           setAllowedPages([]);
         }
 
@@ -112,6 +117,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       isLoading, 
       colleagueId,
       canSeeFinancials,
+      canEditAcademy,
       allowedPages,
       canAccessPage,
       hasRole 
