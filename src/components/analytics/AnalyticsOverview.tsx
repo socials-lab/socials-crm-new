@@ -257,14 +257,8 @@ export function AnalyticsOverview({
         {/* Client Concentration */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
+            <CardTitle className="text-base font-medium">
               Koncentrace klientů (Top 5)
-              {concentrationRisk && (
-                <Badge variant="destructive" className="text-xs">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  Riziko &gt;50%
-                </Badge>
-              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -465,16 +459,6 @@ export function AnalyticsOverview({
         </Card>
       </div>
 
-      {/* Concentration Risk Alert */}
-      {concentrationRisk && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Vysoká koncentrace klientů:</strong> Top 5 klientů tvoří více než 50% celkových příjmů. 
-            Doporučujeme diverzifikovat klientskou bázi pro snížení rizika.
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }
