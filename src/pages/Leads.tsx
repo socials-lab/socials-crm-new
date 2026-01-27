@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, LayoutGrid, List } from 'lucide-react';
+import { Search, Plus, LayoutGrid, List, Calendar, TrendingUp, Target, Trophy } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,31 @@ import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
 import { AddLeadDialog } from '@/components/leads/AddLeadDialog';
 import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
+import { startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, isWithinInterval } from 'date-fns';
+
+type KPIPeriod = 'this_month' | 'last_month' | 'this_quarter' | 'last_quarter' | 'ytd' | 'year';
+
+const getKPIPeriodRange = (period: KPIPeriod): { start: Date; end: Date } => {
+  const now = new Date();
+  switch(period) {
+    case 'this_month': return { start: startOfMonth(now), end: endOfMonth(now) };
+    case 'last_month': return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) };
+    case 'this_quarter': return { start: startOfQuarter(now), end: now };
+    case 'last_quarter': return { start: startOfQuarter(subQuarters(now, 1)), end: endOfQuarter(subQuarters(now, 1)) };
+    case 'ytd': return { start: startOfYear(now), end: now };
+    case 'year': return { start: startOfYear(now), end: endOfYear(now) };
+  }
+};
+
+const formatCurrency = (value: number) => {
+  if (value >= 1000000) {
+    return `${(value / 1000000).toFixed(1)}M`;
+  }
+  if (value >= 1000) {
+    return `${Math.round(value / 1000)}k`;
+  }
+  return value.toString();
+};
 
 type ViewMode = 'kanban' | 'table';
 
@@ -36,6 +61,7 @@ export default function Leads() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [kpiPeriod, setKpiPeriod] = useState<KPIPeriod>('this_month');
 
   // Derive selectedLead from context to always have fresh data
   const selectedLead = selectedLeadId 
@@ -57,25 +83,53 @@ export default function Leads() {
     });
   }, [leads, searchQuery, ownerFilter, stageFilter]);
 
-  // KPI calculations
+  // KPI calculations with time filtering
   const kpis = useMemo(() => {
-    const activeLeads = leads.filter(l => !['won', 'lost'].includes(l.stage));
-    const totalExpectedValue = activeLeads.reduce((sum, l) => 
-      sum + (l.estimated_price * l.probability_percent / 100), 0);
-    const totalEstimatedValue = activeLeads.reduce((sum, l) => sum + l.estimated_price, 0);
-    const wonLeads = leads.filter(l => l.stage === 'won').length;
-    const lostLeads = leads.filter(l => l.stage === 'lost').length;
-    const conversionRate = wonLeads + lostLeads > 0 
-      ? Math.round((wonLeads / (wonLeads + lostLeads)) * 100) 
+    const { start, end } = getKPIPeriodRange(kpiPeriod);
+    
+    // Aktivní leady vytvořené v období
+    const periodLeads = leads.filter(l => {
+      const createdAt = l.created_at ? new Date(l.created_at) : new Date();
+      return isWithinInterval(createdAt, { start, end });
+    });
+    
+    const activeLeads = periodLeads.filter(l => 
+      !['won', 'lost', 'postponed'].includes(l.stage)
+    );
+    
+    // Vyhrané leady (converted_at v daném období)
+    const wonLeads = leads.filter(l => {
+      if (l.stage !== 'won') return false;
+      const convertedAt = l.converted_at ? new Date(l.converted_at) : new Date(l.updated_at || l.created_at || new Date());
+      return isWithinInterval(convertedAt, { start, end });
+    });
+    
+    // Prohrané leady (stage = lost, updated v období)
+    const lostLeads = leads.filter(l => {
+      if (l.stage !== 'lost') return false;
+      const lostAt = new Date(l.updated_at || l.created_at || new Date());
+      return isWithinInterval(lostAt, { start, end });
+    });
+    
+    // Konverzní poměr
+    const conversionRate = wonLeads.length + lostLeads.length > 0 
+      ? Math.round((wonLeads.length / (wonLeads.length + lostLeads.length)) * 100) 
       : 0;
+    
+    // Potenciální hodnota aktivních
+    const potentialValue = activeLeads.reduce((sum, l) => sum + (l.estimated_price || 0), 0);
+    
+    // Hodnota vyhraných
+    const wonValue = wonLeads.reduce((sum, l) => sum + (l.estimated_price || 0), 0);
 
     return {
       activeCount: activeLeads.length,
-      totalExpectedValue,
-      totalEstimatedValue,
       conversionRate,
+      potentialValue,
+      wonCount: wonLeads.length,
+      wonValue,
     };
-  }, [leads]);
+  }, [leads, kpiPeriod]);
 
   const handleLeadClick = (lead: Lead) => {
     setSelectedLeadId(lead.id);
@@ -135,27 +189,50 @@ export default function Leads() {
         }
       />
 
+      {/* KPI Period Selector */}
+      <div className="flex items-center gap-2">
+        <Calendar className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">KPI období:</span>
+        <Select value={kpiPeriod} onValueChange={(v) => setKpiPeriod(v as KPIPeriod)}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="this_month">Tento měsíc</SelectItem>
+            <SelectItem value="last_month">Minulý měsíc</SelectItem>
+            <SelectItem value="this_quarter">Tento kvartál</SelectItem>
+            <SelectItem value="last_quarter">Minulý kvartál</SelectItem>
+            <SelectItem value="ytd">Year to Date</SelectItem>
+            <SelectItem value="year">Celý rok</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <KPICard
           title="Aktivní leady"
           value={kpis.activeCount}
           subtitle="v pipeline"
+          icon={Target}
         />
         <KPICard
-          title="Očekávaná hodnota"
-          value={`${Math.round(kpis.totalExpectedValue / 1000)}k`}
-          subtitle="CZK (vážená)"
+          title="Lead → Won"
+          value={`${kpis.conversionRate}%`}
+          subtitle="konverzní poměr"
+          icon={TrendingUp}
         />
         <KPICard
           title="Potenciální hodnota"
-          value={`${Math.round(kpis.totalEstimatedValue / 1000)}k`}
-          subtitle="CZK (celkem)"
+          value={`${formatCurrency(kpis.potentialValue)} CZK`}
+          subtitle="aktivní pipeline"
+          icon={Target}
         />
         <KPICard
-          title="Konverzní poměr"
-          value={`${kpis.conversionRate}%`}
-          subtitle="vyhráno/prohráno"
+          title="Vyhrané leady"
+          value={kpis.wonCount}
+          subtitle={`${formatCurrency(kpis.wonValue)} CZK MRR`}
+          icon={Trophy}
         />
       </div>
 
