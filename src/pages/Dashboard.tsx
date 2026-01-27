@@ -43,7 +43,7 @@ import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils
 
 export default function Dashboard() {
   const { leads } = useLeadsData();
-  const { clients, engagements, colleagues, extraWorks, engagementServices } = useCRMData();
+  const { clients, engagements, colleagues, extraWorks, engagementServices, assignments } = useCRMData();
   const { getTodaysMeetings } = useMeetingsData();
   const { isSuperAdmin, canSeeFinancials: userCanSeeFinancials } = useUserRole();
   const { pendingRequests } = useModificationRequests();
@@ -156,6 +156,44 @@ export default function Dashboard() {
   // === TEAM ===
   const upcomingBirthdays = getUpcomingBirthdays(colleagues, 14);
   const todaysMeetings = getTodaysMeetings();
+
+  // === TEAM WORKLOAD ===
+  const teamWorkload = useMemo(() => {
+    const activeColleagues = colleagues.filter(c => c.status === 'active');
+    const activeEngagementIds = engagements
+      .filter(e => e.status === 'active')
+      .map(e => e.id);
+    
+    const colleaguesWithWorkload = activeColleagues.map(colleague => {
+      // Count active assignments for this colleague
+      const activeAssignments = assignments.filter(
+        a => a.colleague_id === colleague.id && activeEngagementIds.includes(a.engagement_id)
+      ).length;
+      const maxEngagements = colleague.max_engagements ?? 5;
+      const utilizationPercent = Math.round((activeAssignments / maxEngagements) * 100);
+      const isFullyUtilized = activeAssignments >= maxEngagements;
+      
+      return {
+        ...colleague,
+        activeAssignments,
+        maxEngagements,
+        utilizationPercent,
+        isFullyUtilized,
+      };
+    });
+
+    const fullyUtilized = colleaguesWithWorkload.filter(c => c.isFullyUtilized);
+    const averageUtilization = colleaguesWithWorkload.length > 0
+      ? Math.round(colleaguesWithWorkload.reduce((sum, c) => sum + c.utilizationPercent, 0) / colleaguesWithWorkload.length)
+      : 0;
+
+    return {
+      colleagues: colleaguesWithWorkload,
+      fullyUtilized,
+      averageUtilization,
+      totalActive: activeColleagues.length,
+    };
+  }, [colleagues, engagements, assignments]);
 
   // === LEADS PIPELINE (all 9 stages) ===
   const leadsPipeline = useMemo(() => ({
@@ -611,10 +649,54 @@ export default function Dashboard() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
-              👥 Tým & Meetingy
+              👥 Tým & Vytížení
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Team Workload Overview */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Activity className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Průměrné vytížení</p>
+                  <p className="text-xs text-muted-foreground">{teamWorkload.totalActive} aktivních kolegů</p>
+                </div>
+              </div>
+              <span className="text-2xl font-semibold">{teamWorkload.averageUtilization}%</span>
+            </div>
+
+            {/* Fully Utilized Warning */}
+            {teamWorkload.fullyUtilized.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3 text-amber-500" />
+                  Plně vytížení kolegové ({teamWorkload.fullyUtilized.length})
+                </p>
+                {teamWorkload.fullyUtilized.slice(0, 4).map((colleague) => (
+                  <div 
+                    key={colleague.id} 
+                    className="flex items-center gap-3 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs">
+                        {colleague.full_name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{colleague.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{colleague.position}</p>
+                    </div>
+                    <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300 bg-amber-100 dark:bg-amber-900 dark:text-amber-300 text-xs">
+                      <AlertTriangle className="h-3 w-3" />
+                      {colleague.activeAssignments}/{colleague.maxEngagements}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Today's meetings count */}
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
               <div className="flex items-center gap-3">
