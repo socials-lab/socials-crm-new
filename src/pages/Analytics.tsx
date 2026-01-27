@@ -543,6 +543,27 @@ export default function Analytics() {
       };
     });
 
+    // Won deals details for table
+    const wonDeals = wonLeads
+      .filter(l => l.converted_at)
+      .map(l => {
+        const colleague = colleagues.find(c => c.id === l.owner_id);
+        const conversionDays = differenceInDays(new Date(l.converted_at!), new Date(l.created_at));
+        return {
+          id: l.id,
+          companyName: l.company_name,
+          value: l.estimated_price || 0,
+          source: SOURCE_LABELS[l.source || 'other'] || l.source || 'Neznámý',
+          owner: colleague?.full_name || 'Nepřiřazeno',
+          conversionDays,
+          convertedAt: l.converted_at!,
+        };
+      })
+      .sort((a, b) => new Date(b.convertedAt).getTime() - new Date(a.convertedAt).getTime());
+
+    const totalWonValue = wonDeals.reduce((sum, d) => sum + d.value, 0);
+    const wonDealsCount = wonDeals.length;
+
     return {
       totalLeads: leads.length,
       newLeadsThisMonth: currentPeriodLeads.length,
@@ -559,6 +580,9 @@ export default function Analytics() {
       sourcePerformance,
       ownerPerformance,
       monthlyWinLoss,
+      wonDeals,
+      totalWonValue,
+      wonDealsCount,
     };
   }, [periodStart, periodEnd, comparisonStart, comparisonEnd, leads, colleagues]);
 
