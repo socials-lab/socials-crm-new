@@ -1303,10 +1303,15 @@ function EngagementsContent() {
           setEndEngagementDialogOpen(open);
           if (!open) setEngagementToEnd(null);
         }}
-        onConfirm={(endDate) => {
+        onConfirm={(data) => {
           if (engagementToEnd) {
-            updateEngagement(engagementToEnd.id, { end_date: endDate });
-            toast.success(`Spolupráce bude ukončena k ${format(parseISO(endDate), 'd. MMMM yyyy', { locale: cs })}`);
+            updateEngagement(engagementToEnd.id, { 
+              end_date: data.end_date,
+              termination_reason: data.termination_reason,
+              termination_initiated_by: data.termination_initiated_by,
+              termination_notes: data.termination_notes,
+            });
+            toast.success(`Spolupráce bude ukončena k ${format(parseISO(data.end_date), 'd. MMMM yyyy', { locale: cs })}`);
             setEngagementToEnd(null);
           }
         }}

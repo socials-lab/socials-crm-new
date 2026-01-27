@@ -181,6 +181,44 @@ export const ADVERTISING_PLATFORMS = [
 
 export type AdvertisingPlatform = typeof ADVERTISING_PLATFORMS[number];
 
+// Termination reason for engagements
+export type TerminationReason = 
+  | 'budget_cut'        // Snížení rozpočtu
+  | 'strategy_change'   // Změna strategie
+  | 'dissatisfied'      // Nespokojenost s výsledky
+  | 'agency_terminated' // Ukončeno agenturou
+  | 'project_completed' // Projekt dokončen
+  | 'merged_with_another' // Sloučeno s jinou zakázkou
+  | 'other';            // Jiný důvod
+
+// Who initiated the termination
+export type TerminationInitiatedBy = 'client' | 'agency';
+
+// Labels for termination reasons (Czech)
+export const TERMINATION_REASON_LABELS: Record<TerminationReason, string> = {
+  budget_cut: 'Snížení rozpočtu',
+  strategy_change: 'Změna strategie',
+  dissatisfied: 'Nespokojenost s výsledky',
+  agency_terminated: 'Ukončeno agenturou',
+  project_completed: 'Projekt dokončen',
+  merged_with_another: 'Sloučeno s jinou zakázkou',
+  other: 'Jiný důvod',
+};
+
+// Labels for termination initiator (Czech)
+export const TERMINATION_INITIATED_BY_LABELS: Record<TerminationInitiatedBy, string> = {
+  client: 'Klient',
+  agency: 'Agentura',
+};
+
+// Termination data interface
+export interface TerminationData {
+  end_date: string;
+  termination_reason: TerminationReason;
+  termination_initiated_by: TerminationInitiatedBy;
+  termination_notes: string;
+}
+
 export interface Engagement {
   id: string;
   client_id: string;
@@ -201,6 +239,10 @@ export interface Engagement {
   // Document links from lead conversion
   offer_url: string | null;
   contract_url: string | null;
+  // Termination tracking (optional - only set when terminating)
+  termination_reason?: TerminationReason | null;
+  termination_initiated_by?: TerminationInitiatedBy | null;
+  termination_notes?: string | null;
   created_at: string;
   updated_at: string;
 }
