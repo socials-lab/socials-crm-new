@@ -1158,6 +1158,7 @@ export default function Analytics() {
             clients={clients}
             colleagues={colleagues}
             assignments={assignments}
+            leads={leads}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
           />

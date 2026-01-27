@@ -61,23 +61,37 @@ interface Assignment {
   end_date: string | null;
 }
 
+interface Lead {
+  id: string;
+  company_name: string;
+  contact_name: string;
+  stage: string;
+  estimated_price: number | null;
+  probability_percent: number | null;
+  offer_sent_at: string | null;
+  currency: string | null;
+  potential_services?: { name: string; price: number }[] | null;
+}
+
 interface ForecastTabProps {
   engagements: Engagement[];
   clients: Client[];
   colleagues: Colleague[];
   assignments: Assignment[];
+  leads?: Lead[];
   engagementServices?: EngagementService[];
   selectedYear: number;
   selectedMonth: number;
 }
 
-const DEFAULT_CAPACITY_SLOTS: CapacitySlots = { meta: 3, google: 2, graphics: 2 };
+const DEFAULT_CAPACITY_SLOTS: CapacitySlots = { meta: 3, google: 2, graphics: 0 };
 
 export function ForecastTab({ 
   engagements, 
   clients, 
   colleagues, 
-  assignments, 
+  assignments,
+  leads = [],
   selectedYear, 
   selectedMonth 
 }: ForecastTabProps) {
@@ -139,6 +153,21 @@ export function ForecastTab({
 
   // Projected MRR after changes
   const projectedMRR = currentMRR - churnMRR + newMRR;
+
+  // Leads with offer sent (in pipeline with sent offer)
+  const leadsWithOfferSent = useMemo(() => {
+    return leads.filter(l => l.stage === 'offer_sent');
+  }, [leads]);
+
+  const leadsWithOfferMRR = useMemo(() => {
+    return leadsWithOfferSent.reduce((sum, l) => {
+      // Use potential_services sum or estimated_price
+      if (l.potential_services && l.potential_services.length > 0) {
+        return sum + l.potential_services.reduce((s, ps) => s + ps.price, 0);
+      }
+      return sum + (l.estimated_price || 0);
+    }, 0);
+  }, [leadsWithOfferSent]);
 
   // Churn rate
   const churnRate = currentMRR > 0 ? (churnMRR / currentMRR) * 100 : 0;
@@ -282,22 +311,22 @@ export function ForecastTab({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* 3 Main KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 4 Main KPIs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* MRR Flow */}
             <div className="rounded-lg border bg-card p-4 space-y-1">
               <div className="text-sm text-muted-foreground">MRR</div>
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-semibold">{formatCompact(currentMRR)}</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <span className={`text-2xl font-semibold ${projectedMRR >= currentMRR ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`text-2xl font-semibold ${projectedMRR >= currentMRR ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
                   {formatCompact(projectedMRR)}
                 </span>
               </div>
               <div className="text-xs text-muted-foreground">
-                {churnMRR > 0 && <span className="text-red-600">-{formatCompact(churnMRR)}</span>}
+                {churnMRR > 0 && <span className="text-destructive">-{formatCompact(churnMRR)}</span>}
                 {churnMRR > 0 && newMRR > 0 && ' / '}
-                {newMRR > 0 && <span className="text-green-600">+{formatCompact(newMRR)}</span>}
+                {newMRR > 0 && <span className="text-emerald-600 dark:text-emerald-400">+{formatCompact(newMRR)}</span>}
                 {churnMRR === 0 && newMRR === 0 && 'beze změn'}
               </div>
             </div>
@@ -305,10 +334,10 @@ export function ForecastTab({
             {/* Churn */}
             <div className="rounded-lg border bg-card p-4 space-y-1">
               <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-                <TrendingDown className="h-4 w-4 text-red-500" />
+                <TrendingDown className="h-4 w-4 text-destructive" />
                 Churn
               </div>
-              <div className="text-2xl font-semibold text-red-600">
+              <div className="text-2xl font-semibold text-destructive">
                 {churnMRR > 0 ? `-${formatCompact(churnMRR)}` : '0'}
               </div>
               <div className="text-xs text-muted-foreground">
@@ -320,14 +349,28 @@ export function ForecastTab({
             {/* New / Planned */}
             <div className="rounded-lg border bg-card p-4 space-y-1">
               <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-                <TrendingUp className="h-4 w-4 text-green-500" />
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
                 Nové zakázky
               </div>
-              <div className="text-2xl font-semibold text-green-600">
+              <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
                 {newMRR > 0 ? `+${formatCompact(newMRR)}` : '0'}
               </div>
               <div className="text-xs text-muted-foreground">
                 {plannedForMonth.length} {plannedForMonth.length === 1 ? 'plánovaná' : 'plánované'}
+              </div>
+            </div>
+
+            {/* Leads with offer sent */}
+            <div className="rounded-lg border bg-card p-4 space-y-1">
+              <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                Leady s nabídkou
+              </div>
+              <div className="text-2xl font-semibold text-amber-600 dark:text-amber-400">
+                {leadsWithOfferSent.length}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {leadsWithOfferMRR > 0 ? `~${formatCompact(leadsWithOfferMRR)} MRR` : 'čekají na rozhodnutí'}
               </div>
             </div>
           </div>
@@ -340,7 +383,7 @@ export function ForecastTab({
             </div>
             <div>
               <span className="text-muted-foreground">Změna: </span>
-              <span className={`font-semibold ${projectedMRR >= currentMRR ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              <span className={`font-semibold ${projectedMRR >= currentMRR ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
                 {projectedMRR >= currentMRR ? '+' : ''}{formatCompact(projectedMRR - currentMRR)}
               </span>
             </div>
@@ -362,7 +405,7 @@ export function ForecastTab({
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium flex items-center gap-2">
-              <CalendarX className="h-4 w-4 text-red-500" />
+              <CalendarX className="h-4 w-4 text-destructive" />
               Odchody
               {endingEngagements.length > 0 && (
                 <Badge variant="destructive" className="ml-auto">
