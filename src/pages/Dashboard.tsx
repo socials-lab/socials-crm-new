@@ -492,15 +492,33 @@ export default function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
 
         {/* Recent Activity - Comprehensive CRM Overview */}
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <Activity className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base font-medium">
               📊 Aktivita posledních 7 dní
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[400px] pr-4">
+              {/* Demo activities for scroll testing */}
+              <div className="space-y-2 mb-4 pb-4 border-b">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧪 Demo data pro test scrollu</p>
+                <ActivityRow icon={UserPlus} label="Demo klient 1" count={1} items={["Firma Alpha"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
+                <ActivityRow icon={UserPlus} label="Demo klient 2" count={1} items={["Firma Beta"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
+                <ActivityRow icon={Send} label="Demo nabídka 1" count={1} items={["Firma Gamma"]} colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
+                <ActivityRow icon={Send} label="Demo nabídka 2" count={1} items={["Firma Delta"]} colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
+                <ActivityRow icon={FileSignature} label="Demo smlouva 1" count={1} items={["Firma Epsilon"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
+                <ActivityRow icon={Briefcase} label="Demo zakázka 1" count={1} items={["Projekt Omega"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={Briefcase} label="Demo zakázka 2" count={1} items={["Projekt Zeta"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={Wrench} label="Demo vícepráce 1" count={1} colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900" value={15000} />
+                <ActivityRow icon={Wrench} label="Demo vícepráce 2" count={1} colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900" value={22000} />
+                <ActivityRow icon={Calendar} label="Demo schůzka 1" count={1} items={["Kickoff meeting"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={Calendar} label="Demo schůzka 2" count={1} items={["Review Q1"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={CalendarCheck} label="Demo schůzka 3" count={1} items={["Strategy call"]} colorClass="text-teal-600 bg-teal-100 dark:bg-teal-900" />
+                <ActivityRow icon={Users} label="Demo uchazeč 1" count={1} items={["Jan Novák"]} colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
+                <ActivityRow icon={Users} label="Demo uchazeč 2" count={1} items={["Marie Svobodová"]} colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
+                <ActivityRow icon={UserCheck} label="Demo přijatý" count={1} items={["Petr Horák"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
+              </div>
               <div className="space-y-4">
                 {/* === SALES & LEADY === */}
                 {(recentActivity.newLeads.length > 0 || recentActivity.newClients.length > 0 || 
