@@ -4,6 +4,7 @@ import {
   FileText, 
   Users,
   Target,
+  Percent,
   ExternalLink,
   TrendingUp,
   TrendingDown,
@@ -133,11 +134,28 @@ export default function Dashboard() {
       .filter(l => !['won', 'lost', 'postponed'].includes(l.stage))
       .reduce((sum, l) => sum + (l.estimated_price || 0), 0);
     
-    // Team costs (simplified)
+    // Team costs (simplified) - monthly fixed + hourly costs
     const teamCosts = activeColleagues.reduce((sum, c) => 
       sum + (c.monthly_fixed_cost || 0) + ((c.internal_hourly_cost || 0) * (c.capacity_hours_per_month || 0)), 0);
     
-    // Gross margin estimate
+    // Assignment costs from engagement_assignments
+    const assignmentCosts = assignments.reduce((sum, a) => {
+      // Only count assignments for active engagements
+      const isActiveEngagement = activeEngagements.some(e => e.id === a.engagement_id);
+      if (!isActiveEngagement) return sum;
+      return sum + (a.monthly_cost || 0);
+    }, 0);
+    
+    // Total costs = team overhead + assignment costs
+    const totalCosts = teamCosts + assignmentCosts;
+    
+    // Planned margin (absolute) = MRR - Total costs
+    const plannedMargin = mrr - totalCosts;
+    
+    // Profitability % = (MRR - Costs) / MRR * 100
+    const profitabilityPercent = mrr > 0 ? ((mrr - totalCosts) / mrr * 100) : 0;
+    
+    // Gross margin estimate (keeping for backwards compatibility)
     const grossMargin = mrr > 0 ? ((mrr - teamCosts) / mrr * 100) : 0;
     
     return {
@@ -148,9 +166,12 @@ export default function Dashboard() {
       arr,
       pipelineValue,
       teamCosts,
+      totalCosts,
+      plannedMargin,
+      profitabilityPercent,
       grossMargin,
     };
-  }, [clients, engagements, colleagues, leads]);
+  }, [clients, engagements, colleagues, leads, assignments]);
 
   // === PENDING APPROVALS ===
   const pendingApprovals = useMemo(() => {
@@ -490,7 +511,7 @@ export default function Dashboard() {
       />
 
       {/* === EXECUTIVE KPIs === */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
         <KPICard
           title="📈 MRR"
           value={canSeeFinancials ? `${(metrics.mrr / 1000).toFixed(0)}k` : '***'}
@@ -503,6 +524,26 @@ export default function Dashboard() {
           subtitle={canSeeFinancials ? `Za ${previousMonthName}` : undefined}
           icon={Receipt}
           className="border-primary/30 bg-primary/5"
+        />
+        <KPICard
+          title="💵 Plán. marže"
+          value={canSeeFinancials ? `${(metrics.plannedMargin / 1000).toFixed(0)}k` : '***'}
+          subtitle={canSeeFinancials ? `Náklady: ${(metrics.totalCosts / 1000).toFixed(0)}k` : undefined}
+          icon={DollarSign}
+          className={metrics.plannedMargin >= 0 ? 'border-status-active/30 bg-status-active/5' : 'border-destructive/30 bg-destructive/5'}
+        />
+        <KPICard
+          title="📊 Profitabilita"
+          value={canSeeFinancials ? `${metrics.profitabilityPercent.toFixed(0)}%` : '***'}
+          subtitle={canSeeFinancials ? 'z MRR' : undefined}
+          icon={Percent}
+          className={
+            metrics.profitabilityPercent >= 30 
+              ? 'border-status-active/30 bg-status-active/5' 
+              : metrics.profitabilityPercent >= 15 
+                ? 'border-amber-500/30 bg-amber-500/5' 
+                : 'border-destructive/30 bg-destructive/5'
+          }
         />
         <Link to="/analytics" className="block">
           <KPICard
@@ -520,10 +561,10 @@ export default function Dashboard() {
             icon={BarChart3}
             className={
               currentMonthPlan.progress >= 100 
-                ? 'border-green-500/30 bg-green-500/5' 
+                ? 'border-status-active/30 bg-status-active/5' 
                 : currentMonthPlan.progress >= 80 
                   ? 'border-amber-500/30 bg-amber-500/5' 
-                  : 'border-red-500/30 bg-red-500/5'
+                  : 'border-destructive/30 bg-destructive/5'
             }
           />
         </Link>
