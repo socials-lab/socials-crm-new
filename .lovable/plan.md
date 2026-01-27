@@ -1,164 +1,157 @@
 
-# Plán: Přehledné rozdělení klientské a interní práce
+# Plan: Send Modification Proposal Email to Client
 
-## Shrnutí změn
-Přepracujeme stránku "Můj přehled" tak, aby jasně oddělovala:
-- **Klientská práce** = Moje zakázky + Odměny tento měsíc (s poměrnou částkou)
-- **Interní práce** = nová sekce pro marketing/režii (propojená s fakturací)
-- **Odstranění meetingů** = sekce "Dnešní meetingy" bude zcela odstraněna
+## Overview
+Add the ability to send an email draft of a service modification proposal to a client, with:
+- Manual email input field (editable recipient)
+- Pre-filled email template with modification details
+- Email subject line customization
+- Text content customization
+- Default recipient from client contacts when available
 
-## Nový layout stránky
+## Current State Analysis
 
-```text
-+------------------------------------------+
-| 👋 Ahoj, [jméno]                         |
-| [Quick stats cards bez meetingů]         |
-+------------------------------------------+
+### Existing Infrastructure
+1. **Modification Requests System** (`src/data/modificationRequestsMockData.ts`)
+   - Stores `upgrade_offer_token` for client-facing changes
+   - Already generates public upgrade links (`/upgrade/{token}`)
+   - Has `client_email` field (currently only filled when client confirms)
 
-+------------------------------------------+
-| 📋 Moje zakázky                          |
-|   [Klient]     | 20 000 Kč / měsíc       |
-|                | Spolupráce od: 1.1.2025  |
-|   [Klient 2]   | 15 000 Kč / měsíc       |
-|                | Spolupráce od: 15.1.2026 |
-+------------------------------------------+
+2. **Similar Pattern: SendOfferDialog** (`src/components/leads/SendOfferDialog.tsx`)
+   - Existing dialog for sending offers to leads
+   - Uses colleague selection for sender info
+   - Has email subject and content fields
+   - Good reference pattern to follow
 
-+------------------------------------------+
-| 💰 Odměny tento měsíc (klientská práce)  |
-|   Klient X                     20 000 Kč |
-|   Klient Y (poměr. od 15.1.)    8 710 Kč |
-|   Creative Boost                3 000 Kč |
-|   Schválené provize             2 000 Kč |
-|   --------------------------------       |
-|   Celkem za klientskou práci   33 710 Kč |
-+------------------------------------------+
+3. **Client Data Access**
+   - `useCRMData()` provides `clients`, `clientContacts`, and `engagements`
+   - Client contacts have `is_primary` and `is_decision_maker` flags
+   - Billing email available on client level
 
-+------------------------------------------+
-| 🏢 Interní práce                [Přidat] |
-|   (práce mimo klienty - marketing/režie) |
-|                                          |
-|   Marketing – tvorba videa     4 000 Kč  |
-|   Režijní služby – CRM         8 000 Kč  |
-|   --------------------------------       |
-|   Celkem                       12 000 Kč |
-+------------------------------------------+
+4. **Edge Functions**
+   - Currently no email sending edge function exists
+   - No RESEND_API_KEY configured (secrets empty)
 
-+------------------------------------------+
-| 📄 Fakturace                             |
-|   (historie a přehled pro fakturaci)     |
-+------------------------------------------+
+## Implementation Plan
+
+### Phase 1: Create SendModificationEmailDialog Component
+
+**New file: `src/components/engagements/SendModificationEmailDialog.tsx`**
+
+Features:
+- Dialog triggered from "Čeká na klienta" tab cards
+- Input fields:
+  - **Recipient email** (manually editable, pre-filled from client contacts if available)
+  - **Email subject** (pre-filled with default template)
+  - **Email body** (pre-filled with modification details + upgrade link)
+  - **Sender selection** (dropdown of active colleagues)
+- Show sender's contact info (name, email, phone)
+- Display client/engagement info for context
+- Include the upgrade link prominently in email template
+
+**Email Template Structure:**
+```
+Dobrý den [contact_name],
+
+rádi bychom Vás informovali o navrhované změně ve spolupráci:
+
+[Change Type Label]
+- [Service/Price details based on modification type]
+
+Platnost od: [effective_from date]
+
+Pro potvrzení této změny prosím klikněte na následující odkaz:
+[upgrade link]
+
+Odkaz je platný do: [valid_until date]
+
+V případě dotazů nás neváhejte kontaktovat.
+
+S pozdravem,
+[sender_name]
+[sender_position]
+[sender_email]
+[sender_phone]
 ```
 
-## Detailní změny
+### Phase 2: Add Email Button to ModificationRequestCard
 
-### 1. Moje zakázky - přidat datum začátku spolupráce
-**Soubor:** `src/pages/MyWork.tsx`
+**Modify: `src/components/engagements/ModificationRequestCard.tsx`**
 
-- U každé zakázky zobrazit datum začátku spolupráce (`assignment.start_date`)
-- Celková cena zůstává plná měsíční odměna (bez poměru)
+- Add new `onSendEmail` callback prop
+- Add email icon button (Mail icon from lucide) next to "Zkopírovat odkaz" for requests with status 'approved' and `upgrade_offer_token`
+- Button label: "📧 Odeslat email"
 
-### 2. Odměny tento měsíc - pouze klientská práce s poměrem
-**Soubor:** `src/pages/MyWork.tsx`
+### Phase 3: Integrate in Modifications Page
 
-- **ODSTRANIT** řádek "Ostatní činnosti" (interní práce sem nepatří!)
-- Přidat logiku poměrné odměny:
-  - Pokud `assignment.start_date` je v aktuálním měsíci = poměrná částka
-  - Zobrazit u každého klienta zvlášť s poznámkou o poměru
-- Aktualizovat celkový součet (bez interní práce)
+**Modify: `src/pages/Modifications.tsx`**
 
-### 3. ODSTRANIT sekci "Dnešní meetingy"
-**Soubor:** `src/pages/MyWork.tsx`
+- Import and use `SendModificationEmailDialog`
+- Add state for dialog open/close and selected request
+- Pass handlers to ModificationRequestCard components
+- Add dialog to the page
 
-- Celá karta "Dnešní meetingy" bude odstraněna
-- Odstranit také import `useMeetingsData` pokud už není potřeba jinde
-- Odstranit quick stat kartu pro meetingy
+### Phase 4: (Optional Future) Edge Function for Actual Email Sending
 
-### 4. NOVÁ sekce "Interní práce"
-**Soubor:** `src/pages/MyWork.tsx`
+**Note:** The current system uses mock sending (similar to SendOfferDialog). For actual email sending:
+1. User needs to configure RESEND_API_KEY secret
+2. Create edge function `supabase/functions/send-modification-email/index.ts`
+3. Update dialog to call the edge function
 
-Nová karta místo meetingů:
-- Nadpis "Interní práce" s tlačítkem "Přidat"
-- Info text: "Práce mimo klienty (marketing, režijní služby)"
-- Seznam činností z aktuálního měsíce (z `activityRewards`)
-- Mezisoučet
-- Kliknutím na "Přidat" otevře `AddActivityRewardDialog`
+For now, implement mock sending that:
+- Shows success toast
+- Logs the email action
+- Potentially stores sent email in localStorage for history
 
-### 5. Fakturace - upřesnění účelu
-**Soubor:** `src/components/my-work/ActivityRewardsHistory.tsx`
+## Technical Details
 
-- Přejmenovat na "Fakturace – interní práce"
-- Přidat jasnější vysvětlení:
-  - "Zde je přehled interní práce pro fakturaci"
-  - "Klientská práce se fakturuje automaticky přes zakázky"
-
-## Technické detaily
-
-### Výpočet poměrné odměny
+### Component Props Interface
 ```typescript
-function calculateProratedReward(
-  monthlyAmount: number,
-  startDate: string | null,
-  targetYear: number,
-  targetMonth: number
-): { amount: number; isProrated: boolean; startDay: number | null } {
-  if (!startDate) {
-    return { amount: monthlyAmount, isProrated: false, startDay: null };
-  }
-  
-  const start = parseISO(startDate);
-  const monthStart = startOfMonth(new Date(targetYear, targetMonth - 1));
-  const daysInMonth = getDaysInMonth(monthStart);
-  
-  // Pokud začátek je před tímto měsícem = plná odměna
-  if (isBefore(start, monthStart)) {
-    return { amount: monthlyAmount, isProrated: false, startDay: null };
-  }
-  
-  // Pokud začátek je v tomto měsíci
-  if (isSameMonth(start, monthStart)) {
-    const startDay = getDate(start);
-    if (startDay === 1) {
-      return { amount: monthlyAmount, isProrated: false, startDay: 1 };
-    }
-    const daysWorked = daysInMonth - startDay + 1;
-    const proratedAmount = Math.round((monthlyAmount / daysInMonth) * daysWorked);
-    return { amount: proratedAmount, isProrated: true, startDay };
-  }
-  
-  // Začátek je v budoucnosti
-  return { amount: 0, isProrated: true, startDay: null };
+interface SendModificationEmailDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  request: StoredModificationRequest;
+  upgradeLink: string;
 }
 ```
 
-### Struktura dat pro klientské odměny
-```typescript
-interface ClientRewardItem {
-  clientName: string;
-  fullMonthlyAmount: number;
-  proratedAmount: number;
-  isProrated: boolean;
-  startDate: string | null;
-}
-```
+### Default Email Logic
+1. Check `clientContacts` for matching `client_id`
+2. Prefer `is_decision_maker` contact first
+3. Fall back to `is_primary` contact
+4. Fall back to client's `billing_email`
+5. Fall back to client's `main_contact_email` (legacy field)
+6. Allow manual entry if none found
 
-## Změny v souborech
+### Email Subject Templates
+- **add_service**: "Návrh nové služby – [Client Name] / Socials"
+- **update_service_price**: "Návrh změny ceny – [Client Name] / Socials"
+- **deactivate_service**: "Ukončení služby – [Client Name] / Socials"
 
-| Soubor | Změna |
-|--------|-------|
-| `src/pages/MyWork.tsx` | Hlavní přepracování - odstranění meetingů, přidání interní práce, poměrné odměny |
-| `src/components/my-work/ActivityRewardsHistory.tsx` | Úprava nadpisu a vysvětlení |
+## Files to Create/Modify
 
-## Vizuální změny
+| File | Action | Description |
+|------|--------|-------------|
+| `src/components/engagements/SendModificationEmailDialog.tsx` | Create | New dialog component |
+| `src/components/engagements/ModificationRequestCard.tsx` | Modify | Add email button and callback |
+| `src/pages/Modifications.tsx` | Modify | Integrate dialog, add state management |
 
-### Quick stats (horní karty)
-- **Zachovat:** zakázky, měsíční příjem
-- **ODSTRANIT:** meetingy dnes
-- **Přidat:** případně "Interní práce" jako novou kartu
+## UX Flow
 
-### Grid layout
-Změna z `lg:grid-cols-2` na:
-- Moje zakázky (vlevo)
-- Odměny tento měsíc (vpravo)  
-- Interní práce (celá šířka nebo vlevo)
-- Kontakty kolegů (vpravo)
-- Fakturace (celá šířka)
+1. User views "Čeká na klienta" tab
+2. Clicks "📧 Odeslat email" button on a modification card
+3. Dialog opens with:
+   - Pre-filled recipient from client data
+   - Pre-filled subject and body
+   - Sender selection dropdown
+4. User can edit any field as needed
+5. User clicks "Odeslat"
+6. Toast notification confirms sending
+7. Dialog closes
+
+## Edge Cases Handled
+
+- No email found for client → Empty field, user must enter manually
+- No active colleagues → Error message shown
+- Missing upgrade token → Button not shown (shouldn't happen for approved requests)
+- Expired offers → Still allow sending (expiry date shown in email)
