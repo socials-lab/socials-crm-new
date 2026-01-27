@@ -1,157 +1,202 @@
 
-# Plan: Send Modification Proposal Email to Client
+# Plán: Aktualizace Executive Dashboard
 
-## Overview
-Add the ability to send an email draft of a service modification proposal to a client, with:
-- Manual email input field (editable recipient)
-- Pre-filled email template with modification details
-- Email subject line customization
-- Text content customization
-- Default recipient from client contacts when available
+## Přehled změn
 
-## Current State Analysis
+Dashboard bude aktualizován o následující změny:
+1. Sales pipeline leadů bude odpovídat všem 9 stavům z modulu Leady
+2. Plánovaná fakturace na následující měsíc bude přidána nahoru k hlavním KPI
+3. Quick Actions sekce dole bude odstraněna (odkazy "Nový lead", "Návrhy změn")
+4. Přibude přehled pipeline návrhů změn podle statusů
+5. Přibude přehled aktivních víceprací podle statusů
 
-### Existing Infrastructure
-1. **Modification Requests System** (`src/data/modificationRequestsMockData.ts`)
-   - Stores `upgrade_offer_token` for client-facing changes
-   - Already generates public upgrade links (`/upgrade/{token}`)
-   - Has `client_email` field (currently only filled when client confirms)
+---
 
-2. **Similar Pattern: SendOfferDialog** (`src/components/leads/SendOfferDialog.tsx`)
-   - Existing dialog for sending offers to leads
-   - Uses colleague selection for sender info
-   - Has email subject and content fields
-   - Good reference pattern to follow
+## Detailní popis změn
 
-3. **Client Data Access**
-   - `useCRMData()` provides `clients`, `clientContacts`, and `engagements`
-   - Client contacts have `is_primary` and `is_decision_maker` flags
-   - Billing email available on client level
+### 1. Plánovaná fakturace na další měsíc (nová KPI karta nahoře)
 
-4. **Edge Functions**
-   - Currently no email sending edge function exists
-   - No RESEND_API_KEY configured (secrets empty)
+Nová metrika bude vypočítána z:
+- **Aktivní zakázky (retainery)**: součet `monthly_fee` všech aktivních engagementů
+- **Schválené vícepráce**: částky z extra works se statusem `ready_to_invoice`
+- **One-off služby k fakturaci**: engagement services s `billing_type: 'one_off'` a `invoicing_status: 'pending'`
 
-## Implementation Plan
+Zobrazení:
+- Nová KPI karta s ikonou `Receipt` nebo `DollarSign`
+- Hodnota ve formátu "XXXk CZK"
+- Subtitle: "Plánováno na [měsíc]"
 
-### Phase 1: Create SendModificationEmailDialog Component
+### 2. Sales Pipeline 1:1 se stavy leadů
 
-**New file: `src/components/engagements/SendModificationEmailDialog.tsx`**
+Aktuální 4 stavy budou rozšířeny na všech 9 stavů:
 
-Features:
-- Dialog triggered from "Čeká na klienta" tab cards
-- Input fields:
-  - **Recipient email** (manually editable, pre-filled from client contacts if available)
-  - **Email subject** (pre-filled with default template)
-  - **Email body** (pre-filled with modification details + upgrade link)
-  - **Sender selection** (dropdown of active colleagues)
-- Show sender's contact info (name, email, phone)
-- Display client/engagement info for context
-- Include the upgrade link prominently in email template
+| Stav | Label | Barva |
+|------|-------|-------|
+| new_lead | Nový lead | slate-500 |
+| meeting_done | Schůzka proběhla | blue-500 |
+| waiting_access | Čekáme na přístupy | amber-500 |
+| access_received | Přístupy přijaty | teal-500 |
+| preparing_offer | Příprava nabídky | violet-500 |
+| offer_sent | Nabídka odeslána | pink-500 |
+| won | Vyhráno | emerald-500 |
+| lost | Prohráno | red-500 |
+| postponed | Odloženo | gray-500 |
 
-**Email Template Structure:**
+Stavy won/lost/postponed budou zobrazeny ve zmenšené/oddělené sekci jako "Uzavřené".
+
+### 3. Pipeline návrhů změn (nová sekce)
+
+Nová karta zobrazující počty modifikačních požadavků podle statusů:
+
+| Status | Label |
+|--------|-------|
+| pending | Čeká na schválení |
+| approved | Čeká na klienta |
+| client_approved | Klient potvrdil |
+
+Celková hodnota navrhovaných změn (součet cen z `proposed_changes`).
+
+### 4. Přehled aktivních víceprací (nová sekce)
+
+Nová karta zobrazující vícepráce podle statusů:
+
+| Status | Label |
+|--------|-------|
+| pending_approval | Ke schválení |
+| in_progress | V řešení |
+| ready_to_invoice | K fakturaci |
+
+Celková hodnota aktivních víceprací (součet `amount`).
+
+### 5. Odstranění Quick Actions Footer
+
+Celá sekce "Quick Actions Footer" (řádky 551-581) bude odstraněna, protože:
+- Navigace je dostupná v sidebar menu
+- Dashboard má sloužit jako přehled, ne jako rozcestník
+
+---
+
+## Nový layout Dashboard
+
+```text
++------------------------------------------+
+|  📈 MRR  |  💰 Fakturace  |  🎯 Pipeline  |  🏢 Klienti  |  👥 Tým  |
+|  (příští měsíc nahoře v hlavních KPI)                              |
++------------------------------------------+
+
++-------------------+  +-------------------+
+| ⚠️ Čekající na     |  (zůstává beze změn)
+| schválení         |                      
++-------------------+                      
+
++-------------------+  +-------------------+
+| 📊 Aktivita       |  | 🎯 Sales Pipeline |
+| posledních 7 dní  |  | (všech 9 stavů)   |
+|                   |  |                   |
++-------------------+  +-------------------+
+
++-------------------+  +-------------------+
+| ⭐ Top klienti    |  | 📝 Návrhy změn    |
+|                   |  | pipeline          |
++-------------------+  +-------------------+
+
++-------------------+  +-------------------+
+| 👥 Tým & Meetingy |  | 🔧 Aktivní        |
+|                   |  | vícepráce         |
++-------------------+  +-------------------+
 ```
-Dobrý den [contact_name],
 
-rádi bychom Vás informovali o navrhované změně ve spolupráci:
+---
 
-[Change Type Label]
-- [Service/Price details based on modification type]
+## Technické detaily
 
-Platnost od: [effective_from date]
+### Soubor k úpravě
+`src/pages/Dashboard.tsx`
 
-Pro potvrzení této změny prosím klikněte na následující odkaz:
-[upgrade link]
+### Nové výpočty v useMemo
 
-Odkaz je platný do: [valid_until date]
-
-V případě dotazů nás neváhejte kontaktovat.
-
-S pozdravem,
-[sender_name]
-[sender_position]
-[sender_email]
-[sender_phone]
-```
-
-### Phase 2: Add Email Button to ModificationRequestCard
-
-**Modify: `src/components/engagements/ModificationRequestCard.tsx`**
-
-- Add new `onSendEmail` callback prop
-- Add email icon button (Mail icon from lucide) next to "Zkopírovat odkaz" for requests with status 'approved' and `upgrade_offer_token`
-- Button label: "📧 Odeslat email"
-
-### Phase 3: Integrate in Modifications Page
-
-**Modify: `src/pages/Modifications.tsx`**
-
-- Import and use `SendModificationEmailDialog`
-- Add state for dialog open/close and selected request
-- Pass handlers to ModificationRequestCard components
-- Add dialog to the page
-
-### Phase 4: (Optional Future) Edge Function for Actual Email Sending
-
-**Note:** The current system uses mock sending (similar to SendOfferDialog). For actual email sending:
-1. User needs to configure RESEND_API_KEY secret
-2. Create edge function `supabase/functions/send-modification-email/index.ts`
-3. Update dialog to call the edge function
-
-For now, implement mock sending that:
-- Shows success toast
-- Logs the email action
-- Potentially stores sent email in localStorage for history
-
-## Technical Details
-
-### Component Props Interface
 ```typescript
-interface SendModificationEmailDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  request: StoredModificationRequest;
-  upgradeLink: string;
-}
+// Plánovaná fakturace na další měsíc
+const nextMonthInvoicing = useMemo(() => {
+  const activeEngagements = engagements.filter(e => e.status === 'active');
+  const retainerTotal = activeEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+  
+  const extraWorksToInvoice = extraWorks
+    ?.filter(w => w.status === 'ready_to_invoice')
+    .reduce((sum, w) => sum + w.amount, 0) || 0;
+  
+  const oneOffPending = engagementServices
+    ?.filter(s => s.billing_type === 'one_off' && s.invoicing_status === 'pending')
+    .reduce((sum, s) => sum + s.price, 0) || 0;
+  
+  return {
+    retainer: retainerTotal,
+    extraWorks: extraWorksToInvoice,
+    oneOff: oneOffPending,
+    total: retainerTotal + extraWorksToInvoice + oneOffPending,
+  };
+}, [engagements, extraWorks, engagementServices]);
+
+// Rozšířená pipeline leadů
+const leadsPipeline = useMemo(() => ({
+  new_lead: leads.filter(l => l.stage === 'new_lead').length,
+  meeting_done: leads.filter(l => l.stage === 'meeting_done').length,
+  waiting_access: leads.filter(l => l.stage === 'waiting_access').length,
+  access_received: leads.filter(l => l.stage === 'access_received').length,
+  preparing_offer: leads.filter(l => l.stage === 'preparing_offer').length,
+  offer_sent: leads.filter(l => l.stage === 'offer_sent').length,
+  won: leads.filter(l => l.stage === 'won').length,
+  lost: leads.filter(l => l.stage === 'lost').length,
+  postponed: leads.filter(l => l.stage === 'postponed').length,
+}), [leads]);
+
+// Pipeline návrhů změn
+const modificationsPipeline = useMemo(() => {
+  const requests = pendingRequests || [];
+  return {
+    pending: requests.filter(r => r.status === 'pending').length,
+    approved: requests.filter(r => r.status === 'approved').length,
+    client_approved: requests.filter(r => r.status === 'client_approved').length,
+    totalValue: requests
+      .filter(r => ['pending', 'approved', 'client_approved'].includes(r.status))
+      .reduce((sum, r) => {
+        const changes = r.proposed_changes as any;
+        return sum + (changes.price || changes.new_price || 0);
+      }, 0),
+  };
+}, [pendingRequests]);
+
+// Pipeline víceprací
+const extraWorksPipeline = useMemo(() => {
+  const works = extraWorks || [];
+  return {
+    pending_approval: works.filter(w => w.status === 'pending_approval').length,
+    in_progress: works.filter(w => w.status === 'in_progress').length,
+    ready_to_invoice: works.filter(w => w.status === 'ready_to_invoice').length,
+    totalValue: works
+      .filter(w => ['pending_approval', 'in_progress', 'ready_to_invoice'].includes(w.status))
+      .reduce((sum, w) => sum + w.amount, 0),
+  };
+}, [extraWorks]);
 ```
 
-### Default Email Logic
-1. Check `clientContacts` for matching `client_id`
-2. Prefer `is_decision_maker` contact first
-3. Fall back to `is_primary` contact
-4. Fall back to client's `billing_email`
-5. Fall back to client's `main_contact_email` (legacy field)
-6. Allow manual entry if none found
+### Nové importy
+- `Receipt` z lucide-react (pro ikonu fakturace)
+- `engagementServices` z useCRMData hook
 
-### Email Subject Templates
-- **add_service**: "Návrh nové služby – [Client Name] / Socials"
-- **update_service_price**: "Návrh změny ceny – [Client Name] / Socials"
-- **deactivate_service**: "Ukončení služby – [Client Name] / Socials"
+### Změny v komponentách
 
-## Files to Create/Modify
+1. **KPI Grid**: Přidat 5. kartu "Fakturace" nebo nahradit jednu z existujících
+2. **Sales Pipeline Card**: Rozšířit na 9 stavů, oddělit "Uzavřené" (won/lost/postponed)
+3. **Nová Card**: Návrhy změn pipeline
+4. **Nová Card**: Aktivní vícepráce pipeline
+5. **Odstranit**: Quick Actions Footer sekce
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/components/engagements/SendModificationEmailDialog.tsx` | Create | New dialog component |
-| `src/components/engagements/ModificationRequestCard.tsx` | Modify | Add email button and callback |
-| `src/pages/Modifications.tsx` | Modify | Integrate dialog, add state management |
+---
 
-## UX Flow
+## Vizuální poznámky
 
-1. User views "Čeká na klienta" tab
-2. Clicks "📧 Odeslat email" button on a modification card
-3. Dialog opens with:
-   - Pre-filled recipient from client data
-   - Pre-filled subject and body
-   - Sender selection dropdown
-4. User can edit any field as needed
-5. User clicks "Odeslat"
-6. Toast notification confirms sending
-7. Dialog closes
-
-## Edge Cases Handled
-
-- No email found for client → Empty field, user must enter manually
-- No active colleagues → Error message shown
-- Missing upgrade token → Button not shown (shouldn't happen for approved requests)
-- Expired offers → Still allow sending (expiry date shown in email)
+- Sales pipeline bude mít kompaktnější progress bary pro 9 stavů
+- Won/Lost/Postponed budou zobrazeny jako malé badge/chip komponenty pod hlavní pipeline
+- Nové karty pro změny a vícepráce budou mít podobný styl jako stávající karty
+- Fakturace KPI bude zvýrazněna (např. border-primary) pro důraz na business cíl
