@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ChevronDown, ChevronUp, Mail, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus, BarChart3, Coins } from 'lucide-react';
+import { Search, Plus, ChevronDown, ChevronUp, Mail, Pencil, Zap, Sparkles, Briefcase, Check, X, ExternalLink, Users, Shield, UserPlus, BarChart3, Coins, Building, CreditCard, Cake } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -374,15 +374,65 @@ function ColleaguesContent() {
                             <a href={`tel:${colleague.phone}`} className="text-primary hover:underline">
                               {colleague.phone}
                             </a>
-                          </p>
+                        </p>
                         )}
                         <p className="flex items-center gap-2">
                           <span className="text-muted-foreground">Pozice:</span>
                           {colleague.position}
                         </p>
+                        {colleague.birthday && (
+                          <p className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Narozeniny:</span>
+                            {new Date(colleague.birthday).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long' })}
+                          </p>
+                        )}
                       </div>
-                      
                     </div>
+
+                    {/* Personal & Billing Info - Admin only */}
+                    {superAdmin && (colleague.ico || colleague.personal_email || colleague.bank_account) && (
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm flex items-center gap-2">
+                          <Building className="h-4 w-4 text-muted-foreground" />
+                          Fakturační údaje
+                        </h4>
+                        <div className="space-y-2 text-sm">
+                          {colleague.personal_email && (
+                            <p className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Osobní email:</span>
+                              <a href={`mailto:${colleague.personal_email}`} className="text-primary hover:underline">
+                                {colleague.personal_email}
+                              </a>
+                            </p>
+                          )}
+                          {colleague.ico && (
+                            <p className="flex items-center gap-2">
+                              <span className="text-muted-foreground">IČO:</span>
+                              {colleague.ico}
+                              {colleague.dic && <span className="text-muted-foreground ml-2">DIČ: {colleague.dic}</span>}
+                            </p>
+                          )}
+                          {colleague.company_name && (
+                            <p className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Firma:</span>
+                              {colleague.company_name}
+                            </p>
+                          )}
+                          {(colleague.billing_street || colleague.billing_city) && (
+                            <p className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Adresa:</span>
+                              {[colleague.billing_street, colleague.billing_zip, colleague.billing_city].filter(Boolean).join(', ')}
+                            </p>
+                          )}
+                          {colleague.bank_account && (
+                            <p className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Účet:</span>
+                              {colleague.bank_account}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Workload and Earnings - for super admin */}
                     {superAdmin && (

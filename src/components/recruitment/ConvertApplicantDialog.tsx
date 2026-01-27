@@ -11,6 +11,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Form,
   FormControl,
@@ -20,12 +26,17 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Loader2, Search, CheckCircle, AlertCircle, UserPlus } from 'lucide-react';
+import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 
 const formSchema = z.object({
+  birthday: z.date({ required_error: 'Datum narození je povinné' }),
+  personal_email: z.string().email('Neplatný email').optional().or(z.literal('')),
   ico: z.string().min(8, 'IČO musí mít 8 číslic').max(8, 'IČO musí mít 8 číslic'),
   company_name: z.string().min(1, 'Název firmy je povinný'),
   dic: z.string().optional(),
@@ -58,6 +69,8 @@ export function ConvertApplicantDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      birthday: undefined,
+      personal_email: '',
       ico: '',
       company_name: '',
       dic: '',
@@ -114,6 +127,8 @@ export function ConvertApplicantDialog({
         email: applicant.email,
         phone: applicant.phone || '',
         position: applicant.position,
+        birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : undefined,
+        personal_email: data.personal_email || undefined,
         ico: data.ico,
         company_name: data.company_name,
         dic: data.dic,
@@ -149,6 +164,66 @@ export function ConvertApplicantDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Personal info section */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="birthday"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Datum narození *</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "d. M. yyyy", { locale: cs })
+                            ) : (
+                              <span>Vybrat</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date > new Date()}
+                          initialFocus
+                          className="pointer-events-auto"
+                          captionLayout="dropdown-buttons"
+                          fromYear={1950}
+                          toYear={new Date().getFullYear()}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="personal_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Soukromý email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="jan@gmail.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             {/* IČO with ARES validation */}
             <FormField
               control={form.control}

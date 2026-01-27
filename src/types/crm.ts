@@ -299,6 +299,15 @@ export interface Colleague {
   status: ColleagueStatus;
   notes: string;
   birthday: string | null;
+  // Personal & billing info (collected during onboarding)
+  personal_email: string | null;      // Soukromý email
+  ico: string | null;                 // IČO
+  dic: string | null;                 // DIČ
+  company_name: string | null;        // Název firmy/OSVČ
+  billing_street: string | null;      // Ulice a číslo
+  billing_city: string | null;        // Město
+  billing_zip: string | null;         // PSČ
+  bank_account: string | null;        // Číslo účtu
   created_at: string;
   updated_at: string;
 }
