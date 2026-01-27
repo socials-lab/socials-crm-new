@@ -3,11 +3,13 @@ export type NotificationType =
   | 'form_completed'
   | 'contract_signed'
   | 'lead_converted'
+  | 'lead_qualified'
   | 'access_granted'
   | 'offer_sent'
   | 'offer_viewed'
   | 'colleague_birthday'
   | 'new_feedback_idea'
+  | 'modification_approved'
   | 'client_approved_modification'
   | 'engagement_assigned'
   | 'engagement_service_added'
@@ -17,7 +19,7 @@ export type NotificationType =
   | 'creative_boost_activated'
   | 'creative_boost_deadline';
 
-export type EntityType = 'lead' | 'engagement' | 'extra_work' | 'creative_boost' | 'modification' | 'colleague';
+export type EntityType = 'lead' | 'engagement' | 'extra_work' | 'creative_boost' | 'modification' | 'colleague' | 'feedback';
 
 export interface Notification {
   id: string;
@@ -112,6 +114,18 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, {
     icon: '💡', 
     color: 'text-yellow-600',
     bgColor: 'bg-yellow-500/10'
+  },
+  lead_qualified: {
+    icon: '✓',
+    color: 'text-green-600',
+    bgColor: 'bg-green-500/10',
+    entityType: 'lead'
+  },
+  modification_approved: { 
+    icon: '✅', 
+    color: 'text-green-600',
+    bgColor: 'bg-green-500/10',
+    entityType: 'modification'
   },
   client_approved_modification: { 
     icon: '✅', 

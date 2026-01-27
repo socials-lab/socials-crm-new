@@ -504,6 +504,16 @@ export interface LeadNote {
   created_at: string;
 }
 
+// Lead qualification status
+export type LeadQualificationStatus = 'pending' | 'qualified' | 'bad_fit';
+
+// Labels for qualification status (Czech)
+export const LEAD_QUALIFICATION_LABELS: Record<LeadQualificationStatus, string> = {
+  pending: 'Čeká na posouzení',
+  qualified: 'Kvalifikovaný',
+  bad_fit: 'Bad Fit',
+};
+
 export interface Lead {
   id: string;
   // Company
@@ -534,6 +544,11 @@ export interface Lead {
   client_message: string | null;
   ad_spend_monthly: number | null;
   summary: string;
+  
+  // Qualification tracking (for marketing effectiveness)
+  qualification_status: LeadQualificationStatus;
+  qualification_reason: string | null;  // Reason for bad_fit
+  qualified_at: string | null;
   
   // Offer
   potential_service: string;
