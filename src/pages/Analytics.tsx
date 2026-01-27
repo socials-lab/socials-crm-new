@@ -1,15 +1,6 @@
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnalyticsOverview } from '@/components/analytics/AnalyticsOverview';
 import { LeadsAnalytics } from '@/components/analytics/LeadsAnalytics';
 import { ClientsEngagementsAnalytics } from '@/components/analytics/ClientsEngagementsAnalytics';
@@ -17,6 +8,7 @@ import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
 import { TeamCapacityAnalytics } from '@/components/analytics/TeamCapacityAnalytics';
 import { BusinessPlanTab } from '@/components/analytics/BusinessPlanTab';
 import { ForecastTab } from '@/components/analytics/ForecastTab';
+import { PeriodSelector, type PeriodMode } from '@/components/analytics/PeriodSelector';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
@@ -46,6 +38,8 @@ export default function Analytics() {
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('month');
+  const [selectedQuarter, setSelectedQuarter] = useState(Math.ceil((now.getMonth() + 1) / 3));
   
   const { leads } = useLeadsData();
   const { getClientMonthSummaries } = useCreativeBoostData();
@@ -53,32 +47,98 @@ export default function Analytics() {
   
   const engagementMonthlyMetrics: any[] = [];
 
-  const goToPreviousMonth = () => {
-    if (selectedMonth === 1) {
-      setSelectedMonth(12);
-      setSelectedYear(selectedYear - 1);
-    } else {
-      setSelectedMonth(selectedMonth - 1);
+  // =====================================================
+  // CENTRAL PERIOD CALCULATION
+  // =====================================================
+  const { periodStart, periodEnd, periodLabel, comparisonStart, comparisonEnd } = useMemo(() => {
+    const currentYear = now.getFullYear();
+    
+    switch (periodMode) {
+      case 'month':
+        const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
+        const monthEnd = endOfMonth(monthStart);
+        const prevMonthStart = subMonths(monthStart, 1);
+        return {
+          periodStart: monthStart,
+          periodEnd: monthEnd,
+          periodLabel: `${monthNames[selectedMonth - 1]} ${selectedYear}`,
+          comparisonStart: prevMonthStart,
+          comparisonEnd: endOfMonth(prevMonthStart),
+        };
+      
+      case 'quarter':
+        const qStart = (selectedQuarter - 1) * 3;
+        const quarterStart = new Date(selectedYear, qStart, 1);
+        const quarterEnd = endOfMonth(new Date(selectedYear, qStart + 2));
+        const prevQuarterStart = subMonths(quarterStart, 3);
+        return {
+          periodStart: quarterStart,
+          periodEnd: quarterEnd,
+          periodLabel: `Q${selectedQuarter} ${selectedYear}`,
+          comparisonStart: prevQuarterStart,
+          comparisonEnd: endOfMonth(subMonths(quarterEnd, 3)),
+        };
+      
+      case 'ytd':
+        const ytdStart = new Date(selectedYear, 0, 1);
+        const ytdEnd = selectedYear === currentYear ? now : new Date(selectedYear, 11, 31);
+        const prevYtdStart = new Date(selectedYear - 1, 0, 1);
+        const prevYtdEnd = selectedYear === currentYear 
+          ? new Date(selectedYear - 1, now.getMonth(), now.getDate())
+          : new Date(selectedYear - 1, 11, 31);
+        return {
+          periodStart: ytdStart,
+          periodEnd: ytdEnd,
+          periodLabel: `YTD ${selectedYear}`,
+          comparisonStart: prevYtdStart,
+          comparisonEnd: prevYtdEnd,
+        };
+      
+      case 'year':
+        const yearStart = new Date(selectedYear, 0, 1);
+        const yearEnd = new Date(selectedYear, 11, 31);
+        const prevYearStart = new Date(selectedYear - 1, 0, 1);
+        return {
+          periodStart: yearStart,
+          periodEnd: yearEnd,
+          periodLabel: `Rok ${selectedYear}`,
+          comparisonStart: prevYearStart,
+          comparisonEnd: new Date(selectedYear - 1, 11, 31),
+        };
+      
+      case 'last_year':
+        const lastYear = currentYear - 1;
+        const lastYearStart = new Date(lastYear, 0, 1);
+        const lastYearEnd = new Date(lastYear, 11, 31);
+        const prevLastYearStart = new Date(lastYear - 1, 0, 1);
+        return {
+          periodStart: lastYearStart,
+          periodEnd: lastYearEnd,
+          periodLabel: `Rok ${lastYear}`,
+          comparisonStart: prevLastYearStart,
+          comparisonEnd: new Date(lastYear - 1, 11, 31),
+        };
+      
+      default:
+        const defaultStart = new Date(selectedYear, selectedMonth - 1, 1);
+        const defaultEnd = endOfMonth(defaultStart);
+        return {
+          periodStart: defaultStart,
+          periodEnd: defaultEnd,
+          periodLabel: `${monthNames[selectedMonth - 1]} ${selectedYear}`,
+          comparisonStart: subMonths(defaultStart, 1),
+          comparisonEnd: endOfMonth(subMonths(defaultStart, 1)),
+        };
     }
-  };
-
-  const goToNextMonth = () => {
-    if (selectedMonth === 12) {
-      setSelectedMonth(1);
-      setSelectedYear(selectedYear + 1);
-    } else {
-      setSelectedMonth(selectedMonth + 1);
-    }
-  };
+  }, [periodMode, selectedYear, selectedMonth, selectedQuarter, now]);
 
   // =====================================================
   // OVERVIEW DATA
   // =====================================================
   const overviewData = useMemo(() => {
-    const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
-    const periodEnd = new Date(selectedYear, selectedMonth, 0);
-    const prevPeriodStart = subMonths(periodStart, 1);
-    const prevPeriodEnd = endOfMonth(prevPeriodStart);
+    // Use central period values
+    const prevPeriodStart = comparisonStart;
+    const prevPeriodEnd = comparisonEnd;
 
     // Active clients for current period
     const activeClientsForPeriod = clients.filter(c => {
@@ -287,15 +347,15 @@ export default function Analytics() {
         endingContracts,
       },
     };
-  }, [selectedYear, selectedMonth, leads, clients, engagements, extraWorks, assignments, engagementServices, getClientMonthSummaries, getClientById]);
+  }, [periodStart, periodEnd, comparisonStart, comparisonEnd, leads, clients, engagements, extraWorks, assignments, engagementServices, getClientMonthSummaries, getClientById, selectedYear, selectedMonth]);
 
   // =====================================================
   // LEADS DATA
   // =====================================================
   const leadsData = useMemo(() => {
-    const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
-    const periodEnd = new Date(selectedYear, selectedMonth, 0);
-    const prevPeriodStart = subMonths(periodStart, 1);
+    // Use central period values
+    const prevPeriodStart = comparisonStart;
+    const prevPeriodEnd = comparisonEnd;
 
     const currentPeriodLeads = leads.filter(l => {
       const created = new Date(l.created_at);
@@ -304,7 +364,7 @@ export default function Analytics() {
 
     const prevPeriodLeads = leads.filter(l => {
       const created = new Date(l.created_at);
-      return created >= prevPeriodStart && created < periodStart;
+      return created >= prevPeriodStart && created <= prevPeriodEnd;
     });
 
     const activeLeads = leads.filter(l => l.stage !== 'won' && l.stage !== 'lost' && l.stage !== 'postponed');
@@ -465,16 +525,15 @@ export default function Analytics() {
       ownerPerformance,
       monthlyWinLoss,
     };
-  }, [selectedYear, selectedMonth, leads, colleagues]);
+  }, [periodStart, periodEnd, comparisonStart, comparisonEnd, leads, colleagues]);
 
   // =====================================================
   // CLIENTS & ENGAGEMENTS DATA
   // =====================================================
   const clientsEngagementsData = useMemo(() => {
-    const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
-    const periodEnd = new Date(selectedYear, selectedMonth, 0);
-    const prevPeriodStart = subMonths(periodStart, 1);
-    const prevPeriodEnd = endOfMonth(prevPeriodStart);
+    // Use central period values
+    const prevPeriodStart = comparisonStart;
+    const prevPeriodEnd = comparisonEnd;
 
     const activeClientsForPeriod = clients.filter(c => {
       if (!c.start_date) return c.status === 'active';
@@ -690,16 +749,15 @@ export default function Analytics() {
       tenureDistribution,
       atRiskClients,
     };
-  }, [selectedYear, selectedMonth, clients, engagements, assignments, extraWorks]);
+  }, [periodStart, periodEnd, comparisonStart, comparisonEnd, clients, engagements, assignments, extraWorks]);
 
   // =====================================================
   // FINANCE DATA
   // =====================================================
   const financeData = useMemo(() => {
-    const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
-    const periodEnd = new Date(selectedYear, selectedMonth, 0);
-    const prevPeriodStart = subMonths(periodStart, 1);
-    const prevPeriodEnd = endOfMonth(prevPeriodStart);
+    // Use central period values
+    const prevPeriodStart = comparisonStart;
+    const prevPeriodEnd = comparisonEnd;
 
     const activeEngs = engagements.filter(e => {
       if (!e.start_date) return e.status === 'active';
@@ -896,14 +954,13 @@ export default function Analytics() {
         creativeBoost: cbRevenue,
       },
     };
-  }, [selectedYear, selectedMonth, engagements, extraWorks, assignments, colleagues, clients, getClientMonthSummaries, getClientById, engagementServices]);
+  }, [periodStart, periodEnd, comparisonStart, comparisonEnd, engagements, extraWorks, assignments, colleagues, clients, getClientMonthSummaries, getClientById, engagementServices, selectedYear, selectedMonth]);
 
   // =====================================================
   // TEAM DATA
   // =====================================================
   const teamData = useMemo(() => {
-    const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
-    const periodEnd = new Date(selectedYear, selectedMonth, 0);
+    // Use central period values
 
     const activeColleaguesList = colleagues.filter(c => c.status === 'active');
     const activeColleagues = activeColleaguesList.length;
@@ -999,7 +1056,7 @@ export default function Analytics() {
       topRevenueGenerators,
       freelancerVsEmployee,
     };
-  }, [selectedYear, selectedMonth, colleagues, engagements, assignments]);
+  }, [periodStart, periodEnd, colleagues, engagements, assignments]);
 
   // Helper function to calculate average margin
   function calculateAvgMargin(engs: typeof engagements, assigns: typeof assignments) {
@@ -1032,36 +1089,19 @@ export default function Analytics() {
       />
 
       {/* Period Selector */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Rok:</span>
-          <Select 
-            value={selectedYear.toString()} 
-            onValueChange={(v) => setSelectedYear(Number(v))}
-          >
-            <SelectTrigger className="w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[2023, 2024, 2025, 2026].map(year => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm font-medium w-24 text-center">
-            {monthNames[selectedMonth - 1]}
-          </span>
-          <Button variant="outline" size="icon" onClick={goToNextMonth}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <PeriodSelector
+        periodMode={periodMode}
+        setPeriodMode={setPeriodMode}
+        selectedYear={selectedYear}
+        setSelectedYear={setSelectedYear}
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+        selectedQuarter={selectedQuarter}
+        setSelectedQuarter={setSelectedQuarter}
+        periodLabel={periodLabel}
+        periodStart={periodStart}
+        periodEnd={periodEnd}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-flex">
