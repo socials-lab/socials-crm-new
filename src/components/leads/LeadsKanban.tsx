@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
 import { LeadCard } from './LeadCard';
+import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
 import type { Lead, LeadStage } from '@/types/crm';
+import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useLeadTransitions } from '@/hooks/useLeadTransitions';
 
 interface LeadsKanbanProps {
   leads: Lead[];
@@ -41,6 +44,10 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<LeadStage | null>(null);
   const [closedOpen, setClosedOpen] = useState(false);
+  const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
+  const [showTransitionDialog, setShowTransitionDialog] = useState(false);
+  
+  const { confirmTransition, isConfirming } = useLeadTransitions();
 
   const leadsByStage = useMemo(() => {
     const grouped: Record<LeadStage, Lead[]> = {
@@ -100,12 +107,44 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
     if (draggedLeadId) {
       const lead = leads.find(l => l.id === draggedLeadId);
       if (lead && lead.stage !== stage) {
+        const fromStage = lead.stage;
+        
+        // 1. Update stage immediately
         onStageChange(draggedLeadId, stage);
         toast.success(`Lead přesunut do "${STAGE_CONFIG[stage].title}"`);
+        
+        // 2. Show confirmation dialog for analytics
+        setPendingTransition({
+          leadId: lead.id,
+          leadName: lead.company_name,
+          fromStage,
+          toStage: stage,
+          leadValue: lead.estimated_price || 0,
+        });
+        setShowTransitionDialog(true);
       }
     }
     setDraggedLeadId(null);
     setDragOverStage(null);
+  };
+
+  const handleConfirmTransition = () => {
+    if (pendingTransition) {
+      confirmTransition({
+        leadId: pendingTransition.leadId,
+        fromStage: pendingTransition.fromStage,
+        toStage: pendingTransition.toStage,
+        transitionValue: pendingTransition.leadValue,
+      });
+      toast.success('Přechod byl potvrzen pro analytiku');
+    }
+    setShowTransitionDialog(false);
+    setPendingTransition(null);
+  };
+
+  const handleSkipTransition = () => {
+    setShowTransitionDialog(false);
+    setPendingTransition(null);
   };
 
   const renderStageColumn = (stage: LeadStage, compact = false) => {
@@ -177,43 +216,55 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
   };
 
   return (
-    <div className="space-y-4">
-      {/* Active Stages - 2x3 Grid (fits on screen) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {ACTIVE_STAGES.map(stage => renderStageColumn(stage))}
+    <>
+      <div className="space-y-4">
+        {/* Active Stages - 2x3 Grid (fits on screen) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {ACTIVE_STAGES.map(stage => renderStageColumn(stage))}
+        </div>
+
+        {/* Closed Stages - Collapsible Section */}
+        <Collapsible open={closedOpen} onOpenChange={setClosedOpen}>
+          <CollapsibleTrigger asChild>
+            <button className="flex items-center gap-2 w-full p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors text-left">
+              <span className="text-sm font-medium">Uzavřené leady</span>
+              <Badge variant="outline" className="text-xs">
+                {closedLeadsCount}
+              </Badge>
+              <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  {leadsByStage.won.length} won
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  {leadsByStage.lost.length} lost
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-gray-500" />
+                  {leadsByStage.postponed.length} odloženo
+                </span>
+                {closedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              {CLOSED_STAGES.map(stage => renderStageColumn(stage, true))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
-      {/* Closed Stages - Collapsible Section */}
-      <Collapsible open={closedOpen} onOpenChange={setClosedOpen}>
-        <CollapsibleTrigger asChild>
-          <button className="flex items-center gap-2 w-full p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors text-left">
-            <span className="text-sm font-medium">Uzavřené leady</span>
-            <Badge variant="outline" className="text-xs">
-              {closedLeadsCount}
-            </Badge>
-            <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                {leadsByStage.won.length} won
-              </span>
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-red-500" />
-                {leadsByStage.lost.length} lost
-              </span>
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-gray-500" />
-                {leadsByStage.postponed.length} odloženo
-              </span>
-              {closedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </div>
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-            {CLOSED_STAGES.map(stage => renderStageColumn(stage, true))}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
+      {/* Confirmation Dialog for Funnel Analytics */}
+      <ConfirmStageTransitionDialog
+        pendingTransition={pendingTransition}
+        open={showTransitionDialog}
+        onOpenChange={setShowTransitionDialog}
+        onConfirm={handleConfirmTransition}
+        onSkip={handleSkipTransition}
+        isConfirming={isConfirming}
+      />
+    </>
   );
 }

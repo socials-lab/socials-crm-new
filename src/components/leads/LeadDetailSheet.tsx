@@ -57,6 +57,7 @@ import {
 } from '@/components/ui/select';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useLeadTransitions } from '@/hooks/useLeadTransitions';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
@@ -64,7 +65,9 @@ import { RequestAccessDialog } from './RequestAccessDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
+import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
 import type { Lead, LeadStage, LeadService } from '@/types/crm';
+import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -100,6 +103,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
 export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services } = useCRMData();
+  const { confirmTransition, isConfirming } = useLeadTransitions();
   const [noteText, setNoteText] = useState('');
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -112,6 +116,8 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const [sharedOfferUrl, setSharedOfferUrl] = useState<string | null>(null);
   const [showContractWarning, setShowContractWarning] = useState(false);
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
+  const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
+  const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   const isProcessingWarning = useRef(false);
 
   // Use fresh lead data from context to reflect updates immediately
@@ -123,8 +129,38 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
   const history = getLeadHistory(lead.id);
   const handleStageChange = (newStage: LeadStage) => {
+    const fromStage = lead.stage;
     updateLeadStage(lead.id, newStage);
     toast.success('Stav leadu byl změněn');
+    
+    // Show confirmation dialog for funnel analytics
+    setPendingTransition({
+      leadId: lead.id,
+      leadName: lead.company_name,
+      fromStage,
+      toStage: newStage,
+      leadValue: lead.estimated_price || 0,
+    });
+    setShowTransitionDialog(true);
+  };
+
+  const handleConfirmTransition = () => {
+    if (pendingTransition) {
+      confirmTransition({
+        leadId: pendingTransition.leadId,
+        fromStage: pendingTransition.fromStage,
+        toStage: pendingTransition.toStage,
+        transitionValue: pendingTransition.leadValue,
+      });
+      toast.success('Přechod byl potvrzen pro analytiku');
+    }
+    setShowTransitionDialog(false);
+    setPendingTransition(null);
+  };
+
+  const handleSkipTransition = () => {
+    setShowTransitionDialog(false);
+    setPendingTransition(null);
   };
 
   const handleAddNote = () => {
@@ -1192,6 +1228,16 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
             offer_created_at: new Date().toISOString(),
           });
         }}
+      />
+
+      {/* Confirmation Dialog for Funnel Analytics */}
+      <ConfirmStageTransitionDialog
+        pendingTransition={pendingTransition}
+        open={showTransitionDialog}
+        onOpenChange={setShowTransitionDialog}
+        onConfirm={handleConfirmTransition}
+        onSkip={handleSkipTransition}
+        isConfirming={isConfirming}
       />
     </>
   );
