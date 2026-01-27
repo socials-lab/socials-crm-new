@@ -1,6 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { useState, useCallback, useMemo } from 'react';
 import type { LeadStage } from '@/types/crm';
 import type { 
   LeadStageTransition, 
@@ -8,6 +6,12 @@ import type {
   FunnelPassthroughSummary 
 } from '@/types/leadTransitions';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { 
+  initializeTransitions, 
+  addTransition, 
+  STORAGE_KEY,
+  type MockTransition 
+} from '@/data/leadTransitionsMockData';
 
 const STAGE_ORDER: LeadStage[] = [
   'new_lead',
@@ -31,117 +35,78 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   postponed: 'Odloženo',
 };
 
-// Type for raw database row
-interface TransitionRow {
-  id: string;
-  lead_id: string;
-  from_stage: string;
-  to_stage: string;
-  transition_value: number;
-  confirmed_at: string;
-  confirmed_by: string | null;
-  created_at: string;
-}
-
-const SUPABASE_URL = "https://empndmpeyrdycjdesoxr.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtcG5kbXBleXJkeWNqZGVzb3hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1OTQ5NTUsImV4cCI6MjA4MTE3MDk1NX0.X3I3FU2QRZD16rLwePdC3C2r7UIlGQuvJ6wWZnzgGEQ";
-
 export function useLeadTransitions() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+  // Initialize transitions from localStorage (with mock data if needed)
+  const [transitions, setTransitions] = useState<MockTransition[]>(() => 
+    initializeTransitions()
+  );
+  const [isConfirming, setIsConfirming] = useState(false);
 
-  // Fetch all transitions using direct REST API call
-  const { data: transitions = [], isLoading } = useQuery({
-    queryKey: ['lead-stage-transitions'],
-    queryFn: async () => {
+  // Refresh transitions from localStorage
+  const refreshTransitions = useCallback(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
       try {
-        const session = await supabase.auth.getSession();
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/lead_stage_transitions?order=confirmed_at.desc`,
-          {
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${session.data.session?.access_token}`,
-            },
-          }
-        );
-        
-        if (!response.ok) {
-          // Table doesn't exist yet - return empty array
-          return [] as LeadStageTransition[];
-        }
-        
-        const rows = await response.json() as TransitionRow[];
-        return rows.map(row => ({
-          ...row,
-          from_stage: row.from_stage as LeadStage,
-          to_stage: row.to_stage as LeadStage,
-        })) as LeadStageTransition[];
+        setTransitions(JSON.parse(stored));
       } catch {
-        return [] as LeadStageTransition[];
+        // Keep current state if parse fails
       }
-    },
-  });
+    }
+  }, []);
 
-  // Confirm a transition using direct REST API call
-  const confirmTransitionMutation = useMutation({
-    mutationFn: async ({
-      leadId,
-      fromStage,
-      toStage,
-      transitionValue,
-    }: {
-      leadId: string;
-      fromStage: LeadStage;
-      toStage: LeadStage;
-      transitionValue: number;
-    }) => {
-      const session = await supabase.auth.getSession();
-      const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/lead_stage_transitions`,
-        {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${session.data.session?.access_token}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation',
-          },
-          body: JSON.stringify({
-            lead_id: leadId,
-            from_stage: fromStage,
-            to_stage: toStage,
-            transition_value: transitionValue,
-            confirmed_by: user?.id,
-          }),
-        }
-      );
+  // Confirm a transition (save to localStorage)
+  const confirmTransition = useCallback(({
+    leadId,
+    fromStage,
+    toStage,
+    transitionValue,
+  }: {
+    leadId: string;
+    fromStage: LeadStage;
+    toStage: LeadStage;
+    transitionValue: number;
+  }) => {
+    setIsConfirming(true);
+    
+    try {
+      const newTransition = addTransition({
+        lead_id: leadId,
+        from_stage: fromStage,
+        to_stage: toStage,
+        transition_value: transitionValue,
+        confirmed_at: new Date().toISOString(),
+        confirmed_by: null,
+      });
       
-      if (!response.ok) {
-        throw new Error('Failed to confirm transition');
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lead-stage-transitions'] });
-    },
-  });
+      setTransitions(prev => [newTransition, ...prev]);
+    } finally {
+      setIsConfirming(false);
+    }
+  }, []);
+
+  const confirmTransitionAsync = useCallback(async ({
+    leadId,
+    fromStage,
+    toStage,
+    transitionValue,
+  }: {
+    leadId: string;
+    fromStage: LeadStage;
+    toStage: LeadStage;
+    transitionValue: number;
+  }) => {
+    confirmTransition({ leadId, fromStage, toStage, transitionValue });
+    return Promise.resolve();
+  }, [confirmTransition]);
 
   // Calculate conversion rates between consecutive stages
-  const getConversionRates = (): StageConversionRate[] => {
+  const getConversionRates = useCallback((): StageConversionRate[] => {
     const rates: StageConversionRate[] = [];
     
-    // Count entries to each stage
-    const stageEntries: Record<LeadStage, number> = {} as Record<LeadStage, number>;
+    // Count transitions TO each stage (entries into stage)
+    const stageEntries: Record<string, number> = {};
     STAGE_ORDER.forEach(stage => {
-      stageEntries[stage] = 0;
-    });
-    
-    transitions.forEach(t => {
-      if (stageEntries[t.to_stage] !== undefined) {
-        stageEntries[t.to_stage]++;
-      }
+      stageEntries[stage] = transitions.filter(t => t.to_stage === stage).length;
     });
     
     // Count transitions between consecutive stages
@@ -149,38 +114,44 @@ export function useLeadTransitions() {
       const fromStage = STAGE_ORDER[i];
       const toStage = STAGE_ORDER[i + 1];
       
+      // Count how many went from this stage to the next
       const transitionCount = transitions.filter(
         t => t.from_stage === fromStage && t.to_stage === toStage
       ).length;
       
-      const totalFromStage = stageEntries[fromStage] || 
-        transitions.filter(t => t.to_stage === fromStage).length;
+      // Total that entered this stage
+      const totalFromStage = stageEntries[fromStage] || 0;
+      
+      // Calculate rate (if there were entries to this stage)
+      const rate = totalFromStage > 0 
+        ? (transitionCount / totalFromStage) * 100 
+        : 0;
       
       rates.push({
         fromStage,
         toStage,
         fromLabel: STAGE_LABELS[fromStage],
         toLabel: STAGE_LABELS[toStage],
-        rate: totalFromStage > 0 ? (transitionCount / Math.max(totalFromStage, transitionCount)) * 100 : 0,
+        rate: Math.min(rate, 100), // Cap at 100%
         count: transitionCount,
-        total: Math.max(totalFromStage, transitionCount),
+        total: totalFromStage,
       });
     }
     
     return rates;
-  };
+  }, [transitions]);
 
   // Calculate overall conversion (new_lead -> won)
-  const getOverallConversion = (): number => {
-    const newLeadEntries = transitions.filter(t => t.to_stage === 'new_lead').length;
+  const getOverallConversion = useCallback((): number => {
+    const newLeadEntries = transitions.filter(t => t.to_stage === 'meeting_done').length;
     const wonCount = transitions.filter(t => t.to_stage === 'won').length;
     
     if (newLeadEntries === 0) return 0;
     return (wonCount / newLeadEntries) * 100;
-  };
+  }, [transitions]);
 
   // Get monthly trend for last N months
-  const getMonthlyTrend = (months: number = 6) => {
+  const getMonthlyTrend = useCallback((months: number = 12) => {
     const trend: { month: string; fromStage: LeadStage; toStage: LeadStage; rate: number; count: number }[] = [];
     const now = new Date();
     
@@ -195,7 +166,8 @@ export function useLeadTransitions() {
         return date >= monthStart && date <= monthEnd;
       });
       
-      const newLeadEntries = monthTransitions.filter(t => t.to_stage === 'new_lead').length;
+      // Count leads that entered funnel (new_lead -> meeting_done)
+      const newLeadEntries = monthTransitions.filter(t => t.to_stage === 'meeting_done').length;
       const wonCount = monthTransitions.filter(t => t.to_stage === 'won').length;
       
       trend.push({
@@ -208,28 +180,29 @@ export function useLeadTransitions() {
     }
     
     return trend;
-  };
+  }, [transitions]);
 
   // Get full summary
-  const getSummary = (): FunnelPassthroughSummary => {
+  const getSummary = useCallback((): FunnelPassthroughSummary => {
     return {
       conversionRates: getConversionRates(),
       overallConversion: getOverallConversion(),
       totalTransitions: transitions.length,
       monthlyTrend: getMonthlyTrend(12),
     };
-  };
+  }, [getConversionRates, getOverallConversion, getMonthlyTrend, transitions.length]);
 
   return {
-    transitions,
-    isLoading,
-    confirmTransition: confirmTransitionMutation.mutate,
-    confirmTransitionAsync: confirmTransitionMutation.mutateAsync,
-    isConfirming: confirmTransitionMutation.isPending,
+    transitions: transitions as LeadStageTransition[],
+    isLoading: false,
+    confirmTransition,
+    confirmTransitionAsync,
+    isConfirming,
     getConversionRates,
     getOverallConversion,
     getMonthlyTrend,
     getSummary,
     stageLabels: STAGE_LABELS,
+    refreshTransitions,
   };
 }
