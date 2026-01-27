@@ -17,7 +17,6 @@ import {
   Percent, 
   TrendingUp, 
   Briefcase,
-  Sparkles,
   ArrowUp,
   ArrowDown,
   Users,
@@ -73,17 +72,10 @@ interface FinanceAnalyticsProps {
   marginDistribution: { range: string; count: number }[];
   extraWorkTrend: { month: string; count: number; amount: number }[];
   marginByTier: MarginByTier[];
-  creativeBoostStats: {
-    totalCredits: number;
-    creditsByType: { type: string; credits: number }[];
-    creditsByColleague: { name: string; credits: number }[];
-    creditsTrend: { month: string; credits: number }[];
-  };
   revenueBreakdown: {
     retainers: number;
     extraWork: number;
     oneOff: number;
-    creativeBoost: number;
   };
 }
 
@@ -101,7 +93,6 @@ export function FinanceAnalytics({
   marginDistribution,
   extraWorkTrend,
   marginByTier,
-  creativeBoostStats,
   revenueBreakdown,
 }: FinanceAnalyticsProps) {
   const formatCurrency = (value: number) => `${(value / 1000).toFixed(0)}K`;
@@ -115,7 +106,7 @@ export function FinanceAnalytics({
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         <KPICard
           title="Celková fakturace"
           value={`${formatCurrency(totalInvoicing)} Kč`}
@@ -158,11 +149,6 @@ export function FinanceAnalytics({
           icon={Briefcase}
           subtitle={`${formatCurrency(extraWorkAmount)} Kč`}
         />
-        <KPICard
-          title="Creative Boost"
-          value={`${creativeBoostStats.totalCredits} kreditů`}
-          icon={Sparkles}
-        />
       </div>
 
       {/* Revenue Breakdown Summary */}
@@ -171,7 +157,7 @@ export function FinanceAnalytics({
           <CardTitle className="text-base font-medium">Struktura příjmů (reálná data)</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="text-center p-4 bg-muted/50 rounded-lg">
               <p className="text-2xl font-bold text-primary">{formatCurrency(revenueBreakdown.retainers)} Kč</p>
               <p className="text-sm text-muted-foreground">Retainery</p>
@@ -183,10 +169,6 @@ export function FinanceAnalytics({
             <div className="text-center p-4 bg-muted/50 rounded-lg">
               <p className="text-2xl font-bold text-chart-3">{formatCurrency(revenueBreakdown.oneOff)} Kč</p>
               <p className="text-sm text-muted-foreground">Jednorázové</p>
-            </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold text-chart-4">{formatCurrency(revenueBreakdown.creativeBoost)} Kč</p>
-              <p className="text-sm text-muted-foreground">Creative Boost</p>
             </div>
           </div>
         </CardContent>
@@ -456,104 +438,6 @@ export function FinanceAnalytics({
           </CardContent>
         </Card>
       </div>
-
-      {/* Creative Boost Section */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Creative Boost
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 lg:grid-cols-3">
-            {/* Credits by Type */}
-            <div>
-              <h4 className="text-sm font-medium mb-3">Kredity podle typu</h4>
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={creativeBoostStats.creditsByType} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                    <YAxis 
-                      type="category" 
-                      dataKey="type" 
-                      width={80}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [`${value} kreditů`, 'Kredity']}
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Bar dataKey="credits" fill="hsl(var(--chart-4))" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Credits by Colleague */}
-            <div>
-              <h4 className="text-sm font-medium mb-3">Kredity podle kolegy</h4>
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={creativeBoostStats.creditsByColleague} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                    <YAxis 
-                      type="category" 
-                      dataKey="name" 
-                      width={80}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [`${value} kreditů`, 'Kredity']}
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Bar dataKey="credits" fill="hsl(var(--chart-5))" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Credits Trend */}
-            <div>
-              <h4 className="text-sm font-medium mb-3">Vývoj kreditů</h4>
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={creativeBoostStats.creditsTrend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                    <Tooltip 
-                      formatter={(value: number) => [`${value} kreditů`, 'Kredity']}
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="credits" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={{ fill: 'hsl(var(--primary))', r: 3 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

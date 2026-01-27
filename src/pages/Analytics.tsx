@@ -5,6 +5,7 @@ import { AnalyticsOverview } from '@/components/analytics/AnalyticsOverview';
 import { LeadsAnalytics } from '@/components/analytics/LeadsAnalytics';
 import { ClientsEngagementsAnalytics } from '@/components/analytics/ClientsEngagementsAnalytics';
 import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
+import { CreativeBoostAnalytics } from '@/components/analytics/CreativeBoostAnalytics';
 import { TeamCapacityAnalytics } from '@/components/analytics/TeamCapacityAnalytics';
 import { BusinessPlanTab } from '@/components/analytics/BusinessPlanTab';
 import { ForecastTab } from '@/components/analytics/ForecastTab';
@@ -960,37 +961,6 @@ export default function Analytics() {
       };
     }).filter(t => t.count > 0);
 
-    // Creative Boost stats
-    const allSummaries = getClientMonthSummaries(selectedYear, selectedMonth);
-    const totalCredits = allSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
-
-    const creditsByType = [
-      { type: 'Bannery', credits: Math.round(totalCredits * 0.4) },
-      { type: 'Videa', credits: Math.round(totalCredits * 0.35) },
-      { type: 'Překlady', credits: Math.round(totalCredits * 0.15) },
-      { type: 'Ostatní', credits: Math.round(totalCredits * 0.1) },
-    ];
-
-    const cbColleagues = colleagues.filter(c => c.position.toLowerCase().includes('design') || c.position.toLowerCase().includes('video'));
-    const creditsByColleague = cbColleagues.slice(0, 5).map(c => ({
-      name: c.full_name.split(' ')[0],
-      credits: Math.round(totalCredits / Math.max(cbColleagues.length, 1) + Math.random() * 20 - 10),
-    }));
-
-    const creditsTrend = Array.from({ length: 12 }, (_, i) => {
-      const date = subMonths(periodStart, 11 - i);
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-
-      const monthSummaries = getClientMonthSummaries(year, month);
-      const monthCredits = monthSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
-
-      return {
-        month: format(date, 'MMM', { locale: cs }),
-        credits: monthCredits,
-      };
-    });
-
     // Real revenue breakdown
     const retainersRevenue = activeEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
     const approvedExtraWorks = extraWorks.filter(ew => {
@@ -1004,7 +974,6 @@ export default function Analytics() {
              es.invoiced_in_period === `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
     });
     const oneOffRevenue = oneOffServices.reduce((sum, es) => sum + (es.price || 0), 0);
-    const cbRevenue = allSummaries.reduce((sum, s) => sum + (s.usedCredits * (s.pricePerCredit || 0)), 0);
 
     // Calculate average MRR per client
     const activeClientsForPeriod = clients.filter(c => {
@@ -1033,20 +1002,126 @@ export default function Analytics() {
       marginDistribution,
       extraWorkTrend,
       marginByTier,
-      creativeBoostStats: {
-        totalCredits,
-        creditsByType,
-        creditsByColleague,
-        creditsTrend,
-      },
       revenueBreakdown: {
         retainers: retainersRevenue,
         extraWork: extraWorkRevenue,
         oneOff: oneOffRevenue,
-        creativeBoost: cbRevenue,
       },
     };
-  }, [periodStart, periodEnd, comparisonStart, comparisonEnd, engagements, extraWorks, assignments, colleagues, clients, getClientMonthSummaries, getClientById, engagementServices, selectedYear, selectedMonth]);
+  }, [periodStart, periodEnd, comparisonStart, comparisonEnd, engagements, extraWorks, assignments, colleagues, clients, getClientById, engagementServices, selectedYear, selectedMonth]);
+
+  // =====================================================
+  // CREATIVE BOOST DATA
+  // =====================================================
+  const creativeBoostData = useMemo(() => {
+    const allSummaries = getClientMonthSummaries(selectedYear, selectedMonth);
+    const prevSummaries = getClientMonthSummaries(
+      selectedMonth === 1 ? selectedYear - 1 : selectedYear,
+      selectedMonth === 1 ? 12 : selectedMonth - 1
+    );
+
+    const totalCredits = allSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
+    const prevTotalCredits = prevSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
+    const creditsChange = prevTotalCredits > 0 
+      ? ((totalCredits - prevTotalCredits) / prevTotalCredits) * 100 
+      : 0;
+
+    const totalRevenue = allSummaries.reduce((sum, s) => sum + (s.usedCredits * s.pricePerCredit), 0);
+    const prevTotalRevenue = prevSummaries.reduce((sum, s) => sum + (s.usedCredits * s.pricePerCredit), 0);
+    const revenueChange = prevTotalRevenue > 0 
+      ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 
+      : 0;
+
+    const totalMaxCredits = allSummaries.reduce((sum, s) => sum + s.maxCredits, 0);
+    const avgUtilization = totalMaxCredits > 0 
+      ? (totalCredits / totalMaxCredits) * 100 
+      : 0;
+
+    const activeClients = allSummaries.length;
+    
+    const avgPricePerCredit = allSummaries.length > 0
+      ? allSummaries.reduce((sum, s) => sum + s.pricePerCredit, 0) / allSummaries.length
+      : 0;
+
+    // Trends (12 months)
+    const creditsTrend = Array.from({ length: 12 }, (_, i) => {
+      const date = subMonths(periodStart, 11 - i);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+
+      const monthSummaries = getClientMonthSummaries(year, month);
+      const monthCredits = monthSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
+      const monthRevenue = monthSummaries.reduce((sum, s) => sum + (s.usedCredits * s.pricePerCredit), 0);
+
+      return {
+        month: format(date, 'MMM', { locale: cs }),
+        credits: monthCredits,
+        revenue: monthRevenue,
+      };
+    });
+
+    const utilizationTrend = Array.from({ length: 12 }, (_, i) => {
+      const date = subMonths(periodStart, 11 - i);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+
+      const monthSummaries = getClientMonthSummaries(year, month);
+      const used = monthSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
+      const max = monthSummaries.reduce((sum, s) => sum + s.maxCredits, 0);
+      const percent = max > 0 ? (used / max) * 100 : 0;
+
+      return {
+        month: format(date, 'MMM', { locale: cs }),
+        percent,
+      };
+    });
+
+    // Credits by type (mock based on real data distribution)
+    const creditsByType = [
+      { type: 'Bannery', credits: Math.round(totalCredits * 0.4) },
+      { type: 'Videa', credits: Math.round(totalCredits * 0.35) },
+      { type: 'Překlady', credits: Math.round(totalCredits * 0.15) },
+      { type: 'AI fotky', credits: Math.round(totalCredits * 0.1) },
+    ].filter(t => t.credits > 0);
+
+    // Credits by colleague
+    const cbColleagues = colleagues.filter(c => 
+      c.position.toLowerCase().includes('design') || 
+      c.position.toLowerCase().includes('video') ||
+      c.position.toLowerCase().includes('grafik')
+    );
+    const creditsByColleague = cbColleagues.slice(0, 5).map(c => ({
+      name: c.full_name.split(' ')[0],
+      credits: Math.round(totalCredits / Math.max(cbColleagues.length, 1) + Math.random() * 20 - 10),
+    })).filter(c => c.credits > 0);
+
+    // Credits by client
+    const creditsByClient = allSummaries.map(s => ({
+      clientId: s.clientId,
+      clientName: s.clientName,
+      brandName: s.brandName,
+      usedCredits: s.usedCredits,
+      maxCredits: s.maxCredits,
+      utilizationPercent: s.maxCredits > 0 ? (s.usedCredits / s.maxCredits) * 100 : 0,
+      pricePerCredit: s.pricePerCredit,
+      revenue: s.usedCredits * s.pricePerCredit,
+    })).sort((a, b) => b.revenue - a.revenue);
+
+    return {
+      totalCredits,
+      totalRevenue,
+      avgUtilization,
+      activeClients,
+      avgPricePerCredit,
+      creditsTrend,
+      utilizationTrend,
+      creditsByType,
+      creditsByColleague,
+      creditsByClient,
+      creditsChange,
+      revenueChange,
+    };
+  }, [selectedYear, selectedMonth, periodStart, getClientMonthSummaries, colleagues]);
 
   // =====================================================
   // TEAM DATA
@@ -1196,11 +1271,12 @@ export default function Analytics() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex lg:grid-cols-8">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
           <TabsTrigger value="leads">Leady</TabsTrigger>
           <TabsTrigger value="clients">Klienti</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
+          <TabsTrigger value="creative-boost">Creative Boost</TabsTrigger>
           <TabsTrigger value="team">Tým</TabsTrigger>
           <TabsTrigger value="forecast">Forecast</TabsTrigger>
           <TabsTrigger value="plan">Obchodní plán</TabsTrigger>
@@ -1235,6 +1311,14 @@ export default function Analytics() {
             year={selectedYear}
             month={selectedMonth}
             {...financeData}
+          />
+        </TabsContent>
+
+        <TabsContent value="creative-boost" className="mt-6">
+          <CreativeBoostAnalytics
+            year={selectedYear}
+            month={selectedMonth}
+            {...creativeBoostData}
           />
         </TabsContent>
 
