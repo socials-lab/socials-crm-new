@@ -10,9 +10,12 @@ import {
   FileCheck2, 
   FileSignature,
   CheckCircle2,
+  AlertTriangle,
+  Clock,
 } from 'lucide-react';
 import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
+import { getLeadLastActivity } from '@/utils/leadActivityUtils';
 
 interface LeadMobileCardProps {
   lead: Lead;
@@ -46,6 +49,7 @@ const STAGE_COLORS: Record<LeadStage, string> = {
 
 export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps) {
   const isConverted = !!lead.converted_to_client_id;
+  const activityInfo = getLeadLastActivity(lead);
 
   return (
     <Card 
@@ -101,29 +105,43 @@ export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps
           <span className="text-xs text-muted-foreground truncate">{ownerName}</span>
         </div>
 
-        {/* Footer: Price + Offer link */}
+        {/* Footer: Price + Activity + Offer link */}
         <div className="flex items-center justify-between gap-2 pt-2 border-t">
-          <div>
+          <div className="flex items-center gap-2">
             <span className="font-semibold text-sm">
               ~{lead.estimated_price.toLocaleString()} {lead.currency}
             </span>
-            <Badge variant="secondary" className="text-xs ml-2">
+            <Badge variant="secondary" className="text-xs">
               {lead.potential_service}
             </Badge>
           </div>
-          {lead.offer_url && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(lead.offer_url!, '_blank');
-              }}
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Activity Indicator */}
+            <div className={cn(
+              "flex items-center gap-1 text-xs",
+              activityInfo.isStale ? "text-amber-600" : "text-muted-foreground"
+            )}>
+              {activityInfo.isStale ? (
+                <AlertTriangle className="h-3.5 w-3.5" />
+              ) : (
+                <Clock className="h-3.5 w-3.5" />
+              )}
+              <span>{activityInfo.activityLabel}</span>
+            </div>
+            {lead.offer_url && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(lead.offer_url!, '_blank');
+                }}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
