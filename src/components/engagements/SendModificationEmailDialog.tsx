@@ -220,8 +220,8 @@ ${selectedSender.email}${selectedSender.phone ? `\n${selectedSender.phone}` : ''
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             Odeslat návrh změny klientovi
@@ -231,7 +231,7 @@ ${selectedSender.email}${selectedSender.phone ? `\n${selectedSender.phone}` : ''
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
           {/* Client Info */}
           <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-1">
             <div className="flex items-center gap-2">
@@ -243,66 +243,69 @@ ${selectedSender.email}${selectedSender.phone ? `\n${selectedSender.phone}` : ''
             </div>
           </div>
 
-          {/* Recipient Email */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Email příjemce</Label>
-            <Input
-              type="email"
-              value={recipientEmail}
-              onChange={(e) => setRecipientEmail(e.target.value)}
-              placeholder="email@spolecnost.cz"
-            />
+          {/* Row: Recipient + Sender */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Recipient Email */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Email příjemce</Label>
+              <Input
+                type="email"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                placeholder="email@spolecnost.cz"
+              />
+            </div>
+
+            {/* Sender Selection */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Odesílatel</Label>
+              <Select value={selectedSenderId} onValueChange={setSelectedSenderId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Vyberte odesílatele" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeColleagues.map((colleague) => (
+                    <SelectItem key={colleague.id} value={colleague.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{colleague.full_name}</span>
+                        <span className="text-muted-foreground text-xs">({colleague.position})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* Sender Selection */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Odesílatel</Label>
-            <Select value={selectedSenderId} onValueChange={setSelectedSenderId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Vyberte odesílatele" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeColleagues.map((colleague) => (
-                  <SelectItem key={colleague.id} value={colleague.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{colleague.full_name}</span>
-                      <span className="text-muted-foreground text-xs">({colleague.position})</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Sender Info Card */}
+          {/* Sender Info Card - Compact inline */}
           {selectedSender && (
-            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1">
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-primary" />
+            <div className="p-2 rounded-lg bg-primary/5 border border-primary/20 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <div className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-primary" />
                 <span className="font-medium">{selectedSender.full_name}</span>
-                <span className="text-muted-foreground">– {selectedSender.position}</span>
+                <span className="text-muted-foreground text-xs">– {selectedSender.position}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Mail className="h-4 w-4" />
-                <span>{selectedSender.email}</span>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Mail className="h-3.5 w-3.5" />
+                <span className="text-xs">{selectedSender.email}</span>
               </div>
               {selectedSender.phone && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  <span>{selectedSender.phone}</span>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Phone className="h-3.5 w-3.5" />
+                  <span className="text-xs">{selectedSender.phone}</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Upgrade Link Preview */}
-          <div className="p-2 rounded bg-muted/30 text-xs flex items-center gap-2">
+          {/* Upgrade Link Preview - Compact */}
+          <div className="p-1.5 rounded bg-muted/30 text-xs flex items-center gap-2">
             <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <span className="truncate text-muted-foreground">{upgradeLink}</span>
           </div>
 
           {/* Email Subject */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label className="text-sm font-medium">Předmět emailu</Label>
             <Input
               value={emailSubject}
@@ -311,19 +314,18 @@ ${selectedSender.email}${selectedSender.phone ? `\n${selectedSender.phone}` : ''
             />
           </div>
 
-          {/* Email Content */}
-          <div className="space-y-2">
+          {/* Email Content - Takes remaining space */}
+          <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
             <Label className="text-sm font-medium">Obsah emailu</Label>
             <Textarea
               value={emailContent}
               onChange={(e) => setEmailContent(e.target.value)}
-              rows={14}
-              className="font-mono text-sm"
+              className="font-mono text-sm flex-1 min-h-[200px] resize-none"
             />
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
           </Button>
