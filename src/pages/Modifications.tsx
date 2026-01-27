@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ModificationRequestCard } from '@/components/engagements/ModificationRequestCard';
 import { ProposeModificationDialog } from '@/components/engagements/ProposeModificationDialog';
 import { EditModificationRequestDialog } from '@/components/engagements/EditModificationRequestDialog';
+import { SendModificationEmailDialog } from '@/components/engagements/SendModificationEmailDialog';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -142,6 +143,8 @@ export default function Modifications() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<StoredModificationRequest | null>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailRequest, setEmailRequest] = useState<StoredModificationRequest | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   
   const { 
@@ -268,6 +271,16 @@ export default function Modifications() {
     await deleteRequest(requestId);
   };
 
+  const handleSendEmail = (request: StoredModificationRequest) => {
+    setEmailRequest(request);
+    setEmailDialogOpen(true);
+  };
+
+  const getUpgradeLink = (token: string | null) => {
+    if (!token) return '';
+    return `${window.location.origin}/upgrade/${token}`;
+  };
+
   const handleCopyLink = async () => {
     if (approvedRequest?.upgrade_offer_token) {
       const link = `${window.location.origin}/upgrade/${approvedRequest.upgrade_offer_token}`;
@@ -313,6 +326,16 @@ export default function Modifications() {
       </div>
 
       <ProposeModificationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      
+      {/* Send Email Dialog */}
+      {emailRequest && (
+        <SendModificationEmailDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          request={emailRequest}
+          upgradeLink={getUpgradeLink(emailRequest.upgrade_offer_token)}
+        />
+      )}
 
       {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -428,6 +451,7 @@ export default function Modifications() {
                   request={request}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  onSendEmail={handleSendEmail}
                   isDeleting={isDeleting}
                 />
               ))}

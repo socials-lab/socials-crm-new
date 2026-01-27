@@ -17,6 +17,7 @@ import {
   Clock,
   Pencil,
   Trash2,
+  Mail,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ interface ModificationRequestCardProps {
   onApply?: (requestId: string) => Promise<void>;
   onEdit?: (request: StoredModificationRequest) => void;
   onDelete?: (requestId: string) => Promise<void>;
+  onSendEmail?: (request: StoredModificationRequest) => void;
   isApproving?: boolean;
   isRejecting?: boolean;
   isApplying?: boolean;
@@ -89,6 +91,7 @@ export function ModificationRequestCard({
   onApply,
   onEdit,
   onDelete,
+  onSendEmail,
   isApproving,
   isRejecting,
   isApplying,
@@ -413,6 +416,17 @@ export function ModificationRequestCard({
                       >
                         <Pencil className="h-3.5 w-3.5 mr-1" />
                         Upravit
+                      </Button>
+                    )}
+                    {onSendEmail && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => onSendEmail(request)}
+                      >
+                        <Mail className="h-3.5 w-3.5 mr-1" />
+                        Odeslat email
                       </Button>
                     )}
                     <Button
