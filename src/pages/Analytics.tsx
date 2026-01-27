@@ -16,6 +16,7 @@ import { ClientsEngagementsAnalytics } from '@/components/analytics/ClientsEngag
 import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
 import { TeamCapacityAnalytics } from '@/components/analytics/TeamCapacityAnalytics';
 import { BusinessPlanTab } from '@/components/analytics/BusinessPlanTab';
+import { ForecastTab } from '@/components/analytics/ForecastTab';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
@@ -1063,12 +1064,13 @@ export default function Analytics() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-flex">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
           <TabsTrigger value="leads">Leady</TabsTrigger>
           <TabsTrigger value="clients">Klienti</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
           <TabsTrigger value="team">Tým</TabsTrigger>
+          <TabsTrigger value="forecast">Forecast</TabsTrigger>
           <TabsTrigger value="plan">Obchodní plán</TabsTrigger>
         </TabsList>
 
@@ -1107,6 +1109,16 @@ export default function Analytics() {
         <TabsContent value="team" className="mt-6">
           <TeamCapacityAnalytics
             {...teamData}
+          />
+        </TabsContent>
+
+        <TabsContent value="forecast" className="mt-6">
+          <ForecastTab
+            engagements={engagements}
+            clients={clients}
+            colleagues={colleagues}
+            assignments={assignments}
+            leads={leads}
           />
         </TabsContent>
 

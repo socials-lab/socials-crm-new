@@ -327,7 +327,7 @@ export function BusinessPlanTab({ selectedYear, selectedMonth }: BusinessPlanTab
         </Card>
       )}
 
-      {/* Churn Impact Card */}
+      {/* Churn Impact Summary - links to Forecast tab */}
       {(churnImpact.lostMRR > 0 || churnImpact.requiredIncrease > 0) && (
         <Card className={`border-2 ${
           churnImpact.severity === 'high' 
@@ -336,82 +336,30 @@ export function BusinessPlanTab({ selectedYear, selectedMonth }: BusinessPlanTab
               ? 'border-amber-500/50 bg-amber-500/5' 
               : 'border-green-500/50 bg-green-500/5'
         }`}>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className={`h-5 w-5 ${
-                churnImpact.severity === 'high' 
-                  ? 'text-destructive' 
-                  : churnImpact.severity === 'medium' 
-                    ? 'text-amber-500' 
-                    : 'text-green-500'
-              }`} />
-              Dopad ukončených spoluprací – {selectedMonthData?.monthName} {selectedYear}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Ending engagements list */}
-            {churnImpact.endingEngagements.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Zakázky končící tento měsíc:</p>
-                <div className="space-y-2">
-                  {churnImpact.endingEngagements.map((e) => (
-                    <div 
-                      key={e.id} 
-                      className="flex items-center justify-between p-2 rounded-lg bg-background/50 border"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          (e.monthly_fee || 0) >= 50000 ? 'bg-destructive' : 'bg-amber-500'
-                        }`} />
-                        <span className="font-medium">{e.client?.name || 'Neznámý klient'}</span>
-                        <span className="text-muted-foreground">–</span>
-                        <span className="text-sm text-muted-foreground">{e.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          {e.end_date ? format(parseISO(e.end_date), 'd.M.', { locale: cs }) : '–'}
-                        </div>
-                        <span className="font-medium text-destructive">
-                          -{formatShortCurrency(e.monthly_fee || 0)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className={`h-5 w-5 ${
+                  churnImpact.severity === 'high' 
+                    ? 'text-destructive' 
+                    : churnImpact.severity === 'medium' 
+                      ? 'text-amber-500' 
+                      : 'text-green-500'
+                }`} />
+                <div>
+                  <p className="font-medium">
+                    Dopad ukončených spoluprací: -{formatShortCurrency(churnImpact.lostMRR)} MRR
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Pro splnění plánu je potřeba +{formatShortCurrency(churnImpact.requiredIncrease)}
+                  </p>
                 </div>
               </div>
-            )}
-
-            {/* KPI Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-3 rounded-lg bg-background/50 border">
-                <p className="text-xs text-muted-foreground">Aktuální MRR</p>
-                <p className="text-lg font-bold">{formatShortCurrency(churnImpact.currentMRR)}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-background/50 border">
-                <p className="text-xs text-muted-foreground">Ztráta MRR</p>
-                <p className="text-lg font-bold text-destructive">-{formatShortCurrency(churnImpact.lostMRR)}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-background/50 border">
-                <p className="text-xs text-muted-foreground">MRR po churnu</p>
-                <p className="text-lg font-bold">{formatShortCurrency(churnImpact.mrrAfterChurn)}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-background/50 border border-primary/30">
-                <p className="text-xs text-muted-foreground">Potřebný nárůst</p>
-                <p className="text-lg font-bold text-primary">+{formatShortCurrency(churnImpact.requiredIncrease)}</p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Lightbulb className="h-4 w-4" />
+                <span>Detailní analýzu najdete v tabu Forecast</span>
               </div>
             </div>
-
-            {/* Info box */}
-            {churnImpact.requiredIncrease > 0 && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <Lightbulb className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <p className="text-sm">
-                  Pro splnění plánu je potřeba získat nové zakázky nebo vícepráce v hodnotě minimálně{' '}
-                  <span className="font-semibold">{formatCurrency(churnImpact.requiredIncrease)}</span>
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
