@@ -20,9 +20,11 @@ import {
   Package,
   Bell,
   Activity,
+  Receipt,
+  Wrench,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format, subDays, isAfter, parseISO } from 'date-fns';
+import { format, subDays, isAfter, parseISO, addMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
@@ -41,7 +43,7 @@ import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils
 
 export default function Dashboard() {
   const { leads } = useLeadsData();
-  const { clients, engagements, colleagues, extraWorks } = useCRMData();
+  const { clients, engagements, colleagues, extraWorks, engagementServices } = useCRMData();
   const { getTodaysMeetings } = useMeetingsData();
   const { isSuperAdmin, canSeeFinancials: userCanSeeFinancials } = useUserRole();
   const { pendingRequests } = useModificationRequests();
@@ -155,16 +157,77 @@ export default function Dashboard() {
   const upcomingBirthdays = getUpcomingBirthdays(colleagues, 14);
   const todaysMeetings = getTodaysMeetings();
 
-  // === LEADS PIPELINE ===
-  const leadsPipeline = useMemo(() => {
-    const stages = {
-      new_lead: leads.filter(l => l.stage === 'new_lead').length,
-      meeting_done: leads.filter(l => l.stage === 'meeting_done').length,
-      preparing_offer: leads.filter(l => l.stage === 'preparing_offer').length,
-      offer_sent: leads.filter(l => l.stage === 'offer_sent').length,
+  // === LEADS PIPELINE (all 9 stages) ===
+  const leadsPipeline = useMemo(() => ({
+    new_lead: leads.filter(l => l.stage === 'new_lead').length,
+    meeting_done: leads.filter(l => l.stage === 'meeting_done').length,
+    waiting_access: leads.filter(l => l.stage === 'waiting_access').length,
+    access_received: leads.filter(l => l.stage === 'access_received').length,
+    preparing_offer: leads.filter(l => l.stage === 'preparing_offer').length,
+    offer_sent: leads.filter(l => l.stage === 'offer_sent').length,
+    won: leads.filter(l => l.stage === 'won').length,
+    lost: leads.filter(l => l.stage === 'lost').length,
+    postponed: leads.filter(l => l.stage === 'postponed').length,
+  }), [leads]);
+
+  // === NEXT MONTH INVOICING ===
+  const nextMonthInvoicing = useMemo(() => {
+    const activeEngagements = engagements.filter(e => e.status === 'active');
+    const retainerTotal = activeEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    
+    const extraWorksToInvoice = extraWorks
+      ?.filter(w => w.status === 'ready_to_invoice')
+      .reduce((sum, w) => sum + w.amount, 0) || 0;
+    
+    const oneOffPending = engagementServices
+      ?.filter(s => s.billing_type === 'one_off' && s.invoicing_status === 'pending')
+      .reduce((sum, s) => sum + (s.price || 0), 0) || 0;
+    
+    return {
+      retainer: retainerTotal,
+      extraWorks: extraWorksToInvoice,
+      oneOff: oneOffPending,
+      total: retainerTotal + extraWorksToInvoice + oneOffPending,
     };
-    return stages;
-  }, [leads]);
+  }, [engagements, extraWorks, engagementServices]);
+
+  // === MODIFICATIONS PIPELINE ===
+  const modificationsPipeline = useMemo(() => {
+    const requests = pendingRequests || [];
+    return {
+      pending: requests.filter(r => r.status === 'pending').length,
+      approved: requests.filter(r => r.status === 'approved').length,
+      client_approved: requests.filter(r => r.status === 'client_approved').length,
+      totalValue: requests
+        .filter(r => ['pending', 'approved', 'client_approved'].includes(r.status))
+        .reduce((sum, r) => {
+          const changes = r.proposed_changes as any;
+          return sum + (changes?.price || changes?.new_price || 0);
+        }, 0),
+    };
+  }, [pendingRequests]);
+
+  // === EXTRA WORKS PIPELINE ===
+  const extraWorksPipeline = useMemo(() => {
+    const works = extraWorks || [];
+    return {
+      pending_approval: works.filter(w => w.status === 'pending_approval').length,
+      in_progress: works.filter(w => w.status === 'in_progress').length,
+      ready_to_invoice: works.filter(w => w.status === 'ready_to_invoice').length,
+      totalValue: works
+        .filter(w => ['pending_approval', 'in_progress', 'ready_to_invoice'].includes(w.status))
+        .reduce((sum, w) => sum + w.amount, 0),
+    };
+  }, [extraWorks]);
+
+  // Active pipeline leads (excluding closed stages)
+  const activePipelineLeads = useMemo(() => 
+    leadsPipeline.new_lead + leadsPipeline.meeting_done + leadsPipeline.waiting_access + 
+    leadsPipeline.access_received + leadsPipeline.preparing_offer + leadsPipeline.offer_sent
+  , [leadsPipeline]);
+
+  // Next month name
+  const nextMonthName = format(addMonths(new Date(), 1), 'LLLL', { locale: cs });
 
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
@@ -175,7 +238,7 @@ export default function Dashboard() {
       />
 
       {/* === EXECUTIVE KPIs === */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
         <KPICard
           title="📈 MRR"
           value={canSeeFinancials ? `${(metrics.mrr / 1000).toFixed(0)}k` : '***'}
@@ -183,9 +246,16 @@ export default function Dashboard() {
           icon={TrendingUp}
         />
         <KPICard
+          title="💰 Fakturace"
+          value={canSeeFinancials ? `${(nextMonthInvoicing.total / 1000).toFixed(0)}k` : '***'}
+          subtitle={canSeeFinancials ? `Plánováno na ${nextMonthName}` : undefined}
+          icon={Receipt}
+          className="border-primary/30 bg-primary/5"
+        />
+        <KPICard
           title="🎯 Pipeline"
           value={canSeeFinancials ? `${(metrics.pipelineValue / 1000).toFixed(0)}k` : '***'}
-          subtitle={`${Object.values(leadsPipeline).reduce((a, b) => a + b, 0)} aktivních leadů`}
+          subtitle={`${activePipelineLeads} aktivních leadů`}
           icon={Target}
         />
         <KPICard
@@ -353,7 +423,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Leads Pipeline */}
+        {/* Leads Pipeline - All 9 stages */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -369,24 +439,42 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
+            {/* Active pipeline stages */}
+            <div className="space-y-2">
               {[
                 { label: 'Nový lead', value: leadsPipeline.new_lead, color: 'bg-slate-500' },
-                { label: 'Po meetingu', value: leadsPipeline.meeting_done, color: 'bg-blue-500' },
-                { label: 'Příprava nabídky', value: leadsPipeline.preparing_offer, color: 'bg-amber-500' },
-                { label: 'Nabídka odeslána', value: leadsPipeline.offer_sent, color: 'bg-green-500' },
+                { label: 'Schůzka proběhla', value: leadsPipeline.meeting_done, color: 'bg-blue-500' },
+                { label: 'Čekáme na přístupy', value: leadsPipeline.waiting_access, color: 'bg-amber-500' },
+                { label: 'Přístupy přijaty', value: leadsPipeline.access_received, color: 'bg-teal-500' },
+                { label: 'Příprava nabídky', value: leadsPipeline.preparing_offer, color: 'bg-violet-500' },
+                { label: 'Nabídka odeslána', value: leadsPipeline.offer_sent, color: 'bg-pink-500' },
               ].map((stage) => (
-                <div key={stage.label} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>{stage.label}</span>
-                    <span className="font-medium">{stage.value}</span>
-                  </div>
-                  <Progress 
-                    value={stage.value > 0 ? Math.max(10, (stage.value / Math.max(...Object.values(leadsPipeline), 1)) * 100) : 0} 
-                    className="h-2"
-                  />
+                <div key={stage.label} className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${stage.color} shrink-0`} />
+                  <span className="text-sm flex-1 truncate">{stage.label}</span>
+                  <span className="font-medium text-sm">{stage.value}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Closed stages */}
+            <Separator />
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Uzavřené</p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="gap-1 text-status-active border-status-active/30 bg-status-active/10">
+                  <CheckCircle className="h-3 w-3" />
+                  Vyhráno: {leadsPipeline.won}
+                </Badge>
+                <Badge variant="outline" className="gap-1 text-status-lost border-status-lost/30 bg-status-lost/10">
+                  <TrendingDown className="h-3 w-3" />
+                  Prohráno: {leadsPipeline.lost}
+                </Badge>
+                <Badge variant="outline" className="gap-1 text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  Odloženo: {leadsPipeline.postponed}
+                </Badge>
+              </div>
             </div>
 
             {canSeeFinancials && metrics.pipelineValue > 0 && (
@@ -464,6 +552,56 @@ export default function Dashboard() {
                   ))}
                 </div>
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Modifications Pipeline */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                📝 Návrhy změn
+              </CardTitle>
+              <Link to="/modifications">
+                <Button variant="ghost" size="sm" className="text-xs">
+                  Zobrazit vše
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              {[
+                { label: 'Čeká na schválení', value: modificationsPipeline.pending, color: 'bg-amber-500' },
+                { label: 'Schváleno (čeká klient)', value: modificationsPipeline.approved, color: 'bg-blue-500' },
+                { label: 'Klient potvrdil', value: modificationsPipeline.client_approved, color: 'bg-emerald-500' },
+              ].map((status) => (
+                <div key={status.label} className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${status.color} shrink-0`} />
+                  <span className="text-sm flex-1">{status.label}</span>
+                  <span className="font-medium text-sm">{status.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {canSeeFinancials && modificationsPipeline.totalValue > 0 && (
+              <>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Celková hodnota návrhů</span>
+                  <span className="font-semibold text-primary">
+                    {modificationsPipeline.totalValue.toLocaleString()} CZK
+                  </span>
+                </div>
+              </>
+            )}
+
+            {modificationsPipeline.pending + modificationsPipeline.approved + modificationsPipeline.client_approved === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-2">
+                Žádné aktivní návrhy změn
+              </p>
             )}
           </CardContent>
         </Card>
@@ -546,39 +684,57 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Quick Actions Footer */}
-      <Card className="bg-muted/30">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Link to="/leads">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Target className="h-4 w-4" />
-                Nový lead
-              </Button>
-            </Link>
-            <Link to="/modifications">
-              <Button variant="outline" size="sm" className="gap-2">
-                <FileText className="h-4 w-4" />
-                Návrhy změn
-              </Button>
-            </Link>
-            <Link to="/analytics">
-              <Button variant="outline" size="sm" className="gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Analytika
-              </Button>
-            </Link>
-            <a href="https://notion.so/your-sop-page" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-2">
-                <ExternalLink className="h-4 w-4" />
-                SOP & Procesy
-              </Button>
-            </a>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Extra Works Pipeline */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Wrench className="h-4 w-4 text-primary" />
+                🔧 Aktivní vícepráce
+              </CardTitle>
+              <Link to="/extra-work">
+                <Button variant="ghost" size="sm" className="text-xs">
+                  Zobrazit vše
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              {[
+                { label: 'Ke schválení', value: extraWorksPipeline.pending_approval, color: 'bg-amber-500' },
+                { label: 'V řešení', value: extraWorksPipeline.in_progress, color: 'bg-blue-500' },
+                { label: 'K fakturaci', value: extraWorksPipeline.ready_to_invoice, color: 'bg-emerald-500' },
+              ].map((status) => (
+                <div key={status.label} className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${status.color} shrink-0`} />
+                  <span className="text-sm flex-1">{status.label}</span>
+                  <span className="font-medium text-sm">{status.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {canSeeFinancials && extraWorksPipeline.totalValue > 0 && (
+              <>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Celková hodnota</span>
+                  <span className="font-semibold text-primary">
+                    {extraWorksPipeline.totalValue.toLocaleString()} CZK
+                  </span>
+                </div>
+              </>
+            )}
+
+            {extraWorksPipeline.pending_approval + extraWorksPipeline.in_progress + extraWorksPipeline.ready_to_invoice === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-2">
+                Žádné aktivní vícepráce
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
