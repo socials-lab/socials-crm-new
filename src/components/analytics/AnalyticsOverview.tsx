@@ -54,6 +54,7 @@ interface AnalyticsOverviewProps {
   clientChange: number;
   mrrTrend: { month: string; value: number }[];
   revenueBreakdown: { name: string; value: number }[];
+  serviceTypeBreakdown: { name: string; value: number }[];
   clientConcentration: ClientConcentration[];
   concentrationRisk: boolean;
   monthlyRevenueMargin: { month: string; revenue: number; margin: number }[];
@@ -77,6 +78,7 @@ export function AnalyticsOverview({
   clientChange,
   mrrTrend,
   revenueBreakdown,
+  serviceTypeBreakdown,
   clientConcentration,
   concentrationRisk,
   monthlyRevenueMargin,
@@ -246,38 +248,90 @@ export function AnalyticsOverview({
         </Card>
       </div>
 
-      {/* Charts Row 2 */}
+      {/* Charts Row 2 - Service Types & Client Distribution */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Client Concentration */}
+        {/* Service Type Breakdown */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">
-              Koncentrace klientů (Top 5)
+              Rozložení dle služeb
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[280px]">
+            <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={clientConcentration} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    type="number"
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                    tickFormatter={(value) => `${value}%`}
-                    domain={[0, 100]}
-                  />
-                  <YAxis 
-                    type="category"
-                    dataKey="name"
-                    width={100}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                  />
+                <PieChart>
+                  <Pie
+                    data={serviceTypeBreakdown}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="name"
+                  >
+                    {serviceTypeBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
                   <Tooltip 
-                    formatter={(value: number, name: string) => {
-                      if (name === 'percentage') return [`${value.toFixed(1)}%`, 'Podíl'];
-                      return [value, name];
+                    formatter={(value: number) => [`${value.toLocaleString()} Kč`, 'Příjem']}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3 mt-2">
+              {serviceTypeBreakdown.slice(0, 6).map((entry, index) => (
+                <div key={entry.name} className="flex items-center gap-1.5">
+                  <div 
+                    className="w-2.5 h-2.5 rounded-full" 
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
+                  <span className="text-xs text-muted-foreground">{entry.name}</span>
+                </div>
+              ))}
+              {serviceTypeBreakdown.length > 6 && (
+                <span className="text-xs text-muted-foreground">+{serviceTypeBreakdown.length - 6} dalších</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Client Distribution (all clients) */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">
+              Rozložení dle klientů
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={clientConcentration}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={1}
+                    dataKey="percentage"
+                    nameKey="name"
+                  >
+                    {clientConcentration.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: number, name: string, props: any) => {
+                      const item = props.payload;
+                      return [`${value.toFixed(1)}% (${item.revenue.toLocaleString()} Kč)`, item.name];
                     }}
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
@@ -285,17 +339,29 @@ export function AnalyticsOverview({
                       borderRadius: '8px',
                     }}
                   />
-                  <Bar 
-                    dataKey="percentage" 
-                    fill="hsl(var(--chart-1))" 
-                    radius={[0, 4, 4, 0]}
-                  />
-                </BarChart>
+                </PieChart>
               </ResponsiveContainer>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3 mt-2">
+              {clientConcentration.slice(0, 5).map((entry, index) => (
+                <div key={entry.name} className="flex items-center gap-1.5">
+                  <div 
+                    className="w-2.5 h-2.5 rounded-full" 
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
+                  <span className="text-xs text-muted-foreground">{entry.name} ({entry.percentage.toFixed(0)}%)</span>
+                </div>
+              ))}
+              {clientConcentration.length > 5 && (
+                <span className="text-xs text-muted-foreground">+{clientConcentration.length - 5} dalších</span>
+              )}
             </div>
           </CardContent>
         </Card>
+      </div>
 
+      {/* Charts Row 3 */}
+      <div className="grid gap-4 lg:grid-cols-1">
         {/* Monthly Revenue + Margin */}
         <Card>
           <CardHeader className="pb-2">
