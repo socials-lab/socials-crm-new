@@ -410,11 +410,26 @@ export default function Dashboard() {
     };
   }, [extraWorks]);
 
+  // === DEMO DATA: NEW CLIENTS ===
+  const demoNewClients = useMemo(() => [
+    { id: 'demo-1', brand_name: 'Alza.cz', name: 'Alza.cz a.s.', engagementNames: 'Meta Ads + Google Ads', totalMonthly: 85000, timeAgo: 'před 2 týdny' },
+    { id: 'demo-2', brand_name: 'Notino', name: 'Notino s.r.o.', engagementNames: 'Performance Max + Social', totalMonthly: 62000, timeAgo: 'před 3 týdny' },
+    { id: 'demo-3', brand_name: 'Rohlik.cz', name: 'Rohlik Group a.s.', engagementNames: 'Creative Boost retainer', totalMonthly: 45000, timeAgo: 'před 1 měsícem' },
+    { id: 'demo-4', brand_name: 'Kofola', name: 'Kofola ČeskoSlovensko a.s.', engagementNames: 'Q1 kampaň', totalMonthly: 38000, timeAgo: 'před 2 měsíci' },
+  ], []);
+
+  // === DEMO DATA: ENDING ENGAGEMENTS ===
+  const demoEndingEngagements = useMemo(() => [
+    { id: 'demo-e1', name: 'Social správa', client: { brand_name: 'Mall.cz', name: 'Mall.cz s.r.o.' }, end_date: format(addDays(new Date(), 8), 'yyyy-MM-dd'), daysUntilEnd: 8, urgency: 'critical' as const, monthly_fee: 32000 },
+    { id: 'demo-e2', name: 'PPC retainer 2025', client: { brand_name: 'Datart', name: 'Datart International a.s.' }, end_date: format(addDays(new Date(), 24), 'yyyy-MM-dd'), daysUntilEnd: 24, urgency: 'warning' as const, monthly_fee: 48000 },
+    { id: 'demo-e3', name: 'Creative Boost', client: { brand_name: 'Škoda Auto', name: 'Škoda Auto a.s.' }, end_date: format(addDays(new Date(), 45), 'yyyy-MM-dd'), daysUntilEnd: 45, urgency: 'info' as const, monthly_fee: 75000 },
+  ], []);
+
   // === NEW CLIENTS (last 3 months) ===
   const newClientsSection = useMemo(() => {
     const threeMonthsAgo = subDays(new Date(), 90);
     
-    return clients
+    const realClients = clients
       .filter(c => c.status === 'active' && c.start_date && isAfter(parseISO(c.start_date), threeMonthsAgo))
       .map(client => {
         const clientEngagements = engagements.filter(e => e.client_id === client.id && e.status === 'active');
@@ -426,14 +441,17 @@ export default function Dashboard() {
       })
       .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime())
       .slice(0, 5);
-  }, [clients, engagements]);
+    
+    // Return real data if available, otherwise show demo
+    return realClients.length > 0 ? realClients : demoNewClients;
+  }, [clients, engagements, demoNewClients]);
 
   // === ENDING ENGAGEMENTS (next 60 days) ===
   const endingEngagements = useMemo(() => {
     const now = new Date();
     const sixtyDaysFromNow = addDays(now, 60);
     
-    return engagements
+    const realEnding = engagements
       .filter(e => 
         e.status === 'active' && 
         e.end_date && 
@@ -449,7 +467,10 @@ export default function Dashboard() {
         return { ...engagement, client, daysUntilEnd, urgency };
       })
       .sort((a, b) => a.daysUntilEnd - b.daysUntilEnd);
-  }, [engagements, clients]);
+    
+    // Return real data if available, otherwise show demo
+    return realEnding.length > 0 ? realEnding : demoEndingEngagements;
+  }, [engagements, clients, demoEndingEngagements]);
 
   // Active pipeline leads (excluding closed stages)
   const activePipelineLeads = useMemo(() => 
