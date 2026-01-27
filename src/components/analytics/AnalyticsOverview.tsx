@@ -152,12 +152,6 @@ export function AnalyticsOverview({
           value={activeEngagements}
           icon={Briefcase}
         />
-        <KPICard
-          title="Vícepráce ke schválení"
-          value={alerts.pendingExtraWork}
-          icon={Clock}
-          subtitle="čeká na schválení"
-        />
       </div>
 
       {/* Charts Row 1 */}
