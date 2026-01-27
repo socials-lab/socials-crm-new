@@ -397,25 +397,25 @@ export function AnalyticsOverview({
                       borderRadius: '8px',
                     }}
                   />
-                  <Bar yAxisId="left" dataKey="revenue" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   <Line 
                     yAxisId="right"
                     type="monotone" 
                     dataKey="margin" 
-                    stroke="hsl(var(--status-active))" 
+                    stroke="hsl(var(--chart-4))" 
                     strokeWidth={2}
-                    dot={{ fill: 'hsl(var(--status-active))', r: 4 }}
+                    dot={{ fill: 'hsl(var(--chart-4))', r: 4 }}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
             <div className="flex justify-center gap-6 mt-2">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--chart-2))' }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--primary))' }} />
                 <span className="text-xs text-muted-foreground">Revenue</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--status-active))' }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--chart-4))' }} />
                 <span className="text-xs text-muted-foreground">Marže %</span>
               </div>
             </div>
