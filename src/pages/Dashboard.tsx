@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { 
   Building2, 
   FileText, 
@@ -22,6 +22,14 @@ import {
   Activity,
   Receipt,
   Wrench,
+  Send,
+  FileSignature,
+  CheckCircle2,
+  CalendarCheck,
+  UserCheck,
+  ChevronDown,
+  ChevronRight,
+  PlusCircle,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, subDays, isAfter, parseISO, addMonths } from 'date-fns';
@@ -31,6 +39,7 @@ import { KPICard } from '@/components/shared/KPICard';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useMeetingsData } from '@/hooks/useMeetingsData';
+import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,12 +48,53 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
+import type { LucideIcon } from 'lucide-react';
+
+// Helper component for activity rows
+interface ActivityRowProps {
+  icon: LucideIcon;
+  label: string;
+  count: number;
+  items?: string[];
+  colorClass: string;
+  value?: number;
+  isNegative?: boolean;
+}
+
+function ActivityRow({ icon: Icon, label, count, items, colorClass, value, isNegative }: ActivityRowProps) {
+  return (
+    <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 border border-border/50">
+      <div className={`p-1.5 rounded-full ${colorClass}`}>
+        <Icon className="h-3.5 w-3.5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">{label}</span>
+          <Badge variant="secondary" className="text-xs h-5 px-1.5">{count}</Badge>
+        </div>
+        {items && items.length > 0 && (
+          <p className="text-xs text-muted-foreground truncate">
+            {items.join(', ')}
+          </p>
+        )}
+      </div>
+      {value !== undefined && value > 0 && (
+        <span className={`text-sm font-medium whitespace-nowrap ${isNegative ? 'text-red-600' : 'text-emerald-600'}`}>
+          {isNegative ? '-' : '+'}{(value / 1000).toFixed(0)}k
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { leads } = useLeadsData();
   const { clients, engagements, colleagues, extraWorks, engagementServices, assignments } = useCRMData();
-  const { getTodaysMeetings } = useMeetingsData();
+  const { getTodaysMeetings, meetings } = useMeetingsData();
+  const { applicants } = useApplicantsData();
   const { isSuperAdmin, canSeeFinancials: userCanSeeFinancials } = useUserRole();
   const { pendingRequests } = useModificationRequests();
   
@@ -98,32 +148,116 @@ export default function Dashboard() {
     };
   }, [pendingRequests, extraWorks]);
 
-  // === RECENT ACTIVITY (last 7 days) ===
+  // === RECENT ACTIVITY (last 7 days) - COMPREHENSIVE ===
   const recentActivity = useMemo(() => {
     const sevenDaysAgo = subDays(new Date(), 7);
     
-    // New clients (won leads)
+    // === LEADS ===
+    // Nové leady
+    const newLeads = leads
+      .filter(l => l.created_at && isAfter(parseISO(l.created_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
+    
+    // Konvertované leady (won)
     const newClients = leads
       .filter(l => l.stage === 'won' && l.converted_at && isAfter(parseISO(l.converted_at), sevenDaysAgo))
       .sort((a, b) => new Date(b.converted_at!).getTime() - new Date(a.converted_at!).getTime());
     
-    // New engagements started
-    const newEngagements = engagements
-      .filter(e => e.start_date && isAfter(parseISO(e.start_date), sevenDaysAgo))
-      .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
+    // Odeslané nabídky
+    const offersSent = leads
+      .filter(l => l.offer_sent_at && isAfter(parseISO(l.offer_sent_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.offer_sent_at!).getTime() - new Date(a.offer_sent_at!).getTime());
     
-    // Ended engagements
-    const endedEngagements = engagements
-      .filter(e => e.end_date && isAfter(parseISO(e.end_date), sevenDaysAgo) && ['completed', 'cancelled'].includes(e.status))
-      .sort((a, b) => new Date(b.end_date!).getTime() - new Date(a.end_date!).getTime());
+    // Podepsané smlouvy
+    const contractsSigned = leads
+      .filter(l => l.contract_signed_at && isAfter(parseISO(l.contract_signed_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.contract_signed_at!).getTime() - new Date(a.contract_signed_at!).getTime());
     
     // Lost leads
     const lostLeads = leads
       .filter(l => l.stage === 'lost' && l.updated_at && isAfter(parseISO(l.updated_at), sevenDaysAgo))
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     
-    return { newClients, newEngagements, endedEngagements, lostLeads };
-  }, [leads, engagements]);
+    // === ENGAGEMENTS ===
+    const newEngagements = engagements
+      .filter(e => e.start_date && isAfter(parseISO(e.start_date), sevenDaysAgo))
+      .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
+    
+    const endedEngagements = engagements
+      .filter(e => e.end_date && isAfter(parseISO(e.end_date), sevenDaysAgo) && ['completed', 'cancelled'].includes(e.status || ''))
+      .sort((a, b) => new Date(b.end_date!).getTime() - new Date(a.end_date!).getTime());
+    
+    // === EXTRA WORKS ===
+    const newExtraWorks = (extraWorks || [])
+      .filter(w => w.created_at && isAfter(parseISO(w.created_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
+    
+    const approvedExtraWorks = (extraWorks || [])
+      .filter(w => w.approval_date && isAfter(parseISO(w.approval_date), sevenDaysAgo))
+      .sort((a, b) => new Date(b.approval_date!).getTime() - new Date(a.approval_date!).getTime());
+    
+    // === MODIFICATIONS ===
+    const newModifications = (pendingRequests || [])
+      .filter(r => r.created_at && isAfter(parseISO(r.created_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    const approvedModifications = (pendingRequests || [])
+      .filter(r => r.reviewed_at && ['approved', 'client_approved'].includes(r.status) && isAfter(parseISO(r.reviewed_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.reviewed_at!).getTime() - new Date(a.reviewed_at!).getTime());
+    
+    // === MEETINGS ===
+    const newMeetingsScheduled = meetings
+      .filter(m => m.created_at && isAfter(parseISO(m.created_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    const completedMeetings = meetings
+      .filter(m => m.status === 'completed' && m.scheduled_at && isAfter(parseISO(m.scheduled_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
+    
+    // === APPLICANTS ===
+    const newApplicants = applicants
+      .filter(a => a.created_at && isAfter(parseISO(a.created_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    const hiredApplicants = applicants
+      .filter(a => a.stage === 'hired' && a.updated_at && isAfter(parseISO(a.updated_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    
+    // Check if there's any activity
+    const hasAnyActivity = 
+      newLeads.length > 0 || newClients.length > 0 || offersSent.length > 0 || contractsSigned.length > 0 || lostLeads.length > 0 ||
+      newEngagements.length > 0 || endedEngagements.length > 0 ||
+      newExtraWorks.length > 0 || approvedExtraWorks.length > 0 ||
+      newModifications.length > 0 || approvedModifications.length > 0 ||
+      newMeetingsScheduled.length > 0 || completedMeetings.length > 0 ||
+      newApplicants.length > 0 || hiredApplicants.length > 0;
+    
+    return {
+      // Leads
+      newLeads,
+      newClients,
+      offersSent,
+      contractsSigned,
+      lostLeads,
+      // Engagements
+      newEngagements,
+      endedEngagements,
+      // Extra works
+      newExtraWorks,
+      approvedExtraWorks,
+      // Modifications
+      newModifications,
+      approvedModifications,
+      // Meetings
+      newMeetingsScheduled,
+      completedMeetings,
+      // Applicants
+      newApplicants,
+      hiredApplicants,
+      // Meta
+      hasAnyActivity,
+    };
+  }, [leads, engagements, extraWorks, pendingRequests, meetings, applicants]);
 
   // === CLIENT HEALTH ===
   const clientHealth = useMemo(() => {
@@ -356,108 +490,237 @@ export default function Dashboard() {
 
       {/* === MAIN CONTENT GRID === */}
       <div className="grid gap-6 lg:grid-cols-2">
-        
-        {/* Recent Activity */}
-        <Card>
+
+        {/* Recent Activity - Comprehensive CRM Overview */}
+        <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <Activity className="h-4 w-4 text-primary" />
               📊 Aktivita posledních 7 dní
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {/* New clients */}
-            {recentActivity.newClients.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Noví klienti</p>
-                {recentActivity.newClients.slice(0, 3).map((lead) => (
-                  <div key={lead.id} className="flex items-center gap-3 p-2 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
-                    <div className="p-1.5 rounded-full bg-green-100 dark:bg-green-900">
-                      <UserPlus className="h-3.5 w-3.5 text-green-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{lead.company_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(parseISO(lead.converted_at!), 'd. M.', { locale: cs })}
-                        {canSeeFinancials && lead.estimated_price && ` • ${lead.estimated_price.toLocaleString()} CZK`}
-                      </p>
-                    </div>
+          <CardContent>
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4">
+                {/* === SALES & LEADY === */}
+                {(recentActivity.newLeads.length > 0 || recentActivity.newClients.length > 0 || 
+                  recentActivity.offersSent.length > 0 || recentActivity.contractsSigned.length > 0 || 
+                  recentActivity.lostLeads.length > 0) && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
+                      <Target className="h-3.5 w-3.5" />
+                      Sales & Leady
+                    </p>
+                    
+                    {/* Noví klienti (won) */}
+                    {recentActivity.newClients.length > 0 && (
+                      <ActivityRow 
+                        icon={UserPlus} 
+                        label="Noví klienti" 
+                        count={recentActivity.newClients.length}
+                        items={recentActivity.newClients.slice(0, 3).map(l => l.company_name)}
+                        colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900"
+                        value={canSeeFinancials ? recentActivity.newClients.reduce((s, l) => s + (l.estimated_price || 0), 0) : undefined}
+                      />
+                    )}
+                    
+                    {/* Nové leady */}
+                    {recentActivity.newLeads.length > 0 && (
+                      <ActivityRow 
+                        icon={PlusCircle} 
+                        label="Nové leady" 
+                        count={recentActivity.newLeads.length}
+                        items={recentActivity.newLeads.slice(0, 3).map(l => l.company_name)}
+                        colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800"
+                      />
+                    )}
+                    
+                    {/* Odeslané nabídky */}
+                    {recentActivity.offersSent.length > 0 && (
+                      <ActivityRow 
+                        icon={Send} 
+                        label="Odeslané nabídky" 
+                        count={recentActivity.offersSent.length}
+                        items={recentActivity.offersSent.slice(0, 3).map(l => l.company_name)}
+                        colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900"
+                      />
+                    )}
+                    
+                    {/* Podepsané smlouvy */}
+                    {recentActivity.contractsSigned.length > 0 && (
+                      <ActivityRow 
+                        icon={FileSignature} 
+                        label="Podepsané smlouvy" 
+                        count={recentActivity.contractsSigned.length}
+                        items={recentActivity.contractsSigned.slice(0, 3).map(l => l.company_name)}
+                        colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900"
+                      />
+                    )}
+                    
+                    {/* Ztracené leady */}
+                    {recentActivity.lostLeads.length > 0 && (
+                      <ActivityRow 
+                        icon={TrendingDown} 
+                        label="Ztracené leady" 
+                        count={recentActivity.lostLeads.length}
+                        items={recentActivity.lostLeads.slice(0, 3).map(l => l.company_name)}
+                        colorClass="text-red-600 bg-red-100 dark:bg-red-900"
+                        value={canSeeFinancials ? recentActivity.lostLeads.reduce((s, l) => s + (l.estimated_price || 0), 0) : undefined}
+                        isNegative
+                      />
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* New engagements */}
-            {recentActivity.newEngagements.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nové zakázky</p>
-                {recentActivity.newEngagements.slice(0, 3).map((engagement) => (
-                  <div key={engagement.id} className="flex items-center gap-3 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                    <div className="p-1.5 rounded-full bg-blue-100 dark:bg-blue-900">
-                      <Briefcase className="h-3.5 w-3.5 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{engagement.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Start: {format(parseISO(engagement.start_date!), 'd. M.', { locale: cs })}
-                      </p>
-                    </div>
+                )}
+                
+                {/* === ZAKÁZKY & VÍCEPRÁCE === */}
+                {(recentActivity.newEngagements.length > 0 || recentActivity.endedEngagements.length > 0 ||
+                  recentActivity.newExtraWorks.length > 0 || recentActivity.approvedExtraWorks.length > 0) && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
+                      <Briefcase className="h-3.5 w-3.5" />
+                      Zakázky & Vícepráce
+                    </p>
+                    
+                    {recentActivity.newEngagements.length > 0 && (
+                      <ActivityRow 
+                        icon={Briefcase} 
+                        label="Nové zakázky" 
+                        count={recentActivity.newEngagements.length}
+                        items={recentActivity.newEngagements.slice(0, 3).map(e => e.name)}
+                        colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900"
+                      />
+                    )}
+                    
+                    {recentActivity.endedEngagements.length > 0 && (
+                      <ActivityRow 
+                        icon={UserMinus} 
+                        label="Ukončené zakázky" 
+                        count={recentActivity.endedEngagements.length}
+                        items={recentActivity.endedEngagements.slice(0, 3).map(e => e.name)}
+                        colorClass="text-muted-foreground bg-muted"
+                      />
+                    )}
+                    
+                    {recentActivity.newExtraWorks.length > 0 && (
+                      <ActivityRow 
+                        icon={Wrench} 
+                        label="Nové vícepráce" 
+                        count={recentActivity.newExtraWorks.length}
+                        colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900"
+                        value={canSeeFinancials ? recentActivity.newExtraWorks.reduce((s, w) => s + w.amount, 0) : undefined}
+                      />
+                    )}
+                    
+                    {recentActivity.approvedExtraWorks.length > 0 && (
+                      <ActivityRow 
+                        icon={CheckCircle} 
+                        label="Schválené vícepráce" 
+                        count={recentActivity.approvedExtraWorks.length}
+                        colorClass="text-green-600 bg-green-100 dark:bg-green-900"
+                        value={canSeeFinancials ? recentActivity.approvedExtraWorks.reduce((s, w) => s + w.amount, 0) : undefined}
+                      />
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Ended engagements */}
-            {recentActivity.endedEngagements.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ukončené zakázky</p>
-                {recentActivity.endedEngagements.slice(0, 2).map((engagement) => (
-                  <div key={engagement.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 border">
-                    <div className="p-1.5 rounded-full bg-muted">
-                      <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{engagement.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Konec: {format(parseISO(engagement.end_date!), 'd. M.', { locale: cs })}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {engagement.status === 'completed' ? 'Dokončeno' : 'Zrušeno'}
-                    </Badge>
+                )}
+                
+                {/* === NÁVRHY ZMĚN === */}
+                {(recentActivity.newModifications.length > 0 || recentActivity.approvedModifications.length > 0) && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5" />
+                      Návrhy změn
+                    </p>
+                    
+                    {recentActivity.newModifications.length > 0 && (
+                      <ActivityRow 
+                        icon={FileText} 
+                        label="Nové návrhy" 
+                        count={recentActivity.newModifications.length}
+                        items={recentActivity.newModifications.slice(0, 3).map(m => m.engagement_name)}
+                        colorClass="text-amber-600 bg-amber-100 dark:bg-amber-900"
+                      />
+                    )}
+                    
+                    {recentActivity.approvedModifications.length > 0 && (
+                      <ActivityRow 
+                        icon={CheckCircle2} 
+                        label="Schválené návrhy" 
+                        count={recentActivity.approvedModifications.length}
+                        items={recentActivity.approvedModifications.slice(0, 3).map(m => m.engagement_name)}
+                        colorClass="text-green-600 bg-green-100 dark:bg-green-900"
+                      />
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Lost leads */}
-            {recentActivity.lostLeads.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ztracené leady</p>
-                {recentActivity.lostLeads.slice(0, 2).map((lead) => (
-                  <div key={lead.id} className="flex items-center gap-3 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
-                    <div className="p-1.5 rounded-full bg-red-100 dark:bg-red-900">
-                      <TrendingDown className="h-3.5 w-3.5 text-red-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{lead.company_name}</p>
-                      {canSeeFinancials && lead.estimated_price && (
-                        <p className="text-xs text-red-600">-{lead.estimated_price.toLocaleString()} CZK</p>
-                      )}
-                    </div>
+                )}
+                
+                {/* === SCHŮZKY === */}
+                {(recentActivity.newMeetingsScheduled.length > 0 || recentActivity.completedMeetings.length > 0) && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5" />
+                      Schůzky
+                    </p>
+                    
+                    {recentActivity.newMeetingsScheduled.length > 0 && (
+                      <ActivityRow 
+                        icon={Calendar} 
+                        label="Naplánované" 
+                        count={recentActivity.newMeetingsScheduled.length}
+                        items={recentActivity.newMeetingsScheduled.slice(0, 3).map(m => m.title)}
+                        colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900"
+                      />
+                    )}
+                    
+                    {recentActivity.completedMeetings.length > 0 && (
+                      <ActivityRow 
+                        icon={CalendarCheck} 
+                        label="Proběhlé" 
+                        count={recentActivity.completedMeetings.length}
+                        items={recentActivity.completedMeetings.slice(0, 3).map(m => m.title)}
+                        colorClass="text-teal-600 bg-teal-100 dark:bg-teal-900"
+                      />
+                    )}
                   </div>
-                ))}
+                )}
+                
+                {/* === RECRUITMENT === */}
+                {(recentActivity.newApplicants.length > 0 || recentActivity.hiredApplicants.length > 0) && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5" />
+                      Recruitment
+                    </p>
+                    
+                    {recentActivity.newApplicants.length > 0 && (
+                      <ActivityRow 
+                        icon={Users} 
+                        label="Noví uchazeči" 
+                        count={recentActivity.newApplicants.length}
+                        items={recentActivity.newApplicants.slice(0, 3).map(a => a.full_name)}
+                        colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800"
+                      />
+                    )}
+                    
+                    {recentActivity.hiredApplicants.length > 0 && (
+                      <ActivityRow 
+                        icon={UserCheck} 
+                        label="Přijatí" 
+                        count={recentActivity.hiredApplicants.length}
+                        items={recentActivity.hiredApplicants.slice(0, 3).map(a => a.full_name)}
+                        colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900"
+                      />
+                    )}
+                  </div>
+                )}
+                
+                {/* Empty state */}
+                {!recentActivity.hasAnyActivity && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Žádné změny za posledních 7 dní
+                  </p>
+                )}
               </div>
-            )}
-
-            {recentActivity.newClients.length === 0 && 
-             recentActivity.newEngagements.length === 0 && 
-             recentActivity.endedEngagements.length === 0 && 
-             recentActivity.lostLeads.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Žádné změny za posledních 7 dní
-              </p>
-            )}
+            </ScrollArea>
           </CardContent>
         </Card>
 
