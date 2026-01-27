@@ -1,147 +1,150 @@
 
-# Plan: Rozšíření osobních údajů kolegů (frontend only)
+# Plán: Sloučení Obchodního plánu a Forecastu
 
-## Shrnutí
-Přidám nové osobní a fakturační údaje ke kolegům pouze na úrovni frontendu:
-- Datum narození (birthday) - již existuje v typu
-- Telefonní číslo (phone) - již existuje
-- Soukromý email (personal_email) - nové
-- IČO, DIČ, název firmy - nové
-- Kompletní fakturační adresa - nové
-- Číslo bankovního účtu - nové
-
-Všechny údaje budou sbírány v onboarding formuláři a uloženy v lokálním stavu (mock data).
+## Cíl
+Vytvořit jednu ucelenou kartu **"Plán & Forecast"** která kombinuje:
+1. **Cíle** - měsíční a roční plány tržeb
+2. **Aktuální stav** - skutečné tržby vs. plán
+3. **Trend** - vývoj tržeb v čase s predikcí budoucnosti
+4. **Změny** - plánované odchody, příchody, pipeline
 
 ---
 
-## 1. Aktualizace TypeScript typu Colleague
+## Vizuální návrh nové komponenty
 
-**Soubor:** `src/types/crm.ts`
-
-Rozšířím interface `Colleague` o nová pole:
-```typescript
-export interface Colleague {
-  // ... existující pole ...
-  personal_email: string | null;  // Soukromý email
-  ico: string | null;             // IČO
-  dic: string | null;             // DIČ
-  company_name: string | null;    // Název firmy/OSVČ
-  billing_street: string | null;  // Ulice a číslo
-  billing_city: string | null;    // Město
-  billing_zip: string | null;     // PSČ
-  bank_account: string | null;    // Číslo účtu
-}
-```
-
----
-
-## 2. Aktualizace mock dat v useCRMData
-
-**Soubor:** `src/hooks/useCRMData.tsx`
-
-Přidám výchozí hodnoty `null` pro nová pole v mock datech kolegů.
-
----
-
-## 3. Applicant Onboarding Form - přidání nových polí
-
-**Soubor:** `src/pages/ApplicantOnboardingForm.tsx`
-
-### Změny ve validačním schématu:
-- Přidám pole `birthday` (datum narození) - povinné
-- Přidám pole `personal_email` (soukromý email) - volitelné
-
-### Nová sekce "Osobní údaje":
-Formulář bude rozdělen do sekcí:
-1. **Základní údaje** (jméno, pracovní email, telefon, pozice)
-2. **Osobní údaje** (datum narození, soukromý email) - NOVÁ SEKCE
-3. **Fakturační údaje** (IČO, firma, DIČ, adresa)
-4. **Platební údaje** (hodinová sazba, číslo účtu)
-
----
-
-## 4. ColleagueForm - přidání nových polí
-
-**Soubor:** `src/components/forms/ColleagueForm.tsx`
-
-Přidám novou sekci "Osobní a fakturační údaje" s poli:
-- Soukromý email
-- Datum narození (datepicker)
-- IČO s ARES validací (tlačítko pro načtení dat)
-- Název firmy
-- DIČ
-- Fakturační adresa (ulice, město, PSČ)
-- Číslo účtu
-
-Tato sekce bude viditelná pouze pro adminy/uživatele s finančními právy.
-
----
-
-## 5. Colleagues page - zobrazení osobních údajů
-
-**Soubor:** `src/pages/Colleagues.tsx`
-
-V rozbalené kartě kolegy přidám novou sekci "Fakturační údaje" (viditelnou pouze pro adminy):
-
-Zobrazené informace:
-- Datum narození s ikonou dortu
-- Soukromý email
-- IČO a DIČ
-- Název firmy
-- Fakturační adresa
-- Číslo bankovního účtu
-
----
-
-## 6. Aktualizace konverze uchazeče na kolegu
-
-**Soubory:** 
-- `src/components/recruitment/ConvertApplicantDialog.tsx`
-- `src/hooks/useApplicantsData.tsx`
-
-Při konverzi uchazeče na kolegu zajistím přenos všech nových údajů do záznamu kolegy.
-
----
-
-## Přehled souborů k úpravě
-
-| Soubor | Změny |
-|--------|-------|
-| `src/types/crm.ts` | Rozšíření Colleague interface o 8 nových polí |
-| `src/hooks/useCRMData.tsx` | Přidání výchozích null hodnot do mock dat |
-| `src/pages/ApplicantOnboardingForm.tsx` | Přidání birthday a personal_email do formuláře |
-| `src/components/forms/ColleagueForm.tsx` | Přidání sekce s osobními a fakturačními údaji |
-| `src/pages/Colleagues.tsx` | Zobrazení nových údajů v rozbalené kartě |
-| `src/components/recruitment/ConvertApplicantDialog.tsx` | Přidání personal_email a birthday polí |
-| `src/hooks/useApplicantsData.tsx` | Aktualizace OnboardingData a completeOnboarding |
-
----
-
-## Vizuální náhled
-
-### Onboarding formulář - nová sekce "Osobní údaje":
 ```text
-┌─────────────────────────────────────────────┐
-│ 👤 Osobní údaje                             │
-├─────────────────────────────────────────────┤
-│ Datum narození *        Soukromý email      │
-│ [📅 Vyberte datum  ]    [jan@gmail.com   ]  │
-│                                             │
-│ Pro sledování           Pro interní         │
-│ narozenin v týmu        komunikaci          │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 📊 PLÁN & FORECAST 2026                                          [Únor ▼]  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │ Roční cíl    │  │ YTD tržby    │  │ Plnění       │  │ Zbývá        │    │
+│  │ 25.4M        │  │ 3.2M         │  │ 12.6%        │  │ 22.2M        │    │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
+│                                                                             │
+│  ════════════════════════════════════════════════════════════════════════  │
+│                                                                             │
+│  📈 TREND TRŽEB (12 měsíců + 3 budoucí)                                    │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                                    ┌─ Cíl ─┐                        │   │
+│  │    ▄▄█████████████████▄▄       ▓▓▓▓▓░░░░░░                        │   │
+│  │   ▄███████████████████████▄   ▓▓▓▓▓▓░░░░░░░                       │   │
+│  │  ████████████████████████████ ▓▓▓▓▓▓▓░░░░░░░                      │   │
+│  │  │ Led │ Úno │ Bře │ Dub │ Kvě │ Čvn │ Čvc │ Srp │                │   │
+│  │  └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴────────────────│   │
+│  │     ▲ Skutečnost        ▓▓▓ Projekce        ░░░ Cíl               │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ════════════════════════════════════════════════════════════════════════  │
+│                                                                             │
+│  📅 VYBRANÝ MĚSÍC: ÚNOR 2026                                               │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐                │
+│  │ Cíl měsíce     │  │ Aktuální MRR   │  │ Projekce       │                │
+│  │ 1.7M           │  │ 1.52M          │  │ 1.68M → 94%    │                │
+│  │                │  │ ■■■■■■■■░░ 89% │  │ +160k -40k     │                │
+│  └────────────────┘  └────────────────┘  └────────────────┘                │
+│                                                                             │
+│  ════════════════════════════════════════════════════════════════════════  │
+│                                                                             │
+│  ┌──────────────────────────────┐  ┌──────────────────────────────┐        │
+│  │ 📉 ODCHODY (churn)           │  │ 📈 PŘÍCHODY (new business)   │        │
+│  │ -40k tento měsíc             │  │ +160k tento měsíc            │        │
+│  ├──────────────────────────────┤  ├──────────────────────────────┤        │
+│  │ • ABC s.r.o.     28.2. -25k  │  │ • XYZ Corp      1.2. +80k    │        │
+│  │ • Demo klient    15.2. -15k  │  │ • New Lead      15.2. +80k   │        │
+│  └──────────────────────────────┘  └──────────────────────────────┘        │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────┐      │
+│  │ 🎯 PIPELINE (leady s nabídkou)                                   │      │
+│  │ 3 leady • ~450k potenciální MRR                                  │      │
+│  ├──────────────────────────────────────────────────────────────────┤      │
+│  │ • ABC Corp    200k    [Nabídka odeslaná]                        │      │
+│  │ • XYZ s.r.o.  150k    [Nabídka odeslaná]                        │      │
+│  │ • Demo        100k    [Nabídka odeslaná]                        │      │
+│  └──────────────────────────────────────────────────────────────────┘      │
+│                                                                             │
+│  ════════════════════════════════════════════════════════════════════════  │
+│                                                                             │
+│  📋 MĚSÍČNÍ PŘEHLED PLÁNU                        [+ Nastavit cíle měsíců] │
+│  ┌────────────────────────────────────────────────────────────────────┐    │
+│  │ Měsíc │ Cíl      │ Skutečnost │ Projekce │ Plnění │               │    │
+│  ├───────┼──────────┼────────────┼──────────┼────────┼               │    │
+│  │ Led   │ 1.6M     │ 1.52M      │ -        │ 95%  ✓ │               │    │
+│  │ Úno ◄ │ 1.7M     │ 1.4M       │ 1.68M    │ 94%    │               │    │
+│  │ Bře   │ 1.85M    │ -          │ 1.72M    │ 93%    │               │    │
+│  │ ...   │          │            │          │        │               │    │
+│  └────────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Karta kolegy - nová sekce (pro adminy):
-```text
-┌─────────────────────────────────────────────┐
-│ 🏢 Fakturační údaje                         │
-├─────────────────────────────────────────────┤
-│ 🎂 Narozeniny: 15. března                   │
-│ ✉️  Osobní email: jan.novak@gmail.com       │
-│ 🆔 IČO: 12345678 · DIČ: CZ12345678          │
-│ 🏢 Firma: Jan Novák OSVČ                    │
-│ 🏠 Adresa: Příkladná 123, Praha, 110 00     │
-│ 💳 Účet: 123456789/0100                     │
-└─────────────────────────────────────────────┘
+---
+
+## Technické změny
+
+### 1. Nová komponenta `RevenuePlanForecast.tsx`
+
+**Umístění:** `src/components/analytics/RevenuePlanForecast.tsx`
+
+Sloučí funkcionalitu z:
+- `BusinessPlanTab.tsx` (cíle, skutečnost, trend)
+- `ForecastTab.tsx` (odchody, příchody, projekce)
+
+**Klíčové sekce:**
+1. **Roční KPIs** - Roční cíl, YTD tržby, Plnění %, Zbývá
+2. **Trend chart** - kombinovaný AreaChart s:
+   - Historickými tržbami (solid line)
+   - Projekcí na 3 měsíce dopředu (dashed)
+   - Cílovými hodnotami (background)
+3. **Měsíční detail** - Cíl, Aktuální MRR, Projekce s progress barem
+4. **Odchody/Příchody** - dva sloupce vedle sebe
+5. **Pipeline** - leady s nabídkou
+6. **Tabulka měsíců** - editovatelné cíle
+
+### 2. Úprava `Analytics.tsx`
+
+- Sloučit taby "Forecast" a "Obchodní plán" do jednoho tabu **"Plán & Forecast"**
+- Odstranit import `ForecastTab` a `BusinessPlanTab`
+- Přidat import `RevenuePlanForecast`
+
+### 3. Kapacita týmu
+
+Sekce kapacity týmu z `ForecastTab` přesunout jako samostatnou podkomponentu, která se zobrazí pod hlavní kartou plánu.
+
+---
+
+## Nové datové body v grafu
+
+Graf bude zobrazovat:
+1. **Minulost** (6-12 měsíců): skutečné tržby (z faktur nebo odhadu)
+2. **Aktuální měsíc**: aktuální stav + projekce do konce měsíce
+3. **Budoucnost** (3 měsíce): projekce MRR s ohledem na:
+   - Končící zakázky (churn)
+   - Plánované zakázky
+   - Pipeline (s pravděpodobností)
+
+**Vzorec projekce:**
 ```
+Projekce[M+1] = Aktuální_MRR - Churn[M+1] + Nové_zakázky[M+1] + (Pipeline * pravděpodobnost)
+```
+
+---
+
+## Soubory k úpravě
+
+| Soubor | Akce |
+|--------|------|
+| `src/components/analytics/RevenuePlanForecast.tsx` | **NOVÝ** - hlavní sloučená komponenta |
+| `src/pages/Analytics.tsx` | Upravit - sloučit taby, změnit import |
+| `src/components/analytics/BusinessPlanTab.tsx` | **SMAZAT** - funkcionalita přesunuta |
+| `src/components/analytics/ForecastTab.tsx` | Upravit - ponechat jen sekci kapacity týmu (přejmenovat na `TeamCapacityForecast.tsx`) |
+
+---
+
+## Přidaná hodnota
+
+1. **Jeden pohled** - uživatel vidí cíle, realitu a budoucnost na jednom místě
+2. **Lepší kontext** - churn a nové zakázky přímo vedle projekce
+3. **Akční insights** - jasně vidí co potřebuje udělat pro splnění plánu
+4. **Méně přepínání** - nemusí přepínat mezi dvěma taby
+
