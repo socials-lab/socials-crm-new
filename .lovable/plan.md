@@ -1,193 +1,404 @@
 
-
-# Implementace Funnel Průchodnosti s Potvrzením
+# Systém Notifikací - Komplexní Implementace
 
 ## Shrnutí
 
-Implementace trackingu průchodnosti leadů funnelem s potvrzovacím mechanismem, který zabrání tomu, aby omylem provedené změny fází ovlivňovaly analytické metriky. Řešení zahrnuje novou databázovou tabulku pro potvrzené přechody, UI pro potvrzování změn stavu, a vizualizaci dat v Analytics tabu.
+Vytvoření robustního notifikačního systému, který bude informovat uživatele o relevantních událostech v rámci zakázek, leadů, víceprací a Creative Boost, kde jsou přímo zapojeni. Systém bude navržen tak, aby byl přínosný, ale nezahltil uživatele zbytečnými notifikacemi.
 
 ---
 
-## Jak to bude fungovat
+## Klíčový Princip: "Relevance First"
 
-### 1. Potvrzovací mechanismus
-
-Když uživatel přesune lead do nové fáze (drag & drop na Kanban nebo změna v detailu), systém:
-1. **Okamžitě změní stav leadu** v databázi (pro aktuální workflow)
-2. **Zobrazí potvrzovací dialog** s dotazem: "Potvrdit přechod pro analytiku?"
-3. **Při potvrzení** uloží záznam do nové tabulky `lead_stage_transitions`
-4. **Při odmítnutí** se nic neuloží do historie pro analytiku
-
-### 2. Co se trackuje
-
-Každý potvrzený přechod obsahuje:
-- Z které fáze do které
-- Kdy přechod nastal
-- Kdo ho provedl
-- Hodnota leadu v době přechodu
+Uživatel dostane notifikaci POUZE pokud:
+1. **Je přímo přiřazen** k zakázce/projektu (v `engagement_assignments`)
+2. **Je vlastníkem leadu** (`leads.owner_id`)
+3. **Je přiřazen k vícepráci** (`extra_works.colleague_id`)
+4. **Je přiřazen ke Creative Boost** projektu (jako grafik)
+5. **Je admin/management** a událost vyžaduje jejich pozornost
 
 ---
 
-## Vizuální návrh
+## Typy Notifikací a Triggery
 
-### Potvrzovací toast/dialog po změně fáze:
-```text
-+------------------------------------------+
-|  Fáze změněna na "Nabídka odeslána"      |
-|                                          |
-|  Započítat do funnel analytiky?          |
-|                                          |
-|  [Potvrdit pro analytiku]    [Přeskočit] |
-+------------------------------------------+
-```
+### 1. Leady (pro vlastníka leadu)
+| Událost | Kdy notifikovat | Příklad zprávy |
+|---------|-----------------|----------------|
+| Formulář vyplněn | Lead vyplnil onboarding formulář | "Lead XYZ vyplnil onboarding formulář" |
+| Přístupy nasdíleny | Klient sdílel přístupy | "XYZ nasdílel přístupy k Meta Ads, Google Ads" |
+| Nabídka zobrazena | Klient otevřel nabídku (tracking) | "XYZ zobrazil nabídku" |
+| Smlouva podepsána | Klient podepsal smlouvu | "XYZ podepsal smlouvu!" |
 
-### Nová sekce v Analytics - "Funnel Průchodnost":
-```text
-+--------------------------------------------------+
-|  Funnel Průchodnost (potvrzené přechody)         |
-|--------------------------------------------------|
-|  Nový lead → Meeting      85%    (17/20)         |
-|  Meeting → Čekáme         70%    (12/17)         |
-|  Čekáme → Přístupy        83%    (10/12)         |
-|  Přístupy → Nabídka       90%    (9/10)          |
-|  Nabídka → Odesláno       100%   (9/9)           |
-|  Odesláno → Won           45%    (4/9)           |
-+--------------------------------------------------+
-|  Celková konverze: Nový → Won: 20%               |
-+--------------------------------------------------+
-```
+### 2. Zakázky (pro přiřazené kolegy)
+| Událost | Kdy notifikovat | Příklad zprávy |
+|---------|-----------------|----------------|
+| Přiřazení k zakázce | Kolega přiřazen k nové zakázce | "Byl/a jsi přiřazen/a k zakázce ABC" |
+| Změna ceny služby | Cena byla změněna (klient schválil) | "Cena služby na zakázce ABC byla upravena" |
+| Přidání nové služby | Nová služba aktivována | "Na zakázce ABC byla aktivována nová služba" |
+| Zakázka končí | 30 dní před end_date | "Zakázka ABC končí za 30 dní" |
 
-### Trend graf:
-- X-osa: měsíce
-- Y-osa: % konverze pro každou fázi
-- Linie pro každý přechod mezi fázemi
+### 3. Vícepráce (pro přiřazeného kolegu + admin)
+| Událost | Kdy notifikovat | Příklad zprávy |
+|---------|-----------------|----------------|
+| Vícepráce schválena | Status změněn na approved | "Vícepráce 'Banner sada' byla schválena" |
+| Vícepráce připravena k fakturaci | Status: ready_to_invoice | "Vícepráce čeká na fakturaci" |
+
+### 4. Creative Boost (pro grafiky)
+| Událost | Kdy notifikovat | Příklad zprávy |
+|---------|-----------------|----------------|
+| Nový měsíc spuštěn | Klient přidán do nového měsíce | "Creative Boost pro XYZ - leden 2026 aktivován" |
+| Blížící se deadline | 3 dny před koncem měsíce a < 80% kreditů | "XYZ: vyčerpáno jen 60% kreditů, zbývají 3 dny" |
+
+### 5. Návrhy změn / Modifikace
+| Událost | Kdy notifikovat | Příklad zprávy |
+|---------|-----------------|----------------|
+| Klient schválil změnu | `status: client_approved` | "Klient XYZ schválil změnu ceny!" |
+| Nový návrh čeká na schválení | Pro adminy | "Nový návrh změny čeká na schválení" |
 
 ---
 
-## Technické kroky
+## Databázová Struktura
 
-### Krok 1: Databáze
-
-**Nová tabulka `lead_stage_transitions`:**
+**Nová tabulka: `notifications`**
 
 ```sql
-CREATE TABLE lead_stage_transitions (
+CREATE TABLE notifications (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    lead_id uuid REFERENCES leads(id) ON DELETE CASCADE NOT NULL,
-    from_stage lead_stage NOT NULL,
-    to_stage lead_stage NOT NULL,
-    transition_value numeric DEFAULT 0,  -- hodnota leadu v době přechodu
-    confirmed_at timestamptz DEFAULT now() NOT NULL,
-    confirmed_by uuid REFERENCES auth.users(id),
+    
+    -- Komu notifikace patří
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    
+    -- Typ a obsah
+    type text NOT NULL, -- enum: 'lead_form_completed', 'engagement_assigned', etc.
+    title text NOT NULL,
+    message text NOT NULL,
+    
+    -- Odkaz na související entitu
+    entity_type text, -- 'lead', 'engagement', 'extra_work', 'creative_boost', 'modification'
+    entity_id uuid,
+    link text, -- URL pro přesměrování
+    
+    -- Stav
+    is_read boolean DEFAULT false,
+    read_at timestamptz,
+    
+    -- Metadata (pro rozšířené informace)
+    metadata jsonb DEFAULT '{}',
+    
     created_at timestamptz DEFAULT now()
 );
 
--- RLS policies pro CRM users
-ALTER TABLE lead_stage_transitions ENABLE ROW LEVEL SECURITY;
+-- Indexy pro rychlé dotazy
+CREATE INDEX idx_notifications_user_unread 
+ON notifications(user_id, is_read, created_at DESC);
 
-CREATE POLICY "CRM users can read lead_stage_transitions"
-ON lead_stage_transitions FOR SELECT
-USING (is_crm_user(auth.uid()));
+CREATE INDEX idx_notifications_entity 
+ON notifications(entity_type, entity_id);
 
-CREATE POLICY "CRM users can manage lead_stage_transitions"
-ON lead_stage_transitions FOR ALL
-USING (is_crm_user(auth.uid()));
+-- RLS
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
--- Index pro rychlé dotazy
-CREATE INDEX idx_lead_transitions_confirmed 
-ON lead_stage_transitions(confirmed_at);
+CREATE POLICY "Users can read own notifications"
+ON notifications FOR SELECT
+USING (auth.uid() = user_id);
 
-CREATE INDEX idx_lead_transitions_stages 
-ON lead_stage_transitions(from_stage, to_stage);
+CREATE POLICY "Users can update own notifications"
+ON notifications FOR UPDATE
+USING (auth.uid() = user_id);
+
+-- System can create notifications (via service role or triggers)
+CREATE POLICY "Service role can create notifications"
+ON notifications FOR INSERT
+WITH CHECK (true);
 ```
 
-### Krok 2: Frontend - Potvrzovací komponenta
+---
 
-**Nový soubor: `src/components/leads/ConfirmStageTransitionDialog.tsx`**
+## Logika Vytváření Notifikací
 
-- AlertDialog komponenta
-- Zobrazí odkud → kam se lead přesouvá
-- Tlačítka "Potvrdit pro analytiku" a "Přeskočit"
-- Volá hook pro uložení potvrzené transition
+### Přístup 1: Frontend-based (jednodušší, bez DB triggerů)
 
-### Krok 3: Hook pro správu transitions
-
-**Nový soubor: `src/hooks/useLeadTransitions.tsx`**
+Notifikace se vytvoří přímo v hooks/mutacích při akci:
 
 ```typescript
-// Funkce:
-// - fetchTransitions() - načte všechny potvrzené přechody
-// - confirmTransition(leadId, fromStage, toStage, value) - uloží potvrzený přechod
-// - getConversionRates() - vypočítá konverzní poměry mezi fázemi
-// - getTransitionTrend(months) - trend přechodů za posledních N měsíců
-```
-
-### Krok 4: Integrace do LeadsKanban.tsx
-
-**Úprava `handleDrop` funkce:**
-
-```typescript
-const handleDrop = (e, stage) => {
-  // 1. Změnit stav okamžitě
-  onStageChange(draggedLeadId, stage);
+// Příklad: Když se změní status leadu
+const updateLead = async (leadId, newData) => {
+  await supabase.from('leads').update(newData).eq('id', leadId);
   
-  // 2. Zobrazit potvrzovací dialog
-  setTransitionToConfirm({
-    leadId: draggedLeadId,
-    fromStage: lead.stage,
-    toStage: stage,
-    leadValue: lead.estimated_price
-  });
+  // Pokud vyplněn formulář → notifikace pro owner_id
+  if (newData.onboarding_form_completed_at && lead.owner_id) {
+    await createNotification({
+      user_id: getOwnerUserId(lead.owner_id), // colleague → profile_id → user_id
+      type: 'lead_form_completed',
+      title: 'Formulář vyplněn',
+      message: `${lead.company_name} vyplnil onboarding formulář`,
+      entity_type: 'lead',
+      entity_id: leadId,
+      link: '/leads'
+    });
+  }
 };
 ```
 
-### Krok 5: Integrace do LeadDetailSheet.tsx
+### Přístup 2: Database Triggers (robustnější)
 
-**Úprava `handleStageChange` funkce:**
+Pro kritické události použít DB triggery:
 
-Stejná logika jako v Kanban - po změně zobrazit potvrzovací dialog.
+```sql
+CREATE OR REPLACE FUNCTION notify_on_extra_work_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Když se status změní na 'approved'
+    IF NEW.status = 'approved' AND OLD.status = 'pending_approval' THEN
+        -- Najít user_id přiřazeného kolegy
+        INSERT INTO notifications (user_id, type, title, message, entity_type, entity_id, link)
+        SELECT 
+            c.profile_id,
+            'extra_work_approved',
+            'Vícepráce schválena',
+            'Vícepráce "' || NEW.name || '" byla schválena',
+            'extra_work',
+            NEW.id,
+            '/extra-work'
+        FROM colleagues c
+        WHERE c.id = NEW.colleague_id
+          AND c.profile_id IS NOT NULL;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
-### Krok 6: Nová Analytics komponenta
-
-**Nový soubor: `src/components/analytics/FunnelPassthroughAnalytics.tsx`**
-
-- Zobrazí konverzní poměry mezi všemi fázemi
-- Graf trendu konverzí v čase
-- Filtrování podle období (měsíc/kvartál/rok)
-- Detailní tabulka s počty přechodů
-
-### Krok 7: Integrace do Analytics.tsx
-
-- Přidat nový tab "Funnel" nebo sekci do LeadsAnalytics
-- Předat data z hooku do komponenty
+CREATE TRIGGER trg_extra_work_status_notify
+AFTER UPDATE ON extra_works
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION notify_on_extra_work_status_change();
+```
 
 ---
 
-## Soubory k vytvoření/úpravě
+## Frontend Komponenty
+
+### 1. Upravený useNotifications Hook
+
+```typescript
+// src/hooks/useNotifications.tsx
+
+export function useNotifications() {
+  const { user } = useAuth();
+  
+  // Načtení notifikací z Supabase
+  const { data: notifications, refetch } = useQuery({
+    queryKey: ['notifications', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      return data || [];
+    },
+    enabled: !!user?.id,
+    refetchInterval: 30000, // Poll každých 30 sekund
+  });
+  
+  // Real-time subscription pro okamžité notifikace
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const subscription = supabase
+      .channel('notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        refetch();
+        // Volitelně: zobrazit toast
+        toast({ title: payload.new.title, description: payload.new.message });
+      })
+      .subscribe();
+    
+    return () => subscription.unsubscribe();
+  }, [user?.id]);
+  
+  // ... rest of implementation
+}
+```
+
+### 2. Notifikační služba
+
+```typescript
+// src/services/notificationService.ts
+
+export async function createNotification(params: {
+  recipientColleagueId?: string;
+  recipientUserId?: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  entityType?: string;
+  entityId?: string;
+  link?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  // Získat user_id z colleague_id pokud potřeba
+  let userId = params.recipientUserId;
+  
+  if (!userId && params.recipientColleagueId) {
+    const { data: colleague } = await supabase
+      .from('colleagues')
+      .select('profile_id')
+      .eq('id', params.recipientColleagueId)
+      .single();
+    
+    userId = colleague?.profile_id;
+  }
+  
+  if (!userId) return null; // Kolega nemá propojený profil
+  
+  return supabase.from('notifications').insert({
+    user_id: userId,
+    type: params.type,
+    title: params.title,
+    message: params.message,
+    entity_type: params.entityType,
+    entity_id: params.entityId,
+    link: params.link,
+    metadata: params.metadata || {},
+  });
+}
+
+// Hromadné notifikace pro tým zakázky
+export async function notifyEngagementTeam(
+  engagementId: string,
+  excludeUserId: string | null,
+  notification: Omit<NotificationParams, 'recipientUserId'>
+) {
+  // Získat všechny přiřazené kolegy
+  const { data: assignments } = await supabase
+    .from('engagement_assignments')
+    .select('colleague_id, colleagues(profile_id)')
+    .eq('engagement_id', engagementId);
+  
+  // Vytvořit notifikace pro každého (kromě toho, kdo akci provedl)
+  const notifications = assignments
+    ?.filter(a => a.colleagues?.profile_id && a.colleagues.profile_id !== excludeUserId)
+    .map(a => ({
+      user_id: a.colleagues.profile_id,
+      ...notification,
+    }));
+  
+  if (notifications?.length) {
+    await supabase.from('notifications').insert(notifications);
+  }
+}
+```
+
+---
+
+## Stránka Notifikací (Vylepšení)
+
+Stávající `/notifications` stránka zůstane, ale bude:
+
+1. **Filtrování podle entity** - Zobrazit jen leady / zakázky / vícepráce
+2. **Seskupování podle dne** - Přehlednější organizace
+3. **Archivace** - Možnost smazat staré notifikace
+4. **Nastavení preferencí** - Tab pro nastavení, které typy chce uživatel dostávat
+
+### Wireframe rozšířené stránky:
+
+```text
++----------------------------------------------------------+
+|  🔔 Notifikace                          [Označit vše ✓]  |
++----------------------------------------------------------+
+|  [Všechny] [Leady] [Zakázky] [Vícepráce] [Nastavení ⚙️]  |
++----------------------------------------------------------+
+|                                                          |
+|  Dnes                                                    |
+|  ┌────────────────────────────────────────────────────┐  |
+|  │ ✅ Klient schválil změnu                     10:32 │  |
+|  │    ABC Corp potvrdil změnu ceny na zakázce...      │  |
+|  └────────────────────────────────────────────────────┘  |
+|  ┌────────────────────────────────────────────────────┐  |
+|  │ 📋 Formulář vyplněn                          09:15 │  |
+|  │    XYZ s.r.o. vyplnil onboarding formulář          │  |
+|  └────────────────────────────────────────────────────┘  |
+|                                                          |
+|  Včera                                                   |
+|  ┌────────────────────────────────────────────────────┐  |
+|  │ 🎯 Přiřazení k zakázce                       18:45 │  |
+|  │    Byl/a jsi přiřazen/a k "NewClient Retainer"     │  |
+|  └────────────────────────────────────────────────────┘  |
++----------------------------------------------------------+
+```
+
+---
+
+## Nastavení Preferencí (Volitelné - Fáze 2)
+
+Pro pokročilé uživatele tabulka preferencí:
+
+```sql
+CREATE TABLE notification_preferences (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+    notification_type text NOT NULL,
+    enabled boolean DEFAULT true,
+    UNIQUE(user_id, notification_type)
+);
+```
+
+Toto umožní uživatelům vypnout specifické typy notifikací.
+
+---
+
+## Soubory k Vytvoření/Úpravě
 
 ### Nové soubory:
-1. `src/hooks/useLeadTransitions.tsx` - hook pro práci s transitions
-2. `src/components/leads/ConfirmStageTransitionDialog.tsx` - potvrzovací dialog
-3. `src/components/analytics/FunnelPassthroughAnalytics.tsx` - vizualizace
+1. `src/services/notificationService.ts` - Centrální služba pro vytváření notifikací
+2. `src/types/notifications.ts` - Rozšíření typů (přidání entity_type, entity_id)
+3. `docs/supabase-migration-notifications.sql` - Migrace pro novou tabulku
 
 ### Soubory k úpravě:
-1. `src/types/crm.ts` - přidat typ `LeadStageTransition`
-2. `src/components/leads/LeadsKanban.tsx` - přidat potvrzovací dialog po drop
-3. `src/components/leads/LeadDetailSheet.tsx` - přidat potvrzovací dialog po změně stavu
-4. `src/pages/Analytics.tsx` - integrace nové komponenty
-5. `src/components/analytics/LeadsAnalytics.tsx` - přidat sekci pro funnel průchodnost
-
-### Databázové změny:
-- Migrace pro vytvoření tabulky `lead_stage_transitions`
-- RLS policies pro tabulku
+1. `src/hooks/useNotifications.tsx` - Přepsat na Supabase místo localStorage
+2. `src/pages/Notifications.tsx` - Přidat filtrování a seskupování
+3. `src/hooks/useLeadsData.tsx` - Integrovat notifikace při změnách leadů
+4. `src/hooks/useCRMData.tsx` - Integrovat notifikace při přiřazení k zakázkám
+5. `src/data/modificationRequestsMockData.ts` - Přepsat na Supabase notifikace
 
 ---
 
-## Přínosy řešení
+## Implementační Fáze
 
-1. **Přesná analytika** - jen potvrzené přechody se počítají
-2. **Historická data** - trend konverzí v čase
-3. **Minimální friction** - jednoduchý toast místo blokujícího dialogu
-4. **Zpětná kompatibilita** - stávající workflow zůstává nezměněn
-5. **Hodnota v kontextu** - trackuje se hodnota leadu při přechodu
+### Fáze 1: Základní infrastruktura
+- [ ] Vytvořit tabulku `notifications` v Supabase
+- [ ] Implementovat `notificationService.ts`
+- [ ] Přepsat `useNotifications` hook na Supabase
 
+### Fáze 2: Integrace triggerů
+- [ ] Leady: formulář vyplněn, smlouva podepsána
+- [ ] Zakázky: přiřazení kolegy
+- [ ] Vícepráce: status změny
+- [ ] Modifikace: klient schválil
+
+### Fáze 3: UI vylepšení
+- [ ] Filtrování na stránce notifikací
+- [ ] Seskupování podle dne
+- [ ] Real-time updates přes Supabase subscriptions
+
+### Fáze 4: Preference (volitelné)
+- [ ] Tabulka preferencí
+- [ ] UI pro správu preferencí
+
+---
+
+## Přínosy Řešení
+
+1. **Personalizace** - Každý vidí jen notifikace relevantní pro jeho práci
+2. **Persistentní historie** - Data v databázi, ne localStorage
+3. **Real-time** - Okamžité doručení přes Supabase subscriptions
+4. **Škálovatelnost** - Snadné přidání nových typů notifikací
+5. **Nezahltí uživatele** - Striktní pravidla kdy notifikovat
