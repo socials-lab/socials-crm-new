@@ -167,10 +167,10 @@ export function LeadsAnalytics({
           icon={Clock}
         />
         <KPICard
-          title="Průměrný deal size"
-          value={`${formatCurrency(avgDealSize)} Kč`}
-          icon={TrendingUp}
-          subtitle="vyhrané dealy"
+          title="Uzavřené dealy"
+          value={wonDealsCount}
+          icon={Trophy}
+          subtitle={`${formatCurrency(totalWonValue)} Kč MRR`}
         />
         <KPICard
           title="Pipeline hodnota"
