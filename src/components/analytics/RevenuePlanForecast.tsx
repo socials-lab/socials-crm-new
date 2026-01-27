@@ -424,9 +424,11 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
                 axisLine={{ stroke: 'hsl(var(--border))' }}
               />
               <Tooltip 
-                formatter={(value: number, name: string) => [formatCurrency(value), 
-                  name === 'target' ? 'Cíl' : name === 'actual' ? 'Skutečnost' : 'Projekce'
-                ]}
+                formatter={(value: number, name: string, props: any) => {
+                  const dataKey = props?.dataKey || name;
+                  const label = dataKey === 'target' ? 'Cíl' : dataKey === 'actual' ? 'Skutečnost' : 'Projekce';
+                  return [formatCurrency(value), label];
+                }}
                 contentStyle={{ 
                   backgroundColor: 'hsl(var(--background))', 
                   border: '1px solid hsl(var(--border))',
