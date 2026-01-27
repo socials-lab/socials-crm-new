@@ -503,21 +503,22 @@ export default function Dashboard() {
               {/* Demo activities for scroll testing */}
               <div className="space-y-2 mb-4 pb-4 border-b">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧪 Demo data pro test scrollu</p>
-                <ActivityRow icon={UserPlus} label="Demo klient 1" count={1} items={["Firma Alpha"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
-                <ActivityRow icon={UserPlus} label="Demo klient 2" count={1} items={["Firma Beta"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
-                <ActivityRow icon={Send} label="Demo nabídka 1" count={1} items={["Firma Gamma"]} colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
-                <ActivityRow icon={Send} label="Demo nabídka 2" count={1} items={["Firma Delta"]} colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
-                <ActivityRow icon={FileSignature} label="Demo smlouva 1" count={1} items={["Firma Epsilon"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
-                <ActivityRow icon={Briefcase} label="Demo zakázka 1" count={1} items={["Projekt Omega"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
-                <ActivityRow icon={Briefcase} label="Demo zakázka 2" count={1} items={["Projekt Zeta"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
-                <ActivityRow icon={Wrench} label="Demo vícepráce 1" count={1} colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900" value={15000} />
-                <ActivityRow icon={Wrench} label="Demo vícepráce 2" count={1} colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900" value={22000} />
-                <ActivityRow icon={Calendar} label="Demo schůzka 1" count={1} items={["Kickoff meeting"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
-                <ActivityRow icon={Calendar} label="Demo schůzka 2" count={1} items={["Review Q1"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
-                <ActivityRow icon={CalendarCheck} label="Demo schůzka 3" count={1} items={["Strategy call"]} colorClass="text-teal-600 bg-teal-100 dark:bg-teal-900" />
-                <ActivityRow icon={Users} label="Demo uchazeč 1" count={1} items={["Jan Novák"]} colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
-                <ActivityRow icon={Users} label="Demo uchazeč 2" count={1} items={["Marie Svobodová"]} colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
-                <ActivityRow icon={UserCheck} label="Demo přijatý" count={1} items={["Petr Horák"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
+                <ActivityRow icon={UserPlus} label="Nový klient" count={1} items={["Alza.cz → podepsána smlouva na Meta Ads"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" value={45000} />
+                <ActivityRow icon={UserPlus} label="Nový klient" count={1} items={["Notino → start spolupráce Google Ads"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" value={32000} />
+                <ActivityRow icon={Send} label="Nabídka odeslána" count={1} items={["Škoda Auto → nabídka na Performance Max"]} colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
+                <ActivityRow icon={Send} label="Nabídka odeslána" count={1} items={["Mall.cz → nabídka na Social Management"]} colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
+                <ActivityRow icon={FileSignature} label="Smlouva podepsána" count={1} items={["Rohlik.cz → roční retainer 85k/měsíc"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" value={85000} />
+                <ActivityRow icon={Briefcase} label="Zakázka zahájena" count={1} items={["Kofola → Q1 kampaň spuštěna"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={Briefcase} label="Zakázka zahájena" count={1} items={["Pilsner Urquell → rebranding sociálů"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={Wrench} label="Vícepráce schválena" count={1} items={["TestBrand → extra kreativy pro Black Friday"]} colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900" value={15000} />
+                <ActivityRow icon={Wrench} label="Vícepráce schválena" count={1} items={["Alza.cz → A/B test landing pages"]} colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900" value={22000} />
+                <ActivityRow icon={Calendar} label="Schůzka naplánována" count={1} items={["Škoda Auto → kickoff meeting zítra 10:00"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={Calendar} label="Schůzka naplánována" count={1} items={["Notino → Q1 review ve čtvrtek"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={CalendarCheck} label="Schůzka proběhla" count={1} items={["Mall.cz → strategy call dokončen"]} colorClass="text-teal-600 bg-teal-100 dark:bg-teal-900" />
+                <ActivityRow icon={TrendingDown} label="Lead ztracen" count={1} items={["O2 → vybrali jinou agenturu"]} colorClass="text-red-600 bg-red-100 dark:bg-red-900" isNegative value={60000} />
+                <ActivityRow icon={Users} label="Nový uchazeč" count={1} items={["Jan Novák → PPC specialista, 3 roky exp."]} colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
+                <ActivityRow icon={Users} label="Nový uchazeč" count={1} items={["Marie Svobodová → Social Media Manager"]} colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
+                <ActivityRow icon={UserCheck} label="Uchazeč přijat" count={1} items={["Petr Horák → nastupuje jako junior PPC"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
               </div>
               <div className="space-y-4">
                 {/* === SALES & LEADY === */}
