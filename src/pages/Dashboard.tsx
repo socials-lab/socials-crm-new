@@ -33,7 +33,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format, subDays, isAfter, parseISO, addMonths } from 'date-fns';
+import { format, subDays, isAfter, parseISO, addMonths, addDays, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
@@ -409,6 +409,47 @@ export default function Dashboard() {
         .reduce((sum, w) => sum + w.amount, 0),
     };
   }, [extraWorks]);
+
+  // === NEW CLIENTS (last 3 months) ===
+  const newClientsSection = useMemo(() => {
+    const threeMonthsAgo = subDays(new Date(), 90);
+    
+    return clients
+      .filter(c => c.status === 'active' && c.start_date && isAfter(parseISO(c.start_date), threeMonthsAgo))
+      .map(client => {
+        const clientEngagements = engagements.filter(e => e.client_id === client.id && e.status === 'active');
+        const totalMonthly = clientEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        const engagementNames = clientEngagements.map(e => e.name).join(', ');
+        const startDate = parseISO(client.start_date!);
+        const timeAgo = formatDistanceToNow(startDate, { locale: cs, addSuffix: true });
+        return { ...client, totalMonthly, engagementNames, timeAgo };
+      })
+      .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime())
+      .slice(0, 5);
+  }, [clients, engagements]);
+
+  // === ENDING ENGAGEMENTS (next 60 days) ===
+  const endingEngagements = useMemo(() => {
+    const now = new Date();
+    const sixtyDaysFromNow = addDays(now, 60);
+    
+    return engagements
+      .filter(e => 
+        e.status === 'active' && 
+        e.end_date && 
+        isAfter(parseISO(e.end_date), now) && 
+        !isAfter(parseISO(e.end_date), sixtyDaysFromNow)
+      )
+      .map(engagement => {
+        const client = clients.find(c => c.id === engagement.client_id);
+        const endDate = parseISO(engagement.end_date!);
+        const daysUntilEnd = differenceInDays(endDate, now);
+        const urgency: 'critical' | 'warning' | 'info' = 
+          daysUntilEnd < 14 ? 'critical' : daysUntilEnd < 30 ? 'warning' : 'info';
+        return { ...engagement, client, daysUntilEnd, urgency };
+      })
+      .sort((a, b) => a.daysUntilEnd - b.daysUntilEnd);
+  }, [engagements, clients]);
 
   // Active pipeline leads (excluding closed stages)
   const activePipelineLeads = useMemo(() => 
@@ -844,6 +885,148 @@ export default function Dashboard() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* NEW CLIENTS - Last 3 Months */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-primary" />
+                🆕 Noví klienti
+              </CardTitle>
+              <Link to="/clients">
+                <Button variant="ghost" size="sm" className="text-xs">
+                  Všichni klienti
+                </Button>
+              </Link>
+            </div>
+            <p className="text-xs text-muted-foreground">Získáni za poslední 3 měsíce</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {newClientsSection.length > 0 ? (
+              newClientsSection.map((client) => (
+                <div key={client.id} className="p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/50">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{client.brand_name || client.name}</p>
+                      {client.engagementNames && (
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {client.engagementNames}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {client.timeAgo}
+                    </span>
+                  </div>
+                  {canSeeFinancials && client.totalMonthly > 0 && (
+                    <div className="mt-2 pt-2 border-t border-emerald-200/50 dark:border-emerald-800/50">
+                      <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                        {client.totalMonthly.toLocaleString()} CZK/měsíc
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Žádní noví klienti za poslední 3 měsíce
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ENDING ENGAGEMENTS - Next 60 Days */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                📅 Končící spolupráce
+              </CardTitle>
+              <Link to="/engagements">
+                <Button variant="ghost" size="sm" className="text-xs">
+                  Všechny zakázky
+                </Button>
+              </Link>
+            </div>
+            <p className="text-xs text-muted-foreground">Zakázky s ukončením v příštích 60 dnech</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {endingEngagements.length > 0 ? (
+              endingEngagements.map((engagement) => {
+                const urgencyStyles = {
+                  critical: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800',
+                  warning: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800',
+                  info: 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800',
+                };
+                const urgencyIcon = {
+                  critical: '🔴',
+                  warning: '🟠',
+                  info: '🟡',
+                };
+                return (
+                  <div 
+                    key={engagement.id} 
+                    className={`p-3 rounded-lg border ${urgencyStyles[engagement.urgency]}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span>{urgencyIcon[engagement.urgency]}</span>
+                          <p className="text-sm font-medium truncate">
+                            {engagement.client?.brand_name || engagement.client?.name || 'Neznámý klient'}
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {engagement.name}
+                        </p>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={
+                          engagement.urgency === 'critical' 
+                            ? 'border-red-300 text-red-700 bg-red-100 dark:bg-red-900 dark:text-red-300' 
+                            : engagement.urgency === 'warning'
+                              ? 'border-amber-300 text-amber-700 bg-amber-100 dark:bg-amber-900 dark:text-amber-300'
+                              : 'border-yellow-300 text-yellow-700 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-300'
+                        }
+                      >
+                        za {engagement.daysUntilEnd} dní
+                      </Badge>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-current/10 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        Končí: {format(parseISO(engagement.end_date!), 'd. MMMM yyyy', { locale: cs })}
+                      </span>
+                      {canSeeFinancials && engagement.monthly_fee && (
+                        <span className="text-sm font-medium text-muted-foreground">
+                          MRR: {engagement.monthly_fee.toLocaleString()} CZK
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-4">
+                <CheckCircle className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Žádné spolupráce nekončí v příštích 60 dnech
+                </p>
+              </div>
+            )}
+
+            {/* Process Info */}
+            <Separator />
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p className="font-medium">Proces ukončení spolupráce:</p>
+              <p>1. Nastavte datum ukončení v detailu zakázky</p>
+              <p>2. Běžná výpovědní lhůta je 1 měsíc</p>
+              <p>3. Po ukončení změňte status na "Dokončeno"</p>
+            </div>
           </CardContent>
         </Card>
 
