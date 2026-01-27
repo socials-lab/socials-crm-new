@@ -66,6 +66,7 @@ interface ClientEngagementsAnalyticsProps {
   invoicingChange: number;
   clientChange: number;
   clientTrend: { month: string; active: number; new: number; lost: number }[];
+  engagementTrend: { month: string; count: number }[];
   topClientsByRevenue: { name: string; revenue: number }[];
   topClientsByMargin: { name: string; margin: number }[];
   clientsByTier: { tier: string; count: number }[];
@@ -81,9 +82,9 @@ export function ClientsEngagementsAnalytics({
   churnRate,
   activeEngagements,
   totalInvoicing,
-  invoicingChange,
   clientChange,
   clientTrend,
+  engagementTrend,
   topClientsByRevenue,
   topClientsByMargin,
   clientsByTier,
@@ -137,7 +138,7 @@ export function ClientsEngagementsAnalytics({
       </div>
 
       {/* KPI Cards Row 2 - Engagements */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <KPICard
           title="Aktivní zakázky"
           value={activeEngagements}
@@ -147,19 +148,6 @@ export function ClientsEngagementsAnalytics({
           title="Celková fakturace"
           value={`${formatCurrency(totalInvoicing)} Kč`}
           icon={TrendingUp}
-        />
-        <KPICard
-          title="MoM změna fakturace"
-          value={`${invoicingChange >= 0 ? '+' : ''}${invoicingChange.toFixed(1)}%`}
-          icon={invoicingChange >= 0 ? ArrowUp : ArrowDown}
-          subtitle={
-            <span className={cn(
-              "text-xs",
-              invoicingChange >= 0 ? "text-status-active" : "text-status-lost"
-            )}>
-              vs minulý měsíc
-            </span>
-          }
         />
       </div>
 
@@ -217,7 +205,49 @@ export function ClientsEngagementsAnalytics({
           </CardContent>
         </Card>
 
-        {/* Revenue by Industry */}
+        {/* Engagement Trend */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Vývoj počtu zakázek (12 měsíců)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={engagementTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <YAxis 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="count" 
+                    stroke="hsl(var(--chart-2))" 
+                    fill="hsl(var(--chart-2))"
+                    fillOpacity={0.3}
+                    name="Aktivní zakázky"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row 2 - Revenue by Industry */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Příjmy podle odvětví</CardTitle>
