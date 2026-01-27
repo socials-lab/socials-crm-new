@@ -429,95 +429,32 @@ export function AnalyticsOverview({
         </Card>
       </div>
 
-      {/* Alerts Section */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Low Margin Engagements */}
+      {/* Alerts Section - Low Margin Only */}
+      {alerts.lowMarginEngagements.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-status-paused" />
-              Nízká marže (&lt;30%)
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              Zakázky s nízkou marží (&lt;50%)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {alerts.lowMarginEngagements.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                Všechny zakázky dosahují cílové marže 🎉
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {alerts.lowMarginEngagements.slice(0, 5).map((e, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-                    <div>
-                      <p className="font-medium text-sm">{e.name}</p>
-                      <p className="text-xs text-muted-foreground">{e.client}</p>
-                    </div>
-                    <Badge variant="destructive" className="text-xs">
-                      {e.margin.toFixed(1)}%
-                    </Badge>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {alerts.lowMarginEngagements.map((e, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div>
+                    <p className="font-medium text-sm">{e.name}</p>
+                    <p className="text-xs text-muted-foreground">{e.client}</p>
                   </div>
-                ))}
-              </div>
-            )}
+                  <Badge variant="destructive" className="text-xs">
+                    {e.margin.toFixed(1)}%
+                  </Badge>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
-
-        {/* Ending Contracts */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-status-paused" />
-              Končící smlouvy (&lt;60 dní)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {alerts.endingContracts.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                Žádné smlouvy blížící se ke konci 🎉
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {alerts.endingContracts.slice(0, 5).map((c, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-                    <p className="font-medium text-sm">{c.client}</p>
-                    <Badge variant="secondary" className="text-xs">
-                      {c.daysLeft} dní
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Overdue Leads */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4 text-status-paused" />
-              Leady čekající &gt;14 dní
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {alerts.overdueLeads.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                Žádné opožděné leady 🎉
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {alerts.overdueLeads.slice(0, 5).map((lead, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-                    <p className="font-medium text-sm">{lead.company}</p>
-                    <Badge variant="secondary" className="text-xs">
-                      {lead.daysOverdue} dní
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      )}
 
     </div>
   );

@@ -324,7 +324,7 @@ export default function Analytics() {
           margin,
         };
       })
-      .filter(e => e.margin > 0 && e.margin < 30)
+      .filter(e => e.margin > 0 && e.margin < 50)
       .sort((a, b) => a.margin - b.margin);
 
     const overdueLeads = leads
