@@ -10,10 +10,11 @@ import {
   Settings,
   Target,
   Sparkles,
-  ChevronRight,
+  Lightbulb,
+  Rocket,
+  Heart,
   Trophy,
-  Star,
-  Lock,
+  Pencil,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,186 +23,24 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAcademyData, AcademyModule, AcademyVideo } from '@/hooks/useAcademyData';
+import { AcademyAdminPanel } from '@/components/academy/AcademyAdminPanel';
 
-// Types
-interface Video {
-  id: string;
-  title: string;
-  description: string;
-  duration: string;
-  videoUrl: string; // YouTube embed URL or video link
-  thumbnail?: string;
-}
-
-interface Module {
-  id: string;
-  title: string;
-  description: string;
-  icon: typeof GraduationCap;
-  videos: Video[];
-  required: boolean;
-  order: number;
-}
-
-// Mock data for academy modules
-const ACADEMY_MODULES: Module[] = [
-  {
-    id: 'welcome',
-    title: 'Vítej v Socials! 👋',
-    description: 'Úvod do naší agentury, kultury a hodnot',
-    icon: Users,
-    required: true,
-    order: 1,
-    videos: [
-      {
-        id: 'welcome-1',
-        title: 'Kdo jsme a co děláme',
-        description: 'Seznámení s agenturou Socials, naše mise a vize',
-        duration: '5:30',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-      {
-        id: 'welcome-2',
-        title: 'Naše hodnoty a kultura',
-        description: 'Jak u nás pracujeme a co je pro nás důležité',
-        duration: '4:15',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-      {
-        id: 'welcome-3',
-        title: 'Seznámení s týmem',
-        description: 'Kdo je kdo a na koho se obrátit',
-        duration: '6:00',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-    ],
-  },
-  {
-    id: 'tools',
-    title: 'Nástroje a procesy 🛠️',
-    description: 'Všechny nástroje které používáme denně',
-    icon: Settings,
-    required: true,
-    order: 2,
-    videos: [
-      {
-        id: 'tools-1',
-        title: 'CRM systém - základy',
-        description: 'Jak používat Socials CRM pro správu klientů',
-        duration: '8:20',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-      {
-        id: 'tools-2',
-        title: 'Freelo - projektové řízení',
-        description: 'Práce s úkoly a projekty ve Freelu',
-        duration: '7:45',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-      {
-        id: 'tools-3',
-        title: 'Slack komunikace',
-        description: 'Pravidla komunikace a kanály',
-        duration: '4:00',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-      {
-        id: 'tools-4',
-        title: 'Google Workspace',
-        description: 'Dokumenty, kalendář a další Google nástroje',
-        duration: '5:30',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-    ],
-  },
-  {
-    id: 'clients',
-    title: 'Práce s klienty 🤝',
-    description: 'Jak komunikovat a pracovat s našimi klienty',
-    icon: Briefcase,
-    required: true,
-    order: 3,
-    videos: [
-      {
-        id: 'clients-1',
-        title: 'Onboarding nového klienta',
-        description: 'Proces nástupu nového klienta krok za krokem',
-        duration: '10:15',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-      {
-        id: 'clients-2',
-        title: 'Pravidelná komunikace',
-        description: 'Jak a kdy komunikovat s klienty',
-        duration: '6:30',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-      {
-        id: 'clients-3',
-        title: 'Řešení problémů',
-        description: 'Co dělat když něco nejde podle plánu',
-        duration: '7:00',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-    ],
-  },
-  {
-    id: 'performance',
-    title: 'Performance marketing 📈',
-    description: 'Základy výkonnostní reklamy',
-    icon: Target,
-    required: false,
-    order: 4,
-    videos: [
-      {
-        id: 'perf-1',
-        title: 'Meta Ads základy',
-        description: 'Úvod do Facebook a Instagram reklamy',
-        duration: '12:00',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-      {
-        id: 'perf-2',
-        title: 'Google Ads základy',
-        description: 'Úvod do Google vyhledávání a PMax',
-        duration: '11:30',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-      {
-        id: 'perf-3',
-        title: 'Reporting a analýza',
-        description: 'Jak číst data a připravit report',
-        duration: '9:45',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-    ],
-  },
-  {
-    id: 'creative',
-    title: 'Creative Boost 🎨',
-    description: 'Vše o naší kreativní službě',
-    icon: Sparkles,
-    required: false,
-    order: 5,
-    videos: [
-      {
-        id: 'creative-1',
-        title: 'Co je Creative Boost',
-        description: 'Představení služby a jak funguje',
-        duration: '5:00',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-      {
-        id: 'creative-2',
-        title: 'Kreditový systém',
-        description: 'Jak fungují kredity a odměny',
-        duration: '6:30',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      },
-    ],
-  },
-];
+// Icon mapping
+const ICON_MAP: Record<string, typeof BookOpen> = {
+  Users,
+  Settings,
+  Briefcase,
+  Target,
+  Sparkles,
+  BookOpen,
+  GraduationCap,
+  Lightbulb,
+  Rocket,
+  Heart,
+};
 
 // Local storage for progress
 const STORAGE_KEY = 'academy_progress';
@@ -224,17 +63,23 @@ function setVideoWatched(videoId: string): void {
 }
 
 export default function Academy() {
-  const { colleagueId } = useUserRole();
+  const { isSuperAdmin, canEditAcademy } = useUserRole();
+  const { modules, isLoading, isUsingDatabase } = useAcademyData();
+  
   const [watchedVideos, setWatchedVideos] = useState<string[]>(getWatchedVideos);
-  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [selectedModule, setSelectedModule] = useState<Module | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<AcademyVideo | null>(null);
+  const [selectedModule, setSelectedModule] = useState<AcademyModule | null>(null);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+
+  // Check if user can edit
+  const canEdit = isSuperAdmin || canEditAcademy;
 
   // Calculate progress
   const progress = useMemo(() => {
-    const totalVideos = ACADEMY_MODULES.reduce((sum, m) => sum + m.videos.length, 0);
-    const requiredVideos = ACADEMY_MODULES.filter(m => m.required).reduce((sum, m) => sum + m.videos.length, 0);
+    const totalVideos = modules.reduce((sum, m) => sum + m.videos.length, 0);
+    const requiredVideos = modules.filter(m => m.required).reduce((sum, m) => sum + m.videos.length, 0);
     const watchedCount = watchedVideos.length;
-    const watchedRequired = ACADEMY_MODULES
+    const watchedRequired = modules
       .filter(m => m.required)
       .reduce((sum, m) => sum + m.videos.filter(v => watchedVideos.includes(v.id)).length, 0);
 
@@ -246,10 +91,10 @@ export default function Academy() {
       requiredWatched: watchedRequired,
       requiredComplete: watchedRequired >= requiredVideos,
     };
-  }, [watchedVideos]);
+  }, [watchedVideos, modules]);
 
   // Module progress
-  const getModuleProgress = (module: Module) => {
+  const getModuleProgress = (module: AcademyModule) => {
     const watched = module.videos.filter(v => watchedVideos.includes(v.id)).length;
     return {
       watched,
@@ -266,18 +111,56 @@ export default function Academy() {
   };
 
   // Open video player
-  const openVideo = (video: Video, module: Module) => {
+  const openVideo = (video: AcademyVideo, module: AcademyModule) => {
     setSelectedVideo(video);
     setSelectedModule(module);
   };
 
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-6 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <GraduationCap className="h-12 w-12 mx-auto mb-4 text-primary animate-pulse" />
+          <p className="text-muted-foreground">Načítám akademii...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
-      <PageHeader 
-        title="🎓 Akademie" 
-        titleAccent="Socials"
-        description="Vzdělávací centrum pro všechny členy týmu"
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <PageHeader 
+          title="🎓 Akademie" 
+          titleAccent="Socials"
+          description="Vzdělávací centrum pro všechny členy týmu"
+        />
+        
+        {canEdit && (
+          <Button 
+            variant={showAdminPanel ? "default" : "outline"}
+            onClick={() => setShowAdminPanel(!showAdminPanel)}
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            {showAdminPanel ? 'Skrýt správu' : 'Upravit obsah'}
+          </Button>
+        )}
+      </div>
+
+      {/* Admin info about database */}
+      {canEdit && !isUsingDatabase && (
+        <Alert>
+          <AlertDescription>
+            ⚠️ Databázové tabulky ještě nebyly vytvořeny. Data se zobrazují z výchozí konfigurace. 
+            Pro aktivaci editace spusťte migraci z <code className="bg-muted px-1 rounded">docs/supabase-migration-academy.sql</code>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Admin Panel */}
+      {canEdit && showAdminPanel && (
+        <AcademyAdminPanel />
+      )}
 
       {/* Progress Overview */}
       <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20">
@@ -319,9 +202,9 @@ export default function Academy() {
 
       {/* Modules Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {ACADEMY_MODULES.sort((a, b) => a.order - b.order).map((module) => {
+        {modules.sort((a, b) => a.sort_order - b.sort_order).map((module) => {
           const moduleProgress = getModuleProgress(module);
-          const Icon = module.icon;
+          const Icon = ICON_MAP[module.icon] || BookOpen;
           
           return (
             <Card 
@@ -429,9 +312,9 @@ export default function Academy() {
           <div className="space-y-4">
             {/* Video embed placeholder */}
             <div className="aspect-video bg-muted rounded-lg flex items-center justify-center relative overflow-hidden">
-              {selectedVideo?.videoUrl ? (
+              {selectedVideo?.video_url ? (
                 <iframe
-                  src={selectedVideo.videoUrl}
+                  src={selectedVideo.video_url}
                   className="w-full h-full rounded-lg"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
@@ -496,11 +379,9 @@ export default function Academy() {
                               <Play className="h-3 w-3 text-muted-foreground" />
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm truncate ${isActive ? 'font-medium' : ''}`}>
-                              {video.title}
-                            </p>
-                          </div>
+                          <span className={`text-sm flex-1 truncate ${isWatched && !isActive ? 'text-muted-foreground' : ''}`}>
+                            {video.title}
+                          </span>
                           <span className="text-xs text-muted-foreground">{video.duration}</span>
                         </button>
                       );

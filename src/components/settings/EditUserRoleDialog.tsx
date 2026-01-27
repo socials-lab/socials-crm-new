@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ShieldCheck, Wallet } from 'lucide-react';
+import { ShieldCheck, Wallet, GraduationCap } from 'lucide-react';
 import { ALL_PAGES, PAGE_GROUPS } from '@/constants/permissions';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -23,6 +23,7 @@ interface UserData {
   email: string;
   allowed_pages?: string[];
   can_see_financials?: boolean;
+  can_edit_academy?: boolean;
 }
 
 interface EditUserRoleDialogProps {
@@ -52,6 +53,7 @@ export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUse
   const [role, setRole] = useState<AppRole>('specialist');
   const [allowedPages, setAllowedPages] = useState<string[]>([]);
   const [canSeeFinancials, setCanSeeFinancials] = useState(false);
+  const [canEditAcademy, setCanEditAcademy] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUse
       setRole(user.role);
       setAllowedPages(user.allowed_pages || []);
       setCanSeeFinancials(user.can_see_financials || false);
+      setCanEditAcademy(user.can_edit_academy || false);
     }
   }, [user]);
 
@@ -88,6 +91,7 @@ export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUse
         role,
         allowed_pages: allowedPages,
         can_see_financials: canSeeFinancials,
+        can_edit_academy: canEditAcademy,
       } as Record<string, unknown>)
       .eq('id', user.id);
 
@@ -169,6 +173,23 @@ export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUse
                 <Switch
                   checked={canSeeFinancials}
                   onCheckedChange={setCanSeeFinancials}
+                />
+              </div>
+
+              {/* Academy editing */}
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-3">
+                  <GraduationCap className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-sm">Může upravovat Akademii</p>
+                    <p className="text-xs text-muted-foreground">
+                      Přidávání, editace a mazání vzdělávacích modulů
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={canEditAcademy}
+                  onCheckedChange={setCanEditAcademy}
                 />
               </div>
 

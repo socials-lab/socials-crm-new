@@ -21,6 +21,7 @@ interface UserRoleData {
   is_super_admin: boolean;
   allowed_pages?: string[];
   can_see_financials?: boolean;
+  can_edit_academy?: boolean;
   profile?: {
     id: string;
     email: string | null;
@@ -50,6 +51,7 @@ export function UserManagement() {
     email: string;
     allowed_pages?: string[];
     can_see_financials?: boolean;
+    can_edit_academy?: boolean;
   } | null>(null);
 
   const fetchUserRoles = async () => {
@@ -102,6 +104,7 @@ export function UserManagement() {
       email: userRole.profile?.email || '',
       allowed_pages: userRole.allowed_pages || [],
       can_see_financials: userRole.can_see_financials || false,
+      can_edit_academy: userRole.can_edit_academy || false,
     });
     setEditDialogOpen(true);
   };
