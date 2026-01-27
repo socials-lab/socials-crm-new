@@ -1,219 +1,193 @@
 
 
-# Plán: Vylepšení Forecast tabu - Plánované zakázky a kompaktní design
+# Implementace Funnel Průchodnosti s Potvrzením
 
-## Přehled změn
+## Shrnutí
 
-### 1. Přidání plánovaných zakázek do forecastu
-Nová funkcionalita umožní přidat "plánované příjmy" - zakázky, o kterých víte, že začnou v budoucnu, i když ještě nejsou v systému jako engagement.
-
-### 2. Kompaktnější a čitelnější design
-Redukce počtu KPI karet a zlepšení čitelnosti textů.
+Implementace trackingu průchodnosti leadů funnelem s potvrzovacím mechanismem, který zabrání tomu, aby omylem provedené změny fází ovlivňovaly analytické metriky. Řešení zahrnuje novou databázovou tabulku pro potvrzené přechody, UI pro potvrzování změn stavu, a vizualizaci dat v Analytics tabu.
 
 ---
 
-## Nový UI design
+## Jak to bude fungovat
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  FORECAST - Únor 2026                                    [◀ Měsíc ▶]   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ SOUHRN MĚSÍCE                                                      │ │
-│  │ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐              │ │
-│  │ │ MRR           │ │ Churn         │ │ Nové zakázky  │              │ │
-│  │ │ 1,550k → 1,470k │ │ -80k (5.2%)  │ │ +120k         │              │ │
-│  │ │ ↓ -80k churn   │ │ 2 zakázky    │ │ 1 plánovaná   │              │ │
-│  │ └───────────────┘ └───────────────┘ └───────────────┘              │ │
-│  │                                                                    │ │
-│  │ VÝSLEDNÝ STAV: 1,590k MRR | Gap do plánu: +110k | Kapacita: 3 sloty│ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│  ┌──────────────────────────────────┐ ┌──────────────────────────────┐ │
-│  │ 📉 ODCHODY (Únor)               │ │ ➕ PŘÍCHODY (Únor)           │ │
-│  ├──────────────────────────────────┤ ├──────────────────────────────┤ │
-│  │ Mall.cz          8.2.   -32k    │ │ [+ Přidat plánovanou zakázku]│ │
-│  │   └ Jan N., Eva K.              │ │                              │ │
-│  │ Datart          24.2.   -48k    │ │ ✦ NewCorp s.r.o.   od 15.2.  │ │
-│  │   └ Petr S.                     │ │   +120k MRR | Jan N.         │ │
-│  │                                 │ │   (plánovaná)                │ │
-│  │ Celkem: -80k                    │ │ Celkem: +120k                │ │
-│  └──────────────────────────────────┘ └──────────────────────────────┘ │
-│                                                                         │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ 👥 KAPACITA TÝMU                              [Zobrazit vše ▼]    │ │
-│  │ ┌───────────┐ ┌───────────┐ ┌───────────┐                          │ │
-│  │ │Jan Novák  │ │Petr S.    │ │Eva K.     │                          │ │
-│  │ │4/5 → 3/5  │ │5/5 → 4/5  │ │3/5 (bez   │                          │ │
-│  │ │+1 od 8.2. │ │+1 od 24.2.│ │změny)     │                          │ │
-│  │ │-1 od 15.2.│ │           │ │           │                          │ │
-│  │ │= 4/5      │ │= 4/5      │ │= 3/5      │                          │ │
-│  │ └───────────┘ └───────────┘ └───────────┘                          │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+### 1. Potvrzovací mechanismus
+
+Když uživatel přesune lead do nové fáze (drag & drop na Kanban nebo změna v detailu), systém:
+1. **Okamžitě změní stav leadu** v databázi (pro aktuální workflow)
+2. **Zobrazí potvrzovací dialog** s dotazem: "Potvrdit přechod pro analytiku?"
+3. **Při potvrzení** uloží záznam do nové tabulky `lead_stage_transitions`
+4. **Při odmítnutí** se nic neuloží do historie pro analytiku
+
+### 2. Co se trackuje
+
+Každý potvrzený přechod obsahuje:
+- Z které fáze do které
+- Kdy přechod nastal
+- Kdo ho provedl
+- Hodnota leadu v době přechodu
+
+---
+
+## Vizuální návrh
+
+### Potvrzovací toast/dialog po změně fáze:
+```text
++------------------------------------------+
+|  Fáze změněna na "Nabídka odeslána"      |
+|                                          |
+|  Započítat do funnel analytiky?          |
+|                                          |
+|  [Potvrdit pro analytiku]    [Přeskočit] |
++------------------------------------------+
 ```
 
+### Nová sekce v Analytics - "Funnel Průchodnost":
+```text
++--------------------------------------------------+
+|  Funnel Průchodnost (potvrzené přechody)         |
+|--------------------------------------------------|
+|  Nový lead → Meeting      85%    (17/20)         |
+|  Meeting → Čekáme         70%    (12/17)         |
+|  Čekáme → Přístupy        83%    (10/12)         |
+|  Přístupy → Nabídka       90%    (9/10)          |
+|  Nabídka → Odesláno       100%   (9/9)           |
+|  Odesláno → Won           45%    (4/9)           |
++--------------------------------------------------+
+|  Celková konverze: Nový → Won: 20%               |
++--------------------------------------------------+
+```
+
+### Trend graf:
+- X-osa: měsíce
+- Y-osa: % konverze pro každou fázi
+- Linie pro každý přechod mezi fázemi
+
 ---
 
-## Technické řešení pro plánované zakázky
+## Technické kroky
 
-### Možnost A: LocalStorage (jednodušší, bez DB)
-- Plánované zakázky se ukládají do localStorage
-- Data jsou pouze pro forecast, neovlivňují zbytek systému
-- Výhoda: Rychlá implementace, žádné DB změny
-- Nevýhoda: Data nejsou sdílená mezi uživateli
+### Krok 1: Databáze
 
-### Možnost B: Nová tabulka "planned_engagements" (robustnější)
-- Nová tabulka v Supabase
-- Sdílené mezi uživateli, persistentní
-- Výhoda: Profesionální řešení, možnost reportingu
-- Nevýhoda: Vyžaduje DB migraci
+**Nová tabulka `lead_stage_transitions`:**
 
-**Doporučení**: Začít s localStorage (Možnost A), později lze rozšířit na DB.
+```sql
+CREATE TABLE lead_stage_transitions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id uuid REFERENCES leads(id) ON DELETE CASCADE NOT NULL,
+    from_stage lead_stage NOT NULL,
+    to_stage lead_stage NOT NULL,
+    transition_value numeric DEFAULT 0,  -- hodnota leadu v době přechodu
+    confirmed_at timestamptz DEFAULT now() NOT NULL,
+    confirmed_by uuid REFERENCES auth.users(id),
+    created_at timestamptz DEFAULT now()
+);
 
----
+-- RLS policies pro CRM users
+ALTER TABLE lead_stage_transitions ENABLE ROW LEVEL SECURITY;
 
-## Struktura plánované zakázky
+CREATE POLICY "CRM users can read lead_stage_transitions"
+ON lead_stage_transitions FOR SELECT
+USING (is_crm_user(auth.uid()));
+
+CREATE POLICY "CRM users can manage lead_stage_transitions"
+ON lead_stage_transitions FOR ALL
+USING (is_crm_user(auth.uid()));
+
+-- Index pro rychlé dotazy
+CREATE INDEX idx_lead_transitions_confirmed 
+ON lead_stage_transitions(confirmed_at);
+
+CREATE INDEX idx_lead_transitions_stages 
+ON lead_stage_transitions(from_stage, to_stage);
+```
+
+### Krok 2: Frontend - Potvrzovací komponenta
+
+**Nový soubor: `src/components/leads/ConfirmStageTransitionDialog.tsx`**
+
+- AlertDialog komponenta
+- Zobrazí odkud → kam se lead přesouvá
+- Tlačítka "Potvrdit pro analytiku" a "Přeskočit"
+- Volá hook pro uložení potvrzené transition
+
+### Krok 3: Hook pro správu transitions
+
+**Nový soubor: `src/hooks/useLeadTransitions.tsx`**
 
 ```typescript
-interface PlannedEngagement {
-  id: string;                    // UUID
-  name: string;                  // Název zakázky
-  client_name: string;           // Jméno klienta (textově)
-  lead_id?: string;              // Volitelně propojení s leadem
-  monthly_fee: number;           // Plánované MRR
-  start_date: string;            // Od kdy
-  assigned_colleague_ids: string[]; // Přiřazení kolegové
-  notes: string;                 // Poznámky
-  probability_percent: number;   // Pravděpodobnost (default 100%)
-  created_at: string;
-}
+// Funkce:
+// - fetchTransitions() - načte všechny potvrzené přechody
+// - confirmTransition(leadId, fromStage, toStage, value) - uloží potvrzený přechod
+// - getConversionRates() - vypočítá konverzní poměry mezi fázemi
+// - getTransitionTrend(months) - trend přechodů za posledních N měsíců
 ```
 
----
+### Krok 4: Integrace do LeadsKanban.tsx
 
-## Nové komponenty
-
-### 1. AddPlannedEngagementDialog
-Dialog pro přidání plánované zakázky:
-- Název zakázky
-- Jméno klienta (text nebo select z leadů)
-- Očekávané MRR
-- Datum zahájení
-- Přiřazení kolegové (multi-select)
-- Pravděpodobnost (slider 0-100%)
-
-### 2. PlannedEngagementCard
-Karta zobrazující plánovanou zakázku s možností:
-- Editace
-- Smazání
-- Převod na skutečnou zakázku
-
-### 3. ForecastSummaryBar
-Kompaktní summary bar místo 7 KPI karet:
-- Tři hlavní metriky vedle sebe
-- Výsledný stav na jednom řádku
-
----
-
-## Logika forecastu s plánovanými zakázkami
+**Úprava `handleDrop` funkce:**
 
 ```typescript
-// Výpočet dopadu na kapacitu
-const capacityImpact = useMemo(() => {
-  return colleagues.map(colleague => {
-    const current = getCurrentEngagementCount(colleague.id);
-    const endingThisMonth = getEndingAssignments(colleague.id, month);
-    const newPlanned = plannedEngagements
-      .filter(p => 
-        p.assigned_colleague_ids.includes(colleague.id) &&
-        isInMonth(p.start_date, month)
-      );
-    
-    return {
-      colleague,
-      current,
-      afterEndings: current - endingThisMonth.length,
-      afterNew: current - endingThisMonth.length + newPlanned.length,
-      capacityEvents: [
-        ...endingThisMonth.map(e => ({ date: e.end_date, type: 'freed', name: e.name })),
-        ...newPlanned.map(p => ({ date: p.start_date, type: 'filled', name: p.name }))
-      ].sort((a, b) => a.date.localeCompare(b.date))
-    };
-  });
-}, [colleagues, engagements, assignments, plannedEngagements, month]);
-
-// Výpočet dopadu na revenue
-const revenueImpact = useMemo(() => {
-  const lostMRR = endingEngagements.reduce((sum, e) => sum + e.monthly_fee, 0);
-  const newMRR = plannedEngagements
-    .filter(p => isInMonth(p.start_date, month))
-    .reduce((sum, p) => sum + p.monthly_fee * (p.probability_percent / 100), 0);
+const handleDrop = (e, stage) => {
+  // 1. Změnit stav okamžitě
+  onStageChange(draggedLeadId, stage);
   
-  return {
-    currentMRR,
-    lostMRR,
-    newMRR,
-    projectedMRR: currentMRR - lostMRR + newMRR,
-    gapToPlan: target - (currentMRR - lostMRR + newMRR)
-  };
-}, [engagements, plannedEngagements, month, target]);
+  // 2. Zobrazit potvrzovací dialog
+  setTransitionToConfirm({
+    leadId: draggedLeadId,
+    fromStage: lead.stage,
+    toStage: stage,
+    leadValue: lead.estimated_price
+  });
+};
 ```
 
----
+### Krok 5: Integrace do LeadDetailSheet.tsx
 
-## Změny v existujícím kódu
+**Úprava `handleStageChange` funkce:**
 
-### ForecastTab.tsx - Refaktor
+Stejná logika jako v Kanban - po změně zobrazit potvrzovací dialog.
 
-1. **Redukce KPI karet z 7 na 3 hlavní metriky**:
-   - MRR (aktuální → po změnách)
-   - Churn (ztráta + počet zakázek)
-   - Nové (plánovaný přírůstek)
+### Krok 6: Nová Analytics komponenta
 
-2. **Přidání summary baru** místo gridu KPI karet
+**Nový soubor: `src/components/analytics/FunnelPassthroughAnalytics.tsx`**
 
-3. **Dvousloupcový layout**:
-   - Levý sloupec: Odchody (končící zakázky)
-   - Pravý sloupec: Příchody (plánované zakázky + tlačítko přidat)
+- Zobrazí konverzní poměry mezi všemi fázemi
+- Graf trendu konverzí v čase
+- Filtrování podle období (měsíc/kvartál/rok)
+- Detailní tabulka s počty přechodů
 
-4. **Zjednodušená kapacita**:
-   - Kompaktní karty kolegů s timeline změn
-   - Zobrazení: "4/5 → 3/5 → 4/5" namísto dlouhých textů
+### Krok 7: Integrace do Analytics.tsx
 
-5. **Odstranění**:
-   - Sekce "Doporučení" (informace budou v summary)
-   - Sekce "Timeline 3 měsíce" (zjednodušit do karet kolegů)
+- Přidat nový tab "Funnel" nebo sekci do LeadsAnalytics
+- Předat data z hooku do komponenty
 
 ---
 
-## Soubory k úpravě/vytvoření
+## Soubory k vytvoření/úpravě
 
-| Soubor | Změna |
-|--------|-------|
-| `src/components/analytics/ForecastTab.tsx` | Kompletní refaktor - kompaktnější design, přidání plánovaných zakázek |
-| `src/components/analytics/AddPlannedEngagementDialog.tsx` | **Nový** - dialog pro přidání plánované zakázky |
-| `src/hooks/usePlannedEngagements.tsx` | **Nový** - hook pro správu plánovaných zakázek (localStorage) |
+### Nové soubory:
+1. `src/hooks/useLeadTransitions.tsx` - hook pro práci s transitions
+2. `src/components/leads/ConfirmStageTransitionDialog.tsx` - potvrzovací dialog
+3. `src/components/analytics/FunnelPassthroughAnalytics.tsx` - vizualizace
+
+### Soubory k úpravě:
+1. `src/types/crm.ts` - přidat typ `LeadStageTransition`
+2. `src/components/leads/LeadsKanban.tsx` - přidat potvrzovací dialog po drop
+3. `src/components/leads/LeadDetailSheet.tsx` - přidat potvrzovací dialog po změně stavu
+4. `src/pages/Analytics.tsx` - integrace nové komponenty
+5. `src/components/analytics/LeadsAnalytics.tsx` - přidat sekci pro funnel průchodnost
+
+### Databázové změny:
+- Migrace pro vytvoření tabulky `lead_stage_transitions`
+- RLS policies pro tabulku
 
 ---
 
-## Pořadí implementace
+## Přínosy řešení
 
-1. Vytvořit `usePlannedEngagements` hook s localStorage persistencí
-2. Vytvořit `AddPlannedEngagementDialog` komponentu
-3. Refaktorovat `ForecastTab` - kompaktní design
-4. Přidat sekci "Příchody" s plánovanými zakázkami
-5. Aktualizovat logiku výpočtu kapacity a revenue
-
----
-
-## Očekávaný výsledek
-
-1. **Kompaktnější UI**: 3 hlavní metriky místo 7, čitelné texty
-2. **Plánované zakázky**: Možnost přidat budoucí klienty/zakázky
-3. **Dopad na kapacitu**: Viditelné, jak nová zakázka ovlivní vytížení kolegů
-4. **Dopad na revenue**: Projekce MRR včetně plánovaných příjmů
-5. **Vizuální srovnání**: Odchody vs Příchody vedle sebe
+1. **Přesná analytika** - jen potvrzené přechody se počítají
+2. **Historická data** - trend konverzí v čase
+3. **Minimální friction** - jednoduchý toast místo blokujícího dialogu
+4. **Zpětná kompatibilita** - stávající workflow zůstává nezměněn
+5. **Hodnota v kontextu** - trackuje se hodnota leadu při přechodu
 
