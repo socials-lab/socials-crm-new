@@ -356,6 +356,21 @@ export function ModificationRequestCard({
                   📧 Klient potvrdil: {format(new Date(request.client_approved_at), 'd.M.yyyy v H:mm')} ({request.client_email})
                 </div>
               )}
+
+              {/* Email sending history */}
+              {request.emails_sent && request.emails_sent.length > 0 && (
+                <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded-md space-y-1">
+                  <span className="font-medium">📨 Historie odeslaných emailů:</span>
+                  {request.emails_sent.map((email, idx) => (
+                    <div key={idx} className="flex items-center gap-2 ml-4">
+                      <span>{format(new Date(email.sent_at), 'd.M.yyyy H:mm')}</span>
+                      <span>→</span>
+                      <span className="font-medium">{email.sent_to}</span>
+                      <span className="text-muted-foreground">(odeslal: {email.sent_by_name})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               
               {/* Footer */}
               <div className="flex items-center justify-between pt-2">
