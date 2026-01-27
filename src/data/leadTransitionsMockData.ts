@@ -48,13 +48,11 @@ export const MOCK_TRANSITIONS: MockTransition[] = [
   // ===== ZÁŘÍ 2025 =====
   // 12 new leads entered, 4 qualified (33%), 2 won
   
-  // Lead B1 - Full journey to won
+  // Lead B1 - Full journey to won (SKIPPED ACCESS - went directly to offer)
   { id: generateId(), lead_id: 'lead-b1', from_stage: 'new_lead', to_stage: 'meeting_done', transition_value: 120000, confirmed_at: '2025-09-02T09:00:00Z', confirmed_by: null, created_at: '2025-09-02T09:00:00Z' },
-  { id: generateId(), lead_id: 'lead-b1', from_stage: 'meeting_done', to_stage: 'waiting_access', transition_value: 120000, confirmed_at: '2025-09-05T11:00:00Z', confirmed_by: null, created_at: '2025-09-05T11:00:00Z' },
-  { id: generateId(), lead_id: 'lead-b1', from_stage: 'waiting_access', to_stage: 'access_received', transition_value: 120000, confirmed_at: '2025-09-09T14:00:00Z', confirmed_by: null, created_at: '2025-09-09T14:00:00Z' },
-  { id: generateId(), lead_id: 'lead-b1', from_stage: 'access_received', to_stage: 'preparing_offer', transition_value: 120000, confirmed_at: '2025-09-11T10:00:00Z', confirmed_by: null, created_at: '2025-09-11T10:00:00Z' },
-  { id: generateId(), lead_id: 'lead-b1', from_stage: 'preparing_offer', to_stage: 'offer_sent', transition_value: 120000, confirmed_at: '2025-09-14T16:00:00Z', confirmed_by: null, created_at: '2025-09-14T16:00:00Z' },
-  { id: generateId(), lead_id: 'lead-b1', from_stage: 'offer_sent', to_stage: 'won', transition_value: 120000, confirmed_at: '2025-09-20T10:00:00Z', confirmed_by: null, created_at: '2025-09-20T10:00:00Z' },
+  { id: generateId(), lead_id: 'lead-b1', from_stage: 'meeting_done', to_stage: 'preparing_offer', transition_value: 120000, confirmed_at: '2025-09-05T11:00:00Z', confirmed_by: null, created_at: '2025-09-05T11:00:00Z' },
+  { id: generateId(), lead_id: 'lead-b1', from_stage: 'preparing_offer', to_stage: 'offer_sent', transition_value: 120000, confirmed_at: '2025-09-08T16:00:00Z', confirmed_by: null, created_at: '2025-09-08T16:00:00Z' },
+  { id: generateId(), lead_id: 'lead-b1', from_stage: 'offer_sent', to_stage: 'won', transition_value: 120000, confirmed_at: '2025-09-14T10:00:00Z', confirmed_by: null, created_at: '2025-09-14T10:00:00Z' },
 
   // Lead B2 - Lost at offer_sent
   { id: generateId(), lead_id: 'lead-b2', from_stage: 'new_lead', to_stage: 'meeting_done', transition_value: 55000, confirmed_at: '2025-09-05T10:00:00Z', confirmed_by: null, created_at: '2025-09-05T10:00:00Z' },
@@ -63,9 +61,10 @@ export const MOCK_TRANSITIONS: MockTransition[] = [
   { id: generateId(), lead_id: 'lead-b2', from_stage: 'access_received', to_stage: 'preparing_offer', transition_value: 55000, confirmed_at: '2025-09-15T11:00:00Z', confirmed_by: null, created_at: '2025-09-15T11:00:00Z' },
   { id: generateId(), lead_id: 'lead-b2', from_stage: 'preparing_offer', to_stage: 'offer_sent', transition_value: 55000, confirmed_at: '2025-09-18T15:00:00Z', confirmed_by: null, created_at: '2025-09-18T15:00:00Z' },
 
-  // Lead B3 - Lost at waiting_access
+  // Lead B3 - SKIPPED ACCESS - went directly to offer, then lost
   { id: generateId(), lead_id: 'lead-b3', from_stage: 'new_lead', to_stage: 'meeting_done', transition_value: 40000, confirmed_at: '2025-09-10T11:00:00Z', confirmed_by: null, created_at: '2025-09-10T11:00:00Z' },
-  { id: generateId(), lead_id: 'lead-b3', from_stage: 'meeting_done', to_stage: 'waiting_access', transition_value: 40000, confirmed_at: '2025-09-14T10:00:00Z', confirmed_by: null, created_at: '2025-09-14T10:00:00Z' },
+  { id: generateId(), lead_id: 'lead-b3', from_stage: 'meeting_done', to_stage: 'preparing_offer', transition_value: 40000, confirmed_at: '2025-09-14T10:00:00Z', confirmed_by: null, created_at: '2025-09-14T10:00:00Z' },
+  { id: generateId(), lead_id: 'lead-b3', from_stage: 'preparing_offer', to_stage: 'offer_sent', transition_value: 40000, confirmed_at: '2025-09-17T15:00:00Z', confirmed_by: null, created_at: '2025-09-17T15:00:00Z' },
 
   // Lead B4 - Won
   { id: generateId(), lead_id: 'lead-b4', from_stage: 'new_lead', to_stage: 'meeting_done', transition_value: 75000, confirmed_at: '2025-09-12T14:00:00Z', confirmed_by: null, created_at: '2025-09-12T14:00:00Z' },
@@ -99,13 +98,11 @@ export const MOCK_TRANSITIONS: MockTransition[] = [
   // ===== LISTOPAD 2025 =====
   // 9 new leads entered, 3 qualified (33%), 1 won
   
-  // Lead D1 - Won
+  // Lead D1 - Won (SKIPPED ACCESS - consulting project, no ads access needed)
   { id: generateId(), lead_id: 'lead-d1', from_stage: 'new_lead', to_stage: 'meeting_done', transition_value: 85000, confirmed_at: '2025-11-04T09:00:00Z', confirmed_by: null, created_at: '2025-11-04T09:00:00Z' },
-  { id: generateId(), lead_id: 'lead-d1', from_stage: 'meeting_done', to_stage: 'waiting_access', transition_value: 85000, confirmed_at: '2025-11-07T11:00:00Z', confirmed_by: null, created_at: '2025-11-07T11:00:00Z' },
-  { id: generateId(), lead_id: 'lead-d1', from_stage: 'waiting_access', to_stage: 'access_received', transition_value: 85000, confirmed_at: '2025-11-11T14:00:00Z', confirmed_by: null, created_at: '2025-11-11T14:00:00Z' },
-  { id: generateId(), lead_id: 'lead-d1', from_stage: 'access_received', to_stage: 'preparing_offer', transition_value: 85000, confirmed_at: '2025-11-13T10:00:00Z', confirmed_by: null, created_at: '2025-11-13T10:00:00Z' },
-  { id: generateId(), lead_id: 'lead-d1', from_stage: 'preparing_offer', to_stage: 'offer_sent', transition_value: 85000, confirmed_at: '2025-11-16T16:00:00Z', confirmed_by: null, created_at: '2025-11-16T16:00:00Z' },
-  { id: generateId(), lead_id: 'lead-d1', from_stage: 'offer_sent', to_stage: 'won', transition_value: 85000, confirmed_at: '2025-11-22T10:00:00Z', confirmed_by: null, created_at: '2025-11-22T10:00:00Z' },
+  { id: generateId(), lead_id: 'lead-d1', from_stage: 'meeting_done', to_stage: 'preparing_offer', transition_value: 85000, confirmed_at: '2025-11-07T11:00:00Z', confirmed_by: null, created_at: '2025-11-07T11:00:00Z' },
+  { id: generateId(), lead_id: 'lead-d1', from_stage: 'preparing_offer', to_stage: 'offer_sent', transition_value: 85000, confirmed_at: '2025-11-10T16:00:00Z', confirmed_by: null, created_at: '2025-11-10T16:00:00Z' },
+  { id: generateId(), lead_id: 'lead-d1', from_stage: 'offer_sent', to_stage: 'won', transition_value: 85000, confirmed_at: '2025-11-16T10:00:00Z', confirmed_by: null, created_at: '2025-11-16T10:00:00Z' },
 
   // Lead D2 - Lost at offer
   { id: generateId(), lead_id: 'lead-d2', from_stage: 'new_lead', to_stage: 'meeting_done', transition_value: 50000, confirmed_at: '2025-11-10T10:00:00Z', confirmed_by: null, created_at: '2025-11-10T10:00:00Z' },
@@ -149,15 +146,13 @@ export const MOCK_TRANSITIONS: MockTransition[] = [
   // ===== LEDEN 2026 =====
   // 10 new leads entered, 3 qualified (30%), 1 won so far
   
-  // Lead F1 - Won (current month)
+  // Lead F1 - Won (current month, SKIPPED ACCESS)
   { id: generateId(), lead_id: 'lead-f1', from_stage: 'new_lead', to_stage: 'meeting_done', transition_value: 90000, confirmed_at: '2026-01-06T10:00:00Z', confirmed_by: null, created_at: '2026-01-06T10:00:00Z' },
-  { id: generateId(), lead_id: 'lead-f1', from_stage: 'meeting_done', to_stage: 'waiting_access', transition_value: 90000, confirmed_at: '2026-01-09T11:00:00Z', confirmed_by: null, created_at: '2026-01-09T11:00:00Z' },
-  { id: generateId(), lead_id: 'lead-f1', from_stage: 'waiting_access', to_stage: 'access_received', transition_value: 90000, confirmed_at: '2026-01-13T14:00:00Z', confirmed_by: null, created_at: '2026-01-13T14:00:00Z' },
-  { id: generateId(), lead_id: 'lead-f1', from_stage: 'access_received', to_stage: 'preparing_offer', transition_value: 90000, confirmed_at: '2026-01-15T10:00:00Z', confirmed_by: null, created_at: '2026-01-15T10:00:00Z' },
-  { id: generateId(), lead_id: 'lead-f1', from_stage: 'preparing_offer', to_stage: 'offer_sent', transition_value: 90000, confirmed_at: '2026-01-17T16:00:00Z', confirmed_by: null, created_at: '2026-01-17T16:00:00Z' },
-  { id: generateId(), lead_id: 'lead-f1', from_stage: 'offer_sent', to_stage: 'won', transition_value: 90000, confirmed_at: '2026-01-23T10:00:00Z', confirmed_by: null, created_at: '2026-01-23T10:00:00Z' },
+  { id: generateId(), lead_id: 'lead-f1', from_stage: 'meeting_done', to_stage: 'preparing_offer', transition_value: 90000, confirmed_at: '2026-01-09T11:00:00Z', confirmed_by: null, created_at: '2026-01-09T11:00:00Z' },
+  { id: generateId(), lead_id: 'lead-f1', from_stage: 'preparing_offer', to_stage: 'offer_sent', transition_value: 90000, confirmed_at: '2026-01-12T16:00:00Z', confirmed_by: null, created_at: '2026-01-12T16:00:00Z' },
+  { id: generateId(), lead_id: 'lead-f1', from_stage: 'offer_sent', to_stage: 'won', transition_value: 90000, confirmed_at: '2026-01-18T10:00:00Z', confirmed_by: null, created_at: '2026-01-18T10:00:00Z' },
 
-  // Lead F2 - In progress (at offer_sent)
+  // Lead F2 - In progress (at offer_sent, with full access flow)
   { id: generateId(), lead_id: 'lead-f2', from_stage: 'new_lead', to_stage: 'meeting_done', transition_value: 65000, confirmed_at: '2026-01-10T09:00:00Z', confirmed_by: null, created_at: '2026-01-10T09:00:00Z' },
   { id: generateId(), lead_id: 'lead-f2', from_stage: 'meeting_done', to_stage: 'waiting_access', transition_value: 65000, confirmed_at: '2026-01-14T14:00:00Z', confirmed_by: null, created_at: '2026-01-14T14:00:00Z' },
   { id: generateId(), lead_id: 'lead-f2', from_stage: 'waiting_access', to_stage: 'access_received', transition_value: 65000, confirmed_at: '2026-01-18T10:00:00Z', confirmed_by: null, created_at: '2026-01-18T10:00:00Z' },
