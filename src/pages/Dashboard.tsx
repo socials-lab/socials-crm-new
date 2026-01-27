@@ -399,8 +399,8 @@ export default function Dashboard() {
     leadsPipeline.access_received + leadsPipeline.preparing_offer + leadsPipeline.offer_sent
   , [leadsPipeline]);
 
-  // Next month name
-  const nextMonthName = format(addMonths(new Date(), 1), 'LLLL', { locale: cs });
+  // Previous month name (invoicing is for previous month's work)
+  const previousMonthName = format(new Date(), 'LLLL', { locale: cs });
 
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
@@ -421,7 +421,7 @@ export default function Dashboard() {
         <KPICard
           title="💰 Fakturace"
           value={canSeeFinancials ? `${(nextMonthInvoicing.total / 1000).toFixed(0)}k` : '***'}
-          subtitle={canSeeFinancials ? `Plánováno na ${nextMonthName}` : undefined}
+          subtitle={canSeeFinancials ? `Za ${previousMonthName}` : undefined}
           icon={Receipt}
           className="border-primary/30 bg-primary/5"
         />

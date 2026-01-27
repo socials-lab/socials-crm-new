@@ -15,6 +15,7 @@ import { LeadsAnalytics } from '@/components/analytics/LeadsAnalytics';
 import { ClientsEngagementsAnalytics } from '@/components/analytics/ClientsEngagementsAnalytics';
 import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
 import { TeamCapacityAnalytics } from '@/components/analytics/TeamCapacityAnalytics';
+import { BusinessPlanTab } from '@/components/analytics/BusinessPlanTab';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
@@ -1062,12 +1063,13 @@ export default function Analytics() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
           <TabsTrigger value="leads">Leady</TabsTrigger>
           <TabsTrigger value="clients">Klienti</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
           <TabsTrigger value="team">Tým</TabsTrigger>
+          <TabsTrigger value="plan">Obchodní plán</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -1105,6 +1107,13 @@ export default function Analytics() {
         <TabsContent value="team" className="mt-6">
           <TeamCapacityAnalytics
             {...teamData}
+          />
+        </TabsContent>
+
+        <TabsContent value="plan" className="mt-6">
+          <BusinessPlanTab
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
           />
         </TabsContent>
       </Tabs>
