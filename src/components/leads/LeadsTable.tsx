@@ -1,4 +1,4 @@
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, AlertTriangle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -14,6 +14,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LeadMobileCard } from './LeadMobileCard';
 import { cn } from '@/lib/utils';
+import { getLeadLastActivity } from '@/utils/leadActivityUtils';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -94,6 +95,7 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
         </TableHeader>
         <TableBody>
           {leads.map(lead => {
+            const activityInfo = getLeadLastActivity(lead);
             
             return (
               <TableRow 
@@ -145,8 +147,16 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
                     </Button>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {new Date(lead.updated_at).toLocaleDateString('cs-CZ')}
+                <TableCell>
+                  <div className={cn(
+                    "flex items-center gap-1.5 text-sm",
+                    activityInfo.isStale ? "text-amber-600 font-medium" : "text-muted-foreground"
+                  )}>
+                    {activityInfo.isStale && (
+                      <AlertTriangle className="h-4 w-4" />
+                    )}
+                    <span>{activityInfo.activityLabel}</span>
+                  </div>
                 </TableCell>
               </TableRow>
             );
