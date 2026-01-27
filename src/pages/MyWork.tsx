@@ -20,6 +20,7 @@ import {
   CalendarDays,
   AlertCircle,
   Megaphone,
+  Wrench,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,6 +59,7 @@ function MyWorkContent() {
     engagements, 
     assignments, 
     clients,
+    extraWorks,
     getColleagueById,
   } = useCRMData();
   
@@ -163,12 +165,27 @@ function MyWorkContent() {
     : [];
   const totalApprovedCommission = approvedCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
 
+  // Extra work for current colleague this month (ready_to_invoice or invoiced)
+  const myExtraWorks = useMemo(() => {
+    if (!currentColleague) return [];
+    return extraWorks.filter(ew => {
+      if (ew.colleague_id !== currentColleague.id) return false;
+      // Only show approved (ready_to_invoice or invoiced)
+      if (ew.status !== 'ready_to_invoice' && ew.status !== 'invoiced') return false;
+      // Check billing period matches current month
+      const [ewYear, ewMonth] = ew.billing_period.split('-').map(Number);
+      return ewYear === currentYear && ewMonth === currentMonth;
+    });
+  }, [extraWorks, currentColleague, currentYear, currentMonth]);
+  
+  const totalExtraWork = myExtraWorks.reduce((sum, ew) => sum + ew.amount, 0);
+
   // Internal work this month
   const internalWorkThisMonth = getRewardsByMonth(currentYear, currentMonth);
   const categorizedInternalWork = getRewardsByCategory(currentYear, currentMonth);
 
   // Total client earnings this month (WITHOUT internal work)
-  const totalClientEarnings = myWorkData.totalMonthlyProrated + totalCreativeBoostReward + totalApprovedCommission;
+  const totalClientEarnings = myWorkData.totalMonthlyProrated + totalCreativeBoostReward + totalApprovedCommission + totalExtraWork;
 
   // Prepare data for invoicing overview
   const clientRewardsForInvoice = myWorkData.clientRewards.map((cr) => ({
@@ -189,6 +206,15 @@ function MyWorkContent() {
     clientName: comm.clientName,
     amount: comm.commissionAmount,
   }));
+
+  const extraWorksForInvoice = myExtraWorks.map((ew) => {
+    const client = clients.find(c => c.id === ew.client_id);
+    return {
+      clientName: client?.brand_name || client?.name || 'Neznámý klient',
+      name: ew.name,
+      amount: ew.amount,
+    };
+  });
 
   // No colleague linked
   if (!currentColleague) {
@@ -324,6 +350,25 @@ function MyWorkContent() {
                   Schválené provize
                 </span>
                 <span className="font-medium text-primary">{totalApprovedCommission.toLocaleString()} Kč</span>
+              </div>
+            )}
+            
+            {/* Extra Work */}
+            {myExtraWorks.length > 0 && (
+              <div className="space-y-1.5 border-t pt-1.5">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Wrench className="h-3 w-3" />
+                  Více práce
+                </div>
+                {myExtraWorks.map((ew) => {
+                  const client = clients.find(c => c.id === ew.client_id);
+                  return (
+                    <div key={ew.id} className="flex items-center justify-between py-1">
+                      <span className="text-sm truncate">{client?.brand_name || client?.name} – {ew.name}</span>
+                      <span className="font-medium">{ew.amount.toLocaleString()} Kč</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
             
@@ -486,6 +531,7 @@ function MyWorkContent() {
         clientRewards={clientRewardsForInvoice}
         creativeBoostItems={creativeBoostForInvoice}
         commissionItems={commissionsForInvoice}
+        extraWorkItems={extraWorksForInvoice}
         internalRewards={activityRewards}
         getRewardsByMonth={getRewardsByMonth}
         getRewardsByCategory={getRewardsByCategory}
