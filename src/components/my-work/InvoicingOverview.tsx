@@ -48,11 +48,18 @@ interface CommissionForInvoice {
   amount: number;
 }
 
+interface ExtraWorkForInvoice {
+  clientName: string;
+  name: string;
+  amount: number;
+}
+
 interface InvoicingOverviewProps {
   // Client work data
   clientRewards: ClientRewardForInvoice[];
   creativeBoostItems: CreativeBoostForInvoice[];
   commissionItems: CommissionForInvoice[];
+  extraWorkItems: ExtraWorkForInvoice[];
   // Internal work data
   internalRewards: ActivityReward[];
   getRewardsByMonth: (year: number, month: number) => ActivityReward[];
@@ -133,6 +140,7 @@ export function InvoicingOverview({
   clientRewards,
   creativeBoostItems,
   commissionItems,
+  extraWorkItems,
   internalRewards,
   getRewardsByMonth,
   getRewardsByCategory,
@@ -192,6 +200,16 @@ export function InvoicingOverview({
           amount: comm.amount,
         });
       });
+
+      // 4. Extra work (format: "Přímá služba – [klient] – [název práce]")
+      extraWorkItems.forEach((ew, idx) => {
+        items.push({
+          id: `extra-${idx}`,
+          category: 'client',
+          invoiceName: `Přímá služba – ${ew.clientName} – ${ew.name}`,
+          amount: ew.amount,
+        });
+      });
     }
 
     // 4. Internal work (marketing + overhead) - from activity rewards
@@ -218,7 +236,7 @@ export function InvoicingOverview({
     });
 
     return items;
-  }, [clientRewards, creativeBoostItems, commissionItems, getRewardsByCategory, selectedYear, selectedMonth, isCurrentMonth]);
+  }, [clientRewards, creativeBoostItems, commissionItems, extraWorkItems, getRewardsByCategory, selectedYear, selectedMonth, isCurrentMonth]);
 
   // Group items by category for display
   const groupedItems = useMemo(() => {
