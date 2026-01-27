@@ -1,203 +1,174 @@
 
+# Implementace: Logika ukončení spolupráce (zakázka + klient)
 
-# Plán: Logika ukončení spolupráce (zakázka + klient)
-
-## Přehled současného stavu
+## Analýza současného stavu
 
 ### Co už existuje:
-- **Engagement** (zakázka) má pole `end_date` a `notice_period_months`
-- **EndEngagementDialog** umožňuje nastavit datum ukončení zakázky
-- **Client** (klient) má pole `end_date` a `status` (active, paused, lost)
-- Po nastavení `end_date` se zakázka zobrazí v dashboardu jako "končící"
-
-### Co chybí:
-- Automatické workflow při ukončení
-- Ukončení na úrovni klienta (všechny zakázky najednou)
-- Propojení mezi ukončením klienta a jeho zakázek
-- Volba důvodu ukončení
-- Zobrazení stavu ukončení v UI
+- **EndEngagementDialog** (`src/components/engagements/EndEngagementDialog.tsx`) - jednoduchý dialog pouze s výběrem data ukončení
+- **Engagement** má pole `end_date`, `notice_period_months`, `status`
+- **Client** má pole `end_date`, `status` (active, paused, lost)
+- V **Engagements.tsx** je akce "Ukončit spolupráci" v dropdown menu (linka 503-511)
+- V **Clients.tsx** chybí akce pro ukončení klienta
 
 ---
 
-## Navrhovaná logika ukončení
+## Plán implementace
 
-### 1. Úroveň zakázky (Engagement)
+### 1. Databázová migrace - Nová pole pro zakázku
 
-**Proces:**
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  1. OZNÁMENÍ UKONČENÍ                                                       │
-│     ↓                                                                       │
-│  [Nastavit end_date] + [Důvod ukončení] + [Výpovědní lhůta]                │
-│     ↓                                                                       │
-│  2. SLEDOVÁNÍ (Dashboard sekce "Končící spolupráce")                        │
-│     ↓                                                                       │
-│  3. OFFBOARDING (manuální úkoly týmu)                                       │
-│     ↓                                                                       │
-│  4. PO DATU UKONČENÍ → Status: "completed" nebo "cancelled"                 │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Nová pole v dialogu:**
-- `end_date` - datum ukončení (už existuje)
-- `termination_reason` - důvod ukončení (nové)
-- `termination_initiated_by` - kdo inicioval (klient/agentura)
-- `termination_notes` - poznámky k ukončení
-
-**Důvody ukončení (enum):**
-- `budget_cut` - Snížení rozpočtu
-- `strategy_change` - Změna strategie
-- `dissatisfied` - Nespokojenost s výsledky
-- `agency_terminated` - Ukončeno agenturou
-- `project_completed` - Projekt dokončen
-- `merged_with_another` - Sloučeno s jinou zakázkou
-- `other` - Jiný důvod
-
----
-
-### 2. Úroveň klienta (Client)
-
-**Dva scénáře:**
-
-#### A) Ukončení celé spolupráce s klientem
-Když klient končí kompletně:
-1. Otevře dialog "Ukončit spolupráci s klientem"
-2. Nastaví `end_date` na klientovi
-3. **Automaticky** nastaví `end_date` na všech aktivních zakázkách
-4. Po datu ukončení → status klienta na `lost` nebo `paused`
-
-#### B) Ukončení jednotlivé zakázky
-Když končí jen jedna zakázka:
-1. Použije stávající EndEngagementDialog
-2. Klient zůstává aktivní s ostatními zakázkami
-3. Pokud končí poslední aktivní zakázka → nabídnout ukončení klienta
-
----
-
-## Změny v kódu
-
-### Databáze (nová pole)
+Přidání sloupců do tabulky `engagements`:
+- `termination_reason` (text) - důvod ukončení
+- `termination_initiated_by` (text) - 'client' | 'agency'  
+- `termination_notes` (text) - poznámky k ukončení
 
 ```sql
--- Přidání důvodu ukončení na zakázku
 ALTER TABLE engagements ADD COLUMN IF NOT EXISTS 
   termination_reason text DEFAULT NULL;
 
 ALTER TABLE engagements ADD COLUMN IF NOT EXISTS 
-  termination_initiated_by text DEFAULT NULL; -- 'client' | 'agency'
+  termination_initiated_by text DEFAULT NULL;
 
 ALTER TABLE engagements ADD COLUMN IF NOT EXISTS 
   termination_notes text DEFAULT NULL;
 ```
 
-### Soubory k úpravě
+---
+
+### 2. Aktualizace typů (`src/types/crm.ts`)
+
+Přidání nových typů:
+
+```typescript
+// Důvod ukončení spolupráce
+export type TerminationReason = 
+  | 'budget_cut'        // Snížení rozpočtu
+  | 'strategy_change'   // Změna strategie
+  | 'dissatisfied'      // Nespokojenost s výsledky
+  | 'agency_terminated' // Ukončeno agenturou
+  | 'project_completed' // Projekt dokončen
+  | 'merged_with_another' // Sloučeno s jinou zakázkou
+  | 'other';            // Jiný důvod
+
+// Kdo inicioval ukončení
+export type TerminationInitiatedBy = 'client' | 'agency';
+
+// Konstanty pro labely
+export const TERMINATION_REASON_LABELS: Record<TerminationReason, string> = {
+  budget_cut: 'Snížení rozpočtu',
+  strategy_change: 'Změna strategie',
+  dissatisfied: 'Nespokojenost s výsledky',
+  agency_terminated: 'Ukončeno agenturou',
+  project_completed: 'Projekt dokončen',
+  merged_with_another: 'Sloučeno s jinou zakázkou',
+  other: 'Jiný důvod',
+};
+```
+
+Rozšíření `Engagement` interface o nová pole.
+
+---
+
+### 3. Rozšíření EndEngagementDialog (`src/components/engagements/EndEngagementDialog.tsx`)
+
+Aktuální dialog má pouze:
+- Datum ukončení (date picker)
+- Tlačítka Zrušit/Potvrdit
+
+Rozšířím o:
+- **Radio group**: Kdo ukončuje? (Klient / Agentura)
+- **Select**: Důvod ukončení (7 možností)
+- **Textarea**: Poznámky k ukončení
+- **Info box**: Zobrazení výpovědní lhůty a data poslední fakturace
+
+Změna props `onConfirm`:
+```typescript
+// Před:
+onConfirm: (endDate: string) => void;
+
+// Po:
+onConfirm: (data: {
+  end_date: string;
+  termination_reason: TerminationReason;
+  termination_initiated_by: TerminationInitiatedBy;
+  termination_notes: string;
+}) => void;
+```
+
+---
+
+### 4. Nový komponent EndClientDialog (`src/components/clients/EndClientDialog.tsx`)
+
+Nový dialog pro ukončení celé spolupráce s klientem:
+- Zobrazení seznamu aktivních zakázek s MRR
+- Celkové MRR, které bude ztraceno
+- Výběr data ukončení
+- Výběr důvodu ukončení
+- Checkbox "Ukončit všechny aktivní zakázky ke stejnému datu" (default: checked)
+
+Akce při potvrzení:
+1. Nastaví `end_date` na klientovi
+2. Nastaví `end_date` + `termination_reason` na všech aktivních zakázkách
+
+---
+
+### 5. Integrace do Clients.tsx
+
+Přidání do stránky klientů:
+- Import nového dialogu
+- Stav pro dialog: `endClientDialogOpen`, `clientToEnd`
+- Akce "Ukončit spolupráci" v rozšířeném detailu klienta (vedle tlačítka Upravit)
+
+---
+
+### 6. Aktualizace Engagements.tsx
+
+Úprava handleru `onConfirm` v EndEngagementDialog:
+```typescript
+onConfirm={(data) => {
+  if (engagementToEnd) {
+    updateEngagement(engagementToEnd.id, { 
+      end_date: data.end_date,
+      termination_reason: data.termination_reason,
+      termination_initiated_by: data.termination_initiated_by,
+      termination_notes: data.termination_notes,
+    });
+    toast.success(`Spolupráce bude ukončena k ${...}`);
+  }
+}}
+```
+
+---
+
+## Soubory k úpravě
 
 | Soubor | Změna |
 |--------|-------|
-| `src/components/engagements/EndEngagementDialog.tsx` | Přidat důvod ukončení a další pole |
-| `src/pages/Clients.tsx` | Přidat akci "Ukončit spolupráci" pro klienta |
+| `docs/supabase-migration-termination.sql` | Nový - SQL migrace |
+| `src/types/crm.ts` | Přidat typy + rozšířit Engagement interface |
+| `src/components/engagements/EndEngagementDialog.tsx` | Rozšířit o důvod, iniciátora, poznámky |
 | `src/components/clients/EndClientDialog.tsx` | **Nový** - dialog pro ukončení klienta |
-| `src/types/crm.ts` | Přidat typy pro termination_reason |
-| Migrace DB | Přidat nová pole |
+| `src/pages/Clients.tsx` | Přidat akci "Ukončit spolupráci" |
+| `src/pages/Engagements.tsx` | Aktualizovat onConfirm handler |
+| `src/hooks/useCRMData.tsx` | Přidat funkci pro hromadné ukončení zakázek klienta |
 
 ---
 
-## UI návrh
+## Pořadí implementace
 
-### Rozšířený EndEngagementDialog (zakázka)
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ Ukončit spolupráci                                       [X]   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ Zakázka: TestBrand - Retainer 2025                             │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ 📅 Datum ukončení *                                         │ │
-│ │ [28. února 2026                                    📅]      │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ Kdo ukončuje? *                                             │ │
-│ │ ○ Klient   ○ Agentura                                       │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ Důvod ukončení *                                            │ │
-│ │ [Snížení rozpočtu                                    ▼]     │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ Poznámky                                                    │ │
-│ │ [                                                         ] │ │
-│ │ [                                                         ] │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ⚠️ Výpovědní lhůta: 1 měsíc                                    │
-│    Poslední fakturace bude za únor 2026                        │
-│                                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│                               [Zrušit]  [Potvrdit ukončení]     │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Nový EndClientDialog (klient)
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ Ukončit spolupráci s klientem                            [X]   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ Klient: TestBrand (Test Client s.r.o.)                         │
-│                                                                 │
-│ ⚠️ Aktivní zakázky:                                            │
-│   • Retainer 2025 (50 000 CZK/měsíc)                           │
-│   • Creative Boost (25 000 CZK/měsíc)                          │
-│                                                                 │
-│ Celkové MRR: 75 000 CZK                                        │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ 📅 Datum ukončení (pro všechny zakázky) *                   │ │
-│ │ [28. února 2026                                    📅]      │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ Důvod ukončení *                                            │ │
-│ │ [Snížení rozpočtu                                    ▼]     │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ☑️ Ukončit všechny aktivní zakázky ke stejnému datu           │
-│                                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│                               [Zrušit]  [Ukončit spolupráci]    │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Workflow automatizace
-
-### Po nastavení end_date:
-1. Zakázka se objeví v dashboardu "Končící spolupráce"
-2. Barevné značení dle urgence (už implementováno)
-
-### Po překročení end_date:
-- **Manuální akce**: Admin změní status na `completed`
-- (Volitelně budoucí: automatický cron job)
-
-### Ukončení klienta:
-1. Nastaví `end_date` na klientovi
-2. Nastaví `end_date` na všech aktivních zakázkách
-3. Po datu: Admin změní status klienta na `lost`
+1. **Databázová migrace** - přidat nové sloupce
+2. **Typy** - rozšířit TypeScript definice
+3. **EndEngagementDialog** - rozšířit stávající dialog
+4. **Engagements.tsx** - aktualizovat handler
+5. **EndClientDialog** - vytvořit nový komponent
+6. **Clients.tsx** - přidat integraci
+7. **useCRMData** - přidat helper funkci
 
 ---
 
 ## Očekávaný výsledek
 
-1. **Rozšířený dialog pro ukončení zakázky** s důvodem a poznámkami
-2. **Nový dialog pro ukončení klienta** s hromadným ukončením zakázek
-3. **Akce "Ukončit spolupráci"** v dropdown menu klienta
-4. **Sledování důvodů ukončení** pro analytics (churn analysis)
-5. **Jasný proces** s výpovědní lhůtou a datem ukončení
-
+Po implementaci bude k dispozici:
+1. Rozšířený dialog pro ukončení zakázky s důvodem a poznámkami
+2. Nový dialog pro ukončení spolupráce s celým klientem
+3. Automatické nastavení end_date na všech zakázkách při ukončení klienta
+4. Data o důvodech ukončení pro budoucí analýzu churnu
