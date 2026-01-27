@@ -467,14 +467,14 @@ export default function Dashboard() {
         </Link>
         <KPICard
           title="🎯 Pipeline"
-          value={canSeeFinancials ? `${(metrics.pipelineValue / 1000).toFixed(0)}k` : '***'}
-          subtitle={`${activePipelineLeads} aktivních leadů`}
+          value={activePipelineLeads}
+          subtitle={canSeeFinancials ? `Hodnota: ${(metrics.pipelineValue / 1000).toFixed(0)}k Kč` : undefined}
           icon={Target}
         />
         <KPICard
-          title="🏢 Klienti"
-          value={metrics.activeClients}
-          subtitle={`${metrics.activeEngagements} aktivních zakázek`}
+          title="🏢 Zakázky"
+          value={metrics.activeEngagements}
+          subtitle={`${metrics.activeClients} aktivních klientů`}
           icon={Building2}
         />
         <KPICard
