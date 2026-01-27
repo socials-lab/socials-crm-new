@@ -302,6 +302,9 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       contract_signed_at: lead?.contract_signed_at || null,
       offer_sent_at: lead?.offer_sent_at || null,
       offer_sent_by_id: lead?.offer_sent_by_id || null,
+      qualification_status: lead?.qualification_status || 'pending',
+      qualification_reason: lead?.qualification_reason || null,
+      qualified_at: lead?.qualified_at || null,
       created_by: user?.id || null,
       updated_by: user?.id || null,
     };

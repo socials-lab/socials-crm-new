@@ -129,6 +129,9 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
           stage: lead.stage || 'new_lead',
           potential_services: lead.potential_services || [],
           access_request_platforms: lead.access_request_platforms || [],
+          qualification_status: lead.qualification_status || 'pending',
+          qualification_reason: lead.qualification_reason || null,
+          qualified_at: lead.qualified_at || null,
         };
       });
     },

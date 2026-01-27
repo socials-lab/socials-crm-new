@@ -1,8 +1,9 @@
 import type { Notification } from '@/types/notifications';
 
-// Mock data for notifications - will be replaced by Supabase data
-// Uses is_read for compatibility with new schema
-export const mockNotifications: Notification[] = [
+export const NOTIFICATIONS_STORAGE_KEY = 'crm_notifications';
+
+// Default mock notifications for demo
+const DEFAULT_MOCK_NOTIFICATIONS: Notification[] = [
   {
     id: 'notif-1',
     type: 'new_lead',
@@ -101,4 +102,72 @@ export const mockNotifications: Notification[] = [
       company_name: 'SportEquip s.r.o.',
     },
   },
+  // Additional historical notifications for demo
+  {
+    id: 'notif-8',
+    type: 'modification_approved',
+    title: '✅ Modifikace schválena',
+    message: 'Klient schválil úpravu zakázky pro AutoParts CZ.',
+    link: '/modifications',
+    is_read: true,
+    entity_type: 'engagement',
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
+    metadata: {
+      engagement_id: 'eng-1',
+      company_name: 'AutoParts CZ',
+    },
+  },
+  {
+    id: 'notif-9',
+    type: 'new_feedback_idea',
+    title: '💡 Nový nápad!',
+    message: 'Jan Novák přidal nápad: "Automatické reporty pro klienty"',
+    link: '/feedback',
+    is_read: true,
+    entity_type: 'feedback',
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(), // 4 days ago
+    metadata: {
+      colleague_id: 'col-1',
+      colleague_name: 'Jan Novák',
+    },
+  },
+  {
+    id: 'notif-10',
+    type: 'lead_qualified',
+    title: '✓ Lead kvalifikován',
+    message: 'HealthCare Plus s.r.o. byl označen jako kvalifikovaný lead.',
+    link: '/leads',
+    is_read: true,
+    entity_type: 'lead',
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString(), // 5 days ago
+    metadata: {
+      lead_id: 'lead-5',
+      company_name: 'HealthCare Plus s.r.o.',
+    },
+  },
 ];
+
+// Initialize localStorage with mock data if empty
+export function initializeNotifications(): Notification[] {
+  const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+  
+  if (!stored) {
+    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(DEFAULT_MOCK_NOTIFICATIONS));
+    return DEFAULT_MOCK_NOTIFICATIONS;
+  }
+  
+  try {
+    return JSON.parse(stored) as Notification[];
+  } catch {
+    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(DEFAULT_MOCK_NOTIFICATIONS));
+    return DEFAULT_MOCK_NOTIFICATIONS;
+  }
+}
+
+// Save notifications to localStorage
+export function saveNotifications(notifications: Notification[]): void {
+  localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
+}
+
+// Legacy export for backwards compatibility
+export const mockNotifications = DEFAULT_MOCK_NOTIFICATIONS;
