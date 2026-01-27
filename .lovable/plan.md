@@ -1,123 +1,159 @@
 
-# Plán: KPI karta s plněním obchodního plánu na Dashboardu
+# Plán: Noví klienti a Končící spolupráce na Dashboardu
 
 ## Přehled
 
-Přidání nové KPI karty na hlavní dashboard, která zobrazí plnění obchodního plánu pro aktuální měsíc s vizuální indikací trendu.
+Přidání dvou nových sekcí na dashboard:
+1. **Noví klienti (poslední 3 měsíce)** - pro větší pozornost novým partnerstvím
+2. **Končící spolupráce** - zakázky s nastaveným datem ukončení v blízké budoucnosti
 
 ---
 
-## Změny
+## 1. Noví klienti (poslední 3 měsíce)
 
-### 1. Extrakce logiky do sdíleného utility modulu
+### Logika
+- Klient je "nový", pokud jeho `start_date` je v posledních 90 dnech
+- Zobrazíme jméno, datum začátku, celkový měsíční objem zakázek
 
-Vytvořím nový soubor `src/utils/businessPlanUtils.ts` s funkcemi pro:
-- Získání cíle pro měsíc (z localStorage nebo default hodnot 2026)
-- Výpočet skutečných tržeb (z faktur nebo odhad)
-
-Toto umožní sdílení logiky mezi Dashboard a BusinessPlanTab.
-
-### 2. Úprava Dashboardu
-
-Přidám novou KPI kartu do gridu vedle ostatních metrik:
+### UI návrh
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ 📊 Plán leden                                                   │
-│ 85.2%                                                           │
-│ 1,36M / 1,6M Kč                                                 │
-│ [Progress bar ███████████████░░░░░]                             │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ 🆕 Noví klienti                    [Všichni klienti →]  │
+├─────────────────────────────────────────────────────────┤
+│ TestBrand                                   před 2 týdny │
+│ Performance + Creative Boost                  45 000 CZK │
+│                                                          │
+│ AcmeCorp                                  před 1 měsícem │
+│ PPC správa                                   28 000 CZK │
+│                                                          │
+│ Žádní noví klienti za poslední 3 měsíce                 │
+└─────────────────────────────────────────────────────────┘
 ```
-
-**Zobrazené informace:**
-- Název měsíce v titulku
-- Procentuální plnění jako hlavní hodnota
-- Subtitle: skutečnost / cíl
-- Progress bar v kartě
-- Barevné zvýraznění dle stavu (zelená ≥100%, oranžová ≥80%, červená <80%)
 
 ---
 
-## Soubory k úpravě
+## 2. Končící spolupráce
+
+### Logika
+Zakázka se zobrazí jako "končící" pokud:
+- Má nastavené `end_date` v příštích 60 dnech
+- Status je `active` (ne completed/cancelled)
+
+### UI návrh
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 📅 Končící spolupráce               [Všechny zakázky →] │
+├─────────────────────────────────────────────────────────┤
+│ ⚠️ TestBrand - Social správa                            │
+│ Končí: 28. února 2026 (za 32 dní)         MRR: 25 000   │
+│                                                          │
+│ 🟡 AcmeCorp - Retainer                                  │
+│ Končí: 15. března 2026 (za 47 dní)        MRR: 40 000   │
+│                                                          │
+│ ✅ Žádné spolupráce nekončí v příštích 60 dnech         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Barevné značení
+- **Červená** (< 14 dní): Kritické - nutná akce
+- **Oranžová** (14-30 dní): Upozornění - připravit offboarding
+- **Žlutá** (30-60 dní): Info - sledovat
+
+---
+
+## 3. Proces ukončení spolupráce (Logika)
+
+### Stávající stav
+- V systému existuje `EndEngagementDialog` pro nastavení data ukončení
+- Zakázka má pole `end_date` a `notice_period_months`
+- Status lze změnit na `completed` nebo `cancelled`
+
+### Doporučený proces ukončení (bez změny kódu)
+1. **Klient oznámí ukončení** → Nastavit `end_date` (typicky +1 měsíc = výpovědní lhůta)
+2. **Dashboard upozorní** na blížící se konec (nová sekce)
+3. **Offboarding úkoly** → Tým dokončí práci, předá přístupy
+4. **Po datu ukončení** → Status změnit na `completed`
+
+### Využití existujících polí
+- `end_date` - datum ukončení spolupráce
+- `notice_period_months` - výpovědní lhůta (1 měsíc default)
+- `status` - změnit na `completed` po ukončení
+
+---
+
+## Změny v kódu
 
 | Soubor | Změna |
 |--------|-------|
-| `src/utils/businessPlanUtils.ts` | **Nový** - sdílená logika pro obchodní plán |
-| `src/pages/Dashboard.tsx` | Přidání KPI karty s plněním plánu |
-| `src/components/analytics/BusinessPlanTab.tsx` | Refaktoring na použití utility funkcí |
+| `src/pages/Dashboard.tsx` | Přidání 2 nových sekcí + výpočtů |
 
 ---
 
 ## Technické detaily
 
-### Nový utility soubor
+### Nové useMemo bloky
 
 ```typescript
-// src/utils/businessPlanUtils.ts
+// Noví klienti (poslední 3 měsíce)
+const newClients = useMemo(() => {
+  const threeMonthsAgo = subDays(new Date(), 90);
+  
+  return clients
+    .filter(c => c.status === 'active' && c.start_date && isAfter(parseISO(c.start_date), threeMonthsAgo))
+    .map(client => {
+      const clientEngagements = engagements.filter(e => e.client_id === client.id && e.status === 'active');
+      const totalMonthly = clientEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+      const engagementNames = clientEngagements.map(e => e.name).join(', ');
+      return { ...client, totalMonthly, engagementNames };
+    })
+    .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime())
+    .slice(0, 5);
+}, [clients, engagements]);
 
-const STORAGE_KEY = 'crm-business-plan';
-
-const DEFAULT_TARGETS_2026: Record<number, number> = {
-  1: 1600000,   // Leden
-  2: 1700000,   // Únor
-  3: 1850000,   // Březen
-  ...
-  12: 2600000,  // Prosinec
-};
-
-export function getTargetForMonth(year: number, month: number): number {
-  // Načti z localStorage nebo vrať default
-}
-
-export function calculateActualRevenue(
-  year: number, 
-  month: number,
-  issuedInvoices: any[],
-  engagements: any[],
-  extraWorks: any[],
-  engagementServices: any[]
-): { actual: number; source: 'invoiced' | 'estimated' } {
-  // Logika výpočtu skutečných tržeb
-}
-```
-
-### Úprava Dashboard.tsx
-
-```typescript
-// Přidání importu
-import { getTargetForMonth, calculateActualRevenue } from '@/utils/businessPlanUtils';
-
-// V komponentě Dashboard
-const currentMonthPlan = useMemo(() => {
+// Končící spolupráce (příštích 60 dní)
+const endingEngagements = useMemo(() => {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const sixtyDaysFromNow = addDays(now, 60);
   
-  const target = getTargetForMonth(year, month);
-  const { actual, source } = calculateActualRevenue(
-    year, month, issuedInvoices, engagements, extraWorks, engagementServices
-  );
-  const progress = target > 0 ? (actual / target) * 100 : 0;
-  
-  return { year, month, target, actual, progress, source };
-}, [issuedInvoices, engagements, extraWorks, engagementServices]);
-
-// V KPI gridu přidat novou kartu
-<KPICard
-  title={`📊 Plán ${currentMonthName}`}
-  value={`${currentMonthPlan.progress.toFixed(0)}%`}
-  subtitle={`${formatCurrency(currentMonthPlan.actual)} / ${formatCurrency(currentMonthPlan.target)}`}
-  icon={Target}
-/>
+  return engagements
+    .filter(e => 
+      e.status === 'active' && 
+      e.end_date && 
+      isAfter(parseISO(e.end_date), now) && 
+      !isAfter(parseISO(e.end_date), sixtyDaysFromNow)
+    )
+    .map(engagement => {
+      const client = getClientById(engagement.client_id);
+      const endDate = parseISO(engagement.end_date!);
+      const daysUntilEnd = differenceInDays(endDate, now);
+      const urgency = daysUntilEnd < 14 ? 'critical' : daysUntilEnd < 30 ? 'warning' : 'info';
+      return { ...engagement, client, daysUntilEnd, urgency };
+    })
+    .sort((a, b) => a.daysUntilEnd - b.daysUntilEnd);
+}, [engagements, getClientById]);
 ```
+
+### Nové UI karty
+
+Přidám dvě nové karty do gridu na dashboardu vedle existujících sekcí.
 
 ---
 
 ## Očekávaný výsledek
 
-Po implementaci bude dashboard obsahovat novou KPI kartu:
-- Zobrazující aktuální měsíc a % plnění
-- S progress barem uvnitř karty
-- Barevně odlišenou dle stavu plnění
-- Kliknutím přesměruje na Analytics → Obchodní plán (volitelné rozšíření)
+Po implementaci bude dashboard obsahovat:
+
+1. **Sekce "Noví klienti"** zobrazující:
+   - Klienty získané za poslední 3 měsíce
+   - Relativní čas od zahájení (např. "před 2 týdny")
+   - Názvy zakázek a celkové MRR
+   - Link na detail klienta
+
+2. **Sekce "Končící spolupráce"** zobrazující:
+   - Zakázky s end_date v příštích 60 dnech
+   - Barevně odlišené dle urgence
+   - Počet dní do ukončení
+   - MRR, které bude ztraceno
+   - Quick akci pro zobrazení detailu zakázky
