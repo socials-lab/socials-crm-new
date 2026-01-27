@@ -9,7 +9,8 @@ import { CreativeBoostAnalytics } from '@/components/analytics/CreativeBoostAnal
 import { TeamCapacityAnalytics } from '@/components/analytics/TeamCapacityAnalytics';
 import { BusinessPlanTab } from '@/components/analytics/BusinessPlanTab';
 import { ForecastTab } from '@/components/analytics/ForecastTab';
-import { UpsellsExtraWorkAnalytics } from '@/components/analytics/UpsellsExtraWorkAnalytics';
+import { ExtraWorkMarginSection } from '@/components/analytics/ExtraWorkMarginSection';
+import { UpsellCommissionsAnalytics } from '@/components/analytics/UpsellCommissionsAnalytics';
 import { PeriodSelector, type PeriodMode } from '@/components/analytics/PeriodSelector';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
@@ -1317,15 +1318,26 @@ export default function Analytics() {
         </TabsContent>
 
         <TabsContent value="finance" className="mt-6">
-          <FinanceAnalytics
-            year={selectedYear}
-            month={selectedMonth}
-            {...financeData}
-          />
+          <div className="space-y-8">
+            <FinanceAnalytics
+              year={selectedYear}
+              month={selectedMonth}
+              {...financeData}
+            />
+            
+            {/* Extra Work Margin Section */}
+            <div className="pt-4 border-t">
+              <h2 className="text-lg font-semibold mb-4">📊 Marže víceprací</h2>
+              <ExtraWorkMarginSection
+                year={selectedYear}
+                month={selectedMonth}
+              />
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="upsells" className="mt-6">
-          <UpsellsExtraWorkAnalytics
+          <UpsellCommissionsAnalytics
             year={selectedYear}
             month={selectedMonth}
           />
