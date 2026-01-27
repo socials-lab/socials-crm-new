@@ -5,10 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Target, TrendingUp, TrendingDown, Edit2, Save, X, FileText, Calculator } from 'lucide-react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useCRMData } from '@/hooks/useCRMData';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { 
+  getTargetForMonth, 
+  calculateActualRevenue, 
+  getStoredPlans,
+  DEFAULT_TARGETS_2026,
+  type RevenueSource 
+} from '@/utils/businessPlanUtils';
 
 interface MonthlyPlan {
   year: number;
@@ -23,36 +30,11 @@ interface BusinessPlanTabProps {
 
 const STORAGE_KEY = 'crm-business-plan';
 
-// Default targets for 2026: 1.6M → 2.6M with total ~25.4M
-const DEFAULT_TARGETS_2026: Record<number, number> = {
-  1: 1600000,   // Leden
-  2: 1700000,   // Únor
-  3: 1850000,   // Březen
-  4: 1950000,   // Duben
-  5: 2050000,   // Květen
-  6: 2100000,   // Červen
-  7: 2150000,   // Červenec
-  8: 2200000,   // Srpen
-  9: 2300000,   // Září
-  10: 2400000,  // Říjen
-  11: 2500000,  // Listopad
-  12: 2600000,  // Prosinec
-};
-
-type RevenueSource = 'invoiced' | 'estimated';
-
 export function BusinessPlanTab({ selectedYear, selectedMonth }: BusinessPlanTabProps) {
   const { engagements, extraWorks, engagementServices, issuedInvoices } = useCRMData();
   
   // Load plans from localStorage
-  const [plans, setPlans] = useState<MonthlyPlan[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [plans, setPlans] = useState<MonthlyPlan[]>(() => getStoredPlans());
   
   const [editingMonth, setEditingMonth] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -62,78 +44,29 @@ export function BusinessPlanTab({ selectedYear, selectedMonth }: BusinessPlanTab
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newPlans));
   };
 
-  const getTargetForMonth = (year: number, month: number): number => {
-    // First check localStorage (user-edited)
-    const userPlan = plans.find(p => p.year === year && p.month === month);
-    if (userPlan) return userPlan.targetRevenue;
-    
-    // Fallback to default targets for 2026
-    if (year === 2026 && DEFAULT_TARGETS_2026[month]) {
-      return DEFAULT_TARGETS_2026[month];
-    }
-    
-    return 0;
-  };
-
   const setPlanForMonth = (year: number, month: number, targetRevenue: number) => {
     const existing = plans.filter(p => !(p.year === year && p.month === month));
     savePlans([...existing, { year, month, targetRevenue }]);
-  };
-
-  const calculateActualRevenue = (year: number, month: number): { actual: number; source: RevenueSource } => {
-    // 1. Check issued invoices for this month
-    const invoicedRevenue = issuedInvoices
-      .filter(inv => inv.year === year && inv.month === month)
-      .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
-    
-    if (invoicedRevenue > 0) {
-      return { actual: invoicedRevenue, source: 'invoiced' };
-    }
-    
-    // 2. Fallback: estimate from active engagements and approved extra works
-    const periodStart = startOfMonth(new Date(year, month - 1));
-    const periodEnd = endOfMonth(new Date(year, month - 1));
-    
-    // Retainers
-    const retainerRevenue = engagements
-      .filter(e => {
-        if (e.status !== 'active' || e.type !== 'retainer') return false;
-        const start = e.start_date ? new Date(e.start_date) : null;
-        const end = e.end_date ? new Date(e.end_date) : null;
-        if (!start) return false;
-        return start <= periodEnd && (!end || end >= periodStart);
-      })
-      .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
-    
-    // Extra works ready to invoice or invoiced
-    const expectedPeriod = `${year}-${String(month).padStart(2, '0')}`;
-    const extraWorksRevenue = extraWorks
-      .filter(ew => {
-        return ew.billing_period === expectedPeriod && 
-               (ew.status === 'ready_to_invoice' || ew.status === 'invoiced');
-      })
-      .reduce((sum, ew) => sum + (ew.amount || 0), 0);
-    
-    // One-off services
-    const oneOffRevenue = (engagementServices || [])
-      .filter(es => {
-        return es.billing_type === 'one_off' && 
-               es.invoiced_in_period === expectedPeriod;
-      })
-      .reduce((sum, es) => sum + (es.price || 0), 0);
-    
-    return { 
-      actual: retainerRevenue + extraWorksRevenue + oneOffRevenue, 
-      source: 'estimated'
-    };
   };
 
   // Generate months for the year
   const monthsData = useMemo(() => {
     return Array.from({ length: 12 }, (_, i) => {
       const month = i + 1;
+      
+      // Use shared utility for target (checks localStorage then defaults)
       const target = getTargetForMonth(selectedYear, month);
-      const { actual, source } = calculateActualRevenue(selectedYear, month);
+      
+      // Use shared utility for actual revenue calculation
+      const { actual, source } = calculateActualRevenue(
+        selectedYear, 
+        month, 
+        issuedInvoices || [], 
+        engagements, 
+        extraWorks || [], 
+        engagementServices || []
+      );
+      
       const progress = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
       const diff = actual - target;
       const diffPercent = target > 0 ? ((actual - target) / target) * 100 : 0;
