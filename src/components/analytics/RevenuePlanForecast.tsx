@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Target, TrendingUp, TrendingDown, Edit2, Save, X, 
   FileText, Calculator, Sparkles, CalendarX, ArrowRight,
-  Trash2
+  Trash2, Settings
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, parseISO, isSameMonth, addMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -16,6 +16,7 @@ import { useLeadsData } from '@/hooks/useLeadsData';
 import { usePlannedEngagements } from '@/hooks/usePlannedEngagements';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from 'recharts';
 import { AddPlannedEngagementDialog } from './AddPlannedEngagementDialog';
+import { EditMonthlyTargetsDialog } from './EditMonthlyTargetsDialog';
 import { 
   getTargetForMonth, 
   calculateActualRevenue, 
@@ -54,6 +55,7 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
   const [editingMonth, setEditingMonth] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [showMonthlyTable, setShowMonthlyTable] = useState(false);
+  const [showTargetsDialog, setShowTargetsDialog] = useState(false);
 
   const monthStart = startOfMonth(new Date(selectedYear, selectedMonth - 1));
   const monthEnd = endOfMonth(monthStart);
@@ -292,9 +294,19 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
       {/* Annual KPIs */}
       <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Plán & Forecast {selectedYear}
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Plán & Forecast {selectedYear}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTargetsDialog(true)}
+            >
+              <Settings className="h-4 w-4 mr-1" />
+              Nastavit cíle
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -775,6 +787,15 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
           </CardContent>
         )}
       </Card>
+
+      {/* Edit Monthly Targets Dialog */}
+      <EditMonthlyTargetsDialog
+        open={showTargetsDialog}
+        onOpenChange={setShowTargetsDialog}
+        selectedYear={selectedYear}
+        plans={plans}
+        onSave={savePlans}
+      />
     </div>
   );
 }
