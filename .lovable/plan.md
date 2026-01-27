@@ -1,150 +1,69 @@
 
-# Plán: Sloučení Obchodního plánu a Forecastu
+# Plán: Úpravy sekce Plán & Forecast
 
-## Cíl
-Vytvořit jednu ucelenou kartu **"Plán & Forecast"** která kombinuje:
-1. **Cíle** - měsíční a roční plány tržeb
-2. **Aktuální stav** - skutečné tržby vs. plán
-3. **Trend** - vývoj tržeb v čase s predikcí budoucnosti
-4. **Změny** - plánované odchody, příchody, pipeline
+## Požadované změny
 
----
+### 1. Odstranit sekci Pipeline
+Odstraním celou kartu "Pipeline (leady s nabídkou)" která zobrazuje leady s odeslanou nabídkou. Tato sekce se nachází na řádcích 679-709.
 
-## Vizuální návrh nové komponenty
+### 2. Nechat tabulku měsíčního přehledu rozbalenou
+Změním výchozí stav `showMonthlyTable` z `false` na `true`, aby byla tabulka při načtení stránky automaticky viditelná.
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 📊 PLÁN & FORECAST 2026                                          [Únor ▼]  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│  │ Roční cíl    │  │ YTD tržby    │  │ Plnění       │  │ Zbývá        │    │
-│  │ 25.4M        │  │ 3.2M         │  │ 12.6%        │  │ 22.2M        │    │
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
-│                                                                             │
-│  ════════════════════════════════════════════════════════════════════════  │
-│                                                                             │
-│  📈 TREND TRŽEB (12 měsíců + 3 budoucí)                                    │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                                    ┌─ Cíl ─┐                        │   │
-│  │    ▄▄█████████████████▄▄       ▓▓▓▓▓░░░░░░                        │   │
-│  │   ▄███████████████████████▄   ▓▓▓▓▓▓░░░░░░░                       │   │
-│  │  ████████████████████████████ ▓▓▓▓▓▓▓░░░░░░░                      │   │
-│  │  │ Led │ Úno │ Bře │ Dub │ Kvě │ Čvn │ Čvc │ Srp │                │   │
-│  │  └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴────────────────│   │
-│  │     ▲ Skutečnost        ▓▓▓ Projekce        ░░░ Cíl               │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ════════════════════════════════════════════════════════════════════════  │
-│                                                                             │
-│  📅 VYBRANÝ MĚSÍC: ÚNOR 2026                                               │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐                │
-│  │ Cíl měsíce     │  │ Aktuální MRR   │  │ Projekce       │                │
-│  │ 1.7M           │  │ 1.52M          │  │ 1.68M → 94%    │                │
-│  │                │  │ ■■■■■■■■░░ 89% │  │ +160k -40k     │                │
-│  └────────────────┘  └────────────────┘  └────────────────┘                │
-│                                                                             │
-│  ════════════════════════════════════════════════════════════════════════  │
-│                                                                             │
-│  ┌──────────────────────────────┐  ┌──────────────────────────────┐        │
-│  │ 📉 ODCHODY (churn)           │  │ 📈 PŘÍCHODY (new business)   │        │
-│  │ -40k tento měsíc             │  │ +160k tento měsíc            │        │
-│  ├──────────────────────────────┤  ├──────────────────────────────┤        │
-│  │ • ABC s.r.o.     28.2. -25k  │  │ • XYZ Corp      1.2. +80k    │        │
-│  │ • Demo klient    15.2. -15k  │  │ • New Lead      15.2. +80k   │        │
-│  └──────────────────────────────┘  └──────────────────────────────┘        │
-│                                                                             │
-│  ┌──────────────────────────────────────────────────────────────────┐      │
-│  │ 🎯 PIPELINE (leady s nabídkou)                                   │      │
-│  │ 3 leady • ~450k potenciální MRR                                  │      │
-│  ├──────────────────────────────────────────────────────────────────┤      │
-│  │ • ABC Corp    200k    [Nabídka odeslaná]                        │      │
-│  │ • XYZ s.r.o.  150k    [Nabídka odeslaná]                        │      │
-│  │ • Demo        100k    [Nabídka odeslaná]                        │      │
-│  └──────────────────────────────────────────────────────────────────┘      │
-│                                                                             │
-│  ════════════════════════════════════════════════════════════════════════  │
-│                                                                             │
-│  📋 MĚSÍČNÍ PŘEHLED PLÁNU                        [+ Nastavit cíle měsíců] │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │ Měsíc │ Cíl      │ Skutečnost │ Projekce │ Plnění │               │    │
-│  ├───────┼──────────┼────────────┼──────────┼────────┼               │    │
-│  │ Led   │ 1.6M     │ 1.52M      │ -        │ 95%  ✓ │               │    │
-│  │ Úno ◄ │ 1.7M     │ 1.4M       │ 1.68M    │ 94%    │               │    │
-│  │ Bře   │ 1.85M    │ -          │ 1.72M    │ 93%    │               │    │
-│  │ ...   │          │            │          │        │               │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+### 3. Přidat výpočet potřebného přeplnění
+Přidám do tabulky nový sloupec **"K dorovnání"** (nebo podobně), který bude zobrazovat:
+- Kolik zbývá celkem do ročního cíle
+- Kolik musí měsíce, které ještě neproběhly, v průměru vydělat navíc, aby se dohnal případný deficit
+
+**Vzorec:**
 ```
+ytd_deficit = suma(cíl_minulých_měsíců) - suma(skutečnost_minulých_měsíců)
+zbývající_měsíce = 12 - aktuální_měsíc + 1
+měsíční_navýšení = ytd_deficit / zbývající_měsíce
+```
+
+Tento výpočet se zobrazí:
+- Jako souhrnný řádek nad/pod tabulkou s textem typu: *"Pro dohnání ztráty potřebujete každý zbývající měsíc přidat ~X Kč navíc"*
+- A případně v každém řádku budoucího měsíce jako dodatečná hodnota
 
 ---
 
 ## Technické změny
 
-### 1. Nová komponenta `RevenuePlanForecast.tsx`
+### Soubor: `src/components/analytics/RevenuePlanForecast.tsx`
 
-**Umístění:** `src/components/analytics/RevenuePlanForecast.tsx`
+| Změna | Detail |
+|-------|--------|
+| Řádek 110 | Změnit `useState(false)` → `useState(true)` pro `showMonthlyTable` |
+| Řádky 679-709 | Odstranit celou sekci s Pipeline kartou |
+| Řádky ~296-304 | Rozšířit `yearTotals` useMemo o výpočet deficitu a potřebného navýšení |
+| Řádky ~711-836 | Přidat souhrnnou informaci o potřebném dorovnání nad tabulku měsíčního přehledu |
 
-Sloučí funkcionalitu z:
-- `BusinessPlanTab.tsx` (cíle, skutečnost, trend)
-- `ForecastTab.tsx` (odchody, příchody, projekce)
+### Nová logika výpočtu
 
-**Klíčové sekce:**
-1. **Roční KPIs** - Roční cíl, YTD tržby, Plnění %, Zbývá
-2. **Trend chart** - kombinovaný AreaChart s:
-   - Historickými tržbami (solid line)
-   - Projekcí na 3 měsíce dopředu (dashed)
-   - Cílovými hodnotami (background)
-3. **Měsíční detail** - Cíl, Aktuální MRR, Projekce s progress barem
-4. **Odchody/Příchody** - dva sloupce vedle sebe
-5. **Pipeline** - leady s nabídkou
-6. **Tabulka měsíců** - editovatelné cíle
+```typescript
+// V yearTotals useMemo
+const pastMonthsTarget = monthsData
+  .filter(m => m.isPast)
+  .reduce((sum, m) => sum + m.target, 0);
+  
+const pastMonthsActual = monthsData
+  .filter(m => m.isPast)
+  .reduce((sum, m) => sum + m.actual, 0);
 
-### 2. Úprava `Analytics.tsx`
-
-- Sloučit taby "Forecast" a "Obchodní plán" do jednoho tabu **"Plán & Forecast"**
-- Odstranit import `ForecastTab` a `BusinessPlanTab`
-- Přidat import `RevenuePlanForecast`
-
-### 3. Kapacita týmu
-
-Sekce kapacity týmu z `ForecastTab` přesunout jako samostatnou podkomponentu, která se zobrazí pod hlavní kartou plánu.
-
----
-
-## Nové datové body v grafu
-
-Graf bude zobrazovat:
-1. **Minulost** (6-12 měsíců): skutečné tržby (z faktur nebo odhadu)
-2. **Aktuální měsíc**: aktuální stav + projekce do konce měsíce
-3. **Budoucnost** (3 měsíce): projekce MRR s ohledem na:
-   - Končící zakázky (churn)
-   - Plánované zakázky
-   - Pipeline (s pravděpodobností)
-
-**Vzorec projekce:**
-```
-Projekce[M+1] = Aktuální_MRR - Churn[M+1] + Nové_zakázky[M+1] + (Pipeline * pravděpodobnost)
+const ytdDeficit = pastMonthsTarget - pastMonthsActual;
+const remainingMonths = monthsData.filter(m => !m.isPast).length;
+const monthlyAdjustment = remainingMonths > 0 ? ytdDeficit / remainingMonths : 0;
 ```
 
----
+### UI zobrazení
 
-## Soubory k úpravě
+Pokud je `ytdDeficit > 0` (jsme za plánem), zobrazí se nad tabulkou alert:
+```
+⚠️ Aktuální ztráta: -X Kč
+Pro dohnání cíle potřebujete každý ze zbývajících Y měsíců přeplnit o ~Z Kč
+```
 
-| Soubor | Akce |
-|--------|------|
-| `src/components/analytics/RevenuePlanForecast.tsx` | **NOVÝ** - hlavní sloučená komponenta |
-| `src/pages/Analytics.tsx` | Upravit - sloučit taby, změnit import |
-| `src/components/analytics/BusinessPlanTab.tsx` | **SMAZAT** - funkcionalita přesunuta |
-| `src/components/analytics/ForecastTab.tsx` | Upravit - ponechat jen sekci kapacity týmu (přejmenovat na `TeamCapacityForecast.tsx`) |
-
----
-
-## Přidaná hodnota
-
-1. **Jeden pohled** - uživatel vidí cíle, realitu a budoucnost na jednom místě
-2. **Lepší kontext** - churn a nové zakázky přímo vedle projekce
-3. **Akční insights** - jasně vidí co potřebuje udělat pro splnění plánu
-4. **Méně přepínání** - nemusí přepínat mezi dvěma taby
-
+Pokud je `ytdDeficit <= 0` (jsme před plánem), zobrazí se pozitivní zpráva:
+```
+✓ Jste +X Kč před plánem
+```
