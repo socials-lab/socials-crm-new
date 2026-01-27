@@ -30,6 +30,7 @@ import {
   ChevronDown,
   ChevronRight,
   PlusCircle,
+  BarChart3,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, subDays, isAfter, parseISO, addMonths } from 'date-fns';
@@ -51,6 +52,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
+import { getTargetForMonth, calculateActualRevenue, formatCurrencyShort } from '@/utils/businessPlanUtils';
 import type { LucideIcon } from 'lucide-react';
 
 // Helper component for activity rows
@@ -93,7 +95,7 @@ function ActivityRow({ icon: Icon, label, count, items, colorClass, value, isNeg
 
 export default function Dashboard() {
   const { leads } = useLeadsData();
-  const { clients, engagements, colleagues, extraWorks, engagementServices, assignments } = useCRMData();
+  const { clients, engagements, colleagues, extraWorks, engagementServices, assignments, issuedInvoices } = useCRMData();
   const { getTodaysMeetings, meetings } = useMeetingsData();
   const { applicants } = useApplicantsData();
   const { isSuperAdmin, canSeeFinancials: userCanSeeFinancials } = useUserRole();
@@ -101,6 +103,21 @@ export default function Dashboard() {
   
   const canSeeFinancials = userCanSeeFinancials || isSuperAdmin;
 
+  // === BUSINESS PLAN (current month) ===
+  const currentMonthPlan = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const monthName = format(now, 'LLLL', { locale: cs });
+    
+    const target = getTargetForMonth(year, month);
+    const { actual, source } = calculateActualRevenue(
+      year, month, issuedInvoices || [], engagements, extraWorks || [], engagementServices || []
+    );
+    const progress = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
+    
+    return { year, month, monthName, target, actual, progress, source };
+  }, [issuedInvoices, engagements, extraWorks, engagementServices]);
   // === EXECUTIVE METRICS ===
   const metrics = useMemo(() => {
     const activeClients = clients.filter(c => c.status === 'active');
@@ -411,7 +428,7 @@ export default function Dashboard() {
       />
 
       {/* === EXECUTIVE KPIs === */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
         <KPICard
           title="📈 MRR"
           value={canSeeFinancials ? `${(metrics.mrr / 1000).toFixed(0)}k` : '***'}
@@ -425,6 +442,29 @@ export default function Dashboard() {
           icon={Receipt}
           className="border-primary/30 bg-primary/5"
         />
+        <Link to="/analytics" className="block">
+          <KPICard
+            title={`📊 Plán ${currentMonthPlan.monthName}`}
+            value={canSeeFinancials ? `${currentMonthPlan.progress.toFixed(0)}%` : '***'}
+            subtitle={canSeeFinancials ? (
+              <div className="space-y-1">
+                <span>{formatCurrencyShort(currentMonthPlan.actual)} / {formatCurrencyShort(currentMonthPlan.target)} Kč</span>
+                <Progress 
+                  value={currentMonthPlan.progress} 
+                  className="h-1.5"
+                />
+              </div>
+            ) : undefined}
+            icon={BarChart3}
+            className={
+              currentMonthPlan.progress >= 100 
+                ? 'border-green-500/30 bg-green-500/5' 
+                : currentMonthPlan.progress >= 80 
+                  ? 'border-amber-500/30 bg-amber-500/5' 
+                  : 'border-red-500/30 bg-red-500/5'
+            }
+          />
+        </Link>
         <KPICard
           title="🎯 Pipeline"
           value={canSeeFinancials ? `${(metrics.pipelineValue / 1000).toFixed(0)}k` : '***'}
