@@ -8,9 +8,12 @@ import type {
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { 
   initializeTransitions, 
+  initializeNewLeadEntries,
   addTransition, 
   STORAGE_KEY,
-  type MockTransition 
+  NEW_LEADS_STORAGE_KEY,
+  type MockTransition,
+  type NewLeadEntry 
 } from '@/data/leadTransitionsMockData';
 
 const STAGE_ORDER: LeadStage[] = [
@@ -40,14 +43,29 @@ export function useLeadTransitions() {
   const [transitions, setTransitions] = useState<MockTransition[]>(() => 
     initializeTransitions()
   );
+  
+  // Initialize new lead entries (all leads including bad fits)
+  const [newLeadEntries, setNewLeadEntries] = useState<NewLeadEntry[]>(() =>
+    initializeNewLeadEntries()
+  );
+  
   const [isConfirming, setIsConfirming] = useState(false);
 
   // Refresh transitions from localStorage
   const refreshTransitions = useCallback(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
+    const storedTransitions = localStorage.getItem(STORAGE_KEY);
+    if (storedTransitions) {
       try {
-        setTransitions(JSON.parse(stored));
+        setTransitions(JSON.parse(storedTransitions));
+      } catch {
+        // Keep current state if parse fails
+      }
+    }
+    
+    const storedEntries = localStorage.getItem(NEW_LEADS_STORAGE_KEY);
+    if (storedEntries) {
+      try {
+        setNewLeadEntries(JSON.parse(storedEntries));
       } catch {
         // Keep current state if parse fails
       }
@@ -99,25 +117,33 @@ export function useLeadTransitions() {
     return Promise.resolve();
   }, [confirmTransition]);
 
+  // Get qualification rate (% of leads that are qualified vs bad fit)
+  const getQualificationRate = useCallback((): { 
+    totalLeads: number; 
+    qualifiedLeads: number; 
+    badFitLeads: number; 
+    qualificationRate: number; 
+  } => {
+    const totalLeads = newLeadEntries.length;
+    const qualifiedLeads = newLeadEntries.filter(e => e.is_qualified).length;
+    const badFitLeads = totalLeads - qualifiedLeads;
+    const qualificationRate = totalLeads > 0 ? (qualifiedLeads / totalLeads) * 100 : 0;
+    
+    return { totalLeads, qualifiedLeads, badFitLeads, qualificationRate };
+  }, [newLeadEntries]);
+
   // Calculate conversion rates between consecutive stages
   const getConversionRates = useCallback((): StageConversionRate[] => {
     const rates: StageConversionRate[] = [];
     
-    // Count transitions FROM each stage (how many leads left this stage)
-    const stageExits: Record<string, number> = {};
-    STAGE_ORDER.forEach(stage => {
-      stageExits[stage] = transitions.filter(t => t.from_stage === stage).length;
-    });
+    // Total new leads that came in (including bad fits)
+    const totalNewLeads = newLeadEntries.length;
     
     // Count transitions TO each stage (entries into stage) - for calculating base
     const stageEntries: Record<string, number> = {};
     STAGE_ORDER.forEach(stage => {
       stageEntries[stage] = transitions.filter(t => t.to_stage === stage).length;
     });
-    
-    // For new_lead, the "entries" are all leads that ever moved to meeting_done
-    // (i.e., total leads that entered the funnel)
-    const totalNewLeads = stageEntries['meeting_done'] || 0;
     
     // Count transitions between consecutive stages
     for (let i = 0; i < STAGE_ORDER.length - 1; i++) {
@@ -129,10 +155,11 @@ export function useLeadTransitions() {
         t => t.from_stage === fromStage && t.to_stage === toStage
       ).length;
       
-      // For new_lead stage, use total new leads as base
+      // For new_lead stage, use TOTAL new leads (including bad fits) as base
+      // This gives the real picture: new_lead -> meeting = ~30% (70% are bad fit)
       // For other stages, use entries into that stage
       const totalFromStage = fromStage === 'new_lead' 
-        ? totalNewLeads  // Use new leads count
+        ? totalNewLeads
         : stageEntries[fromStage] || 0;
       
       // Calculate rate (if there were entries to this stage)
@@ -152,16 +179,16 @@ export function useLeadTransitions() {
     }
     
     return rates;
-  }, [transitions]);
+  }, [transitions, newLeadEntries]);
 
-  // Calculate overall conversion (new_lead -> won)
+  // Calculate overall conversion (new_lead -> won) based on ALL leads
   const getOverallConversion = useCallback((): number => {
-    const newLeadEntries = transitions.filter(t => t.to_stage === 'meeting_done').length;
+    const totalNewLeads = newLeadEntries.length;
     const wonCount = transitions.filter(t => t.to_stage === 'won').length;
     
-    if (newLeadEntries === 0) return 0;
-    return (wonCount / newLeadEntries) * 100;
-  }, [transitions]);
+    if (totalNewLeads === 0) return 0;
+    return (wonCount / totalNewLeads) * 100;
+  }, [transitions, newLeadEntries]);
 
   // Get monthly trend for last N months
   const getMonthlyTrend = useCallback((months: number = 12) => {
@@ -174,26 +201,30 @@ export function useLeadTransitions() {
       const monthEnd = endOfMonth(monthDate);
       const monthLabel = format(monthDate, 'MMM yy');
       
+      // Count ALL new leads in this month (including bad fits)
+      const monthNewLeads = newLeadEntries.filter(e => {
+        const date = new Date(e.entered_at);
+        return date >= monthStart && date <= monthEnd;
+      }).length;
+      
       const monthTransitions = transitions.filter(t => {
         const date = new Date(t.confirmed_at);
         return date >= monthStart && date <= monthEnd;
       });
       
-      // Count leads that entered funnel (new_lead -> meeting_done)
-      const newLeadEntries = monthTransitions.filter(t => t.to_stage === 'meeting_done').length;
       const wonCount = monthTransitions.filter(t => t.to_stage === 'won').length;
       
       trend.push({
         month: monthLabel,
         fromStage: 'new_lead',
         toStage: 'won',
-        rate: newLeadEntries > 0 ? (wonCount / newLeadEntries) * 100 : 0,
+        rate: monthNewLeads > 0 ? (wonCount / monthNewLeads) * 100 : 0,
         count: wonCount,
       });
     }
     
     return trend;
-  }, [transitions]);
+  }, [transitions, newLeadEntries]);
 
   // Get full summary
   const getSummary = useCallback((): FunnelPassthroughSummary => {
@@ -207,12 +238,14 @@ export function useLeadTransitions() {
 
   return {
     transitions: transitions as LeadStageTransition[],
+    newLeadEntries,
     isLoading: false,
     confirmTransition,
     confirmTransitionAsync,
     isConfirming,
     getConversionRates,
     getOverallConversion,
+    getQualificationRate,
     getMonthlyTrend,
     getSummary,
     stageLabels: STAGE_LABELS,
