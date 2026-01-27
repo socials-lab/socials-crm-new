@@ -93,7 +93,7 @@ export function AnalyticsOverview({
   return (
     <div className="space-y-6">
       {/* KPI Cards Row 1 - Main Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KPICard
           title="MRR"
           value={`${formatCurrency(mrr)} Kč`}
@@ -125,16 +125,10 @@ export function AnalyticsOverview({
           icon={CalendarClock}
           subtitle="aktivní klienti"
         />
-        <KPICard
-          title="Pipeline Coverage"
-          value={`${(pipelineCoverage * 100).toFixed(0)}%`}
-          icon={Target}
-          subtitle="vs 3M target"
-        />
       </div>
 
       {/* KPI Cards Row 2 - Operational */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <KPICard
           title="Aktivní klienti"
           value={activeClients}
