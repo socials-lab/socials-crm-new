@@ -299,6 +299,7 @@ export interface Colleague {
   status: ColleagueStatus;
   notes: string;
   birthday: string | null;
+  avatar_url: string | null;          // Profilová fotka (1:1)
   // Personal & billing info (collected during onboarding)
   personal_email: string | null;      // Soukromý email
   ico: string | null;                 // IČO

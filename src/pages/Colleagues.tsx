@@ -26,6 +26,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { ColleagueForm } from '@/components/forms/ColleagueForm';
 import { UserManagement } from '@/components/settings/UserManagement';
 import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { ColleagueStatus, Seniority, Colleague } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -292,9 +293,14 @@ function ColleaguesContent() {
                 onClick={() => toggleExpand(colleague.id)}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                    {colleague.full_name.split(' ').map(n => n[0]).join('')}
-                  </div>
+                  <Avatar className="h-8 w-8">
+                    {colleague.avatar_url ? (
+                      <AvatarImage src={colleague.avatar_url} alt={colleague.full_name} className="object-cover" />
+                    ) : null}
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                      {colleague.full_name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm truncate">{colleague.full_name}</span>

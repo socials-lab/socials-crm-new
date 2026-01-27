@@ -26,15 +26,17 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon } from 'lucide-react';
+import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
+import { AvatarUpload } from '@/components/forms/AvatarUpload';
 
 const formSchema = z.object({
+  avatar_url: z.string().nullable().optional(),
   birthday: z.date({ required_error: 'Datum narození je povinné' }),
   personal_email: z.string().email('Neplatný email').optional().or(z.literal('')),
   ico: z.string().min(8, 'IČO musí mít 8 číslic').max(8, 'IČO musí mít 8 číslic'),
@@ -69,6 +71,7 @@ export function ConvertApplicantDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      avatar_url: null,
       birthday: undefined,
       personal_email: '',
       ico: '',
@@ -127,6 +130,7 @@ export function ConvertApplicantDialog({
         email: applicant.email,
         phone: applicant.phone || '',
         position: applicant.position,
+        avatar_url: data.avatar_url || undefined,
         birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : undefined,
         personal_email: data.personal_email || undefined,
         ico: data.ico,
@@ -164,6 +168,28 @@ export function ConvertApplicantDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Avatar upload */}
+            <FormField
+              control={form.control}
+              name="avatar_url"
+              render={({ field }) => (
+                <FormItem className="flex flex-col items-center">
+                  <FormLabel className="flex items-center gap-2">
+                    <Camera className="h-4 w-4" />
+                    Profilová fotka
+                  </FormLabel>
+                  <FormControl>
+                    <AvatarUpload
+                      value={field.value || null}
+                      onChange={field.onChange}
+                      name={applicant.full_name}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Personal info section */}
             <div className="grid grid-cols-2 gap-4">
               <FormField

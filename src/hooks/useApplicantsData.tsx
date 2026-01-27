@@ -74,6 +74,7 @@ export interface OnboardingData {
   // New personal fields
   birthday?: string;
   personal_email?: string;
+  avatar_url?: string;
 }
 
 const ApplicantsDataContext = createContext<ApplicantsDataContextType | undefined>(undefined);
@@ -172,6 +173,7 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
       notes: '',
       profile_id: null,
       birthday: data.birthday || null,
+      avatar_url: data.avatar_url || null,
       // New personal & billing fields
       personal_email: data.personal_email || null,
       ico: data.ico,

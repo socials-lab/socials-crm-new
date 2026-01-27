@@ -21,12 +21,13 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { CheckCircle, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle, CalendarIcon, Heart } from 'lucide-react';
+import { CheckCircle, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle, CalendarIcon, Heart, Camera } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import socialsLogo from '@/assets/socials-logo.png';
+import { AvatarUpload } from '@/components/forms/AvatarUpload';
 
 const formSchema = z.object({
   // Pre-filled from application
@@ -38,6 +39,7 @@ const formSchema = z.object({
   // Personal info (new section)
   birthday: z.date({ required_error: 'Datum narození je povinné' }),
   personal_email: z.string().email('Neplatný email').optional().or(z.literal('')),
+  avatar_url: z.string().nullable().optional(),
   
   // Company info (ARES validated)
   ico: z.string().min(8, 'IČO musí mít 8 číslic').max(8, 'IČO musí mít 8 číslic'),
@@ -95,6 +97,7 @@ export default function ApplicantOnboardingForm() {
       position: '',
       birthday: undefined,
       personal_email: '',
+      avatar_url: null,
       ico: '',
       company_name: '',
       dic: '',
@@ -327,6 +330,31 @@ export default function ApplicantOnboardingForm() {
                     <Heart className="h-4 w-4" />
                     Osobní údaje
                   </h3>
+
+                  {/* Avatar Upload */}
+                  <FormField
+                    control={form.control}
+                    name="avatar_url"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col items-center">
+                        <FormLabel className="flex items-center gap-2">
+                          <Camera className="h-4 w-4" />
+                          Profilová fotka *
+                        </FormLabel>
+                        <FormControl>
+                          <AvatarUpload
+                            value={field.value || null}
+                            onChange={field.onChange}
+                            name={form.watch('full_name')}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-center">
+                          Nahrajte svou fotku ve formátu 1:1 pro profil v CRM
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
