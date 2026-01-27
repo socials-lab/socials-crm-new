@@ -686,6 +686,25 @@ export default function Analytics() {
       };
     });
 
+    // Engagement trend (last 12 months)
+    const engagementTrend = Array.from({ length: 12 }, (_, i) => {
+      const date = subMonths(periodStart, 11 - i);
+      const monthStart = startOfMonth(date);
+      const monthEnd = endOfMonth(date);
+      
+      const activeInMonth = engagements.filter(e => {
+        if (!e.start_date) return false;
+        const start = new Date(e.start_date);
+        const end = e.end_date ? new Date(e.end_date) : null;
+        return e.status === 'active' && start <= monthEnd && (!end || end >= monthStart);
+      }).length;
+
+      return {
+        month: format(date, 'MMM', { locale: cs }),
+        count: activeInMonth,
+      };
+    });
+
     const topClientsByRevenue = activeClientsForPeriod
       .map(c => {
         const clientEngs = activeEngs.filter(e => e.client_id === c.id);
@@ -801,6 +820,7 @@ export default function Analytics() {
       invoicingChange,
       clientChange: activeClientsForPeriod.length - prevActiveClients.length,
       clientTrend,
+      engagementTrend,
       topClientsByRevenue,
       topClientsByMargin,
       clientsByTier,
@@ -986,6 +1006,18 @@ export default function Analytics() {
     const oneOffRevenue = oneOffServices.reduce((sum, es) => sum + (es.price || 0), 0);
     const cbRevenue = allSummaries.reduce((sum, s) => sum + (s.usedCredits * (s.pricePerCredit || 0)), 0);
 
+    // Calculate average MRR per client
+    const activeClientsForPeriod = clients.filter(c => {
+      if (!c.start_date) return c.status === 'active';
+      const start = new Date(c.start_date);
+      const end = c.end_date ? new Date(c.end_date) : null;
+      return start <= periodEnd && (!end || end >= periodStart);
+    }).length;
+    
+    const avgMrrPerClient = activeClientsForPeriod > 0 
+      ? totalInvoicing / activeClientsForPeriod 
+      : 0;
+
     return {
       totalInvoicing,
       avgMarginPercent,
@@ -995,6 +1027,7 @@ export default function Analytics() {
       revenuePerColleague,
       invoicingChange,
       marginChange: 0,
+      avgMrrPerClient,
       engagementMargins,
       marginTrend,
       marginDistribution,
