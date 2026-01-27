@@ -21,7 +21,10 @@ import {
   ArrowUp,
   ArrowDown,
   TrendingUp,
+  Trophy,
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -72,6 +75,16 @@ interface OwnerPerformance {
   conversionRate: number;
 }
 
+interface WonDeal {
+  id: string;
+  companyName: string;
+  value: number;
+  source: string;
+  owner: string;
+  conversionDays: number;
+  convertedAt: string;
+}
+
 interface LeadsAnalyticsProps {
   year: number;
   month: number;
@@ -90,6 +103,9 @@ interface LeadsAnalyticsProps {
   sourcePerformance: SourcePerformance[];
   ownerPerformance: OwnerPerformance[];
   monthlyWinLoss: { month: string; won: number; lost: number }[];
+  wonDeals: WonDeal[];
+  totalWonValue: number;
+  wonDealsCount: number;
 }
 
 export function LeadsAnalytics({
@@ -106,6 +122,9 @@ export function LeadsAnalytics({
   sourcePerformance,
   ownerPerformance,
   monthlyWinLoss,
+  wonDeals,
+  totalWonValue,
+  wonDealsCount,
 }: LeadsAnalyticsProps) {
   const formatCurrency = (value: number) => `${(value / 1000).toFixed(0)}K`;
   
@@ -372,6 +391,68 @@ export function LeadsAnalytics({
           </CardContent>
         </Card>
       </div>
+
+      {/* Won Deals Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-status-active" />
+              Vyhrané dealy
+            </CardTitle>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-muted-foreground">
+                Celkem: <span className="font-semibold text-foreground">{wonDealsCount}</span>
+              </span>
+              <span className="text-muted-foreground">
+                Hodnota: <span className="font-semibold text-status-active">{formatCurrency(totalWonValue)} Kč</span>
+              </span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Společnost</TableHead>
+                  <TableHead className="text-right">Hodnota</TableHead>
+                  <TableHead>Zdroj</TableHead>
+                  <TableHead>Obchodník</TableHead>
+                  <TableHead className="text-right">Doba konverze</TableHead>
+                  <TableHead>Datum uzavření</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {wonDeals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      Žádné vyhrané dealy
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  wonDeals.map((deal) => (
+                    <TableRow key={deal.id}>
+                      <TableCell className="font-medium">{deal.companyName}</TableCell>
+                      <TableCell className="text-right font-semibold text-status-active">
+                        {formatCurrency(deal.value)} Kč
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{deal.source}</Badge>
+                      </TableCell>
+                      <TableCell>{deal.owner}</TableCell>
+                      <TableCell className="text-right">{deal.conversionDays} dní</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {format(new Date(deal.convertedAt), 'd. M. yyyy', { locale: cs })}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Funnel Passthrough Analytics */}
       <FunnelPassthroughAnalytics />
