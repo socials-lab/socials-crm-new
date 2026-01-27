@@ -1,26 +1,13 @@
 import { useMemo, useState } from 'react';
+import { format, isSameMonth, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { TrendingDown, TrendingUp, Users, CalendarX, Sparkles, Trash2, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { KPICard } from '@/components/shared/KPICard';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  TrendingDown, 
-  Users, 
-  Calendar, 
-  Lightbulb,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Target,
-  Wallet,
-  UserCheck
-} from 'lucide-react';
-import { format, parseISO, addDays, startOfMonth, endOfMonth, addMonths } from 'date-fns';
-import { cs } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { usePlannedEngagements } from '@/hooks/usePlannedEngagements';
+import { AddPlannedEngagementDialog } from './AddPlannedEngagementDialog';
 
 interface Engagement {
   id: string;
@@ -55,21 +42,13 @@ interface Assignment {
   end_date: string | null;
 }
 
-interface Lead {
-  id: string;
-  company_name: string;
-  estimated_price: number | null;
-  stage: string | null;
-  probability_percent: number | null;
-}
-
 interface ForecastTabProps {
   engagements: Engagement[];
   clients: Client[];
   colleagues: Colleague[];
   assignments: Assignment[];
-  leads: Lead[];
-  monthlyTargets?: Record<string, number>;
+  selectedYear: number;
+  selectedMonth: number;
 }
 
 const DEFAULT_MAX_ENGAGEMENTS = 5;
@@ -79,339 +58,282 @@ export function ForecastTab({
   clients, 
   colleagues, 
   assignments, 
-  leads,
-  monthlyTargets = {}
+  selectedYear, 
+  selectedMonth 
 }: ForecastTabProps) {
-  const currentDate = new Date();
-  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [showAllColleagues, setShowAllColleagues] = useState(false);
+  const { 
+    plannedEngagements, 
+    addPlannedEngagement, 
+    deletePlannedEngagement 
+  } = usePlannedEngagements();
 
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
-    }
-    if (value >= 1000) {
-      return `${Math.round(value / 1000)}k`;
-    }
-    return value.toLocaleString('cs-CZ');
+  const monthStart = startOfMonth(new Date(selectedYear, selectedMonth - 1));
+  const monthEnd = endOfMonth(monthStart);
+
+  // Format number to compact form
+  const formatCompact = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(0)}k`;
+    return num.toLocaleString('cs-CZ');
   };
 
-  const getTargetForMonth = (year: number, month: number) => {
-    const key = `${year}-${month.toString().padStart(2, '0')}`;
-    return monthlyTargets[key] || 1700000;
-  };
+  // Calculate current MRR from active retainer engagements
+  const currentMRR = useMemo(() => {
+    return engagements
+      .filter(e => e.status === 'active' && e.type === 'retainer')
+      .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+  }, [engagements]);
 
-  // Calculate forecast data
-  const forecastData = useMemo(() => {
-    const monthStart = startOfMonth(new Date(selectedYear, selectedMonth - 1));
-    const monthEnd = endOfMonth(new Date(selectedYear, selectedMonth - 1));
-
-    // Get active colleagues
-    const activeColleagues = colleagues.filter(c => c.status === 'active');
-
-    // Get ending engagements this month
-    const endingEngagements = engagements.filter(e => {
+  // Find engagements ending this month
+  const endingEngagements = useMemo(() => {
+    return engagements.filter(e => {
       if (!e.end_date || e.status !== 'active') return false;
       const endDate = parseISO(e.end_date);
-      return endDate >= monthStart && endDate <= monthEnd;
-    }).map(e => ({
-      ...e,
-      client: clients.find(c => c.id === e.client_id),
-      assignedColleagues: assignments
-        .filter(a => a.engagement_id === e.id && (!a.end_date || parseISO(a.end_date) >= monthStart))
-        .map(a => ({
-          ...a,
-          colleague: colleagues.find(c => c.id === a.colleague_id)
-        }))
+      return isSameMonth(endDate, monthStart);
+    }).map(eng => ({
+      ...eng,
+      client: clients.find(c => c.id === eng.client_id)
     }));
+  }, [engagements, clients, monthStart]);
 
-    // Calculate lost MRR
-    const lostMRR = endingEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+  // Calculate churn (lost MRR)
+  const churnMRR = useMemo(() => {
+    return endingEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+  }, [endingEngagements]);
 
-    // Calculate current MRR (active retainers at start of month)
-    const currentMRR = engagements
-      .filter(e => {
-        if (e.status !== 'active' || e.type !== 'retainer') return false;
-        const start = e.start_date ? parseISO(e.start_date) : null;
-        if (!start || start > monthEnd) return false;
-        if (!e.end_date) return true;
-        return parseISO(e.end_date) > monthEnd;
-      })
-      .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+  // Get planned engagements for this month
+  const plannedForMonth = useMemo(() => {
+    return plannedEngagements.filter(p => {
+      const startDate = parseISO(p.start_date);
+      return isSameMonth(startDate, monthStart);
+    });
+  }, [plannedEngagements, monthStart]);
 
-    const mrrAfterChurn = currentMRR - lostMRR;
-    const target = getTargetForMonth(selectedYear, selectedMonth);
-    const requiredIncrease = Math.max(0, target - mrrAfterChurn);
+  // Calculate new MRR from planned engagements (weighted by probability)
+  const newMRR = useMemo(() => {
+    return plannedForMonth.reduce((sum, p) => 
+      sum + (p.monthly_fee * (p.probability_percent / 100)), 0
+    );
+  }, [plannedForMonth]);
 
-    // Calculate churn severity
-    const churnPercent = currentMRR > 0 ? (lostMRR / currentMRR) * 100 : 0;
-    const severity = churnPercent > 20 ? 'high' : churnPercent > 10 ? 'medium' : 'low';
+  // Projected MRR after changes
+  const projectedMRR = currentMRR - churnMRR + newMRR;
 
-    // Calculate colleague capacity forecast
-    const colleagueCapacity = activeColleagues.map(colleague => {
-      // Current active assignments for this colleague
+  // Churn rate
+  const churnRate = currentMRR > 0 ? (churnMRR / currentMRR) * 100 : 0;
+
+  // Get colleague data with capacity impacts
+  const colleagueCapacity = useMemo(() => {
+    const activeColleagues = colleagues.filter(c => c.status === 'active');
+
+    return activeColleagues.map(colleague => {
+      // Current active assignments
       const currentAssignments = assignments.filter(a => {
+        const eng = engagements.find(e => e.id === a.engagement_id);
+        return a.colleague_id === colleague.id && 
+               eng?.status === 'active' &&
+               (!a.end_date || parseISO(a.end_date) > monthStart);
+      });
+
+      // Assignments ending this month
+      const endingAssignments = assignments.filter(a => {
         if (a.colleague_id !== colleague.id) return false;
-        const engagement = engagements.find(e => e.id === a.engagement_id);
-        if (!engagement || engagement.status !== 'active') return false;
-        // Assignment is active if no end_date or end_date is in future
-        if (a.end_date && parseISO(a.end_date) < monthStart) return false;
-        return true;
+        const eng = engagements.find(e => e.id === a.engagement_id);
+        if (!eng?.end_date) return false;
+        const endDate = parseISO(eng.end_date);
+        return isSameMonth(endDate, monthStart);
       });
 
-      const currentEngagementCount = currentAssignments.length;
-      const maxEngagements = DEFAULT_MAX_ENGAGEMENTS;
-      const utilization = (currentEngagementCount / maxEngagements) * 100;
+      // Planned engagements assigned to this colleague
+      const newPlanned = plannedForMonth.filter(p => 
+        p.assigned_colleague_ids.includes(colleague.id)
+      );
 
-      // Find ending assignments for this colleague
-      const endingAssignments = currentAssignments.filter(a => {
-        const engagement = engagements.find(e => e.id === a.engagement_id);
-        if (!engagement?.end_date) return false;
-        const endDate = parseISO(engagement.end_date);
-        return endDate >= monthStart && endDate <= monthEnd;
-      }).map(a => {
-        const engagement = engagements.find(e => e.id === a.engagement_id)!;
-        const client = clients.find(c => c.id === engagement.client_id);
-        return {
-          engagement,
-          client,
-          endDate: engagement.end_date!,
-          role: a.role_on_engagement || 'Specialist'
-        };
-      });
+      const currentCount = currentAssignments.length;
+      const afterEndings = currentCount - endingAssignments.length;
+      const afterNew = afterEndings + newPlanned.length;
 
-      // Calculate average MRR for this colleague's engagements
-      const colleagueEngagementMRRs = currentAssignments
-        .map(a => engagements.find(e => e.id === a.engagement_id))
-        .filter(Boolean)
-        .map(e => e!.monthly_fee || 0);
+      // Build timeline of events
+      const events: { date: Date; type: 'freed' | 'filled'; name: string }[] = [];
       
-      const avgMRR = colleagueEngagementMRRs.length > 0
-        ? colleagueEngagementMRRs.reduce((sum, m) => sum + m, 0) / colleagueEngagementMRRs.length
-        : 0;
+      endingAssignments.forEach(a => {
+        const eng = engagements.find(e => e.id === a.engagement_id);
+        if (eng?.end_date) {
+          events.push({ 
+            date: parseISO(eng.end_date), 
+            type: 'freed', 
+            name: eng.name 
+          });
+        }
+      });
 
-      // Calculate future free slots after endings
-      const futureSlots = endingAssignments.length;
-      const futureCapacity = maxEngagements - currentEngagementCount + futureSlots;
+      newPlanned.forEach(p => {
+        events.push({ 
+          date: parseISO(p.start_date), 
+          type: 'filled', 
+          name: p.name 
+        });
+      });
+
+      events.sort((a, b) => a.date.getTime() - b.date.getTime());
 
       return {
         colleague,
-        currentEngagements: currentEngagementCount,
-        maxEngagements,
-        utilization,
-        endingAssignments,
-        freeSlotsAfterEndings: futureSlots,
-        futureCapacity,
-        avgMRR,
-        hasEndingEngagements: endingAssignments.length > 0
+        currentCount,
+        afterEndings,
+        afterNew,
+        maxEngagements: DEFAULT_MAX_ENGAGEMENTS,
+        events,
+        hasChanges: events.length > 0,
       };
     }).sort((a, b) => {
-      // Sort: those with ending engagements first, then by utilization
-      if (a.hasEndingEngagements && !b.hasEndingEngagements) return -1;
-      if (!a.hasEndingEngagements && b.hasEndingEngagements) return 1;
-      return b.utilization - a.utilization;
+      // Sort by changes first, then by utilization
+      if (a.hasChanges !== b.hasChanges) return a.hasChanges ? -1 : 1;
+      return b.currentCount - a.currentCount;
     });
+  }, [colleagues, assignments, engagements, plannedForMonth, monthStart]);
 
-    // Colleagues who will have capacity
-    const colleaguesWithFutureCapacity = colleagueCapacity.filter(c => c.freeSlotsAfterEndings > 0);
-    const totalFreedSlots = colleaguesWithFutureCapacity.reduce((sum, c) => sum + c.freeSlotsAfterEndings, 0);
-    const potentialRevenue = colleaguesWithFutureCapacity.reduce((sum, c) => sum + (c.avgMRR * c.freeSlotsAfterEndings), 0);
-
-    // Pipeline leads analysis
-    const activeLeads = leads.filter(l => 
-      l.stage && !['won', 'lost', 'postponed'].includes(l.stage)
+  // Total free capacity at end of month
+  const totalFreeCapacity = useMemo(() => {
+    return colleagueCapacity.reduce((sum, c) => 
+      sum + (c.maxEngagements - c.afterNew), 0
     );
-    const pipelineValue = activeLeads.reduce((sum, l) => {
-      const probability = (l.probability_percent || 50) / 100;
-      return sum + (l.estimated_price || 0) * probability;
-    }, 0);
+  }, [colleagueCapacity]);
 
-    // 3-month timeline data
-    const timelineData = [0, 1, 2].map(monthOffset => {
-      const month = addMonths(monthStart, monthOffset);
-      const mStart = startOfMonth(month);
-      const mEnd = endOfMonth(month);
+  // Colleagues to display
+  const displayedColleagues = showAllColleagues 
+    ? colleagueCapacity 
+    : colleagueCapacity.slice(0, 6);
 
-      const events = engagements
-        .filter(e => {
-          if (!e.end_date || e.status !== 'active') return false;
-          const endDate = parseISO(e.end_date);
-          return endDate >= mStart && endDate <= mEnd;
-        })
-        .flatMap(e => {
-          const client = clients.find(c => c.id === e.client_id);
-          return assignments
-            .filter(a => a.engagement_id === e.id)
-            .map(a => {
-              const colleague = colleagues.find(c => c.id === a.colleague_id);
-              return {
-                date: e.end_date!,
-                collegueue: colleague?.full_name || 'Neznámý',
-                engagement: e.name,
-                client: client?.brand_name || client?.name || 'Neznámý'
-              };
-            });
-        });
+  const monthLabel = format(monthStart, 'LLLL yyyy', { locale: cs });
 
-      return {
-        month,
-        monthName: format(month, 'LLLL', { locale: cs }),
-        events,
-        totalSlots: events.length
-      };
-    });
-
-    return {
-      endingEngagements,
-      currentMRR,
-      lostMRR,
-      mrrAfterChurn,
-      target,
-      requiredIncrease,
-      churnPercent,
-      severity,
-      colleagueCapacity,
-      colleaguesWithFutureCapacity: colleaguesWithFutureCapacity.length,
-      totalFreedSlots,
-      potentialRevenue,
-      activeLeads,
-      pipelineValue,
-      timelineData
-    };
-  }, [selectedYear, selectedMonth, engagements, clients, colleagues, assignments, leads, monthlyTargets]);
-
-  const handlePrevMonth = () => {
-    if (selectedMonth === 1) {
-      setSelectedMonth(12);
-      setSelectedYear(selectedYear - 1);
-    } else {
-      setSelectedMonth(selectedMonth - 1);
-    }
-  };
-
-  const handleNextMonth = () => {
-    if (selectedMonth === 12) {
-      setSelectedMonth(1);
-      setSelectedYear(selectedYear + 1);
-    } else {
-      setSelectedMonth(selectedMonth + 1);
-    }
-  };
-
-  const monthName = format(new Date(selectedYear, selectedMonth - 1), 'LLLL yyyy', { locale: cs });
-
-  const severityColors = {
-    high: 'border-destructive/50 bg-destructive/5',
-    medium: 'border-amber-500/50 bg-amber-500/5',
-    low: 'border-emerald-500/50 bg-emerald-500/5'
+  // Get assigned colleagues for an engagement
+  const getAssignedColleagues = (engagementId: string) => {
+    return assignments
+      .filter(a => a.engagement_id === engagementId)
+      .map(a => colleagues.find(c => c.id === a.colleague_id))
+      .filter(Boolean)
+      .map(c => c!.full_name.split(' ').map(n => n[0]).join(''))
+      .join(', ');
   };
 
   return (
     <div className="space-y-6">
-      {/* Month Navigation */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold capitalize">Forecast - {monthName}</h2>
-          <p className="text-muted-foreground">Predikce tržeb a kapacity týmu</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={handlePrevMonth}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="min-w-[120px] text-center font-medium capitalize">
-            {monthName}
-          </span>
-          <Button variant="outline" size="icon" onClick={handleNextMonth}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      {/* Summary Section - 3 KPI cards */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            Souhrn měsíce
+            <Badge variant="outline" className="font-normal capitalize">{monthLabel}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* 3 Main KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* MRR Flow */}
+            <div className="rounded-lg border bg-card p-4 space-y-1">
+              <div className="text-sm text-muted-foreground">MRR</div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-semibold">{formatCompact(currentMRR)}</span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                <span className={`text-2xl font-semibold ${projectedMRR >= currentMRR ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCompact(projectedMRR)}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {churnMRR > 0 && <span className="text-red-600">-{formatCompact(churnMRR)}</span>}
+                {churnMRR > 0 && newMRR > 0 && ' / '}
+                {newMRR > 0 && <span className="text-green-600">+{formatCompact(newMRR)}</span>}
+                {churnMRR === 0 && newMRR === 0 && 'beze změn'}
+              </div>
+            </div>
 
-      {/* KPI Summary Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        <KPICard
-          title="Aktuální MRR"
-          value={`${formatCurrency(forecastData.currentMRR)} Kč`}
-          icon={Wallet}
-        />
-        <KPICard
-          title="Ztráta MRR"
-          value={forecastData.lostMRR > 0 ? `-${formatCurrency(forecastData.lostMRR)} Kč` : '0 Kč'}
-          icon={TrendingDown}
-          className={forecastData.lostMRR > 0 ? 'border-destructive/30' : ''}
-        />
-        <KPICard
-          title="MRR po churnu"
-          value={`${formatCurrency(forecastData.mrrAfterChurn)} Kč`}
-          icon={Target}
-        />
-        <KPICard
-          title="Gap do plánu"
-          value={forecastData.requiredIncrease > 0 ? `+${formatCurrency(forecastData.requiredIncrease)} Kč` : 'Splněno ✓'}
-          icon={Target}
-          className={forecastData.requiredIncrease > 0 ? 'border-amber-500/30' : 'border-emerald-500/30'}
-        />
-        <KPICard
-          title="Kolegové s kapacitou"
-          value={forecastData.colleaguesWithFutureCapacity.toString()}
-          icon={Users}
-        />
-        <KPICard
-          title="Uvolněné sloty"
-          value={`+${forecastData.totalFreedSlots}`}
-          icon={Calendar}
-        />
-        <KPICard
-          title="Potenciální revenue"
-          value={`~${formatCurrency(forecastData.potentialRevenue)} Kč`}
-          icon={UserCheck}
-          subtitle="při obsazení"
-        />
-      </div>
+            {/* Churn */}
+            <div className="rounded-lg border bg-card p-4 space-y-1">
+              <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <TrendingDown className="h-4 w-4 text-red-500" />
+                Churn
+              </div>
+              <div className="text-2xl font-semibold text-red-600">
+                {churnMRR > 0 ? `-${formatCompact(churnMRR)}` : '0'}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {endingEngagements.length} {endingEngagements.length === 1 ? 'zakázka' : 'zakázky'} 
+                {churnRate > 0 && ` (${churnRate.toFixed(1)}%)`}
+              </div>
+            </div>
 
-      {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Ending Engagements */}
-        <Card className={cn('border-2', severityColors[forecastData.severity])}>
+            {/* New / Planned */}
+            <div className="rounded-lg border bg-card p-4 space-y-1">
+              <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4 text-green-500" />
+                Nové zakázky
+              </div>
+              <div className="text-2xl font-semibold text-green-600">
+                {newMRR > 0 ? `+${formatCompact(newMRR)}` : '0'}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {plannedForMonth.length} {plannedForMonth.length === 1 ? 'plánovaná' : 'plánované'}
+              </div>
+            </div>
+          </div>
+
+          {/* Summary bar */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm bg-muted/50 rounded-lg px-4 py-3">
+            <div>
+              <span className="text-muted-foreground">Výsledné MRR: </span>
+              <span className="font-semibold">{formatCompact(projectedMRR)}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Změna: </span>
+              <span className={`font-semibold ${projectedMRR >= currentMRR ? 'text-green-600' : 'text-red-600'}`}>
+                {projectedMRR >= currentMRR ? '+' : ''}{formatCompact(projectedMRR - currentMRR)}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Volná kapacita: </span>
+              <span className="font-semibold">{totalFreeCapacity} slotů</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Two-column: Departures and Arrivals */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Departures (Ending engagements) */}
+        <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <TrendingDown className="h-5 w-5" />
-              Končící zakázky ({format(new Date(selectedYear, selectedMonth - 1), 'LLLL', { locale: cs })})
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <CalendarX className="h-4 w-4 text-red-500" />
+              Odchody
+              {endingEngagements.length > 0 && (
+                <Badge variant="destructive" className="ml-auto">
+                  -{formatCompact(churnMRR)}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {forecastData.endingEngagements.length === 0 ? (
-              <div className="flex items-center gap-2 text-muted-foreground py-4">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                <span>Žádné zakázky nekončí tento měsíc</span>
-              </div>
+            {endingEngagements.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Žádné zakázky nekončí tento měsíc
+              </p>
             ) : (
               <div className="space-y-3">
-                {forecastData.endingEngagements.map(engagement => (
-                  <div 
-                    key={engagement.id} 
-                    className="flex items-start justify-between p-3 rounded-lg bg-background border"
-                  >
+                {endingEngagements.map(eng => (
+                  <div key={eng.id} className="flex items-start justify-between p-3 rounded-lg border bg-red-50/50 dark:bg-red-950/20">
                     <div className="space-y-1">
-                      <div className="font-medium">{engagement.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {engagement.client?.brand_name || engagement.client?.name}
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {engagement.assignedColleagues.map(ac => (
-                          <Badge key={ac.id} variant="secondary" className="text-xs">
-                            {ac.colleague?.full_name}
-                          </Badge>
-                        ))}
+                      <div className="font-medium text-sm">{eng.client?.brand_name || eng.client?.name || eng.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {eng.end_date && format(parseISO(eng.end_date), 'd.M.', { locale: cs })}
+                        {getAssignedColleagues(eng.id) && (
+                          <span className="ml-2">• {getAssignedColleagues(eng.id)}</span>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm text-muted-foreground">
-                        {format(parseISO(engagement.end_date!), 'd.M.', { locale: cs })}
-                      </div>
-                      <div className="font-semibold text-destructive">
-                        -{formatCurrency(engagement.monthly_fee || 0)} Kč
-                      </div>
+                    <div className="text-sm font-medium text-red-600">
+                      -{formatCompact(eng.monthly_fee || 0)}
                     </div>
                   </div>
                 ))}
@@ -420,180 +342,153 @@ export function ForecastTab({
           </CardContent>
         </Card>
 
-        {/* Team Capacity */}
+        {/* Arrivals (Planned engagements) */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5" />
-              Kapacita týmu po ukončení
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-green-500" />
+              Příchody
+              {plannedForMonth.length > 0 && (
+                <Badge variant="default" className="ml-auto bg-green-600">
+                  +{formatCompact(newMRR)}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {forecastData.colleagueCapacity.slice(0, 5).map(cap => (
-              <div 
-                key={cap.colleague.id} 
-                className={cn(
-                  "p-3 rounded-lg border",
-                  cap.hasEndingEngagements ? "bg-amber-500/5 border-amber-500/30" : "bg-background"
-                )}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <div className="font-medium">{cap.colleague.full_name}</div>
-                    <div className="text-xs text-muted-foreground">{cap.colleague.position}</div>
-                  </div>
-                  <Badge variant={cap.utilization >= 100 ? "destructive" : cap.utilization >= 80 ? "secondary" : "outline"}>
-                    {cap.currentEngagements}/{cap.maxEngagements} zakázek
-                  </Badge>
-                </div>
-                
-                <Progress value={cap.utilization} className="h-2 mb-2" />
-                
-                {cap.hasEndingEngagements ? (
-                  <div className="space-y-1 mt-3">
-                    {cap.endingAssignments.map((ea, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm">
-                        <AlertTriangle className="h-3 w-3 text-amber-500" />
-                        <span className="text-muted-foreground">
-                          Po {format(parseISO(ea.endDate), 'd.M.', { locale: cs })} končí:
+          <CardContent className="space-y-3">
+            {/* Add button */}
+            <AddPlannedEngagementDialog
+              colleagues={colleagues as any}
+              onAdd={addPlannedEngagement}
+              defaultStartDate={monthStart}
+            />
+
+            {/* Planned engagements list */}
+            {plannedForMonth.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Žádné plánované zakázky pro tento měsíc
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {plannedForMonth.map(planned => {
+                  const assignedNames = planned.assigned_colleague_ids
+                    .map(id => colleagues.find(c => c.id === id))
+                    .filter(Boolean)
+                    .map(c => c!.full_name.split(' ')[0])
+                    .join(', ');
+
+                  return (
+                    <div key={planned.id} className="flex items-start justify-between p-3 rounded-lg border bg-green-50/50 dark:bg-green-950/20">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{planned.client_name}</span>
+                          {planned.probability_percent < 100 && (
+                            <Badge variant="outline" className="text-xs">
+                              {planned.probability_percent}%
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {planned.name} • od {format(parseISO(planned.start_date), 'd.M.', { locale: cs })}
+                          {assignedNames && <span className="ml-1">• {assignedNames}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-green-600">
+                          +{formatCompact(planned.monthly_fee)}
                         </span>
-                        <span className="font-medium">{ea.client?.brand_name || ea.client?.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => deletePlannedEngagement(planned.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                    ))}
-                    <div className="flex items-center gap-2 text-sm text-emerald-600 mt-2">
-                      <Calendar className="h-3 w-3" />
-                      <span>Volná kapacita: +{cap.freeSlotsAfterEndings} zakázka</span>
                     </div>
-                    {cap.avgMRR > 0 && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Wallet className="h-3 w-3" />
-                        <span>Průměrný MRR zakázek: ~{formatCurrency(cap.avgMRR)} Kč</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                    <span>Žádné končící zakázky</span>
-                  </div>
-                )}
+                  );
+                })}
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Timeline */}
+      {/* Team Capacity */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Clock className="h-5 w-5" />
-            Timeline kapacity (příští 3 měsíce)
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Kapacita týmu
+            </CardTitle>
+            {colleagueCapacity.length > 6 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAllColleagues(!showAllColleagues)}
+              >
+                {showAllColleagues ? 'Zobrazit méně' : `Zobrazit vše (${colleagueCapacity.length})`}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-3 gap-4">
-            {forecastData.timelineData.map((month, idx) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {displayedColleagues.map(({ colleague, currentCount, afterNew, maxEngagements, events, hasChanges }) => (
               <div 
-                key={idx}
-                className={cn(
-                  "p-4 rounded-lg border",
-                  idx === 0 ? "bg-primary/5 border-primary/30" : "bg-muted/30"
-                )}
+                key={colleague.id} 
+                className={`p-3 rounded-lg border ${hasChanges ? 'bg-muted/50' : ''}`}
               >
-                <div className="font-medium capitalize mb-3">{month.monthName}</div>
-                {month.events.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Žádné změny</div>
-                ) : (
-                  <div className="space-y-2">
-                    {month.events.slice(0, 3).map((event, eIdx) => (
-                      <div key={eIdx} className="text-sm">
-                        <span className="text-muted-foreground">
-                          {format(parseISO(event.date), 'd.M.', { locale: cs })}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-sm truncate">{colleague.full_name}</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                    {hasChanges ? (
+                      <>
+                        {currentCount}/{maxEngagements}
+                        <ArrowRight className="inline h-3 w-3 mx-0.5" />
+                        {afterNew}/{maxEngagements}
+                      </>
+                    ) : (
+                      `${currentCount}/${maxEngagements}`
+                    )}
+                  </span>
+                </div>
+                
+                <Progress 
+                  value={(afterNew / maxEngagements) * 100} 
+                  className="h-1.5 mb-2"
+                />
+
+                {events.length > 0 && (
+                  <div className="space-y-1">
+                    {events.slice(0, 2).map((event, idx) => (
+                      <div key={idx} className="text-xs flex items-center gap-1">
+                        <span className={event.type === 'freed' ? 'text-green-600' : 'text-blue-600'}>
+                          {event.type === 'freed' ? '+1 slot' : '-1 slot'}
                         </span>
-                        {' '}
-                        <span className="font-medium">{event.collegueue}</span>
-                        {' '}
-                        <span className="text-emerald-600">+1</span>
+                        <span className="text-muted-foreground truncate">
+                          {format(event.date, 'd.M.', { locale: cs })} • {event.name}
+                        </span>
                       </div>
                     ))}
-                    {month.events.length > 3 && (
+                    {events.length > 2 && (
                       <div className="text-xs text-muted-foreground">
-                        +{month.events.length - 3} dalších
+                        +{events.length - 2} dalších změn
                       </div>
                     )}
                   </div>
                 )}
-                <div className="mt-3 pt-3 border-t text-sm">
-                  <span className="text-muted-foreground">Celkem uvolněno:</span>
-                  {' '}
-                  <span className="font-semibold text-emerald-600">+{month.totalSlots} slotů</span>
-                </div>
+
+                {!hasChanges && (
+                  <div className="text-xs text-muted-foreground">
+                    Beze změn
+                  </div>
+                )}
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Recommendations */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Lightbulb className="h-5 w-5 text-primary" />
-            Doporučení
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2">
-            {forecastData.requiredIncrease > 0 && (
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">•</span>
-                <span>
-                  Pro splnění plánu je potřeba získat{' '}
-                  <strong>+{formatCurrency(forecastData.requiredIncrease)} Kč</strong> nového MRR
-                </span>
-              </li>
-            )}
-            {forecastData.colleagueCapacity
-              .filter(c => c.hasEndingEngagements)
-              .slice(0, 2)
-              .map(c => (
-                <li key={c.colleague.id} className="flex items-start gap-2">
-                  <span className="text-primary mt-1">•</span>
-                  <span>
-                    Od {format(parseISO(c.endingAssignments[0]?.endDate || new Date().toISOString()), 'd.M.', { locale: cs })} bude{' '}
-                    <strong>{c.colleague.full_name}</strong> volný pro nového klienta
-                  </span>
-                </li>
-              ))
-            }
-            {forecastData.activeLeads.length > 0 && (
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">•</span>
-                <span>
-                  V pipeline je {forecastData.activeLeads.length} aktivních leadů s váženou hodnotou{' '}
-                  <strong>~{formatCurrency(forecastData.pipelineValue)} Kč</strong>
-                </span>
-              </li>
-            )}
-            {forecastData.totalFreedSlots > 0 && forecastData.potentialRevenue > 0 && (
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">•</span>
-                <span>
-                  Obsazením {forecastData.totalFreedSlots} uvolněných slotů lze získat až{' '}
-                  <strong>~{formatCurrency(forecastData.potentialRevenue)} Kč</strong> měsíčně
-                </span>
-              </li>
-            )}
-            {forecastData.lostMRR === 0 && forecastData.requiredIncrease === 0 && (
-              <li className="flex items-start gap-2">
-                <span className="text-emerald-500 mt-1">✓</span>
-                <span>
-                  Tento měsíc je vše v pořádku - žádný churn a plán je splněn
-                </span>
-              </li>
-            )}
-          </ul>
         </CardContent>
       </Card>
     </div>
