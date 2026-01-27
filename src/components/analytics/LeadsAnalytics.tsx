@@ -253,51 +253,48 @@ export function LeadsAnalytics({
         </CardContent>
       </Card>
 
-      {/* Charts Row - Pipeline Velocity */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Pipeline Velocity */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Pipeline Velocity (prům. dny ve stage)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={pipelineVelocity} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    type="number"
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                  />
-                  <YAxis 
-                    type="category"
-                    dataKey="stage"
-                    width={120}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                    tickFormatter={(value) => STAGE_LABELS[value] || value}
-                  />
-                  <Tooltip 
-                    formatter={(value: number) => [`${value.toFixed(1)} dní`, 'Průměr']}
-                    labelFormatter={(label) => STAGE_LABELS[label] || label}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="avgDays" radius={[0, 4, 4, 0]}>
-                    {pipelineVelocity.map((entry) => (
-                      <Cell key={entry.stage} fill={STAGE_COLORS[entry.stage] || 'hsl(var(--chart-1))'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Pipeline Velocity - Full Width */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium">Pipeline Velocity (prům. dny ve stage)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={pipelineVelocity} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis 
+                  type="number"
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                />
+                <YAxis 
+                  type="category"
+                  dataKey="stage"
+                  width={140}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                  tickFormatter={(value) => STAGE_LABELS[value] || value}
+                />
+                <Tooltip 
+                  formatter={(value: number) => [`${value.toFixed(1)} dní`, 'Průměr']}
+                  labelFormatter={(label) => STAGE_LABELS[label] || label}
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Bar dataKey="avgDays" radius={[0, 4, 4, 0]}>
+                  {pipelineVelocity.map((entry) => (
+                    <Cell key={entry.stage} fill={STAGE_COLORS[entry.stage] || 'hsl(var(--chart-1))'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Performance Tables Section */}
 
