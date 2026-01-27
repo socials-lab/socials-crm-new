@@ -240,11 +240,14 @@ export default function Analytics() {
     const allSummaries = getClientMonthSummaries(selectedYear, selectedMonth);
     const cbRevenue = allSummaries.reduce((sum, s) => sum + (s.usedCredits * (s.pricePerCredit || 0)), 0);
 
+    // Retainery = monthly fees + Creative Boost (both are recurring)
+    const retainerTotal = retainersRevenue + cbRevenue;
+    // Jednorázové = one-off services + extra work
+    const oneOffTotal = oneOffRevenue + extraWorkRevenue;
+
     const revenueBreakdown = [
-      { name: 'Retainery', value: retainersRevenue },
-      { name: 'Vícepráce', value: extraWorkRevenue },
-      { name: 'Jednorázové', value: oneOffRevenue },
-      { name: 'Creative Boost', value: cbRevenue },
+      { name: 'Retainery', value: retainerTotal },
+      { name: 'Jednorázové', value: oneOffTotal },
     ].filter(r => r.value > 0);
 
     // Client concentration (all clients)
