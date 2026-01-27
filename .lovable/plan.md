@@ -1,161 +1,222 @@
 
-
-# Plán: Churn Impact v obchodním plánu
+# Plán: Nový tab "Forecast" v Analytice
 
 ## Přehled
 
-Přidání nové sekce do **BusinessPlanTab** (Analytika → Obchodní plán), která zobrazí:
-1. **Končící spolupráce** - seznam zakázek s end_date v daném měsíci
-2. **Ztráta MRR** - kolik měsíčně ztratíme
-3. **Potřebný růst** - o kolik musíme navýšit nové příjmy, abychom splnili plán
+Vytvoření nové komplexní sekce **Forecast** v Analytice, která kombinuje:
+1. **Revenue Forecast** - dopad končících zakázek na tržby
+2. **Capacity Forecast** - volná kapacita kolegů po ukončení zakázek
+3. **Planning Tools** - nástroje pro plánování nových klientů
+
+Tato sekce nahradí aktuální "Churn Impact" kartu v BusinessPlanTab (přesuneme logiku do Forecastu).
 
 ---
 
-## Logika výpočtu
-
-### Pro každý měsíc v roce:
+## Struktura nového tabu
 
 ```
-Stávající MRR (retainery bez end_date v daném měsíci)
-- Končící MRR (zakázky s end_date v daném měsíci)
-= Očekávaný MRR po churnu
-
-Plán pro měsíc (target)
-- Očekávaný MRR po churnu
-= Potřebný dodatečný příjem (k získání z nových klientů/vícepráce)
+┌─────────────────────────────────────────────────────────────────────────┐
+│  FORECAST - Únor 2026                                    [◀ Měsíc ▶]   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ 📊 KPI SOUHRN                                                   │   │
+│  ├─────────────────────────────────────────────────────────────────┤   │
+│  │ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐        │   │
+│  │ │Aktuální   │ │Ztráta     │ │MRR po     │ │Gap do     │        │   │
+│  │ │MRR        │ │MRR        │ │churnu     │ │plánu      │        │   │
+│  │ │1,550k     │ │-80k       │ │1,470k     │ │+230k      │        │   │
+│  │ └───────────┘ └───────────┘ └───────────┘ └───────────┘        │   │
+│  │ ┌───────────┐ ┌───────────┐ ┌───────────┐                      │   │
+│  │ │Kolegy s   │ │Uvolněná   │ │Potenciální│                      │   │
+│  │ │kapacitou  │ │kapacita   │ │revenue    │                      │   │
+│  │ │3          │ │4 sloty    │ │~120k      │                      │   │
+│  │ └───────────┘ └───────────┘ └───────────┘                      │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ 📉 KONČÍCÍ ZAKÁZKY (Únor 2026)                                  │   │
+│  ├─────────────────────────────────────────────────────────────────┤   │
+│  │ Zakázka          │ Klient    │ Datum   │ MRR   │ Přiřazení      │   │
+│  │ ─────────────────┼───────────┼─────────┼───────┼───────────────  │   │
+│  │ Social správa    │ Mall.cz   │ 8.2.    │ 32k   │ Jan N., Eva K. │   │
+│  │ PPC retainer     │ Datart    │ 24.2.   │ 48k   │ Petr S.        │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ 👥 KAPACITA TÝMU PO UKONČENÍ                                    │   │
+│  ├─────────────────────────────────────────────────────────────────┤   │
+│  │                                                                 │   │
+│  │ ┌─────────────────────────────────────────────────────────────┐ │   │
+│  │ │ Jan Novák (Senior PPC Specialist)                           │ │   │
+│  │ │ ┌──────────────────────────────┐                            │ │   │
+│  │ │ │ Aktuální: 4/5 zakázek        │  ████████████░░░ 80%       │ │   │
+│  │ │ └──────────────────────────────┘                            │ │   │
+│  │ │ ⚠️ Po 8.2. končí: Mall.cz - Social správa                   │ │   │
+│  │ │ 📅 Od 9.2. volná kapacita: +1 zakázka                       │ │   │
+│  │ │ 💰 Průměrný MRR jeho zakázek: ~40k Kč                       │ │   │
+│  │ └─────────────────────────────────────────────────────────────┘ │   │
+│  │                                                                 │   │
+│  │ ┌─────────────────────────────────────────────────────────────┐ │   │
+│  │ │ Petr Svoboda (PPC Manager)                                  │ │   │
+│  │ │ ┌──────────────────────────────┐                            │ │   │
+│  │ │ │ Aktuální: 5/5 zakázek        │  ████████████████ 100%     │ │   │
+│  │ │ └──────────────────────────────┘                            │ │   │
+│  │ │ ⚠️ Po 24.2. končí: Datart - PPC retainer                    │ │   │
+│  │ │ 📅 Od 25.2. volná kapacita: +1 zakázka                      │ │   │
+│  │ │ 💰 Průměrný MRR jeho zakázek: ~35k Kč                       │ │   │
+│  │ └─────────────────────────────────────────────────────────────┘ │   │
+│  │                                                                 │   │
+│  │ ✅ Eva Králová - žádné končící zakázky (aktuálně 3/5)          │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ 📅 TIMELINE KAPACITY (příštích 3 měsíce)                        │   │
+│  ├─────────────────────────────────────────────────────────────────┤   │
+│  │                                                                 │   │
+│  │  Únor          Březen         Duben                             │   │
+│  │  ──────────────────────────────────────                         │   │
+│  │  8.2. Jan +1   15.3. Eva +1   -                                 │   │
+│  │  24.2. Petr +1                                                  │   │
+│  │  ──────────────────────────────────────                         │   │
+│  │  Celkem: +2    Celkem: +1     Celkem: 0                         │   │
+│  │                                                                 │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ 💡 DOPORUČENÍ                                                   │   │
+│  ├─────────────────────────────────────────────────────────────────┤   │
+│  │                                                                 │   │
+│  │ • Pro splnění plánu je potřeba +230k nového MRR                │   │
+│  │ • Od 9.2. bude Jan Novák volný pro nového klienta              │   │
+│  │ • V pipeline jsou 2 leady s odhadovaným MRR ~150k              │   │
+│  │ • Doporučujeme přiřadit lead "XYZ Corp" Janovi                 │   │
+│  │                                                                 │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
-
-### Příklad:
-- **Cíl února**: 1 700 000 CZK
-- **Aktuální MRR**: 1 550 000 CZK
-- **Končící v únoru**: Mall.cz (32k) + Datart (48k) = 80 000 CZK
-- **MRR po churnu**: 1 470 000 CZK
-- **Potřebný nárůst**: 1 700 000 - 1 470 000 = **230 000 CZK**
 
 ---
 
-## UI návrh
+## Logika výpočtu kapacity
 
-### Nová karta v BusinessPlanTab
+### Pro každého kolegu:
 
+```typescript
+interface ColleagueCapacityForecast {
+  colleague: Colleague;
+  currentEngagements: number;        // Aktuální počet přiřazených zakázek
+  maxEngagements: number;            // Limit z colleague.max_engagements (default 5)
+  currentUtilization: number;        // % vytížení (current/max)
+  
+  endingAssignments: {               // Zakázky které končí
+    engagement: Engagement;
+    endDate: string;
+    monthlyFee: number;
+    role: string;
+  }[];
+  
+  futureCapacity: {                  // Kapacita po ukončení
+    date: string;                    // Od kdy
+    freeSlots: number;               // Kolik zakázek může vzít
+    reason: string;                  // Proč (které zakázky skončí)
+  }[];
+  
+  avgRevenuePerEngagement: number;   // Průměr MRR jeho zakázek (pro odhad potenciálu)
+}
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ ⚠️ Dopad ukončených spoluprací – Únor 2026          [info icon]│
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ Zakázky končící tento měsíc:                                   │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ 🔴 Mall.cz – Social správa         končí 8.2.    -32 000   │ │
-│ │ 🟠 Datart – PPC retainer 2025      končí 24.2.   -48 000   │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
-│ │ Aktuální MRR│ │ Ztráta MRR  │ │ MRR po      │ │ Potřebný    │ │
-│ │             │ │             │ │ churnu      │ │ nárůst      │ │
-│ │  1 550k     │ │   -80k      │ │  1 470k     │ │  +230k      │ │
-│ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
-│                                                                 │
-│ 💡 Pro splnění plánu je potřeba získat nové zakázky/vícepráce  │
-│    v hodnotě minimálně 230 000 CZK                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
 
-### Barevné značení karty
-- **Červená** (ztráta > 20% MRR): Vysoký churn
-- **Oranžová** (ztráta 10-20% MRR): Střední churn  
-- **Zelená** (ztráta < 10% MRR nebo žádná): Zdravý stav
+### Propojení s leady:
+
+```typescript
+interface PipelineMatch {
+  lead: Lead;
+  suggestedColleague: Colleague;
+  availableFrom: string;
+  reason: string;
+}
+```
 
 ---
 
-## Změny v kódu
+## Technická implementace
+
+### Nový soubor: `src/components/analytics/ForecastTab.tsx`
+
+Obsahuje:
+1. **KPI Grid** - Souhrn klíčových metrik
+2. **EndingEngagementsTable** - Tabulka končících zakázek s přiřazenými kolegy
+3. **ColleagueCapacityCards** - Karty kolegů s kapacitou
+4. **CapacityTimeline** - Vizuální timeline příštích 3 měsíců
+5. **RecommendationsCard** - AI-like doporučení
+
+### Změny v Analytics.tsx
+
+- Přidání nového tabu "Forecast" (před "Obchodní plán")
+- Nový `useMemo` blok `forecastData` s výpočty
+- Import nové komponenty
+
+### Změny v BusinessPlanTab.tsx
+
+- Odstranit "Churn Impact" kartu (přesunuto do Forecast)
+- Přidat odkaz/tlačítko na Forecast tab pro detailní analýzu
+
+---
+
+## Data flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ engagements │────▶│ assignments │────▶│ colleagues  │
+│ (end_date)  │     │ (end_date)  │     │(max_engage) │
+└─────────────┘     └─────────────┘     └─────────────┘
+       │                   │                   │
+       ▼                   ▼                   ▼
+┌─────────────────────────────────────────────────────┐
+│           FORECAST CALCULATIONS                     │
+│  • Ending engagements in selected period            │
+│  • Colleague capacity after endings                 │
+│  • Revenue impact (lost MRR)                        │
+│  • Target gap calculation                           │
+└─────────────────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────────┐
+│           PLANNING RECOMMENDATIONS                   │
+│  • Match pipeline leads with available capacity     │
+│  • Suggest colleague assignments                    │
+│  • Calculate revenue potential                      │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## Soubory k úpravě/vytvoření
 
 | Soubor | Změna |
 |--------|-------|
-| `src/components/analytics/BusinessPlanTab.tsx` | Přidat nový useMemo pro churn data + novou kartu |
-| `src/utils/businessPlanUtils.ts` | (volitelně) Přidat helper funkci pro výpočet churnu |
+| `src/components/analytics/ForecastTab.tsx` | **Nový** - hlavní komponenta |
+| `src/pages/Analytics.tsx` | Přidat tab, useMemo pro forecastData |
+| `src/components/analytics/BusinessPlanTab.tsx` | Odstranit churn kartu, přidat odkaz na Forecast |
 
 ---
 
-## Technické detaily
+## Pořadí implementace
 
-### Nový useMemo blok v BusinessPlanTab.tsx
-
-```typescript
-// Churn impact for selected month
-const churnImpact = useMemo(() => {
-  const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
-  const monthEnd = new Date(selectedYear, selectedMonth, 0);
-  
-  // Engagements ending this month
-  const endingThisMonth = engagements.filter(e => {
-    if (!e.end_date || e.status !== 'active') return false;
-    const endDate = parseISO(e.end_date);
-    return endDate >= monthStart && endDate <= monthEnd;
-  });
-  
-  // Calculate lost MRR
-  const lostMRR = endingThisMonth.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
-  
-  // Current MRR (all active retainers without end_date in this month)
-  const currentMRR = engagements
-    .filter(e => {
-      if (e.status !== 'active' || e.type !== 'retainer') return false;
-      const start = e.start_date ? parseISO(e.start_date) : null;
-      if (!start || start > monthEnd) return false;
-      // Include if no end_date or end_date is after this month
-      if (!e.end_date) return true;
-      return parseISO(e.end_date) > monthEnd;
-    })
-    .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
-  
-  // MRR after churn
-  const mrrAfterChurn = currentMRR - lostMRR;
-  
-  // Target for this month
-  const target = getTargetForMonth(selectedYear, selectedMonth);
-  
-  // Required increase to meet plan
-  const requiredIncrease = Math.max(0, target - mrrAfterChurn);
-  
-  // Churn severity
-  const churnPercent = currentMRR > 0 ? (lostMRR / currentMRR) * 100 : 0;
-  const severity = churnPercent > 20 ? 'high' : churnPercent > 10 ? 'medium' : 'low';
-  
-  return {
-    endingEngagements: endingThisMonth.map(e => ({
-      ...e,
-      client: clients.find(c => c.id === e.client_id),
-    })),
-    currentMRR,
-    lostMRR,
-    mrrAfterChurn,
-    target,
-    requiredIncrease,
-    churnPercent,
-    severity,
-  };
-}, [selectedYear, selectedMonth, engagements, clients]);
-```
-
-### Nová UI karta
-
-Karta bude umístěna pod "Selected Month Detail" a zobrazí:
-1. Seznam končících zakázek s datem ukončení a ztraceným MRR
-2. 4 KPI: Aktuální MRR, Ztráta MRR, MRR po churnu, Potřebný nárůst
-3. Info box s doporučením
-
-### Demo data
-
-Pokud nejsou žádné reálné končící zakázky, zobrazí se demo data (stejně jako na dashboardu) pro demonstraci funkcionality.
+1. Vytvořit `ForecastTab.tsx` s kompletní logikou
+2. Přidat forecastData useMemo do Analytics.tsx
+3. Přidat nový tab do TabsList
+4. Upravit BusinessPlanTab - odstranit duplicitní churn kartu
+5. Přidat demo data pro testování (pokud nejsou reálné končící zakázky)
 
 ---
 
 ## Očekávaný výsledek
 
-1. **Nová karta "Dopad ukončených spoluprací"** v obchodním plánu
-2. **Výpočet ztraceného MRR** na základě end_date zakázek
-3. **Kalkulace potřebného nárůstu** pro splnění plánu
-4. **Vizuální upozornění** na vysoký churn
-5. **Demo data** pro testování funkcionality
-
+1. **Nový tab "Forecast"** v Analytice s komplexním přehledem
+2. **Vizualizace končících zakázek** včetně přiřazených kolegů
+3. **Kapacitní forecast** - kdo a kdy bude mít volno
+4. **Timeline view** příštích 3 měsíců
+5. **Doporučení** pro přiřazení nových klientů
+6. **Propojení s pipeline** - které leady by mohly zaplnit kapacitu
