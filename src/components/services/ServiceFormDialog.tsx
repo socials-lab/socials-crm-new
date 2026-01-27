@@ -34,7 +34,7 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
   const [serviceType, setServiceType] = useState<ServiceType>('addon');
   const [category, setCategory] = useState<ServiceCategory>('performance');
   const [description, setDescription] = useState('');
-  const [externalUrl, setExternalUrl] = useState('');
+  
   const [basePrice, setBasePrice] = useState<number>(0);
   const [currency, setCurrency] = useState('CZK');
   const [isActive, setIsActive] = useState(true);
@@ -59,7 +59,7 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       setServiceType(service.service_type);
       setCategory(service.category);
       setDescription(service.description);
-      setExternalUrl(service.external_url || '');
+      
       setBasePrice(service.base_price);
       setCurrency(service.currency);
       setIsActive(service.is_active);
@@ -75,7 +75,7 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       setServiceType('addon');
       setCategory('performance');
       setDescription('');
-      setExternalUrl('');
+      
       setBasePrice(0);
       setCurrency('CZK');
       setIsActive(true);
@@ -117,7 +117,7 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       service_type: serviceType,
       category,
       description: description.trim(),
-      external_url: externalUrl.trim() || null,
+      external_url: null,
       base_price: serviceType === 'core' ? (tierPricing.find(t => t.tier === 'growth')?.price || 0) : basePrice,
       currency,
       tier_pricing: serviceType === 'core' ? tierPricing : null,
@@ -312,19 +312,6 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
             </CollapsibleContent>
           </Collapsible>
 
-          <div className="space-y-2">
-            <Label htmlFor="externalUrl">Externí URL</Label>
-            <Input
-              id="externalUrl"
-              type="url"
-              value={externalUrl}
-              onChange={(e) => setExternalUrl(e.target.value)}
-              placeholder="https://socials.cz/sluzby/..."
-            />
-            <p className="text-xs text-muted-foreground">
-              Odkaz na stránku s detailním popisem služby
-            </p>
-          </div>
 
           <div className="flex items-center justify-between">
             <Label htmlFor="isActive">Služba je aktivní</Label>
