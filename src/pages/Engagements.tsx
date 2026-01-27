@@ -1305,11 +1305,9 @@ function EngagementsContent() {
         }}
         onConfirm={(data) => {
           if (engagementToEnd) {
+            // Only save end_date for now (termination fields not yet in DB)
             updateEngagement(engagementToEnd.id, { 
               end_date: data.end_date,
-              termination_reason: data.termination_reason,
-              termination_initiated_by: data.termination_initiated_by,
-              termination_notes: data.termination_notes,
             });
             toast.success(`Spolupráce bude ukončena k ${format(parseISO(data.end_date), 'd. MMMM yyyy', { locale: cs })}`);
             setEngagementToEnd(null);

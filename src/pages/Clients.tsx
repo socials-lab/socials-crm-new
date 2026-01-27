@@ -819,19 +819,16 @@ export default function Clients() {
               status: 'lost',
             });
             
-            // If endAllEngagements is true, update all active engagements
+            // If endAllEngagements is true, update all active engagements (only end_date for now)
             if (data.endAllEngagements) {
               const clientEngagements = engagements.filter(
                 e => e.client_id === clientToEnd.id && e.status === 'active' && !e.end_date
               );
               
-              // Update each engagement with termination data
+              // Update each engagement with end_date only (termination fields not yet in DB)
               for (const eng of clientEngagements) {
                 await updateEngagement(eng.id, {
                   end_date: data.end_date,
-                  termination_reason: data.termination_reason,
-                  termination_initiated_by: data.termination_initiated_by,
-                  termination_notes: data.termination_notes,
                 });
               }
             }
