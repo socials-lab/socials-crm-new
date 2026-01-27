@@ -8,6 +8,14 @@ import type { Notification } from '@/types/notifications';
 const STORAGE_KEY = 'modification_requests';
 const NOTIFICATIONS_STORAGE_KEY = 'crm_notifications';
 
+// Email sent record
+export interface EmailSentRecord {
+  sent_at: string;
+  sent_to: string;
+  sent_by_id: string;
+  sent_by_name: string;
+}
+
 // Simplified interface for localStorage storage
 export interface StoredModificationRequest {
   id: string;
@@ -32,6 +40,8 @@ export interface StoredModificationRequest {
   client_approved_at: string | null;
   created_at: string;
   updated_at: string;
+  // Email history
+  emails_sent: EmailSentRecord[];
   // Denormalized data for display
   engagement_name: string;
   client_id: string;
@@ -104,6 +114,8 @@ export function createModificationRequest(params: {
     client_approved_at: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    // Email history
+    emails_sent: [],
     // Denormalized
     engagement_name: params.engagement_name,
     client_id: params.client_id,
@@ -339,4 +351,34 @@ export function getRequestsByStatus(status?: ModificationRequestStatus): StoredM
 export function getModificationRequestById(id: string): StoredModificationRequest | null {
   const requests = getModificationRequests();
   return requests.find(r => r.id === id) || null;
+}
+
+// Record email sent
+export function recordEmailSent(
+  requestId: string,
+  sentTo: string,
+  sentById: string,
+  sentByName: string
+): StoredModificationRequest | null {
+  const requests = getModificationRequests();
+  const index = requests.findIndex(r => r.id === requestId);
+  
+  if (index === -1) return null;
+  
+  const request = requests[index];
+  const emailRecord: EmailSentRecord = {
+    sent_at: new Date().toISOString(),
+    sent_to: sentTo,
+    sent_by_id: sentById,
+    sent_by_name: sentByName,
+  };
+  
+  requests[index] = {
+    ...request,
+    emails_sent: [...(request.emails_sent || []), emailRecord],
+    updated_at: new Date().toISOString(),
+  };
+  
+  saveRequests(requests);
+  return requests[index];
 }

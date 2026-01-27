@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
-import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
+import { recordEmailSent, type StoredModificationRequest } from '@/data/modificationRequestsMockData';
 import type {
   AddServiceProposedChanges,
   UpdateServicePriceProposedChanges,
@@ -204,6 +204,14 @@ ${selectedSender.email}${selectedSender.phone ? `\n${selectedSender.phone}` : ''
     
     // Mock sending - will be replaced with actual Edge Function
     await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Record the email in history
+    recordEmailSent(
+      request.id,
+      recipientEmail,
+      selectedSender.id,
+      selectedSender.full_name
+    );
     
     // Log email action for debugging
     console.log('📧 Email sent:', {
