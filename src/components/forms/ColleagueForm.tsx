@@ -21,6 +21,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import {
   Select,
@@ -31,6 +32,19 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { Colleague } from '@/types/crm';
+import { 
+  SERVICE_SLOT_LABELS, 
+  SERVICE_SLOT_TYPES,
+  DEFAULT_CAPACITY_SLOTS,
+  getCapacitySlots,
+  type CapacitySlots 
+} from '@/constants/serviceSlotTypes';
+
+const capacitySlotsSchema = z.object({
+  meta: z.coerce.number().min(0),
+  google: z.coerce.number().min(0),
+  graphics: z.coerce.number().min(0),
+});
 
 const colleagueSchema = z.object({
   full_name: z.string().min(1, 'Jméno je povinné'),
@@ -42,6 +56,7 @@ const colleagueSchema = z.object({
   internal_hourly_cost: z.coerce.number().min(0, 'Hodinová sazba musí být kladná'),
   monthly_fixed_cost: z.coerce.number().min(0).nullable(),
   max_engagements: z.coerce.number().min(0).nullable(),
+  capacity_slots: capacitySlotsSchema,
   status: z.enum(['active', 'on_hold', 'left'] as const),
   notes: z.string(),
   birthday: z.date().nullable(),
@@ -59,6 +74,11 @@ interface ColleagueFormProps {
 }
 
 export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption = false }: ColleagueFormProps) {
+  // Get existing capacity slots or defaults
+  const existingSlots = colleague?.capacity_slots 
+    ? getCapacitySlots(colleague.capacity_slots)
+    : DEFAULT_CAPACITY_SLOTS;
+
   const form = useForm<ColleagueFormData>({
     resolver: zodResolver(colleagueSchema),
     defaultValues: {
@@ -71,6 +91,7 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
       internal_hourly_cost: colleague?.internal_hourly_cost || 0,
       monthly_fixed_cost: colleague?.monthly_fixed_cost ?? null,
       max_engagements: colleague?.max_engagements ?? 5,
+      capacity_slots: existingSlots,
       status: colleague?.status || 'active',
       notes: colleague?.notes || '',
       birthday: colleague?.birthday ? new Date(colleague.birthday) : null,
@@ -266,8 +287,38 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
         </div>
 
         <div className="border-t pt-4">
-          <h4 className="font-medium text-sm mb-3">Finanční údaje</h4>
+          <h4 className="font-medium text-sm mb-3">Kapacita podle typu služby</h4>
+          <FormDescription className="mb-3">
+            Počet zakázek, které může kolega vést pro každý typ služby
+          </FormDescription>
           <div className="grid gap-4 sm:grid-cols-3">
+            {SERVICE_SLOT_TYPES.map((slotType) => (
+              <FormField
+                key={slotType}
+                control={form.control}
+                name={`capacity_slots.${slotType}`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{SERVICE_SLOT_LABELS[slotType]}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min={0}
+                        max={10}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h4 className="font-medium text-sm mb-3">Finanční údaje</h4>
+          <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="internal_hourly_cost"
@@ -287,24 +338,6 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Fixní měsíční náklad</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min={0}
-                      value={field.value ?? ''} 
-                      onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="max_engagements"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Max. počet zakázek</FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 

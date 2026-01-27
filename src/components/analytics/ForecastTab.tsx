@@ -8,6 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { usePlannedEngagements } from '@/hooks/usePlannedEngagements';
 import { AddPlannedEngagementDialog } from './AddPlannedEngagementDialog';
+import { 
+  SERVICE_SLOT_TYPES, 
+  SERVICE_SLOT_LABELS, 
+  SERVICE_SLOT_BG_COLORS,
+  SERVICE_SLOT_TEXT_COLORS,
+  getCapacitySlots,
+  getSlotTypeFromPosition,
+  type ServiceSlotType,
+  type CapacitySlots 
+} from '@/constants/serviceSlotTypes';
+
+interface EngagementService {
+  id: string;
+  engagement_id: string;
+  name: string;
+  service_id: string | null;
+}
 
 interface Engagement {
   id: string;
@@ -32,12 +49,14 @@ interface Colleague {
   position: string;
   seniority: string;
   status: string | null;
+  capacity_slots?: Record<string, number> | null;
 }
 
 interface Assignment {
   id: string;
   engagement_id: string;
   colleague_id: string;
+  engagement_service_id: string | null;
   role_on_engagement: string | null;
   end_date: string | null;
 }
@@ -47,11 +66,12 @@ interface ForecastTabProps {
   clients: Client[];
   colleagues: Colleague[];
   assignments: Assignment[];
+  engagementServices?: EngagementService[];
   selectedYear: number;
   selectedMonth: number;
 }
 
-const DEFAULT_MAX_ENGAGEMENTS = 5;
+const DEFAULT_CAPACITY_SLOTS: CapacitySlots = { meta: 3, google: 2, graphics: 2 };
 
 export function ForecastTab({ 
   engagements, 
@@ -123,11 +143,22 @@ export function ForecastTab({
   // Churn rate
   const churnRate = currentMRR > 0 ? (churnMRR / currentMRR) * 100 : 0;
 
-  // Get colleague data with capacity impacts
+  // Determine slot type from colleague's position
+  const getColleagueSlotType = (colleague: Colleague): ServiceSlotType => {
+    return getSlotTypeFromPosition(colleague.position) || 'meta';
+  };
+
+  // Get colleague data with capacity impacts PER SLOT TYPE
   const colleagueCapacity = useMemo(() => {
     const activeColleagues = colleagues.filter(c => c.status === 'active');
 
     return activeColleagues.map(colleague => {
+      // Get capacity slots for this colleague
+      const slots = getCapacitySlots(colleague.capacity_slots);
+      
+      // Primary slot type based on position
+      const primarySlotType = getColleagueSlotType(colleague);
+
       // Current active assignments
       const currentAssignments = assignments.filter(a => {
         const eng = engagements.find(e => e.id === a.engagement_id);
@@ -150,12 +181,21 @@ export function ForecastTab({
         p.assigned_colleague_ids.includes(colleague.id)
       );
 
-      const currentCount = currentAssignments.length;
-      const afterEndings = currentCount - endingAssignments.length;
-      const afterNew = afterEndings + newPlanned.length;
+      // Calculate counts per slot type
+      const slotCounts: Record<ServiceSlotType, { current: number; afterEndings: number; afterNew: number }> = {
+        meta: { current: 0, afterEndings: 0, afterNew: 0 },
+        google: { current: 0, afterEndings: 0, afterNew: 0 },
+        graphics: { current: 0, afterEndings: 0, afterNew: 0 },
+      };
+
+      // For now, count assignments based on colleague's primary slot type
+      // In future, this could be based on engagement_service_id mapping
+      slotCounts[primarySlotType].current = currentAssignments.length;
+      slotCounts[primarySlotType].afterEndings = currentAssignments.length - endingAssignments.length;
+      slotCounts[primarySlotType].afterNew = slotCounts[primarySlotType].afterEndings + newPlanned.length;
 
       // Build timeline of events
-      const events: { date: Date; type: 'freed' | 'filled'; name: string }[] = [];
+      const events: { date: Date; type: 'freed' | 'filled'; name: string; slotType: ServiceSlotType }[] = [];
       
       endingAssignments.forEach(a => {
         const eng = engagements.find(e => e.id === a.engagement_id);
@@ -163,7 +203,8 @@ export function ForecastTab({
           events.push({ 
             date: parseISO(eng.end_date), 
             type: 'freed', 
-            name: eng.name 
+            name: eng.name,
+            slotType: primarySlotType,
           });
         }
       });
@@ -172,7 +213,8 @@ export function ForecastTab({
         events.push({ 
           date: parseISO(p.start_date), 
           type: 'filled', 
-          name: p.name 
+          name: p.name,
+          slotType: primarySlotType,
         });
       });
 
@@ -180,26 +222,37 @@ export function ForecastTab({
 
       return {
         colleague,
-        currentCount,
-        afterEndings,
-        afterNew,
-        maxEngagements: DEFAULT_MAX_ENGAGEMENTS,
+        slots,
+        slotCounts,
+        primarySlotType,
         events,
         hasChanges: events.length > 0,
       };
     }).sort((a, b) => {
       // Sort by changes first, then by utilization
       if (a.hasChanges !== b.hasChanges) return a.hasChanges ? -1 : 1;
-      return b.currentCount - a.currentCount;
+      const aUtil = a.slotCounts[a.primarySlotType].current / (a.slots[a.primarySlotType] || 1);
+      const bUtil = b.slotCounts[b.primarySlotType].current / (b.slots[b.primarySlotType] || 1);
+      return bUtil - aUtil;
     });
   }, [colleagues, assignments, engagements, plannedForMonth, monthStart]);
 
-  // Total free capacity at end of month
-  const totalFreeCapacity = useMemo(() => {
-    return colleagueCapacity.reduce((sum, c) => 
-      sum + (c.maxEngagements - c.afterNew), 0
-    );
+  // Total free capacity at end of month per slot type
+  const totalFreeCapacityByType = useMemo(() => {
+    const result: Record<ServiceSlotType, number> = { meta: 0, google: 0, graphics: 0 };
+    
+    colleagueCapacity.forEach(c => {
+      SERVICE_SLOT_TYPES.forEach(slotType => {
+        const max = c.slots[slotType] || 0;
+        const used = c.slotCounts[slotType].afterNew;
+        result[slotType] += Math.max(0, max - used);
+      });
+    });
+    
+    return result;
   }, [colleagueCapacity]);
+
+  const totalFreeCapacity = totalFreeCapacityByType.meta + totalFreeCapacityByType.google + totalFreeCapacityByType.graphics;
 
   // Colleagues to display
   const displayedColleagues = showAllColleagues 
@@ -287,13 +340,17 @@ export function ForecastTab({
             </div>
             <div>
               <span className="text-muted-foreground">Změna: </span>
-              <span className={`font-semibold ${projectedMRR >= currentMRR ? 'text-green-600' : 'text-red-600'}`}>
+              <span className={`font-semibold ${projectedMRR >= currentMRR ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {projectedMRR >= currentMRR ? '+' : ''}{formatCompact(projectedMRR - currentMRR)}
               </span>
             </div>
-            <div>
-              <span className="text-muted-foreground">Volná kapacita: </span>
-              <span className="font-semibold">{totalFreeCapacity} slotů</span>
+            <div className="flex items-center gap-3">
+              <span className="text-muted-foreground">Volná kapacita:</span>
+              {SERVICE_SLOT_TYPES.map(slotType => (
+                <span key={slotType} className={`font-medium ${SERVICE_SLOT_TEXT_COLORS[slotType]}`}>
+                  {totalFreeCapacityByType[slotType]} {SERVICE_SLOT_LABELS[slotType]}
+                </span>
+              ))}
             </div>
           </div>
         </CardContent>
@@ -435,59 +492,99 @@ export function ForecastTab({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {displayedColleagues.map(({ colleague, currentCount, afterNew, maxEngagements, events, hasChanges }) => (
-              <div 
-                key={colleague.id} 
-                className={`p-3 rounded-lg border ${hasChanges ? 'bg-muted/50' : ''}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-sm truncate">{colleague.full_name}</span>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                    {hasChanges ? (
-                      <>
-                        {currentCount}/{maxEngagements}
-                        <ArrowRight className="inline h-3 w-3 mx-0.5" />
-                        {afterNew}/{maxEngagements}
-                      </>
-                    ) : (
-                      `${currentCount}/${maxEngagements}`
-                    )}
-                  </span>
-                </div>
-                
-                <Progress 
-                  value={(afterNew / maxEngagements) * 100} 
-                  className="h-1.5 mb-2"
-                />
-
-                {events.length > 0 && (
-                  <div className="space-y-1">
-                    {events.slice(0, 2).map((event, idx) => (
-                      <div key={idx} className="text-xs flex items-center gap-1">
-                        <span className={event.type === 'freed' ? 'text-green-600' : 'text-blue-600'}>
-                          {event.type === 'freed' ? '+1 slot' : '-1 slot'}
-                        </span>
-                        <span className="text-muted-foreground truncate">
-                          {format(event.date, 'd.M.', { locale: cs })} • {event.name}
-                        </span>
-                      </div>
-                    ))}
-                    {events.length > 2 && (
-                      <div className="text-xs text-muted-foreground">
-                        +{events.length - 2} dalších změn
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {!hasChanges && (
-                  <div className="text-xs text-muted-foreground">
-                    Beze změn
-                  </div>
-                )}
+          {/* Summary by slot type */}
+          <div className="flex flex-wrap gap-3 mb-4 pb-3 border-b">
+            {SERVICE_SLOT_TYPES.map(slotType => (
+              <div key={slotType} className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${SERVICE_SLOT_BG_COLORS[slotType]}`}>
+                <span className={`text-sm font-medium ${SERVICE_SLOT_TEXT_COLORS[slotType]}`}>
+                  {SERVICE_SLOT_LABELS[slotType]}
+                </span>
+                <span className={`text-sm ${SERVICE_SLOT_TEXT_COLORS[slotType]}`}>
+                  {totalFreeCapacityByType[slotType]} volných
+                </span>
               </div>
             ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {displayedColleagues.map(({ colleague, slots, slotCounts, primarySlotType, events, hasChanges }) => {
+              const primaryMax = slots[primarySlotType] || 0;
+              const primaryCurrent = slotCounts[primarySlotType].current;
+              const primaryAfterNew = slotCounts[primarySlotType].afterNew;
+
+              return (
+                <div 
+                  key={colleague.id} 
+                  className={`p-3 rounded-lg border ${hasChanges ? 'bg-muted/50' : ''}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-sm truncate">{colleague.full_name}</span>
+                      <Badge variant="outline" className={`text-xs ${SERVICE_SLOT_TEXT_COLORS[primarySlotType]} shrink-0`}>
+                        {SERVICE_SLOT_LABELS[primarySlotType]}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Slot type breakdown */}
+                  <div className="space-y-1.5 mb-2">
+                    {SERVICE_SLOT_TYPES.filter(st => slots[st] > 0).map(slotType => {
+                      const max = slots[slotType];
+                      const current = slotCounts[slotType].current;
+                      const afterNew = slotCounts[slotType].afterNew;
+                      const changed = current !== afterNew;
+                      
+                      return (
+                        <div key={slotType} className="flex items-center gap-2">
+                          <span className={`text-xs w-16 ${SERVICE_SLOT_TEXT_COLORS[slotType]}`}>
+                            {SERVICE_SLOT_LABELS[slotType]}
+                          </span>
+                          <Progress 
+                            value={(afterNew / max) * 100} 
+                            className="h-1.5 flex-1"
+                          />
+                          <span className="text-xs text-muted-foreground w-12 text-right">
+                            {changed ? (
+                              <>
+                                {current}→{afterNew}/{max}
+                              </>
+                            ) : (
+                              `${current}/${max}`
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {events.length > 0 && (
+                    <div className="space-y-1 pt-2 border-t">
+                      {events.slice(0, 2).map((event, idx) => (
+                        <div key={idx} className="text-xs flex items-center gap-1">
+                          <span className={event.type === 'freed' ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}>
+                            {event.type === 'freed' ? '+1' : '-1'} {SERVICE_SLOT_LABELS[event.slotType]}
+                          </span>
+                          <span className="text-muted-foreground truncate">
+                            {format(event.date, 'd.M.', { locale: cs })} • {event.name}
+                          </span>
+                        </div>
+                      ))}
+                      {events.length > 2 && (
+                        <div className="text-xs text-muted-foreground">
+                          +{events.length - 2} dalších změn
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!hasChanges && (
+                    <div className="text-xs text-muted-foreground pt-2 border-t">
+                      Beze změn
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
