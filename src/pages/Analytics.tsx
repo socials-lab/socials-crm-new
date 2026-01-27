@@ -9,6 +9,7 @@ import { CreativeBoostAnalytics } from '@/components/analytics/CreativeBoostAnal
 import { TeamCapacityAnalytics } from '@/components/analytics/TeamCapacityAnalytics';
 import { BusinessPlanTab } from '@/components/analytics/BusinessPlanTab';
 import { ForecastTab } from '@/components/analytics/ForecastTab';
+import { UpsellsExtraWorkAnalytics } from '@/components/analytics/UpsellsExtraWorkAnalytics';
 import { PeriodSelector, type PeriodMode } from '@/components/analytics/PeriodSelector';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
@@ -1279,11 +1280,12 @@ export default function Analytics() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex lg:grid-cols-9">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
           <TabsTrigger value="leads">Leady</TabsTrigger>
           <TabsTrigger value="clients">Klienti</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
+          <TabsTrigger value="upsells">Upselly</TabsTrigger>
           <TabsTrigger value="creative-boost">Creative Boost</TabsTrigger>
           <TabsTrigger value="team">Tým</TabsTrigger>
           <TabsTrigger value="forecast">Forecast</TabsTrigger>
@@ -1319,6 +1321,13 @@ export default function Analytics() {
             year={selectedYear}
             month={selectedMonth}
             {...financeData}
+          />
+        </TabsContent>
+
+        <TabsContent value="upsells" className="mt-6">
+          <UpsellsExtraWorkAnalytics
+            year={selectedYear}
+            month={selectedMonth}
           />
         </TabsContent>
 
