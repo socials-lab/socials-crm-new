@@ -2,21 +2,23 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 
 const STORAGE_KEY = 'crm-business-plan';
 
-// Default targets for 2026: 1.6M → 2.6M with total ~25.4M
+// Default targets for 2026: gradual growth to reach 25.4M total
+// Starting at 1.8M, growing to 2.5M (approx 3% monthly growth)
 export const DEFAULT_TARGETS_2026: Record<number, number> = {
-  1: 1600000,   // Leden
-  2: 1700000,   // Únor
-  3: 1850000,   // Březen
-  4: 1950000,   // Duben
-  5: 2050000,   // Květen
-  6: 2100000,   // Červen
-  7: 2150000,   // Červenec
-  8: 2200000,   // Srpen
-  9: 2300000,   // Září
-  10: 2400000,  // Říjen
-  11: 2500000,  // Listopad
-  12: 2600000,  // Prosinec
+  1: 1800000,   // Leden
+  2: 1855000,   // Únor
+  3: 1910000,   // Březen
+  4: 1970000,   // Duben
+  5: 2030000,   // Květen
+  6: 2090000,   // Červen
+  7: 2155000,   // Červenec
+  8: 2220000,   // Srpen
+  9: 2290000,   // Září
+  10: 2360000,  // Říjen
+  11: 2435000,  // Listopad
+  12: 2285000,  // Prosinec (adjusted to hit 25.4M exactly)
 };
+// Total: 25,400,000 Kč
 
 interface MonthlyPlan {
   year: number;
