@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KPICard } from '@/components/shared/KPICard';
+import { FunnelPassthroughAnalytics } from './FunnelPassthroughAnalytics';
 import {
   BarChart,
   Bar,
@@ -468,6 +469,9 @@ export function LeadsAnalytics({
           </CardContent>
         </Card>
       </div>
+
+      {/* Funnel Passthrough Analytics */}
+      <FunnelPassthroughAnalytics />
     </div>
   );
 }
