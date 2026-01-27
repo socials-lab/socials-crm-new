@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useAuth } from '@/hooks/useAuth';
 import { recordEmailSent, type StoredModificationRequest } from '@/data/modificationRequestsMockData';
 import type {
   AddServiceProposedChanges,
@@ -56,15 +57,15 @@ export function SendModificationEmailDialog({
   upgradeLink,
 }: SendModificationEmailDialogProps) {
   const { colleagues, clients, clientContacts } = useCRMData();
+  const { user } = useAuth();
   
   const [recipientEmail, setRecipientEmail] = useState('');
-  const [selectedSenderId, setSelectedSenderId] = useState<string>('');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailContent, setEmailContent] = useState('');
   const [isSending, setIsSending] = useState(false);
 
-  const activeColleagues = colleagues.filter(c => c.status === 'active');
-  const selectedSender = colleagues.find(c => c.id === selectedSenderId);
+  // Get sender from logged-in user's colleague record
+  const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
   const client = clients.find(c => c.id === request.client_id);
   const clientName = request.client_brand_name || request.client_name;
 
@@ -133,21 +134,15 @@ export function SendModificationEmailDialog({
       // Set default email
       setRecipientEmail(findDefaultEmail());
       
-      // Set default sender (first active colleague or upsold_by)
-      const defaultSender = request.upsold_by_id && activeColleagues.find(c => c.id === request.upsold_by_id)
-        ? request.upsold_by_id
-        : activeColleagues[0]?.id || '';
-      setSelectedSenderId(defaultSender);
-      
       // Set default subject
       const subjectPrefix = REQUEST_TYPE_SUBJECTS[request.request_type] || 'Návrh změny';
       setEmailSubject(`${subjectPrefix} – ${clientName} / Socials`);
     }
   }, [open, request]);
 
-  // Generate email content when sender changes
+  // Generate email content when dialog opens or sender info available
   useEffect(() => {
-    if (!selectedSender || !open) return;
+    if (!currentUserColleague || !open) return;
     
     const contactName = getContactName();
     const greeting = contactName ? `Dobrý den, ${contactName},` : 'Dobrý den,';
@@ -177,10 +172,10 @@ Odkaz je platný do: ${validUntil}
 V případě dotazů nás neváhejte kontaktovat.
 
 S pozdravem,
-${selectedSender.full_name}
-${selectedSender.position}
-${selectedSender.email}${selectedSender.phone ? `\n${selectedSender.phone}` : ''}`);
-  }, [selectedSender, open, request, upgradeLink]);
+${currentUserColleague.full_name}
+${currentUserColleague.position}
+${currentUserColleague.email}${currentUserColleague.phone ? `\n${currentUserColleague.phone}` : ''}`);
+  }, [currentUserColleague, open, request, upgradeLink]);
 
   const handleSend = async () => {
     if (!recipientEmail.trim()) {
@@ -188,8 +183,8 @@ ${selectedSender.email}${selectedSender.phone ? `\n${selectedSender.phone}` : ''
       return;
     }
 
-    if (!selectedSender) {
-      toast.error('Vyberte odesílatele');
+    if (!currentUserColleague) {
+      toast.error('Nepodařilo se načíst informace o odesílateli');
       return;
     }
 
@@ -209,15 +204,15 @@ ${selectedSender.email}${selectedSender.phone ? `\n${selectedSender.phone}` : ''
     recordEmailSent(
       request.id,
       recipientEmail,
-      selectedSender.id,
-      selectedSender.full_name
+      currentUserColleague.id,
+      currentUserColleague.full_name
     );
     
     // Log email action for debugging
     console.log('📧 Email sent:', {
       to: recipientEmail,
       subject: emailSubject,
-      sender: selectedSender.full_name,
+      sender: currentUserColleague.full_name,
       requestId: request.id,
     });
     
@@ -251,56 +246,33 @@ ${selectedSender.email}${selectedSender.phone ? `\n${selectedSender.phone}` : ''
             </div>
           </div>
 
-          {/* Row: Recipient + Sender */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Recipient Email */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Email příjemce</Label>
-              <Input
-                type="email"
-                value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
-                placeholder="email@spolecnost.cz"
-              />
-            </div>
-
-            {/* Sender Selection */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Odesílatel</Label>
-              <Select value={selectedSenderId} onValueChange={setSelectedSenderId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Vyberte odesílatele" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeColleagues.map((colleague) => (
-                    <SelectItem key={colleague.id} value={colleague.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{colleague.full_name}</span>
-                        <span className="text-muted-foreground text-xs">({colleague.position})</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Recipient Email */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Email příjemce</Label>
+            <Input
+              type="email"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              placeholder="email@spolecnost.cz"
+            />
           </div>
 
-          {/* Sender Info Card - Compact inline */}
-          {selectedSender && (
+          {/* Sender Info Card - Current user */}
+          {currentUserColleague && (
             <div className="p-2 rounded-lg bg-primary/5 border border-primary/20 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               <div className="flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5 text-primary" />
-                <span className="font-medium">{selectedSender.full_name}</span>
-                <span className="text-muted-foreground text-xs">– {selectedSender.position}</span>
+                <span className="font-medium">{currentUserColleague.full_name}</span>
+                <span className="text-muted-foreground text-xs">– {currentUserColleague.position}</span>
               </div>
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Mail className="h-3.5 w-3.5" />
-                <span className="text-xs">{selectedSender.email}</span>
+                <span className="text-xs">{currentUserColleague.email}</span>
               </div>
-              {selectedSender.phone && (
+              {currentUserColleague.phone && (
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Phone className="h-3.5 w-3.5" />
-                  <span className="text-xs">{selectedSender.phone}</span>
+                  <span className="text-xs">{currentUserColleague.phone}</span>
                 </div>
               )}
             </div>
@@ -339,7 +311,7 @@ ${selectedSender.email}${selectedSender.phone ? `\n${selectedSender.phone}` : ''
           </Button>
           <Button
             onClick={handleSend}
-            disabled={isSending || !recipientEmail || !selectedSender}
+            disabled={isSending || !recipientEmail || !currentUserColleague}
           >
             {isSending ? (
               <>
