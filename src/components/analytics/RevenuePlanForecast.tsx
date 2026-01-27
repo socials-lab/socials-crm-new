@@ -104,7 +104,22 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
 
   const churnMRR = endingEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
 
-  // Planned engagements for this month
+  // NEW: Engagements starting this month (from DB - actual new deals)
+  const startingEngagements = useMemo(() => {
+    return engagements.filter(e => {
+      if (!e.start_date || e.status !== 'active') return false;
+      const startDate = parseISO(e.start_date);
+      // Only count if started this month AND is relatively new (within current month)
+      return isSameMonth(startDate, monthStart);
+    }).map(eng => ({
+      ...eng,
+      client: clients.find(c => c.id === eng.client_id)
+    }));
+  }, [engagements, clients, monthStart]);
+
+  const startingMRR = startingEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+
+  // Planned engagements for this month (manual forecasts)
   const plannedForMonth = useMemo(() => {
     return plannedEngagements.filter(p => {
       const startDate = parseISO(p.start_date);
@@ -112,9 +127,12 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
     });
   }, [plannedEngagements, monthStart]);
 
-  const newMRR = plannedForMonth.reduce((sum, p) => 
+  const plannedMRR = plannedForMonth.reduce((sum, p) => 
     sum + (p.monthly_fee * (p.probability_percent / 100)), 0
   );
+
+  // Total new MRR = actual starting + planned
+  const newMRR = startingMRR + plannedMRR;
 
   // Leads with offer sent
   const leadsWithOfferSent = useMemo(() => {
@@ -504,59 +522,89 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {/* Actual new deals from DB */}
+            {startingEngagements.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nové zakázky (z CRM)</p>
+                {startingEngagements.map(eng => (
+                  <div key={eng.id} className="flex items-center justify-between p-3 rounded-lg border bg-emerald-500/10">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{eng.client?.brand_name || eng.client?.name || eng.name}</span>
+                        <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-300">
+                          Aktivní
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        od {eng.start_date && format(parseISO(eng.start_date), 'd.M.', { locale: cs })}
+                        {getAssignedColleagues(eng.id) && ` • ${getAssignedColleagues(eng.id)}`}
+                      </div>
+                    </div>
+                    <span className="text-sm font-medium text-emerald-600">
+                      +{formatCompact(eng.monthly_fee || 0)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Manual planned engagements */}
+            <div className="space-y-2">
+              {(startingEngagements.length > 0 || plannedForMonth.length > 0) && plannedForMonth.length > 0 && (
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Plánované (manuální forecast)</p>
+              )}
+              {plannedForMonth.map(planned => {
+                const assignedNames = planned.assigned_colleague_ids
+                  .map(id => colleagues.find(c => c.id === id))
+                  .filter(Boolean)
+                  .map(c => c!.full_name.split(' ')[0])
+                  .join(', ');
+
+                return (
+                  <div key={planned.id} className="flex items-center justify-between p-3 rounded-lg border bg-emerald-500/5">
+                    <div className="space-y-0.5 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{planned.client_name}</span>
+                        {planned.probability_percent < 100 && (
+                          <Badge variant="outline" className="text-xs">
+                            {planned.probability_percent}%
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {planned.name} • od {format(parseISO(planned.start_date), 'd.M.', { locale: cs })}
+                        {assignedNames && ` • ${assignedNames}`}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-emerald-600">
+                        +{formatCompact(planned.monthly_fee)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => deletePlannedEngagement(planned.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {startingEngagements.length === 0 && plannedForMonth.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Žádné nové zakázky tento měsíc
+              </p>
+            )}
+
             <AddPlannedEngagementDialog
               colleagues={colleagues as any}
               onAdd={addPlannedEngagement}
               defaultStartDate={monthStart}
             />
-
-            {plannedForMonth.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Žádné plánované zakázky pro tento měsíc
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {plannedForMonth.map(planned => {
-                  const assignedNames = planned.assigned_colleague_ids
-                    .map(id => colleagues.find(c => c.id === id))
-                    .filter(Boolean)
-                    .map(c => c!.full_name.split(' ')[0])
-                    .join(', ');
-
-                  return (
-                    <div key={planned.id} className="flex items-center justify-between p-3 rounded-lg border bg-emerald-500/5">
-                      <div className="space-y-0.5 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{planned.client_name}</span>
-                          {planned.probability_percent < 100 && (
-                            <Badge variant="outline" className="text-xs">
-                              {planned.probability_percent}%
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {planned.name} • od {format(parseISO(planned.start_date), 'd.M.', { locale: cs })}
-                          {assignedNames && ` • ${assignedNames}`}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-emerald-600">
-                          +{formatCompact(planned.monthly_fee)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => deletePlannedEngagement(planned.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
