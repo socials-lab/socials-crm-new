@@ -108,7 +108,7 @@ export function FinanceAnalytics({
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KPICard
           title="Celková fakturace"
           value={`${formatCurrency(totalInvoicing)} Kč`}
@@ -144,12 +144,6 @@ export function FinanceAnalytics({
           value={`${formatCurrency(avgMarginPerClient)} Kč`}
           icon={TrendingUp}
           subtitle="průměrná"
-        />
-        <KPICard
-          title="Revenue/Kolega"
-          value={`${formatCurrency(revenuePerColleague)} Kč`}
-          icon={Users}
-          subtitle="měsíční"
         />
         <KPICard
           title="Vícepráce"
