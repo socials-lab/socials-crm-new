@@ -62,9 +62,10 @@ interface ActivityRowProps {
   colorClass: string;
   value?: number;
   isNegative?: boolean;
+  date?: string;
 }
 
-function ActivityRow({ icon: Icon, label, count, items, colorClass, value, isNegative }: ActivityRowProps) {
+function ActivityRow({ icon: Icon, label, count, items, colorClass, value, isNegative, date }: ActivityRowProps) {
   return (
     <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 border border-border/50">
       <div className={`p-1.5 rounded-full ${colorClass}`}>
@@ -73,7 +74,7 @@ function ActivityRow({ icon: Icon, label, count, items, colorClass, value, isNeg
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{label}</span>
-          <Badge variant="secondary" className="text-xs h-5 px-1.5">{count}</Badge>
+          {date && <span className="text-xs text-muted-foreground">{date}</span>}
         </div>
         {items && items.length > 0 && (
           <p className="text-xs text-muted-foreground truncate">
@@ -82,7 +83,7 @@ function ActivityRow({ icon: Icon, label, count, items, colorClass, value, isNeg
         )}
       </div>
       {value !== undefined && value > 0 && (
-        <span className={`text-sm font-medium whitespace-nowrap ${isNegative ? 'text-red-600' : 'text-emerald-600'}`}>
+        <span className={`text-sm font-medium whitespace-nowrap ${isNegative ? 'text-destructive' : 'text-emerald-600'}`}>
           {isNegative ? '-' : '+'}{(value / 1000).toFixed(0)}k
         </span>
       )}
@@ -503,22 +504,22 @@ export default function Dashboard() {
               {/* Demo activities for scroll testing */}
               <div className="space-y-2 mb-4 pb-4 border-b">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧪 Demo data pro test scrollu</p>
-                <ActivityRow icon={UserPlus} label="Nový klient" count={1} items={["Alza.cz → podepsána smlouva na Meta Ads"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" value={45000} />
-                <ActivityRow icon={UserPlus} label="Nový klient" count={1} items={["Notino → start spolupráce Google Ads"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" value={32000} />
-                <ActivityRow icon={Send} label="Nabídka odeslána" count={1} items={["Škoda Auto → nabídka na Performance Max"]} colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
-                <ActivityRow icon={Send} label="Nabídka odeslána" count={1} items={["Mall.cz → nabídka na Social Management"]} colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
-                <ActivityRow icon={FileSignature} label="Smlouva podepsána" count={1} items={["Rohlik.cz → roční retainer 85k/měsíc"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" value={85000} />
-                <ActivityRow icon={Briefcase} label="Zakázka zahájena" count={1} items={["Kofola → Q1 kampaň spuštěna"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
-                <ActivityRow icon={Briefcase} label="Zakázka zahájena" count={1} items={["Pilsner Urquell → rebranding sociálů"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
-                <ActivityRow icon={Wrench} label="Vícepráce schválena" count={1} items={["TestBrand → extra kreativy pro Black Friday"]} colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900" value={15000} />
-                <ActivityRow icon={Wrench} label="Vícepráce schválena" count={1} items={["Alza.cz → A/B test landing pages"]} colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900" value={22000} />
-                <ActivityRow icon={Calendar} label="Schůzka naplánována" count={1} items={["Škoda Auto → kickoff meeting zítra 10:00"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
-                <ActivityRow icon={Calendar} label="Schůzka naplánována" count={1} items={["Notino → Q1 review ve čtvrtek"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
-                <ActivityRow icon={CalendarCheck} label="Schůzka proběhla" count={1} items={["Mall.cz → strategy call dokončen"]} colorClass="text-teal-600 bg-teal-100 dark:bg-teal-900" />
-                <ActivityRow icon={TrendingDown} label="Lead ztracen" count={1} items={["O2 → vybrali jinou agenturu"]} colorClass="text-red-600 bg-red-100 dark:bg-red-900" isNegative value={60000} />
-                <ActivityRow icon={Users} label="Nový uchazeč" count={1} items={["Jan Novák → PPC specialista, 3 roky exp."]} colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
-                <ActivityRow icon={Users} label="Nový uchazeč" count={1} items={["Marie Svobodová → Social Media Manager"]} colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
-                <ActivityRow icon={UserCheck} label="Uchazeč přijat" count={1} items={["Petr Horák → nastupuje jako junior PPC"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
+                <ActivityRow icon={UserPlus} label="Nový klient" date="dnes" count={1} items={["Alza.cz → podepsána smlouva na Meta Ads"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" value={45000} />
+                <ActivityRow icon={UserPlus} label="Nový klient" date="včera" count={1} items={["Notino → start spolupráce Google Ads"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" value={32000} />
+                <ActivityRow icon={Send} label="Nabídka odeslána" date="včera" count={1} items={["Škoda Auto → nabídka na Performance Max"]} colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
+                <ActivityRow icon={Send} label="Nabídka odeslána" date="před 2 dny" count={1} items={["Mall.cz → nabídka na Social Management"]} colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
+                <ActivityRow icon={FileSignature} label="Smlouva podepsána" date="před 2 dny" count={1} items={["Rohlik.cz → roční retainer 85k/měsíc"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" value={85000} />
+                <ActivityRow icon={Briefcase} label="Zakázka zahájena" date="před 3 dny" count={1} items={["Kofola → Q1 kampaň spuštěna"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={Briefcase} label="Zakázka zahájena" date="před 3 dny" count={1} items={["Pilsner Urquell → rebranding sociálů"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={Wrench} label="Vícepráce schválena" date="před 4 dny" count={1} items={["TestBrand → extra kreativy pro Black Friday"]} colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900" value={15000} />
+                <ActivityRow icon={Wrench} label="Vícepráce schválena" date="před 4 dny" count={1} items={["Alza.cz → A/B test landing pages"]} colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900" value={22000} />
+                <ActivityRow icon={Calendar} label="Schůzka naplánována" date="před 5 dny" count={1} items={["Škoda Auto → kickoff meeting zítra 10:00"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={Calendar} label="Schůzka naplánována" date="před 5 dny" count={1} items={["Notino → Q1 review ve čtvrtek"]} colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                <ActivityRow icon={CalendarCheck} label="Schůzka proběhla" date="před 6 dny" count={1} items={["Mall.cz → strategy call dokončen"]} colorClass="text-teal-600 bg-teal-100 dark:bg-teal-900" />
+                <ActivityRow icon={TrendingDown} label="Lead ztracen" date="před 6 dny" count={1} items={["O2 → vybrali jinou agenturu"]} colorClass="text-red-600 bg-red-100 dark:bg-red-900" isNegative value={60000} />
+                <ActivityRow icon={Users} label="Nový uchazeč" date="před 7 dny" count={1} items={["Jan Novák → PPC specialista, 3 roky exp."]} colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
+                <ActivityRow icon={Users} label="Nový uchazeč" date="před 7 dny" count={1} items={["Marie Svobodová → Social Media Manager"]} colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
+                <ActivityRow icon={UserCheck} label="Uchazeč přijat" date="před 7 dny" count={1} items={["Petr Horák → nastupuje jako junior PPC"]} colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
               </div>
               <div className="space-y-4">
                 {/* === SALES & LEADY === */}
