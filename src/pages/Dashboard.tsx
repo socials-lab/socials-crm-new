@@ -511,13 +511,7 @@ export default function Dashboard() {
       />
 
       {/* === EXECUTIVE KPIs === */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-        <KPICard
-          title="📈 MRR"
-          value={canSeeFinancials ? `${(metrics.mrr / 1000).toFixed(0)}k` : '***'}
-          subtitle={canSeeFinancials ? `ARR: ${(metrics.arr / 1000000).toFixed(1)}M CZK` : undefined}
-          icon={TrendingUp}
-        />
+      <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         <KPICard
           title="💰 Fakturace"
           value={canSeeFinancials ? `${(nextMonthInvoicing.total / 1000).toFixed(0)}k` : '***'}
@@ -573,18 +567,6 @@ export default function Dashboard() {
           value={activePipelineLeads}
           subtitle={canSeeFinancials ? `Hodnota: ${(metrics.pipelineValue / 1000).toFixed(0)}k Kč` : undefined}
           icon={Target}
-        />
-        <KPICard
-          title="🏢 Zakázky"
-          value={metrics.activeEngagements}
-          subtitle={`${metrics.activeClients} aktivních klientů`}
-          icon={Building2}
-        />
-        <KPICard
-          title="👥 Tým"
-          value={metrics.activeColleagues}
-          subtitle={canSeeFinancials ? `Náklady: ${(metrics.teamCosts / 1000).toFixed(0)}k/měs` : undefined}
-          icon={Users}
         />
       </div>
 
