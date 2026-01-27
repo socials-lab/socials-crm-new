@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import type { LeadStage } from '@/types/crm';
+// Hook updated: 2026-01-27 - added source performance tracking
 import type { 
   LeadStageTransition, 
   StageConversionRate, 
