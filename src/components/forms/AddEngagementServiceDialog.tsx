@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, getDaysInMonth, differenceInDays, startOfMonth, endOfMonth, isFirstDayOfMonth } from 'date-fns';
-import { setRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
 import { cs } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -195,15 +194,6 @@ export function AddEngagementServiceDialog({
     const isOneOff = data.billing_type === 'one_off';
     const selectedService = services.find(s => s.id === data.service_id);
     const isCore = selectedService?.service_type === 'core';
-    const isCreativeBoostService = selectedService?.code === CREATIVE_BOOST_CODE;
-    
-    // Generate a temporary ID for the new service (will be replaced by actual ID from DB/hook)
-    const tempServiceId = `es-${Date.now()}`;
-    
-    // Store reward per credit in frontend mock data for Creative Boost services
-    if (isCreativeBoostService && data.creative_boost_colleague_reward_per_credit) {
-      setRewardPerCredit(tempServiceId, data.creative_boost_colleague_reward_per_credit);
-    }
     
     onSubmit({
       engagement_id: engagementId,
@@ -344,36 +334,6 @@ export function AddEngagementServiceDialog({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="creative_boost_colleague_reward_per_credit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>🎨 Odměna za kredit pro grafika</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input 
-                            type="number" 
-                            min={0} 
-                            placeholder="80"
-                            className="pr-12"
-                            {...field}
-                            value={field.value ?? ''}
-                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                            CZK
-                          </span>
-                        </div>
-                      </FormControl>
-                      <FormDescription className="text-xs">
-                        Odměna pro přiřazeného kolegu/grafika za každý kredit (doporučeno: 80 Kč)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <div className="pt-2 border-t space-y-2">
                   <div>
                     <p className="text-sm font-medium">
@@ -386,19 +346,9 @@ export function AddEngagementServiceDialog({
                       = {form.watch('creative_boost_max_credits') ?? 0} kreditů × {form.watch('creative_boost_price_per_credit') ?? 0} Kč/kredit
                     </p>
                   </div>
-                  {(form.watch('creative_boost_colleague_reward_per_credit') ?? 0) > 0 && (
-                    <div>
-                      <p className="text-sm font-medium">
-                        Odměna pro grafika: {' '}
-                        <span className="text-green-600">
-                          {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_colleague_reward_per_credit') ?? 0)).toLocaleString('cs-CZ')} CZK/měsíc
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        = {form.watch('creative_boost_max_credits') ?? 0} kreditů × {form.watch('creative_boost_colleague_reward_per_credit') ?? 0} Kč/kredit
-                      </p>
-                    </div>
-                  )}
+                  <p className="text-xs text-muted-foreground border-t pt-2 mt-2">
+                    💡 Odměnu za kredit pro grafika/video editora nastavíte v přiřazení kolegy k zakázce
+                  </p>
                 </div>
               </div>
             )}

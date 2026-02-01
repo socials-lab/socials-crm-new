@@ -25,6 +25,7 @@ interface CreativeBoostCreditOverviewProps {
   year: number;
   month: number;
   canSeeFinancials: boolean;
+  assignedColleagueAssignmentId?: string | null; // ID of assignment for reward lookup
   onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number; colleagueRewardPerCredit?: number }) => void;
   onDelete: () => void;
 }
@@ -37,6 +38,7 @@ export function CreativeBoostCreditOverview({
   year, 
   month,
   canSeeFinancials,
+  assignedColleagueAssignmentId,
   onUpdateSettings,
   onDelete
 }: CreativeBoostCreditOverviewProps) {
@@ -50,7 +52,8 @@ export function CreativeBoostCreditOverview({
   
   const maxCredits = engagementService.creative_boost_max_credits ?? 0;
   const pricePerCredit = engagementService.creative_boost_price_per_credit ?? 0;
-  const colleagueRewardPerCredit = getRewardPerCredit(engagementService.id);
+  // Get reward from assignment if available, otherwise fallback to default
+  const colleagueRewardPerCredit = getRewardPerCredit(assignedColleagueAssignmentId ?? null);
   
   const usedCredits = summary?.usedCredits ?? 0;
   const progressPercent = maxCredits > 0 ? Math.min((usedCredits / maxCredits) * 100, 100) : 0;

@@ -47,6 +47,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { getRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
 import { EngagementForm } from '@/components/forms/EngagementForm';
 import { AssignmentForm } from '@/components/forms/AssignmentForm';
 import { AddEngagementServiceDialog } from '@/components/forms/AddEngagementServiceDialog';
@@ -660,6 +661,11 @@ function EngagementsContent() {
                                 
                                 // For Creative Boost, show only the unified card
                                 if (isCreativeBoost) {
+                                  // Find assignment for this Creative Boost service to get reward
+                                  const cbAssignment = engagementAssignments.find(
+                                    a => a.engagement_service_id === engService.id
+                                  );
+                                  
                                   return (
                                     <CreativeBoostCreditOverview 
                                       key={engService.id}
@@ -668,6 +674,7 @@ function EngagementsContent() {
                                       year={filterYear}
                                       month={filterMonth}
                                       canSeeFinancials={canSeeFinancials}
+                                      assignedColleagueAssignmentId={cbAssignment?.id}
                                       onUpdateSettings={(updates) => {
                                         updateEngagementService(engService.id, { 
                                           creative_boost_max_credits: updates.maxCredits,
@@ -902,13 +909,29 @@ function EngagementsContent() {
                                       title="Klikněte pro úpravu odměny"
                                     >
                                       <span>
-                                        {assignment.cost_model === 'fixed_monthly' && assignment.monthly_cost 
-                                          ? `${assignment.monthly_cost.toLocaleString('cs-CZ')} Kč/měs`
-                                          : assignment.cost_model === 'hourly' && assignment.hourly_cost
-                                          ? `${assignment.hourly_cost.toLocaleString('cs-CZ')} Kč/h`
-                                          : assignment.cost_model === 'percentage' && assignment.percentage_of_revenue
-                                          ? `${assignment.percentage_of_revenue}%`
-                                          : '–'}
+                                        {(() => {
+                                          // Check if this is a Creative Boost assignment with per-credit reward
+                                          const perCreditReward = getRewardPerCredit(assignment.id);
+                                          const hasPerCreditReward = perCreditReward !== 80 || (assignment.engagement_service_id && engagementServices.find(es => es.id === assignment.engagement_service_id && es.service_id === CREATIVE_BOOST_SERVICE_ID));
+                                          
+                                          if (hasPerCreditReward && assignment.engagement_service_id) {
+                                            const service = engagementServices.find(es => es.id === assignment.engagement_service_id);
+                                            if (service?.service_id === CREATIVE_BOOST_SERVICE_ID) {
+                                              return `${perCreditReward} Kč/kredit`;
+                                            }
+                                          }
+                                          
+                                          if (assignment.cost_model === 'fixed_monthly' && assignment.monthly_cost) {
+                                            return `${assignment.monthly_cost.toLocaleString('cs-CZ')} Kč/měs`;
+                                          }
+                                          if (assignment.cost_model === 'hourly' && assignment.hourly_cost) {
+                                            return `${assignment.hourly_cost.toLocaleString('cs-CZ')} Kč/h`;
+                                          }
+                                          if (assignment.cost_model === 'percentage' && assignment.percentage_of_revenue) {
+                                            return `${assignment.percentage_of_revenue}%`;
+                                          }
+                                          return '–';
+                                        })()}
                                       </span>
                                       <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </button>
@@ -1335,6 +1358,11 @@ function EngagementsContent() {
           }}
           assignment={editingAssignment}
           colleagueName={getColleagueById(editingAssignment.colleague_id)?.full_name || ''}
+          isCreativeBoostService={
+            editingAssignment.engagement_service_id 
+              ? engagementServices.find(es => es.id === editingAssignment.engagement_service_id)?.service_id === CREATIVE_BOOST_SERVICE_ID
+              : false
+          }
           onSave={(data) => {
             updateAssignment(editingAssignment.id, data);
             toast.success('Odměna kolegy byla upravena');

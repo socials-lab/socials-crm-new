@@ -99,7 +99,7 @@ interface CreativeBoostContextType {
 const CreativeBoostContext = createContext<CreativeBoostContextType | null>(null);
 
 export function CreativeBoostProvider({ children }: { children: ReactNode }) {
-  const { getClientById, colleagues, engagements, engagementServices } = useCRMData();
+  const { getClientById, colleagues, engagements, engagementServices, assignments } = useCRMData();
   const { user } = useAuth();
   
   const [outputTypes, setOutputTypes] = useState<OutputType[]>(initialOutputTypes);
@@ -474,9 +474,10 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         totalCredits += credits.totalCredits;
       });
       
-      // Get reward per credit from mock data (frontend-only demo)
+      // Get reward per credit from assignment (frontend-only demo)
       let engagementId: string | null = null;
       let engagementName = '';
+      let rewardPerCredit = 80; // Default
       
       if (clientMonth?.engagementServiceId) {
         const engService = engagementServices.find(es => es.id === clientMonth.engagementServiceId);
@@ -484,15 +485,28 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           engagementId = engService.engagement_id;
           const engagement = engagements.find(e => e.id === engService.engagement_id);
           engagementName = engagement?.name ?? '';
+          
+          // Find assignment for this colleague on this engagement service to get reward
+          const assignment = assignments.find(
+            a => a.colleague_id === colleagueId && a.engagement_service_id === clientMonth.engagementServiceId
+          );
+          if (assignment) {
+            rewardPerCredit = getRewardPerCredit(assignment.id);
+          }
         }
       } else if (clientMonth?.engagementId) {
         engagementId = clientMonth.engagementId;
         const engagement = engagements.find(e => e.id === clientMonth.engagementId);
         engagementName = engagement?.name ?? '';
+        
+        // Find assignment for this colleague on this engagement
+        const assignment = assignments.find(
+          a => a.colleague_id === colleagueId && a.engagement_id === clientMonth.engagementId
+        );
+        if (assignment) {
+          rewardPerCredit = getRewardPerCredit(assignment.id);
+        }
       }
-      
-      // Use frontend mock for reward per credit
-      const rewardPerCredit = getRewardPerCredit(clientMonth?.engagementServiceId ?? null);
       
       results.push({
         clientId,
@@ -507,7 +521,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
     });
     
     return results.sort((a, b) => b.totalReward - a.totalReward);
-  }, [outputs, clientMonths, engagementServices, engagements, getClientById, calculateOutputCredits]);
+  }, [outputs, clientMonths, engagementServices, engagements, assignments, getClientById, calculateOutputCredits]);
 
   // Helpers
   const getOutputTypeById = useCallback((id: string) => {
