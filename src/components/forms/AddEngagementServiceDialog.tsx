@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, getDaysInMonth, differenceInDays, startOfMonth, endOfMonth, isFirstDayOfMonth } from 'date-fns';
+import { setRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
 import { cs } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -194,6 +195,15 @@ export function AddEngagementServiceDialog({
     const isOneOff = data.billing_type === 'one_off';
     const selectedService = services.find(s => s.id === data.service_id);
     const isCore = selectedService?.service_type === 'core';
+    const isCreativeBoostService = selectedService?.code === CREATIVE_BOOST_CODE;
+    
+    // Generate a temporary ID for the new service (will be replaced by actual ID from DB/hook)
+    const tempServiceId = `es-${Date.now()}`;
+    
+    // Store reward per credit in frontend mock data for Creative Boost services
+    if (isCreativeBoostService && data.creative_boost_colleague_reward_per_credit) {
+      setRewardPerCredit(tempServiceId, data.creative_boost_colleague_reward_per_credit);
+    }
     
     onSubmit({
       engagement_id: engagementId,
@@ -208,7 +218,7 @@ export function AddEngagementServiceDialog({
       creative_boost_min_credits: data.creative_boost_min_credits,
       creative_boost_max_credits: data.creative_boost_max_credits,
       creative_boost_price_per_credit: data.creative_boost_price_per_credit,
-      creative_boost_reward_per_credit: data.creative_boost_colleague_reward_per_credit,
+      // Note: reward per credit is stored in frontend mock data, not in DB
       invoicing_status: isOneOff ? 'pending' : 'not_applicable',
       invoiced_at: null,
       invoiced_in_period: null,

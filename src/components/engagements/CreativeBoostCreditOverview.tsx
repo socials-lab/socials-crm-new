@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { getRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
 import type { EngagementService } from '@/types/crm';
 import type { ClientMonthSummary } from '@/types/creativeBoost';
 
@@ -49,7 +50,7 @@ export function CreativeBoostCreditOverview({
   
   const maxCredits = engagementService.creative_boost_max_credits ?? 0;
   const pricePerCredit = engagementService.creative_boost_price_per_credit ?? 0;
-  const colleagueRewardPerCredit = engagementService.creative_boost_reward_per_credit ?? 80;
+  const colleagueRewardPerCredit = getRewardPerCredit(engagementService.id);
   
   const usedCredits = summary?.usedCredits ?? 0;
   const progressPercent = maxCredits > 0 ? Math.min((usedCredits / maxCredits) * 100, 100) : 0;
