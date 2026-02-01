@@ -347,22 +347,23 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-[250px]">Typ výstupu</TableHead>
-                            <TableHead className="text-center w-[80px]">Kredity</TableHead>
-                            <TableHead className="text-center w-[100px]">Klasické</TableHead>
-                            <TableHead className="text-center w-[100px]">
+                            <TableHead className="w-[200px]">Typ výstupu</TableHead>
+                            <TableHead className="text-center w-[70px]">Kredity</TableHead>
+                            <TableHead className="text-center w-[80px]">Klasické</TableHead>
+                            <TableHead className="text-center w-[80px]">
                               <div className="flex items-center justify-center gap-1">
                                 <Zap className="h-3 w-3 text-amber-600" />
                                 Express
                               </div>
                             </TableHead>
-                            <TableHead className="text-center w-[80px]">Celkem</TableHead>
+                            <TableHead className="text-center w-[70px]">Celkem</TableHead>
+                            <TableHead className="w-[150px]">Grafik</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {/* Banner section */}
                           <TableRow className="bg-blue-50/50 hover:bg-blue-50/50">
-                            <TableCell colSpan={5} className="py-1.5">
+                            <TableCell colSpan={6} className="py-1.5">
                               <div className="flex items-center gap-1.5 font-semibold text-blue-700 text-xs">
                                 <Image className="h-3.5 w-3.5" />
                                 BANNERY
@@ -393,7 +394,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                     min="0"
                                     value={normalCount}
                                     onChange={(e) => handleOutputChange(summary.clientId, outputType.id, 'normalCount', parseInt(e.target.value) || 0)}
-                                    className="w-20 h-8 text-center mx-auto"
+                                    className="w-16 h-8 text-center mx-auto"
                                   />
                                 </TableCell>
                                 <TableCell className="text-center">
@@ -402,7 +403,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                     min="0"
                                     value={expressCount}
                                     onChange={(e) => handleOutputChange(summary.clientId, outputType.id, 'expressCount', parseInt(e.target.value) || 0)}
-                                    className="w-20 h-8 text-center mx-auto"
+                                    className="w-16 h-8 text-center mx-auto"
                                   />
                                 </TableCell>
                                 <TableCell className="text-center font-medium">
@@ -414,13 +415,30 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                     <span className="text-muted-foreground">-</span>
                                   )}
                                 </TableCell>
+                                <TableCell>
+                                  {totalCount > 0 && (
+                                    <Select
+                                      value={output?.colleagueId || ''}
+                                      onValueChange={(val) => handleOutputChange(summary.clientId, outputType.id, 'colleagueId', val)}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue placeholder="Vybrat..." />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-popover">
+                                        {designerColleagues.map((c) => (
+                                          <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                </TableCell>
                               </TableRow>
                             );
                           })}
                           
                           {/* Video section */}
                           <TableRow className="bg-purple-50/50 hover:bg-purple-50/50">
-                            <TableCell colSpan={5} className="py-1.5">
+                            <TableCell colSpan={6} className="py-1.5">
                               <div className="flex items-center gap-1.5 font-semibold text-purple-700 text-xs">
                                 <Video className="h-3.5 w-3.5" />
                                 VIDEA
@@ -451,7 +469,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                     min="0"
                                     value={normalCount}
                                     onChange={(e) => handleOutputChange(summary.clientId, outputType.id, 'normalCount', parseInt(e.target.value) || 0)}
-                                    className="w-20 h-8 text-center mx-auto"
+                                    className="w-16 h-8 text-center mx-auto"
                                   />
                                 </TableCell>
                                 <TableCell className="text-center">
@@ -460,7 +478,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                     min="0"
                                     value={expressCount}
                                     onChange={(e) => handleOutputChange(summary.clientId, outputType.id, 'expressCount', parseInt(e.target.value) || 0)}
-                                    className="w-20 h-8 text-center mx-auto"
+                                    className="w-16 h-8 text-center mx-auto"
                                   />
                                 </TableCell>
                                 <TableCell className="text-center font-medium">
@@ -470,6 +488,23 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                     </span>
                                   ) : (
                                     <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {totalCount > 0 && (
+                                    <Select
+                                      value={output?.colleagueId || ''}
+                                      onValueChange={(val) => handleOutputChange(summary.clientId, outputType.id, 'colleagueId', val)}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue placeholder="Vybrat..." />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-popover">
+                                        {designerColleagues.map((c) => (
+                                          <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   )}
                                 </TableCell>
                               </TableRow>
