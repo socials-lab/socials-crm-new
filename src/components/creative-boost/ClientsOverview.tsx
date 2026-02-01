@@ -357,7 +357,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                               </div>
                             </TableHead>
                             <TableHead className="text-center w-[70px]">Celkem</TableHead>
-                            <TableHead className="w-[150px]">Grafik</TableHead>
+                            <TableHead className="w-[150px]">Grafik / Video editor</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>

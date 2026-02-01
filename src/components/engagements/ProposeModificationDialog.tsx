@@ -222,7 +222,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
             selected_tier: null,
             creative_boost_max_credits: cbMaxCredits,
             creative_boost_price_per_credit: cbPricePerCredit,
-            creative_boost_colleague_reward_per_credit: cbColleagueReward,
+            creative_boost_reward_per_credit: cbColleagueReward,
           };
         } else {
           proposed_changes = {

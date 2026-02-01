@@ -481,8 +481,10 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       if (clientMonth?.engagementServiceId) {
         const engService = engagementServices.find(es => es.id === clientMonth.engagementServiceId);
         if (engService) {
-          // Use colleague reward if set, otherwise default
-          rewardPerCredit = (engService as any).creative_boost_colleague_reward_per_credit ?? 80;
+          // Use colleague reward if set, otherwise default (check both field name variants)
+          rewardPerCredit = (engService as any).creative_boost_reward_per_credit 
+            ?? (engService as any).creative_boost_colleague_reward_per_credit 
+            ?? 80;
           engagementId = engService.engagement_id;
           const engagement = engagements.find(e => e.id === engService.engagement_id);
           engagementName = engagement?.name ?? '';

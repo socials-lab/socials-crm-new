@@ -221,7 +221,7 @@ export default function Modifications() {
             creative_boost_min_credits: changes.creative_boost_min_credits || null,
             creative_boost_max_credits: changes.creative_boost_max_credits || null,
             creative_boost_price_per_credit: changes.creative_boost_price_per_credit || null,
-            creative_boost_colleague_reward_per_credit: null,
+            creative_boost_reward_per_credit: null,
             invoicing_status: 'not_applicable',
             invoiced_at: null,
             invoiced_in_period: null,
