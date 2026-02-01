@@ -49,7 +49,7 @@ export function CreativeBoostCreditOverview({
   
   const maxCredits = engagementService.creative_boost_max_credits ?? 0;
   const pricePerCredit = engagementService.creative_boost_price_per_credit ?? 0;
-  const colleagueRewardPerCredit = engagementService.creative_boost_colleague_reward_per_credit ?? 0;
+  const colleagueRewardPerCredit = engagementService.creative_boost_reward_per_credit ?? 80;
   
   const usedCredits = summary?.usedCredits ?? 0;
   const progressPercent = maxCredits > 0 ? Math.min((usedCredits / maxCredits) * 100, 100) : 0;
