@@ -5,6 +5,7 @@ import {
   creativeBoostClientMonths as initialClientMonths,
   clientMonthOutputs as initialOutputs,
 } from '@/data/creativeBoostMockData';
+import { getRewardPerCredit, setRewardPerCredit as updateRewardMock } from '@/data/creativeBoostRewardsMockData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import type {
@@ -473,18 +474,13 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         totalCredits += credits.totalCredits;
       });
       
-      // Get reward per credit from engagement service (default 80 CZK)
-      let rewardPerCredit = 80; // Default
+      // Get reward per credit from mock data (frontend-only demo)
       let engagementId: string | null = null;
       let engagementName = '';
       
       if (clientMonth?.engagementServiceId) {
         const engService = engagementServices.find(es => es.id === clientMonth.engagementServiceId);
         if (engService) {
-          // Use colleague reward if set, otherwise default (check both field name variants)
-          rewardPerCredit = (engService as any).creative_boost_reward_per_credit 
-            ?? (engService as any).creative_boost_colleague_reward_per_credit 
-            ?? 80;
           engagementId = engService.engagement_id;
           const engagement = engagements.find(e => e.id === engService.engagement_id);
           engagementName = engagement?.name ?? '';
@@ -494,6 +490,9 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         const engagement = engagements.find(e => e.id === clientMonth.engagementId);
         engagementName = engagement?.name ?? '';
       }
+      
+      // Use frontend mock for reward per credit
+      const rewardPerCredit = getRewardPerCredit(clientMonth?.engagementServiceId ?? null);
       
       results.push({
         clientId,
