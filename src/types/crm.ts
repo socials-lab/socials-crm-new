@@ -203,6 +203,7 @@ export interface Engagement {
   contract_url: string | null;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null; // Soft delete timestamp
 }
 
 // One-off invoicing status
@@ -342,6 +343,7 @@ export interface InvoiceLineItem {
   engagement_id: string | null;
   extra_work_id: string | null;
   engagement_service_id: string | null;
+  creative_boost_client_month_id?: string | null;
   source_description: string;
   source_amount: number;
   period_start: string;
@@ -407,6 +409,9 @@ export interface MonthlyEngagementInvoice {
   notes: string;
   created_at: string;
   updated_at: string;
+  fakturoid_id: string | null;
+  fakturoid_url: string | null;
+  invoice_number: string | null;
 }
 
 // Lead types

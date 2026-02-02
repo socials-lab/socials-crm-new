@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
-import type { Engagement, MonthlyEngagementInvoice } from '@/types/crm';
+import type { Engagement, MonthlyEngagementInvoice, IssuedInvoice } from '@/types/crm';
 
 interface InvoiceMonth {
   year: number;
@@ -16,40 +16,42 @@ interface InvoiceMonth {
   isPending: boolean;
   amount: number | null;
   issuedAt: string | null;
+  fakturoidUrl: string | null;
+  invoiceNumber: string | null;
 }
 
 interface EngagementInvoicingBadgesProps {
   engagement: Engagement;
-  invoices: MonthlyEngagementInvoice[];
+  invoices: IssuedInvoice[];
 }
 
 // Get last 3 months for badges display
-export function getRecentMonths(engagement: Engagement, invoices: MonthlyEngagementInvoice[]): InvoiceMonth[] {
+export function getRecentMonths(engagement: Engagement, invoices: IssuedInvoice[]): InvoiceMonth[] {
   const now = new Date();
   const currentMonth = startOfMonth(now);
   const engagementStart = startOfMonth(new Date(engagement.start_date));
-  
+
   const months: InvoiceMonth[] = [];
-  
+
   // Show last 3 months (current month and 2 previous)
   for (let i = 2; i >= 0; i--) {
     const monthDate = subMonths(currentMonth, i);
     const year = monthDate.getFullYear();
     const month = monthDate.getMonth() + 1;
-    
+
     // Skip if before engagement start
     if (isBefore(monthDate, engagementStart)) continue;
-    
+
     // Skip if engagement ended before this month
     if (engagement.end_date) {
       const endDate = new Date(engagement.end_date);
       if (isAfter(monthDate, startOfMonth(endDate))) continue;
     }
-    
+
     const invoice = invoices.find(inv => inv.year === year && inv.month === month);
-    const isInvoiced = invoice?.status === 'issued' || invoice?.status === 'paid';
+    const isInvoiced = !!invoice;
     const isPending = !isInvoiced && i === 0; // Current month is pending
-    
+
     months.push({
       year,
       month,
@@ -58,36 +60,38 @@ export function getRecentMonths(engagement: Engagement, invoices: MonthlyEngagem
       isPending,
       amount: invoice?.total_amount || null,
       issuedAt: invoice?.issued_at || null,
+      fakturoidUrl: invoice?.fakturoid_url || null,
+      invoiceNumber: invoice?.invoice_number || null,
     });
   }
-  
+
   return months;
 }
 
 // Get all invoicing months for expanded section
-export function getAllInvoicingMonths(engagement: Engagement, invoices: MonthlyEngagementInvoice[]): InvoiceMonth[] {
+export function getAllInvoicingMonths(engagement: Engagement, invoices: IssuedInvoice[]): InvoiceMonth[] {
   const now = new Date();
   const currentMonth = startOfMonth(now);
   const engagementStart = startOfMonth(new Date(engagement.start_date));
-  
+
   const months: InvoiceMonth[] = [];
   let monthDate = engagementStart;
-  
+
   while (!isAfter(monthDate, currentMonth)) {
     // Skip if engagement ended before this month
     if (engagement.end_date) {
       const endDate = new Date(engagement.end_date);
       if (isAfter(monthDate, startOfMonth(endDate))) break;
     }
-    
+
     const year = monthDate.getFullYear();
     const month = monthDate.getMonth() + 1;
-    
+
     const invoice = invoices.find(inv => inv.year === year && inv.month === month);
-    const isInvoiced = invoice?.status === 'issued' || invoice?.status === 'paid';
+    const isInvoiced = !!invoice;
     const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
     const isPending = !isInvoiced && isCurrentMonth;
-    
+
     months.unshift({
       year,
       month,
@@ -96,11 +100,13 @@ export function getAllInvoicingMonths(engagement: Engagement, invoices: MonthlyE
       isPending,
       amount: invoice?.total_amount || null,
       issuedAt: invoice?.issued_at || null,
+      fakturoidUrl: invoice?.fakturoid_url || null,
+      invoiceNumber: invoice?.invoice_number || null,
     });
-    
+
     monthDate = addMonths(monthDate, 1);
   }
-  
+
   return months;
 }
 
@@ -138,33 +144,35 @@ export function EngagementInvoicingBadges({ engagement, invoices }: EngagementIn
 
 interface EngagementInvoicingSectionProps {
   engagement: Engagement;
-  invoices: MonthlyEngagementInvoice[];
+  invoices: IssuedInvoice[];
   currency: string;
 }
 
 export function EngagementInvoicingSection({ engagement, invoices, currency }: EngagementInvoicingSectionProps) {
   const navigate = useNavigate();
   const allMonths = getAllInvoicingMonths(engagement, invoices);
-  
-  // Filter only relevant months (invoiced or pending)
-  const availableMonths = allMonths.filter(m => m.isInvoiced || m.isPending);
-  
-  // Default to first (most recent) available month
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
-  
-  const selectedMonth = selectedMonthKey 
-    ? availableMonths.find(m => `${m.year}-${m.month}` === selectedMonthKey)
-    : availableMonths[0];
-  
-  const invoicedCount = allMonths.filter(m => m.isInvoiced).length;
+
+  // Filter only invoiced months
+  const invoicedMonths = allMonths.filter(m => m.isInvoiced);
+
+  const invoicedCount = invoicedMonths.length;
   const totalCount = allMonths.length;
-  
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('cs-CZ', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="font-medium text-sm flex items-center gap-2">
           <FileText className="h-4 w-4 text-muted-foreground" />
-          Fakturace ({invoicedCount}/{totalCount})
+          Faktury ({invoicedCount})
         </h4>
         <Button
           variant="ghost"
@@ -179,35 +187,60 @@ export function EngagementInvoicingSection({ engagement, invoices, currency }: E
           <ExternalLink className="h-3 w-3 ml-1" />
         </Button>
       </div>
-      
-      {availableMonths.length > 0 ? (
-        <Select 
-          value={selectedMonthKey || (selectedMonth ? `${selectedMonth.year}-${selectedMonth.month}` : undefined)} 
-          onValueChange={setSelectedMonthKey}
-        >
-          <SelectTrigger className="h-9">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-              <SelectValue placeholder="Vyberte měsíc" />
+
+      {invoicedMonths.length > 0 ? (
+        <div className="space-y-2">
+          {invoicedMonths.slice(0, 5).map(m => (
+            <div
+              key={`${m.year}-${m.month}`}
+              className="flex items-center justify-between text-sm py-1.5 px-2 rounded bg-muted/50"
+            >
+              <div className="flex items-center gap-2">
+                {m.fakturoidUrl ? (
+                  <a
+                    href={m.fakturoidUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {m.invoiceNumber || `${m.month}/${m.year}`}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {m.invoiceNumber || `${m.month}/${m.year}`}
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground capitalize">
+                  ({m.label})
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">
+                  {m.amount ? formatCurrency(m.amount) : '-'}
+                </span>
+                {m.fakturoidUrl ? (
+                  <Badge variant="outline" className="text-[10px] h-5 bg-green-50 text-green-700 border-green-200">
+                    <Check className="h-2.5 w-2.5 mr-0.5" />
+                    Fakturoid
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] h-5 bg-amber-50 text-amber-700 border-amber-200">
+                    Lokální
+                  </Badge>
+                )}
+              </div>
             </div>
-          </SelectTrigger>
-          <SelectContent>
-            {availableMonths.map(m => (
-              <SelectItem key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`}>
-                <div className="flex items-center gap-2">
-                  {m.isInvoiced ? (
-                    <Check className="h-3.5 w-3.5 text-green-600" />
-                  ) : (
-                    <Circle className="h-3.5 w-3.5 text-amber-500" />
-                  )}
-                  <span className="capitalize">{m.label}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          ))}
+          {invoicedMonths.length > 5 && (
+            <p className="text-xs text-muted-foreground text-center">
+              +{invoicedMonths.length - 5} dalších faktur
+            </p>
+          )}
+        </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Žádná historie fakturace</p>
+        <p className="text-sm text-muted-foreground">Žádné vystavené faktury</p>
       )}
     </div>
   );

@@ -26,23 +26,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- Add constraint to client_contacts
-ALTER TABLE client_contacts
-  ADD CONSTRAINT chk_contact_email_format
-  CHECK (is_valid_email_format(email));
-
--- Add constraint to leads (for contact_email field)
--- First check if the constraint doesn't already exist
+-- Add constraint to client_contacts (idempotent)
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'chk_lead_contact_email_format'
-  ) THEN
-    ALTER TABLE leads
-      ADD CONSTRAINT chk_lead_contact_email_format
-      CHECK (contact_email IS NULL OR is_valid_email_format(contact_email));
-  END IF;
+  ALTER TABLE client_contacts DROP CONSTRAINT IF EXISTS chk_contact_email_format;
+  ALTER TABLE client_contacts ADD CONSTRAINT chk_contact_email_format CHECK (is_valid_email_format(email));
+EXCEPTION WHEN others THEN
+  RAISE NOTICE 'Could not add chk_contact_email_format constraint: %', SQLERRM;
+END $$;
+
+-- Add constraint to leads (for contact_email field)
+DO $$
+BEGIN
+  ALTER TABLE leads DROP CONSTRAINT IF EXISTS chk_lead_contact_email_format;
+  ALTER TABLE leads ADD CONSTRAINT chk_lead_contact_email_format CHECK (contact_email IS NULL OR is_valid_email_format(contact_email));
+EXCEPTION WHEN others THEN
+  RAISE NOTICE 'Could not add chk_lead_contact_email_format constraint: %', SQLERRM;
 END $$;
 
 -- Success message

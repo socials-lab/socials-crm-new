@@ -102,6 +102,10 @@ const transformClientMonth = (row: Record<string, unknown>): CreativeBoostClient
   status: row.status as MonthStatus,
   engagementServiceId: row.engagement_service_id,
   engagementId: row.engagement_id,
+  invoiceId: row.invoice_id || null,
+  invoicedAt: row.invoiced_at || null,
+  invoicedAmount: row.invoiced_amount ? parseFloat(row.invoiced_amount) : null,
+  invoicedCredits: row.invoiced_credits ? parseInt(row.invoiced_credits) : null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });

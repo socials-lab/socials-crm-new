@@ -1,4 +1,4 @@
-import type { ClientStatus, EngagementStatus } from '@/types/crm';
+import type { ClientStatus, EngagementStatus, Engagement } from '@/types/crm';
 
 // Client status transitions
 // Standard users can only do these transitions
@@ -128,3 +128,42 @@ export const ENGAGEMENT_STATUS_LABELS: Record<EngagementStatus, string> = {
   completed: 'Dokončený',
   cancelled: 'Zrušený',
 };
+
+/**
+ * Check if engagement can be terminated (completed/cancelled) based on notice period
+ * Returns { allowed: boolean; reason?: string; noticeEndDate?: Date }
+ */
+export function canTerminateEngagement(
+  engagement: Engagement,
+  targetStatus: 'completed' | 'cancelled',
+  isSuperAdmin: boolean = false
+): { allowed: boolean; reason?: string; noticeEndDate?: Date } {
+  // If no notice period set, always allow
+  if (!engagement.notice_period_months || engagement.notice_period_months === 0) {
+    return { allowed: true };
+  }
+
+  // Super admin can override notice period
+  if (isSuperAdmin) {
+    return { allowed: true };
+  }
+
+  // Calculate when notice period would end
+  const startDate = new Date(engagement.start_date);
+  const noticeEndDate = new Date(startDate);
+  noticeEndDate.setMonth(noticeEndDate.getMonth() + engagement.notice_period_months);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  noticeEndDate.setHours(0, 0, 0, 0);
+
+  if (today < noticeEndDate) {
+    return {
+      allowed: false,
+      reason: `Výpovědní lhůta (${engagement.notice_period_months} měsíců) vyprší ${noticeEndDate.toLocaleDateString('cs-CZ')}. Pouze super admin může tuto podmínku přeskočit.`,
+      noticeEndDate,
+    };
+  }
+
+  return { allowed: true };
+}

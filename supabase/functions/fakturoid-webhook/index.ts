@@ -42,17 +42,23 @@ serve(async (req) => {
     const bodyText = await req.text();
     const payload: FakturoidWebhookPayload = JSON.parse(bodyText);
 
-    // Verify webhook authorization header
+    // Verify webhook authorization header (REQUIRED)
     const WEBHOOK_SECRET = Deno.env.get("FAKTUROID_WEBHOOK_SECRET");
-    if (WEBHOOK_SECRET) {
-      const authHeader = req.headers.get("Authorization");
-      if (authHeader !== WEBHOOK_SECRET) {
-        console.error("Webhook authorization failed");
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    if (!WEBHOOK_SECRET) {
+      console.error("FAKTUROID_WEBHOOK_SECRET not configured - rejecting webhook");
+      return new Response(
+        JSON.stringify({ error: "Webhook secret not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader !== WEBHOOK_SECRET) {
+      console.error("Webhook authorization failed");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (payload.event_name !== "invoice_paid" && payload.event_name !== "invoice_updated") {

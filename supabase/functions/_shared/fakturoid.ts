@@ -26,6 +26,7 @@ export interface FakturoidInvoice {
   id: number;
   number: string;
   html_url?: string;
+  public_html_url?: string;
 }
 
 // Token cache (persists for the lifetime of the edge function instance)
@@ -244,6 +245,30 @@ export async function createInvoice(
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Fakturoid create invoice failed: ${errorText}`);
+  }
+
+  return await response.json();
+}
+
+export async function getInvoiceById(
+  accessToken: string,
+  accountSlug: string,
+  invoiceId: number
+): Promise<FakturoidInvoice> {
+  const url = `https://app.fakturoid.cz/api/v3/accounts/${accountSlug}/invoices/${invoiceId}.json`;
+
+  const response = await fakturoidFetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Accept": "application/json",
+      "User-Agent": USER_AGENT,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Fakturoid get invoice failed: ${errorText}`);
   }
 
   return await response.json();

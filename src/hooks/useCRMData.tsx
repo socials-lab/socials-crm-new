@@ -98,7 +98,8 @@ interface CRMDataContextType {
     invoice: Omit<IssuedInvoice, 'id' | 'created_at' | 'invoice_number'>,
     lineItems: Omit<InvoiceLineItem, 'id' | 'created_at' | 'updated_at' | 'invoice_id'>[],
     extraWorkIds: string[],
-    oneOffServiceIds: string[]
+    oneOffServiceIds: string[],
+    creativeBoostClientMonthIds?: string[]
   ) => Promise<IssuedInvoice>;
   
   // Invoice Line Items operations
@@ -227,9 +228,16 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
   const { data: engagements = [], isLoading: engagementsLoading } = useQuery({
     queryKey: ['engagements'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('engagements').select('*').order('name');
+      // Filter out soft-deleted engagements and engagements of soft-deleted clients
+      const { data, error } = await supabase
+        .from('engagements')
+        .select('*, clients!inner(deleted_at)')
+        .is('deleted_at', null)
+        .is('clients.deleted_at', null)
+        .order('name');
       if (error) throw error;
-      return (data || []).map(transformEngagement);
+      // Remove the clients join data from result
+      return (data || []).map(({ clients, ...engagement }) => transformEngagement(engagement));
     },
   });
 
@@ -263,9 +271,15 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
   const { data: extraWorks = [], isLoading: extraWorksLoading } = useQuery({
     queryKey: ['extra_works'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('extra_works').select('*').order('work_date', { ascending: false });
+      // Note: soft delete filter (.is('deleted_at', null)) will be added after migration
+      // Currently the column doesn't exist yet
+      const { data, error } = await supabase
+        .from('extra_works')
+        .select('*')
+        .order('work_date', { ascending: false });
       if (error) throw error;
-      return data || [];
+      // Filter out soft-deleted items client-side if column exists
+      return (data || []).filter(item => !('deleted_at' in item) || item.deleted_at === null);
     },
   });
 
@@ -353,9 +367,58 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
         }
       });
 
+    // Subscribe to engagements changes
+    const engagementsChannel = supabase
+      .channel('engagements_realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'engagements' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['engagements'] });
+          queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Failed to subscribe to engagements realtime:', err);
+        }
+      });
+
+    // Subscribe to engagement_services changes
+    const engServicesChannel = supabase
+      .channel('engagement_services_realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'engagement_services' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Failed to subscribe to engagement_services realtime:', err);
+        }
+      });
+
+    // Subscribe to engagement_assignments changes
+    const assignmentsChannel = supabase
+      .channel('engagement_assignments_realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'engagement_assignments' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Failed to subscribe to engagement_assignments realtime:', err);
+        }
+      });
+
     return () => {
       supabase.removeChannel(contactsChannel);
       supabase.removeChannel(clientsChannel);
+      supabase.removeChannel(engagementsChannel);
+      supabase.removeChannel(engServicesChannel);
+      supabase.removeChannel(assignmentsChannel);
     };
   }, [queryClient]);
 
@@ -643,8 +706,13 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
         }
       });
 
-      // Wait for history entries (non-blocking)
-      Promise.all(historyPromises).then(() => {}).catch(e => console.error('History logging error:', e));
+      // Wait for history entries before proceeding with update
+      try {
+        await Promise.all(historyPromises);
+      } catch (e) {
+        console.error('History logging error:', e);
+        // Continue with update even if history logging fails
+      }
 
       const { error } = await supabase.from('engagements').update(data).eq('id', id);
       if (error) throw error;
@@ -662,7 +730,28 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
 
   const deleteEngagementMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('engagements').delete().eq('id', id);
+      // Log deletion to history first (before soft-deleting)
+      try {
+        await supabase.rpc('log_engagement_change', {
+          _engagement_id: id,
+          _change_type: 'deleted',
+          _field_name: null,
+          _field_label: null,
+          _old_value: null,
+          _new_value: null,
+          _related_entity_id: null,
+          _related_entity_name: null,
+        });
+      } catch (e) {
+        console.error('Failed to log engagement deletion:', e);
+        // Continue with deletion even if logging fails
+      }
+
+      // Soft delete by setting deleted_at
+      const { error } = await supabase
+        .from('engagements')
+        .update({ deleted_at: new Date().toISOString(), status: 'cancelled' })
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -985,6 +1074,18 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Validate current status before approving
+      const { data: current, error: fetchError } = await supabase
+        .from('extra_works')
+        .select('status')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (current?.status !== 'pending_approval') {
+        throw new Error('Can only approve items with pending_approval status');
+      }
+
       const { error } = await supabase.from('extra_works').update({
         status: 'in_progress',
         approval_date: new Date().toISOString(),
@@ -1004,6 +1105,18 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
 
   const completeExtraWorkMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Validate current status before completing
+      const { data: current, error: fetchError } = await supabase
+        .from('extra_works')
+        .select('status')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (current?.status !== 'in_progress') {
+        throw new Error('Can only complete items with in_progress status');
+      }
+
       const { error } = await supabase.from('extra_works').update({
         status: 'ready_to_invoice',
       }).eq('id', id);
@@ -1021,7 +1134,8 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
 
   const deleteExtraWorkMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('extra_works').delete().eq('id', id);
+      // Use soft delete via RPC function
+      const { error } = await supabase.rpc('soft_delete_extra_work', { p_extra_work_id: id });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -1234,7 +1348,8 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     invoice: Omit<IssuedInvoice, 'id' | 'created_at' | 'invoice_number'>,
     lineItems: Omit<InvoiceLineItem, 'id' | 'created_at' | 'updated_at' | 'invoice_id'>[],
     extraWorkIds: string[],
-    oneOffServiceIds: string[]
+    oneOffServiceIds: string[],
+    creativeBoostClientMonthIds: string[] = []
   ): Promise<IssuedInvoice> => {
     // Generate invoice number
     const invoiceNumber = getNextInvoiceNumber(invoice.year);
@@ -1270,9 +1385,11 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (lineItemsError) throw lineItemsError;
     }
     
-    // Update extra works to invoiced status
+    // Update extra works to invoiced status - atomic update with status check
     if (extraWorkIds.length > 0) {
-      const { error: extraWorkError } = await supabase
+      // Atomic update: only update items that are still ready_to_invoice
+      // This prevents race conditions where another request invoices the same item
+      const { data: updatedWorks, error: extraWorkError } = await supabase
         .from('extra_works')
         .update({
           status: 'invoiced',
@@ -1280,9 +1397,18 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
           invoice_number: invoiceNumber,
           invoiced_at: new Date().toISOString(),
         })
-        .in('id', extraWorkIds);
-      
+        .in('id', extraWorkIds)
+        .eq('status', 'ready_to_invoice')  // Only update if still ready_to_invoice
+        .select('id');
+
       if (extraWorkError) throw extraWorkError;
+
+      // Verify all items were updated (none were already invoiced)
+      if (!updatedWorks || updatedWorks.length !== extraWorkIds.length) {
+        const updatedIds = new Set(updatedWorks?.map(w => w.id) || []);
+        const failedIds = extraWorkIds.filter(id => !updatedIds.has(id));
+        throw new Error(`Some extra works could not be invoiced (may have been invoiced already): ${failedIds.join(', ')}`);
+      }
     }
     
     // Update one-off services to invoiced status
@@ -1295,15 +1421,36 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
           invoice_id: createdInvoice.id,
         })
         .in('id', oneOffServiceIds);
-      
+
       if (serviceError) throw serviceError;
     }
-    
+
+    // Update Creative Boost client months to invoiced status
+    if (creativeBoostClientMonthIds.length > 0) {
+      // Calculate total credits from line items for this invoice
+      const cbLineItems = lineItems.filter(li => li.source === 'creative_boost');
+      const totalCredits = cbLineItems.reduce((sum, li) => sum + (li.quantity || 0), 0);
+      const totalAmount = cbLineItems.reduce((sum, li) => sum + ((li.unit_price || 0) * (li.quantity || 0)), 0);
+
+      const { error: cbError } = await supabase
+        .from('creative_boost_client_months')
+        .update({
+          invoice_id: createdInvoice.id,
+          invoiced_at: new Date().toISOString(),
+          invoiced_credits: totalCredits,
+          invoiced_amount: totalAmount,
+        })
+        .in('id', creativeBoostClientMonthIds);
+
+      if (cbError) throw cbError;
+    }
+
     // Invalidate queries
     queryClient.invalidateQueries({ queryKey: ['issued_invoices'] });
     queryClient.invalidateQueries({ queryKey: ['invoice_line_items'] });
     queryClient.invalidateQueries({ queryKey: ['extra_works'] });
     queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
+    queryClient.invalidateQueries({ queryKey: ['creative_boost_client_months'] });
     
     return createdInvoice;
   };

@@ -37,22 +37,50 @@ type AssignmentFormData = z.infer<typeof assignmentSchema>;
 interface AssignmentFormProps {
   engagementId: string;
   engagementServiceId?: string | null;
+  engagementStartDate: string;
+  engagementEndDate?: string | null;
   colleagues: Colleague[];
   existingAssignments: EngagementAssignment[];
   onSubmit: (data: Omit<EngagementAssignment, 'id' | 'created_at' | 'updated_at'>) => void;
   onCancel: () => void;
 }
 
-export function AssignmentForm({ 
-  engagementId, 
+export function AssignmentForm({
+  engagementId,
   engagementServiceId,
-  colleagues, 
+  engagementStartDate,
+  engagementEndDate,
+  colleagues,
   existingAssignments,
-  onSubmit, 
-  onCancel 
+  onSubmit,
+  onCancel
 }: AssignmentFormProps) {
+  // Create schema with engagement date validation
+  const assignmentSchemaWithDates = assignmentSchema.refine(
+    (data) => {
+      const assignStart = new Date(data.start_date);
+      const engStart = new Date(engagementStartDate);
+
+      // Assignment cannot start before engagement
+      if (assignStart < engStart) return false;
+
+      // If engagement has end date, assignment cannot start after it
+      if (engagementEndDate) {
+        const engEnd = new Date(engagementEndDate);
+        if (assignStart > engEnd) return false;
+      }
+
+      return true;
+    },
+    {
+      message: engagementEndDate
+        ? `Datum musí být v rozsahu zakázky (${engagementStartDate} - ${engagementEndDate})`
+        : `Datum nesmí být před začátkem zakázky (${engagementStartDate})`,
+      path: ['start_date']
+    }
+  );
   const form = useForm<AssignmentFormData>({
-    resolver: zodResolver(assignmentSchema),
+    resolver: zodResolver(assignmentSchemaWithDates),
     defaultValues: {
       colleague_id: '',
       role_on_engagement: '',

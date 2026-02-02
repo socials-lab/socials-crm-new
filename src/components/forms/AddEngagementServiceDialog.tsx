@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { TrendingUp } from 'lucide-react';
+import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { Service, EngagementService, ServiceTier } from '@/types/crm';
 import { serviceTierConfigs } from '@/constants/services';
@@ -147,7 +148,19 @@ export function AddEngagementServiceDialog({
   const handleSubmit = (data: EngagementServiceFormData) => {
     const selectedService = services.find(s => s.id === data.service_id);
     if (!selectedService) return;
-    
+
+    // Validate Creative Boost has at least 1 credit
+    if (data.service_id === CREATIVE_BOOST_SERVICE_ID) {
+      if (!data.creative_boost_max_credits || data.creative_boost_max_credits <= 0) {
+        toast.error('Creative Boost musí mít alespoň 1 kredit');
+        return;
+      }
+      if (!data.creative_boost_price_per_credit || data.creative_boost_price_per_credit <= 0) {
+        toast.error('Creative Boost musí mít nastavenou cenu za kredit');
+        return;
+      }
+    }
+
     const isOneOff = selectedService.billing_type === 'one_off';
     const isCore = selectedService.service_type === 'core';
     

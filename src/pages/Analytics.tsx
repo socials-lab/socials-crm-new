@@ -595,7 +595,7 @@ export default function Analytics() {
       if (!output.colleagueId) return;
       const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
       const colleague = colleagues.find(c => c.id === output.colleagueId);
-      const colleagueName = colleague?.full_name.split(' ')[0] || 'Neznámý';
+      const colleagueName = colleague?.full_name?.split(' ')[0] || 'Neznámý';
       const currentCredits = creditsByColleagueMap.get(colleagueName) || 0;
       creditsByColleagueMap.set(colleagueName, currentCredits + credits.totalCredits);
     });

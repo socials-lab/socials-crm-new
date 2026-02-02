@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,7 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Engagement, Client, ClientContact, EngagementStatus } from '@/types/crm';
-import { getAvailableEngagementStatuses, ENGAGEMENT_STATUS_LABELS } from '@/lib/statusTransitions';
+import { getAvailableEngagementStatuses, ENGAGEMENT_STATUS_LABELS, canTerminateEngagement } from '@/lib/statusTransitions';
+import { toast } from 'sonner';
 
 const engagementSchema = z.object({
   name: z.string().min(1, 'Název je povinný'),
@@ -111,9 +113,44 @@ export function EngagementForm({
   // Filter contacts by selected client
   const clientContacts = contacts.filter(c => c.client_id === selectedClientId);
 
+  // Reset contact when client changes (only if it's not the initial client)
+  const initialClientId = useMemo(() => engagement?.client_id || defaultClientId, [engagement?.client_id, defaultClientId]);
+
+  // Memoize the reset function to avoid recreating on every render
+  const resetContactIfInvalid = useCallback((clientId: string, currentContact: string | null) => {
+    if (currentContact) {
+      const contactBelongsToClient = contacts.some(
+        c => c.id === currentContact && c.client_id === clientId
+      );
+      if (!contactBelongsToClient) {
+        form.setValue('contact_person_id', null);
+      }
+    }
+  }, [contacts, form.setValue]);
+
+  useEffect(() => {
+    if (selectedClientId && selectedClientId !== initialClientId) {
+      const currentContact = form.getValues('contact_person_id');
+      resetContactIfInvalid(selectedClientId, currentContact);
+    }
+  }, [selectedClientId, initialClientId, resetContactIfInvalid, form.getValues]);
+
+  // Handle form submission with notice period check
+  const handleFormSubmit = (data: EngagementFormData) => {
+    // Check notice period if changing to completed/cancelled
+    if (engagement && (data.status === 'completed' || data.status === 'cancelled') && engagement.status !== data.status) {
+      const terminationCheck = canTerminateEngagement(engagement, data.status, isSuperAdmin);
+      if (!terminationCheck.allowed) {
+        toast.error(terminationCheck.reason);
+        return;
+      }
+    }
+    onSubmit(data);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -134,7 +171,7 @@ export function EngagementForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Klient</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Vyberte klienta" />
@@ -192,7 +229,7 @@ export function EngagementForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Typ</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue />
@@ -215,7 +252,7 @@ export function EngagementForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue />
@@ -248,7 +285,7 @@ export function EngagementForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Billing model</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue />
@@ -271,7 +308,7 @@ export function EngagementForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Měna</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue />

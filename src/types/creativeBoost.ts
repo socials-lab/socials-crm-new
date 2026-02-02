@@ -72,6 +72,11 @@ export interface CreativeBoostClientMonth {
   // Link to engagement service
   engagementServiceId: string | null;
   engagementId: string | null;
+  // Invoicing tracking
+  invoiceId: string | null;
+  invoicedAt: string | null;
+  invoicedAmount: number | null;
+  invoicedCredits: number | null;
   createdAt: string;
   updatedAt: string;
 }

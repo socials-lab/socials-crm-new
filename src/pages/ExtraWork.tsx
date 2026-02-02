@@ -2,33 +2,38 @@ import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ExtraWorkTable } from '@/components/extra-work/ExtraWorkTable';
 import { ExtraWorkKanban } from '@/components/extra-work/ExtraWorkKanban';
+import { ExtraWorkMobileList } from '@/components/extra-work/ExtraWorkMobileList';
 import { AddExtraWorkDialog } from '@/components/extra-work/AddExtraWorkDialog';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { ExtraWork as ExtraWorkType, ExtraWorkStatus } from '@/types/crm';
-import { Plus, Clock, Loader2, FileText, Receipt, LayoutList, Columns3 } from 'lucide-react';
+import { Plus, Clock, Loader2, FileText, Receipt, LayoutList, Columns3, TrendingUp } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 type ViewMode = 'table' | 'kanban';
 
 export default function ExtraWork() {
-  const { extraWorks, addExtraWork, updateExtraWork, deleteExtraWork } = useCRMData();
+  const { extraWorks, addExtraWork, updateExtraWork, deleteExtraWork, isLoading } = useCRMData();
+  const isMobile = useIsMobile();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [filterStatus, setFilterStatus] = useState<ExtraWorkStatus | 'all'>('all');
   const [filterClientId, setFilterClientId] = useState<string | 'all'>('all');
   const [filterColleagueId, setFilterColleagueId] = useState<string | 'all'>('all');
   const [filterMonth, setFilterMonth] = useState<string | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Apply filters for kanban view
+  // Apply filters for kanban view - use billing_period for consistent filtering
   const filteredExtraWorks = useMemo(() => {
     return extraWorks.filter(work => {
       if (filterClientId !== 'all' && work.client_id !== filterClientId) return false;
       if (filterColleagueId !== 'all' && work.colleague_id !== filterColleagueId) return false;
       if (filterMonth !== 'all') {
-        const workMonth = work.work_date.substring(0, 7);
-        if (workMonth !== filterMonth) return false;
+        // Use billing_period for filtering, consistent with ExtraWorkTable
+        if (work.billing_period !== filterMonth) return false;
       }
       return true;
     });
@@ -50,6 +55,12 @@ export default function ExtraWork() {
       readyToInvoiceAmount: readyToInvoice.reduce((sum, w) => sum + w.amount, 0),
       invoicedCount: invoiced.length,
       invoicedAmount: invoiced.reduce((sum, w) => sum + w.amount, 0),
+      // Upsell metrics
+      upsellCount: extraWorks.filter(w => w.upsold_by_id).length,
+      upsellAmount: extraWorks.filter(w => w.upsold_by_id).reduce((sum, w) => sum + w.amount, 0),
+      upsellCommission: extraWorks
+        .filter(w => w.upsold_by_id && w.upsell_commission_percent)
+        .reduce((sum, w) => sum + (w.amount * (w.upsell_commission_percent || 0) / 100), 0),
     };
   }, [extraWorks]);
 
@@ -73,6 +84,27 @@ export default function ExtraWork() {
       maximumFractionDigits: 0,
     }).format(amount);
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-40" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} className="h-24 rounded-lg" />
+          ))}
+        </div>
+        <Skeleton className="h-96 rounded-lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -99,7 +131,7 @@ export default function ExtraWork() {
       />
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <KPICard
           title="Čeká na schválení"
           value={kpis.pendingApprovalCount.toString()}
@@ -124,27 +156,44 @@ export default function ExtraWork() {
           subtitle={`${kpis.invoicedCount} položek`}
           icon={Receipt}
         />
+        <KPICard
+          title="Upsell"
+          value={formatCurrency(kpis.upsellAmount)}
+          subtitle={`${kpis.upsellCount} položek • ${formatCurrency(kpis.upsellCommission)} provize`}
+          icon={TrendingUp}
+        />
       </div>
 
-      {/* View */}
+      {/* View - use mobile list on small screens for table view */}
       {viewMode === 'table' ? (
-        <ExtraWorkTable
-          extraWorks={extraWorks}
-          onUpdate={handleUpdate}
-          onDelete={handleDelete}
-          filterStatus={filterStatus}
-          onFilterStatusChange={setFilterStatus}
-          filterClientId={filterClientId}
-          onFilterClientChange={setFilterClientId}
-          filterColleagueId={filterColleagueId}
-          onFilterColleagueChange={setFilterColleagueId}
-          filterMonth={filterMonth}
-          onFilterMonthChange={setFilterMonth}
-        />
+        isMobile ? (
+          <ExtraWorkMobileList
+            extraWorks={filteredExtraWorks}
+            onUpdate={handleUpdate}
+            onDelete={handleDelete}
+          />
+        ) : (
+          <ExtraWorkTable
+            extraWorks={extraWorks}
+            onUpdate={handleUpdate}
+            onDelete={handleDelete}
+            filterStatus={filterStatus}
+            onFilterStatusChange={setFilterStatus}
+            filterClientId={filterClientId}
+            onFilterClientChange={setFilterClientId}
+            filterColleagueId={filterColleagueId}
+            onFilterColleagueChange={setFilterColleagueId}
+            filterMonth={filterMonth}
+            onFilterMonthChange={setFilterMonth}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+        )
       ) : (
         <ExtraWorkKanban
           extraWorks={filteredExtraWorks}
           onUpdate={handleUpdate}
+          searchQuery={searchQuery}
         />
       )}
 

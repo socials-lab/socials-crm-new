@@ -14,9 +14,10 @@ interface InlineEditTextProps {
   onChange: (value: string) => void;
   className?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
-export function InlineEditText({ value, onChange, className, placeholder }: InlineEditTextProps) {
+export function InlineEditText({ value, onChange, className, placeholder, disabled }: InlineEditTextProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +48,20 @@ export function InlineEditText({ value, onChange, className, placeholder }: Inli
       setIsEditing(false);
     }
   };
+
+  // Disabled state - render non-interactive display
+  if (disabled) {
+    return (
+      <div
+        className={cn(
+          "px-2 py-1 min-h-[28px] flex items-center opacity-60 cursor-not-allowed",
+          className
+        )}
+      >
+        {value || <span className="text-muted-foreground">{placeholder || '—'}</span>}
+      </div>
+    );
+  }
 
   if (isEditing) {
     return (
@@ -81,9 +96,11 @@ interface InlineEditNumberProps {
   className?: string;
   suffix?: string;
   placeholder?: string;
+  min?: number;
+  disabled?: boolean;
 }
 
-export function InlineEditNumber({ value, onChange, className, suffix, placeholder }: InlineEditNumberProps) {
+export function InlineEditNumber({ value, onChange, className, suffix, placeholder, min, disabled }: InlineEditNumberProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value?.toString() || '');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -100,7 +117,12 @@ export function InlineEditNumber({ value, onChange, className, suffix, placehold
   }, [value]);
 
   const handleSave = () => {
-    const numValue = editValue ? parseFloat(editValue) : null;
+    let numValue = editValue ? parseFloat(editValue) : null;
+    // Enforce min constraint
+    if (numValue !== null && min !== undefined && numValue < min) {
+      numValue = min;
+      setEditValue(min.toString());
+    }
     if (numValue !== value) {
       onChange(numValue);
     }
@@ -116,6 +138,25 @@ export function InlineEditNumber({ value, onChange, className, suffix, placehold
     }
   };
 
+  const formatValue = () => {
+    if (value === null || value === undefined) return placeholder || '—';
+    return suffix ? `${value}${suffix}` : value.toString();
+  };
+
+  // Disabled state - render non-interactive display
+  if (disabled) {
+    return (
+      <div
+        className={cn(
+          "px-2 py-1 min-h-[28px] flex items-center opacity-60 cursor-not-allowed",
+          className
+        )}
+      >
+        {value !== null ? formatValue() : <span className="text-muted-foreground">{placeholder || '—'}</span>}
+      </div>
+    );
+  }
+
   if (isEditing) {
     return (
       <Input
@@ -127,14 +168,10 @@ export function InlineEditNumber({ value, onChange, className, suffix, placehold
         onKeyDown={handleKeyDown}
         className={cn("h-7 px-2 text-sm", className)}
         placeholder={placeholder}
+        min={min}
       />
     );
   }
-
-  const formatValue = () => {
-    if (value === null || value === undefined) return placeholder || '—';
-    return suffix ? `${value}${suffix}` : value.toString();
-  };
 
   return (
     <div

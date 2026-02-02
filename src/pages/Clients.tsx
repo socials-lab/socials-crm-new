@@ -361,12 +361,15 @@ export default function Clients() {
   const handleFormSubmit = async (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       if (editingClient) {
-        // Prevent marking client as "lost" if they have active engagements
+        // Prevent marking client as "lost" if they have blocking engagements
+        // FIX: Match backend logic - also check 'paused' and 'planned' statuses
         if (data.status === 'lost' && editingClient.status !== 'lost') {
           const clientEngagements = getEngagementsByClientId(editingClient.id);
-          const hasActiveEngagements = clientEngagements.some(e => e.status === 'active');
-          if (hasActiveEngagements) {
-            toast.error('Nelze označit klienta jako ztraceného, pokud má aktivní zakázky. Nejprve ukončete nebo pozastavte všechny zakázky.');
+          const hasBlockingEngagements = clientEngagements.some(
+            e => ['active', 'paused', 'planned'].includes(e.status)
+          );
+          if (hasBlockingEngagements) {
+            toast.error('Nelze označit klienta jako ztraceného, pokud má aktivní, pozastavené nebo plánované zakázky. Nejprve ukončete nebo zrušte všechny zakázky.');
             return;
           }
         }

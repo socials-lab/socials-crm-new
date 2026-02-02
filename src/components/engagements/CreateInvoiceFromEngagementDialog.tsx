@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calculator, CalendarDays, FileText, Plus, Trash2 } from 'lucide-react';
+import { Calculator, CalendarDays, FileText, Plus, Trash2, Loader2 } from 'lucide-react';
 import type { Engagement, Client, EngagementService } from '@/types/crm';
 import { format, subMonths, addMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -44,6 +44,7 @@ interface CreateInvoiceFromEngagementDialogProps {
   engagement: Engagement;
   client: Client;
   engagementServices: EngagementService[];
+  isLoading?: boolean;
   onCreateInvoice: (data: {
     engagementId: string;
     year: number;
@@ -85,6 +86,7 @@ export function CreateInvoiceFromEngagementDialog({
   engagement,
   client,
   engagementServices,
+  isLoading = false,
   onCreateInvoice,
 }: CreateInvoiceFromEngagementDialogProps) {
   // Generate period options - past 6 months + current + next 2 months
@@ -220,8 +222,8 @@ export function CreateInvoiceFromEngagementDialog({
 
   const handleSubmit = () => {
     const validItems = items.filter(item => item.description && item.amount && Number(item.amount) > 0);
-    if (validItems.length === 0 || !selectedPeriod) return;
-    
+    if (validItems.length === 0 || !selectedPeriod || isLoading) return;
+
     const selectedOption = periodOptions.find(p => p.value === selectedPeriod);
     if (!selectedOption) return;
 
@@ -239,7 +241,7 @@ export function CreateInvoiceFromEngagementDialog({
         service_id: item.serviceId,
       })),
     });
-    onOpenChange(false);
+    // Note: Dialog closing is now handled by parent after successful creation
   };
 
   const selectedOption = periodOptions.find(p => p.value === selectedPeriod);
@@ -424,14 +426,21 @@ export function CreateInvoiceFromEngagementDialog({
             Celkem: <span className="font-semibold text-foreground">{totalAmount.toLocaleString('cs-CZ')} {items[0]?.currency || 'CZK'}</span>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Zrušit
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={validItemsCount === 0}
+              disabled={validItemsCount === 0 || isLoading}
             >
-              Vytvořit fakturu ({validItemsCount})
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Vytvářím...
+                </>
+              ) : (
+                `Vytvořit fakturu (${validItemsCount})`
+              )}
             </Button>
           </div>
         </div>

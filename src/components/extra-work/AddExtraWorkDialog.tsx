@@ -73,10 +73,24 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
     [selectedEngagement, getClientById]
   );
 
-  const activeColleagues = useMemo(() => 
+  const activeColleagues = useMemo(() =>
     colleagues.filter(c => c.status === 'active'),
     [colleagues]
   );
+
+  // Generate billing period options: 3 months back + current + 2 months ahead
+  const billingPeriodOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = -3; i <= 2; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      options.push({
+        value: format(date, 'yyyy-MM'),
+        label: format(date, 'LLLL yyyy', { locale: cs }),
+      });
+    }
+    return options;
+  }, []);
 
   const handleSubmit = () => {
     if (!engagementId || !colleagueId || !name || !workDate || !selectedEngagement) return;
@@ -276,11 +290,11 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
                 <SelectValue placeholder="Automaticky dle data práce" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="2024-10">Říjen 2024</SelectItem>
-                <SelectItem value="2024-11">Listopad 2024</SelectItem>
-                <SelectItem value="2024-12">Prosinec 2024</SelectItem>
-                <SelectItem value="2025-01">Leden 2025</SelectItem>
-                <SelectItem value="2025-02">Únor 2025</SelectItem>
+                {billingPeriodOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -293,15 +307,15 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
             </div>
             <div className="grid gap-2">
               <Label htmlFor="upsold-by" className="text-sm text-muted-foreground">Prodal kolega</Label>
-              <Select 
-                value={upsoldById || ''} 
-                onValueChange={(val) => setUpsoldById(val || null)}
+              <Select
+                value={upsoldById || '__none__'}
+                onValueChange={(val) => setUpsoldById(val === '__none__' ? null : val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Žádný upsell" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Žádný upsell</SelectItem>
+                  <SelectItem value="__none__">Žádný upsell</SelectItem>
                   {activeColleagues.map(col => (
                     <SelectItem key={col.id} value={col.id}>
                       {col.full_name}

@@ -64,7 +64,7 @@ export function CreativeBoostCreditOverview({
     e.stopPropagation();
     onUpdateSettings({
       maxCredits: parseInt(tempMaxCredits) || 0,
-      pricePerCredit: parseInt(tempPricePerCredit) || 0,
+      pricePerCredit: parseFloat(tempPricePerCredit) || 0,
     });
     setIsEditing(false);
   };

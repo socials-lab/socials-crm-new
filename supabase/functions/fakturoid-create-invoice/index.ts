@@ -21,6 +21,7 @@ interface InvoiceLineItem {
   unit_price: number;
   vat_rate?: number;
   unit_name?: string;
+  is_reverse_charge?: boolean;
 }
 
 interface FakturoidInvoiceItem {
@@ -110,25 +111,28 @@ serve(async (req) => {
     const accountSlug = getAccountSlug();
     const accessToken = await getFakturoidAccessToken();
 
+    // Check if account is VAT payer (plátce DPH)
+    // Set FAKTUROID_VAT_PAYER=true if you become VAT registered
+    const isVatPayer = Deno.env.get("FAKTUROID_VAT_PAYER") === "true";
+
     // Map line items to Fakturoid format
     const lines: FakturoidInvoiceItem[] = (invoice.invoice_line_items as InvoiceLineItem[]).map((item) => ({
       name: item.line_description,
       quantity: Number(item.quantity),
       unit_name: item.unit_name || 'ks',
       unit_price: Number(item.unit_price),
-      vat_rate: item.vat_rate ?? 21,
+      // Non-VAT payer: always 0%, VAT payer: use reverse charge or line item rate
+      vat_rate: isVatPayer ? (item.is_reverse_charge ? 0 : (item.vat_rate ?? 21)) : 0,
     }));
 
-    // Prepare invoice payload
-    const issueDate = new Date(invoice.issued_at).toISOString().split('T')[0];
-    const dueDate = new Date(invoice.issued_at);
-    dueDate.setDate(dueDate.getDate() + 14);
-
+    // Note: We don't send issued_on or due dates - let Fakturoid use its server's current date
+    // This avoids date validation issues when local system clock differs from Fakturoid's server
+    // Fakturoid will use today's date for issued_on and calculate due based on account settings (default 14 days)
     const payload = {
       subject_id: client.fakturoid_subject_id,
       lines,
-      due: dueDate.toISOString().split('T')[0],
-      issued_on: issueDate,
+      // due_in: 14 means "due 14 days from issued_on" - Fakturoid will calculate actual date
+      due_in: 14,
       note: `Faktura ${invoice.invoice_number}`,
     };
 
@@ -136,8 +140,10 @@ serve(async (req) => {
     const fakturoidInvoice = await createInvoice(accessToken, accountSlug, payload);
     const durationMs = Date.now() - startTime;
 
-    // Update invoice with Fakturoid IDs
-    const fakturoidInvoiceUrl = fakturoidInvoice.html_url || `https://app.fakturoid.cz/accounts/${accountSlug}/invoices/${fakturoidInvoice.id}`;
+    // Use the public URL (accessible without login) if available, otherwise fall back to admin URL
+    const fakturoidInvoiceUrl = fakturoidInvoice.public_html_url
+      || fakturoidInvoice.html_url
+      || `https://app.fakturoid.cz/${accountSlug}/invoices/${fakturoidInvoice.id}`;
 
     const { error: updateError } = await supabaseAdmin
       .from("issued_invoices")

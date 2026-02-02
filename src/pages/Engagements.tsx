@@ -1,8 +1,11 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isSameMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock, Loader2 } from 'lucide-react';
+import { getErrorMessage } from '@/lib/errorUtils';
+import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -63,23 +66,26 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/sonner';
 
-const CREATIVE_BOOST_SERVICE_ID = 'srv-3';
+// Dynamic lookup for Creative Boost service ID
+const CREATIVE_BOOST_SERVICE_NAME = 'Creative Boost';
 
 function EngagementsContent() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
   const highlightedRef = useRef<HTMLDivElement>(null);
   const { isSuperAdmin, canSeeFinancials } = useUserRole();
 
-  const { 
-    clients, 
+  const {
+    clients,
     clientContacts,
-    engagements, 
+    engagements,
     engagementServices,
     colleagues,
     assignments,
     services,
+    isLoading,
     getClientById,
     getAssignmentsByEngagementId,
     getColleagueById,
@@ -96,7 +102,17 @@ function EngagementsContent() {
     getMetricsByEngagementId,
     getEngagementHistory,
     getInvoicesByEngagementId,
+    createInvoiceWithLineItems,
   } = useCRMData();
+
+  // Dynamic Creative Boost service ID lookup
+  const CREATIVE_BOOST_SERVICE_ID = useMemo(() => {
+    const cbService = services.find(s => s.name === CREATIVE_BOOST_SERVICE_NAME);
+    return cbService?.id || null;
+  }, [services]);
+
+  // State for service deletion confirmation
+  const [serviceToDelete, setServiceToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const { 
     getClientMonthSummaryByEngagementServiceId, 
@@ -153,18 +169,25 @@ function EngagementsContent() {
   // Create invoice dialog state
   const [invoiceDialogEngagement, setInvoiceDialogEngagement] = useState<Engagement | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
 
   // History dialog state
   const [historyEngagement, setHistoryEngagement] = useState<Engagement | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-  // Handle highlight from URL
+  // Pagination state
+  const INITIAL_PAGE_SIZE = 50;
+  const LOAD_MORE_SIZE = 25;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_PAGE_SIZE);
+
+  // Handle highlight from URL - with cleanup to prevent memory leak
   useEffect(() => {
     if (highlightId) {
       setExpandedEngagementId(highlightId);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         highlightedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
+      return () => clearTimeout(timer);
     }
   }, [highlightId]);
 
@@ -218,6 +241,19 @@ function EngagementsContent() {
     });
   }, [engagements, searchQuery, statusFilter, typeFilter, filterYear, filterMonth, getClientById, isEngagementActiveInMonth]);
 
+  // Apply pagination to filtered engagements
+  const paginatedEngagements = useMemo(() => {
+    return filteredEngagements.slice(0, visibleCount);
+  }, [filteredEngagements, visibleCount]);
+
+  const hasMoreEngagements = filteredEngagements.length > visibleCount;
+  const remainingCount = filteredEngagements.length - visibleCount;
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setVisibleCount(INITIAL_PAGE_SIZE);
+  }, [searchQuery, statusFilter, typeFilter, filterYear, filterMonth]);
+
   // Month navigation helpers
   const goToPreviousMonth = () => {
     if (filterMonth === 1) {
@@ -269,16 +305,21 @@ function EngagementsContent() {
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = (data: Omit<Engagement, 'id' | 'created_at' | 'updated_at'>) => {
-    if (editingEngagement) {
-      updateEngagement(editingEngagement.id, data);
-      toast.success('Zakázka byla upravena');
-    } else {
-      addEngagement(data);
-      toast.success('Zakázka byla vytvořena');
+  const handleFormSubmit = async (data: Omit<Engagement, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      if (editingEngagement) {
+        await updateEngagement(editingEngagement.id, data);
+        toast.success('Zakázka byla upravena');
+      } else {
+        await addEngagement(data);
+        toast.success('Zakázka byla vytvořena');
+      }
+      setIsFormOpen(false);
+      setEditingEngagement(null);
+    } catch (error) {
+      console.error('Failed to save engagement:', error);
+      toast.error(getErrorMessage(error, 'Nepodařilo se uložit zakázku'));
     }
-    setIsFormOpen(false);
-    setEditingEngagement(null);
   };
 
   const handleOpenAssignmentForm = (engagementId: string) => {
@@ -286,25 +327,78 @@ function EngagementsContent() {
     setIsAssignmentFormOpen(true);
   };
 
-  const handleAssignmentSubmit = (data: Omit<EngagementAssignment, 'id' | 'created_at' | 'updated_at'>) => {
-    addAssignment(data);
-    toast.success('Kolega byl přiřazen');
-    setIsAssignmentFormOpen(false);
-    setAssignmentEngagementId(null);
+  const handleAssignmentSubmit = async (data: Omit<EngagementAssignment, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      await addAssignment(data);
+      toast.success('Kolega byl přiřazen');
+      setIsAssignmentFormOpen(false);
+      setAssignmentEngagementId(null);
+    } catch (error) {
+      console.error('Failed to add assignment:', error);
+      toast.error(getErrorMessage(error, 'Nepodařilo se přiřadit kolegu'));
+    }
   };
 
-  const handleRemoveAssignment = () => {
+  const handleRemoveAssignment = async () => {
     if (assignmentToRemove) {
-      removeAssignment(assignmentToRemove.id);
-      toast.success('Přiřazení bylo odebráno');
+      try {
+        await removeAssignment(assignmentToRemove.id);
+        toast.success('Přiřazení bylo odebráno');
+      } catch (error) {
+        console.error('Failed to remove assignment:', error);
+        toast.error(getErrorMessage(error, 'Nepodařilo se odebrat přiřazení'));
+      }
       setAssignmentToRemove(null);
     }
   };
 
+  const handleDeleteService = async () => {
+    if (!serviceToDelete) return;
+    try {
+      await deleteEngagementService(serviceToDelete.id);
+      toast.success('Služba byla odebrána');
+    } catch (error) {
+      console.error('Failed to delete service:', error);
+      toast.error(getErrorMessage(error, 'Nepodařilo se odebrat službu'));
+    }
+    setServiceToDelete(null);
+  };
+
+  // Safe inline update helpers with error handling
+  const safeUpdateEngagement = async (id: string, data: Partial<Engagement>, successMessage: string) => {
+    try {
+      await updateEngagement(id, data);
+      toast.success(successMessage);
+    } catch (error) {
+      console.error('Failed to update engagement:', error);
+      toast.error(getErrorMessage(error, 'Nepodařilo se uložit změnu'));
+    }
+  };
+
+  const safeUpdateService = async (id: string, data: Partial<EngagementService>, successMessage: string) => {
+    try {
+      await updateEngagementService(id, data);
+      toast.success(successMessage);
+    } catch (error) {
+      console.error('Failed to update service:', error);
+      toast.error(getErrorMessage(error, 'Nepodařilo se uložit službu'));
+    }
+  };
+
+  // Show loading state while data is being fetched
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">Načítám zakázky...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
-      <PageHeader 
-        title="📋 Zakázky" 
+      <PageHeader
+        title="📋 Zakázky"
         titleAccent="& projekty"
         description="Správa kontraktů a projektů"
         actions={
@@ -363,7 +457,7 @@ function EngagementsContent() {
             <CalendarOff className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>Žádné zakázky pro {capitalizedMonthLabel}</p>
           </Card>
-        ) : filteredEngagements.map((engagement) => {
+        ) : paginatedEngagements.map((engagement) => {
           const client = getClientById(engagement.client_id);
           const marginPercent = canSeeFinancials ? getLatestMargin(engagement.id) : null;
           const engagementAssignments = getAssignmentsByEngagementId(engagement.id).filter(a => !a.end_date);
@@ -453,6 +547,16 @@ function EngagementsContent() {
                   {hasEndDate && (
                     <Badge variant="outline" className="text-xs whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200">
                       Končí: {format(parseISO(engagement.end_date!), 'd.M.yyyy')}
+                    </Badge>
+                  )}
+                  {/* Past due warning badge */}
+                  {engagement.end_date &&
+                   new Date(engagement.end_date) < new Date() &&
+                   engagement.status !== 'completed' &&
+                   engagement.status !== 'cancelled' && (
+                    <Badge variant="destructive" className="text-xs whitespace-nowrap gap-1">
+                      <Clock className="h-3 w-3" />
+                      Po termínu
                     </Badge>
                   )}
                   {/* Type badge */}
@@ -548,8 +652,7 @@ function EngagementsContent() {
                               <Select
                                 value={engagement.contact_person_id || ''}
                                 onValueChange={(value) => {
-                                  updateEngagement(engagement.id, { contact_person_id: value || null });
-                                  toast.success('Kontaktní osoba změněna');
+                                  safeUpdateEngagement(engagement.id, { contact_person_id: value || null }, 'Kontaktní osoba změněna');
                                 }}
                               >
                                 <SelectTrigger 
@@ -614,7 +717,10 @@ function EngagementsContent() {
                     {/* Services section */}
                     {(() => {
                       const engServices = getEngagementServicesByEngagementId(engagement.id);
-                      const totalServicesPrice = engServices.reduce((sum, s) => sum + s.price, 0);
+                      // FIX: Only sum active services in total price
+                      const totalServicesPrice = engServices
+                        .filter(s => s.is_active)
+                        .reduce((sum, s) => sum + s.price, 0);
                       return (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
@@ -680,8 +786,7 @@ function EngagementsContent() {
                                         toast.success('Nastavení kreditů aktualizováno');
                                       }}
                                       onDelete={() => {
-                                        deleteEngagementService(engService.id);
-                                        toast.success('Creative Boost služba odebrána');
+                                        setServiceToDelete({ id: engService.id, name: engService.name });
                                       }}
                                     />
                                   );
@@ -814,14 +919,13 @@ function EngagementsContent() {
                                           </button>
                                         )
                                       )}
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
                                         className="h-6 w-6 text-destructive hover:text-destructive"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          deleteEngagementService(engService.id);
-                                          toast.success('Služba odebrána');
+                                          setServiceToDelete({ id: engService.id, name: engService.name });
                                         }}
                                       >
                                         <Trash2 className="h-3 w-3" />
@@ -868,7 +972,7 @@ function EngagementsContent() {
                               >
                                 <div className="flex items-center gap-2">
                                   <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                                    {colleague?.full_name.split(' ').map(n => n[0]).join('')}
+                                    {colleague?.full_name?.split(' ').map(n => n?.[0] || '').join('') || '?'}
                                   </div>
                                   <div>
                                     <button
@@ -942,7 +1046,7 @@ function EngagementsContent() {
                                     const newPlatforms = isSelected
                                       ? currentPlatforms.filter(p => p !== platform)
                                       : [...currentPlatforms, platform];
-                                    updateEngagement(engagement.id, { platforms: newPlatforms });
+                                    safeUpdateEngagement(engagement.id, { platforms: newPlatforms }, 'Platformy aktualizovány');
                                   }}
                                 >
                                   <Checkbox checked={isSelected} />
@@ -983,9 +1087,8 @@ function EngagementsContent() {
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                  updateEngagement(engagement.id, { offer_url: tempOfferUrl || null });
+                                  safeUpdateEngagement(engagement.id, { offer_url: tempOfferUrl || null }, 'Odkaz na nabídku uložen');
                                   setEditingOfferUrlId(null);
-                                  toast.success('Odkaz na nabídku uložen');
                                 } else if (e.key === 'Escape') {
                                   setEditingOfferUrlId(null);
                                 }
@@ -996,9 +1099,8 @@ function EngagementsContent() {
                               size="icon"
                               className="h-8 w-8 text-status-active"
                               onClick={() => {
-                                updateEngagement(engagement.id, { offer_url: tempOfferUrl || null });
+                                safeUpdateEngagement(engagement.id, { offer_url: tempOfferUrl || null }, 'Odkaz na nabídku uložen');
                                 setEditingOfferUrlId(null);
-                                toast.success('Odkaz na nabídku uložen');
                               }}
                             >
                               <Check className="h-4 w-4" />
@@ -1066,9 +1168,8 @@ function EngagementsContent() {
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                  updateEngagement(engagement.id, { contract_url: tempContractUrl || null });
+                                  safeUpdateEngagement(engagement.id, { contract_url: tempContractUrl || null }, 'Odkaz na smlouvu uložen');
                                   setEditingContractUrlId(null);
-                                  toast.success('Odkaz na smlouvu uložen');
                                 } else if (e.key === 'Escape') {
                                   setEditingContractUrlId(null);
                                 }
@@ -1079,9 +1180,8 @@ function EngagementsContent() {
                               size="icon"
                               className="h-8 w-8 text-status-active"
                               onClick={() => {
-                                updateEngagement(engagement.id, { contract_url: tempContractUrl || null });
+                                safeUpdateEngagement(engagement.id, { contract_url: tempContractUrl || null }, 'Odkaz na smlouvu uložen');
                                 setEditingContractUrlId(null);
-                                toast.success('Odkaz na smlouvu uložen');
                               }}
                             >
                               <Check className="h-4 w-4" />
@@ -1156,9 +1256,8 @@ function EngagementsContent() {
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
-                                updateEngagement(engagement.id, { freelo_url: tempFreeloUrl || null });
+                                safeUpdateEngagement(engagement.id, { freelo_url: tempFreeloUrl || null }, 'Freelo odkaz uložen');
                                 setEditingFreeloId(null);
-                                toast.success('Freelo odkaz uložen');
                               } else if (e.key === 'Escape') {
                                 setEditingFreeloId(null);
                               }
@@ -1169,9 +1268,8 @@ function EngagementsContent() {
                             size="icon"
                             className="h-8 w-8 text-status-active"
                             onClick={() => {
-                              updateEngagement(engagement.id, { freelo_url: tempFreeloUrl || null });
+                              safeUpdateEngagement(engagement.id, { freelo_url: tempFreeloUrl || null }, 'Freelo odkaz uložen');
                               setEditingFreeloId(null);
-                              toast.success('Freelo odkaz uložen');
                             }}
                           >
                             <Check className="h-4 w-4" />
@@ -1238,13 +1336,24 @@ function EngagementsContent() {
             </Card>
           );
         })}
+
+        {/* Load more button */}
+        {hasMoreEngagements && (
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setVisibleCount(prev => prev + LOAD_MORE_SIZE)}
+              className="min-w-[200px]"
+            >
+              Načíst další ({remainingCount > LOAD_MORE_SIZE ? LOAD_MORE_SIZE : remainingCount} z {remainingCount})
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Zobrazeno {paginatedEngagements.length} z {filteredEngagements.length} zakázek
+            </p>
+          </div>
+        )}
       </div>
 
-      {filteredEngagements.length === 0 && (
-        <div className="py-12 text-center text-muted-foreground">
-          Žádné zakázky neodpovídají vašim kritériím
-        </div>
-      )}
 
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent className="sm:max-w-lg overflow-y-auto">
@@ -1269,15 +1378,21 @@ function EngagementsContent() {
           <DialogHeader>
             <DialogTitle>Přiřadit kolegu k zakázce</DialogTitle>
           </DialogHeader>
-          {assignmentEngagementId && (
-            <AssignmentForm
-              engagementId={assignmentEngagementId}
-              colleagues={colleagues}
-              existingAssignments={getAssignmentsByEngagementId(assignmentEngagementId)}
-              onSubmit={handleAssignmentSubmit}
-              onCancel={() => setIsAssignmentFormOpen(false)}
-            />
-          )}
+          {assignmentEngagementId && (() => {
+            const eng = engagements.find(e => e.id === assignmentEngagementId);
+            if (!eng) return null;
+            return (
+              <AssignmentForm
+                engagementId={assignmentEngagementId}
+                engagementStartDate={eng.start_date}
+                engagementEndDate={eng.end_date}
+                colleagues={colleagues}
+                existingAssignments={getAssignmentsByEngagementId(assignmentEngagementId)}
+                onSubmit={handleAssignmentSubmit}
+                onCancel={() => setIsAssignmentFormOpen(false)}
+              />
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -1334,15 +1449,116 @@ function EngagementsContent() {
       {invoiceDialogEngagement && (
         <CreateInvoiceFromEngagementDialog
           open={isInvoiceDialogOpen}
-          onOpenChange={setIsInvoiceDialogOpen}
+          onOpenChange={(open) => {
+            if (!isCreatingInvoice) {
+              setIsInvoiceDialogOpen(open);
+              if (!open) setInvoiceDialogEngagement(null);
+            }
+          }}
           engagement={invoiceDialogEngagement}
           client={getClientById(invoiceDialogEngagement.client_id)!}
           engagementServices={getEngagementServicesByEngagementId(invoiceDialogEngagement.id).filter(s => s.is_active)}
-          onCreateInvoice={(data) => {
-            // TODO: Integrate with invoicing system when available
-            toast.success(`Faktura za ${data.month}/${data.year} byla vytvořena s ${data.items.length} položkami`);
-            setIsInvoiceDialogOpen(false);
-            setInvoiceDialogEngagement(null);
+          isLoading={isCreatingInvoice}
+          onCreateInvoice={async (data) => {
+            setIsCreatingInvoice(true);
+            try {
+              const client = getClientById(invoiceDialogEngagement.client_id);
+              if (!client) throw new Error('Client not found');
+
+              // Calculate period dates
+              const periodStart = new Date(data.year, data.month - 1, 1);
+              const periodEnd = new Date(data.year, data.month, 0); // Last day of month
+              const totalDaysInMonth = periodEnd.getDate();
+
+              // Build invoice data (without status - not a DB column)
+              const invoice = {
+                engagement_id: invoiceDialogEngagement.id,
+                engagement_name: invoiceDialogEngagement.name,
+                client_id: invoiceDialogEngagement.client_id,
+                client_name: client.brand_name,
+                year: data.year,
+                month: data.month,
+                fakturoid_id: null,
+                fakturoid_url: null,
+                line_items: [],
+                total_amount: data.items.reduce((sum, item) => sum + item.amount, 0),
+                currency: data.items[0]?.currency || invoiceDialogEngagement.currency || 'CZK',
+                issued_at: new Date().toISOString(),
+                issued_by: null,
+              };
+
+              // Build line items - use 'engagement' source (valid enum value)
+              const lineItems = data.items.map(item => ({
+                source: 'engagement' as const,
+                engagement_id: invoiceDialogEngagement.id,
+                extra_work_id: null,
+                engagement_service_id: item.service_id,
+                source_description: item.description,
+                source_amount: item.amount,
+                period_start: periodStart.toISOString().split('T')[0],
+                period_end: periodEnd.toISOString().split('T')[0],
+                prorated_days: totalDaysInMonth,
+                total_days_in_month: totalDaysInMonth,
+                prorated_amount: item.amount,
+                line_description: item.description,
+                unit_price: item.amount,
+                quantity: 1,
+                unit_name: item.hours ? 'hod' : 'ks',
+                adjustment_amount: 0,
+                adjustment_reason: '',
+                final_amount: item.amount,
+                is_approved: false,
+                note: '',
+                hours: item.hours,
+                hourly_rate: item.hourly_rate,
+                currency: item.currency,
+                is_reverse_charge: item.is_reverse_charge,
+              }));
+
+              const createdInvoice = await createInvoiceWithLineItems(invoice, lineItems, [], []);
+
+              // Now sync to Fakturoid
+              let fakturoidSuccess = false;
+              let fakturoidErrorMessage: string | null = null;
+
+              try {
+                const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
+                  'fakturoid-create-invoice',
+                  { body: { invoice_id: createdInvoice.id } }
+                );
+
+                if (fakturoidError) {
+                  console.warn('Fakturoid sync failed:', fakturoidError);
+                  fakturoidErrorMessage = fakturoidError.message || 'Neznámá chyba';
+                } else if (fakturoidResult?.error) {
+                  console.warn('Fakturoid sync failed:', fakturoidResult.error);
+                  fakturoidErrorMessage = fakturoidResult.error;
+                } else if (fakturoidResult?.success) {
+                  fakturoidSuccess = true;
+                }
+              } catch (fakturoidErr) {
+                console.warn('Fakturoid error:', fakturoidErr);
+                fakturoidErrorMessage = 'Nepodařilo se spojit s Fakturoid';
+              }
+
+              if (fakturoidSuccess) {
+                // Refresh issued_invoices to show the new fakturoid_url
+                await queryClient.invalidateQueries({ queryKey: ['issued_invoices'] });
+                toast.success(`Faktura za ${data.month}/${data.year} byla vytvořena a odeslána do Fakturoid`);
+              } else {
+                // Show specific error message
+                const errorDetail = fakturoidErrorMessage || 'Neznámá chyba';
+                toast.warning(`Faktura vytvořena, ale Fakturoid selhal: ${errorDetail}`);
+              }
+
+              setIsInvoiceDialogOpen(false);
+              setInvoiceDialogEngagement(null);
+            } catch (error) {
+              console.error('Failed to create invoice:', error);
+              toast.error('Nepodařilo se vytvořit fakturu');
+            } finally {
+              setIsCreatingInvoice(false);
+            }
           }}
         />
       )}
@@ -1373,6 +1589,28 @@ function EngagementsContent() {
           engagementName={historyEngagement.name}
         />
       )}
+
+      {/* Service Deletion Confirmation Dialog */}
+      <AlertDialog open={!!serviceToDelete} onOpenChange={(open) => !open && setServiceToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat službu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete odebrat službu <span className="font-medium">{serviceToDelete?.name}</span>?
+              Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteService}
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

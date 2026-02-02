@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { EngagementInvoiceCard } from './EngagementInvoiceCard';
 import { IssueInvoicesDialog } from './IssueInvoicesDialog';
@@ -40,7 +40,7 @@ interface FutureInvoicingProps {
 
 
 export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvoicingProps) {
-  const { clients, engagements, engagementServices, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices } = useCRMData();
+  const { clients, engagements, engagementServices, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices, issuedInvoices } = useCRMData();
   const { clientMonths, getClientOutputs, calculateOutputCredits } = useCreativeBoostData();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<MonthlyEngagementInvoice[]>([]);
@@ -51,6 +51,22 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
   const [issuedInvoiceIds, setIssuedInvoiceIds] = useState<Set<string>>(new Set());
 
+  // Initialize issuedInvoiceIds based on actual issued invoices from database
+  useEffect(() => {
+    const alreadyIssuedIds = new Set<string>();
+
+    // Check which engagements already have issued invoices for this year/month
+    issuedInvoices
+      .filter(inv => inv.year === year && inv.month === month)
+      .forEach(inv => {
+        // The generated invoice ID format is `inv-{engagement_id}-{year}-{month}`
+        const generatedId = `inv-${inv.engagement_id}-${year}-${month}`;
+        alreadyIssuedIds.add(generatedId);
+      });
+
+    setIssuedInvoiceIds(alreadyIssuedIds);
+  }, [issuedInvoices, year, month]);
+
   // Generate invoices from engagements - ONE INVOICE PER ENGAGEMENT
   const generatedInvoices = useMemo(() => {
     const periodStart = startOfMonth(new Date(year, month - 1));
@@ -58,13 +74,14 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     const totalDays = getDaysInMonth(new Date(year, month - 1));
 
     // Get Creative Boost data for the period (grouped by client for now, will associate with engagement)
-    const creativeBoostData = new Map<string, { usedCredits: number; pricePerCredit: number; totalAmount: number }>();
-    
+    // Skip months that are already invoiced to prevent double-billing
+    const creativeBoostData = new Map<string, { usedCredits: number; pricePerCredit: number; totalAmount: number; clientMonthId: string }>();
+
     clientMonths
-      .filter(cm => cm.year === year && cm.month === month)
+      .filter(cm => cm.year === year && cm.month === month && !cm.invoiceId) // Skip already invoiced
       .forEach(cm => {
         const clientOutputs = getClientOutputs(cm.clientId, year, month);
-        
+
         let totalCredits = 0;
         clientOutputs.forEach(output => {
           const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
@@ -76,6 +93,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             usedCredits: totalCredits,
             pricePerCredit: cm.pricePerCredit,
             totalAmount: totalCredits * cm.pricePerCredit,
+            clientMonthId: cm.id,
           });
         }
       });
@@ -181,6 +199,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             source: 'creative_boost' as const,
             engagement_id: engagement.id,
             extra_work_id: null,
+            creative_boost_client_month_id: cbData.clientMonthId,
             source_description: `Creative Boost - ${cbData.usedCredits} kreditů × ${cbData.pricePerCredit.toLocaleString()} Kč`,
             source_amount: cbData.totalAmount,
             period_start: format(periodStart, 'yyyy-MM-dd'),
@@ -245,6 +264,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             source: 'one_off' as const,
             engagement_id: engagement.id,
             extra_work_id: null,
+            engagement_service_id: service.id, // FIX: Track which service this line item came from
             source_description: `Jednorázová položka: ${service.name}`,
             source_amount: service.price,
             period_start: format(periodStart, 'yyyy-MM-dd'),
@@ -591,9 +611,29 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const totalAmount = currentInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
   const totalItems = currentInvoices.reduce((sum, inv) => sum + inv.line_items.length, 0);
 
+  // Helper to format amounts grouped by currency
+  const formatAmountsByCurrency = (invoiceList: MonthlyEngagementInvoice[]) => {
+    const byCurrency = new Map<string, number>();
+    invoiceList.forEach(inv => {
+      const curr = inv.currency || 'CZK';
+      byCurrency.set(curr, (byCurrency.get(curr) || 0) + inv.total_amount);
+    });
+
+    return Array.from(byCurrency.entries())
+      .map(([currency, amount]) =>
+        new Intl.NumberFormat('cs-CZ', {
+          style: 'currency',
+          currency,
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(amount)
+      )
+      .join(' + ');
+  };
+
   // Calculate issued statistics
-  const issuedInvoices = currentInvoices.filter(inv => issuedInvoiceIds.has(inv.id));
-  const issuedAmount = issuedInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
+  const issuedInvoicesInPeriod = currentInvoices.filter(inv => issuedInvoiceIds.has(inv.id));
+  const issuedAmount = issuedInvoicesInPeriod.reduce((sum, inv) => sum + inv.total_amount, 0);
   const pendingInvoices = currentInvoices.filter(inv => !issuedInvoiceIds.has(inv.id));
 
   // Helper to check if invoice is fully approved
@@ -779,14 +819,14 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             {issuedInvoiceIds.size > 0 && (
               <span className="text-xs font-medium text-green-600 flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
-                {issuedInvoiceIds.size}/{currentInvoices.length} vystaveno ({new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', minimumFractionDigits: 0 }).format(issuedAmount)})
+                {issuedInvoiceIds.size}/{currentInvoices.length} vystaveno ({formatAmountsByCurrency(issuedInvoicesInPeriod)})
               </span>
             )}
           </div>
         </div>
         {selectedInvoiceIds.size > 0 && (
           <span className="text-sm font-medium">
-            Celkem: {new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', minimumFractionDigits: 0 }).format(selectedTotal)}
+            Celkem: {formatAmountsByCurrency(selectedInvoices)}
           </span>
         )}
       </div>

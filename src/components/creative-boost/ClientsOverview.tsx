@@ -63,7 +63,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     getSettingsHistory,
     ensureClientMonthsForActiveEngagements,
   } = useCreativeBoostData();
-  const { colleagues, engagements, getClientById } = useCRMData();
+  const { colleagues, engagements, getClientById, updateEngagementService } = useCRMData();
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<MonthStatus | 'all'>('all');
@@ -152,10 +152,33 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     updateClientOutput(clientId, outputTypeId, year, month, updateData);
   };
 
-  const handleSettingsChange = (clientId: string, field: 'maxCredits' | 'pricePerCredit' | 'status' | 'colleagueId', value: number | MonthStatus | string) => {
+  const handleSettingsChange = async (clientId: string, field: 'maxCredits' | 'pricePerCredit' | 'status' | 'colleagueId', value: number | MonthStatus | string) => {
     const monthData = clientMonths.find(cm => cm.clientId === clientId && cm.year === year && cm.month === month);
     if (monthData) {
-      updateClientMonth(monthData.id, { [field]: value });
+      // Build list of updates to execute together
+      const updates: Promise<unknown>[] = [];
+
+      // Always update client month record
+      updates.push(updateClientMonth(monthData.id, { [field]: value }));
+
+      // Also update the source engagement_services record to keep them in sync
+      if (monthData.engagementServiceId && (field === 'maxCredits' || field === 'pricePerCredit')) {
+        const serviceUpdate: Record<string, unknown> = {};
+        if (field === 'maxCredits') {
+          serviceUpdate.creative_boost_max_credits = value as number;
+        } else if (field === 'pricePerCredit') {
+          serviceUpdate.creative_boost_price_per_credit = value as number;
+        }
+        updates.push(updateEngagementService(monthData.engagementServiceId, serviceUpdate));
+      }
+
+      // Execute all updates together - if one fails, at least we'll know
+      try {
+        await Promise.all(updates);
+      } catch (error) {
+        console.error('Failed to sync settings:', error);
+        // Both mutations have their own error handling, but log here for visibility
+      }
     }
   };
 
@@ -515,8 +538,9 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                           <Input
                             type="number"
                             min="0"
+                            step="0.01"
                             value={monthData?.pricePerCredit ?? 0}
-                            onChange={(e) => handleSettingsChange(summary.clientId, 'pricePerCredit', parseInt(e.target.value) || 0)}
+                            onChange={(e) => handleSettingsChange(summary.clientId, 'pricePerCredit', parseFloat(e.target.value) || 0)}
                             className="w-24 h-7 text-center"
                           />
                           <span className="text-muted-foreground">Kč</span>
@@ -582,8 +606,9 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                     <Input
                       type="number"
                       min="0"
+                      step="0.01"
                       value={monthData.pricePerCredit}
-                      onChange={(e) => handleSettingsChange(summary.clientId, 'pricePerCredit', parseInt(e.target.value) || 0)}
+                      onChange={(e) => handleSettingsChange(summary.clientId, 'pricePerCredit', parseFloat(e.target.value) || 0)}
                       className="w-32"
                     />
                     <span className="text-sm text-muted-foreground">Kč</span>

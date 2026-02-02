@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 interface ExtraWorkKanbanProps {
   extraWorks: ExtraWork[];
   onUpdate: (id: string, data: Partial<ExtraWork>) => void;
+  searchQuery?: string;
 }
 
 interface KanbanColumnProps {
@@ -199,12 +200,32 @@ function KanbanColumn({
   );
 }
 
-export function ExtraWorkKanban({ extraWorks, onUpdate }: ExtraWorkKanbanProps) {
+export function ExtraWorkKanban({ extraWorks, onUpdate, searchQuery }: ExtraWorkKanbanProps) {
+  const { getClientById, getColleagueById, getEngagementById } = useCRMData();
+
+  // Apply search filter to extraWorks
+  const filteredWorks = useMemo(() => {
+    if (!searchQuery) return extraWorks;
+    const query = searchQuery.toLowerCase();
+    return extraWorks.filter(work => {
+      const client = getClientById(work.client_id);
+      const colleague = getColleagueById(work.colleague_id);
+      const engagement = work.engagement_id ? getEngagementById(work.engagement_id) : null;
+      return (
+        work.name.toLowerCase().includes(query) ||
+        work.description?.toLowerCase().includes(query) ||
+        client?.brand_name?.toLowerCase().includes(query) ||
+        colleague?.full_name?.toLowerCase().includes(query) ||
+        engagement?.name?.toLowerCase().includes(query)
+      );
+    });
+  }, [extraWorks, searchQuery, getClientById, getColleagueById, getEngagementById]);
+
   const columns = useMemo(() => {
-    const pendingApproval = extraWorks.filter(w => w.status === 'pending_approval');
-    const inProgress = extraWorks.filter(w => w.status === 'in_progress');
-    const readyToInvoice = extraWorks.filter(w => w.status === 'ready_to_invoice');
-    const invoiced = extraWorks.filter(w => w.status === 'invoiced');
+    const pendingApproval = filteredWorks.filter(w => w.status === 'pending_approval');
+    const inProgress = filteredWorks.filter(w => w.status === 'in_progress');
+    const readyToInvoice = filteredWorks.filter(w => w.status === 'ready_to_invoice');
+    const invoiced = filteredWorks.filter(w => w.status === 'invoiced');
 
     return {
       pendingApproval: {
@@ -224,7 +245,7 @@ export function ExtraWorkKanban({ extraWorks, onUpdate }: ExtraWorkKanbanProps) 
         total: invoiced.reduce((sum, w) => sum + w.amount, 0),
       },
     };
-  }, [extraWorks]);
+  }, [filteredWorks]);
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4">

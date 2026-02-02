@@ -68,6 +68,8 @@ interface ExtraWorkTableProps {
   onFilterColleagueChange?: (colleagueId: string | 'all') => void;
   filterMonth?: string | 'all';
   onFilterMonthChange?: (month: string | 'all') => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
 export function ExtraWorkTable({
@@ -82,10 +84,15 @@ export function ExtraWorkTable({
   onFilterColleagueChange,
   filterMonth = 'all',
   onFilterMonthChange,
+  searchQuery: searchQueryProp,
+  onSearchChange,
 }: ExtraWorkTableProps) {
   const { clients, colleagues, getClientById, getEngagementById, getColleagueById, approveExtraWork, completeExtraWork } = useCRMData();
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
+  // Use controlled search if prop provided, otherwise use internal state
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
+  const searchQuery = searchQueryProp ?? internalSearchQuery;
+  const setSearchQuery = onSearchChange ?? setInternalSearchQuery;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [billingPeriodDialogOpen, setBillingPeriodDialogOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ id: string; work: ExtraWork } | null>(null);
@@ -458,10 +465,21 @@ export function ExtraWorkTable({
                             {engagement?.name || '—'}
                           </span>
                           {upsoldBy && (
-                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-green-50 text-green-700 border-green-200 shrink-0" title={`Prodal: ${upsoldBy.full_name} (provize ${work.upsell_commission_percent || 10}%)`}>
-                              <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
-                              Upsell
-                            </Badge>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-green-50 text-green-700 border-green-200" title={`Prodal: ${upsoldBy.full_name}`}>
+                                <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+                                Upsell
+                              </Badge>
+                              <InlineEditNumber
+                                value={work.upsell_commission_percent}
+                                onChange={(value) => onUpdate(work.id, { upsell_commission_percent: value })}
+                                className="w-[45px] text-[10px] text-green-700"
+                                placeholder="10"
+                                suffix="%"
+                                min={0}
+                                disabled={work.status === 'invoiced'}
+                              />
+                            </div>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground truncate">
@@ -481,6 +499,7 @@ export function ExtraWorkTable({
                         value={work.name}
                         onChange={(value) => onUpdate(work.id, { name: value })}
                         className="text-sm font-medium"
+                        disabled={work.status === 'invoiced'}
                       />
                     </TableCell>
                     
@@ -492,6 +511,8 @@ export function ExtraWorkTable({
                           onChange={(value) => handleHoursChange(work.id, value)}
                           className="w-[50px]"
                           placeholder="0"
+                          min={0}
+                          disabled={work.status === 'invoiced'}
                         />
                         <span className="text-muted-foreground text-xs">h ×</span>
                         <InlineEditNumber
@@ -499,6 +520,8 @@ export function ExtraWorkTable({
                           onChange={(value) => handleRateChange(work.id, value)}
                           className="w-[70px]"
                           placeholder="0"
+                          min={0}
+                          disabled={work.status === 'invoiced'}
                         />
                         <span className="text-muted-foreground text-xs">=</span>
                         <span className="font-semibold whitespace-nowrap">

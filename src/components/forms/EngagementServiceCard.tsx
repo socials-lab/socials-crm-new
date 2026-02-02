@@ -129,7 +129,7 @@ export function EngagementServiceCard({
                   >
                     <div className="flex items-center gap-2">
                       <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                        {assignment.colleague.full_name.split(' ').map(n => n[0]).join('')}
+                        {assignment.colleague?.full_name?.split(' ').map(n => n?.[0] || '').join('') || '?'}
                       </div>
                       <div>
                         <p className="text-sm font-medium">{assignment.colleague.full_name}</p>

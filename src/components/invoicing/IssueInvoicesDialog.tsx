@@ -55,10 +55,10 @@ export function IssueInvoicesDialog({
   const periodDate = new Date(year, month - 1);
   const periodLabel = format(periodDate, 'LLLL yyyy', { locale: cs });
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, currency: string = 'CZK') => {
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
-      currency: 'CZK',
+      currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -83,9 +83,10 @@ export function IssueInvoicesDialog({
       const invoice = invoices[i];
       const client = getClientById(invoice.client_id);
 
-      // Extract extra work IDs and one-off service IDs from line items
+      // Extract extra work IDs, one-off service IDs, and Creative Boost client month IDs from line items
       const extraWorkIds: string[] = [];
       const oneOffServiceIds: string[] = [];
+      const creativeBoostClientMonthIds: string[] = [];
 
       invoice.line_items.forEach(item => {
         if (item.extra_work_id) {
@@ -93,6 +94,9 @@ export function IssueInvoicesDialog({
         }
         if (item.engagement_service_id) {
           oneOffServiceIds.push(item.engagement_service_id);
+        }
+        if (item.creative_boost_client_month_id) {
+          creativeBoostClientMonthIds.push(item.creative_boost_client_month_id);
         }
       });
 
@@ -123,7 +127,8 @@ export function IssueInvoicesDialog({
         invoiceData,
         lineItemsWithoutInvoiceId,
         extraWorkIds,
-        oneOffServiceIds
+        oneOffServiceIds,
+        creativeBoostClientMonthIds
       );
 
       // Now push to Fakturoid
