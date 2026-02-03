@@ -1,4 +1,3 @@
-Initialising login role...
 export type Json =
   | string
   | number
@@ -12,31 +11,6 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
   }
   public: {
     Tables: {
@@ -528,6 +502,10 @@ export type Database = {
           engagement_id: string | null
           engagement_service_id: string | null
           id: string
+          invoice_id: string | null
+          invoiced_amount: number | null
+          invoiced_at: string | null
+          invoiced_credits: number | null
           max_credits: number
           min_credits: number
           month: number
@@ -543,6 +521,10 @@ export type Database = {
           engagement_id?: string | null
           engagement_service_id?: string | null
           id?: string
+          invoice_id?: string | null
+          invoiced_amount?: number | null
+          invoiced_at?: string | null
+          invoiced_credits?: number | null
           max_credits?: number
           min_credits?: number
           month: number
@@ -558,6 +540,10 @@ export type Database = {
           engagement_id?: string | null
           engagement_service_id?: string | null
           id?: string
+          invoice_id?: string | null
+          invoiced_amount?: number | null
+          invoiced_at?: string | null
+          invoiced_credits?: number | null
           max_credits?: number
           min_credits?: number
           month?: number
@@ -593,6 +579,13 @@ export type Database = {
             columns: ["engagement_service_id"]
             isOneToOne: false
             referencedRelation: "engagement_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_boost_client_months_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "issued_invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -1019,6 +1012,7 @@ export type Database = {
           contract_url: string | null
           created_at: string | null
           currency: string | null
+          deleted_at: string | null
           end_date: string | null
           freelo_url: string | null
           id: string
@@ -1041,6 +1035,7 @@ export type Database = {
           contract_url?: string | null
           created_at?: string | null
           currency?: string | null
+          deleted_at?: string | null
           end_date?: string | null
           freelo_url?: string | null
           id?: string
@@ -1063,6 +1058,7 @@ export type Database = {
           contract_url?: string | null
           created_at?: string | null
           currency?: string | null
+          deleted_at?: string | null
           end_date?: string | null
           freelo_url?: string | null
           id?: string
@@ -1152,6 +1148,7 @@ export type Database = {
           colleague_id: string
           created_at: string | null
           currency: string | null
+          deleted_at: string | null
           description: string | null
           engagement_id: string | null
           hourly_rate: number | null
@@ -1177,6 +1174,7 @@ export type Database = {
           colleague_id: string
           created_at?: string | null
           currency?: string | null
+          deleted_at?: string | null
           description?: string | null
           engagement_id?: string | null
           hourly_rate?: number | null
@@ -1202,6 +1200,7 @@ export type Database = {
           colleague_id?: string
           created_at?: string | null
           currency?: string | null
+          deleted_at?: string | null
           description?: string | null
           engagement_id?: string | null
           hourly_rate?: number | null
@@ -1525,6 +1524,8 @@ export type Database = {
           issued_by: string | null
           line_items: Json | null
           month: number
+          paid_at: string | null
+          status: string | null
           total_amount: number
           year: number
         }
@@ -1543,6 +1544,8 @@ export type Database = {
           issued_by?: string | null
           line_items?: Json | null
           month: number
+          paid_at?: string | null
+          status?: string | null
           total_amount: number
           year: number
         }
@@ -1561,6 +1564,8 @@ export type Database = {
           issued_by?: string | null
           line_items?: Json | null
           month?: number
+          paid_at?: string | null
+          status?: string | null
           total_amount?: number
           year?: number
         }
@@ -2405,43 +2410,92 @@ export type Database = {
         }
         Returns: Json
       }
-      create_invoice_with_items: {
-        Args: {
-          p_client_id: string
-          p_client_name: string
-          p_currency: string
-          p_engagement_id: string
-          p_engagement_name: string
-          p_issued_by: string
-          p_line_items: Json
-          p_month: number
-          p_total_amount: number
-          p_year: number
-        }
-        Returns: {
-          client_id: string | null
-          client_name: string | null
-          created_at: string | null
-          currency: string | null
-          engagement_id: string | null
-          engagement_name: string | null
-          fakturoid_id: string | null
-          fakturoid_url: string | null
-          id: string
-          invoice_number: string
-          issued_at: string
-          issued_by: string | null
-          line_items: Json | null
-          month: number
-          total_amount: number
-          year: number
-        }
-        SetofOptions: {
-          from: "*"
-          to: "issued_invoices"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+      create_invoice_with_items:
+        | {
+            Args: {
+              p_client_id: string
+              p_client_name: string
+              p_currency: string
+              p_engagement_id: string
+              p_engagement_name: string
+              p_issued_by: string
+              p_line_items: Json
+              p_month: number
+              p_total_amount: number
+              p_year: number
+            }
+            Returns: {
+              client_id: string | null
+              client_name: string | null
+              created_at: string | null
+              currency: string | null
+              engagement_id: string | null
+              engagement_name: string | null
+              fakturoid_id: string | null
+              fakturoid_url: string | null
+              id: string
+              invoice_number: string
+              issued_at: string
+              issued_by: string | null
+              line_items: Json | null
+              month: number
+              paid_at: string | null
+              status: string | null
+              total_amount: number
+              year: number
+            }
+            SetofOptions: {
+              from: "*"
+              to: "issued_invoices"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_client_id: string
+              p_client_name: string
+              p_currency: string
+              p_engagement_id: string
+              p_engagement_name: string
+              p_extra_work_ids?: string[]
+              p_issued_by: string
+              p_line_items: Json
+              p_month: number
+              p_one_off_service_ids?: string[]
+              p_total_amount: number
+              p_year: number
+            }
+            Returns: {
+              client_id: string | null
+              client_name: string | null
+              created_at: string | null
+              currency: string | null
+              engagement_id: string | null
+              engagement_name: string | null
+              fakturoid_id: string | null
+              fakturoid_url: string | null
+              id: string
+              invoice_number: string
+              issued_at: string
+              issued_by: string | null
+              line_items: Json | null
+              month: number
+              paid_at: string | null
+              status: string | null
+              total_amount: number
+              year: number
+            }
+            SetofOptions: {
+              from: "*"
+              to: "issued_invoices"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+      days_in_month: {
+        Args: { p_month: number; p_year: number }
+        Returns: number
       }
       generate_invoice_number: { Args: { p_year?: number }; Returns: string }
       get_colleague_id: { Args: { _user_id: string }; Returns: string }
@@ -2470,6 +2524,8 @@ export type Database = {
         Returns: boolean
       }
       is_user_super_admin: { Args: never; Returns: boolean }
+      is_user_super_admin_v2: { Args: never; Returns: boolean }
+      is_valid_email_format: { Args: { email: string }; Returns: boolean }
       log_applicant_change: {
         Args: {
           _applicant_id: string
@@ -2539,9 +2595,21 @@ export type Database = {
         Returns: undefined
       }
       release_invoice_number_lock: { Args: never; Returns: undefined }
+      restore_engagement: {
+        Args: { p_engagement_id: string }
+        Returns: undefined
+      }
       set_contact_as_primary: { Args: { p_contact_id: string }; Returns: Json }
       soft_delete_client: { Args: { p_client_id: string }; Returns: undefined }
       soft_delete_contact: { Args: { p_contact_id: string }; Returns: Json }
+      soft_delete_engagement: {
+        Args: { p_engagement_id: string }
+        Returns: undefined
+      }
+      soft_delete_extra_work: {
+        Args: { p_extra_work_id: string }
+        Returns: undefined
+      }
       try_set_fakturoid_subject_id: {
         Args: { p_client_id: string; p_fakturoid_subject_id: number }
         Returns: {
@@ -2604,6 +2672,7 @@ export type Database = {
         | "colleague_removed"
         | "colleague_updated"
         | "end_date_set"
+        | "deleted"
       engagement_status:
         | "planned"
         | "active"
@@ -2838,9 +2907,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_role: [
@@ -2901,6 +2967,7 @@ export const Constants = {
         "colleague_removed",
         "colleague_updated",
         "end_date_set",
+        "deleted",
       ],
       engagement_status: [
         "planned",

@@ -189,11 +189,25 @@ serve(async (req) => {
 
     console.log(`Role ${role} assigned to user ${inviteData.user.id}`);
 
+    // Create access_granted notification for the invited user
+    try {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: inviteData.user.id,
+        type: "access_granted",
+        title: "Vítejte v CRM!",
+        message: `Byl vám udělen přístup do systému s rolí: ${role}.`,
+        link: "/",
+        metadata: { role },
+      });
+    } catch (notifError) {
+      console.error("Failed to create notification:", notifError);
+    }
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: "Pozvánka úspěšně odeslána",
-        userId: inviteData.user.id 
+        userId: inviteData.user.id
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

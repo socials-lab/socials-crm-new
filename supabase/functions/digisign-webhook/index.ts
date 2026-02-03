@@ -167,7 +167,7 @@ serve(async (req) => {
     // Find lead by digisign_id
     const { data: lead, error: findError } = await supabaseAdmin
       .from("leads")
-      .select("id, contract_signed_at, digisign_id")
+      .select("id, contract_signed_at, digisign_id, company_name")
       .eq("digisign_id", envelopeId)
       .single();
 
@@ -242,6 +242,33 @@ serve(async (req) => {
           JSON.stringify({ error: "Nepodařilo se aktualizovat smlouvu" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+    }
+
+    // Notify admins on contract signed
+    if (payload.event === "envelopeCompleted") {
+      try {
+        const { data: adminUsers } = await supabaseAdmin
+          .from("user_roles")
+          .select("user_id")
+          .in("role", ["admin", "management"])
+          .eq("is_active", true);
+
+        if (adminUsers && adminUsers.length > 0) {
+          const companyName = (lead as Record<string, unknown>).company_name || "Neznámý";
+          await supabaseAdmin.from("notifications").insert(
+            adminUsers.map((u: { user_id: string }) => ({
+              user_id: u.user_id,
+              type: "contract_signed",
+              title: "Smlouva podepsána!",
+              message: `Smlouva podepsána pro: "${companyName}"`,
+              link: "/leads",
+              metadata: { lead_id: lead.id, company_name: companyName },
+            }))
+          );
+        }
+      } catch (notifError) {
+        console.error("Failed to create notifications:", notifError);
       }
     }
 

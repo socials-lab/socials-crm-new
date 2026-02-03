@@ -30,7 +30,7 @@ interface CreateOfferDialogProps {
 
 function generateToken(): string {
   // Use cryptographically secure random values
-  const array = new Uint8Array(24);
+  const array = new Uint8Array(16);
   crypto.getRandomValues(array);
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -176,9 +176,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
       setCreatedOfferUrl(offerUrl);
       toast.success('Nabídka byla vytvořena!');
       onSuccess(token, offerUrl);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating offer:', err);
-      toast.error('Chyba při vytváření nabídky');
+      toast.error(err?.message || err?.details || 'Chyba při vytváření nabídky');
     } finally {
       setIsCreating(false);
     }

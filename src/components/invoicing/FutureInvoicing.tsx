@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Save, Send, FileText, AlertTriangle, Plus, CheckCircle2 } from 'lucide-react';
+import { Save, Send, FileText, AlertTriangle, Plus, CheckCircle2, RotateCcw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { InvoiceLineItem, MonthlyEngagementInvoice } from '@/types/crm';
 import { getDaysInMonth, parseISO, startOfMonth, endOfMonth, format, isAfter, isBefore } from 'date-fns';
@@ -43,13 +43,32 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const { clients, engagements, engagementServices, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices, issuedInvoices } = useCRMData();
   const { clientMonths, getClientOutputs, calculateOutputCredits } = useCreativeBoostData();
   const { toast } = useToast();
-  const [invoices, setInvoices] = useState<MonthlyEngagementInvoice[]>([]);
+  const draftKey = `invoice-drafts-${year}-${month}`;
+  const [invoices, setInvoices] = useState<MonthlyEngagementInvoice[]>(() => {
+    try {
+      const saved = localStorage.getItem(draftKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set());
   const [singleIssueInvoice, setSingleIssueInvoice] = useState<MonthlyEngagementInvoice | null>(null);
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
   const [issuedInvoiceIds, setIssuedInvoiceIds] = useState<Set<string>>(new Set());
+  const [savingDraft, setSavingDraft] = useState(false);
+
+  // Clear draft state when year/month changes and reload from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(draftKey);
+      setInvoices(saved ? JSON.parse(saved) : []);
+    } catch {
+      setInvoices([]);
+    }
+  }, [draftKey]);
 
   // Initialize issuedInvoiceIds based on actual issued invoices from database
   useEffect(() => {
@@ -418,9 +437,31 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   };
 
   const handleSave = () => {
+    setSavingDraft(true);
+    try {
+      const dataToSave = invoices.length > 0 ? invoices : generatedInvoices;
+      localStorage.setItem(draftKey, JSON.stringify(dataToSave));
+      toast({
+        title: 'Úpravy uloženy',
+        description: 'Změny byly uloženy a přetrvají při obnovení stránky.',
+      });
+    } catch {
+      toast({
+        title: 'Chyba',
+        description: 'Nepodařilo se uložit úpravy.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const handleDiscardDraft = () => {
+    localStorage.removeItem(draftKey);
+    setInvoices([]);
     toast({
-      title: 'Úpravy uloženy',
-      description: 'Všechny změny byly úspěšně uloženy.',
+      title: 'Koncept zahozen',
+      description: 'Úpravy byly zahozeny a data byla obnovena z aktuálních zakázek.',
     });
   };
 
@@ -746,10 +787,10 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     setIssuedInvoiceIds(prev => {
       const next = new Set(prev);
       invoiceIds.forEach(id => next.add(id));
-      
+
       // Calculate detailed stats and notify parent
       onIssuedStatsChange?.(calculateIssuedStats(next));
-      
+
       return next;
     });
     // Clear selection for issued invoices
@@ -758,6 +799,9 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       invoiceIds.forEach(id => next.delete(id));
       return next;
     });
+    // Clear draft from localStorage since invoices were issued
+    localStorage.removeItem(draftKey);
+    setInvoices([]);
   };
 
   const handleReissueInvoice = (invoice: MonthlyEngagementInvoice) => {
@@ -859,8 +903,14 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
           <Plus className="h-4 w-4 mr-2" />
           Přidat novou fakturu
         </Button>
-        <Button variant="outline" onClick={handleSave}>
-          <Save className="h-4 w-4 mr-2" />
+        {invoices.length > 0 && (
+          <Button variant="ghost" onClick={handleDiscardDraft}>
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Zahodit úpravy
+          </Button>
+        )}
+        <Button variant="outline" onClick={handleSave} disabled={savingDraft}>
+          {savingDraft ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
           Uložit úpravy
         </Button>
         <Button 

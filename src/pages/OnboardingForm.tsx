@@ -370,7 +370,16 @@ export default function OnboardingForm() {
       });
 
       if (error || result?.error) {
-        const errorMessage = error?.message || result?.error || 'Neznámá chyba';
+        // Try to get the actual error from the response body
+        let errorMessage = result?.error || 'Neznámá chyba';
+        if (error && !result?.error) {
+          try {
+            const errBody = await error.context?.json?.();
+            errorMessage = errBody?.error || error.message || errorMessage;
+          } catch {
+            errorMessage = error.message || errorMessage;
+          }
+        }
         console.error('Submission failed:', errorMessage);
         toast.error(`Nepodařilo se odeslat formulář: ${errorMessage}`);
         return;

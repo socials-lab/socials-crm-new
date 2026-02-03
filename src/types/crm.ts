@@ -328,6 +328,7 @@ export interface ExtraWork {
   notes: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null; // Soft delete timestamp
 }
 
 export interface ExtraWorkWithDetails extends ExtraWork {
@@ -617,10 +618,14 @@ export interface IssuedInvoice {
   total_amount: number;
   currency: string;
   
+  // Status & payment
+  status: string;
+  paid_at: string | null;
+
   // Timestamps
   issued_at: string;
   issued_by: string | null;
-  
+
   created_at: string;
 }
 

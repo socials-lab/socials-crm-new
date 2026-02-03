@@ -14,6 +14,7 @@ import {
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { ApplicantsKanban } from '@/components/recruitment/ApplicantsKanban';
+import { ApplicantsTable } from '@/components/recruitment/ApplicantsTable';
 import { ApplicantDetailSheet } from '@/components/recruitment/ApplicantDetailSheet';
 import { AddApplicantDialog } from '@/components/recruitment/AddApplicantDialog';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
@@ -208,9 +209,10 @@ export default function Recruitment() {
           onStageChange={handleStageChange}
         />
       ) : (
-        <div className="text-muted-foreground text-center py-12">
-          Tabulkové zobrazení bude brzy dostupné
-        </div>
+        <ApplicantsTable
+          applicants={filteredApplicants}
+          onApplicantClick={handleApplicantClick}
+        />
       )}
 
       {/* Detail Sheet */}

@@ -335,6 +335,19 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] }),
       ]);
 
+      // Notify admins about the conversion
+      try {
+        await supabase.rpc('create_admin_notification', {
+          p_type: 'lead_converted',
+          p_title: 'Lead převeden na klienta!',
+          p_message: `Lead "${lead.company_name}" byl úspěšně převeden.`,
+          p_link: '/clients',
+          p_metadata: { lead_id: lead.id, company_name: lead.company_name },
+        });
+      } catch {
+        // Non-blocking
+      }
+
       toast.success('Lead byl úspěšně převeden na zakázku');
       onSuccess();
     } catch (error) {

@@ -22,6 +22,7 @@ export interface Meeting {
   ai_summary: string;
   notes: string;
   created_by: string | null;
+  google_event_id: string | null;
   calendar_invites_sent_at: string | null;
   created_at: string;
   updated_at: string;

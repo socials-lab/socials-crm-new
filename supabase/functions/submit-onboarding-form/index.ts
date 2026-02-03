@@ -113,6 +113,31 @@ serve(async (req) => {
       );
     }
 
+    // Notify admin/management users about completed onboarding form
+    try {
+      const { data: adminUsers } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["admin", "management"])
+        .eq("is_active", true);
+
+      if (adminUsers && adminUsers.length > 0) {
+        await supabaseAdmin.from("notifications").insert(
+          adminUsers.map((u: { user_id: string }) => ({
+            user_id: u.user_id,
+            type: "form_completed",
+            title: "Formulář vyplněn!",
+            message: `Onboarding formulář vyplněn pro: "${data.company_name}"`,
+            link: "/leads",
+            metadata: { lead_id: data.leadId, company_name: data.company_name },
+          }))
+        );
+      }
+    } catch (notifError) {
+      console.error("Failed to create notifications:", notifError);
+      // Don't fail the request because of notification errors
+    }
+
     return new Response(
       JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
