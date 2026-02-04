@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, ExternalLink, Copy, Check, AlertCircle } from 'lucide-react';
+import { Send, ExternalLink, Copy, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { toast } from '@/components/ui/sonner';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
 
 interface SendOnboardingFormDialogProps {
@@ -29,12 +28,11 @@ export function SendOnboardingFormDialog({
   lead,
   onSent,
 }: SendOnboardingFormDialogProps) {
-  const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
   const [isSending, setIsSending] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   
   // Generate unique form URL for this lead
-  const formUrl = `${window.location.origin}/onboarding/${lead.id}`;
+  const formUrl = `https://crm.socials.cz/onboarding/${lead.id}`;
   
   const cleanWebsite = (website: string | null) => {
     if (!website) return '';
@@ -86,70 +84,17 @@ Tým Socials`;
       return;
     }
 
-    if (!hasGmailScope) {
-      toast.error('Pro odesílání emailů je potřeba propojit Google účet s oprávněním pro Gmail');
-      return;
-    }
-
     setIsSending(true);
     
-    try {
-      // Convert plain text to HTML with better formatting
-      const lines = emailContent.split('\n');
-      const htmlParts: string[] = [];
-      let currentParagraph: string[] = [];
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        
-        if (trimmed === '') {
-          // Empty line - end current paragraph
-          if (currentParagraph.length > 0) {
-            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-            currentParagraph = [];
-          }
-        } else if (trimmed.includes('👉')) {
-          // Special emoji line - flush paragraph first
-          if (currentParagraph.length > 0) {
-            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-            currentParagraph = [];
-          }
-          // Convert URLs to clickable links
-          const withLinks = trimmed.replace(
-            /(https?:\/\/[^\s]+)/g,
-            '<a href="$1" style="color: #0066cc; text-decoration: underline;">$1</a>'
-          );
-          htmlParts.push(`<p style="margin: 16px 0; font-weight: bold;">${withLinks}</p>`);
-        } else {
-          // Regular line - add to current paragraph
-          currentParagraph.push(trimmed);
-        }
-      }
-      
-      // Flush remaining paragraph
-      if (currentParagraph.length > 0) {
-        htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-      }
-
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6; color: #333;">
-          ${htmlParts.join('')}
-        </div>
-      `;
-
-      const result = await sendEmail(lead.contact_email, emailSubject, html);
-      
-      if (result) {
-        // Notify parent about sent form
-        onSent?.(formUrl);
-        toast.success('Onboarding formulář byl odeslán');
-        onOpenChange(false);
-      }
-    } catch (error) {
-      console.error('Failed to send email:', error);
-    } finally {
-      setIsSending(false);
-    }
+    // Mock sending - will be replaced with actual Edge Function
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Notify parent about sent form
+    onSent?.(formUrl);
+    
+    setIsSending(false);
+    toast.success('Onboarding formulář byl odeslán');
+    onOpenChange(false);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -172,26 +117,6 @@ Tým Socials`;
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Google Connection Warning */}
-          {!isCheckingConnection && !hasGmailScope && (
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                  Pro odesílání emailů je potřeba propojit Google účet
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={connectGoogleCalendar}
-                  disabled={googleLoading}
-                >
-                  Propojit Google účet
-                </Button>
-              </div>
-            </div>
-          )}
           {/* Form URL */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Odkaz na formulář</Label>
@@ -299,7 +224,7 @@ Tým Socials`;
           </Button>
           <Button
             onClick={handleSend}
-            disabled={isSending || !lead.contact_email || !hasGmailScope}
+            disabled={isSending || !lead.contact_email}
           >
             {isSending ? (
               <>

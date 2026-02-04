@@ -35,6 +35,7 @@ export function AddLeadServiceDialog({
   const [selectedTier, setSelectedTier] = useState<ServiceTier | null>(null);
   const [price, setPrice] = useState(0);
   const [currency, setCurrency] = useState('CZK');
+  const [billingType, setBillingType] = useState<'monthly' | 'one_off'>('monthly');
 
   const selectedService = services.find(s => s.id === selectedServiceId);
   const isCoreService = selectedService?.service_type === 'core';
@@ -77,7 +78,7 @@ export function AddLeadServiceDialog({
       selected_tier: isCoreService ? selectedTier : null,
       price,
       currency,
-      billing_type: selectedService.billing_type,
+      billing_type: billingType,
     });
     
     // Reset form
@@ -85,6 +86,7 @@ export function AddLeadServiceDialog({
     setSelectedTier(null);
     setPrice(0);
     setCurrency('CZK');
+    setBillingType('monthly');
     onOpenChange(false);
   };
 
@@ -144,14 +146,28 @@ export function AddLeadServiceDialog({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label>Cena</Label>
-            <Input 
-              type="number" 
-              min={0} 
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value))}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Cena</Label>
+              <Input 
+                type="number" 
+                min={0} 
+                value={price}
+                onChange={(e) => setPrice(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Typ fakturace</Label>
+              <Select value={billingType} onValueChange={(v) => setBillingType(v as 'monthly' | 'one_off')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Měsíčně</SelectItem>
+                  <SelectItem value="one_off">Jednorázově</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">

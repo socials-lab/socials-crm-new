@@ -181,7 +181,7 @@ function KanbanColumn({
           {formatCurrency(total)}
         </div>
       </div>
-      <div className="bg-muted/30 rounded-b-lg p-3 min-h-[400px]">
+      <div className="bg-muted/30 rounded-b-lg p-3 min-h-[200px] max-h-[70vh] overflow-y-auto">
         {items.length === 0 ? (
           <div className="text-center text-sm text-muted-foreground py-8">
             Žádné položky

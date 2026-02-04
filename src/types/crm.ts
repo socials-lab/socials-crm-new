@@ -234,6 +234,8 @@ export interface EngagementService {
   // Upsell tracking - who sold this service
   upsold_by_id: string | null;
   upsell_commission_percent: number | null;
+  // Effective date for modifications/upsells
+  effective_from: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -427,7 +429,7 @@ export type LeadStage =
   | 'lost'               // Prohráno
   | 'postponed';         // Odloženo
 
-export type LeadSource = 
+export type LeadSource =
   | 'referral'
   | 'inbound'
   | 'cold_outreach'
@@ -435,6 +437,16 @@ export type LeadSource =
   | 'linkedin'
   | 'website'
   | 'other';
+
+export type LeadOfferType = 'retainer' | 'one_off';
+
+export type LeadQualificationStatus = 'pending' | 'qualified' | 'bad_fit';
+
+export const LEAD_QUALIFICATION_LABELS: Record<LeadQualificationStatus, string> = {
+  pending: 'Čeká na posouzení',
+  qualified: 'Kvalifikovaný',
+  bad_fit: 'Bad Fit',
+};
 
 // Service in a lead offer
 export interface LeadService {
@@ -490,9 +502,16 @@ export interface Lead {
   client_message: string | null;
   ad_spend_monthly: number | null;
   summary: string;
-  
+
+  // Qualification tracking
+  qualification_status: LeadQualificationStatus;
+  qualification_reason: string | null;
+  qualified_at: string | null;
+
   // Offer
+  potential_service: string;
   potential_services: LeadService[];
+  offer_type: LeadOfferType;
   estimated_price: number;
   currency: string;
   probability_percent: number;
@@ -537,6 +556,7 @@ export interface Lead {
   digisign_id: string | null;
   contract_url: string | null;
   contract_created_at: string | null;
+  contract_sent_at: string | null;
   contract_signed_at: string | null;
   
   // Meta
@@ -627,6 +647,150 @@ export interface IssuedInvoice {
   issued_by: string | null;
 
   created_at: string;
+}
+
+// ============= Modification Request Types =============
+
+// Request type for engagement modifications
+export type ModificationRequestType =
+  | 'add_service'
+  | 'update_service_price'
+  | 'deactivate_service'
+  | 'add_assignment'
+  | 'update_assignment'
+  | 'remove_assignment';
+
+// Status for modification requests
+export type ModificationRequestStatus =
+  | 'pending'          // Čeká na interní schválení
+  | 'approved'         // Interně schváleno, čeká na klienta (pro client-facing změny)
+  | 'client_approved'  // Klient potvrdil, připraveno k aplikaci
+  | 'applied'          // Změna byla aplikována
+  | 'rejected';        // Zamítnuto
+
+// Labels for request types
+export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+  add_service: 'Přidání služby',
+  update_service_price: 'Změna ceny služby',
+  deactivate_service: 'Ukončení služby',
+  add_assignment: 'Přiřazení kolegy',
+  update_assignment: 'Změna odměny kolegy',
+  remove_assignment: 'Odebrání kolegy',
+};
+
+// Status labels
+export const MODIFICATION_REQUEST_STATUS_LABELS: Record<ModificationRequestStatus, string> = {
+  pending: 'Čeká na schválení',
+  approved: 'Čeká na klienta',
+  client_approved: 'Klient potvrdil',
+  applied: 'Aplikováno',
+  rejected: 'Zamítnuto',
+};
+
+// Proposed changes structure for different request types
+export interface AddServiceProposedChanges {
+  service_id: string | null;
+  name: string;
+  price: number;
+  currency: string;
+  billing_type: 'monthly' | 'one_off';
+  selected_tier?: ServiceTier | null;
+  description?: string;
+  deliverables?: string[];
+  benefits?: string[];
+  creative_boost_min_credits?: number | null;
+  creative_boost_max_credits?: number | null;
+  creative_boost_price_per_credit?: number | null;
+}
+
+export interface UpdateServicePriceProposedChanges {
+  service_name: string;
+  old_price: number;
+  new_price: number;
+  currency: string;
+}
+
+export interface DeactivateServiceProposedChanges {
+  service_name: string;
+  price: number;
+  currency: string;
+}
+
+export interface AddAssignmentProposedChanges {
+  colleague_id: string;
+  colleague_name: string;
+  role_on_engagement: string;
+  cost_model: CostModel;
+  hourly_cost?: number | null;
+  monthly_cost?: number | null;
+  percentage_of_revenue?: number | null;
+}
+
+export interface UpdateAssignmentProposedChanges {
+  colleague_name: string;
+  old_cost_model?: CostModel;
+  new_cost_model: CostModel;
+  old_hourly_cost?: number | null;
+  new_hourly_cost?: number | null;
+  old_monthly_cost?: number | null;
+  new_monthly_cost?: number | null;
+  old_percentage?: number | null;
+  new_percentage?: number | null;
+  old_role?: string;
+  new_role?: string;
+}
+
+export interface RemoveAssignmentProposedChanges {
+  colleague_name: string;
+  role_on_engagement: string;
+}
+
+export type ModificationProposedChanges =
+  | AddServiceProposedChanges
+  | UpdateServicePriceProposedChanges
+  | DeactivateServiceProposedChanges
+  | AddAssignmentProposedChanges
+  | UpdateAssignmentProposedChanges
+  | RemoveAssignmentProposedChanges;
+
+// Main modification request interface
+export interface ModificationRequest {
+  id: string;
+  engagement_id: string;
+  request_type: ModificationRequestType;
+  status: ModificationRequestStatus;
+  proposed_changes: ModificationProposedChanges;
+  engagement_service_id: string | null;
+  engagement_assignment_id: string | null;
+  effective_from: string | null;
+  upsold_by_id: string | null;
+  upsell_commission_percent: number;
+  requested_by: string | null;
+  requested_at: string;
+  note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  upgrade_offer_token: string | null;
+  upgrade_offer_valid_until: string | null;
+  client_email: string | null;
+  client_approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Extended with relations for display
+export interface ModificationRequestWithDetails extends ModificationRequest {
+  engagement: Engagement;
+  client: Client;
+  requested_by_profile: Profile | null;
+  reviewed_by_profile: Profile | null;
+  upsold_by_colleague: Colleague | null;
+}
+
+// Helper to check if a request type is client-facing
+export function isClientFacingRequestType(type: ModificationRequestType): boolean {
+  return ['add_service', 'update_service_price', 'deactivate_service'].includes(type);
 }
 
 // Extended types with relations

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, User, Mail, Building2, ExternalLink, AlertCircle } from 'lucide-react';
+import { Send, User, Mail, Building2, ExternalLink } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,11 +12,16 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/components/ui/sonner';
-import { useAuth } from '@/hooks/useAuth';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
-import type { Lead } from '@/types/crm';
+import type { Lead, Colleague } from '@/types/crm';
 
 interface SendOfferDialogProps {
   open: boolean;
@@ -31,10 +36,8 @@ export function SendOfferDialog({
   lead,
   onSent,
 }: SendOfferDialogProps) {
-  const { user } = useAuth();
   const { colleagues } = useCRMData();
-  const { hasGmailScope, isCheckingConnection, isConnected, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
-  
+  const [selectedOwnerId, setSelectedOwnerId] = useState(lead.owner_id);
   const cleanWebsite = (website: string | null) => {
     if (!website) return '';
     return website
@@ -52,12 +55,12 @@ export function SendOfferDialog({
   const [emailContent, setEmailContent] = useState('');
   const [isSending, setIsSending] = useState(false);
 
-  // Get current user's colleague record
-  const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
+  const selectedOwner = colleagues.find(c => c.id === selectedOwnerId);
+  const activeColleagues = colleagues.filter(c => c.status === 'active');
 
-  // Generate email content when dialog opens or lead changes
+  // Generate email content when owner changes
   useEffect(() => {
-    if (!currentUserColleague || !open) return;
+    if (!selectedOwner) return;
     
     const servicesText = lead.potential_services && lead.potential_services.length > 0
       ? lead.potential_services.map(s => {
@@ -71,10 +74,9 @@ export function SendOfferDialog({
     const totalPrice = hasServices
       ? lead.potential_services.reduce((sum, s) => sum + s.price, 0)
       : 0;
-    const hasMonthlyServices = hasServices && lead.potential_services.some(s => s.billing_type === 'monthly');
 
     const priceText = hasServices
-      ? `Celková cena: ${totalPrice.toLocaleString()} ${lead.currency}${hasMonthlyServices ? '/měs' : ''}`
+      ? `Celková cena: ${totalPrice.toLocaleString()} ${lead.currency}${lead.offer_type === 'retainer' ? '/měs' : ''}`
       : 'Cena bude stanovena na základě detailní nabídky.';
 
     setEmailContent(`Dobrý den ${lead.contact_name},
@@ -92,11 +94,11 @@ ${lead.offer_url ? `Detailní nabídku naleznete zde: ${lead.offer_url}` : ''}
 Budu rád/a, když se mi ozvete s případnými dotazy.
 
 S pozdravem,
-${currentUserColleague.full_name}
-${currentUserColleague.position}
-${currentUserColleague.email}
-${currentUserColleague.phone || ''}`);
-  }, [currentUserColleague, lead, open]);
+${selectedOwner.full_name}
+${selectedOwner.position}
+${selectedOwner.email}
+${selectedOwner.phone || ''}`);
+  }, [selectedOwner, lead]);
 
   const handleSend = async () => {
     if (!lead.contact_email) {
@@ -104,73 +106,26 @@ ${currentUserColleague.phone || ''}`);
       return;
     }
 
-    if (!hasGmailScope) {
-      toast.error('Pro odesílání emailů je potřeba propojit Google účet s oprávněním pro Gmail');
-      return;
-    }
-
-    if (!currentUserColleague) {
-      toast.error('Nepodařilo se zjistit vaše údaje');
+    if (!selectedOwner) {
+      toast.error('Vyberte odpovědnou osobu');
       return;
     }
 
     setIsSending(true);
     
-    try {
-      // Convert plain text to HTML with better formatting
-      const lines = emailContent.split('\n');
-      const htmlParts: string[] = [];
-      let currentParagraph: string[] = [];
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        
-        if (trimmed === '') {
-          // Empty line - end current paragraph
-          if (currentParagraph.length > 0) {
-            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-            currentParagraph = [];
-          }
-        } else if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.match(/^\d+\./)) {
-          // List item - flush paragraph first
-          if (currentParagraph.length > 0) {
-            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-            currentParagraph = [];
-          }
-          htmlParts.push(`<p style="margin: 0 0 8px 0; padding-left: 20px;">${trimmed}</p>`);
-        } else {
-          // Regular line - add to current paragraph
-          currentParagraph.push(trimmed);
-        }
-      }
-      
-      // Flush remaining paragraph
-      if (currentParagraph.length > 0) {
-        htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-      }
-
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6; color: #333;">
-          ${htmlParts.join('')}
-        </div>
-      `;
-
-      const result = await sendEmail(lead.contact_email, emailSubject, html);
-      
-      if (result) {
-        onSent?.(lead.owner_id);
-        toast.success('📤 Nabídka byla odeslána!');
-        onOpenChange(false);
-      }
-    } catch (error) {
-      console.error('Failed to send email:', error);
-    } finally {
-      setIsSending(false);
-    }
+    // Mock sending - will be replaced with actual Edge Function
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    onSent?.(selectedOwnerId);
+    
+    setIsSending(false);
+    toast.success('📤 Nabídka byla odeslána!');
+    onOpenChange(false);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
+      setSelectedOwnerId(lead.owner_id);
       setEmailSubject(getDefaultSubject());
     }
     onOpenChange(newOpen);
@@ -182,47 +137,46 @@ ${currentUserColleague.phone || ''}`);
         <DialogHeader>
           <DialogTitle>📤 Odeslat nabídku</DialogTitle>
           <DialogDescription>
-            Nabídka bude odeslána kontaktní osobě z vašeho Google účtu.
+            Nabídka bude odeslána kontaktní osobě. Vyberte, kdo ji odesílá.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Google Connection Warning */}
-          {!isCheckingConnection && !hasGmailScope && (
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                  Pro odesílání emailů je potřeba propojit Google účet
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={connectGoogleCalendar}
-                  disabled={googleLoading}
-                >
-                  Propojit Google účet
-                </Button>
-              </div>
-            </div>
-          )}
+          {/* Sender Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Odesílatel (odpovědná osoba)</Label>
+            <Select value={selectedOwnerId} onValueChange={setSelectedOwnerId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Vyberte osobu" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeColleagues.map((colleague) => (
+                  <SelectItem key={colleague.id} value={colleague.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{colleague.full_name}</span>
+                      <span className="text-muted-foreground text-xs">({colleague.position})</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Sender Info Card */}
-          {currentUserColleague && (
+          {selectedOwner && (
             <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1">
               <div className="flex items-center gap-2 text-sm">
                 <User className="h-4 w-4 text-primary" />
-                <span className="font-medium">{currentUserColleague.full_name}</span>
-                <span className="text-muted-foreground">– {currentUserColleague.position}</span>
+                <span className="font-medium">{selectedOwner.full_name}</span>
+                <span className="text-muted-foreground">– {selectedOwner.position}</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Mail className="h-4 w-4" />
-                <span>{currentUserColleague.email}</span>
+                <span>{selectedOwner.email}</span>
               </div>
-              {currentUserColleague.phone && (
+              {selectedOwner.phone && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="ml-6">{currentUserColleague.phone}</span>
+                  <span className="ml-6">{selectedOwner.phone}</span>
                 </div>
               )}
             </div>
@@ -282,7 +236,7 @@ ${currentUserColleague.phone || ''}`);
           </Button>
           <Button
             onClick={handleSend}
-            disabled={isSending || !lead.contact_email || !hasGmailScope || !currentUserColleague}
+            disabled={isSending || !lead.contact_email || !selectedOwner}
           >
             {isSending ? (
               <>

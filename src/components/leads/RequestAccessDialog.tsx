@@ -13,8 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/components/ui/sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface RequestAccessDialogProps {
   open: boolean;
@@ -97,46 +96,22 @@ Tým Socials`;
 
     setIsSending(true);
     
-    try {
-      // Convert plain text email to HTML
-      const htmlContent = emailContent
-        .split('\n')
-        .map(line => line.trim() ? `<p>${line}</p>` : '<br>')
-        .join('');
-      
-      const { data, error } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: contactEmail,
-          subject: emailSubject,
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-              ${htmlContent}
-            </div>
-          `,
-        },
-      });
-
-      if (error) throw error;
-
-      // Notify parent about sent platforms
-      const platformLabels = selectedPlatforms
-        .map(id => PLATFORMS.find(p => p.id === id)?.label)
-        .filter(Boolean) as string[];
-      onSent?.(platformLabels);
-      
-      toast.success('Žádost o přístupy byla odeslána');
-      onOpenChange(false);
-      
-      // Reset state
-      setSelectedPlatforms([]);
-      setEmailContent('');
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Nepodařilo se odeslat email: ${errorMessage}`);
-    } finally {
-      setIsSending(false);
-    }
+    // Mock sending - will be replaced with actual Edge Function
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Notify parent about sent platforms
+    const platformLabels = selectedPlatforms
+      .map(id => PLATFORMS.find(p => p.id === id)?.label)
+      .filter(Boolean) as string[];
+    onSent?.(platformLabels);
+    
+    setIsSending(false);
+    toast.success('Žádost o přístupy byla odeslána');
+    onOpenChange(false);
+    
+    // Reset state
+    setSelectedPlatforms([]);
+    setEmailContent('');
   };
 
   const handleOpenChange = (newOpen: boolean) => {

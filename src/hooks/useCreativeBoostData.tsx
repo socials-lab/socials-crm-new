@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
+import { getRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
 import type {
   OutputType,
   CreativeBoostClientMonth,
@@ -23,6 +24,17 @@ interface ColleagueCreditDetail {
   normalCredits: number;
   expressCredits: number;
   totalCredits: number;
+}
+
+interface ColleagueClientRewardSummary {
+  clientId: string;
+  clientName: string;
+  brandName: string;
+  engagementId: string | null;
+  engagementName: string;
+  totalCredits: number;
+  rewardPerCredit: number;
+  totalReward: number;
 }
 
 interface CreativeBoostContextType {
@@ -60,6 +72,7 @@ interface CreativeBoostContextType {
   getColleagueCredits: (colleagueId: string, year: number, month: number) => number;
   getColleagueCreditsYear: (colleagueId: string, year: number) => number;
   getColleagueCreditsDetail: (colleagueId: string, year?: number, month?: number) => ColleagueCreditDetail[];
+  getColleagueCreditsByClient: (colleagueId: string, year: number, month: number) => ColleagueClientRewardSummary[];
 
   // Engagement service integration
   getClientMonthByEngagementServiceId: (engagementServiceId: string, year: number, month: number) => CreativeBoostClientMonth | undefined;
@@ -140,7 +153,7 @@ const transformSettingsHistory = (row: Record<string, unknown>): CreativeBoostSe
 
 export function CreativeBoostProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const { getClientById, colleagues, engagements, engagementServices, services } = useCRMData();
+  const { getClientById, colleagues, engagements, engagementServices, assignments, services } = useCRMData();
   const { user } = useAuth();
   
   // Queries
@@ -571,6 +584,80 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
     [outputs, getClientById, outputTypes, calculateOutputCredits]
   );
 
+  const getColleagueCreditsByClient = useCallback((colleagueId: string, year: number, month: number): ColleagueClientRewardSummary[] => {
+    // Group outputs by client
+    const clientOutputsMap = new Map<string, { outputs: typeof outputs, clientMonth: CreativeBoostClientMonth | undefined }>();
+
+    outputs
+      .filter(o => o.colleagueId === colleagueId && o.year === year && o.month === month)
+      .forEach(output => {
+        if (!clientOutputsMap.has(output.clientId)) {
+          const clientMonth = clientMonths.find(
+            cm => cm.clientId === output.clientId && cm.year === year && cm.month === month
+          );
+          clientOutputsMap.set(output.clientId, { outputs: [], clientMonth });
+        }
+        clientOutputsMap.get(output.clientId)!.outputs.push(output);
+      });
+
+    const results: ColleagueClientRewardSummary[] = [];
+
+    clientOutputsMap.forEach(({ outputs: clientOutputs, clientMonth }, clientId) => {
+      const clientData = getClientById(clientId);
+      if (!clientData) return;
+
+      let totalCredits = 0;
+      clientOutputs.forEach(output => {
+        const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
+        totalCredits += credits.totalCredits;
+      });
+
+      let engagementId: string | null = null;
+      let engagementName = '';
+      let rewardPerCredit = 80;
+
+      if (clientMonth?.engagementServiceId) {
+        const engService = engagementServices.find(es => es.id === clientMonth.engagementServiceId);
+        if (engService) {
+          engagementId = engService.engagement_id;
+          const engagement = engagements.find(e => e.id === engService.engagement_id);
+          engagementName = engagement?.name ?? '';
+
+          const assignment = assignments.find(
+            a => a.colleague_id === colleagueId && a.engagement_service_id === clientMonth.engagementServiceId
+          );
+          if (assignment) {
+            rewardPerCredit = getRewardPerCredit(assignment.id);
+          }
+        }
+      } else if (clientMonth?.engagementId) {
+        engagementId = clientMonth.engagementId;
+        const engagement = engagements.find(e => e.id === clientMonth.engagementId);
+        engagementName = engagement?.name ?? '';
+
+        const assignment = assignments.find(
+          a => a.colleague_id === colleagueId && a.engagement_id === clientMonth.engagementId
+        );
+        if (assignment) {
+          rewardPerCredit = getRewardPerCredit(assignment.id);
+        }
+      }
+
+      results.push({
+        clientId,
+        clientName: clientData.name,
+        brandName: clientData.brand_name ?? clientData.name,
+        engagementId,
+        engagementName,
+        totalCredits,
+        rewardPerCredit,
+        totalReward: totalCredits * rewardPerCredit,
+      });
+    });
+
+    return results.sort((a, b) => b.totalReward - a.totalReward);
+  }, [outputs, clientMonths, engagementServices, engagements, assignments, getClientById, calculateOutputCredits]);
+
   const getClientMonthByEngagementServiceId = useCallback(
     (engagementServiceId: string, year: number, month: number) => {
     return clientMonths.find(
@@ -851,6 +938,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       getColleagueCredits,
       getColleagueCreditsYear,
       getColleagueCreditsDetail,
+      getColleagueCreditsByClient,
       getClientMonthByEngagementServiceId,
       getClientMonthSummaryByEngagementServiceId,
       getSettingsHistory,

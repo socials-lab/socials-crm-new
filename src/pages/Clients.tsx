@@ -45,9 +45,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useLeadsData } from '@/hooks/useLeadsData';
 import { useFakturoid, type FakturoidSubjectData } from '@/hooks/useFakturoid';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { AddContactDialog } from '@/components/clients/AddContactDialog';
+import { LeadOriginSection } from '@/components/clients/LeadOriginSection';
 import { useUserRole } from '@/hooks/useUserRole';
 import type { ClientStatus, Client, ClientContact, ClientTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
@@ -108,6 +110,10 @@ export default function Clients() {
   } = useCRMData();
 
   const { isSuperAdmin: superAdmin, role } = useUserRole();
+  const { leads } = useLeadsData();
+  const getLeadByClientId = useCallback((clientId: string) => {
+    return leads.find(lead => lead.converted_to_client_id === clientId);
+  }, [leads]);
   // Allow editing for super admin or roles: admin, management, project_manager, specialist
   const canModifyContactsFlag = superAdmin || ['admin', 'management', 'project_manager', 'specialist'].includes(role || '');
   const { createSubjectInFakturoid, syncSubjectToFakturoid, getSubjectFromFakturoid, isLoading: isFakturoidLoading } = useFakturoid();
@@ -678,6 +684,20 @@ export default function Clients() {
                       </p>
                     )}
                   </div>
+
+                  {/* Lead Origin Section */}
+                  {(() => {
+                    const originLead = getLeadByClientId(client.id);
+                    if (!originLead) return null;
+                    return (
+                      <div className="mb-6">
+                        <LeadOriginSection
+                          lead={originLead}
+                          onStopPropagation={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    );
+                  })()}
 
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {/* Firemní údaje */}

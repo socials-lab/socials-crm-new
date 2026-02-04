@@ -14,12 +14,12 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Copy, ExternalLink, Check } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
-import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
-import { supabase } from '@/integrations/supabase/client';
+import { addPublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
+import { mergeWithDefaults } from '@/constants/serviceDefaults';
 
 interface CreateOfferDialogProps {
   open: boolean;
@@ -29,18 +29,12 @@ interface CreateOfferDialogProps {
 }
 
 function generateToken(): string {
-  // Use cryptographically secure random values
-  const array = new Uint8Array(16);
-  crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
-function getOfferTypeFromServices(services: Array<{ billing_type: 'monthly' | 'one_off' }>): 'retainer' | 'one_off' {
-  if (!services?.length) return 'retainer';
-  const hasMonthly = services.some(s => s.billing_type === 'monthly');
-  const hasOneOff = services.some(s => s.billing_type === 'one_off');
-  if (hasMonthly && hasOneOff) return 'retainer'; // Mixed: default to retainer
-  return hasMonthly ? 'retainer' : 'one_off';
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 12; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
 
 // Default portfolio links that can be added
@@ -52,7 +46,6 @@ const DEFAULT_PORTFOLIO_OPTIONS: Omit<PortfolioLink, 'id'>[] = [
 
 export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: CreateOfferDialogProps) {
   const { services, colleagues } = useCRMData();
-  const { colleagueId } = useUserRole();
   const [auditSummary, setAuditSummary] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [notionUrl, setNotionUrl] = useState('');
@@ -67,14 +60,19 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   // Editable services state
   const [editableServices, setEditableServices] = useState<PublicOfferService[]>([]);
 
-  // Get current user's colleague record (the logged-in user)
-  const currentColleague = colleagueId ? colleagues.find(c => c.id === colleagueId) : null;
+  // Get current user's colleague record
+  const currentColleague = colleagues.find(c => c.status === 'active');
 
   // Initialize editable services when dialog opens
   useEffect(() => {
     if (open && lead.potential_services) {
       const initialServices: PublicOfferService[] = lead.potential_services.map(ls => {
         const serviceDetails = services.find(s => s.id === ls.service_id);
+        
+        // Get deliverables from service defaults or use intelligent fallbacks
+        const deliverables = serviceDetails?.default_deliverables?.length 
+          ? serviceDetails.default_deliverables 
+          : mergeWithDefaults(ls.name, null, null, null, null).deliverables;
         
         return {
           id: ls.id,
@@ -90,8 +88,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           billing_type: ls.billing_type,
           // Pass service_type from service definition
           service_type: serviceDetails?.service_type,
-          // Use DB deliverables or empty array (no magic fallbacks)
-          deliverables: serviceDetails?.default_deliverables || [],
+          // Pre-fill with deliverables from DB or intelligent fallbacks
+          deliverables,
           frequency: '',
           turnaround: '',
           requirements: [],
@@ -137,48 +135,50 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     try {
       const token = generateToken();
       const offerUrl = `${window.location.origin}/offer/${token}`;
+      const now = new Date().toISOString();
 
       // Find lead owner for contact info
       const leadOwner = colleagues.find(c => c.id === lead.owner_id);
 
-      // Insert offer into Supabase
-      const { error } = await supabase
-        .from('public_offers')
-        .insert({
-          lead_id: lead.id,
-          token,
-          company_name: lead.company_name,
-          website: lead.website || null,
-          contact_name: lead.contact_name,
-          audit_summary: auditSummary.trim() || null,
-          recommendation_intro: null,
-          custom_note: customNote.trim() || null,
-          notion_url: notionUrl.trim() || null,
-          // Cast to unknown to satisfy Supabase's JSONB column type (typed arrays -> Json)
-          services: editableServices as unknown as Record<string, unknown>[],
-          portfolio_links: portfolioLinks as unknown as Record<string, unknown>[],
-          total_price: totals.totalFinal,
-          currency: lead.currency || 'CZK',
-          offer_type: getOfferTypeFromServices(editableServices),
-          valid_until: validUntil || defaultValidUntil,
-          is_active: true,
-          created_by: currentColleague?.id || null,
-          owner_name: leadOwner?.full_name || null,
-          owner_email: leadOwner?.email || null,
-          owner_phone: leadOwner?.phone || null,
-          estimated_start_date: null, // Can be set later if needed
-        });
+      // Create offer object for mock store
+      const newOffer: PublicOffer = {
+        id: crypto.randomUUID(),
+        lead_id: lead.id,
+        token,
+        company_name: lead.company_name,
+        website: lead.website || null,
+        contact_name: lead.contact_name,
+        audit_summary: auditSummary.trim() || null,
+        recommendation_intro: null,
+        custom_note: customNote.trim() || null,
+        notion_url: notionUrl.trim() || null,
+        services: editableServices,
+        portfolio_links: portfolioLinks,
+        total_price: totals.totalFinal,
+        currency: lead.currency,
+        offer_type: lead.offer_type as 'retainer' | 'one_off',
+        valid_until: validUntil || null,
+        is_active: true,
+        viewed_at: null,
+        view_count: 0,
+        created_by: currentColleague?.id || null,
+        created_at: now,
+        updated_at: now,
+        // Contact person info (lead owner)
+        owner_name: leadOwner?.full_name || undefined,
+        owner_email: leadOwner?.email || undefined,
+        owner_phone: leadOwner?.phone || undefined,
+      };
 
-      if (error) {
-        throw error;
-      }
+      // Add to mock store
+      addPublicOffer(newOffer);
 
       setCreatedOfferUrl(offerUrl);
       toast.success('Nabídka byla vytvořena!');
       onSuccess(token, offerUrl);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error creating offer:', err);
-      toast.error(err?.message || err?.details || 'Chyba při vytváření nabídky');
+      toast.error('Chyba při vytváření nabídky');
     } finally {
       setIsCreating(false);
     }

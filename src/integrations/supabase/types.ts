@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_rewards: {
+        Row: {
+          activity_date: string
+          amount: number
+          billing_type: string
+          category: string
+          colleague_id: string
+          created_at: string
+          description: string
+          hourly_rate: number | null
+          hours: number | null
+          id: string
+          invoice_item_name: string
+          updated_at: string
+        }
+        Insert: {
+          activity_date: string
+          amount: number
+          billing_type: string
+          category: string
+          colleague_id: string
+          created_at?: string
+          description: string
+          hourly_rate?: number | null
+          hours?: number | null
+          id?: string
+          invoice_item_name: string
+          updated_at?: string
+        }
+        Update: {
+          activity_date?: string
+          amount?: number
+          billing_type?: string
+          category?: string
+          colleague_id?: string
+          created_at?: string
+          description?: string
+          hourly_rate?: number | null
+          hours?: number | null
+          id?: string
+          invoice_item_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_rewards_colleague_id_fkey"
+            columns: ["colleague_id"]
+            isOneToOne: false
+            referencedRelation: "colleagues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applicant_history: {
         Row: {
           applicant_id: string
@@ -1651,6 +1704,7 @@ export type Database = {
           contact_phone: string | null
           contact_position: string | null
           contract_created_at: string | null
+          contract_sent_at: string | null
           contract_signed_at: string | null
           contract_url: string | null
           converted_at: string | null
@@ -1671,6 +1725,7 @@ export type Database = {
           offer_created_at: string | null
           offer_sent_at: string | null
           offer_sent_by_id: string | null
+          offer_type: string | null
           offer_url: string | null
           onboarding_form_completed_at: string | null
           onboarding_form_sent_at: string | null
@@ -1679,8 +1734,12 @@ export type Database = {
           onboarding_signatories: Json | null
           onboarding_start_date: string | null
           owner_id: string | null
+          potential_service: string | null
           potential_services: Json | null
           probability_percent: number | null
+          qualification_reason: string | null
+          qualification_status: string | null
+          qualified_at: string | null
           source: Database["public"]["Enums"]["lead_source"] | null
           source_custom: string | null
           stage: Database["public"]["Enums"]["lead_stage"] | null
@@ -1706,6 +1765,7 @@ export type Database = {
           contact_phone?: string | null
           contact_position?: string | null
           contract_created_at?: string | null
+          contract_sent_at?: string | null
           contract_signed_at?: string | null
           contract_url?: string | null
           converted_at?: string | null
@@ -1726,6 +1786,7 @@ export type Database = {
           offer_created_at?: string | null
           offer_sent_at?: string | null
           offer_sent_by_id?: string | null
+          offer_type?: string | null
           offer_url?: string | null
           onboarding_form_completed_at?: string | null
           onboarding_form_sent_at?: string | null
@@ -1734,8 +1795,12 @@ export type Database = {
           onboarding_signatories?: Json | null
           onboarding_start_date?: string | null
           owner_id?: string | null
+          potential_service?: string | null
           potential_services?: Json | null
           probability_percent?: number | null
+          qualification_reason?: string | null
+          qualification_status?: string | null
+          qualified_at?: string | null
           source?: Database["public"]["Enums"]["lead_source"] | null
           source_custom?: string | null
           stage?: Database["public"]["Enums"]["lead_stage"] | null
@@ -1761,6 +1826,7 @@ export type Database = {
           contact_phone?: string | null
           contact_position?: string | null
           contract_created_at?: string | null
+          contract_sent_at?: string | null
           contract_signed_at?: string | null
           contract_url?: string | null
           converted_at?: string | null
@@ -1781,6 +1847,7 @@ export type Database = {
           offer_created_at?: string | null
           offer_sent_at?: string | null
           offer_sent_by_id?: string | null
+          offer_type?: string | null
           offer_url?: string | null
           onboarding_form_completed_at?: string | null
           onboarding_form_sent_at?: string | null
@@ -1789,8 +1856,12 @@ export type Database = {
           onboarding_signatories?: Json | null
           onboarding_start_date?: string | null
           owner_id?: string | null
+          potential_service?: string | null
           potential_services?: Json | null
           probability_percent?: number | null
+          qualification_reason?: string | null
+          qualification_status?: string | null
+          qualified_at?: string | null
           source?: Database["public"]["Enums"]["lead_source"] | null
           source_custom?: string | null
           stage?: Database["public"]["Enums"]["lead_stage"] | null
@@ -2143,6 +2214,8 @@ export type Database = {
           avatar_url: string | null
           created_at: string | null
           email: string | null
+          email_notification_level: string | null
+          email_notifications_enabled: boolean | null
           full_name: string | null
           id: string
           updated_at: string | null
@@ -2151,6 +2224,8 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           email?: string | null
+          email_notification_level?: string | null
+          email_notifications_enabled?: boolean | null
           full_name?: string | null
           id: string
           updated_at?: string | null
@@ -2159,6 +2234,8 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           email?: string | null
+          email_notification_level?: string | null
+          email_notifications_enabled?: boolean | null
           full_name?: string | null
           id?: string
           updated_at?: string | null
@@ -2409,6 +2486,17 @@ export type Database = {
           p_services?: Json
         }
         Returns: Json
+      }
+      create_admin_notification: {
+        Args: {
+          p_exclude_user_id?: string
+          p_link?: string
+          p_message: string
+          p_metadata?: Json
+          p_title: string
+          p_type: Database["public"]["Enums"]["notification_type"]
+        }
+        Returns: undefined
       }
       create_invoice_with_items:
         | {

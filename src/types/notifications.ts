@@ -1,4 +1,4 @@
-export type NotificationType = 
+export type NotificationType =
   | 'new_lead'
   | 'form_completed'
   | 'contract_signed'
@@ -6,7 +6,8 @@ export type NotificationType =
   | 'access_granted'
   | 'offer_sent'
   | 'colleague_birthday'
-  | 'new_feedback_idea';
+  | 'new_feedback_idea'
+  | 'client_approved_modification';
 
 export interface Notification {
   id: string;
@@ -15,6 +16,8 @@ export interface Notification {
   message: string;
   link?: string;
   read: boolean;
+  entity_type?: string;
+  entity_id?: string;
   created_at: string;
   metadata?: {
     lead_id?: string;
@@ -22,6 +25,8 @@ export interface Notification {
     company_name?: string;
     colleague_id?: string;
     colleague_name?: string;
+    modification_request_id?: string;
+    engagement_name?: string;
   };
 }
 
@@ -65,9 +70,14 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, {
     color: 'text-rose-600',
     bgColor: 'bg-rose-500/10'
   },
-  new_feedback_idea: { 
-    icon: '💡', 
+  new_feedback_idea: {
+    icon: '💡',
     color: 'text-yellow-600',
     bgColor: 'bg-yellow-500/10'
+  },
+  client_approved_modification: {
+    icon: '✅',
+    color: 'text-green-600',
+    bgColor: 'bg-green-500/10'
   },
 };
