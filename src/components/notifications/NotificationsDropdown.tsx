@@ -7,7 +7,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NOTIFICATION_CONFIG } from '@/types/notifications';
@@ -90,7 +89,7 @@ export function NotificationsDropdown() {
         </div>
 
         {/* Notifications List */}
-        <ScrollArea className="max-h-[400px]">
+        <div className="max-h-[400px] overflow-y-auto">
           {notifications.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -156,7 +155,7 @@ export function NotificationsDropdown() {
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
         {/* Footer */}
         {notifications.length > 0 && (

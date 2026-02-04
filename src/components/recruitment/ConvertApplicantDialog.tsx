@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -68,6 +68,24 @@ export function ConvertApplicantDialog({
       bank_account: '',
     },
   });
+
+  // Pre-fill form with applicant's existing data when dialog opens
+  useEffect(() => {
+    if (open && applicant) {
+      form.reset({
+        ico: applicant.ico || '',
+        company_name: applicant.company_name || '',
+        dic: applicant.dic || '',
+        hourly_rate: applicant.hourly_rate || 500,
+        billing_street: applicant.billing_street || '',
+        billing_city: applicant.billing_city || '',
+        billing_zip: applicant.billing_zip || '',
+        bank_account: applicant.bank_account || '',
+      });
+      setAresValidated(!!applicant.ico);
+      setAresError(null);
+    }
+  }, [open, applicant.id]);
 
   const validateARES = async (ico: string) => {
     if (ico.length !== 8) {

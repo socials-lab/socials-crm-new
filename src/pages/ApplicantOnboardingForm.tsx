@@ -17,51 +17,25 @@ import {
 } from '@/components/ui/form';
 import { CheckCircle, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
+import { supabase } from '@/integrations/supabase/client';
 import socialsLogo from '@/assets/socials-logo.png';
 
 const formSchema = z.object({
-  // Pre-filled from application
   full_name: z.string().min(2, 'Jméno je povinné'),
   email: z.string().email('Neplatný email'),
   phone: z.string().min(9, 'Telefon je povinný'),
   position: z.string().min(2, 'Pozice je povinná'),
-  
-  // Company info (ARES validated)
-  ico: z.string().min(8, 'IČO musí mít 8 číslic').max(8, 'IČO musí mít 8 číslic'),
+  ico: z.string().length(8, 'IČO musí mít 8 číslic').regex(/^\d+$/, 'IČO musí obsahovat pouze číslice'),
   company_name: z.string().min(1, 'Název firmy je povinný'),
   dic: z.string().optional(),
-  
-  // Billing address
   billing_street: z.string().min(1, 'Ulice je povinná'),
   billing_city: z.string().min(1, 'Město je povinné'),
   billing_zip: z.string().min(5, 'PSČ je povinné'),
-  
-  // Hourly rate
   hourly_rate: z.coerce.number().min(100, 'Minimální hodinová sazba je 100 Kč'),
-  
-  // Bank account
   bank_account: z.string().min(1, 'Číslo účtu je povinné'),
 });
 
 type FormData = z.infer<typeof formSchema>;
-
-// Mock data for testing - in production would fetch from API
-const MOCK_APPLICANT_DATA = {
-  'mock-applicant-1': {
-    full_name: 'Jan Novák',
-    email: 'jan.novak@email.cz',
-    phone: '+420 777 123 456',
-    position: 'Performance Specialist',
-  },
-};
-
-interface ARESData {
-  company_name: string;
-  dic?: string;
-  billing_street: string;
-  billing_city: string;
-  billing_zip: string;
-}
 
 export default function ApplicantOnboardingForm() {
   const { applicantId } = useParams<{ applicantId: string }>();
@@ -69,6 +43,7 @@ export default function ApplicantOnboardingForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [alreadyCompleted, setAlreadyCompleted] = useState(false);
   const [isValidatingARES, setIsValidatingARES] = useState(false);
   const [aresError, setAresError] = useState<string | null>(null);
   const [aresValidated, setAresValidated] = useState(false);
@@ -91,27 +66,73 @@ export default function ApplicantOnboardingForm() {
     },
   });
 
-  // Load applicant data
+  // Load applicant data from edge function
   useEffect(() => {
-    if (applicantId) {
-      // Simulate API call
-      setTimeout(() => {
-        const data = MOCK_APPLICANT_DATA[applicantId as keyof typeof MOCK_APPLICANT_DATA];
-        if (data) {
-          form.reset({
-            ...form.getValues(),
-            ...data,
-          });
-          setIsLoading(false);
-        } else {
+    if (!applicantId) {
+      setNotFound(true);
+      setIsLoading(false);
+      return;
+    }
+
+    async function fetchApplicant() {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-applicant-onboarding', {
+          body: { applicantId },
+        });
+
+        if (error) {
+          // Try to get actual error from response
+          try {
+            const errBody = await error.context?.json?.();
+            if (errBody?.error === 'Onboarding already completed') {
+              setAlreadyCompleted(true);
+              setIsLoading(false);
+              return;
+            }
+          } catch { /* ignore parse error */ }
           setNotFound(true);
           setIsLoading(false);
+          return;
         }
-      }, 500);
+
+        if (data?.error) {
+          if (data.error === 'Onboarding already completed') {
+            setAlreadyCompleted(true);
+          } else {
+            setNotFound(true);
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        const a = data.applicant;
+        form.reset({
+          full_name: a.full_name || '',
+          email: a.email || '',
+          phone: a.phone || '',
+          position: a.position || '',
+          ico: a.ico || '',
+          company_name: a.company_name || '',
+          dic: a.dic || '',
+          billing_street: a.billing_street || '',
+          billing_city: a.billing_city || '',
+          billing_zip: a.billing_zip || '',
+          hourly_rate: a.hourly_rate || 0,
+          bank_account: a.bank_account || '',
+        });
+
+        if (a.ico) setAresValidated(true);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error fetching applicant:', err);
+        setNotFound(true);
+        setIsLoading(false);
+      }
     }
+
+    fetchApplicant();
   }, [applicantId, form]);
 
-  // ARES validation function
   const validateARES = async (ico: string) => {
     if (ico.length !== 8) {
       setAresError('IČO musí mít přesně 8 číslic');
@@ -123,31 +144,21 @@ export default function ApplicantOnboardingForm() {
 
     try {
       const response = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
-      
+
       if (!response.ok) {
         throw new Error('Subjekt nebyl nalezen v ARES');
       }
 
       const data = await response.json();
-      
-      // Extract data from ARES response
-      const aresData: ARESData = {
-        company_name: data.obchodniJmeno || '',
-        dic: data.dic || '',
-        billing_street: data.sidlo?.textovaAdresa?.split(',')[0] || '',
-        billing_city: data.sidlo?.nazevObce || '',
-        billing_zip: data.sidlo?.psc?.toString() || '',
-      };
 
-      // Update form with ARES data
-      form.setValue('company_name', aresData.company_name);
-      if (aresData.dic) form.setValue('dic', aresData.dic);
-      if (aresData.billing_street) form.setValue('billing_street', aresData.billing_street);
-      if (aresData.billing_city) form.setValue('billing_city', aresData.billing_city);
-      if (aresData.billing_zip) form.setValue('billing_zip', aresData.billing_zip);
+      form.setValue('company_name', data.obchodniJmeno || '');
+      if (data.dic) form.setValue('dic', data.dic);
+      if (data.sidlo?.textovaAdresa) form.setValue('billing_street', data.sidlo.textovaAdresa.split(',')[0] || '');
+      if (data.sidlo?.nazevObce) form.setValue('billing_city', data.sidlo.nazevObce);
+      if (data.sidlo?.psc) form.setValue('billing_zip', data.sidlo.psc.toString());
 
       setAresValidated(true);
-      toast.success(`Údaje načteny z ARES: ${aresData.company_name}`);
+      toast.success(`Údaje načteny z ARES: ${data.obchodniJmeno}`);
     } catch (error) {
       setAresError(error instanceof Error ? error.message : 'Chyba při validaci IČO');
       setAresValidated(false);
@@ -156,18 +167,39 @@ export default function ApplicantOnboardingForm() {
     }
   };
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (formData: FormData) => {
     setIsSubmitting(true);
-    
-    // Simulate API call - in production would call backend to:
-    // 1. Update applicant with onboarding_completed_at
-    // 2. Create new colleague record
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    console.log('Onboarding data submitted:', data);
-    toast.success('Onboarding dokončen! Byl jste přidán do týmu.');
-    setIsSubmitted(true);
-    setIsSubmitting(false);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('submit-applicant-onboarding', {
+        body: {
+          applicantId,
+          ...formData,
+        },
+      });
+
+      if (error || data?.error) {
+        let errorMessage = data?.error || 'Neznámá chyba';
+        if (error && !data?.error) {
+          try {
+            const errBody = await error.context?.json?.();
+            errorMessage = errBody?.error || error.message || errorMessage;
+          } catch {
+            errorMessage = error.message || errorMessage;
+          }
+        }
+        toast.error(`Nepodařilo se uložit: ${errorMessage}`);
+        return;
+      }
+
+      toast.success('Onboarding dokončen!');
+      setIsSubmitted(true);
+    } catch (err: any) {
+      console.error('Submission failed:', err);
+      toast.error(err?.message || 'Nepodařilo se uložit formulář');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) {
@@ -186,6 +218,24 @@ export default function ApplicantOnboardingForm() {
             <h2 className="text-2xl font-bold">Odkaz nenalezen</h2>
             <p className="text-muted-foreground">
               Tento onboarding odkaz není platný nebo již vypršel.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (alreadyCompleted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="pt-8 pb-8 space-y-4">
+            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold">Onboarding již dokončen</h2>
+            <p className="text-muted-foreground">
+              Tento formulář byl již vyplněn. Pokud potřebujete změnit údaje, kontaktujte HR tým.
             </p>
           </CardContent>
         </Card>
@@ -216,9 +266,9 @@ export default function ApplicantOnboardingForm() {
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <img 
-            src={socialsLogo} 
-            alt="Socials" 
+          <img
+            src={socialsLogo}
+            alt="Socials"
             className="h-12 mx-auto"
           />
           <div>
@@ -246,7 +296,7 @@ export default function ApplicantOnboardingForm() {
                     <User className="h-4 w-4" />
                     Základní údaje (z přihlášky)
                   </h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -321,8 +371,8 @@ export default function ApplicantOnboardingForm() {
                         <FormLabel>IČO *</FormLabel>
                         <div className="flex gap-2">
                           <FormControl>
-                            <Input 
-                              {...field} 
+                            <Input
+                              {...field}
                               placeholder="12345678"
                               maxLength={8}
                               onChange={(e) => {
@@ -332,7 +382,7 @@ export default function ApplicantOnboardingForm() {
                               }}
                             />
                           </FormControl>
-                          <Button 
+                          <Button
                             type="button"
                             variant="outline"
                             onClick={() => validateARES(field.value)}
@@ -465,9 +515,9 @@ export default function ApplicantOnboardingForm() {
                         <FormItem>
                           <FormLabel>Hodinová sazba (Kč) *</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="500" 
+                            <Input
+                              type="number"
+                              placeholder="500"
                               {...field}
                             />
                           </FormControl>
@@ -498,9 +548,9 @@ export default function ApplicantOnboardingForm() {
                 </div>
 
                 {/* Submit */}
-                <Button 
-                  type="submit" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  className="w-full"
                   size="lg"
                   disabled={isSubmitting}
                 >

@@ -59,7 +59,7 @@ export default function Feedback() {
   }, [ideas, categoryFilter, statusFilter, sortBy, getVoteCounts]);
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6 animate-fade-in">
       <PageHeader
         title="💡 Feedback Zone"
         description="Nápady od kolegů na vylepšení firmy"

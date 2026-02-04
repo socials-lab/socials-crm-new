@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Mail, Copy, Check, Send } from 'lucide-react';
+import { Mail, Copy, Check, Send, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
+import { supabase } from '@/integrations/supabase/client';
 import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 
@@ -23,19 +24,8 @@ interface SendApplicantOnboardingDialogProps {
   onSend?: () => void;
 }
 
-export function SendApplicantOnboardingDialog({
-  applicant,
-  open,
-  onOpenChange,
-  onSend,
-}: SendApplicantOnboardingDialogProps) {
-  const { sendOnboarding } = useApplicantsData();
-  const [copied, setCopied] = useState(false);
-  
-  const onboardingUrl = `${window.location.origin}/applicant-onboarding/${applicant.id}`;
-  
-  const emailSubject = `Onboarding - ${applicant.position} | Socials.cz`;
-  const emailBody = `Dobrý den ${applicant.full_name.split(' ')[0]},
+function buildDefaultMessage(applicant: Applicant, onboardingUrl: string) {
+  return `Dobrý den ${applicant.full_name.split(' ')[0]},
 
 gratulujeme k přijetí na pozici ${applicant.position}!
 
@@ -48,6 +38,32 @@ Těšíme se na spolupráci!
 
 S pozdravem,
 HR tým Socials.cz`;
+}
+
+export function SendApplicantOnboardingDialog({
+  applicant,
+  open,
+  onOpenChange,
+  onSend,
+}: SendApplicantOnboardingDialogProps) {
+  const { sendOnboarding } = useApplicantsData();
+  const [copied, setCopied] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
+  const onboardingUrl = `${window.location.origin}/applicant-onboarding/${applicant.id}`;
+
+  const [emailTo, setEmailTo] = useState(applicant.email || '');
+  const [subject, setSubject] = useState(`Onboarding - ${applicant.position} | Socials.cz`);
+  const [message, setMessage] = useState(buildDefaultMessage(applicant, onboardingUrl));
+
+  // Reset fields when applicant changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      setEmailTo(applicant.email || '');
+      setSubject(`Onboarding - ${applicant.position} | Socials.cz`);
+      setMessage(buildDefaultMessage(applicant, `${window.location.origin}/applicant-onboarding/${applicant.id}`));
+    }
+  }, [open, applicant.id]);
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(onboardingUrl);
@@ -56,13 +72,49 @@ HR tým Socials.cz`;
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSendEmail = () => {
-    const mailtoLink = `mailto:${applicant.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-    window.open(mailtoLink, '_blank');
-    sendOnboarding(applicant.id);
-    onSend?.();
-    toast.success('Onboarding byl odeslán');
-    onOpenChange(false);
+  const handleSend = async () => {
+    if (!emailTo.trim()) {
+      toast.error('Vyplňte e-mail příjemce');
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      const htmlContent = message
+        .split('\n')
+        .map(line => {
+          if (line.startsWith('http')) {
+            return `<p><a href="${line}" style="color: #2563eb; text-decoration: underline;">${line}</a></p>`;
+          }
+          return line.trim() ? `<p>${line}</p>` : '<br>';
+        })
+        .join('');
+
+      const { error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: emailTo.trim(),
+          subject,
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+              ${htmlContent}
+            </div>
+          `,
+        },
+      });
+
+      if (error) throw error;
+
+      sendOnboarding(applicant.id);
+      onSend?.();
+      toast.success('Onboarding email byl odeslán');
+      onOpenChange(false);
+    } catch (err: any) {
+      console.error('Failed to send onboarding email:', err);
+      toast.error(err?.message || 'Nepodařilo se odeslat email');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleMarkAsSent = () => {
@@ -86,24 +138,39 @@ HR tým Socials.cz`;
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Recipient info */}
-          <div className="bg-muted/50 p-3 rounded-lg space-y-1">
-            <p className="font-medium">{applicant.full_name}</p>
-            <p className="text-sm text-muted-foreground">{applicant.email}</p>
-            <p className="text-sm text-muted-foreground">{applicant.position}</p>
+          {/* Recipient */}
+          <div className="space-y-2">
+            <Label htmlFor="onb-email">Příjemce</Label>
+            <Input
+              id="onb-email"
+              type="email"
+              value={emailTo}
+              onChange={(e) => setEmailTo(e.target.value)}
+              placeholder="email@example.com"
+            />
+          </div>
+
+          {/* Subject */}
+          <div className="space-y-2">
+            <Label htmlFor="onb-subject">Předmět</Label>
+            <Input
+              id="onb-subject"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+            />
           </div>
 
           {/* Onboarding link */}
           <div className="space-y-2">
             <Label>Odkaz na onboarding</Label>
             <div className="flex gap-2">
-              <Input 
-                value={onboardingUrl} 
-                readOnly 
+              <Input
+                value={onboardingUrl}
+                readOnly
                 className="text-sm"
               />
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={handleCopyLink}
               >
@@ -116,13 +183,14 @@ HR tým Socials.cz`;
             </div>
           </div>
 
-          {/* Email preview */}
+          {/* Editable message */}
           <div className="space-y-2">
-            <Label>Náhled emailu</Label>
-            <Textarea 
-              value={emailBody}
-              readOnly
-              className="min-h-[150px] text-sm"
+            <Label htmlFor="onb-message">Zpráva</Label>
+            <Textarea
+              id="onb-message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="min-h-[150px] text-sm font-mono"
             />
           </div>
         </div>
@@ -131,9 +199,13 @@ HR tým Socials.cz`;
           <Button variant="outline" onClick={handleMarkAsSent}>
             Pouze označit jako odesláno
           </Button>
-          <Button onClick={handleSendEmail} className="gap-2">
-            <Send className="h-4 w-4" />
-            Otevřít v emailu
+          <Button onClick={handleSend} disabled={isSending || !emailTo.trim()}>
+            {isSending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="mr-2 h-4 w-4" />
+            )}
+            {isSending ? 'Odesílání...' : 'Odeslat email'}
           </Button>
         </DialogFooter>
       </DialogContent>

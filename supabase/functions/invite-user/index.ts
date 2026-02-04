@@ -19,6 +19,7 @@ interface InviteRequest {
   internal_hourly_cost?: number;
   monthly_fixed_cost?: number;
   capacity_hours_per_month?: number;
+  colleague_id?: string;
 }
 
 serve(async (req) => {

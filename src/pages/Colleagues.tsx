@@ -164,7 +164,51 @@ function ColleaguesContent() {
     try {
       if (editingColleague) {
         updateColleague(editingColleague.id, colleagueData);
-        toast.success('Kolega byl upraven');
+
+        // If invite_to_crm is checked and colleague doesn't have CRM access yet, send invite
+        if (invite_to_crm && role && !editingColleague.profile_id) {
+          const nameParts = colleagueData.full_name.trim().split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+
+          const requestBody = {
+            email: colleagueData.email,
+            firstName,
+            lastName,
+            role,
+            position: colleagueData.position,
+            seniority: colleagueData.seniority,
+            phone: colleagueData.phone,
+            notes: colleagueData.notes,
+            is_freelancer: colleagueData.is_freelancer,
+            internal_hourly_cost: colleagueData.internal_hourly_cost,
+            monthly_fixed_cost: colleagueData.monthly_fixed_cost,
+            capacity_hours_per_month: colleagueData.capacity_hours_per_month,
+            colleague_id: editingColleague.id,
+          };
+
+          console.log('[Colleagues] Inviting existing colleague to CRM:', requestBody);
+
+          const { data: responseData, error } = await supabase.functions.invoke('invite-user', {
+            body: requestBody,
+          });
+
+          console.log('[Colleagues] Invite response:', { responseData, error });
+
+          if (error) {
+            console.error('[Colleagues] Invite error:', error);
+            throw new Error(error.message || 'Nepodařilo se pozvat uživatele');
+          }
+
+          if (responseData?.error) {
+            console.error('[Colleagues] Response error:', responseData.error);
+            throw new Error(responseData.error);
+          }
+
+          toast.success(`Kolega upraven a pozvánka odeslána na ${colleagueData.email}`);
+        } else {
+          toast.success('Kolega byl upraven');
+        }
       } else {
         // If invite_to_crm is checked, use edge function (creates colleague + user + sends email)
         if (invite_to_crm && role) {
@@ -584,7 +628,7 @@ function ColleaguesContent() {
               colleague={editingColleague || undefined}
               onSubmit={handleFormSubmit}
               onCancel={() => setIsFormOpen(false)}
-              showInviteOption={superAdmin && !editingColleague}
+              showInviteOption={superAdmin}
             />
           </div>
         </SheetContent>

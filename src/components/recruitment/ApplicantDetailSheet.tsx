@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
+import { ColorBadge } from '@/components/shared/ColorBadge';
 import {
   Select,
   SelectContent,

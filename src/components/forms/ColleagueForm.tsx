@@ -334,7 +334,7 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
           )}
         />
 
-        {showInviteOption && !colleague && (
+        {showInviteOption && (!colleague || !colleague.profile_id) && (
           <div className="border-t pt-4 space-y-4">
             <h4 className="font-medium text-sm">Přístup do CRM</h4>
             <FormField
