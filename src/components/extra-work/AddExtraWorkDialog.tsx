@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, TrendingUp } from 'lucide-react';
+import { CalendarIcon, TrendingUp, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cs } from 'date-fns/locale';
 import type { ExtraWork } from '@/types/crm';
@@ -48,6 +48,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
   const [billingPeriod, setBillingPeriod] = useState('');
   const [notes, setNotes] = useState('');
   const [upsoldById, setUpsoldById] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Calculated amount
   const calculatedAmount = useMemo(() => {
@@ -92,45 +93,52 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
     return options;
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!engagementId || !colleagueId || !name || !workDate || !selectedEngagement) return;
+    if (isSubmitting) return;
 
-    const effectiveBillingPeriod = billingPeriod || format(workDate, 'yyyy-MM');
+    setIsSubmitting(true);
 
-    onAdd({
-      client_id: selectedEngagement.client_id,
-      engagement_id: engagementId,
-      colleague_id: colleagueId,
-      name,
-      description,
-      amount: calculatedAmount,
-      currency: 'CZK',
-      hours_worked: hoursWorked ? parseFloat(hoursWorked) : null,
-      hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-      work_date: format(workDate, 'yyyy-MM-dd'),
-      billing_period: effectiveBillingPeriod,
-      notes,
-      upsold_by_id: upsoldById,
-      upsell_commission_percent: upsoldById ? 10 : null,
-    });
+    try {
+      const effectiveBillingPeriod = billingPeriod || format(workDate, 'yyyy-MM');
 
-    toast({
-      title: 'Vícepráce přidána',
-      description: `Vícepráce "${name}" byla úspěšně vytvořena.`,
-    });
+      await onAdd({
+        client_id: selectedEngagement.client_id,
+        engagement_id: engagementId,
+        colleague_id: colleagueId,
+        name,
+        description,
+        amount: calculatedAmount,
+        currency: 'CZK',
+        hours_worked: hoursWorked ? parseFloat(hoursWorked) : null,
+        hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+        work_date: format(workDate, 'yyyy-MM-dd'),
+        billing_period: effectiveBillingPeriod,
+        notes,
+        upsold_by_id: upsoldById,
+        upsell_commission_percent: upsoldById ? 10 : null,
+      });
 
-    // Reset form
-    setEngagementId('');
-    setColleagueId('');
-    setName('');
-    setDescription('');
-    setHoursWorked('');
-    setHourlyRate('');
-    setWorkDate(new Date());
-    setBillingPeriod('');
-    setNotes('');
-    setUpsoldById(null);
-    onOpenChange(false);
+      toast({
+        title: 'Vícepráce přidána',
+        description: `Vícepráce "${name}" byla úspěšně vytvořena.`,
+      });
+
+      // Reset form
+      setEngagementId('');
+      setColleagueId('');
+      setName('');
+      setDescription('');
+      setHoursWorked('');
+      setHourlyRate('');
+      setWorkDate(new Date());
+      setBillingPeriod('');
+      setNotes('');
+      setUpsoldById(null);
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Engagement is required, colleague, name, and date are required
@@ -347,8 +355,15 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
           </Button>
-          <Button onClick={handleSubmit} disabled={!isValid}>
-            Přidat vícepráci
+          <Button onClick={handleSubmit} disabled={!isValid || isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Přidávám...
+              </>
+            ) : (
+              'Přidat vícepráci'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

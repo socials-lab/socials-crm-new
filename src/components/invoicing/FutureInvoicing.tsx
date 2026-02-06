@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Save, Send, FileText, AlertTriangle, Plus, CheckCircle2, RotateCcw, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { InvoiceLineItem, MonthlyEngagementInvoice } from '@/types/crm';
 import { getDaysInMonth, parseISO, startOfMonth, endOfMonth, format, isAfter, isBefore } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -42,7 +42,6 @@ interface FutureInvoicingProps {
 export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvoicingProps) {
   const { clients, engagements, engagementServices, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices, issuedInvoices } = useCRMData();
   const { clientMonths, getClientOutputs, calculateOutputCredits } = useCreativeBoostData();
-  const { toast } = useToast();
   const draftKey = `invoice-drafts-${year}-${month}`;
   const [invoices, setInvoices] = useState<MonthlyEngagementInvoice[]>(() => {
     try {
@@ -69,6 +68,22 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       setInvoices([]);
     }
   }, [draftKey]);
+
+  // Auto-save drafts whenever invoices change (debounced)
+  useEffect(() => {
+    // Only auto-save if user has made edits (invoices.length > 0)
+    if (invoices.length === 0) return;
+
+    const timeoutId = setTimeout(() => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(invoices));
+      } catch (e) {
+        console.error('Failed to auto-save invoice drafts:', e);
+      }
+    }, 500); // Debounce 500ms to avoid excessive writes
+
+    return () => clearTimeout(timeoutId);
+  }, [invoices, draftKey]);
 
   // Initialize issuedInvoiceIds based on actual issued invoices from database
   useEffect(() => {
@@ -440,16 +455,22 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     setSavingDraft(true);
     try {
       const dataToSave = invoices.length > 0 ? invoices : generatedInvoices;
-      localStorage.setItem(draftKey, JSON.stringify(dataToSave));
-      toast({
-        title: 'Úpravy uloženy',
-        description: 'Změny byly uloženy a přetrvají při obnovení stránky.',
+      const jsonData = JSON.stringify(dataToSave);
+      localStorage.setItem(draftKey, jsonData);
+
+      // Verify the save worked by reading it back
+      const verified = localStorage.getItem(draftKey);
+      if (verified !== jsonData) {
+        throw new Error('Verification failed - saved data does not match');
+      }
+
+      toast.success('Koncept uložen', {
+        description: 'Změny byly uloženy. Pro finální uložení do systému vystavte faktury.',
       });
-    } catch {
-      toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se uložit úpravy.',
-        variant: 'destructive',
+    } catch (e) {
+      console.error('Failed to save invoice draft:', e);
+      toast.error('Chyba při ukládání', {
+        description: 'Nepodařilo se uložit úpravy. Zkontrolujte, zda máte povolené cookies a localStorage.',
       });
     } finally {
       setSavingDraft(false);
@@ -459,8 +480,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const handleDiscardDraft = () => {
     localStorage.removeItem(draftKey);
     setInvoices([]);
-    toast({
-      title: 'Koncept zahozen',
+    toast.success('Koncept zahozen', {
       description: 'Úpravy byly zahozeny a data byla obnovena z aktuálních zakázek.',
     });
   };
@@ -503,8 +523,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       });
     });
 
-    toast({
-      title: 'Položka duplikována',
+    toast.success('Položka duplikována', {
       description: 'Kopie položky byla přidána.',
     });
   };
@@ -598,8 +617,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       }
     });
 
-    toast({
-      title: 'Položka přidána',
+    toast.success('Položka přidána', {
       description: 'Nová fakturační položka byla vytvořena.',
     });
   };
@@ -624,8 +642,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       return [...base, duplicatedInvoice];
     });
 
-    toast({
-      title: 'Faktura duplikována',
+    toast.success('Faktura duplikována', {
       description: 'Kopie faktury se všemi položkami byla vytvořena.',
     });
   };
@@ -643,8 +660,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       return next;
     });
 
-    toast({
-      title: 'Faktura odstraněna',
+    toast.success('Faktura odstraněna', {
       description: `Faktura "${invoice.engagement_name}" byla odstraněna.`,
     });
   };
@@ -815,8 +831,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       
       return next;
     });
-    toast({
-      title: 'Faktura připravena k opětovnému vystavení',
+    toast.success('Faktura připravena k opětovnému vystavení', {
       description: `Faktura "${invoice.engagement_name}" je připravena k opětovnému vystavení.`,
     });
   };

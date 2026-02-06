@@ -1,4 +1,5 @@
 import type { ClientStatus, EngagementStatus, Engagement } from '@/types/crm';
+import { addMonths } from 'date-fns';
 
 // Client status transitions
 // Standard users can only do these transitions
@@ -149,9 +150,9 @@ export function canTerminateEngagement(
   }
 
   // Calculate when notice period would end
+  // Using date-fns addMonths to properly handle month overflow (e.g., Jan 31 + 1 month = Feb 28, not Mar 3)
   const startDate = new Date(engagement.start_date);
-  const noticeEndDate = new Date(startDate);
-  noticeEndDate.setMonth(noticeEndDate.getMonth() + engagement.notice_period_months);
+  const noticeEndDate = addMonths(startDate, engagement.notice_period_months);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

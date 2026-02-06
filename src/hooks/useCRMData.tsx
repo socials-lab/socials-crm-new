@@ -335,6 +335,19 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
 
   // Real-time subscriptions for contacts and clients
   useEffect(() => {
+    // Track if we've already shown a realtime error toast to avoid spamming
+    let hasShownRealtimeError = false;
+    const showRealtimeError = (tableName: string, err: unknown) => {
+      console.error(`Failed to subscribe to ${tableName} realtime:`, err);
+      if (!hasShownRealtimeError) {
+        hasShownRealtimeError = true;
+        toast.error('Aktualizace v reálném čase nejsou dostupné', {
+          description: 'Obnovte stránku pro zobrazení nejnovějších dat',
+          duration: 10000,
+        });
+      }
+    };
+
     // Subscribe to client_contacts changes
     const contactsChannel = supabase
       .channel('client_contacts_realtime')
@@ -346,7 +359,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       )
       .subscribe((status, err) => {
         if (status === 'CHANNEL_ERROR') {
-          console.error('Failed to subscribe to contacts realtime:', err);
+          showRealtimeError('contacts', err);
         }
       });
 
@@ -363,7 +376,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       )
       .subscribe((status, err) => {
         if (status === 'CHANNEL_ERROR') {
-          console.error('Failed to subscribe to clients realtime:', err);
+          showRealtimeError('clients', err);
         }
       });
 
@@ -379,7 +392,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       )
       .subscribe((status, err) => {
         if (status === 'CHANNEL_ERROR') {
-          console.error('Failed to subscribe to engagements realtime:', err);
+          showRealtimeError('engagements', err);
         }
       });
 
@@ -394,7 +407,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       )
       .subscribe((status, err) => {
         if (status === 'CHANNEL_ERROR') {
-          console.error('Failed to subscribe to engagement_services realtime:', err);
+          showRealtimeError('engagement_services', err);
         }
       });
 
@@ -409,7 +422,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       )
       .subscribe((status, err) => {
         if (status === 'CHANNEL_ERROR') {
-          console.error('Failed to subscribe to engagement_assignments realtime:', err);
+          showRealtimeError('engagement_assignments', err);
         }
       });
 

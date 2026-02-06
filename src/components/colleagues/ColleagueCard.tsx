@@ -78,6 +78,11 @@ export function ColleagueCard({
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [tempCost, setTempCost] = useState<string>('');
 
+  // Calculate total capacity from capacity_slots
+  const totalCapacity = colleague.capacity_slots
+    ? Object.values(colleague.capacity_slots).reduce((sum, val) => sum + (val || 0), 0)
+    : (colleague.max_engagements ?? 5);
+
   const handleSaveAssignmentCost = (assignmentId: string) => {
     const cost = parseFloat(tempCost) || 0;
     onUpdateAssignment?.(assignmentId, { monthly_cost: cost });
@@ -300,11 +305,11 @@ export function ColleagueCard({
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-xs text-muted-foreground">Vytížení</p>
                       <p className="text-sm font-medium">
-                        {details.assignmentCount} / {colleague.max_engagements ?? 5}
+                        {details.assignmentCount} / {totalCapacity}
                       </p>
                     </div>
-                    <Progress 
-                      value={(details.assignmentCount / (colleague.max_engagements ?? 5)) * 100} 
+                    <Progress
+                      value={totalCapacity > 0 ? (details.assignmentCount / totalCapacity) * 100 : 0}
                       className="h-2"
                     />
                   </div>

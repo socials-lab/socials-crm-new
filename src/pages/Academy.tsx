@@ -91,31 +91,10 @@ const getLinkIcon = (type?: AcademyLink['type']) => {
   }
 };
 
-// Local storage for progress
-const STORAGE_KEY = 'academy_progress';
-
-function getWatchedVideos(): string[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function setVideoWatched(videoId: string): void {
-  const watched = getWatchedVideos();
-  if (!watched.includes(videoId)) {
-    watched.push(videoId);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(watched));
-  }
-}
-
 function AcademyContent() {
   const { isSuperAdmin, canEditAcademy } = useUserRole();
-  const { modules, isLoading, isUsingDatabase } = useAcademyData();
-  
-  const [watchedVideos, setWatchedVideos] = useState<string[]>(getWatchedVideos);
+  const { modules, isLoading, isUsingDatabase, watchedVideoIds, markVideoWatched, isVideoWatched } = useAcademyData();
+
   const [selectedVideo, setSelectedVideo] = useState<AcademyVideo | null>(null);
   const [selectedModule, setSelectedModule] = useState<AcademyModule | null>(null);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -127,10 +106,10 @@ function AcademyContent() {
   const progress = useMemo(() => {
     const totalVideos = modules.reduce((sum, m) => sum + m.videos.length, 0);
     const requiredVideos = modules.filter(m => m.required).reduce((sum, m) => sum + m.videos.length, 0);
-    const watchedCount = watchedVideos.length;
+    const watchedCount = watchedVideoIds.length;
     const watchedRequired = modules
       .filter(m => m.required)
-      .reduce((sum, m) => sum + m.videos.filter(v => watchedVideos.includes(v.id)).length, 0);
+      .reduce((sum, m) => sum + m.videos.filter(v => watchedVideoIds.includes(v.id)).length, 0);
 
     return {
       total: totalVideos,
@@ -140,11 +119,11 @@ function AcademyContent() {
       requiredWatched: watchedRequired,
       requiredComplete: watchedRequired >= requiredVideos,
     };
-  }, [watchedVideos, modules]);
+  }, [watchedVideoIds, modules]);
 
   // Module progress
   const getModuleProgress = (module: AcademyModule) => {
-    const watched = module.videos.filter(v => watchedVideos.includes(v.id)).length;
+    const watched = module.videos.filter(v => watchedVideoIds.includes(v.id)).length;
     return {
       watched,
       total: module.videos.length,
@@ -155,8 +134,7 @@ function AcademyContent() {
 
   // Handle video completion
   const handleVideoComplete = (videoId: string) => {
-    setVideoWatched(videoId);
-    setWatchedVideos(getWatchedVideos());
+    markVideoWatched(videoId);
   };
 
   // Open video player
@@ -336,7 +314,7 @@ function AcademyContent() {
                   ) : (
                     <>
                       {module.videos.slice(0, 3).map((video) => {
-                        const isWatched = watchedVideos.includes(video.id);
+                        const isWatched = watchedVideoIds.includes(video.id);
                         return (
                           <button
                             key={video.id}
@@ -446,7 +424,7 @@ function AcademyContent() {
                 )}
               </div>
               
-              {selectedVideo && !watchedVideos.includes(selectedVideo.id) ? (
+              {selectedVideo && !watchedVideoIds.includes(selectedVideo.id) ? (
                 <Button onClick={() => handleVideoComplete(selectedVideo.id)}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Označit jako zhlédnuté
@@ -466,7 +444,7 @@ function AcademyContent() {
                 <ScrollArea className="h-[120px]">
                   <div className="space-y-1">
                     {selectedModule.videos.map((video) => {
-                      const isWatched = watchedVideos.includes(video.id);
+                      const isWatched = watchedVideoIds.includes(video.id);
                       const isActive = video.id === selectedVideo?.id;
                       return (
                         <button

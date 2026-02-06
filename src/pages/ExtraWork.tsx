@@ -26,18 +26,27 @@ export default function ExtraWork() {
   const [filterMonth, setFilterMonth] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Apply filters for kanban view - use billing_period for consistent filtering
+  // Apply filters for kanban and mobile views - use same filters as table
   const filteredExtraWorks = useMemo(() => {
     return extraWorks.filter(work => {
+      // Status filter
+      if (filterStatus !== 'all' && work.status !== filterStatus) return false;
+      // Client filter
       if (filterClientId !== 'all' && work.client_id !== filterClientId) return false;
+      // Colleague filter
       if (filterColleagueId !== 'all' && work.colleague_id !== filterColleagueId) return false;
-      if (filterMonth !== 'all') {
-        // Use billing_period for filtering, consistent with ExtraWorkTable
-        if (work.billing_period !== filterMonth) return false;
+      // Month filter - use billing_period for consistent filtering
+      if (filterMonth !== 'all' && work.billing_period !== filterMonth) return false;
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = work.name?.toLowerCase().includes(query);
+        const matchesDescription = work.description?.toLowerCase().includes(query);
+        if (!matchesName && !matchesDescription) return false;
       }
       return true;
     });
-  }, [extraWorks, filterClientId, filterColleagueId, filterMonth]);
+  }, [extraWorks, filterStatus, filterClientId, filterColleagueId, filterMonth, searchQuery]);
 
   // KPI calculations with new status system
   const kpis = useMemo(() => {

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -58,6 +59,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
   const { addApplicant, updateApplicant } = useApplicantsData();
   const { colleagues } = useCRMData();
   const isEditing = !!applicant;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -108,46 +110,53 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
     }
   }, [applicant, form]);
 
-  const onSubmit = (data: FormData) => {
-    const applicantData = {
-      full_name: data.full_name,
-      email: data.email,
-      phone: data.phone || null,
-      position: data.position,
-      cover_letter: data.cover_letter || null,
-      cv_url: data.cv_url || null,
-      video_url: data.video_url || null,
-      stage: data.stage as ApplicantStage,
-      owner_id: data.owner_id || null,
-      source: data.source as ApplicantSource,
-      source_custom: data.source_custom || null,
-      // Freelancer info (null until onboarding)
-      ico: null,
-      company_name: null,
-      dic: null,
-      hourly_rate: null,
-      billing_street: null,
-      billing_city: null,
-      billing_zip: null,
-      bank_account: null,
-      // Communication tracking
-      interview_invite_sent_at: null,
-      rejection_sent_at: null,
-      // Onboarding status
-      onboarding_sent_at: null,
-      onboarding_completed_at: null,
-      converted_to_colleague_id: null,
-    };
+  const onSubmit = async (data: FormData) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-    if (isEditing && applicant) {
-      updateApplicant(applicant.id, applicantData);
-      toast.success('Uchazeč byl upraven');
-    } else {
-      addApplicant(applicantData);
-      toast.success('Uchazeč byl přidán');
+    try {
+      const applicantData = {
+        full_name: data.full_name,
+        email: data.email,
+        phone: data.phone || null,
+        position: data.position,
+        cover_letter: data.cover_letter || null,
+        cv_url: data.cv_url || null,
+        video_url: data.video_url || null,
+        stage: data.stage as ApplicantStage,
+        owner_id: data.owner_id || null,
+        source: data.source as ApplicantSource,
+        source_custom: data.source_custom || null,
+        // Freelancer info (null until onboarding)
+        ico: null,
+        company_name: null,
+        dic: null,
+        hourly_rate: null,
+        billing_street: null,
+        billing_city: null,
+        billing_zip: null,
+        bank_account: null,
+        // Communication tracking
+        interview_invite_sent_at: null,
+        rejection_sent_at: null,
+        // Onboarding status
+        onboarding_sent_at: null,
+        onboarding_completed_at: null,
+        converted_to_colleague_id: null,
+      };
+
+      if (isEditing && applicant) {
+        await updateApplicant(applicant.id, applicantData);
+        toast.success('Uchazeč byl upraven');
+      } else {
+        await addApplicant(applicantData);
+        toast.success('Uchazeč byl přidán');
+      }
+
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    onOpenChange(false);
   };
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
@@ -370,8 +379,15 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Zrušit
               </Button>
-              <Button type="submit">
-                {isEditing ? 'Uložit změny' : 'Přidat uchazeče'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isEditing ? 'Ukládám...' : 'Přidávám...'}
+                  </>
+                ) : (
+                  isEditing ? 'Uložit změny' : 'Přidat uchazeče'
+                )}
               </Button>
             </div>
           </form>

@@ -11,67 +11,31 @@ export function useDigiSign() {
   const createContract = async (leadId: string, templateId?: string) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      console.log('Creating contract for lead:', leadId);
       const { data, error } = await supabase.functions.invoke('digisign-create-contract', {
         body: { lead_id: leadId, template_id: templateId },
       });
-      
-      console.log('Edge Function response:', { data, error });
-      
+
       // Check for error in response data first (Edge Function error messages)
       if (data?.error) {
         throw new Error(data.error);
       }
-      
+
       // Then check for Supabase client error
       if (error) {
-        // Extract detailed error info - error may have a context property with Response
-        const errorWithContext = error as Error & { context?: unknown; status?: number };
-        const context = errorWithContext.context;
-
-        // If context is a Response, try to read the body
-        if (context instanceof Response) {
-          try {
-            const responseBody = await context.json();
-            console.error('Edge Function error response:', responseBody);
-            if (responseBody?.error) {
-              throw new Error(responseBody.error);
-            }
-          } catch (parseError) {
-            // Try to read as text if JSON parsing fails
-            try {
-              const textBody = await context.text();
-              console.error('Edge Function error response (text):', textBody);
-              if (textBody) {
-                throw new Error(textBody);
-              }
-            } catch {
-              // Ignore if we can't read the body
-            }
-          }
-        }
-
-        console.error('Supabase function error details:', {
-          message: error.message,
-          name: error.name,
-          status: errorWithContext.status,
-        });
-
-        throw new Error(error.message || 'Edge Function error');
+        throw new Error(error.message || 'Chyba při volání DigiSign API');
       }
-      
+
       // Invalidate leads cache to refresh with new contract data
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      
+
       toast.success('Smlouva byla vytvořena v DigiSign');
       return data;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Chyba při vytváření smlouvy';
       setError(errorMessage);
       toast.error(errorMessage);
-      console.error('DigiSign contract creation error:', err);
       return null;
     } finally {
       setIsLoading(false);

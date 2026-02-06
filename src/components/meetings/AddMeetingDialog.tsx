@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Plus, Clock, MapPin, Link as LinkIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Clock, MapPin, Link as LinkIcon, Users, X, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -39,10 +39,12 @@ import {
 import { useMeetingsData } from '@/hooks/useMeetingsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import type { MeetingType } from '@/types/meetings';
 
 const meetingSchema = z.object({
@@ -63,10 +65,13 @@ type MeetingFormValues = z.infer<typeof meetingSchema>;
 export function AddMeetingDialog() {
   const [open, setOpen] = useState(false);
   const [sendCalendarInvites, setSendCalendarInvites] = useState(false);
-  const { addMeeting } = useMeetingsData();
-  const { clients, engagements } = useCRMData();
+  const [selectedColleagueIds, setSelectedColleagueIds] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { addMeeting, addParticipant } = useMeetingsData();
+  const { clients, engagements, colleagues } = useCRMData();
   const { createCalendarEvent, isConnected } = useGoogleCalendar();
-  const { toast } = useToast();
+
+  const activeColleagues = colleagues.filter(c => c.status === 'active');
 
   const form = useForm<MeetingFormValues>({
     resolver: zodResolver(meetingSchema),
@@ -87,11 +92,26 @@ export function AddMeetingDialog() {
   const selectedClientId = form.watch('client_id');
 
   const activeClients = clients.filter(c => c.status === 'active');
-  const clientEngagements = selectedClientId 
+  const clientEngagements = selectedClientId
     ? engagements.filter(e => e.client_id === selectedClientId && e.status === 'active')
     : [];
 
+  const toggleColleague = (colleagueId: string) => {
+    setSelectedColleagueIds(prev =>
+      prev.includes(colleagueId)
+        ? prev.filter(id => id !== colleagueId)
+        : [...prev, colleagueId]
+    );
+  };
+
+  const removeColleague = (colleagueId: string) => {
+    setSelectedColleagueIds(prev => prev.filter(id => id !== colleagueId));
+  };
+
   const onSubmit = async (data: MeetingFormValues) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     try {
       const [hours, minutes] = data.scheduled_time.split(':').map(Number);
       const scheduledAt = new Date(data.scheduled_date);
@@ -116,25 +136,45 @@ export function AddMeetingDialog() {
         calendar_invites_sent_at: null,
       });
 
-      // Send calendar invites if requested and connected
-      if (sendCalendarInvites && isConnected && newMeeting?.id) {
-        await createCalendarEvent(newMeeting.id);
+      // Add selected colleagues as participants
+      if (newMeeting?.id && selectedColleagueIds.length > 0) {
+        await Promise.all(
+          selectedColleagueIds.map(colleagueId =>
+            addParticipant({
+              meeting_id: newMeeting.id,
+              colleague_id: colleagueId,
+              external_name: null,
+              external_email: null,
+              role: 'attendee',
+              attendance: 'pending',
+            })
+          )
+        );
       }
 
-      toast({
-        title: 'Meeting vytvořen',
-        description: `Meeting "${data.title}" byl úspěšně naplánován.`,
+      // Send calendar invites if requested and connected
+      if (sendCalendarInvites && isConnected && newMeeting?.id && selectedColleagueIds.length > 0) {
+        try {
+          await createCalendarEvent(newMeeting.id);
+        } catch (calendarError) {
+          console.error('Failed to send calendar invites:', calendarError);
+          toast.warning('Meeting vytvořen, ale nepodařilo se odeslat pozvánky do kalendáře');
+        }
+      }
+
+      toast.success('Meeting vytvořen', {
+        description: `Meeting "${data.title}" byl úspěšně naplánován${selectedColleagueIds.length > 0 ? ` s ${selectedColleagueIds.length} účastníky` : ''}.`,
       });
 
       form.reset();
       setSendCalendarInvites(false);
+      setSelectedColleagueIds([]);
       setOpen(false);
     } catch (error) {
-      toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se vytvořit meeting.',
-        variant: 'destructive',
-      });
+      console.error('Failed to create meeting:', error);
+      toast.error('Nepodařilo se vytvořit meeting');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -380,10 +420,10 @@ export function AddMeetingDialog() {
                 <FormItem>
                   <FormLabel>Agenda</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Body k projednání..."
                       className="min-h-[100px]"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -391,24 +431,108 @@ export function AddMeetingDialog() {
               )}
             />
 
-            {isConnected && (
-              <div className="flex items-center space-x-2">
+            {/* Colleague Picker */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Účastníci (kolegové)
+              </Label>
+
+              {/* Selected colleagues badges */}
+              {selectedColleagueIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pb-2">
+                  {selectedColleagueIds.map(id => {
+                    const colleague = activeColleagues.find(c => c.id === id);
+                    if (!colleague) return null;
+                    return (
+                      <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                        {colleague.full_name}
+                        <button
+                          type="button"
+                          onClick={() => removeColleague(id)}
+                          className="ml-1 rounded-full hover:bg-muted p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Colleague selector */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" type="button" className="w-full justify-start text-muted-foreground">
+                    <Plus className="h-4 w-4 mr-2" />
+                    {selectedColleagueIds.length === 0
+                      ? 'Přidat účastníky...'
+                      : `Přidat další (${activeColleagues.length - selectedColleagueIds.length} dostupných)`
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Hledat kolegu..." />
+                    <CommandList>
+                      <CommandEmpty>Žádný kolega nenalezen</CommandEmpty>
+                      <CommandGroup>
+                        {activeColleagues.map(colleague => {
+                          const isSelected = selectedColleagueIds.includes(colleague.id);
+                          return (
+                            <CommandItem
+                              key={colleague.id}
+                              onSelect={() => toggleColleague(colleague.id)}
+                              className="cursor-pointer"
+                            >
+                              <div className={cn(
+                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                isSelected ? "bg-primary text-primary-foreground" : "opacity-50"
+                              )}>
+                                {isSelected && <Check className="h-3 w-3" />}
+                              </div>
+                              <span>{colleague.full_name}</span>
+                              {colleague.position && (
+                                <span className="ml-auto text-xs text-muted-foreground">
+                                  {colleague.position}
+                                </span>
+                              )}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {isConnected && selectedColleagueIds.length > 0 && (
+              <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
                 <Checkbox
                   id="send-calendar-invites"
                   checked={sendCalendarInvites}
                   onCheckedChange={(checked) => setSendCalendarInvites(checked === true)}
                 />
                 <Label htmlFor="send-calendar-invites" className="text-sm font-normal cursor-pointer">
-                  Odeslat pozvánky do Google kalendáře
+                  📅 Odeslat pozvánky do Google kalendáře ({selectedColleagueIds.length} účastníků)
                 </Label>
               </div>
             )}
 
+            {!isConnected && selectedColleagueIds.length > 0 && (
+              <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
+                Pro odesílání kalendářních pozvánek propojte svůj Google účet v nastavení.
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
                 Zrušit
               </Button>
-              <Button type="submit">Vytvořit meeting</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Vytvářím...' : 'Vytvořit meeting'}
+              </Button>
             </div>
           </form>
         </Form>

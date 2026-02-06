@@ -134,51 +134,59 @@ export function useNotifications() {
     addNotificationRef.current = addNotificationMutation.mutateAsync;
   }, [addNotificationMutation.mutateAsync]);
 
-  // Birthday notifications check
+  // Birthday notifications check - run in parallel for better performance
   useEffect(() => {
     if (!user?.id || !colleagues || colleagues.length === 0) return;
 
     const todaysBirthdays = getTodaysBirthdays(colleagues);
+    if (todaysBirthdays.length === 0) return;
 
-    todaysBirthdays.forEach(async (colleague) => {
-      // Check localStorage first to avoid unnecessary DB queries
-      if (wasBirthdayNotificationShown(colleague.id)) return;
-
-      // Check if notification already exists in DB for today
+    const checkAndCreateBirthdayNotifications = async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const { data: existingNotifications } = await supabase
-        .from('notifications')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('type', 'colleague_birthday')
-        .eq('metadata->>colleague_id', colleague.id)
-        .gte('created_at', today.toISOString())
-        .lt('created_at', tomorrow.toISOString())
-        .limit(1);
+      // Process all birthdays in parallel
+      await Promise.all(
+        todaysBirthdays.map(async (colleague) => {
+          // Check localStorage first to avoid unnecessary DB queries
+          if (wasBirthdayNotificationShown(colleague.id)) return;
 
-      if (existingNotifications && existingNotifications.length > 0) {
-        markBirthdayNotificationShown(colleague.id);
-        return;
-      }
+          // Check if notification already exists in DB for today
+          const { data: existingNotifications } = await supabase
+            .from('notifications')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('type', 'colleague_birthday')
+            .eq('metadata->>colleague_id', colleague.id)
+            .gte('created_at', today.toISOString())
+            .lt('created_at', tomorrow.toISOString())
+            .limit(1);
 
-      // Create birthday notification using stable ref
-      await addNotificationRef.current({
-        type: 'colleague_birthday',
-        title: '🎂 Narozeniny!',
-        message: `${colleague.full_name} má dnes narozeniny! Nezapomeňte popřát.`,
-        link: '/colleagues',
-        metadata: {
-          colleague_id: colleague.id,
-          colleague_name: colleague.full_name,
-        },
-      });
+          if (existingNotifications && existingNotifications.length > 0) {
+            markBirthdayNotificationShown(colleague.id);
+            return;
+          }
 
-      markBirthdayNotificationShown(colleague.id);
-    });
+          // Create birthday notification using stable ref
+          await addNotificationRef.current({
+            type: 'colleague_birthday',
+            title: '🎂 Narozeniny!',
+            message: `${colleague.full_name} má dnes narozeniny! Nezapomeňte popřát.`,
+            link: '/colleagues',
+            metadata: {
+              colleague_id: colleague.id,
+              colleague_name: colleague.full_name,
+            },
+          });
+
+          markBirthdayNotificationShown(colleague.id);
+        })
+      );
+    };
+
+    checkAndCreateBirthdayNotifications();
   }, [colleagues, user?.id]);
 
   const unreadCount = useMemo(

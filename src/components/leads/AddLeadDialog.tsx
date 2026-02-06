@@ -30,7 +30,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import type { Lead, LeadStage, LeadSource, LeadOfferType } from '@/types/crm';
 import { toast } from 'sonner';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Loader2, Search } from 'lucide-react';
 
 const leadSchema = z.object({
@@ -123,6 +123,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
   const { colleagues } = useCRMData();
   const { user } = useAuth();
   const [isLoadingAres, setIsLoadingAres] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   
@@ -259,64 +260,74 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
     }
   }, [lead, form]);
 
-  const handleSubmit = (data: LeadFormData) => {
-    const leadData = {
-      company_name: data.company_name,
-      ico: data.ico,
-      dic: data.dic || null,
-      website: data.website || null,
-      industry: data.industry || null,
-      billing_street: data.billing_street || null,
-      billing_city: data.billing_city || null,
-      billing_zip: data.billing_zip || null,
-      billing_country: data.billing_country || null,
-      billing_email: data.billing_email || null,
-      contact_name: data.contact_name,
-      contact_position: data.contact_position || null,
-      contact_email: data.contact_email || null,
-      contact_phone: data.contact_phone || null,
-      stage: data.stage,
-      owner_id: data.owner_id,
-      source: data.source,
-      source_custom: data.source === 'other' ? (data.source_custom || null) : null,
-      client_message: data.client_message || null,
-      ad_spend_monthly: data.ad_spend_monthly || null,
-      summary: data.summary,
-      potential_service: data.potential_service,
-      offer_type: data.offer_type,
-      estimated_price: data.estimated_price,
-      currency: data.currency,
-      probability_percent: data.probability_percent,
-      offer_url: data.offer_url || null,
-      offer_created_at: lead?.offer_created_at || null,
-      potential_services: lead?.potential_services || [],
-      access_request_sent_at: lead?.access_request_sent_at || null,
-      access_request_platforms: lead?.access_request_platforms || [],
-      access_received_at: lead?.access_received_at || null,
-      onboarding_form_sent_at: lead?.onboarding_form_sent_at || null,
-      onboarding_form_url: lead?.onboarding_form_url || null,
-      onboarding_form_completed_at: lead?.onboarding_form_completed_at || null,
-      contract_url: lead?.contract_url || null,
-      contract_created_at: lead?.contract_created_at || null,
-      contract_sent_at: lead?.contract_sent_at || null,
-      contract_signed_at: lead?.contract_signed_at || null,
-      offer_sent_at: lead?.offer_sent_at || null,
-      offer_sent_by_id: lead?.offer_sent_by_id || null,
-      qualification_status: lead?.qualification_status || 'pending',
-      qualification_reason: lead?.qualification_reason || null,
-      qualified_at: lead?.qualified_at || null,
-      created_by: user?.id || null,
-      updated_by: user?.id || null,
-    };
+  const handleSubmit = async (data: LeadFormData) => {
+    if (isSubmitting) return;
 
-    if (lead) {
-      updateLead(lead.id, leadData);
-      toast.success('Lead byl upraven');
-    } else {
-      addLead(leadData);
-      toast.success('Lead byl vytvořen');
+    setIsSubmitting(true);
+    try {
+      const leadData = {
+        company_name: data.company_name,
+        ico: data.ico,
+        dic: data.dic || null,
+        website: data.website || null,
+        industry: data.industry || null,
+        billing_street: data.billing_street || null,
+        billing_city: data.billing_city || null,
+        billing_zip: data.billing_zip || null,
+        billing_country: data.billing_country || null,
+        billing_email: data.billing_email || null,
+        contact_name: data.contact_name,
+        contact_position: data.contact_position || null,
+        contact_email: data.contact_email || null,
+        contact_phone: data.contact_phone || null,
+        stage: data.stage,
+        owner_id: data.owner_id,
+        source: data.source,
+        source_custom: data.source === 'other' ? (data.source_custom || null) : null,
+        client_message: data.client_message || null,
+        ad_spend_monthly: data.ad_spend_monthly || null,
+        summary: data.summary,
+        potential_service: data.potential_service,
+        offer_type: data.offer_type,
+        estimated_price: data.estimated_price,
+        currency: data.currency,
+        probability_percent: data.probability_percent,
+        offer_url: data.offer_url || null,
+        offer_created_at: lead?.offer_created_at || null,
+        potential_services: lead?.potential_services || [],
+        access_request_sent_at: lead?.access_request_sent_at || null,
+        access_request_platforms: lead?.access_request_platforms || [],
+        access_received_at: lead?.access_received_at || null,
+        onboarding_form_sent_at: lead?.onboarding_form_sent_at || null,
+        onboarding_form_url: lead?.onboarding_form_url || null,
+        onboarding_form_completed_at: lead?.onboarding_form_completed_at || null,
+        contract_url: lead?.contract_url || null,
+        contract_created_at: lead?.contract_created_at || null,
+        contract_sent_at: lead?.contract_sent_at || null,
+        contract_signed_at: lead?.contract_signed_at || null,
+        offer_sent_at: lead?.offer_sent_at || null,
+        offer_sent_by_id: lead?.offer_sent_by_id || null,
+        qualification_status: lead?.qualification_status || 'pending',
+        qualification_reason: lead?.qualification_reason || null,
+        qualified_at: lead?.qualified_at || null,
+        created_by: user?.id || null,
+        updated_by: user?.id || null,
+      };
+
+      if (lead) {
+        await updateLead(lead.id, leadData);
+        toast.success('Lead byl upraven');
+      } else {
+        await addLead(leadData);
+        toast.success('Lead byl vytvořen');
+      }
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error saving lead:', error);
+      toast.error('Nepodařilo se uložit lead');
+    } finally {
+      setIsSubmitting(false);
     }
-    onOpenChange(false);
   };
 
   return (
@@ -810,11 +821,18 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Zrušit
               </Button>
-              <Button type="submit">
-                {lead ? 'Uložit změny' : 'Vytvořit lead'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Ukládám...
+                  </>
+                ) : (
+                  lead ? 'Uložit změny' : 'Vytvořit lead'
+                )}
               </Button>
             </div>
           </form>

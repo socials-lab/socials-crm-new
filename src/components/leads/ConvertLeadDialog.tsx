@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -101,6 +101,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const { addClient, addContact, addEngagement, addAssignment, colleagues, services } = useCRMData();
   const { user } = useAuth();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   const activeServices = services.filter(s => s.is_active);
@@ -306,8 +307,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   };
 
   const handleSubmit = async (data: ConvertFormData) => {
-    if (!lead) return;
-    await executeConversion(data);
+    if (!lead || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await executeConversion(data);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!lead) return null;
@@ -1057,11 +1064,18 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Zrušit
               </Button>
-              <Button type="submit">
-                Převést na zakázku
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Převádím...
+                  </>
+                ) : (
+                  'Převést na zakázku'
+                )}
               </Button>
             </div>
           </form>

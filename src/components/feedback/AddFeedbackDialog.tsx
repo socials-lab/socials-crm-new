@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import { useFeedbackData } from '@/hooks/useFeedbackData';
 import { FEEDBACK_CATEGORY_CONFIG, type FeedbackCategory } from '@/types/feedback';
 import { toast } from '@/components/ui/sonner';
@@ -31,24 +31,32 @@ export function AddFeedbackDialog({ children }: AddFeedbackDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<FeedbackCategory>('other');
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const { addIdea } = useFeedbackData();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title.trim() || !description.trim()) {
       toast.error('Vyplňte prosím název a popis nápadu');
       return;
     }
 
-    await addIdea({ title, description, category });
-    
-    toast.success('Nápad byl přidán');
-    setTitle('');
-    setDescription('');
-    setCategory('other');
-    setOpen(false);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      await addIdea({ title, description, category });
+
+      toast.success('Nápad byl přidán');
+      setTitle('');
+      setDescription('');
+      setCategory('other');
+      setOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -107,8 +115,15 @@ export function AddFeedbackDialog({ children }: AddFeedbackDialogProps) {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Zrušit
             </Button>
-            <Button type="submit">
-              Přidat nápad
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Přidávám...
+                </>
+              ) : (
+                'Přidat nápad'
+              )}
             </Button>
           </div>
         </form>

@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/components/ui/sonner';
+import { Loader2 } from 'lucide-react';
 
 interface AddClientToMonthDialogProps {
   open: boolean;
@@ -35,6 +36,7 @@ export function AddClientToMonthDialog({ open, onOpenChange, year, month }: AddC
   const [minCredits, setMinCredits] = useState<number>(30);
   const [maxCredits, setMaxCredits] = useState<number>(50);
   const [pricePerCredit, setPricePerCredit] = useState<number>(1500);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const availableClients = useMemo(() => {
     return getAvailableClientsForMonth(year, month);
@@ -50,27 +52,34 @@ export function AddClientToMonthDialog({ open, onOpenChange, year, month }: AddC
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedClientId) {
       toast.error('Vyberte klienta');
       return;
     }
+    if (isSubmitting) return;
 
-    addClientToMonth(selectedClientId, year, month, {
-      minCredits,
-      maxCredits,
-      pricePerCredit,
-    });
+    setIsSubmitting(true);
 
-    const clientData = getClientById(selectedClientId);
-    toast.success(`${clientData?.brand_name ?? 'Klient'} byl přidán do měsíce`);
-    
-    // Reset form
-    setSelectedClientId('');
-    setMinCredits(30);
-    setMaxCredits(50);
-    setPricePerCredit(1500);
-    onOpenChange(false);
+    try {
+      await addClientToMonth(selectedClientId, year, month, {
+        minCredits,
+        maxCredits,
+        pricePerCredit,
+      });
+
+      const clientData = getClientById(selectedClientId);
+      toast.success(`${clientData?.brand_name ?? 'Klient'} byl přidán do měsíce`);
+
+      // Reset form
+      setSelectedClientId('');
+      setMinCredits(30);
+      setMaxCredits(50);
+      setPricePerCredit(1500);
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -140,8 +149,15 @@ export function AddClientToMonthDialog({ open, onOpenChange, year, month }: AddC
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
           </Button>
-          <Button onClick={handleSubmit} disabled={!selectedClientId}>
-            Přidat klienta
+          <Button onClick={handleSubmit} disabled={!selectedClientId || isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Přidávám...
+              </>
+            ) : (
+              'Přidat klienta'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

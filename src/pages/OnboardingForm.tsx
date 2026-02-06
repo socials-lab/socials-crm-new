@@ -1091,7 +1091,6 @@ export default function OnboardingForm() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
                       🔄 MĚSÍČNÍ SLUŽBY
-                      MĚSÍČNÍ SLUŽBY
                     </div>
                     <div className="border rounded-lg overflow-hidden">
                       <div className="divide-y">

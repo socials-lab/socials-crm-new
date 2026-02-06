@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface AcademyLink {
   label: string;
@@ -600,6 +601,10 @@ interface AcademyDataContextType {
   error: string | null;
   isUsingDatabase: boolean;
   refetch: () => Promise<void>;
+  // Progress tracking
+  watchedVideoIds: string[];
+  markVideoWatched: (videoId: string) => Promise<void>;
+  isVideoWatched: (videoId: string) => boolean;
   // Admin functions
   createModule: (module: Partial<AcademyModule>) => Promise<AcademyModule | null>;
   updateModule: (id: string, module: Partial<AcademyModule>) => Promise<boolean>;
@@ -618,7 +623,9 @@ export function AcademyDataProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUsingDatabase, setIsUsingDatabase] = useState(false);
+  const [watchedVideoIds, setWatchedVideoIds] = useState<string[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -727,6 +734,65 @@ export function AcademyDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchDataDirect();
   }, [fetchDataDirect]);
+
+  // Fetch user's progress
+  const fetchProgress = useCallback(async () => {
+    if (!user) {
+      setWatchedVideoIds([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await (supabase as any)
+        .from('academy_progress')
+        .select('video_id')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error fetching progress:', error);
+        return;
+      }
+
+      setWatchedVideoIds((data || []).map((p: { video_id: string }) => p.video_id));
+    } catch (err) {
+      console.error('Error fetching progress:', err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchProgress();
+  }, [fetchProgress]);
+
+  // Mark a video as watched
+  const markVideoWatched = async (videoId: string) => {
+    if (!user) return;
+
+    // Optimistically update UI
+    setWatchedVideoIds(prev => [...prev, videoId]);
+
+    try {
+      const { error } = await (supabase as any)
+        .from('academy_progress')
+        .insert({
+          user_id: user.id,
+          video_id: videoId,
+        });
+
+      if (error) {
+        // Revert on error
+        setWatchedVideoIds(prev => prev.filter(id => id !== videoId));
+        console.error('Error marking video watched:', error);
+      }
+    } catch (err) {
+      setWatchedVideoIds(prev => prev.filter(id => id !== videoId));
+      console.error('Error marking video watched:', err);
+    }
+  };
+
+  // Check if a video is watched
+  const isVideoWatched = (videoId: string): boolean => {
+    return watchedVideoIds.includes(videoId);
+  };
 
   const createModule = async (moduleData: Partial<AcademyModule>): Promise<AcademyModule | null> => {
     if (!isUsingDatabase) {
@@ -960,6 +1026,9 @@ export function AcademyDataProvider({ children }: { children: ReactNode }) {
       error,
       isUsingDatabase,
       refetch: fetchDataDirect,
+      watchedVideoIds,
+      markVideoWatched,
+      isVideoWatched,
       createModule,
       updateModule,
       deleteModule,
