@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, MoreVertical, Pencil, Trash2, ChevronDown, ChevronUp, ExternalLink, Users } from 'lucide-react';
+import { Search, Plus, MoreVertical, Pencil, Trash2, ChevronDown, ChevronUp, ExternalLink, Users, FileEdit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,10 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { ServiceFormDialog } from '@/components/services/ServiceFormDialog';
 import { DeleteServiceDialog } from '@/components/services/DeleteServiceDialog';
+import { ServiceDetailView, type ServiceDetailData } from '@/components/services/ServiceDetailView';
+import { ServiceDetailEditDialog } from '@/components/services/ServiceDetailEditDialog';
 import { serviceTierConfigs } from '@/constants/services';
+import { getServiceDetail } from '@/constants/serviceDetails';
 import { toast } from '@/components/ui/sonner';
 import type { Service, ServiceCategory, ServiceType } from '@/types/crm';
 
@@ -50,6 +53,8 @@ export default function Services() {
   const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState<string>('');
+  const [detailEditDialogOpen, setDetailEditDialogOpen] = useState(false);
+  const [editingDetailService, setEditingDetailService] = useState<Service | null>(null);
 
   const filteredServices = useMemo(() => {
     return services.filter(service => {
@@ -153,6 +158,22 @@ export default function Services() {
     const isExpanded = expandedServiceId === service.id;
     const activeClients = getActiveClientsForService(service.id);
     const activeClientCount = getActiveClientCount(service.id);
+
+    // Get service detail - prefer database fields, fall back to constants
+    const constantDetail = getServiceDetail(service.code);
+
+    // Build service detail data from database fields first, then constants as fallback
+    const serviceDetailData: ServiceDetailData | undefined = {
+      tagline: service.tagline || constantDetail?.tagline,
+      platforms: service.platforms || constantDetail?.platforms,
+      target_audience: service.target_audience || constantDetail?.targetAudience,
+      benefits: service.benefits || constantDetail?.benefits,
+      setup_items: service.setup_items || constantDetail?.setup,
+      management_items: service.management_items || constantDetail?.management,
+      tier_comparison: service.tier_comparison || constantDetail?.tierComparison,
+      tier_pricing: service.tier_pricing || constantDetail?.tierPricing || null,
+      credit_pricing: service.credit_pricing || constantDetail?.creditPricing || null,
+    };
 
     return (
       <Card key={service.id} className="overflow-hidden">
@@ -362,41 +383,28 @@ export default function Services() {
               )}
             </div>
 
-            {/* Tier Pricing Table for Core services */}
-            {service.service_type === 'core' && service.tier_pricing && (
-              <div className="mt-3 pt-3 border-t">
-                <h5 className="text-xs font-medium mb-2">Ceník dle spendu klienta:</h5>
-                <div className="grid grid-cols-3 gap-2">
-                  {serviceTierConfigs.map((config) => {
-                    const pricing = service.tier_pricing?.find(p => p.tier === config.tier);
-                    return (
-                      <div key={config.tier} className="bg-muted rounded-lg p-2 text-center">
-                        <div className="text-xs font-semibold">{config.label}</div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {config.spend_description}
-                        </div>
-                        <div className="mt-1 font-bold text-sm">
-                          {pricing?.price !== null && pricing?.price !== undefined ? (
-                            <>
-                              {pricing.original_price && (
-                                <span className="line-through text-muted-foreground text-xs mr-1">
-                                  {pricing.original_price.toLocaleString('cs-CZ')} Kč
-                                </span>
-                              )}
-                              <span className={pricing.original_price ? 'text-status-active' : ''}>
-                                {pricing.price.toLocaleString('cs-CZ')} Kč
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">Individuální</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+            {/* Service Detail View - shows detailed info */}
+            <div className="mt-3 pt-3 border-t">
+              <div className="flex justify-between items-center mb-2">
+                <h5 className="text-xs font-semibold text-muted-foreground">Detaily služby</h5>
+                {canManageServices && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs px-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingDetailService(service);
+                      setDetailEditDialogOpen(true);
+                    }}
+                  >
+                    <FileEdit className="mr-1 h-3 w-3" />
+                    Upravit detaily
+                  </Button>
+                )}
               </div>
-            )}
+              <ServiceDetailView data={serviceDetailData} />
+            </div>
 
             {/* Description */}
             {service.description && (
@@ -554,6 +562,18 @@ export default function Services() {
         activeClientCount={serviceToDelete ? getActiveClientCount(serviceToDelete.id) : 0}
         onConfirm={handleConfirmDelete}
       />
+
+      {editingDetailService && (
+        <ServiceDetailEditDialog
+          open={detailEditDialogOpen}
+          onOpenChange={setDetailEditDialogOpen}
+          service={editingDetailService}
+          onSave={(serviceId, detailData) => {
+            updateService(serviceId, detailData as Partial<Service>);
+            toast.success('Detaily služby byly aktualizovány');
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { ModificationRequestCard } from '@/components/engagements/ModificationRequestCard';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges } from '@/types/crm';
-import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
+import type { StoredModificationRequest } from '@/hooks/useModificationRequests';
 
 export function PendingModificationsSection() {
   const { 

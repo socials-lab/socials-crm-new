@@ -18,13 +18,16 @@ const mainNavItems = [
   // Osobní přehledy
   { title: '🏠 Přehled', url: '/', page: 'dashboard' },
   { title: '👤 Můj přehled', url: '/my-work', page: 'my-work', requiresColleague: true },
+  { title: '📝 Můj profil', url: '/my-profile', page: 'my-profile', requiresColleague: true },
   // Obchodní proces
   { title: '🎯 Leady', url: '/leads', page: 'leads' },
   { title: '🏢 Klienti', url: '/clients', page: 'clients' },
   { title: '📇 Kontakty', url: '/contacts', page: 'contacts' },
   { title: '📋 Zakázky', url: '/engagements', page: 'engagements' },
+  { title: '📝 Návrhy změn', url: '/modifications', page: 'modifications' },
   // Práce & dodávka
   { title: '🔧 Vícepráce', url: '/extra-work', page: 'extra-work' },
+  { title: '💰 Provize', url: '/upsells', page: 'upsells' },
   { title: '🎨 Creative Boost', url: '/creative-boost', page: 'creative-boost' },
   { title: '📅 Meetingy', url: '/meetings', page: 'meetings' },
   // Finance & služby
@@ -34,6 +37,7 @@ const mainNavItems = [
   { title: '👥 Kolegové', url: '/colleagues', page: 'colleagues' },
   { title: '🎓 Nábor', url: '/recruitment', page: 'recruitment' },
   { title: '💡 Feedback Zone', url: '/feedback', page: 'feedback' },
+  { title: '📚 Akademie', url: '/academy', page: 'academy' },
   // Reporting
   { title: '📊 Analytika', url: '/analytics', page: 'analytics' },
 ];

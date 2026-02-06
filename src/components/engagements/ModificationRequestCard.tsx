@@ -41,7 +41,7 @@ import type {
   UpdateAssignmentProposedChanges,
   RemoveAssignmentProposedChanges,
 } from '@/types/crm';
-import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
+import type { StoredModificationRequest } from '@/hooks/useModificationRequests';
 
 interface ModificationRequestCardProps {
   request: StoredModificationRequest;
@@ -139,7 +139,7 @@ export function ModificationRequestCard({
   
   const handleCopyLink = async () => {
     if (request.upgrade_offer_token) {
-      const link = `${window.location.origin}/upgrade/${request.upgrade_offer_token}`;
+      const link = `${window.location.origin}/modification/${request.upgrade_offer_token}`;
       await navigator.clipboard.writeText(link);
       setLinkCopied(true);
       toast.success('Odkaz zkopírován');
@@ -200,8 +200,10 @@ export function ModificationRequestCard({
         const c = changes as DeactivateServiceProposedChanges;
         return (
           <div className="space-y-1 text-sm">
-            <p><span className="text-muted-foreground">Služba:</span> {c.service_name}</p>
-            <p><span className="text-muted-foreground">Aktuální cena:</span> {c.price.toLocaleString('cs-CZ')} {c.currency}</p>
+            <p><span className="text-muted-foreground">Služba:</span> {c.service_name || 'Neznámá služba'}</p>
+            {c.price != null && (
+              <p><span className="text-muted-foreground">Aktuální cena:</span> {c.price.toLocaleString('cs-CZ')} {c.currency || 'CZK'}</p>
+            )}
           </div>
         );
       }
@@ -353,7 +355,7 @@ export function ModificationRequestCard({
               {/* Client acceptance info */}
               {isClientApproved && request.client_approved_at && (
                 <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
-                  📧 Klient potvrdil: {format(new Date(request.client_approved_at), 'd.M.yyyy v H:mm')} ({request.client_email})
+                  📧 Klient potvrdil: {format(new Date(request.client_approved_at), "d.M.yyyy 'v' H:mm")} ({request.client_email})
                 </div>
               )}
 

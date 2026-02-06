@@ -484,16 +484,26 @@ export type Database = {
       }
       colleagues: {
         Row: {
+          bank_account: string | null
+          billing_city: string | null
+          billing_street: string | null
+          billing_zip: string | null
           birthday: string | null
           capacity_hours_per_month: number | null
+          capacity_slots: Json | null
+          company_name: string | null
           created_at: string | null
+          dic: string | null
           email: string
           full_name: string
+          ico: string | null
           id: string
           internal_hourly_cost: number | null
           is_freelancer: boolean | null
+          max_engagements: number | null
           monthly_fixed_cost: number | null
           notes: string | null
+          personal_email: string | null
           phone: string | null
           position: string
           profile_id: string | null
@@ -502,16 +512,26 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bank_account?: string | null
+          billing_city?: string | null
+          billing_street?: string | null
+          billing_zip?: string | null
           birthday?: string | null
           capacity_hours_per_month?: number | null
+          capacity_slots?: Json | null
+          company_name?: string | null
           created_at?: string | null
+          dic?: string | null
           email: string
           full_name: string
+          ico?: string | null
           id?: string
           internal_hourly_cost?: number | null
           is_freelancer?: boolean | null
+          max_engagements?: number | null
           monthly_fixed_cost?: number | null
           notes?: string | null
+          personal_email?: string | null
           phone?: string | null
           position: string
           profile_id?: string | null
@@ -520,16 +540,26 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bank_account?: string | null
+          billing_city?: string | null
+          billing_street?: string | null
+          billing_zip?: string | null
           birthday?: string | null
           capacity_hours_per_month?: number | null
+          capacity_slots?: Json | null
+          company_name?: string | null
           created_at?: string | null
+          dic?: string | null
           email?: string
           full_name?: string
+          ico?: string | null
           id?: string
           internal_hourly_cost?: number | null
           is_freelancer?: boolean | null
+          max_engagements?: number | null
           monthly_fixed_cost?: number | null
           notes?: string | null
+          personal_email?: string | null
           phone?: string | null
           position?: string
           profile_id?: string | null
@@ -2140,6 +2170,167 @@ export type Database = {
           },
         ]
       }
+      modification_request_emails: {
+        Row: {
+          id: string
+          modification_request_id: string
+          sent_at: string
+          sent_by_id: string | null
+          sent_by_name: string
+          sent_to: string
+        }
+        Insert: {
+          id?: string
+          modification_request_id: string
+          sent_at?: string
+          sent_by_id?: string | null
+          sent_by_name: string
+          sent_to: string
+        }
+        Update: {
+          id?: string
+          modification_request_id?: string
+          sent_at?: string
+          sent_by_id?: string | null
+          sent_by_name?: string
+          sent_to?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modification_request_emails_modification_request_id_fkey"
+            columns: ["modification_request_id"]
+            isOneToOne: false
+            referencedRelation: "modification_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modification_requests: {
+        Row: {
+          client_approved_at: string | null
+          client_brand_name: string | null
+          client_email: string | null
+          client_id: string
+          client_name: string
+          created_at: string
+          effective_from: string | null
+          engagement_assignment_id: string | null
+          engagement_id: string
+          engagement_name: string
+          engagement_service_id: string | null
+          id: string
+          note: string | null
+          proposed_changes: Json
+          rejection_reason: string | null
+          request_type: Database["public"]["Enums"]["modification_request_type"]
+          requested_at: string
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["modification_request_status"]
+          updated_at: string
+          upgrade_offer_token: string | null
+          upgrade_offer_valid_until: string | null
+          upsell_commission_percent: number | null
+          upsold_by_id: string | null
+          upsold_by_name: string | null
+        }
+        Insert: {
+          client_approved_at?: string | null
+          client_brand_name?: string | null
+          client_email?: string | null
+          client_id: string
+          client_name: string
+          created_at?: string
+          effective_from?: string | null
+          engagement_assignment_id?: string | null
+          engagement_id: string
+          engagement_name: string
+          engagement_service_id?: string | null
+          id?: string
+          note?: string | null
+          proposed_changes: Json
+          rejection_reason?: string | null
+          request_type: Database["public"]["Enums"]["modification_request_type"]
+          requested_at?: string
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["modification_request_status"]
+          updated_at?: string
+          upgrade_offer_token?: string | null
+          upgrade_offer_valid_until?: string | null
+          upsell_commission_percent?: number | null
+          upsold_by_id?: string | null
+          upsold_by_name?: string | null
+        }
+        Update: {
+          client_approved_at?: string | null
+          client_brand_name?: string | null
+          client_email?: string | null
+          client_id?: string
+          client_name?: string
+          created_at?: string
+          effective_from?: string | null
+          engagement_assignment_id?: string | null
+          engagement_id?: string
+          engagement_name?: string
+          engagement_service_id?: string | null
+          id?: string
+          note?: string | null
+          proposed_changes?: Json
+          rejection_reason?: string | null
+          request_type?: Database["public"]["Enums"]["modification_request_type"]
+          requested_at?: string
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["modification_request_status"]
+          updated_at?: string
+          upgrade_offer_token?: string | null
+          upgrade_offer_valid_until?: string | null
+          upsell_commission_percent?: number | null
+          upsold_by_id?: string | null
+          upsold_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modification_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modification_requests_engagement_assignment_id_fkey"
+            columns: ["engagement_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "engagement_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modification_requests_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modification_requests_engagement_service_id_fkey"
+            columns: ["engagement_service_id"]
+            isOneToOne: false
+            referencedRelation: "engagement_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modification_requests_upsold_by_id_fkey"
+            columns: ["upsold_by_id"]
+            isOneToOne: false
+            referencedRelation: "colleagues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -2347,10 +2538,12 @@ export type Database = {
       services: {
         Row: {
           base_price: number | null
+          benefits: string[] | null
           billing_type: string
           category: Database["public"]["Enums"]["service_category"]
           code: string
           created_at: string | null
+          credit_pricing: Json | null
           currency: string | null
           default_deliverables: string[] | null
           default_frequency: string | null
@@ -2360,18 +2553,26 @@ export type Database = {
           external_url: string | null
           id: string
           is_active: boolean | null
+          management_items: Json | null
           name: string
           offer_description: string | null
+          platforms: string[] | null
           service_type: Database["public"]["Enums"]["service_type"]
+          setup_items: Json | null
+          tagline: string | null
+          target_audience: string | null
+          tier_comparison: Json | null
           tier_pricing: Json | null
           updated_at: string | null
         }
         Insert: {
           base_price?: number | null
+          benefits?: string[] | null
           billing_type?: string
           category: Database["public"]["Enums"]["service_category"]
           code: string
           created_at?: string | null
+          credit_pricing?: Json | null
           currency?: string | null
           default_deliverables?: string[] | null
           default_frequency?: string | null
@@ -2381,18 +2582,26 @@ export type Database = {
           external_url?: string | null
           id?: string
           is_active?: boolean | null
+          management_items?: Json | null
           name: string
           offer_description?: string | null
+          platforms?: string[] | null
           service_type: Database["public"]["Enums"]["service_type"]
+          setup_items?: Json | null
+          tagline?: string | null
+          target_audience?: string | null
+          tier_comparison?: Json | null
           tier_pricing?: Json | null
           updated_at?: string | null
         }
         Update: {
           base_price?: number | null
+          benefits?: string[] | null
           billing_type?: string
           category?: Database["public"]["Enums"]["service_category"]
           code?: string
           created_at?: string | null
+          credit_pricing?: Json | null
           currency?: string | null
           default_deliverables?: string[] | null
           default_frequency?: string | null
@@ -2402,9 +2611,15 @@ export type Database = {
           external_url?: string | null
           id?: string
           is_active?: boolean | null
+          management_items?: Json | null
           name?: string
           offer_description?: string | null
+          platforms?: string[] | null
           service_type?: Database["public"]["Enums"]["service_type"]
+          setup_items?: Json | null
+          tagline?: string | null
+          target_audience?: string | null
+          tier_comparison?: Json | null
           tier_pricing?: Json | null
           updated_at?: string | null
         }
@@ -2456,6 +2671,48 @@ export type Database = {
     Functions: {
       acquire_client_lock: { Args: { p_client_id: string }; Returns: undefined }
       acquire_invoice_number_lock: { Args: never; Returns: undefined }
+      apply_modification_request: {
+        Args: { p_applied_by?: string; p_request_id: string }
+        Returns: Json
+      }
+      approve_modification_request: {
+        Args: { p_request_id: string; p_reviewed_by: string }
+        Returns: {
+          client_approved_at: string | null
+          client_brand_name: string | null
+          client_email: string | null
+          client_id: string
+          client_name: string
+          created_at: string
+          effective_from: string | null
+          engagement_assignment_id: string | null
+          engagement_id: string
+          engagement_name: string
+          engagement_service_id: string | null
+          id: string
+          note: string | null
+          proposed_changes: Json
+          rejection_reason: string | null
+          request_type: Database["public"]["Enums"]["modification_request_type"]
+          requested_at: string
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["modification_request_status"]
+          updated_at: string
+          upgrade_offer_token: string | null
+          upgrade_offer_valid_until: string | null
+          upsell_commission_percent: number | null
+          upsold_by_id: string | null
+          upsold_by_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "modification_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       can_edit_page: { Args: { page_name: string }; Returns: boolean }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_view_page: { Args: { page_name: string }; Returns: boolean }
@@ -2474,6 +2731,10 @@ export type Database = {
       check_is_super_admin: {
         Args: { check_user_id: string }
         Returns: boolean
+      }
+      client_accept_modification: {
+        Args: { p_client_email: string; p_token: string }
+        Returns: Json
       }
       convert_lead_to_client: {
         Args: {
@@ -2836,6 +3097,19 @@ export type Database = {
       meeting_task_priority: "low" | "medium" | "high"
       meeting_task_status: "todo" | "in_progress" | "done"
       meeting_type: "internal" | "client"
+      modification_request_status:
+        | "pending"
+        | "approved"
+        | "client_approved"
+        | "applied"
+        | "rejected"
+      modification_request_type:
+        | "add_service"
+        | "update_service_price"
+        | "deactivate_service"
+        | "add_assignment"
+        | "update_assignment"
+        | "remove_assignment"
       month_status: "active" | "inactive"
       notification_type:
         | "new_lead"
@@ -3142,6 +3416,21 @@ export const Constants = {
       meeting_task_priority: ["low", "medium", "high"],
       meeting_task_status: ["todo", "in_progress", "done"],
       meeting_type: ["internal", "client"],
+      modification_request_status: [
+        "pending",
+        "approved",
+        "client_approved",
+        "applied",
+        "rejected",
+      ],
+      modification_request_type: [
+        "add_service",
+        "update_service_price",
+        "deactivate_service",
+        "add_assignment",
+        "update_assignment",
+        "remove_assignment",
+      ],
       month_status: ["active", "inactive"],
       notification_type: [
         "new_lead",

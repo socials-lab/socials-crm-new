@@ -2,7 +2,6 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
-import type { PagePermission } from '@/types/crm';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -12,7 +11,8 @@ interface UserRoleContextType {
   isLoading: boolean;
   colleagueId: string | null;
   canSeeFinancials: boolean;
-  pagePermissions: PagePermission[];
+  canEditAcademy: boolean;
+  allowedPages: string[];
   canAccessPage: (page: string) => boolean;
   hasRole: (role: AppRole) => boolean;
 }
@@ -20,80 +20,81 @@ interface UserRoleContextType {
 const UserRoleContext = createContext<UserRoleContextType | undefined>(undefined);
 
 export function UserRoleProvider({ children }: { children: ReactNode }) {
-  const { user, session, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [role, setRole] = useState<AppRole | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [colleagueId, setColleagueId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [canSeeFinancials, setCanSeeFinancials] = useState(false);
-  const [pagePermissions, setPagePermissions] = useState<PagePermission[]>([]);
+  const [canEditAcademy, setCanEditAcademy] = useState(false);
+  const [allowedPages, setAllowedPages] = useState<string[]>([]);
 
   useEffect(() => {
-    if (authLoading) {
-      return;
-    }
+    if (authLoading) return;
     
-    if (!user || !session) {
+    if (!user) {
       setRole(null);
       setIsSuperAdmin(false);
       setColleagueId(null);
       setCanSeeFinancials(false);
-      setPagePermissions([]);
+      setCanEditAcademy(false);
+      setAllowedPages([]);
       setIsLoading(false);
       return;
     }
 
-    async function fetchUserRole() {
+    const fetchUserRole = async () => {
       setIsLoading(true);
       try {
-        // Fetch user role
-        const { data: userRolesData, error: roleError } = await supabase
+        // Fetch user role - use raw query to handle both old and new schema
+        const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
-          .select('role, is_super_admin, can_see_financials, page_permissions')
-          .eq('user_id', user!.id)
-          .eq('is_active', true)
+          .select('*')
+          .eq('user_id', user.id)
           .maybeSingle();
 
-        if (roleError && roleError.code !== 'PGRST116') {
+        if (roleError) {
           console.error('Error fetching user role:', roleError);
         }
 
-        if (userRolesData) {
-          setRole(userRolesData.role);
-          setIsSuperAdmin(userRolesData.is_super_admin ?? false);
-          setCanSeeFinancials(userRolesData.can_see_financials ?? false);
-          
-          // Parse page_permissions JSONB
-          const permissions = (userRolesData.page_permissions as PagePermission[]) || [];
-          setPagePermissions(permissions);
+        if (roleData) {
+          setRole(roleData.role);
+          setIsSuperAdmin(roleData.is_super_admin || false);
+          // Handle new columns that might not exist yet
+          const data = roleData as Record<string, unknown>;
+          setCanSeeFinancials((data.can_see_financials as boolean) || false);
+          setCanEditAcademy((data.can_edit_academy as boolean) || false);
+          setAllowedPages((data.allowed_pages as string[]) || []);
         } else {
+          // User has no role assigned yet
           setRole(null);
           setIsSuperAdmin(false);
           setCanSeeFinancials(false);
-          setPagePermissions([]);
+          setCanEditAcademy(false);
+          setAllowedPages([]);
         }
 
-        // Fetch colleague ID
+        // Fetch linked colleague
         const { data: colleagueData, error: colleagueError } = await supabase
           .from('colleagues')
           .select('id')
-          .eq('profile_id', user!.id)
+          .eq('profile_id', user.id)
           .maybeSingle();
 
-        if (colleagueError && colleagueError.code !== 'PGRST116') {
+        if (colleagueError) {
           console.error('Error fetching colleague:', colleagueError);
         }
 
-        setColleagueId(colleagueData?.id ?? null);
+        setColleagueId(colleagueData?.id || null);
       } catch (error) {
         console.error('Error in fetchUserRole:', error);
       } finally {
         setIsLoading(false);
       }
-    }
+    };
 
     fetchUserRole();
-  }, [user, session, authLoading]);
+  }, [user, authLoading]);
 
   const hasRole = (checkRole: AppRole): boolean => {
     if (isSuperAdmin) return true;
@@ -103,20 +104,10 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const canAccessPage = (page: string): boolean => {
     // Super admin has access to everything
     if (isSuperAdmin) return true;
-    
-    // If no page_permissions defined, default to role-based access
-    if (pagePermissions.length === 0) {
-      return has_crm_access();
-    }
-    
-    // Check if page has can_view = true
-    const permission = pagePermissions.find(p => p.page === page);
-    return permission?.can_view ?? false;
-  };
-
-  // Helper function to check CRM access
-  const has_crm_access = (): boolean => {
-    return role !== null;
+    // If no allowed_pages defined, allow access (backward compatibility)
+    if (allowedPages.length === 0) return true;
+    // Check if page is in allowed pages
+    return allowedPages.includes(page);
   };
 
   return (
@@ -126,7 +117,8 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       isLoading, 
       colleagueId,
       canSeeFinancials,
-      pagePermissions,
+      canEditAcademy,
+      allowedPages,
       canAccessPage,
       hasRole 
     }}>

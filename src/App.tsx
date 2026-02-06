@@ -26,6 +26,7 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import ExtraWork from "./pages/ExtraWork";
 import MyWork from "./pages/MyWork";
+import MyProfile from "./pages/MyProfile";
 import Recruitment from "./pages/Recruitment";
 import Meetings from "./pages/Meetings";
 import ApplicantOnboardingForm from "./pages/ApplicantOnboardingForm";
@@ -36,6 +37,10 @@ import Feedback from "./pages/Feedback";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import PublicOfferPage from "./pages/PublicOfferPage";
+import PublicModificationPage from "./pages/PublicModificationPage";
+import Modifications from "./pages/Modifications";
+import Upsells from "./pages/Upsells";
+import Academy from "./pages/Academy";
 
 const queryClient = new QueryClient();
 
@@ -59,15 +64,18 @@ const App = () => (
                           <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
                           <Route path="/offer/:token" element={<PublicOfferPage />} />
                           <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
+                          <Route path="/modification/:token" element={<PublicModificationPage />} />
                           
                           {/* Protected routes */}
                           <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
                             <Route path="/" element={<Dashboard />} />
                             <Route path="/my-work" element={<MyWork />} />
+                            <Route path="/my-profile" element={<MyProfile />} />
                             <Route path="/leads" element={<Leads />} />
                             <Route path="/clients" element={<Clients />} />
                             <Route path="/contacts" element={<Contacts />} />
                             <Route path="/engagements" element={<Engagements />} />
+                            <Route path="/modifications" element={<Modifications />} />
                             <Route path="/extra-work" element={<ExtraWork />} />
                             <Route path="/invoicing" element={<Invoicing />} />
                             <Route path="/creative-boost" element={<CreativeBoost />} />
@@ -76,9 +84,11 @@ const App = () => (
                             <Route path="/colleagues" element={<Colleagues />} />
                             <Route path="/recruitment" element={<Recruitment />} />
                             <Route path="/analytics" element={<Analytics />} />
+                            <Route path="/upsells" element={<Upsells />} />
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/notifications" element={<Notifications />} />
                             <Route path="/feedback" element={<Feedback />} />
+                            <Route path="/academy" element={<Academy />} />
                           </Route>
                           <Route path="*" element={<NotFound />} />
                         </Routes>

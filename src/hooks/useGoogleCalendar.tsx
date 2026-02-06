@@ -2,7 +2,37 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/components/ui/sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
+
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  location?: string;
+  start: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  end: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  htmlLink?: string;
+  attendees?: Array<{
+    email: string;
+    displayName?: string;
+    responseStatus?: string;
+  }>;
+  organizer?: {
+    email: string;
+    displayName?: string;
+  };
+  status?: string;
+  created?: string;
+  updated?: string;
+}
 
 export function useGoogleCalendar() {
   const { user } = useAuth();
@@ -137,18 +167,18 @@ export function useGoogleCalendar() {
   const sendEmail = async (to: string, subject: string, html: string) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke('gmail-send-email', {
         body: { to, subject, html },
       });
-      
+
       if (error) throw error;
-      
+
       if (data?.error) {
         throw new Error(data.error);
       }
-      
+
       return data;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Chyba při odesílání emailu';
@@ -160,16 +190,70 @@ export function useGoogleCalendar() {
     }
   };
 
-  return { 
-    connectGoogleCalendar, 
+  // Fetch calendar events
+  const fetchCalendarEvents = useCallback(async (options?: {
+    timeMin?: string;
+    timeMax?: string;
+    maxResults?: number;
+  }): Promise<GoogleCalendarEvent[]> => {
+    try {
+      // Check current session
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Current session:', session ? 'exists' : 'null', session?.user?.email);
+
+      if (!session) {
+        console.error('No active session');
+        toast.error('Nejste přihlášeni');
+        return [];
+      }
+
+      // Convert to snake_case for the edge function
+      const body = options ? {
+        time_min: options.timeMin,
+        time_max: options.timeMax,
+        max_results: options.maxResults,
+      } : {};
+
+      console.log('Fetching calendar events with options:', body);
+
+      const { data, error } = await supabase.functions.invoke('calendar-fetch-events', {
+        body,
+      });
+
+      console.log('Calendar fetch response:', { data, error });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        toast.error('Chyba při načítání kalendáře: ' + error.message);
+        return [];
+      }
+
+      if (data?.error) {
+        console.error('Calendar fetch error:', data.error);
+        toast.error('Chyba z Google Calendar: ' + data.error);
+        return [];
+      }
+
+      console.log('Fetched events count:', data?.events?.length || 0);
+      return data?.events || [];
+    } catch (err) {
+      console.error('Failed to fetch calendar events:', err);
+      toast.error('Nepodařilo se načíst kalendář');
+      return [];
+    }
+  }, []);
+
+  return {
+    connectGoogleCalendar,
     handleOAuthCallback,
     createCalendarEvent,
     sendEmail,
+    fetchCalendarEvents,
     checkConnection,
     isConnected,
     hasGmailScope,
     isCheckingConnection,
-    isLoading, 
-    error 
+    isLoading,
+    error
   };
 }

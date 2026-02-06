@@ -141,6 +141,27 @@ export interface ServiceTierConfig {
   max_spend: number | null;
 }
 
+// Service detail types
+export interface ServiceSetupItem {
+  title: string;
+  items: string[];
+}
+
+export interface ServiceTierFeature {
+  feature: string;
+  growth: string | boolean;
+  pro: string | boolean;
+  elite: string | boolean;
+}
+
+export interface ServiceCreditPricing {
+  basePrice: number;
+  currency: string;
+  expressMultiplier: number;
+  colleagueRewardPerCredit?: number;
+  outputTypes: { name: string; credits: number; description: string }[];
+}
+
 export interface Service {
   id: string;
   code: string;
@@ -157,11 +178,20 @@ export interface Service {
   created_at: string;
   updated_at: string;
   // Default values for offer generation
-  default_deliverables: string[] | null;     // Co klient dostane
+  default_deliverables: string[] | null;
   default_frequency: string | null;
   default_requirements: string[] | null;
   default_turnaround: string | null;
   offer_description: string | null;
+  // Service details
+  tagline: string | null;
+  platforms: string[] | null;
+  target_audience: string | null;
+  benefits: string[] | null;
+  setup_items: ServiceSetupItem[] | null;
+  management_items: ServiceSetupItem[] | null;
+  tier_comparison: ServiceTierFeature[] | null;
+  credit_pricing: ServiceCreditPricing | null;
 }
 
 // ClientService removed - services are now tracked via engagement_services instead
@@ -180,6 +210,40 @@ export const ADVERTISING_PLATFORMS = [
 ] as const;
 
 export type AdvertisingPlatform = typeof ADVERTISING_PLATFORMS[number];
+
+// Termination tracking
+export type TerminationReason =
+  | 'budget_cut'
+  | 'strategy_change'
+  | 'dissatisfied'
+  | 'agency_terminated'
+  | 'project_completed'
+  | 'merged_with_another'
+  | 'other';
+
+export type TerminationInitiatedBy = 'client' | 'agency';
+
+export const TERMINATION_REASON_LABELS: Record<TerminationReason, string> = {
+  budget_cut: 'Snížení rozpočtu',
+  strategy_change: 'Změna strategie',
+  dissatisfied: 'Nespokojenost s výsledky',
+  agency_terminated: 'Ukončeno agenturou',
+  project_completed: 'Projekt dokončen',
+  merged_with_another: 'Sloučeno s jinou zakázkou',
+  other: 'Jiný důvod',
+};
+
+export const TERMINATION_INITIATED_BY_LABELS: Record<TerminationInitiatedBy, string> = {
+  client: 'Klient',
+  agency: 'Agentura',
+};
+
+export interface TerminationData {
+  end_date: string;
+  termination_reason: TerminationReason;
+  termination_initiated_by: TerminationInitiatedBy;
+  termination_notes: string;
+}
 
 export interface Engagement {
   id: string;
@@ -201,6 +265,10 @@ export interface Engagement {
   // Document links from lead conversion
   offer_url: string | null;
   contract_url: string | null;
+  // Termination tracking
+  termination_reason?: TerminationReason | null;
+  termination_initiated_by?: TerminationInitiatedBy | null;
+  termination_notes?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null; // Soft delete timestamp
@@ -252,9 +320,20 @@ export interface Colleague {
   internal_hourly_cost: number;
   monthly_fixed_cost: number | null;
   capacity_hours_per_month: number | null;
+  capacity_slots: Record<string, number> | null;
   status: ColleagueStatus;
   notes: string;
   birthday: string | null;
+  // Billing/personal fields
+  personal_email: string | null;
+  ico: string | null;
+  dic: string | null;
+  company_name: string | null;
+  billing_street: string | null;
+  billing_city: string | null;
+  billing_zip: string | null;
+  bank_account: string | null;
+  max_engagements: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -616,6 +695,36 @@ export interface EngagementHistoryEntry {
   changed_by: string;
   changed_by_name: string;
   created_at: string;
+}
+
+// Entity types for engagement history (used by EngagementHistoryDialog)
+export type EngagementHistoryEntityType = 'assignment' | 'service' | 'engagement';
+
+export interface EngagementHistoryRecord {
+  id: string;
+  engagement_id: string;
+  entity_type: EngagementHistoryEntityType;
+  entity_id: string | null;
+  change_type: 'created' | 'updated' | 'deleted';
+  field_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  changed_by: string | null;
+  changed_at: string;
+  metadata: {
+    colleague_name?: string;
+    colleague_id?: string;
+    service_name?: string;
+    cost_model?: string;
+    monthly_cost?: number;
+    hourly_cost?: number;
+    percentage_of_revenue?: number;
+    role_on_engagement?: string;
+    price?: number;
+    currency?: string;
+    billing_type?: string;
+    selected_tier?: string;
+  };
 }
 
 // Issued Invoice - stored when invoice is actually issued

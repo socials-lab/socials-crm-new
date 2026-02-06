@@ -1,4 +1,4 @@
-import type { StoredModificationRequest } from './modificationRequestsMockData';
+import type { StoredModificationRequest } from '@/hooks/useModificationRequests';
 
 const STORAGE_KEY = 'applied_modifications_history';
 

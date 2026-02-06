@@ -58,6 +58,8 @@ import { CreateInvoiceFromEngagementDialog } from '@/components/engagements/Crea
 import { EngagementInvoicingSection } from '@/components/engagements/EngagementInvoicingStatus';
 import { EndEngagementDialog } from '@/components/engagements/EndEngagementDialog';
 import { EngagementHistoryDialog } from '@/components/engagements/EngagementHistoryDialog';
+import { EditAssignmentDialog } from '@/components/engagements/EditAssignmentDialog';
+import { getRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
 import { serviceTierConfigs } from '@/constants/services';
 import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier } from '@/types/crm';
 import { ADVERTISING_PLATFORMS } from '@/types/crm';
@@ -134,9 +136,9 @@ function EngagementsContent() {
   const [endEngagementDialogOpen, setEndEngagementDialogOpen] = useState(false);
   const [engagementToEnd, setEngagementToEnd] = useState<Engagement | null>(null);
 
-  // Inline editing state for assignment costs
-  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
-  const [tempCost, setTempCost] = useState<string>('');
+  // Edit assignment dialog state
+  const [editingAssignment, setEditingAssignment] = useState<EngagementAssignment | null>(null);
+  const [isEditAssignmentDialogOpen, setIsEditAssignmentDialogOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<EngagementStatus | 'all'>('all');
@@ -475,7 +477,7 @@ function EngagementsContent() {
             .filter(s => s.is_active)
             .reduce((sum, s) => {
               // For Creative Boost, calculate from USED credits for the FILTERED month only
-              if (s.service_id === CREATIVE_BOOST_SERVICE_ID) {
+              if (CREATIVE_BOOST_SERVICE_ID && s.service_id === CREATIVE_BOOST_SERVICE_ID) {
                 const cbSummary = getClientMonthSummaryByEngagementServiceId(s.id, filterYear, filterMonth);
                 // If there's summary data for this month, use estimated invoice
                 if (cbSummary) {
@@ -716,11 +718,10 @@ function EngagementsContent() {
 
                     {/* Services section */}
                     {(() => {
-                      const engServices = getEngagementServicesByEngagementId(engagement.id);
-                      // FIX: Only sum active services in total price
-                      const totalServicesPrice = engServices
-                        .filter(s => s.is_active)
-                        .reduce((sum, s) => sum + s.price, 0);
+                      const allEngServices = getEngagementServicesByEngagementId(engagement.id);
+                      // Only show active services
+                      const engServices = allEngServices.filter(s => s.is_active);
+                      const totalServicesPrice = engServices.reduce((sum, s) => sum + s.price, 0);
                       return (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
@@ -752,21 +753,27 @@ function EngagementsContent() {
                               engServices.map(engService => {
                                 const service = services.find(s => s.id === engService.service_id);
                                 const isEditing = editingServicePrice === engService.id;
-                                const isCreativeBoost = engService.service_id === CREATIVE_BOOST_SERVICE_ID;
+                                const isCreativeBoost = CREATIVE_BOOST_SERVICE_ID !== null && engService.service_id === CREATIVE_BOOST_SERVICE_ID;
                                 const cbSummary = isCreativeBoost 
                                   ? getClientMonthSummaryByEngagementServiceId(engService.id, filterYear, filterMonth)
                                   : null;
                                 
                                 // For Creative Boost, show only the unified card
                                 if (isCreativeBoost) {
+                                  // Find assignment for this Creative Boost service to get reward
+                                  const cbAssignment = engagementAssignments.find(
+                                    a => a.engagement_service_id === engService.id
+                                  );
+
                                   return (
-                                    <CreativeBoostCreditOverview 
+                                    <CreativeBoostCreditOverview
                                       key={engService.id}
                                       engagementService={engService}
                                       summary={cbSummary}
                                       year={filterYear}
                                       month={filterMonth}
                                       canSeeFinancials={canSeeFinancials}
+                                      assignedColleagueAssignmentId={cbAssignment?.id}
                                       onUpdateSettings={(updates) => {
                                         updateEngagementService(engService.id, { 
                                           creative_boost_max_credits: updates.maxCredits,
@@ -988,9 +995,47 @@ function EngagementsContent() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                  {canSeeFinancials && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingAssignment(assignment);
+                                        setIsEditAssignmentDialogOpen(true);
+                                      }}
+                                      className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors group"
+                                      title="Klikněte pro úpravu odměny"
+                                    >
+                                      <span>
+                                        {(() => {
+                                          // Check if this is a Creative Boost assignment with per-credit reward
+                                          const perCreditReward = getRewardPerCredit(assignment.id);
+                                          const hasPerCreditReward = perCreditReward !== 80 || (CREATIVE_BOOST_SERVICE_ID && assignment.engagement_service_id && engagementServices.find(es => es.id === assignment.engagement_service_id && es.service_id === CREATIVE_BOOST_SERVICE_ID));
+
+                                          if (hasPerCreditReward && assignment.engagement_service_id) {
+                                            const service = engagementServices.find(es => es.id === assignment.engagement_service_id);
+                                            if (CREATIVE_BOOST_SERVICE_ID && service?.service_id === CREATIVE_BOOST_SERVICE_ID) {
+                                              return `${perCreditReward} Kč/kredit`;
+                                            }
+                                          }
+
+                                          if (assignment.cost_model === 'fixed_monthly' && assignment.monthly_cost) {
+                                            return `${assignment.monthly_cost.toLocaleString('cs-CZ')} Kč/měs`;
+                                          }
+                                          if (assignment.cost_model === 'hourly' && assignment.hourly_cost) {
+                                            return `${assignment.hourly_cost.toLocaleString('cs-CZ')} Kč/h`;
+                                          }
+                                          if (assignment.cost_model === 'percentage' && assignment.percentage_of_revenue) {
+                                            return `${assignment.percentage_of_revenue}%`;
+                                          }
+                                          return '–';
+                                        })()}
+                                      </span>
+                                      <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </button>
+                                  )}
                                   <Button
-                                    variant="ghost" 
-                                    size="icon" 
+                                    variant="ghost"
+                                    size="icon"
                                     className="h-6 w-6 text-destructive hover:text-destructive"
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1009,9 +1054,102 @@ function EngagementsContent() {
                       </div>
                     </div>
 
+                    {/* Profitability Section */}
+                    {canSeeFinancials && (() => {
+                      const engServices = getEngagementServicesByEngagementId(engagement.id);
+                      const engAssignments = getAssignmentsByEngagementId(engagement.id).filter(a => !a.end_date);
+
+                      // Calculate total revenue from services
+                      const totalRevenue = engServices
+                        .filter(s => s.is_active)
+                        .reduce((sum, s) => {
+                          // For Creative Boost, use estimated invoice from filtered month
+                          if (CREATIVE_BOOST_SERVICE_ID && s.service_id === CREATIVE_BOOST_SERVICE_ID) {
+                            const cbSummary = getClientMonthSummaryByEngagementServiceId(s.id, filterYear, filterMonth);
+                            if (cbSummary) {
+                              return sum + cbSummary.estimatedInvoice;
+                            }
+                            // Fallback to max credits * price per credit
+                            const maxCredits = s.creative_boost_max_credits || 0;
+                            const pricePerCredit = s.creative_boost_price_per_credit || 400;
+                            return sum + (maxCredits * pricePerCredit);
+                          }
+                          return sum + s.price;
+                        }, 0);
+
+                      // Calculate total colleague costs from assignments
+                      const totalColleagueCosts = engAssignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
+
+                      // Calculate profit and margin
+                      const profit = totalRevenue - totalColleagueCosts;
+                      const profitMarginPercent = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+
+                      // Determine color based on margin
+                      const marginColor = profitMarginPercent >= 30
+                        ? 'text-status-active'
+                        : profitMarginPercent >= 15
+                          ? 'text-chart-4'
+                          : 'text-destructive';
+
+                      return (
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-sm flex items-center gap-2">
+                            📊 Profitabilita zakázky
+                          </h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Revenue card */}
+                            <div className="p-3 rounded-lg bg-status-active/5 border border-status-active/20">
+                              <div className="text-xs text-muted-foreground mb-1">💰 Příjmy</div>
+                              <div className="text-lg font-bold text-status-active">
+                                {totalRevenue.toLocaleString()} {engagement.currency}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                z {engServices.filter(s => s.is_active).length} služeb
+                              </div>
+                            </div>
+
+                            {/* Costs card */}
+                            <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                              <div className="text-xs text-muted-foreground mb-1">🎨 Náklady na kolegy</div>
+                              <div className="text-lg font-bold text-destructive">
+                                {totalColleagueCosts.toLocaleString()} {engagement.currency}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                {engAssignments.length} přiřazených kolegů
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Profit summary */}
+                          <div className="p-3 rounded-lg bg-muted/50 border">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">📈 Čistý zisk</div>
+                                <div className={cn("text-xl font-bold", marginColor)}>
+                                  {profit.toLocaleString()} {engagement.currency}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-xs text-muted-foreground mb-1">Marže</div>
+                                <div className={cn("text-xl font-bold", marginColor)}>
+                                  {profitMarginPercent.toFixed(1)}%
+                                </div>
+                              </div>
+                            </div>
+                            {profitMarginPercent < 15 && (
+                              <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                Nízká marže - zvažte úpravu cen nebo snížení nákladů
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Invoicing history section */}
-                    <EngagementInvoicingSection 
-                      engagement={engagement} 
+                    <EngagementInvoicingSection
+                      engagement={engagement}
                       invoices={invoiceHistory}
                       currency={engagement.currency}
                     />
@@ -1427,7 +1565,7 @@ function EngagementsContent() {
             const newService = await addEngagementService(data);
             
             // If Creative Boost service, automatically create record in Creative Boost tab
-            if (data.service_id === CREATIVE_BOOST_SERVICE_ID) {
+            if (CREATIVE_BOOST_SERVICE_ID && data.service_id === CREATIVE_BOOST_SERVICE_ID) {
               const engagement = engagements.find(e => e.id === data.engagement_id);
               if (engagement) {
                 addClientToMonth(engagement.client_id, currentYear, currentMonth, {
@@ -1571,10 +1709,16 @@ function EngagementsContent() {
           setEndEngagementDialogOpen(open);
           if (!open) setEngagementToEnd(null);
         }}
-        onConfirm={(endDate) => {
+        onConfirm={(data) => {
           if (engagementToEnd) {
-            updateEngagement(engagementToEnd.id, { end_date: endDate });
-            toast.success(`Spolupráce bude ukončena k ${format(parseISO(endDate), 'd. MMMM yyyy', { locale: cs })}`);
+            // Save end_date and termination fields
+            updateEngagement(engagementToEnd.id, {
+              end_date: data.end_date,
+              termination_reason: data.termination_reason,
+              termination_initiated_by: data.termination_initiated_by,
+              termination_notes: data.termination_notes || null,
+            });
+            toast.success(`Spolupráce bude ukončena k ${format(parseISO(data.end_date), 'd. MMMM yyyy', { locale: cs })}`);
             setEngagementToEnd(null);
           }
         }}
@@ -1585,7 +1729,7 @@ function EngagementsContent() {
         <EngagementHistoryDialog
           open={isHistoryOpen}
           onOpenChange={setIsHistoryOpen}
-          history={getEngagementHistory(historyEngagement.id)}
+          engagementId={historyEngagement.id}
           engagementName={historyEngagement.name}
         />
       )}
@@ -1611,6 +1755,29 @@ function EngagementsContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Assignment Dialog */}
+      {editingAssignment && (
+        <EditAssignmentDialog
+          open={isEditAssignmentDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditAssignmentDialogOpen(open);
+            if (!open) setEditingAssignment(null);
+          }}
+          assignment={editingAssignment}
+          colleagueName={getColleagueById(editingAssignment.colleague_id)?.full_name || ''}
+          isCreativeBoostService={
+            CREATIVE_BOOST_SERVICE_ID && editingAssignment.engagement_service_id
+              ? engagementServices.find(es => es.id === editingAssignment.engagement_service_id)?.service_id === CREATIVE_BOOST_SERVICE_ID
+              : false
+          }
+          onSave={(data) => {
+            updateAssignment(editingAssignment.id, data);
+            toast.success('Odměna kolegy byla upravena');
+            setEditingAssignment(null);
+          }}
+        />
+      )}
     </div>
   );
 }
