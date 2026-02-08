@@ -210,8 +210,8 @@ function MyWorkContent() {
   const extraWorksForInvoice = myExtraWorks.map((ew) => {
     const client = clients.find(c => c.id === ew.client_id);
     return {
-      clientName: client?.brand_name || client?.name || 'Neznámý klient',
-      name: ew.name,
+      clientName: client?.brand_name || client?.name || 'Klient',
+      name: ew.name || 'Vícepráce',
       amount: ew.amount,
     };
   });
@@ -362,9 +362,10 @@ function MyWorkContent() {
                 </div>
                 {myExtraWorks.map((ew) => {
                   const client = clients.find(c => c.id === ew.client_id);
+                  const clientName = client?.brand_name || client?.name || 'Klient';
                   return (
                     <div key={ew.id} className="flex items-center justify-between py-1">
-                      <span className="text-sm truncate">{client?.brand_name || client?.name} – {ew.name}</span>
+                      <span className="text-sm truncate">{clientName} – {ew.name || 'Vícepráce'}</span>
                       <span className="font-medium">{ew.amount.toLocaleString()} Kč</span>
                     </div>
                   );

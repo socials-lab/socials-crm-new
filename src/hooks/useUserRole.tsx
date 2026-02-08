@@ -64,7 +64,14 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
           const data = roleData as Record<string, unknown>;
           setCanSeeFinancials((data.can_see_financials as boolean) || false);
           setCanEditAcademy((data.can_edit_academy as boolean) || false);
-          setAllowedPages((data.allowed_pages as string[]) || []);
+          // Extract allowed pages from page_permissions array
+          const pagePermissions = data.page_permissions as Array<{ page: string; can_view: boolean }> | null;
+          if (pagePermissions && Array.isArray(pagePermissions)) {
+            const pages = pagePermissions.filter(p => p.can_view).map(p => p.page);
+            setAllowedPages(pages);
+          } else {
+            setAllowedPages([]);
+          }
         } else {
           // User has no role assigned yet
           setRole(null);

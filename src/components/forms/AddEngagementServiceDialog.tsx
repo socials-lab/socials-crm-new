@@ -420,15 +420,15 @@ export function AddEngagementServiceDialog({
               </div>
               <div className="grid gap-2">
                 <Label className="text-sm text-muted-foreground">Prodal kolega</Label>
-                <Select 
-                  value={upsoldById || ''} 
-                  onValueChange={(val) => setUpsoldById(val || null)}
+                <Select
+                  value={upsoldById || '__none__'}
+                  onValueChange={(val) => setUpsoldById(val === '__none__' ? null : val)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Žádný upsell" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Žádný upsell</SelectItem>
+                    <SelectItem value="__none__">Žádný upsell</SelectItem>
                     {activeColleagues.map(col => (
                       <SelectItem key={col.id} value={col.id}>
                         {col.full_name}

@@ -298,17 +298,111 @@ export default function Analytics() {
       };
     }).sort((a, b) => b.count - a.count);
 
+    // Pipeline velocity - average days in each stage
+    const pipelineStages = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent'];
+    const pipelineVelocity = pipelineStages.map(stage => {
+      const stageLeads = leads.filter(l => l.stage === stage);
+      const totalDays = stageLeads.reduce((sum, l) => {
+        const created = new Date(l.created_at);
+        const updated = new Date(l.updated_at);
+        return sum + differenceInDays(updated, created);
+      }, 0);
+      return {
+        stage,
+        avgDays: stageLeads.length > 0 ? totalDays / stageLeads.length : 0,
+      };
+    });
+
+    // Source performance with extended metrics
+    const sourcePerformance = sources.map(source => {
+      const sourceLeads = leads.filter(l => l.source === source);
+      const convertedLeads = sourceLeads.filter(l => l.stage === 'won');
+      const totalValue = convertedLeads.reduce((sum, l) => sum + (l.estimated_price || 0), 0);
+      return {
+        source: SOURCE_LABELS[source] || source,
+        count: sourceLeads.length,
+        converted: convertedLeads.length,
+        conversionRate: sourceLeads.length > 0 ? (convertedLeads.length / sourceLeads.length) * 100 : 0,
+        avgDealSize: convertedLeads.length > 0 ? totalValue / convertedLeads.length : 0,
+      };
+    }).filter(s => s.count > 0).sort((a, b) => b.conversionRate - a.conversionRate);
+
+    // Owner performance with extended metrics
+    const ownerPerformance = ownerIds.map(ownerId => {
+      const colleague = colleagues.find(c => c.id === ownerId);
+      const ownerLeads = leads.filter(l => l.owner_id === ownerId);
+      const convertedLeads = ownerLeads.filter(l => l.stage === 'won');
+      return {
+        owner: colleague?.full_name || 'Neznámý',
+        count: ownerLeads.length,
+        converted: convertedLeads.length,
+        conversionRate: ownerLeads.length > 0 ? (convertedLeads.length / ownerLeads.length) * 100 : 0,
+      };
+    }).sort((a, b) => b.conversionRate - a.conversionRate);
+
+    // Monthly win/loss trends
+    const monthlyWinLoss = Array.from({ length: 12 }, (_, i) => {
+      const date = subMonths(periodStart, 11 - i);
+      const monthStart = startOfMonth(date);
+      const monthEnd = endOfMonth(date);
+
+      const won = leads.filter(l => {
+        if (l.stage !== 'won' || !l.converted_at) return false;
+        const convertedDate = new Date(l.converted_at);
+        return convertedDate >= monthStart && convertedDate <= monthEnd;
+      }).length;
+
+      const lost = leads.filter(l => {
+        if (l.stage !== 'lost') return false;
+        const updated = new Date(l.updated_at);
+        return updated >= monthStart && updated <= monthEnd;
+      }).length;
+
+      return {
+        month: format(date, 'MMM', { locale: cs }),
+        won,
+        lost,
+      };
+    });
+
+    // Won deals list
+    const wonDeals = wonLeads.map(l => {
+      const colleague = colleagues.find(c => c.id === l.owner_id);
+      return {
+        id: l.id,
+        companyName: l.company_name,
+        value: l.estimated_price || 0,
+        source: SOURCE_LABELS[l.source as keyof typeof SOURCE_LABELS] || l.source,
+        owner: colleague?.full_name || 'Neznámý',
+        conversionDays: l.converted_at ? differenceInDays(new Date(l.converted_at), new Date(l.created_at)) : 0,
+        convertedAt: l.converted_at || l.updated_at,
+      };
+    }).sort((a, b) => new Date(b.convertedAt).getTime() - new Date(a.convertedAt).getTime());
+
+    // Total won value and count
+    const totalWonValue = wonLeads.reduce((sum, l) => sum + (l.estimated_price || 0), 0);
+    const wonDealsCount = wonLeads.length;
+    const avgDealSize = wonDealsCount > 0 ? totalWonValue / wonDealsCount : 0;
+
     return {
       totalLeads: leads.length,
       newLeadsThisMonth: currentPeriodLeads.length,
       leadToClientRate,
       avgConversionDays,
       expectedValue,
+      avgDealSize,
       leadChange: currentPeriodLeads.length - prevPeriodLeads.length,
       leadTrend,
       funnelData,
       leadsBySource,
       leadsByOwner,
+      pipelineVelocity,
+      sourcePerformance,
+      ownerPerformance,
+      monthlyWinLoss,
+      wonDeals,
+      totalWonValue,
+      wonDealsCount,
     };
   }, [selectedYear, selectedMonth, leads, colleagues]);
 

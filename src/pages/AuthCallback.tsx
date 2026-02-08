@@ -147,9 +147,9 @@ export default function AuthCallback() {
           }
           
           if (verifyData.session) {
-            console.log('[AuthCallback] Token verified, session created, redirecting');
+            console.log('[AuthCallback] Token verified, session created, redirecting to profile');
             toast.success('Úspěšně přihlášeno!');
-            navigate('/');
+            navigate('/my-profile');
             return;
           }
         }
@@ -212,9 +212,9 @@ export default function AuthCallback() {
             console.log('[AuthCallback] Invited/new user, redirecting to dashboard');
           }
           
-          // Regular login, redirect to dashboard
+          // Redirect to profile so user can fill in their info
           toast.success('Úspěšně přihlášeno!');
-          navigate('/');
+          navigate('/my-profile');
         } else {
           // No session and no token - user needs to log in
           console.log('[AuthCallback] No session found, no tokens in URL');

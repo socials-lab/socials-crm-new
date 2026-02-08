@@ -12,6 +12,8 @@ const ROUTE_TO_PAGE: Record<string, string> = {
   '/clients': 'clients',
   '/contacts': 'contacts',
   '/engagements': 'engagements',
+  '/modifications': 'modifications',
+  '/upsells': 'upsells',
   '/extra-work': 'extra-work',
   '/creative-boost': 'creative-boost',
   '/meetings': 'meetings',
@@ -20,10 +22,13 @@ const ROUTE_TO_PAGE: Record<string, string> = {
   '/colleagues': 'colleagues',
   '/recruitment': 'recruitment',
   '/feedback': 'feedback',
+  '/academy': 'academy',
   '/analytics': 'analytics',
   '/settings': 'settings',
-  '/notifications': 'notifications',
 };
+
+// Pages that are always accessible (don't require permission)
+const ALWAYS_ACCESSIBLE = ['/my-profile'];
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -59,18 +64,23 @@ export function RouteGuard({ children }: RouteGuardProps) {
     return <>{children}</>;
   }
 
+  // Always accessible pages don't need permission checks
+  if (ALWAYS_ACCESSIBLE.includes(currentPath)) {
+    return <>{children}</>;
+  }
+
   // Special handling for /my-work - requires colleague_id
   if (currentPath === '/my-work') {
     if (!colleagueId) {
-      return <Navigate to="/" replace />;
+      return <Navigate to="/my-profile" replace />;
     }
   }
 
   // Check page access based on allowed_pages
   const pageId = ROUTE_TO_PAGE[currentPath];
   if (pageId && !canAccessPage(pageId)) {
-    // Redirect to dashboard if no access to this page
-    return <Navigate to="/" replace />;
+    // Redirect to my-profile if no access (avoids loop if dashboard is also blocked)
+    return <Navigate to="/my-profile" replace />;
   }
 
   return <>{children}</>;
