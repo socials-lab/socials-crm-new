@@ -348,13 +348,32 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Debounce invalidations to prevent cascading updates on reconnect
+    const pendingInvalidations = new Set<string>();
+    let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const debouncedInvalidate = (queryKeys: string[]) => {
+      // Only process if document is visible (prevents background tab updates)
+      if (document.hidden) return;
+
+      queryKeys.forEach(key => pendingInvalidations.add(key));
+
+      if (debounceTimeout) clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => {
+        pendingInvalidations.forEach(key => {
+          queryClient.invalidateQueries({ queryKey: [key] });
+        });
+        pendingInvalidations.clear();
+      }, 500); // Wait 500ms before invalidating to batch updates
+    };
+
     // Subscribe to client_contacts changes
     const contactsChannel = supabase
       .channel('client_contacts_realtime')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'client_contacts' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
+          debouncedInvalidate(['client_contacts']);
         }
       )
       .subscribe((status, err) => {
@@ -369,9 +388,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'clients' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['clients'] });
-          // Also refresh contacts since they filter by client deleted_at
-          queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
+          debouncedInvalidate(['clients', 'client_contacts']);
         }
       )
       .subscribe((status, err) => {
@@ -386,8 +403,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'engagements' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['engagements'] });
-          queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+          debouncedInvalidate(['engagements', 'engagement_history']);
         }
       )
       .subscribe((status, err) => {
@@ -402,7 +418,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'engagement_services' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
+          debouncedInvalidate(['engagement_services']);
         }
       )
       .subscribe((status, err) => {
@@ -417,7 +433,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'engagement_assignments' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
+          debouncedInvalidate(['engagement_assignments']);
         }
       )
       .subscribe((status, err) => {
@@ -427,6 +443,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       });
 
     return () => {
+      if (debounceTimeout) clearTimeout(debounceTimeout);
       supabase.removeChannel(contactsChannel);
       supabase.removeChannel(clientsChannel);
       supabase.removeChannel(engagementsChannel);
@@ -1364,8 +1381,23 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     oneOffServiceIds: string[],
     creativeBoostClientMonthIds: string[] = []
   ): Promise<IssuedInvoice> => {
-    // Generate invoice number
-    const invoiceNumber = getNextInvoiceNumber(invoice.year);
+    // Generate invoice number - fetch fresh from database to avoid duplicates
+    const { data: latestInvoices, error: fetchError } = await supabase
+      .from('issued_invoices')
+      .select('invoice_number')
+      .eq('year', invoice.year)
+      .order('invoice_number', { ascending: false })
+      .limit(10);
+
+    if (fetchError) throw fetchError;
+
+    let maxNumber = 0;
+    (latestInvoices || []).forEach(inv => {
+      const match = inv.invoice_number.match(/FV-\d{4}-(\d+)/);
+      const num = match ? parseInt(match[1], 10) : 0;
+      maxNumber = Math.max(maxNumber, num);
+    });
+    const invoiceNumber = `FV-${invoice.year}-${String(maxNumber + 1).padStart(3, '0')}`;
     
     // Get current user for issued_by
     const { data: { user } } = await supabase.auth.getUser();

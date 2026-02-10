@@ -21,8 +21,6 @@ const LEAD_FIELD_LABELS: Record<string, string> = {
   client_message: 'Zpráva od klienta',
   ad_spend_monthly: 'Měsíční investice do reklamy',
   summary: 'Shrnutí',
-  potential_service: 'Potenciální služba',
-  offer_type: 'Typ nabídky',
   estimated_price: 'Odhadovaná cena',
   probability_percent: 'Pravděpodobnost',
   offer_url: 'URL nabídky',
@@ -52,24 +50,24 @@ interface LeadsDataContextType {
   leads: Lead[];
   leadHistory: LeadHistoryEntry[];
   isLoading: boolean;
-  
+
   // CRUD operations
   addLead: (data: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'notes' | 'converted_to_client_id' | 'converted_to_engagement_id' | 'converted_at'>) => Promise<Lead>;
   updateLead: (id: string, data: Partial<Lead>) => Promise<void>;
   deleteLead: (id: string) => Promise<void>;
-  
+
   // Stage management
   updateLeadStage: (id: string, stage: LeadStage) => Promise<void>;
-  
+
   // Notes
   addNote: (leadId: string, text: string) => Promise<void>;
-  
+
   // Helpers
   getLeadById: (id: string) => Lead | undefined;
   getLeadsByStage: (stage: LeadStage) => Lead[];
   getLeadsByOwner: (ownerId: string) => Lead[];
   getLeadHistory: (leadId: string) => LeadHistoryEntry[];
-  
+
   // Conversion
   markLeadAsConverted: (leadId: string, clientId: string, engagementId: string) => Promise<void>;
 }
@@ -78,87 +76,69 @@ const LeadsDataContext = createContext<LeadsDataContextType | null>(null);
 
 export function LeadsDataProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const [leadHistory, setLeadHistory] = useState<LeadHistoryEntry[]>([]);
 
-  const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const now = () => new Date().toISOString();
 
   // Fetch leads from Supabase
-  const { data: leads = [], isLoading } = useQuery({
+  const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from('leads').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      // Transform leads to include notes array and mock conversion data
-      return (data || []).map((lead: any) => {
-        // Mock conversion data for TestBrand client demo
-        if (lead.id === '20000000-0000-0000-0000-000000000001') {
-          return {
-            ...lead,
-            notes: [],
-            stage: 'won' as const,
-            potential_services: lead.potential_services || [],
-            access_request_platforms: lead.access_request_platforms || [],
-            // Conversion links
-            converted_to_client_id: 'c0000000-0000-0000-0000-000000000001',
-            converted_to_engagement_id: 'e0000000-0000-0000-0000-000000000001',
-            converted_at: '2025-01-01T10:00:00Z',
-            // Onboarding form data
-            onboarding_form_sent_at: '2024-12-27T09:00:00Z',
-            onboarding_form_completed_at: '2024-12-28T14:30:00Z',
-            billing_street: 'Vinohradská 123',
-            billing_city: 'Praha',
-            billing_zip: '120 00',
-            billing_country: 'Česká republika',
-            billing_email: 'fakturace@potentialclient.cz',
-            // Offer
-            offer_sent_at: '2024-12-20T11:00:00Z',
-            // Contract
-            contract_url: 'https://digisign.example.com/contract/abc123',
-            contract_created_at: '2024-12-29T08:00:00Z',
-            contract_sent_at: '2024-12-29T09:00:00Z',
-            contract_signed_at: '2024-12-30T15:00:00Z',
-            // Notes
-            summary: 'Klient hledá komplexní správu sociálních sítí a kreativní výstupy. Měsíční budget na reklamu cca 50 000 CZK.',
-            client_message: 'Máme zájem o dlouhodobou spolupráci na správě našich sociálních sítí. Rádi bychom začali od února.',
-          };
-        }
-        return {
-          ...lead,
-          notes: [],
-          stage: lead.stage || 'new_lead',
-          potential_services: lead.potential_services || [],
-          access_request_platforms: lead.access_request_platforms || [],
-          qualification_status: lead.qualification_status || 'pending',
-          qualification_reason: lead.qualification_reason || null,
-          qualified_at: lead.qualified_at || null,
-        };
-      });
+      // Transform leads - notes is JSONB array, ensure it's always an array
+      return (data || []).map((lead: Record<string, unknown>) => ({
+        ...lead,
+        notes: Array.isArray(lead.notes) ? lead.notes : [],
+        stage: lead.stage || 'new_lead',
+        potential_services: Array.isArray(lead.potential_services) ? lead.potential_services : [],
+        access_request_platforms: Array.isArray(lead.access_request_platforms) ? lead.access_request_platforms : [],
+      }));
     },
   });
 
-  // Add history entry helper (local state for now)
-  const addHistoryEntry = useCallback((
+  // Fetch lead history from Supabase
+  const { data: leadHistory = [], isLoading: historyLoading } = useQuery({
+    queryKey: ['lead_history'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lead_history')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map((entry: Record<string, unknown>) => ({
+        ...entry,
+        field_label: entry.field_label || (entry.field_name ? LEAD_FIELD_LABELS[entry.field_name as string] || entry.field_name : null),
+      }));
+    },
+  });
+
+  const isLoading = leadsLoading || historyLoading;
+
+  // Add history entry helper - uses database function
+  const addHistoryEntry = useCallback(async (
     leadId: string,
     changeType: LeadChangeType,
-    fieldName: string | null,
-    oldValue: string | null,
-    newValue: string | null
+    fieldName: string | null = null,
+    fieldLabel: string | null = null,
+    oldValue: string | null = null,
+    newValue: string | null = null
   ) => {
-    const entry: LeadHistoryEntry = {
-      id: generateId('lh'),
-      lead_id: leadId,
-      change_type: changeType,
-      field_name: fieldName,
-      field_label: fieldName ? LEAD_FIELD_LABELS[fieldName] || fieldName : null,
-      old_value: oldValue,
-      new_value: newValue,
-      changed_by: '',
-      changed_by_name: 'User',
-      created_at: now(),
-    };
-    setLeadHistory(prev => [entry, ...prev]);
-  }, []);
+    const { error } = await supabase.rpc('log_lead_change', {
+      _lead_id: leadId,
+      _change_type: changeType,
+      _field_name: fieldName,
+      _field_label: fieldLabel || (fieldName ? LEAD_FIELD_LABELS[fieldName] || fieldName : null),
+      _old_value: oldValue,
+      _new_value: newValue,
+    });
+
+    if (error) {
+      console.error('Error logging lead change:', error);
+      // Don't throw - history logging shouldn't break the main operation
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['lead_history'] });
+    }
+  }, [queryClient]);
 
   // Mutations
   const addLeadMutation = useMutation({
@@ -166,23 +146,34 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       const insertData = {
         ...data,
         notes: [],
+        potential_services: data.potential_services || [],
+        access_request_platforms: data.access_request_platforms || [],
         converted_to_client_id: null,
         converted_to_engagement_id: null,
         converted_at: null,
       };
-      const { data: result, error } = await (supabase as any).from('leads').insert(insertData).select().single();
+      const { data: result, error } = await supabase.from('leads').insert(insertData).select().single();
       if (error) throw error;
-      return { ...result, notes: [] };
+      const newLead = {
+        ...result,
+        notes: Array.isArray(result.notes) ? result.notes : [],
+        potential_services: Array.isArray(result.potential_services) ? result.potential_services : [],
+        access_request_platforms: Array.isArray(result.access_request_platforms) ? result.access_request_platforms : [],
+      };
+
+      // Log creation in history
+      await addHistoryEntry(newLead.id, 'created', null, null, null, newLead.company_name);
+
+      return newLead;
     },
-    onSuccess: (newLead) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      addHistoryEntry(newLead.id, 'created', null, null, newLead.company_name);
     },
   });
 
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Lead> }) => {
-      const { error } = await (supabase as any).from('leads').update({
+      const { error } = await supabase.from('leads').update({
         ...data,
         updated_at: now(),
       }).eq('id', id);
@@ -193,7 +184,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from('leads').delete().eq('id', id);
+      const { error } = await supabase.from('leads').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
@@ -206,21 +197,26 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   const updateLead = useCallback(async (id: string, data: Partial<Lead>) => {
     const lead = leads.find(l => l.id === id);
     if (!lead) return;
-    
-    // Log field changes
+
+    // Log field changes before updating
+    const historyPromises: Promise<void>[] = [];
     Object.keys(data).forEach(key => {
-      if (key === 'updated_at' || key === 'updated_by') return;
-      const oldVal = String((lead as any)[key] ?? '');
-      const newVal = String((data as any)[key] ?? '');
+      if (key === 'updated_at' || key === 'updated_by' || key === 'notes') return;
+      const oldVal = String((lead as Record<string, unknown>)[key] ?? '');
+      const newVal = String((data as Record<string, unknown>)[key] ?? '');
       if (oldVal !== newVal) {
+        const fieldLabel = LEAD_FIELD_LABELS[key] || key;
         if (key === 'owner_id') {
-          addHistoryEntry(id, 'owner_change', key, oldVal, newVal);
+          historyPromises.push(addHistoryEntry(id, 'owner_change', key, fieldLabel, oldVal, newVal));
         } else {
-          addHistoryEntry(id, 'field_update', key, oldVal, newVal);
+          historyPromises.push(addHistoryEntry(id, 'field_update', key, fieldLabel, oldVal, newVal));
         }
       }
     });
-    
+
+    // Wait for history entries to be logged (non-blocking)
+    Promise.all(historyPromises).then(() => {}).catch(e => console.error('History logging error:', e));
+
     await updateLeadMutation.mutateAsync({ id, data });
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
@@ -231,37 +227,71 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   const updateLeadStage = useCallback(async (id: string, stage: LeadStage) => {
     const lead = leads.find(l => l.id === id);
     if (!lead) return;
-    
+
     const oldStageLabel = STAGE_LABELS[lead.stage];
     const newStageLabel = STAGE_LABELS[stage];
-    
-    addHistoryEntry(id, 'stage_change', 'stage', oldStageLabel, newStageLabel);
-    
+
+    // Log stage change
+    await addHistoryEntry(id, 'stage_change', 'stage', LEAD_FIELD_LABELS.stage || 'Stav', oldStageLabel, newStageLabel);
+
     await updateLeadMutation.mutateAsync({ id, data: { stage } });
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
   const addNote = useCallback(async (leadId: string, text: string) => {
-    // For now, notes are stored in lead history (will be proper table later)
-    addHistoryEntry(leadId, 'note_added', null, null, text.substring(0, 100) + (text.length > 100 ? '...' : ''));
-    
-    // Update lead's updated_at
-    await updateLeadMutation.mutateAsync({ id: leadId, data: {} });
-  }, [updateLeadMutation, addHistoryEntry]);
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    // Get current user info for note
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+
+    const authorName = profile?.full_name || user.email || 'Unknown';
+
+    // Create note object
+    const newNote: LeadNote = {
+      id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      lead_id: leadId,
+      author_id: user.id,
+      author_name: authorName,
+      text,
+      created_at: now(),
+    };
+
+    // Append to notes JSONB array
+    const currentNotes = Array.isArray(lead.notes) ? lead.notes : [];
+    const updatedNotes = [...currentNotes, newNote];
+
+    // Update lead with new notes array
+    await updateLeadMutation.mutateAsync({
+      id: leadId,
+      data: { notes: updatedNotes }
+    });
+
+    // Log note addition in history
+    await addHistoryEntry(leadId, 'note_added', null, null, null, `Přidána poznámka: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
+  }, [leads, updateLeadMutation, addHistoryEntry]);
 
   const getLeadById = useCallback((id: string) => leads.find(l => l.id === id), [leads]);
-  
-  const getLeadsByStage = useCallback((stage: LeadStage) => 
+
+  const getLeadsByStage = useCallback((stage: LeadStage) =>
     leads.filter(l => l.stage === stage), [leads]);
-  
-  const getLeadsByOwner = useCallback((ownerId: string) => 
+
+  const getLeadsByOwner = useCallback((ownerId: string) =>
     leads.filter(l => l.owner_id === ownerId), [leads]);
 
-  const getLeadHistory = useCallback((leadId: string) => 
+  const getLeadHistory = useCallback((leadId: string) =>
     leadHistory.filter(h => h.lead_id === leadId), [leadHistory]);
 
   const markLeadAsConverted = useCallback(async (leadId: string, clientId: string, engagementId: string) => {
-    addHistoryEntry(leadId, 'converted', null, null, 'Převedeno na zakázku');
-    
+    // Log conversion in history
+    await addHistoryEntry(leadId, 'converted', null, null, null, `Převedeno na klienta a zakázku`);
+
     await updateLeadMutation.mutateAsync({
       id: leadId,
       data: {

@@ -1,17 +1,16 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useCRMData } from '@/hooks/useCRMData';
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { toast } from 'sonner';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
-const STORAGE_KEY = 'upsell_commission_approvals';
-
-interface ApprovalData {
-  approved: boolean;
-  approvedAt: string;
-  approvedBy: string;
-}
-
-interface ApprovalStore {
-  [key: string]: ApprovalData;
+interface UpsellApproval {
+  id: string;
+  item_type: 'extra_work' | 'service';
+  item_id: string;
+  approved_at: string;
+  approved_by: string;
 }
 
 export interface UpsellItem {
@@ -33,67 +32,103 @@ export interface UpsellItem {
   approvedAt: string | null;
   approvedBy: string | null;
   createdAt: string;
-  isOneOff?: boolean; // For distinguishing one-off vs monthly services
+  isOneOff?: boolean;
 }
 
-const getStorageKey = (type: 'extra_work' | 'service', id: string) => `${type}_${id}`;
-
-const getApprovals = (): ApprovalStore => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
-};
-
-const saveApprovals = (approvals: ApprovalStore) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(approvals));
-};
-
 export function useUpsellApprovals() {
-  const { 
-    extraWorks, 
-    engagementServices, 
-    engagements, 
-    clients, 
-    colleagues,
+  const queryClient = useQueryClient();
+  const {
+    extraWorks,
+    engagementServices,
     getClientById,
     getEngagementById,
     getColleagueById,
   } = useCRMData();
-  
-  const [version, setVersion] = useState(0);
-  const forceUpdate = useCallback(() => setVersion(v => v + 1), []);
+
+  // Fetch all approvals from Supabase
+  const { data: approvals = [] } = useQuery({
+    queryKey: ['upsell_approvals'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('upsell_approvals')
+        .select('*');
+      if (error) throw error;
+      return (data || []) as UpsellApproval[];
+    },
+  });
+
+  // Create a map for fast lookups
+  const approvalsMap = useMemo(() => {
+    const map = new Map<string, UpsellApproval>();
+    approvals.forEach(a => {
+      map.set(`${a.item_type}_${a.item_id}`, a);
+    });
+    return map;
+  }, [approvals]);
+
+  // Approve mutation
+  const approveMutation = useMutation({
+    mutationFn: async ({ itemType, itemId, approvedBy }: { itemType: 'extra_work' | 'service'; itemId: string; approvedBy: string }) => {
+      const { error } = await supabase
+        .from('upsell_approvals')
+        .insert({
+          item_type: itemType,
+          item_id: itemId,
+          approved_by: approvedBy,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['upsell_approvals'] });
+      toast.success('Provize byla schválena');
+    },
+    onError: (error) => {
+      console.error('Failed to approve commission:', error);
+      toast.error('Nepodařilo se schválit provizi');
+    },
+  });
+
+  // Revoke mutation
+  const revokeMutation = useMutation({
+    mutationFn: async ({ itemType, itemId }: { itemType: 'extra_work' | 'service'; itemId: string }) => {
+      const { error } = await supabase
+        .from('upsell_approvals')
+        .delete()
+        .eq('item_type', itemType)
+        .eq('item_id', itemId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['upsell_approvals'] });
+      toast.success('Schválení bylo zrušeno');
+    },
+    onError: (error) => {
+      console.error('Failed to revoke approval:', error);
+      toast.error('Nepodařilo se zrušit schválení');
+    },
+  });
 
   // Get approval status for an item
-  const getApprovalStatus = useCallback((type: 'extra_work' | 'service', id: string): ApprovalData | null => {
-    const approvals = getApprovals();
-    const key = getStorageKey(type, id);
-    return approvals[key] || null;
-  }, [version]);
+  const getApprovalStatus = useCallback((type: 'extra_work' | 'service', id: string) => {
+    const key = `${type}_${id}`;
+    const approval = approvalsMap.get(key);
+    if (!approval) return null;
+    return {
+      approved: true,
+      approvedAt: approval.approved_at,
+      approvedBy: approval.approved_by,
+    };
+  }, [approvalsMap]);
 
   // Approve a commission
   const approveCommission = useCallback((type: 'extra_work' | 'service', id: string, approvedBy: string) => {
-    const approvals = getApprovals();
-    const key = getStorageKey(type, id);
-    approvals[key] = {
-      approved: true,
-      approvedAt: new Date().toISOString(),
-      approvedBy,
-    };
-    saveApprovals(approvals);
-    forceUpdate();
-  }, [forceUpdate]);
+    return approveMutation.mutateAsync({ itemType: type, itemId: id, approvedBy });
+  }, [approveMutation]);
 
   // Revoke approval
   const revokeApproval = useCallback((type: 'extra_work' | 'service', id: string) => {
-    const approvals = getApprovals();
-    const key = getStorageKey(type, id);
-    delete approvals[key];
-    saveApprovals(approvals);
-    forceUpdate();
-  }, [forceUpdate]);
+    return revokeMutation.mutateAsync({ itemType: type, itemId: id });
+  }, [revokeMutation]);
 
   // Get all upsells for a specific month
   const getUpsellsForMonth = useCallback((year: number, month: number): UpsellItem[] => {
@@ -104,14 +139,14 @@ export function useUpsellApprovals() {
     // Get extra works with upsold_by_id in this month
     extraWorks.forEach(ew => {
       if (!ew.upsold_by_id || !ew.upsell_commission_percent) return;
-      
+
       const workDate = parseISO(ew.work_date);
       if (!isWithinInterval(workDate, { start: monthStart, end: monthEnd })) return;
 
       const engagement = getEngagementById(ew.engagement_id);
       const client = getClientById(ew.client_id);
       const seller = getColleagueById(ew.upsold_by_id);
-      
+
       if (!client) return;
 
       const approval = getApprovalStatus('extra_work', ew.id);
@@ -140,55 +175,45 @@ export function useUpsellApprovals() {
     });
 
     // Get engagement services with upsold_by_id
-    // For monthly services with mid-month start (effective_from), commission is in the NEXT full month
-    // For one-off services, commission is immediate based on the creation date
     engagementServices.forEach(es => {
       if (!es.upsold_by_id || !es.upsell_commission_percent) return;
 
       const engagement = getEngagementById(es.engagement_id);
       if (!engagement) return;
-      
+
       const client = getClientById(engagement.client_id);
       const seller = getColleagueById(es.upsold_by_id);
-      
+
       if (!client) return;
 
       // Determine when commission should be counted
       let commissionDate: Date;
       const isOneOff = es.billing_type === 'one_off';
-      
+
       if (isOneOff) {
-        // One-off: commission is immediate (based on creation date)
         commissionDate = parseISO(es.created_at);
       } else if (es.effective_from) {
-        // Monthly with effective_from: commission is in the first FULL month
         const effectiveDate = parseISO(es.effective_from);
         const dayOfMonth = effectiveDate.getDate();
-        
+
         if (dayOfMonth === 1) {
-          // Starts on 1st - commission in the same month
           commissionDate = effectiveDate;
         } else {
-          // Starts mid-month - commission in the NEXT month (first full month)
           commissionDate = new Date(effectiveDate.getFullYear(), effectiveDate.getMonth() + 1, 1);
         }
       } else {
-        // No effective_from - use creation date
         commissionDate = parseISO(es.created_at);
       }
 
-      // Check if this commission belongs to the requested month
       if (!isWithinInterval(commissionDate, { start: monthStart, end: monthEnd })) return;
 
       const approval = getApprovalStatus('service', es.id);
-      
-      // Calculate amount - always use FULL price (not prorated)
-      // For Creative Boost use max_credits * price_per_credit
+
       let amount = es.price;
       if (es.creative_boost_max_credits && es.creative_boost_price_per_credit) {
         amount = es.creative_boost_max_credits * es.creative_boost_price_per_credit;
       }
-      
+
       const commissionAmount = amount * (es.upsell_commission_percent / 100);
 
       results.push({
@@ -214,22 +239,19 @@ export function useUpsellApprovals() {
       });
     });
 
-    // Sort by created_at descending
     return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [extraWorks, engagementServices, getClientById, getEngagementById, getColleagueById, getApprovalStatus, version]);
+  }, [extraWorks, engagementServices, getClientById, getEngagementById, getColleagueById, getApprovalStatus]);
 
   // Get approved commissions for a specific colleague
   const getApprovedCommissionsForColleague = useCallback((colleagueId: string, year?: number, month?: number): UpsellItem[] => {
     const allUpsells: UpsellItem[] = [];
-    
-    // Get all extra works and services with upsold_by matching colleagueId
+
     extraWorks.forEach(ew => {
       if (ew.upsold_by_id !== colleagueId || !ew.upsell_commission_percent) return;
-      
+
       const approval = getApprovalStatus('extra_work', ew.id);
       if (!approval?.approved) return;
 
-      // Filter by month if specified
       if (year && month) {
         const workDate = parseISO(ew.work_date);
         const monthStart = startOfMonth(new Date(year, month - 1));
@@ -240,7 +262,7 @@ export function useUpsellApprovals() {
       const engagement = getEngagementById(ew.engagement_id);
       const client = getClientById(ew.client_id);
       const seller = getColleagueById(ew.upsold_by_id);
-      
+
       if (!client) return;
 
       const commissionAmount = ew.amount * (ew.upsell_commission_percent / 100);
@@ -269,28 +291,27 @@ export function useUpsellApprovals() {
 
     engagementServices.forEach(es => {
       if (es.upsold_by_id !== colleagueId || !es.upsell_commission_percent) return;
-      
+
       const approval = getApprovalStatus('service', es.id);
       if (!approval?.approved) return;
 
       const engagement = getEngagementById(es.engagement_id);
       if (!engagement) return;
-      
+
       const client = getClientById(engagement.client_id);
       const seller = getColleagueById(es.upsold_by_id);
-      
+
       if (!client) return;
 
-      // Determine when commission should be counted (same logic as getUpsellsForMonth)
       const isOneOff = es.billing_type === 'one_off';
       let commissionDate: Date;
-      
+
       if (isOneOff) {
         commissionDate = parseISO(es.created_at);
       } else if (es.effective_from) {
         const effectiveDate = parseISO(es.effective_from);
         const dayOfMonth = effectiveDate.getDate();
-        
+
         if (dayOfMonth === 1) {
           commissionDate = effectiveDate;
         } else {
@@ -300,7 +321,6 @@ export function useUpsellApprovals() {
         commissionDate = parseISO(es.created_at);
       }
 
-      // Filter by month if specified
       if (year && month) {
         const monthStart = startOfMonth(new Date(year, month - 1));
         const monthEnd = endOfMonth(new Date(year, month - 1));
@@ -311,7 +331,7 @@ export function useUpsellApprovals() {
       if (es.creative_boost_max_credits && es.creative_boost_price_per_credit) {
         amount = es.creative_boost_max_credits * es.creative_boost_price_per_credit;
       }
-      
+
       const commissionAmount = amount * (es.upsell_commission_percent / 100);
 
       allUpsells.push({
@@ -338,7 +358,7 @@ export function useUpsellApprovals() {
     });
 
     return allUpsells.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [extraWorks, engagementServices, getClientById, getEngagementById, getColleagueById, getApprovalStatus, version]);
+  }, [extraWorks, engagementServices, getClientById, getEngagementById, getColleagueById, getApprovalStatus]);
 
   return {
     getApprovalStatus,

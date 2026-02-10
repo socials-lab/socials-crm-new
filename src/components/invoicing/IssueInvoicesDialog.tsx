@@ -79,6 +79,7 @@ export function IssueInvoicesDialog({
     const issuedInvoiceInfos: IssuedInvoiceInfo[] = [];
     let fakturoidFailures = 0;
 
+    try {
     for (let i = 0; i < invoices.length; i++) {
       const invoice = invoices[i];
       const client = getClientById(invoice.client_id);
@@ -161,6 +162,29 @@ export function IssueInvoicesDialog({
         fakturoid_url: fakturoidUrl,
         fakturoid_failed: fakturoidFailed,
       });
+    }
+    } catch (error: unknown) {
+      console.error('Failed to issue invoices:', error);
+      setIsSubmitting(false);
+
+      // Check for duplicate key error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isDuplicateKey = errorMessage.includes('duplicate key') || errorMessage.includes('23505');
+
+      if (isDuplicateKey) {
+        toast({
+          title: 'Duplicitní číslo faktury',
+          description: 'Číslo faktury již existuje. Obnovte stránku a zkuste to znovu.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Chyba při vystavování faktur',
+          description: errorMessage || 'Nepodařilo se vystavit faktury.',
+          variant: 'destructive',
+        });
+      }
+      return;
     }
 
     setIsSubmitting(false);

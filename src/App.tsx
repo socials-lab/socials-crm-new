@@ -42,7 +42,18 @@ import Modifications from "./pages/Modifications";
 import Upsells from "./pages/Upsells";
 import Academy from "./pages/Academy";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep unused data in cache for 10 minutes
+      refetchOnWindowFocus: false, // Don't refetch when switching tabs back
+      refetchOnReconnect: true, // Do refetch when network reconnects
+      retry: 2, // Retry failed requests twice
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

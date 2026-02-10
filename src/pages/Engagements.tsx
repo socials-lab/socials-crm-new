@@ -59,8 +59,10 @@ import { EngagementInvoicingSection } from '@/components/engagements/EngagementI
 import { EndEngagementDialog } from '@/components/engagements/EndEngagementDialog';
 import { EngagementHistoryDialog } from '@/components/engagements/EngagementHistoryDialog';
 import { EditAssignmentDialog } from '@/components/engagements/EditAssignmentDialog';
-import { getRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
 import { serviceTierConfigs } from '@/constants/services';
+
+// Default reward per credit when not configured in assignment
+const DEFAULT_REWARD_PER_CREDIT = 80;
 import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier } from '@/types/crm';
 import { ADVERTISING_PLATFORMS } from '@/types/crm';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -1008,8 +1010,8 @@ function EngagementsContent() {
                                       <span>
                                         {(() => {
                                           // Check if this is a Creative Boost assignment with per-credit reward
-                                          const perCreditReward = getRewardPerCredit(assignment.id);
-                                          const hasPerCreditReward = perCreditReward !== 80 || (CREATIVE_BOOST_SERVICE_ID && assignment.engagement_service_id && engagementServices.find(es => es.id === assignment.engagement_service_id && es.service_id === CREATIVE_BOOST_SERVICE_ID));
+                                          const perCreditReward = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+                                          const hasPerCreditReward = assignment.reward_per_credit !== null || (CREATIVE_BOOST_SERVICE_ID && assignment.engagement_service_id && engagementServices.find(es => es.id === assignment.engagement_service_id && es.service_id === CREATIVE_BOOST_SERVICE_ID));
 
                                           if (hasPerCreditReward && assignment.engagement_service_id) {
                                             const service = engagementServices.find(es => es.id === assignment.engagement_service_id);

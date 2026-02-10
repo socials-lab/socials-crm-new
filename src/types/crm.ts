@@ -348,6 +348,7 @@ export interface EngagementAssignment {
   hourly_cost: number | null;
   monthly_cost: number | null;
   percentage_of_revenue: number | null;
+  reward_per_credit: number | null;
   start_date: string;
   end_date: string | null;
   notes: string;

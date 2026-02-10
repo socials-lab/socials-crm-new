@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useUpsellApprovals, UpsellItem } from '@/hooks/useUpsellApprovals';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 interface UpsellSummaryCardProps {
@@ -16,8 +15,7 @@ interface UpsellSummaryCardProps {
 }
 
 export function UpsellSummaryCard({ className }: UpsellSummaryCardProps) {
-  const { user } = useAuth();
-  const { isSuperAdmin, role } = useUserRole();
+  const { isSuperAdmin, role, colleagueId } = useUserRole();
   const { getUpsellsForMonth, approveCommission } = useUpsellApprovals();
   
   const currentDate = new Date();
@@ -56,8 +54,8 @@ export function UpsellSummaryCard({ className }: UpsellSummaryCardProps) {
   const capitalizedMonthLabel = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
 
   const handleApprove = (item: UpsellItem) => {
-    if (!user?.id) return;
-    approveCommission(item.type, item.id, user.id);
+    if (!colleagueId) return;
+    approveCommission(item.type, item.id, colleagueId);
   };
 
   const formatDate = (dateStr: string) => {

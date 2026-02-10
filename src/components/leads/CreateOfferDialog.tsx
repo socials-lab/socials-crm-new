@@ -14,12 +14,12 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Copy, ExternalLink, Check } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
-import { addPublicOffer } from '@/data/publicOffersMockData';
+import { supabase } from '@/integrations/supabase/client';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
-import { mergeWithDefaults } from '@/constants/serviceDefaults';
 
 interface CreateOfferDialogProps {
   open: boolean;
@@ -29,12 +29,18 @@ interface CreateOfferDialogProps {
 }
 
 function generateToken(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 12; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  // Use cryptographically secure random values
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function getOfferTypeFromServices(services: Array<{ billing_type: 'monthly' | 'one_off' }>): 'retainer' | 'one_off' {
+  if (!services?.length) return 'retainer';
+  const hasMonthly = services.some(s => s.billing_type === 'monthly');
+  const hasOneOff = services.some(s => s.billing_type === 'one_off');
+  if (hasMonthly && hasOneOff) return 'retainer'; // Mixed: default to retainer
+  return hasMonthly ? 'retainer' : 'one_off';
 }
 
 // Default portfolio links that can be added
@@ -46,6 +52,7 @@ const DEFAULT_PORTFOLIO_OPTIONS: Omit<PortfolioLink, 'id'>[] = [
 
 export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: CreateOfferDialogProps) {
   const { services, colleagues } = useCRMData();
+  const { colleagueId } = useUserRole();
   const [auditSummary, setAuditSummary] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [notionUrl, setNotionUrl] = useState('');
@@ -56,24 +63,19 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const [isCreating, setIsCreating] = useState(false);
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  
+
   // Editable services state
   const [editableServices, setEditableServices] = useState<PublicOfferService[]>([]);
 
-  // Get current user's colleague record
-  const currentColleague = colleagues.find(c => c.status === 'active');
+  // Get current user's colleague record (the logged-in user)
+  const currentColleague = colleagueId ? colleagues.find(c => c.id === colleagueId) : null;
 
   // Initialize editable services when dialog opens
   useEffect(() => {
     if (open && lead.potential_services) {
       const initialServices: PublicOfferService[] = lead.potential_services.map(ls => {
         const serviceDetails = services.find(s => s.id === ls.service_id);
-        
-        // Get deliverables from service defaults or use intelligent fallbacks
-        const deliverables = serviceDetails?.default_deliverables?.length 
-          ? serviceDetails.default_deliverables 
-          : mergeWithDefaults(ls.name, null, null, null, null).deliverables;
-        
+
         return {
           id: ls.id,
           service_id: ls.service_id,
@@ -88,8 +90,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           billing_type: ls.billing_type,
           // Pass service_type from service definition
           service_type: serviceDetails?.service_type,
-          // Pre-fill with deliverables from DB or intelligent fallbacks
-          deliverables,
+          // Use DB deliverables or empty array (no magic fallbacks)
+          deliverables: serviceDetails?.default_deliverables || [],
           frequency: '',
           turnaround: '',
           requirements: [],
@@ -115,7 +117,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   }, [editableServices]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
-    setEditableServices(prev => 
+    setEditableServices(prev =>
       prev.map((s, i) => i === index ? updated : s)
     );
   };
@@ -123,6 +125,13 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const handleRemoveService = (index: number) => {
     setEditableServices(prev => prev.filter((_, i) => i !== index));
   };
+
+  // Default valid_until to 14 days from now
+  const defaultValidUntil = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 14);
+    return date.toISOString().split('T')[0];
+  }, []);
 
   const handleCreate = async () => {
     if (editableServices.length === 0) {
@@ -135,50 +144,49 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     try {
       const token = generateToken();
       const offerUrl = `${window.location.origin}/offer/${token}`;
-      const now = new Date().toISOString();
 
       // Find lead owner for contact info
       const leadOwner = colleagues.find(c => c.id === lead.owner_id);
 
-      // Create offer object for mock store
-      const newOffer: PublicOffer = {
-        id: crypto.randomUUID(),
-        lead_id: lead.id,
-        token,
-        company_name: lead.company_name,
-        website: lead.website || null,
-        contact_name: lead.contact_name,
-        audit_summary: auditSummary.trim() || null,
-        recommendation_intro: null,
-        custom_note: customNote.trim() || null,
-        notion_url: notionUrl.trim() || null,
-        services: editableServices,
-        portfolio_links: portfolioLinks,
-        total_price: totals.totalFinal,
-        currency: lead.currency,
-        offer_type: lead.offer_type as 'retainer' | 'one_off',
-        valid_until: validUntil || null,
-        is_active: true,
-        viewed_at: null,
-        view_count: 0,
-        created_by: currentColleague?.id || null,
-        created_at: now,
-        updated_at: now,
-        // Contact person info (lead owner)
-        owner_name: leadOwner?.full_name || undefined,
-        owner_email: leadOwner?.email || undefined,
-        owner_phone: leadOwner?.phone || undefined,
-      };
+      // Insert offer into Supabase
+      const { error } = await supabase
+        .from('public_offers')
+        .insert({
+          lead_id: lead.id,
+          token,
+          company_name: lead.company_name,
+          website: lead.website || null,
+          contact_name: lead.contact_name,
+          audit_summary: auditSummary.trim() || null,
+          recommendation_intro: null,
+          custom_note: customNote.trim() || null,
+          notion_url: notionUrl.trim() || null,
+          // Cast to unknown to satisfy Supabase's JSONB column type (typed arrays -> Json)
+          services: editableServices as unknown as Record<string, unknown>[],
+          portfolio_links: portfolioLinks as unknown as Record<string, unknown>[],
+          total_price: totals.totalFinal,
+          currency: lead.currency || 'CZK',
+          offer_type: getOfferTypeFromServices(editableServices),
+          valid_until: validUntil || defaultValidUntil,
+          is_active: true,
+          created_by: currentColleague?.id || null,
+          owner_name: leadOwner?.full_name || null,
+          owner_email: leadOwner?.email || null,
+          owner_phone: leadOwner?.phone || null,
+          estimated_start_date: null, // Can be set later if needed
+        });
 
-      // Add to mock store
-      addPublicOffer(newOffer);
+      if (error) {
+        throw error;
+      }
 
       setCreatedOfferUrl(offerUrl);
       toast.success('Nabídka byla vytvořena!');
       onSuccess(token, offerUrl);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error creating offer:', err);
-      toast.error('Chyba při vytváření nabídky');
+      const errorMessage = err instanceof Error ? err.message : 'Chyba při vytváření nabídky';
+      toast.error(errorMessage);
     } finally {
       setIsCreating(false);
     }
@@ -203,19 +211,12 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     onOpenChange(false);
   };
 
-  // Default valid_until to 14 days from now
-  const defaultValidUntil = useMemo(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 14);
-    return date.toISOString().split('T')[0];
-  }, []);
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[700px] max-h-[95vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>
-            {createdOfferUrl ? '✅ Nabídka vytvořena' : 'Vytvořit sdílenou nabídku'}
+            {createdOfferUrl ? 'Nabídka vytvořena' : 'Vytvořit sdílenou nabídku'}
           </DialogTitle>
         </DialogHeader>
 
@@ -268,7 +269,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
                 {/* Editable Services */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">📦 Služby v nabídce</Label>
+                  <Label className="text-sm font-medium">Služby v nabídce</Label>
                   <div className="space-y-3">
                     {editableServices.map((service, idx) => (
                       <EditableOfferServiceCard
@@ -279,13 +280,13 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                       />
                     ))}
                   </div>
-                  
+
                   {editableServices.length === 0 && (
                     <div className="p-4 text-center text-muted-foreground border rounded-lg border-dashed">
                       Žádné služby v nabídce. Přidejte služby k leadu před vytvořením nabídky.
                     </div>
                   )}
-                  
+
                   {/* Price Summary */}
                   {editableServices.length > 0 && (
                     <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
@@ -319,7 +320,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
                 {/* Audit summary */}
                 <div className="space-y-2">
-                  <Label htmlFor="audit">📊 Výstup z auditu (volitelné)</Label>
+                  <Label htmlFor="audit">Výstup z auditu (volitelné)</Label>
                   <Textarea
                     id="audit"
                     value={auditSummary}
@@ -334,7 +335,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
                 {/* Custom note */}
                 <div className="space-y-2">
-                  <Label htmlFor="note">📝 Poznámka pro klienta (volitelné)</Label>
+                  <Label htmlFor="note">Poznámka pro klienta (volitelné)</Label>
                   <Textarea
                     id="note"
                     value={customNote}
@@ -346,7 +347,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
                 {/* Notion URL */}
                 <div className="space-y-2">
-                  <Label htmlFor="notion">📄 Link na detailní nabídku v Notion (volitelné)</Label>
+                  <Label htmlFor="notion">Link na detailní nabídku v Notion (volitelné)</Label>
                   <Input
                     id="notion"
                     type="url"
@@ -361,7 +362,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
                 {/* Valid until */}
                 <div className="space-y-2">
-                  <Label htmlFor="validUntil">📅 Platnost nabídky do</Label>
+                  <Label htmlFor="validUntil">Platnost nabídky do</Label>
                   <Input
                     id="validUntil"
                     type="date"

@@ -28,9 +28,12 @@ import {
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
-import type { Lead, LeadStage, LeadSource, LeadOfferType } from '@/types/crm';
-import { toast } from 'sonner';
-import { useEffect, useState, useRef } from 'react';
+import { useAresLookup } from '@/hooks/useAresLookup';
+import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
+import type { Lead, LeadSource } from '@/types/crm';
+import type { CompanySearchResult } from '@/hooks/useAresSearch';
+import { toast } from '@/components/ui/sonner';
+import { useEffect, useState } from 'react';
 import { Loader2, Search } from 'lucide-react';
 
 const leadSchema = z.object({
@@ -55,12 +58,13 @@ const leadSchema = z.object({
   client_message: z.string().optional().nullable(),
   ad_spend_monthly: z.coerce.number().min(0).optional().nullable(),
   summary: z.string(),
-  potential_service: z.string().min(1, 'Služba je povinná'),
-  offer_type: z.enum(['retainer', 'one_off'] as const),
   estimated_price: z.coerce.number().min(0, 'Cena musí být kladná'),
   currency: z.string().default('CZK'),
   probability_percent: z.coerce.number().min(0).max(100),
   offer_url: z.string().url('Zadejte platnou URL').or(z.literal('')).optional().nullable(),
+  // Court registration info from ARES (hidden fields)
+  court_name: z.string().optional().nullable(),
+  court_file_number: z.string().optional().nullable(),
 });
 
 type LeadFormData = z.infer<typeof leadSchema>;
@@ -81,51 +85,23 @@ const SOURCE_OPTIONS: { value: LeadSource; label: string }[] = [
   { value: 'other', label: 'Jiný' },
 ];
 
-const SERVICE_OPTIONS = [
-  'Performance Boost',
-  'Socials Boost',
-  'Creative Boost',
-  'Lead Gen Funnel',
-  'Analytics Setup',
-  'Strategy Consulting',
-];
-
-// Mock ARES data for demo
-const MOCK_ARES_DATA: Record<string, { company_name: string; dic: string; billing_street: string; billing_city: string; billing_zip: string; billing_country: string }> = {
-  '12345678': {
-    company_name: 'Demo Firma s.r.o.',
-    dic: 'CZ12345678',
-    billing_street: 'Václavské náměstí 1',
-    billing_city: 'Praha',
-    billing_zip: '110 00',
-    billing_country: 'Česká republika',
-  },
-  '87654321': {
-    company_name: 'Test Company a.s.',
-    dic: 'CZ87654321',
-    billing_street: 'Masarykova 123',
-    billing_city: 'Brno',
-    billing_zip: '602 00',
-    billing_country: 'Česká republika',
-  },
-  '11223344': {
-    company_name: 'Innovation Labs s.r.o.',
-    dic: 'CZ11223344',
-    billing_street: 'Technologická 5',
-    billing_city: 'Ostrava',
-    billing_zip: '708 00',
-    billing_country: 'Česká republika',
-  },
-};
+// Helper function to derive offer type from services
+function getOfferTypeFromServices(services: Array<{ billing_type: 'monthly' | 'one_off' }>): 'retainer' | 'one_off' {
+  if (!services?.length) return 'retainer';
+  const hasMonthly = services.some(s => s.billing_type === 'monthly');
+  const hasOneOff = services.some(s => s.billing_type === 'one_off');
+  if (hasMonthly && hasOneOff) return 'retainer'; // Mixed: default to retainer
+  return hasMonthly ? 'retainer' : 'one_off';
+}
 
 export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) {
   const { addLead, updateLead } = useLeadsData();
   const { colleagues } = useCRMData();
   const { user } = useAuth();
-  const [isLoadingAres, setIsLoadingAres] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
+  const isContractCreated = !!lead?.contract_created_at;
   
   const handleAresLookup = async () => {
     const ico = form.getValues('ico');
@@ -134,33 +110,48 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       return;
     }
     
-    setIsLoadingAres(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check mock data first
-    const mockData = MOCK_ARES_DATA[ico];
-    if (mockData) {
-      form.setValue('company_name', mockData.company_name);
-      form.setValue('dic', mockData.dic);
-      form.setValue('billing_street', mockData.billing_street);
-      form.setValue('billing_city', mockData.billing_city);
-      form.setValue('billing_zip', mockData.billing_zip);
-      form.setValue('billing_country', mockData.billing_country);
+    const result = await lookupCompany(ico);
+    if (result) {
+      form.setValue('company_name', result.name || '');
+      form.setValue('dic', result.dic || '');
+      if (result.address) {
+        // Try to parse address (format may vary)
+        const addressParts = result.address.split(',');
+        if (addressParts.length >= 2) {
+          form.setValue('billing_street', addressParts[0].trim());
+          const cityZip = addressParts[addressParts.length - 1].trim().split(' ');
+          if (cityZip.length >= 2) {
+            form.setValue('billing_zip', cityZip[0]);
+            form.setValue('billing_city', cityZip.slice(1).join(' '));
+          } else {
+            form.setValue('billing_city', cityZip[0]);
+          }
+        } else {
+          form.setValue('billing_street', result.address);
+        }
+        form.setValue('billing_country', 'Česká republika');
+      }
+      // Set court registration info
+      if (result.court_name) {
+        form.setValue('court_name', result.court_name);
+      }
+      if (result.court_file_number) {
+        form.setValue('court_file_number', result.court_file_number);
+      }
       toast.success('Údaje načteny z ARES');
-    } else {
-      // Generate random mock data for any IČO
-      form.setValue('company_name', `Společnost ${ico} s.r.o.`);
-      form.setValue('dic', `CZ${ico}`);
-      form.setValue('billing_street', 'Ulice 123');
-      form.setValue('billing_city', 'Praha');
-      form.setValue('billing_zip', '100 00');
-      form.setValue('billing_country', 'Česká republika');
-      toast.success('Údaje načteny z ARES (demo)');
     }
-    
-    setIsLoadingAres(false);
+  };
+
+  const handleCompanySelect = (company: CompanySearchResult) => {
+    // Auto-fill all fields from selected company
+    form.setValue('company_name', company.name);
+    form.setValue('ico', company.ico);
+    form.setValue('dic', company.dic || '');
+    form.setValue('billing_street', company.billing_street);
+    form.setValue('billing_city', company.billing_city);
+    form.setValue('billing_zip', company.billing_zip);
+    form.setValue('billing_country', company.billing_country);
+    toast.success('Údaje načteny z ARES');
   };
 
   const form = useForm<LeadFormData>({
@@ -187,12 +178,12 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       client_message: '',
       ad_spend_monthly: null,
       summary: '',
-      potential_service: '',
-      offer_type: 'retainer',
       estimated_price: 0,
       currency: 'CZK',
       probability_percent: 30,
       offer_url: '',
+      court_name: '',
+      court_file_number: '',
     },
   });
 
@@ -220,12 +211,12 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         client_message: lead.client_message || '',
         ad_spend_monthly: lead.ad_spend_monthly,
         summary: lead.summary,
-        potential_service: lead.potential_service,
-        offer_type: lead.offer_type,
         estimated_price: lead.estimated_price,
         currency: lead.currency,
         probability_percent: lead.probability_percent,
         offer_url: lead.offer_url || '',
+        court_name: lead.court_name || '',
+        court_file_number: lead.court_file_number || '',
       });
     } else {
       form.reset({
@@ -250,84 +241,71 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         client_message: '',
         ad_spend_monthly: null,
         summary: '',
-        potential_service: '',
-        offer_type: 'retainer',
         estimated_price: 0,
         currency: 'CZK',
         probability_percent: 30,
         offer_url: '',
+        court_name: '',
+        court_file_number: '',
       });
     }
   }, [lead, form]);
 
-  const handleSubmit = async (data: LeadFormData) => {
-    if (isSubmitting) return;
+  const handleSubmit = (data: LeadFormData) => {
+    const leadData = {
+      company_name: data.company_name,
+      ico: data.ico,
+      dic: data.dic || null,
+      website: data.website || null,
+      industry: data.industry || null,
+      billing_street: data.billing_street || null,
+      billing_city: data.billing_city || null,
+      billing_zip: data.billing_zip || null,
+      billing_country: data.billing_country || null,
+      billing_email: data.billing_email || null,
+      contact_name: data.contact_name,
+      contact_position: data.contact_position || null,
+      contact_email: data.contact_email || null,
+      contact_phone: data.contact_phone || null,
+      stage: data.stage,
+      owner_id: data.owner_id,
+      source: data.source,
+      source_custom: data.source === 'other' ? (data.source_custom || null) : null,
+      client_message: data.client_message || null,
+      ad_spend_monthly: data.ad_spend_monthly || null,
+      summary: data.summary,
+      estimated_price: data.estimated_price,
+      currency: data.currency,
+      probability_percent: data.probability_percent,
+      offer_url: data.offer_url || null,
+      offer_created_at: lead?.offer_created_at || null,
+      potential_services: lead?.potential_services || [],
+      access_request_sent_at: lead?.access_request_sent_at || null,
+      access_request_platforms: lead?.access_request_platforms || [],
+      access_received_at: lead?.access_received_at || null,
+      onboarding_form_sent_at: lead?.onboarding_form_sent_at || null,
+      onboarding_form_url: lead?.onboarding_form_url || null,
+      onboarding_form_completed_at: lead?.onboarding_form_completed_at || null,
+      contract_url: lead?.contract_url || null,
+      contract_created_at: lead?.contract_created_at || null,
+      contract_signed_at: lead?.contract_signed_at || null,
+      offer_sent_at: lead?.offer_sent_at || null,
+      offer_sent_by_id: lead?.offer_sent_by_id || null,
+      created_by: user?.id || null,
+      updated_by: user?.id || null,
+      // Court registration info from ARES
+      court_name: data.court_name || lead?.court_name || null,
+      court_file_number: data.court_file_number || lead?.court_file_number || null,
+    };
 
-    setIsSubmitting(true);
-    try {
-      const leadData = {
-        company_name: data.company_name,
-        ico: data.ico,
-        dic: data.dic || null,
-        website: data.website || null,
-        industry: data.industry || null,
-        billing_street: data.billing_street || null,
-        billing_city: data.billing_city || null,
-        billing_zip: data.billing_zip || null,
-        billing_country: data.billing_country || null,
-        billing_email: data.billing_email || null,
-        contact_name: data.contact_name,
-        contact_position: data.contact_position || null,
-        contact_email: data.contact_email || null,
-        contact_phone: data.contact_phone || null,
-        stage: data.stage,
-        owner_id: data.owner_id,
-        source: data.source,
-        source_custom: data.source === 'other' ? (data.source_custom || null) : null,
-        client_message: data.client_message || null,
-        ad_spend_monthly: data.ad_spend_monthly || null,
-        summary: data.summary,
-        potential_service: data.potential_service,
-        offer_type: data.offer_type,
-        estimated_price: data.estimated_price,
-        currency: data.currency,
-        probability_percent: data.probability_percent,
-        offer_url: data.offer_url || null,
-        offer_created_at: lead?.offer_created_at || null,
-        potential_services: lead?.potential_services || [],
-        access_request_sent_at: lead?.access_request_sent_at || null,
-        access_request_platforms: lead?.access_request_platforms || [],
-        access_received_at: lead?.access_received_at || null,
-        onboarding_form_sent_at: lead?.onboarding_form_sent_at || null,
-        onboarding_form_url: lead?.onboarding_form_url || null,
-        onboarding_form_completed_at: lead?.onboarding_form_completed_at || null,
-        contract_url: lead?.contract_url || null,
-        contract_created_at: lead?.contract_created_at || null,
-        contract_sent_at: lead?.contract_sent_at || null,
-        contract_signed_at: lead?.contract_signed_at || null,
-        offer_sent_at: lead?.offer_sent_at || null,
-        offer_sent_by_id: lead?.offer_sent_by_id || null,
-        qualification_status: lead?.qualification_status || 'pending',
-        qualification_reason: lead?.qualification_reason || null,
-        qualified_at: lead?.qualified_at || null,
-        created_by: user?.id || null,
-        updated_by: user?.id || null,
-      };
-
-      if (lead) {
-        await updateLead(lead.id, leadData);
-        toast.success('Lead byl upraven');
-      } else {
-        await addLead(leadData);
-        toast.success('Lead byl vytvořen');
-      }
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error saving lead:', error);
-      toast.error('Nepodařilo se uložit lead');
-    } finally {
-      setIsSubmitting(false);
+    if (lead) {
+      updateLead(lead.id, leadData);
+      toast.success('Lead byl upraven');
+    } else {
+      addLead(leadData);
+      toast.success('Lead byl vytvořen');
     }
+    onOpenChange(false);
   };
 
   return (
@@ -339,6 +317,13 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            {isContractCreated && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  ⚠️ Některá pole jsou uzamčena - smlouva byla odeslána
+                </p>
+              </div>
+            )}
             {/* Company Section */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm border-b pb-2">Firma a kontakt</h4>
@@ -351,7 +336,13 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormItem>
                       <FormLabel>Název firmy *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Firma s.r.o." {...field} />
+                        <CompanySearchInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          onSelect={handleCompanySelect}
+                          placeholder="Zadejte název firmy (min. 3 znaky)..."
+                          disabled={isContractCreated}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -365,14 +356,14 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                       <FormLabel>IČO *</FormLabel>
                       <div className="flex gap-2">
                         <FormControl>
-                          <Input placeholder="12345678" {...field} />
+                          <Input placeholder="12345678" {...field} disabled={isContractCreated} />
                         </FormControl>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={handleAresLookup}
-                          disabled={isLoadingAres}
+                          disabled={isLoadingAres || isContractCreated}
                           className="shrink-0"
                         >
                           {isLoadingAres ? (
@@ -397,7 +388,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormItem>
                       <FormLabel>DIČ</FormLabel>
                       <FormControl>
-                        <Input placeholder="CZ12345678" {...field} value={field.value || ''} />
+                        <Input placeholder="CZ12345678" {...field} value={field.value || ''} disabled={isContractCreated} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -444,7 +435,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                   <FormItem>
                     <FormLabel>Ulice a číslo popisné</FormLabel>
                     <FormControl>
-                      <Input placeholder="Václavské náměstí 1" {...field} value={field.value || ''} />
+                      <Input placeholder="Václavské náměstí 1" {...field} value={field.value || ''} disabled={isContractCreated} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -459,7 +450,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormItem>
                       <FormLabel>Město</FormLabel>
                       <FormControl>
-                        <Input placeholder="Praha" {...field} value={field.value || ''} />
+                        <Input placeholder="Praha" {...field} value={field.value || ''} disabled={isContractCreated} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -472,7 +463,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormItem>
                       <FormLabel>PSČ</FormLabel>
                       <FormControl>
-                        <Input placeholder="110 00" {...field} value={field.value || ''} />
+                        <Input placeholder="110 00" {...field} value={field.value || ''} disabled={isContractCreated} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -485,7 +476,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormItem>
                       <FormLabel>Země</FormLabel>
                       <FormControl>
-                        <Input placeholder="Česká republika" {...field} value={field.value || ''} />
+                        <Input placeholder="Česká republika" {...field} value={field.value || ''} disabled={isContractCreated} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -500,7 +491,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                   <FormItem>
                     <FormLabel>Fakturační email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="fakturace@firma.cz" {...field} value={field.value || ''} />
+                      <Input type="email" placeholder="fakturace@firma.cz" {...field} value={field.value || ''} disabled={isContractCreated} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -585,11 +576,14 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="new_lead">Nový lead</SelectItem>
-                          <SelectItem value="contacted">Kontaktováno</SelectItem>
-                          <SelectItem value="in_progress">Probíhá jednání</SelectItem>
+                          <SelectItem value="meeting_done">Schůzka proběhla</SelectItem>
+                          <SelectItem value="waiting_access">Čekáme na přístupy</SelectItem>
+                          <SelectItem value="access_received">Přístupy přijaty</SelectItem>
+                          <SelectItem value="preparing_offer">Příprava nabídky</SelectItem>
                           <SelectItem value="offer_sent">Nabídka odeslána</SelectItem>
                           <SelectItem value="won">Vyhráno</SelectItem>
                           <SelectItem value="lost">Prohráno</SelectItem>
+                          <SelectItem value="postponed">Odloženo</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -716,123 +710,13 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
               />
             </div>
 
-            {/* Offer Section */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm border-b pb-2">Nabídka</h4>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="potential_service"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Služba *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Vyberte službu" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {SERVICE_OPTIONS.map(s => (
-                            <SelectItem key={s} value={s}>
-                              {s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="offer_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Typ nabídky</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="retainer">Paušál</SelectItem>
-                          <SelectItem value="one_off">Jednorázová zakázka</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <FormField
-                  control={form.control}
-                  name="estimated_price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Odhadovaná cena</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="50000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="currency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Měna</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="CZK">CZK</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="offer_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Odkaz na nabídku</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://freelo.io/project/..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Zrušit
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Ukládám...
-                  </>
-                ) : (
-                  lead ? 'Uložit změny' : 'Vytvořit lead'
-                )}
+              <Button type="submit">
+                {lead ? 'Uložit změny' : 'Vytvořit lead'}
               </Button>
             </div>
           </form>

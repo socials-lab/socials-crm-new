@@ -1,10 +1,10 @@
 import { useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import type { Colleague } from '@/types/crm';
-
-const ACTIVITY_REWARDS_KEY = 'activity-rewards';
 
 interface ActivityReward {
   id: string;
@@ -16,15 +16,6 @@ interface ActivityReward {
   hourly_rate: number | null;
   activity_date: string;
   created_at: string;
-}
-
-function getActivityRewards(): ActivityReward[] {
-  try {
-    const stored = localStorage.getItem(ACTIVITY_REWARDS_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
 }
 
 export interface ColleagueEarningsSummary {
@@ -57,7 +48,18 @@ export function useTeamEarnings() {
   const { getColleagueCredits, getColleagueCreditsByClient } = useCreativeBoostData();
   const { getApprovedCommissionsForColleague } = useUpsellApprovals();
 
-  const allActivityRewards = useMemo(() => getActivityRewards(), []);
+  // Fetch all activity rewards from Supabase
+  const { data: allActivityRewards = [] } = useQuery({
+    queryKey: ['activity_rewards_all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('activity_rewards')
+        .select('id, colleague_id, description, billing_type, amount, hours, hourly_rate, activity_date, created_at')
+        .order('activity_date', { ascending: false });
+      if (error) throw error;
+      return (data || []) as ActivityReward[];
+    },
+  });
 
   // Get earnings summary for a colleague in a specific month
   const getColleagueEarningsForMonth = useCallback((

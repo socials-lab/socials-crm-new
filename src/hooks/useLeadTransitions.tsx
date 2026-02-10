@@ -1,21 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import type { LeadStage } from '@/types/crm';
-// Hook updated: 2026-01-27 - added source performance tracking
-import type { 
-  LeadStageTransition, 
-  StageConversionRate, 
-  FunnelPassthroughSummary 
+import type {
+  LeadStageTransition,
+  StageConversionRate,
+  FunnelPassthroughSummary
 } from '@/types/leadTransitions';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { 
-  initializeTransitions, 
-  initializeNewLeadEntries,
-  addTransition, 
-  STORAGE_KEY,
-  NEW_LEADS_STORAGE_KEY,
-  type MockTransition,
-  type NewLeadEntry 
-} from '@/data/leadTransitionsMockData';
 
 const STAGE_ORDER: LeadStage[] = [
   'new_lead',
@@ -39,110 +31,112 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   postponed: 'Odloženo',
 };
 
+// Map Czech labels back to stage keys (lead_history stores labels)
+const LABEL_TO_STAGE: Record<string, LeadStage> = {
+  'Nový lead': 'new_lead',
+  'Schůzka proběhla': 'meeting_done',
+  'Čekáme na přístupy': 'waiting_access',
+  'Přístupy přijaty': 'access_received',
+  'Příprava nabídky': 'preparing_offer',
+  'Nabídka odeslána': 'offer_sent',
+  'Vyhráno': 'won',
+  'Prohráno': 'lost',
+  'Odloženo': 'postponed',
+};
+
+interface LeadHistoryRecord {
+  id: string;
+  lead_id: string;
+  change_type: string;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+  changed_by: string | null;
+}
+
+interface LeadRecord {
+  id: string;
+  source: string;
+  stage: LeadStage;
+  estimated_price: number | null;
+  created_at: string;
+}
+
 export function useLeadTransitions() {
-  // Initialize transitions from localStorage (with mock data if needed)
-  const [transitions, setTransitions] = useState<MockTransition[]>(() => 
-    initializeTransitions()
-  );
-  
-  // Initialize new lead entries (all leads including bad fits)
-  const [newLeadEntries, setNewLeadEntries] = useState<NewLeadEntry[]>(() =>
-    initializeNewLeadEntries()
-  );
-  
-  const [isConfirming, setIsConfirming] = useState(false);
+  // Fetch stage transitions from lead_history
+  const { data: historyData = [] } = useQuery({
+    queryKey: ['lead_transitions_history'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lead_history')
+        .select('id, lead_id, change_type, old_value, new_value, created_at, changed_by')
+        .eq('change_type', 'stage_change')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as LeadHistoryRecord[];
+    },
+  });
 
-  // Refresh transitions from localStorage
-  const refreshTransitions = useCallback(() => {
-    const storedTransitions = localStorage.getItem(STORAGE_KEY);
-    if (storedTransitions) {
-      try {
-        setTransitions(JSON.parse(storedTransitions));
-      } catch {
-        // Keep current state if parse fails
-      }
-    }
-    
-    const storedEntries = localStorage.getItem(NEW_LEADS_STORAGE_KEY);
-    if (storedEntries) {
-      try {
-        setNewLeadEntries(JSON.parse(storedEntries));
-      } catch {
-        // Keep current state if parse fails
-      }
-    }
-  }, []);
+  // Fetch all leads for total counts and source analysis
+  const { data: leadsData = [] } = useQuery({
+    queryKey: ['lead_transitions_leads'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, source, stage, estimated_price, created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as LeadRecord[];
+    },
+  });
 
-  // Confirm a transition (save to localStorage)
-  const confirmTransition = useCallback(({
-    leadId,
-    fromStage,
-    toStage,
-    transitionValue,
-  }: {
-    leadId: string;
-    fromStage: LeadStage;
-    toStage: LeadStage;
-    transitionValue: number;
-  }) => {
-    setIsConfirming(true);
-    
-    try {
-      const newTransition = addTransition({
-        lead_id: leadId,
-        from_stage: fromStage,
-        to_stage: toStage,
-        transition_value: transitionValue,
-        confirmed_at: new Date().toISOString(),
-        confirmed_by: null,
-      });
-      
-      setTransitions(prev => [newTransition, ...prev]);
-    } finally {
-      setIsConfirming(false);
-    }
-  }, []);
+  // Transform history records to transitions format
+  const transitions = useMemo((): LeadStageTransition[] => {
+    return historyData.map(h => ({
+      id: h.id,
+      lead_id: h.lead_id,
+      from_stage: LABEL_TO_STAGE[h.old_value || ''] || 'new_lead',
+      to_stage: LABEL_TO_STAGE[h.new_value || ''] || 'new_lead',
+      transition_value: 0, // Not tracked in history, would need lead lookup
+      confirmed_at: h.created_at,
+      confirmed_by: h.changed_by,
+      created_at: h.created_at,
+    }));
+  }, [historyData]);
 
-  const confirmTransitionAsync = useCallback(async ({
-    leadId,
-    fromStage,
-    toStage,
-    transitionValue,
-  }: {
-    leadId: string;
-    fromStage: LeadStage;
-    toStage: LeadStage;
-    transitionValue: number;
-  }) => {
-    confirmTransition({ leadId, fromStage, toStage, transitionValue });
-    return Promise.resolve();
-  }, [confirmTransition]);
+  // Create new lead entries from leads data (for qualification rate)
+  const newLeadEntries = useMemo(() => {
+    return leadsData.map(lead => ({
+      id: lead.id,
+      lead_id: lead.id,
+      source: lead.source || 'other',
+      entered_at: lead.created_at,
+      value: lead.estimated_price || 0,
+      is_qualified: !['lost', 'postponed'].includes(lead.stage) || lead.stage === 'won',
+      is_won: lead.stage === 'won',
+    }));
+  }, [leadsData]);
 
-  // Get qualification rate (% of leads that are qualified vs bad fit)
-  const getQualificationRate = useCallback((): { 
-    totalLeads: number; 
-    qualifiedLeads: number; 
-    badFitLeads: number; 
-    qualificationRate: number; 
-  } => {
+  // Get qualification rate
+  const getQualificationRate = useCallback(() => {
     const totalLeads = newLeadEntries.length;
     const qualifiedLeads = newLeadEntries.filter(e => e.is_qualified).length;
     const badFitLeads = totalLeads - qualifiedLeads;
     const qualificationRate = totalLeads > 0 ? (qualifiedLeads / totalLeads) * 100 : 0;
-    
+
     return { totalLeads, qualifiedLeads, badFitLeads, qualificationRate };
   }, [newLeadEntries]);
 
-  // Get performance by source - which channels bring the best leads
+  // Get performance by source
   const getSourcePerformance = useCallback(() => {
-    const sourceStats: Record<string, { 
-      total: number; 
-      qualified: number; 
+    const sourceStats: Record<string, {
+      total: number;
+      qualified: number;
       won: number;
       totalValue: number;
       wonValue: number;
     }> = {};
-    
+
     newLeadEntries.forEach(entry => {
       if (!sourceStats[entry.source]) {
         sourceStats[entry.source] = { total: 0, qualified: 0, won: 0, totalValue: 0, wonValue: 0 };
@@ -155,7 +149,7 @@ export function useLeadTransitions() {
         sourceStats[entry.source].wonValue += entry.value;
       }
     });
-    
+
     return Object.entries(sourceStats).map(([source, stats]) => ({
       source,
       total: stats.total,
@@ -171,85 +165,77 @@ export function useLeadTransitions() {
   // Calculate conversion rates between consecutive stages
   const getConversionRates = useCallback((): StageConversionRate[] => {
     const rates: StageConversionRate[] = [];
-    
-    // Total new leads that came in (including bad fits)
     const totalNewLeads = newLeadEntries.length;
-    
-    // Count transitions TO each stage (entries into stage) - for calculating base
+
+    // Count transitions TO each stage
     const stageEntries: Record<string, number> = {};
     STAGE_ORDER.forEach(stage => {
       stageEntries[stage] = transitions.filter(t => t.to_stage === stage).length;
     });
-    
+
     // Count transitions between consecutive stages
     for (let i = 0; i < STAGE_ORDER.length - 1; i++) {
       const fromStage = STAGE_ORDER[i];
       const toStage = STAGE_ORDER[i + 1];
-      
-      // Count how many went from this stage to the next
+
       const transitionCount = transitions.filter(
         t => t.from_stage === fromStage && t.to_stage === toStage
       ).length;
-      
-      // For new_lead stage, use TOTAL new leads (including bad fits) as base
-      // This gives the real picture: new_lead -> meeting = ~30% (70% are bad fit)
-      // For other stages, use entries into that stage
-      const totalFromStage = fromStage === 'new_lead' 
+
+      const totalFromStage = fromStage === 'new_lead'
         ? totalNewLeads
         : stageEntries[fromStage] || 0;
-      
-      // Calculate rate (if there were entries to this stage)
-      const rate = totalFromStage > 0 
-        ? (transitionCount / totalFromStage) * 100 
+
+      const rate = totalFromStage > 0
+        ? (transitionCount / totalFromStage) * 100
         : 0;
-      
+
       rates.push({
         fromStage,
         toStage,
         fromLabel: STAGE_LABELS[fromStage],
         toLabel: STAGE_LABELS[toStage],
-        rate: Math.min(rate, 100), // Cap at 100%
+        rate: Math.min(rate, 100),
         count: transitionCount,
         total: totalFromStage,
       });
     }
-    
+
     return rates;
   }, [transitions, newLeadEntries]);
 
-  // Calculate overall conversion (new_lead -> won) based on ALL leads
+  // Calculate overall conversion (new_lead -> won)
   const getOverallConversion = useCallback((): number => {
     const totalNewLeads = newLeadEntries.length;
     const wonCount = transitions.filter(t => t.to_stage === 'won').length;
-    
+
     if (totalNewLeads === 0) return 0;
     return (wonCount / totalNewLeads) * 100;
   }, [transitions, newLeadEntries]);
 
-  // Get monthly trend for last N months
+  // Get monthly trend
   const getMonthlyTrend = useCallback((months: number = 12) => {
     const trend: { month: string; fromStage: LeadStage; toStage: LeadStage; rate: number; count: number }[] = [];
     const now = new Date();
-    
+
     for (let i = months - 1; i >= 0; i--) {
       const monthDate = subMonths(now, i);
       const monthStart = startOfMonth(monthDate);
       const monthEnd = endOfMonth(monthDate);
       const monthLabel = format(monthDate, 'MMM yy');
-      
-      // Count ALL new leads in this month (including bad fits)
+
       const monthNewLeads = newLeadEntries.filter(e => {
         const date = new Date(e.entered_at);
         return date >= monthStart && date <= monthEnd;
       }).length;
-      
+
       const monthTransitions = transitions.filter(t => {
         const date = new Date(t.confirmed_at);
         return date >= monthStart && date <= monthEnd;
       });
-      
+
       const wonCount = monthTransitions.filter(t => t.to_stage === 'won').length;
-      
+
       trend.push({
         month: monthLabel,
         fromStage: 'new_lead',
@@ -258,7 +244,7 @@ export function useLeadTransitions() {
         count: wonCount,
       });
     }
-    
+
     return trend;
   }, [transitions, newLeadEntries]);
 
@@ -272,13 +258,27 @@ export function useLeadTransitions() {
     };
   }, [getConversionRates, getOverallConversion, getMonthlyTrend, transitions.length]);
 
+  // These are no-ops now since data comes from lead_history automatically
+  const confirmTransition = useCallback(() => {
+    // No-op - transitions are auto-tracked via lead_history
+  }, []);
+
+  const confirmTransitionAsync = useCallback(async () => {
+    // No-op - transitions are auto-tracked via lead_history
+    return Promise.resolve();
+  }, []);
+
+  const refreshTransitions = useCallback(() => {
+    // No-op - React Query handles refetching
+  }, []);
+
   return {
-    transitions: transitions as LeadStageTransition[],
+    transitions,
     newLeadEntries,
     isLoading: false,
     confirmTransition,
     confirmTransitionAsync,
-    isConfirming,
+    isConfirming: false,
     getConversionRates,
     getOverallConversion,
     getQualificationRate,

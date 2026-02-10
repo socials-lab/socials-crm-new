@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
-import { getRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
+
+// Default reward per credit when not configured in assignment
+const DEFAULT_REWARD_PER_CREDIT = 80;
 import type {
   OutputType,
   CreativeBoostClientMonth,
@@ -627,7 +629,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
             a => a.colleague_id === colleagueId && a.engagement_service_id === clientMonth.engagementServiceId
           );
           if (assignment) {
-            rewardPerCredit = getRewardPerCredit(assignment.id);
+            rewardPerCredit = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
           }
         }
       } else if (clientMonth?.engagementId) {
@@ -639,7 +641,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           a => a.colleague_id === colleagueId && a.engagement_id === clientMonth.engagementId
         );
         if (assignment) {
-          rewardPerCredit = getRewardPerCredit(assignment.id);
+          rewardPerCredit = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
         }
       }
 

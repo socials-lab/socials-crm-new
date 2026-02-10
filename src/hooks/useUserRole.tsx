@@ -28,11 +28,15 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const [canSeeFinancials, setCanSeeFinancials] = useState(false);
   const [canEditAcademy, setCanEditAcademy] = useState(false);
   const [allowedPages, setAllowedPages] = useState<string[]>([]);
+  const [lastFetchedUserId, setLastFetchedUserId] = useState<string | null>(null);
+
+  // Use user.id as dependency instead of user object to prevent refetching on token refresh
+  const userId = user?.id ?? null;
 
   useEffect(() => {
     if (authLoading) return;
-    
-    if (!user) {
+
+    if (!userId) {
       setRole(null);
       setIsSuperAdmin(false);
       setColleagueId(null);
@@ -40,6 +44,12 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       setCanEditAcademy(false);
       setAllowedPages([]);
       setIsLoading(false);
+      setLastFetchedUserId(null);
+      return;
+    }
+
+    // Skip refetch if we already loaded data for this user
+    if (lastFetchedUserId === userId) {
       return;
     }
 
@@ -50,7 +60,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .maybeSingle();
 
         if (roleError) {
@@ -85,7 +95,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         const { data: colleagueData, error: colleagueError } = await supabase
           .from('colleagues')
           .select('id')
-          .eq('profile_id', user.id)
+          .eq('profile_id', userId)
           .maybeSingle();
 
         if (colleagueError) {
@@ -93,6 +103,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         }
 
         setColleagueId(colleagueData?.id || null);
+        setLastFetchedUserId(userId);
       } catch (error) {
         console.error('Error in fetchUserRole:', error);
       } finally {
@@ -101,7 +112,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     };
 
     fetchUserRole();
-  }, [user, authLoading]);
+  }, [userId, authLoading, lastFetchedUserId]);
 
   const hasRole = (checkRole: AppRole): boolean => {
     if (isSuperAdmin) return true;

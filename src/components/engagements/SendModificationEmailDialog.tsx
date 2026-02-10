@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Send, User, Mail, Building2, Link2, Phone } from 'lucide-react';
+import { Send, User, Mail, Building2, Link2, Phone, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,16 +14,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useModificationRequests, type StoredModificationRequest } from '@/hooks/useModificationRequests';
 import type {
   AddServiceProposedChanges,
@@ -58,6 +52,7 @@ export function SendModificationEmailDialog({
 }: SendModificationEmailDialogProps) {
   const { colleagues, clients, clientContacts } = useCRMData();
   const { user } = useAuth();
+  const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
   const { recordEmailSent } = useModificationRequests();
   
   const [recipientEmail, setRecipientEmail] = useState('');
@@ -189,6 +184,11 @@ ${currentUserColleague.email}${currentUserColleague.phone ? `\n${currentUserColl
       return;
     }
 
+    if (!hasGmailScope) {
+      toast.error('Pro odesílání emailů je potřeba propojit Google účet s oprávněním pro Gmail');
+      return;
+    }
+
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(recipientEmail)) {
@@ -197,29 +197,69 @@ ${currentUserColleague.email}${currentUserColleague.phone ? `\n${currentUserColl
     }
 
     setIsSending(true);
-    
-    // Mock sending - will be replaced with actual Edge Function
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Record the email in history
-    await recordEmailSent(
-      request.id,
-      recipientEmail,
-      currentUserColleague.id,
-      currentUserColleague.full_name
-    );
-    
-    // Log email action for debugging
-    console.log('📧 Email sent:', {
-      to: recipientEmail,
-      subject: emailSubject,
-      sender: currentUserColleague.full_name,
-      requestId: request.id,
-    });
-    
-    setIsSending(false);
-    toast.success(`📧 Email odeslán na ${recipientEmail}`);
-    onOpenChange(false);
+
+    try {
+      // Convert plain text to HTML with better formatting
+      const lines = emailContent.split('\n');
+      const htmlParts: string[] = [];
+      let currentParagraph: string[] = [];
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+
+        if (trimmed === '') {
+          if (currentParagraph.length > 0) {
+            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
+            currentParagraph = [];
+          }
+        } else if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.match(/^\d+\./)) {
+          if (currentParagraph.length > 0) {
+            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
+            currentParagraph = [];
+          }
+          htmlParts.push(`<p style="margin: 0 0 8px 0; padding-left: 20px;">${trimmed}</p>`);
+        } else {
+          currentParagraph.push(trimmed);
+        }
+      }
+
+      if (currentParagraph.length > 0) {
+        htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
+      }
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6; color: #333;">
+          ${htmlParts.join('')}
+        </div>
+      `;
+
+      const result = await sendEmail(recipientEmail, emailSubject, html);
+
+      if (result) {
+        // Record the email in history
+        await recordEmailSent(
+          request.id,
+          recipientEmail,
+          currentUserColleague.id,
+          currentUserColleague.full_name
+        );
+
+        // Log email action for debugging
+        console.log('📧 Email sent:', {
+          to: recipientEmail,
+          subject: emailSubject,
+          sender: currentUserColleague.full_name,
+          requestId: request.id,
+        });
+
+        toast.success(`📧 Email odeslán na ${recipientEmail}`);
+        onOpenChange(false);
+      }
+    } catch (err: any) {
+      console.error('Failed to send modification email:', err);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -236,6 +276,27 @@ ${currentUserColleague.email}${currentUserColleague.phone ? `\n${currentUserColl
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
+          {/* Google Connection Warning */}
+          {!isCheckingConnection && !hasGmailScope && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                  Pro odesílání emailů je potřeba propojit Google účet
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={connectGoogleCalendar}
+                  disabled={googleLoading}
+                >
+                  Propojit Google účet
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Client Info */}
           <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-1">
             <div className="flex items-center gap-2">
@@ -312,7 +373,7 @@ ${currentUserColleague.email}${currentUserColleague.phone ? `\n${currentUserColl
           </Button>
           <Button
             onClick={handleSend}
-            disabled={isSending || !recipientEmail || !currentUserColleague}
+            disabled={isSending || !recipientEmail || !currentUserColleague || !hasGmailScope}
           >
             {isSending ? (
               <>

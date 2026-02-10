@@ -17,8 +17,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Palette } from 'lucide-react';
-import { getRewardPerCredit, setRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
 import type { EngagementAssignment, CostModel } from '@/types/crm';
+
+// Default reward per credit when not configured
+const DEFAULT_REWARD_PER_CREDIT = 80;
 
 // Extended cost model including per_credit for Creative Boost
 type ExtendedCostModel = CostModel | 'per_credit';
@@ -34,6 +36,7 @@ interface EditAssignmentDialogProps {
     hourly_cost: number | null;
     monthly_cost: number | null;
     percentage_of_revenue: number | null;
+    reward_per_credit: number | null;
     role_on_engagement: string;
   }) => void;
 }
@@ -46,10 +49,10 @@ export function EditAssignmentDialog({
   isCreativeBoostService = false,
   onSave,
 }: EditAssignmentDialogProps) {
-  // Check if this assignment has per-credit reward configured
-  const existingPerCreditReward = getRewardPerCredit(assignment.id);
-  const hasPerCreditReward = existingPerCreditReward !== 80 || isCreativeBoostService;
-  
+  // Get reward from assignment (database) instead of mock data
+  const existingPerCreditReward = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+  const hasPerCreditReward = assignment.reward_per_credit !== null || isCreativeBoostService;
+
   const [costModel, setCostModel] = useState<ExtendedCostModel>(
     hasPerCreditReward && isCreativeBoostService ? 'per_credit' : assignment.cost_model
   );
@@ -71,9 +74,9 @@ export function EditAssignmentDialog({
 
   // Reset form when assignment changes
   useEffect(() => {
-    const reward = getRewardPerCredit(assignment.id);
-    const hasReward = reward !== 80 || isCreativeBoostService;
-    
+    const reward = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+    const hasReward = assignment.reward_per_credit !== null || isCreativeBoostService;
+
     setCostModel(hasReward && isCreativeBoostService ? 'per_credit' : assignment.cost_model);
     setHourlyCost(assignment.hourly_cost?.toString() || '');
     setMonthlyCost(assignment.monthly_cost?.toString() || '');
@@ -83,16 +86,16 @@ export function EditAssignmentDialog({
   }, [assignment, isCreativeBoostService]);
 
   const handleSave = () => {
-    // If per_credit model, save to mock data and use fixed_monthly as DB model
+    // If per_credit model, save reward_per_credit to DB
     if (costModel === 'per_credit') {
-      const reward = parseFloat(perCreditReward) || 80;
-      setRewardPerCredit(assignment.id, reward);
-      
+      const reward = parseFloat(perCreditReward) || DEFAULT_REWARD_PER_CREDIT;
+
       onSave({
         cost_model: 'fixed_monthly', // Store as fixed_monthly in DB
         hourly_cost: null,
         monthly_cost: null, // Will be calculated from credits * reward
         percentage_of_revenue: null,
+        reward_per_credit: reward,
         role_on_engagement: roleOnEngagement,
       });
     } else {
@@ -101,6 +104,7 @@ export function EditAssignmentDialog({
         hourly_cost: costModel === 'hourly' ? parseFloat(hourlyCost) || null : null,
         monthly_cost: costModel === 'fixed_monthly' ? parseFloat(monthlyCost) || null : null,
         percentage_of_revenue: costModel === 'percentage' ? parseFloat(percentageOfRevenue) || null : null,
+        reward_per_credit: null, // Clear reward_per_credit when not using per_credit model
         role_on_engagement: roleOnEngagement,
       });
     }
@@ -114,7 +118,7 @@ export function EditAssignmentDialog({
           <DialogTitle>Upravit odměnu</DialogTitle>
           <p className="text-sm text-muted-foreground">{colleagueName}</p>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>Role na zakázce</Label>

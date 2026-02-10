@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import ApprovalPending from '@/pages/ApprovalPending';
 
 // Map routes to page IDs for permission checking
@@ -40,11 +42,42 @@ export function RouteGuard({ children }: RouteGuardProps) {
   const { isLoading: roleLoading, isSuperAdmin, colleagueId, role, canAccessPage } = useUserRole();
   const currentPath = location.pathname;
 
+  // Track how long we've been loading
+  const [loadingTooLong, setLoadingTooLong] = useState(false);
+  const isLoading = authLoading || roleLoading;
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingTooLong(false);
+      return;
+    }
+
+    // If loading takes more than 10 seconds, show retry option
+    const timeout = setTimeout(() => {
+      setLoadingTooLong(true);
+    }, 10000);
+
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
   // Show loading while checking auth or role
-  if (authLoading || roleLoading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        {loadingTooLong && (
+          <div className="text-center space-y-3">
+            <p className="text-sm text-muted-foreground">Načítání trvá déle než obvykle...</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Obnovit stránku
+            </Button>
+          </div>
+        )}
       </div>
     );
   }

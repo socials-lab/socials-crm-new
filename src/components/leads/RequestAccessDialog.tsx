@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, Check } from 'lucide-react';
+import { Send, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 
 interface RequestAccessDialogProps {
   open: boolean;
@@ -40,6 +41,7 @@ export function RequestAccessDialog({
   leadId,
   onSent,
 }: RequestAccessDialogProps) {
+  const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const getDefaultSubject = () => {
     return `Žádost o nasdílení přístupů - ${companyName} / Socials`;
@@ -78,7 +80,7 @@ Tým Socials`;
     const newSelection = selectedPlatforms.includes(platformId)
       ? selectedPlatforms.filter(id => id !== platformId)
       : [...selectedPlatforms, platformId];
-    
+
     setSelectedPlatforms(newSelection);
     setEmailContent(generateDefaultEmail(newSelection));
   };
@@ -94,24 +96,69 @@ Tým Socials`;
       return;
     }
 
+    if (!hasGmailScope) {
+      toast.error('Pro odesílání emailů je potřeba propojit Google účet s oprávněním pro Gmail');
+      return;
+    }
+
     setIsSending(true);
-    
-    // Mock sending - will be replaced with actual Edge Function
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Notify parent about sent platforms
-    const platformLabels = selectedPlatforms
-      .map(id => PLATFORMS.find(p => p.id === id)?.label)
-      .filter(Boolean) as string[];
-    onSent?.(platformLabels);
-    
-    setIsSending(false);
-    toast.success('Žádost o přístupy byla odeslána');
-    onOpenChange(false);
-    
-    // Reset state
-    setSelectedPlatforms([]);
-    setEmailContent('');
+
+    try {
+      // Convert plain text to HTML with better formatting
+      const lines = emailContent.split('\n');
+      const htmlParts: string[] = [];
+      let currentParagraph: string[] = [];
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+
+        if (trimmed === '') {
+          if (currentParagraph.length > 0) {
+            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
+            currentParagraph = [];
+          }
+        } else if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.match(/^\d+\./)) {
+          if (currentParagraph.length > 0) {
+            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
+            currentParagraph = [];
+          }
+          htmlParts.push(`<p style="margin: 0 0 8px 0; padding-left: 20px;">${trimmed}</p>`);
+        } else {
+          currentParagraph.push(trimmed);
+        }
+      }
+
+      if (currentParagraph.length > 0) {
+        htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
+      }
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6; color: #333;">
+          ${htmlParts.join('')}
+        </div>
+      `;
+
+      const result = await sendEmail(contactEmail, emailSubject, html);
+
+      if (result) {
+        // Notify parent about sent platforms
+        const platformLabels = selectedPlatforms
+          .map(id => PLATFORMS.find(p => p.id === id)?.label)
+          .filter(Boolean) as string[];
+        onSent?.(platformLabels);
+
+        toast.success('Žádost o přístupy byla odeslána');
+        onOpenChange(false);
+
+        // Reset state
+        setSelectedPlatforms([]);
+        setEmailContent('');
+      }
+    } catch (error) {
+      console.error('Failed to send email:', error);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -135,6 +182,27 @@ Tým Socials`;
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Google Connection Warning */}
+          {!isCheckingConnection && !hasGmailScope && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                  Pro odesílání emailů je potřeba propojit Google účet
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={connectGoogleCalendar}
+                  disabled={googleLoading}
+                >
+                  Propojit Google účet
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Platform Selection */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Platformy</Label>
@@ -201,7 +269,7 @@ Tým Socials`;
           </Button>
           <Button
             onClick={handleSend}
-            disabled={isSending || selectedPlatforms.length === 0 || !contactEmail}
+            disabled={isSending || selectedPlatforms.length === 0 || !contactEmail || !hasGmailScope}
           >
             {isSending ? (
               <>
