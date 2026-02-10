@@ -359,6 +359,19 @@ serve(async (req) => {
       );
     }
 
+    // Validate all signatories have email (DigiSign requires email for all recipients)
+    const signatoriesWithoutEmail = signatories.filter(s => !s.email || s.email.trim() === '');
+    if (signatoriesWithoutEmail.length > 0) {
+      const missingNames = signatoriesWithoutEmail.map(s => s.name || 'Neznámé jméno').join(', ');
+      return new Response(
+        JSON.stringify({
+          error: `Následující podpisující osoby nemají vyplněný e-mail: ${missingNames}`,
+          missing_email_signatories: signatoriesWithoutEmail.map(s => s.name),
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Validate all signatories have phone numbers (DigiSign requires mobile for all recipients)
     const signatoriesWithoutPhone = signatories.filter(s => !s.phone || s.phone.trim() === '');
     if (signatoriesWithoutPhone.length > 0) {

@@ -131,14 +131,16 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
       .reduce((sum: number, s: LeadService) => sum + (s.price || 0), 0);
 
     const allSignatoriesHavePhone = signatories.length > 0 && signatories.every((s: { phone?: string }) => s.phone && s.phone.trim() !== '');
+    const allSignatoriesHaveEmail = signatories.length > 0 && signatories.every((s: { email?: string }) => s.email && s.email.trim() !== '');
 
     return {
       hasServices: leadServices.length > 0,
       hasMonthlyFee: monthlyFee > 0,
       hasSignatories: signatories.length > 0,
       allSignatoriesHavePhone,
+      allSignatoriesHaveEmail,
       monthlyFee,
-      isReady: leadServices.length > 0 && monthlyFee > 0 && signatories.length > 0 && allSignatoriesHavePhone,
+      isReady: leadServices.length > 0 && monthlyFee > 0 && signatories.length > 0 && allSignatoriesHavePhone && allSignatoriesHaveEmail,
     };
   }, [lead?.potential_services, lead?.onboarding_signatories]);
 
@@ -950,14 +952,15 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-xs">
-                            {contractReadiness.hasSignatories && contractReadiness.allSignatoriesHavePhone ? (
+                            {contractReadiness.hasSignatories && contractReadiness.allSignatoriesHavePhone && contractReadiness.allSignatoriesHaveEmail ? (
                               <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                             ) : (
                               <X className="h-3.5 w-3.5 text-red-500" />
                             )}
-                            <span className={contractReadiness.hasSignatories && contractReadiness.allSignatoriesHavePhone ? 'text-muted-foreground' : 'text-red-600'}>
+                            <span className={contractReadiness.hasSignatories && contractReadiness.allSignatoriesHavePhone && contractReadiness.allSignatoriesHaveEmail ? 'text-muted-foreground' : 'text-red-600'}>
                               Podpisující osoby ({lead?.onboarding_signatories?.length || 0})
                               {!contractReadiness.hasSignatories && ' - Chybí podpisující osoby'}
+                              {contractReadiness.hasSignatories && !contractReadiness.allSignatoriesHaveEmail && ' - Chybí e-mail u podpisujících'}
                               {contractReadiness.hasSignatories && !contractReadiness.allSignatoriesHavePhone && ' - Chybí telefon u podpisujících'}
                             </span>
                           </div>
@@ -1388,7 +1391,11 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                         {signatory.position && (
                           <div className="text-xs text-muted-foreground">{signatory.position}</div>
                         )}
-                        <div className="text-xs text-muted-foreground">{signatory.email}</div>
+                        {signatory.email ? (
+                          <div className="text-xs text-muted-foreground">{signatory.email}</div>
+                        ) : (
+                          <div className="text-xs text-red-500">⚠️ Chybí e-mail</div>
+                        )}
                         {signatory.phone ? (
                           <div className="text-xs text-muted-foreground">{signatory.phone}</div>
                         ) : (
