@@ -22,7 +22,7 @@ export function useAresSearch() {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<CompanySearchResult[]>([]);
-  
+
   // Cache for recent searches
   const cacheRef = useRef<Map<string, CompanySearchResult[]>>(new Map());
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -59,16 +59,16 @@ export function useAresSearch() {
       if (invokeError) throw invokeError;
 
       const response = data as SearchResponse;
-      
+
       if (response.error) {
         throw new Error(response.error);
       }
 
       const companies = response.companies || [];
-      
+
       // Cache results
       cacheRef.current.set(cacheKey, companies);
-      
+
       // Limit cache size to 50 entries
       if (cacheRef.current.size > 50) {
         const firstKey = cacheRef.current.keys().next().value;

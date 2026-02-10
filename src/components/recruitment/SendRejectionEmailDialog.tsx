@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Send, UserX, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 import type { Applicant } from '@/types/applicant';
 
 interface SendRejectionEmailDialogProps {
@@ -63,7 +63,7 @@ export function SendRejectionEmailDialog({
         .map(line => line.trim() ? `<p>${line}</p>` : '<br>')
         .join('');
 
-      const { error } = await supabase.functions.invoke('send-email', {
+      const { error } = await invokeWithTimeout('send-email', {
         body: {
           to: emailTo.trim(),
           subject,

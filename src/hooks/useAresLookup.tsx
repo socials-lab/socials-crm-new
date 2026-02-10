@@ -8,12 +8,12 @@ export function useAresLookup() {
   const lookupCompany = async (ico: string) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke('ares-lookup', {
         body: { ico },
       });
-      
+
       if (error) throw error;
       return data;
     } catch (err) {

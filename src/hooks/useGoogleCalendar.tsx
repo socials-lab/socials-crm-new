@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/components/ui/sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 export interface GoogleCalendarEvent {
   id: string;
@@ -169,7 +170,7 @@ export function useGoogleCalendar() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('gmail-send-email', {
+      const { data, error } = await invokeWithTimeout('gmail-send-email', {
         body: { to, subject, html },
       });
 
