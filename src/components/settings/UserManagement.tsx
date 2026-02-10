@@ -4,13 +4,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil, User } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil, User, Clock, CheckCircle2 } from 'lucide-react';
 import { TierBadge } from '@/components/shared/TierBadge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { AddCRMUserDialog } from './AddCRMUserDialog';
 import { EditUserRoleDialog } from './EditUserRoleDialog';
 import { EditUserNameDialog } from './EditUserNameDialog';
 import { CreateColleagueForUserDialog } from './CreateColleagueForUserDialog';
+import { ApproveUserDialog } from './ApproveUserDialog';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -37,10 +38,18 @@ interface UserRoleData {
   } | null;
 }
 
+interface PendingUser {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  created_at: string;
+}
+
 export function UserManagement() {
   const navigate = useNavigate();
   useCRMData(); // Ensure CRMDataProvider is initialized (needed for CreateColleagueForUserDialog)
   const [userRoles, setUserRoles] = useState<UserRoleData[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -56,6 +65,8 @@ export function UserManagement() {
     email: string;
     fullName: string;
   } | null>(null);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approveUser, setApproveUser] = useState<PendingUser | null>(null);
   const [selectedUser, setSelectedUser] = useState<{
     id: string;
     user_id: string;
@@ -79,6 +90,22 @@ export function UserManagement() {
       if (rolesError) {
         throw rolesError;
       }
+
+      const activeUserIds = (rolesData || []).map(r => r.user_id).filter(Boolean) as string[];
+
+      // Fetch ALL profiles to find pending ones
+      const { data: allProfiles = [], error: allProfilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, created_at');
+
+      if (allProfilesError) {
+        console.error('Error fetching all profiles:', allProfilesError);
+      }
+
+      // Separate pending users (profiles with no active role)
+      const activeUserIdSet = new Set(activeUserIds);
+      const pending = (allProfiles || []).filter(p => !activeUserIdSet.has(p.id));
+      setPendingUsers(pending);
       
       if (!rolesData || rolesData.length === 0) {
         setUserRoles([]);
@@ -86,13 +113,11 @@ export function UserManagement() {
         return;
       }
 
-      // Fetch profiles
-      const userIds = rolesData.map(r => r.user_id).filter(Boolean) as string[];
-      
+      // Fetch profiles for active users
       const { data: profilesData = [], error: profilesError } = await supabase
         .from('profiles')
         .select('id, email, full_name')
-        .in('id', userIds);
+        .in('id', activeUserIds);
       
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
@@ -102,7 +127,7 @@ export function UserManagement() {
       const { data: colleaguesData = [], error: colleaguesError } = await supabase
         .from('colleagues')
         .select('id, full_name, position, profile_id')
-        .in('profile_id', userIds);
+        .in('profile_id', activeUserIds);
       
       if (colleaguesError) {
         console.error('Error fetching colleagues:', colleaguesError);
@@ -187,6 +212,43 @@ export function UserManagement() {
 
   return (
     <div className="space-y-4">
+      {/* Pending users section */}
+      {pendingUsers.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200 dark:border-amber-900">
+            <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+              Čekají na schválení ({pendingUsers.length})
+            </p>
+          </div>
+          <div className="divide-y divide-amber-200 dark:divide-amber-900">
+            {pendingUsers.map(pending => (
+              <div key={pending.id} className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="font-medium text-sm">{pending.full_name || pending.email || 'Neznámý'}</p>
+                  {pending.full_name && (
+                    <p className="text-xs text-muted-foreground">{pending.email}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Registrace: {new Date(pending.created_at).toLocaleDateString('cs-CZ')}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setApproveUser(pending);
+                    setApproveDialogOpen(true);
+                  }}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Schválit
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">Celkem {userRoles.length} uživatelů s přístupem</p>
         <Button size="sm" onClick={() => setAddDialogOpen(true)}>
@@ -358,6 +420,16 @@ export function UserManagement() {
           }}
         />
       )}
+
+      <ApproveUserDialog
+        open={approveDialogOpen}
+        onOpenChange={setApproveDialogOpen}
+        user={approveUser}
+        onSuccess={() => {
+          fetchUserRoles();
+          setApproveUser(null);
+        }}
+      />
     </div>
   );
 }
