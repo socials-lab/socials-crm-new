@@ -317,6 +317,7 @@ serve(async (req) => {
         billing_city,
         billing_zip,
         contact_email,
+        contact_phone,
         billing_email,
         website,
         court_name,
@@ -350,8 +351,12 @@ serve(async (req) => {
       );
     }
 
-    // Validate required fields
-    const signatories: Signatory[] = lead.onboarding_signatories || [];
+    // Enrich signatories: fill missing phone/email from lead contact info
+    const signatories: Signatory[] = (lead.onboarding_signatories || []).map((s: Signatory) => ({
+      ...s,
+      phone: (s.phone && s.phone.trim()) ? s.phone.trim() : (lead.contact_phone || ''),
+      email: (s.email && s.email.trim()) ? s.email.trim() : (lead.contact_email || ''),
+    }));
     if (signatories.length === 0) {
       return new Response(
         JSON.stringify({ error: "Chybí podpisující osoby (onboarding_signatories)" }),
