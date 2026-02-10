@@ -359,6 +359,19 @@ serve(async (req) => {
       );
     }
 
+    // Validate all signatories have phone numbers (DigiSign requires mobile for all recipients)
+    const signatoriesWithoutPhone = signatories.filter(s => !s.phone || s.phone.trim() === '');
+    if (signatoriesWithoutPhone.length > 0) {
+      const missingNames = signatoriesWithoutPhone.map(s => s.name).join(', ');
+      return new Response(
+        JSON.stringify({
+          error: `Následující podpisující osoby nemají vyplněný telefon (DigiSign vyžaduje telefon pro všechny podepisující): ${missingNames}`,
+          missing_phone_signatories: signatoriesWithoutPhone.map(s => s.name),
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Build billing address
     const billingAddress = [lead.billing_street, lead.billing_city, lead.billing_zip]
       .filter(Boolean)
@@ -464,7 +477,7 @@ serve(async (req) => {
         signatureType: "simple",
         name: signatory.name,
         email: signatory.email,
-        mobile: signatory.phone || undefined,
+        mobile: signatory.phone!.trim(),
         company: lead.company_name || undefined,
         identificationNumber: lead.ico || undefined,
       })),

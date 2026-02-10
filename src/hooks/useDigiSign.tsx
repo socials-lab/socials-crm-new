@@ -22,9 +22,23 @@ export function useDigiSign() {
         throw new Error(data.error);
       }
 
-      // Then check for Supabase client error
+      // Then check for Supabase client error (non-2xx status codes)
       if (error) {
-        throw new Error(error.message || 'Chyba při volání DigiSign API');
+        // Try to extract the actual error message from the Edge Function response
+        let errorMsg = 'Chyba při volání DigiSign API';
+        try {
+          // FunctionsHttpError has a context property with the response
+          const ctx = (error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) errorMsg = body.error;
+          } else if (error.message) {
+            errorMsg = error.message;
+          }
+        } catch {
+          if (error.message) errorMsg = error.message;
+        }
+        throw new Error(errorMsg);
       }
 
       // Invalidate leads cache to refresh with new contract data

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
@@ -51,8 +51,8 @@ const signatorySchema = z.object({
   position: z.string().optional(),
   email: z.string().email('Neplatný formát e-mailu'),
   phone: z.string()
-    .optional()
-    .refine(val => !val || val.length === 0 || val.length >= 9, {
+    .min(1, 'Telefon je povinný pro podpis smlouvy')
+    .refine(val => val.length >= 9, {
       message: 'Telefon musí mít alespoň 9 číslic',
     }),
 });
@@ -861,10 +861,13 @@ export default function OnboardingForm() {
                         name={`signatories.${index}.phone`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Telefon</FormLabel>
+                            <FormLabel>Telefon *</FormLabel>
                             <FormControl>
                               <Input placeholder="+420 123 456 789" {...field} />
                             </FormControl>
+                            <FormDescription className="text-xs">
+                              Povinný pro podpis smlouvy
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
