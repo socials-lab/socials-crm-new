@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
-import { cs } from 'date-fns/locale';
+import { format } from 'date-fns'; // used for saving birthday
 import {
   User,
   Mail,
@@ -15,17 +14,19 @@ import {
   Loader2,
   Save,
   Briefcase,
+  Search,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Calendar } from '@/components/ui/calendar';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Form,
   FormControl,
@@ -41,6 +42,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAresLookup } from '@/hooks/useAresLookup';
 import { toast } from 'sonner';
 
 const profileSchema = z.object({
@@ -61,6 +63,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 export default function MyProfile() {
   const { colleagueId } = useUserRole();
   const { colleagues, updateColleague, getColleagueById } = useCRMData();
+  const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentColleague = useMemo(() => {
@@ -101,6 +104,37 @@ export default function MyProfile() {
       });
     }
   }, [currentColleague?.id]);
+
+  const handleAresLookup = async () => {
+    const ico = form.getValues('ico');
+    if (!ico || ico.length < 8) {
+      toast.error('Zadejte platné IČO (8 číslic)');
+      return;
+    }
+
+    const result = await lookupCompany(ico);
+    if (result) {
+      form.setValue('company_name', result.name || '');
+      form.setValue('dic', result.dic || '');
+      if (result.address) {
+        // Try to parse address (format may vary)
+        const addressParts = result.address.split(',');
+        if (addressParts.length >= 2) {
+          form.setValue('billing_street', addressParts[0].trim());
+          const cityZip = addressParts[addressParts.length - 1].trim().split(' ');
+          if (cityZip.length >= 2) {
+            form.setValue('billing_zip', cityZip[0]);
+            form.setValue('billing_city', cityZip.slice(1).join(' '));
+          } else {
+            form.setValue('billing_city', cityZip[0]);
+          }
+        } else {
+          form.setValue('billing_street', result.address);
+        }
+      }
+      toast.success('Údaje načteny z ARES');
+    }
+  };
 
   const handleSubmit = async (data: ProfileFormData) => {
     if (!currentColleague) return;
@@ -255,48 +289,113 @@ export default function MyProfile() {
                 <FormField
                   control={form.control}
                   name="birthday"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4" />
-                        Datum narození
-                      </FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "d. MMMM yyyy", { locale: cs })
-                              ) : (
-                                <span>Vybrat datum</span>
-                              )}
-                              <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value || undefined}
-                            onSelect={field.onChange}
-                            disabled={(date) => date > new Date()}
-                            initialFocus
-                            className="pointer-events-auto"
-                            captionLayout="dropdown-buttons"
-                            fromYear={1950}
-                            toYear={new Date().getFullYear()}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const currentYear = new Date().getFullYear();
+                    const years = Array.from({ length: currentYear - 1950 + 1 }, (_, i) => currentYear - i);
+                    const months = [
+                      { value: 0, label: 'Leden' },
+                      { value: 1, label: 'Únor' },
+                      { value: 2, label: 'Březen' },
+                      { value: 3, label: 'Duben' },
+                      { value: 4, label: 'Květen' },
+                      { value: 5, label: 'Červen' },
+                      { value: 6, label: 'Červenec' },
+                      { value: 7, label: 'Srpen' },
+                      { value: 8, label: 'Září' },
+                      { value: 9, label: 'Říjen' },
+                      { value: 10, label: 'Listopad' },
+                      { value: 11, label: 'Prosinec' },
+                    ];
+
+                    const selectedYear = field.value?.getFullYear();
+                    const selectedMonth = field.value?.getMonth();
+                    const selectedDay = field.value?.getDate();
+
+                    const daysInMonth = selectedYear && selectedMonth !== undefined
+                      ? new Date(selectedYear, selectedMonth + 1, 0).getDate()
+                      : 31;
+                    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+                    const handleDateChange = (type: 'day' | 'month' | 'year', value: number) => {
+                      const current = field.value || new Date(2000, 0, 1);
+                      let newDate: Date;
+
+                      if (type === 'year') {
+                        newDate = new Date(value, current.getMonth(), Math.min(current.getDate(), new Date(value, current.getMonth() + 1, 0).getDate()));
+                      } else if (type === 'month') {
+                        newDate = new Date(current.getFullYear(), value, Math.min(current.getDate(), new Date(current.getFullYear(), value + 1, 0).getDate()));
+                      } else {
+                        newDate = new Date(current.getFullYear(), current.getMonth(), value);
+                      }
+
+                      field.onChange(newDate);
+                    };
+
+                    return (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4" />
+                          Datum narození
+                        </FormLabel>
+                        <div className="flex gap-2">
+                          <Select
+                            value={selectedDay?.toString() || ''}
+                            onValueChange={(v) => handleDateChange('day', parseInt(v))}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-[80px]">
+                                <SelectValue placeholder="Den" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {days.map((day) => (
+                                <SelectItem key={day} value={day.toString()}>
+                                  {day}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          <Select
+                            value={selectedMonth?.toString() || ''}
+                            onValueChange={(v) => handleDateChange('month', parseInt(v))}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Měsíc" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {months.map((month) => (
+                                <SelectItem key={month.value} value={month.value.toString()}>
+                                  {month.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          <Select
+                            value={selectedYear?.toString() || ''}
+                            onValueChange={(v) => handleDateChange('year', parseInt(v))}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-[100px]">
+                                <SelectValue placeholder="Rok" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {years.map((year) => (
+                                <SelectItem key={year} value={year.toString()}>
+                                  {year}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
               </div>
 
@@ -349,14 +448,30 @@ export default function MyProfile() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>IČO</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="12345678"
-                          {...field}
-                          value={field.value || ''}
-                          onChange={(e) => field.onChange(e.target.value || null)}
-                        />
-                      </FormControl>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input
+                            placeholder="12345678"
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value || null)}
+                          />
+                        </FormControl>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleAresLookup}
+                          disabled={isLoadingAres}
+                          title="Načíst údaje z ARES"
+                        >
+                          {isLoadingAres ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Search className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
