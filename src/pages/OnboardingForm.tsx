@@ -155,6 +155,7 @@ export default function OnboardingForm() {
   const ownerColleague = lead?.owner_id ? getColleagueById(lead.owner_id) : null;
   const ownerEmail = ownerColleague?.email || (lead as any)?.owner_email || 'info@socials.cz';
   const ownerName = ownerColleague?.full_name || (lead as any)?.owner_name || 'tým Socials';
+  const ownerPhone = ownerColleague?.phone || (lead as any)?.owner_phone || '';
   
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
@@ -1283,11 +1284,11 @@ export default function OnboardingForm() {
 
           {/* Footer */}
           <p className="text-center text-sm text-muted-foreground mt-8">
-            Potřebujete pomoct? Obraťte se na{' '}
-            <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">
-              {ownerName}
-            </a>
-            {' '}– <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+            Potřebujete pomoct? Obraťte se na {ownerName}
+            {ownerPhone && (
+              <> – <a href={`tel:${ownerPhone}`} className="text-primary hover:underline">{ownerPhone}</a></>
+            )}
+            {' '}| <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
           </p>
         </div>
       </div>
