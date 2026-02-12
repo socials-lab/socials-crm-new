@@ -457,7 +457,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                       <Building2 className="h-3 w-3" />
                       <span>Obrat firmy není v ARES dostupný –</span>
                       <a
-                        href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${icoValue}`}
+                        href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${icoValue}&firma=${encodeURIComponent(form.getValues('company_name') || '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline inline-flex items-center gap-1"
