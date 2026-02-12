@@ -90,7 +90,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       const { data, error } = await (supabase as any).from('leads').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       // Transform leads to include notes array and mock conversion data
-      return (data || []).map((lead: any) => {
+      const transformedLeads = (data || []).map((lead: any) => {
         // Mock conversion data for TestBrand client demo
         if (lead.id === '20000000-0000-0000-0000-000000000001') {
           return {
@@ -134,6 +134,74 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
           qualified_at: lead.qualified_at || null,
         };
       });
+
+      // Add demo lead Socials Advertising (not in DB)
+      const demoSocialsLead: any = {
+        id: '20000000-0000-0000-0000-000000000002',
+        company_name: 'Socials Advertising s.r.o.',
+        ico: '08186464',
+        dic: 'CZ08186464',
+        website: 'https://www.socials.cz',
+        industry: 'Marketing / Online reklama',
+        contact_name: 'Daniel Kocián',
+        contact_position: 'CEO',
+        contact_email: 'danny@socials.cz',
+        contact_phone: '+420 777 123 456',
+        stage: 'new_lead',
+        source: 'inbound',
+        source_custom: null,
+        client_message: 'Zajímá nás spolupráce na správě kampaní pro naše klienty – white-label model.',
+        ad_spend_monthly: 200000,
+        summary: 'Agentura zaměřená na výkonnostní reklamu (Meta Ads, PPC, video/banner kreativy). Hledají white-label partnera.',
+        potential_service: '',
+        potential_services: [],
+        offer_type: 'retainer',
+        estimated_price: 50000,
+        currency: 'CZK',
+        probability_percent: 50,
+        offer_url: null,
+        offer_created_at: null,
+        offer_sent_at: null,
+        offer_sent_by_id: null,
+        owner_id: null,
+        access_request_sent_at: null,
+        access_request_platforms: [],
+        access_received_at: null,
+        onboarding_form_sent_at: null,
+        onboarding_form_completed_at: null,
+        onboarding_form_url: null,
+        contract_url: null,
+        contract_created_at: null,
+        contract_sent_at: null,
+        contract_signed_at: null,
+        converted_to_client_id: null,
+        converted_to_engagement_id: null,
+        converted_at: null,
+        billing_street: null,
+        billing_city: null,
+        billing_zip: null,
+        billing_country: null,
+        billing_email: null,
+        notes: [],
+        qualification_status: 'pending',
+        qualification_reason: null,
+        qualified_at: null,
+        legal_form: null,
+        founded_date: null,
+        directors: null,
+        ares_nace: null,
+        created_at: '2025-02-10T08:00:00Z',
+        updated_at: '2025-02-10T08:00:00Z',
+        created_by: null,
+        updated_by: null,
+      };
+
+      // Only add if not already fetched from DB
+      if (!transformedLeads.find((l: any) => l.id === demoSocialsLead.id)) {
+        transformedLeads.push(demoSocialsLead);
+      }
+
+      return transformedLeads;
     },
   });
 
