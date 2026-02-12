@@ -306,7 +306,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
                   <SelectValue placeholder="Žádný upsell" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Žádný upsell</SelectItem>
+                  <SelectItem value="none">Žádný upsell</SelectItem>
                   {activeColleagues.map(col => (
                     <SelectItem key={col.id} value={col.id}>
                       {col.full_name}
