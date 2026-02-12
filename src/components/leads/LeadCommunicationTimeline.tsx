@@ -41,6 +41,7 @@ interface TimelineEvent {
   subject?: string | null;
   recipients?: string[] | null;
   noteType?: string;
+  authorName?: string | null;
 }
 
 const formatDate = (date: string) => {
@@ -119,6 +120,7 @@ export function LeadCommunicationTimeline({
       subject: note.subject,
       recipients: note.recipients,
       noteType: note.note_type,
+      authorName: note.author_name,
     });
   });
 
@@ -274,6 +276,9 @@ export function LeadCommunicationTimeline({
                         <div className="flex items-center gap-1.5 mb-1">
                           {event.icon}
                           <span className="text-xs font-medium text-amber-700">{event.title}</span>
+                          {event.authorName && (
+                            <span className="text-[10px] text-muted-foreground">{event.authorName}</span>
+                          )}
                           <span className="text-[10px] text-muted-foreground ml-auto">{formatDate(event.date)}</span>
                         </div>
                         {event.description && (
@@ -317,6 +322,11 @@ export function LeadCommunicationTimeline({
                         )}>
                           {event.title}
                         </span>
+                        {event.authorName && (
+                          <span className="text-[10px] text-muted-foreground ml-auto">
+                            {event.authorName}
+                          </span>
+                        )}
                       </div>
 
                       {/* Recipients */}
