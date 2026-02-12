@@ -1,6 +1,7 @@
 import { useState, useCallback, createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import type { Lead, LeadStage, LeadNote, LeadChangeType, LeadHistoryEntry, LeadNoteType } from '@/types/crm';
 
 // Field labels for history display
@@ -78,6 +79,7 @@ const LeadsDataContext = createContext<LeadsDataContextType | null>(null);
 
 export function LeadsDataProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [leadHistory, setLeadHistory] = useState<LeadHistoryEntry[]>([]);
 
   const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -358,9 +360,26 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     await updateLeadMutation.mutateAsync({ id, data: { stage } });
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
+  // Get current user display name
+  const getCurrentUserName = useCallback(async (): Promise<string> => {
+    if (!user) return 'Neznámý';
+    // Try to get name from profiles table
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('id', user.id)
+      .single();
+    if (profile?.first_name || profile?.last_name) {
+      return [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+    }
+    return profile?.email || user.email || 'Neznámý';
+  }, [user]);
+
   const addNote = useCallback(async (leadId: string, text: string, noteType: LeadNoteType = 'general', callDate: string | null = null, subject: string | null = null, recipients: string[] | null = null) => {
     // For now, notes are stored in lead history (will be proper table later)
     addHistoryEntry(leadId, 'note_added', null, null, text.substring(0, 100) + (text.length > 100 ? '...' : ''));
+    
+    const authorName = await getCurrentUserName();
     
     // Add note to lead's notes array
     const lead = leads.find(l => l.id === leadId);
@@ -368,8 +387,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       const newNote: LeadNote = {
         id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         lead_id: leadId,
-        author_id: '',
-        author_name: 'User',
+        author_id: user?.id || '',
+        author_name: authorName,
         text,
         note_type: noteType,
         call_date: callDate,
@@ -382,7 +401,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     } else {
       await updateLeadMutation.mutateAsync({ id: leadId, data: {} });
     }
-  }, [leads, updateLeadMutation, addHistoryEntry]);
+  }, [leads, updateLeadMutation, addHistoryEntry, getCurrentUserName, user]);
 
   const getLeadById = useCallback((id: string) => leads.find(l => l.id === id), [leads]);
   
