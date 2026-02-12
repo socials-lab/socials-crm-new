@@ -47,7 +47,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
-import { getRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
+import { getRewards, setRewards } from '@/data/creativeBoostRewardsMockData';
 import { EngagementForm } from '@/components/forms/EngagementForm';
 import { AssignmentForm } from '@/components/forms/AssignmentForm';
 import { AddEngagementServiceDialog } from '@/components/forms/AddEngagementServiceDialog';
@@ -680,6 +680,14 @@ function EngagementsContent() {
                                           creative_boost_max_credits: updates.maxCredits,
                                           creative_boost_price_per_credit: updates.pricePerCredit,
                                         });
+                                        // Save banner/video rewards to mock data
+                                        if (cbAssignment) {
+                                          const currentRewards = getRewards(cbAssignment.id);
+                                          setRewards(cbAssignment.id, {
+                                            bannerRewardPerCredit: updates.bannerRewardPerCredit ?? currentRewards.bannerRewardPerCredit,
+                                            videoRewardPerCredit: updates.videoRewardPerCredit ?? currentRewards.videoRewardPerCredit,
+                                          });
+                                        }
                                         // Also update Creative Boost client month if exists
                                         const eng = engagements.find(e => e.id === engService.engagement_id);
                                         if (eng) {
@@ -911,14 +919,11 @@ function EngagementsContent() {
                                       <span>
                                         {(() => {
                                           // Check if this is a Creative Boost assignment with per-credit reward
-                                          const perCreditReward = getRewardPerCredit(assignment.id);
-                                          const hasPerCreditReward = perCreditReward !== 80 || (assignment.engagement_service_id && engagementServices.find(es => es.id === assignment.engagement_service_id && es.service_id === CREATIVE_BOOST_SERVICE_ID));
+                                          const rewards = getRewards(assignment.id);
+                                          const hasPerCreditReward = assignment.engagement_service_id && engagementServices.find(es => es.id === assignment.engagement_service_id && es.service_id === CREATIVE_BOOST_SERVICE_ID);
                                           
-                                          if (hasPerCreditReward && assignment.engagement_service_id) {
-                                            const service = engagementServices.find(es => es.id === assignment.engagement_service_id);
-                                            if (service?.service_id === CREATIVE_BOOST_SERVICE_ID) {
-                                              return `${perCreditReward} Kč/kredit`;
-                                            }
+                                          if (hasPerCreditReward) {
+                                              return `🖼️${rewards.bannerRewardPerCredit} / 🎬${rewards.videoRewardPerCredit} Kč/kr`;
                                           }
                                           
                                           if (assignment.cost_model === 'fixed_monthly' && assignment.monthly_cost) {

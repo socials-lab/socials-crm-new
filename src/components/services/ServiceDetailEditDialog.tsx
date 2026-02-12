@@ -34,7 +34,8 @@ interface CreditPricing {
   basePrice: number;
   currency: string;
   expressMultiplier: number;
-  colleagueRewardPerCredit: number;
+  bannerRewardPerCredit: number;
+  videoRewardPerCredit: number;
 }
 
 interface ServiceDetailData {
@@ -298,7 +299,7 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
   const enableCreditPricing = () => {
     setData(prev => ({
       ...prev,
-      credit_pricing: { basePrice: 400, currency: 'CZK', expressMultiplier: 1.5, colleagueRewardPerCredit: 80 },
+      credit_pricing: { basePrice: 400, currency: 'CZK', expressMultiplier: 1.5, bannerRewardPerCredit: 80, videoRewardPerCredit: 80 },
     }));
   };
 
@@ -670,15 +671,24 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
                         </p>
                       </div>
                       <div className="space-y-2">
-                        <Label>🎨 Výchozí odměna grafika za kredit</Label>
+                        <Label>🖼️ Výchozí odměna za banner kredit</Label>
                         <Input
                           type="number"
-                          value={data.credit_pricing.colleagueRewardPerCredit}
-                          onChange={(e) => updateCreditPricing('colleagueRewardPerCredit', Number(e.target.value))}
+                          value={data.credit_pricing.bannerRewardPerCredit}
+                          onChange={(e) => updateCreditPricing('bannerRewardPerCredit', Number(e.target.value))}
+                          placeholder="80"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>🎬 Výchozí odměna za video kredit</Label>
+                        <Input
+                          type="number"
+                          value={data.credit_pricing.videoRewardPerCredit}
+                          onChange={(e) => updateCreditPricing('videoRewardPerCredit', Number(e.target.value))}
                           placeholder="80"
                         />
                         <p className="text-xs text-muted-foreground">
-                          Výchozí odměna pro grafika/kolegu za 1 kredit
+                          Výchozí odměna pro grafika/kolegu za 1 kredit dle typu výstupu
                         </p>
                       </div>
                     </div>

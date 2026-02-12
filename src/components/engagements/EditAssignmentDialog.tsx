@@ -16,8 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Palette } from 'lucide-react';
-import { getRewardPerCredit, setRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
+import { Palette, Image, Video } from 'lucide-react';
+import { getRewards, setRewards, type CreativeBoostRewards } from '@/data/creativeBoostRewardsMockData';
 import type { EngagementAssignment, CostModel } from '@/types/crm';
 
 // Extended cost model including per_credit for Creative Boost
@@ -47,8 +47,8 @@ export function EditAssignmentDialog({
   onSave,
 }: EditAssignmentDialogProps) {
   // Check if this assignment has per-credit reward configured
-  const existingPerCreditReward = getRewardPerCredit(assignment.id);
-  const hasPerCreditReward = existingPerCreditReward !== 80 || isCreativeBoostService;
+  const existingRewards = getRewards(assignment.id);
+  const hasPerCreditReward = isCreativeBoostService;
   
   const [costModel, setCostModel] = useState<ExtendedCostModel>(
     hasPerCreditReward && isCreativeBoostService ? 'per_credit' : assignment.cost_model
@@ -62,8 +62,11 @@ export function EditAssignmentDialog({
   const [percentageOfRevenue, setPercentageOfRevenue] = useState<string>(
     assignment.percentage_of_revenue?.toString() || ''
   );
-  const [perCreditReward, setPerCreditReward] = useState<string>(
-    existingPerCreditReward.toString()
+  const [bannerReward, setBannerReward] = useState<string>(
+    existingRewards.bannerRewardPerCredit.toString()
+  );
+  const [videoReward, setVideoReward] = useState<string>(
+    existingRewards.videoRewardPerCredit.toString()
   );
   const [roleOnEngagement, setRoleOnEngagement] = useState<string>(
     assignment.role_on_engagement || ''
@@ -71,22 +74,24 @@ export function EditAssignmentDialog({
 
   // Reset form when assignment changes
   useEffect(() => {
-    const reward = getRewardPerCredit(assignment.id);
-    const hasReward = reward !== 80 || isCreativeBoostService;
+    const rewards = getRewards(assignment.id);
+    const hasReward = isCreativeBoostService;
     
     setCostModel(hasReward && isCreativeBoostService ? 'per_credit' : assignment.cost_model);
     setHourlyCost(assignment.hourly_cost?.toString() || '');
     setMonthlyCost(assignment.monthly_cost?.toString() || '');
     setPercentageOfRevenue(assignment.percentage_of_revenue?.toString() || '');
-    setPerCreditReward(reward.toString());
+    setBannerReward(rewards.bannerRewardPerCredit.toString());
+    setVideoReward(rewards.videoRewardPerCredit.toString());
     setRoleOnEngagement(assignment.role_on_engagement || '');
   }, [assignment, isCreativeBoostService]);
 
   const handleSave = () => {
     // If per_credit model, save to mock data and use fixed_monthly as DB model
     if (costModel === 'per_credit') {
-      const reward = parseFloat(perCreditReward) || 80;
-      setRewardPerCredit(assignment.id, reward);
+      const bReward = parseFloat(bannerReward) || 80;
+      const vReward = parseFloat(videoReward) || 80;
+      setRewards(assignment.id, { bannerRewardPerCredit: bReward, videoRewardPerCredit: vReward });
       
       onSave({
         cost_model: 'fixed_monthly', // Store as fixed_monthly in DB
@@ -193,17 +198,35 @@ export function EditAssignmentDialog({
                 <Palette className="h-4 w-4 text-primary" />
                 Creative Boost odměna
               </div>
-              <div className="space-y-2">
-                <Label>Odměna za kredit (Kč)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={perCreditReward}
-                  onChange={(e) => setPerCreditReward(e.target.value)}
-                  placeholder="80"
-                />
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5 text-xs">
+                    <Image className="h-3.5 w-3.5 text-blue-600" />
+                    Bannery (Kč/kredit)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={bannerReward}
+                    onChange={(e) => setBannerReward(e.target.value)}
+                    placeholder="80"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5 text-xs">
+                    <Video className="h-3.5 w-3.5 text-purple-600" />
+                    Videa (Kč/kredit)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={videoReward}
+                    onChange={(e) => setVideoReward(e.target.value)}
+                    placeholder="80"
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Kolega dostane tuto částku za každý odpracovaný kredit. Doporučená hodnota: 80 Kč
+                  Odměna za každý odpracovaný kredit dle typu výstupu.
                 </p>
               </div>
             </div>

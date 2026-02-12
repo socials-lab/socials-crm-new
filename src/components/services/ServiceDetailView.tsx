@@ -29,7 +29,8 @@ interface CreditPricing {
   basePrice: number;
   currency: string;
   expressMultiplier: number;
-  colleagueRewardPerCredit?: number;
+  bannerRewardPerCredit?: number;
+  videoRewardPerCredit?: number;
   outputTypes?: { name: string; credits: number; description: string; category?: string }[];
 }
 

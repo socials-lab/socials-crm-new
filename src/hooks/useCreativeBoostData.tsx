@@ -5,7 +5,7 @@ import {
   creativeBoostClientMonths as initialClientMonths,
   clientMonthOutputs as initialOutputs,
 } from '@/data/creativeBoostMockData';
-import { getRewardPerCredit, setRewardPerCredit as updateRewardMock } from '@/data/creativeBoostRewardsMockData';
+import { getRewards } from '@/data/creativeBoostRewardsMockData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import type {
@@ -36,7 +36,10 @@ interface ColleagueClientRewardSummary {
   engagementId: string | null;
   engagementName: string;
   totalCredits: number;
-  rewardPerCredit: number;
+  bannerCredits: number;
+  videoCredits: number;
+  bannerRewardPerCredit: number;
+  videoRewardPerCredit: number;
   totalReward: number;
 }
 
@@ -472,17 +475,29 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       const clientData = getClientById(clientId);
       if (!clientData) return;
       
-      // Calculate total credits for this client
-      let totalCredits = 0;
+      // Calculate credits split by banner vs video
+      let bannerCredits = 0;
+      let videoCredits = 0;
+      const bannerCategories = ['banner', 'banner_translation', 'banner_revision'];
+      const videoCategories = ['video', 'video_translation'];
+      
       clientOutputs.forEach(output => {
         const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
-        totalCredits += credits.totalCredits;
+        const outputType = outputTypes.find(t => t.id === output.outputTypeId);
+        const cat = outputType?.category ?? 'banner';
+        if (videoCategories.includes(cat)) {
+          videoCredits += credits.totalCredits;
+        } else {
+          bannerCredits += credits.totalCredits;
+        }
       });
       
-      // Get reward per credit from assignment (frontend-only demo)
+      const totalCredits = bannerCredits + videoCredits;
+      
+      // Get rewards from assignment (frontend-only demo)
       let engagementId: string | null = null;
       let engagementName = '';
-      let rewardPerCredit = 80; // Default
+      let assignmentRewards = { bannerRewardPerCredit: 80, videoRewardPerCredit: 80 };
       
       if (clientMonth?.engagementServiceId) {
         const engService = engagementServices.find(es => es.id === clientMonth.engagementServiceId);
@@ -491,12 +506,11 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           const engagement = engagements.find(e => e.id === engService.engagement_id);
           engagementName = engagement?.name ?? '';
           
-          // Find assignment for this colleague on this engagement service to get reward
           const assignment = assignments.find(
             a => a.colleague_id === colleagueId && a.engagement_service_id === clientMonth.engagementServiceId
           );
           if (assignment) {
-            rewardPerCredit = getRewardPerCredit(assignment.id);
+            assignmentRewards = getRewards(assignment.id);
           }
         }
       } else if (clientMonth?.engagementId) {
@@ -504,14 +518,15 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         const engagement = engagements.find(e => e.id === clientMonth.engagementId);
         engagementName = engagement?.name ?? '';
         
-        // Find assignment for this colleague on this engagement
         const assignment = assignments.find(
           a => a.colleague_id === colleagueId && a.engagement_id === clientMonth.engagementId
         );
         if (assignment) {
-          rewardPerCredit = getRewardPerCredit(assignment.id);
+          assignmentRewards = getRewards(assignment.id);
         }
       }
+      
+      const totalReward = (bannerCredits * assignmentRewards.bannerRewardPerCredit) + (videoCredits * assignmentRewards.videoRewardPerCredit);
       
       results.push({
         clientId,
@@ -520,8 +535,11 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         engagementId,
         engagementName,
         totalCredits,
-        rewardPerCredit,
-        totalReward: totalCredits * rewardPerCredit,
+        bannerCredits,
+        videoCredits,
+        bannerRewardPerCredit: assignmentRewards.bannerRewardPerCredit,
+        videoRewardPerCredit: assignmentRewards.videoRewardPerCredit,
+        totalReward,
       });
     });
     
