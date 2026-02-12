@@ -9,7 +9,9 @@ export interface CreativeBoostRewards {
 // Map of engagement_assignment_id -> reward per credit for colleague (banner & video)
 // Defaults are 80 CZK for banners, 80 CZK for videos
 export const creativeBoostRewards: Record<string, CreativeBoostRewards> = {
-  // Demo data - these will be populated when assignments are configured
+  // Test Client s.r.o. - Creative Boost assignment
+  // Uses engagement_service_id as key
+  'f0000000-0000-0000-0000-000000000002': { bannerRewardPerCredit: 80, videoRewardPerCredit: 100 },
 };
 
 // Default rewards per credit when not configured
