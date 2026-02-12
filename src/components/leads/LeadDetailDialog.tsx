@@ -126,6 +126,8 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [noteText, setNoteText] = useState('');
   const [noteType, setNoteType] = useState<LeadNoteType>('general');
   const [callDate, setCallDate] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailRecipients, setEmailRecipients] = useState('');
   const isProcessingWarning = useRef(false);
 
   const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
@@ -170,16 +172,29 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
     setPendingTransition(null);
   };
 
-  const handleAddNote = (text: string, type: LeadNoteType, date: string | null) => {
-    addNote(lead.id, text, type, date);
+  const handleAddNote = (text: string, type: LeadNoteType, date: string | null, subject?: string | null, recipients?: string[] | null) => {
+    addNote(lead.id, text, type, date, subject, recipients);
     toast.success('Poznámka byla přidána');
   };
 
   const handleInlineNoteSubmit = () => {
     if (!noteText.trim()) return;
-    handleAddNote(noteText.trim(), noteType, noteType === 'call' && callDate ? callDate : null);
+    const isEmail = noteType === 'email_sent' || noteType === 'email_received';
+    const subject = isEmail && emailSubject.trim() ? emailSubject.trim() : null;
+    const recipients = isEmail && emailRecipients.trim() 
+      ? emailRecipients.split(',').map(r => r.trim()).filter(Boolean) 
+      : null;
+    handleAddNote(
+      noteText.trim(), 
+      noteType, 
+      noteType === 'call' && callDate ? callDate : null,
+      subject,
+      recipients,
+    );
     setNoteText('');
     setCallDate('');
+    setEmailSubject('');
+    setEmailRecipients('');
   };
 
   const handleAddService = (service: LeadService) => {
@@ -687,10 +702,12 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                 <div className="p-5 space-y-4">
                   {/* Inline note form */}
                   <div className="space-y-2 p-3 rounded-lg border bg-card">
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-wrap">
                       {([
                         { type: 'general' as const, icon: <MessageSquare className="h-3 w-3" />, label: 'Poznámka' },
                         { type: 'call' as const, icon: <Phone className="h-3 w-3" />, label: 'Hovor' },
+                        { type: 'email_sent' as const, icon: <Send className="h-3 w-3" />, label: 'Odeslaný e-mail' },
+                        { type: 'email_received' as const, icon: <Mail className="h-3 w-3" />, label: 'Přijatý e-mail' },
                         { type: 'internal' as const, icon: <Lock className="h-3 w-3" />, label: 'Interní' },
                       ]).map(({ type, icon, label }) => (
                         <Button
@@ -714,17 +731,37 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                         placeholder="Datum hovoru"
                       />
                     )}
+                    {(noteType === 'email_sent' || noteType === 'email_received') && (
+                      <>
+                        <Input
+                          value={emailSubject}
+                          onChange={(e) => setEmailSubject(e.target.value)}
+                          className="h-8 text-xs"
+                          placeholder="Předmět e-mailu"
+                        />
+                        <Input
+                          value={emailRecipients}
+                          onChange={(e) => setEmailRecipients(e.target.value)}
+                          className="h-8 text-xs"
+                          placeholder={noteType === 'email_sent' ? 'Příjemci (oddělte čárkou)' : 'Od koho (e-mail)'}
+                        />
+                      </>
+                    )}
                     <Textarea
                       placeholder={
                         noteType === 'call' 
                           ? 'Co bylo probíráno...' 
                           : noteType === 'internal'
                             ? 'Interní poznámka...'
-                            : 'Přidat poznámku...'
+                            : noteType === 'email_sent'
+                              ? 'Obsah odeslaného e-mailu...'
+                              : noteType === 'email_received'
+                                ? 'Obsah přijatého e-mailu...'
+                                : 'Přidat poznámku...'
                       }
                       value={noteText}
                       onChange={(e) => setNoteText(e.target.value)}
-                      rows={2}
+                      rows={3}
                       className="text-sm min-h-[60px]"
                     />
                     <Button 
@@ -739,7 +776,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                   </div>
 
                   {/* Collapsible Timeline */}
-                  <Collapsible>
+                  <Collapsible defaultOpen>
                     <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
                       <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
                       <Clock className="h-4 w-4 text-muted-foreground" />
