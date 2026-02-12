@@ -22,6 +22,18 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
 import type { ExtraWork } from '@/types/crm';
 
+function getRateForPosition(position: string): number | null {
+  const p = position.toLowerCase();
+  if (p.includes('ai seo')) return 1800;
+  if (p.includes('landing') || (p.includes('ai') && !p.includes('seo'))) return 2500;
+  if (p.includes('meta') || p.includes('facebook') || p.includes('socials')) return 1700;
+  if (p.includes('ppc') || p.includes('google') || p.includes('search')) return 1700;
+  if (p.includes('analytik') || p.includes('analytics') || p.includes('analytika')) return 1900;
+  if (p.includes('grafi') || p.includes('video') || p.includes('design')) return 1500;
+  if (p.includes('seo')) return 1500;
+  return null;
+}
+
 interface EditExtraWorkDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -101,7 +113,14 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label>Kolega *</Label>
-            <Select value={colleagueId} onValueChange={setColleagueId}>
+            <Select value={colleagueId} onValueChange={(val) => {
+              setColleagueId(val);
+              const col = activeColleagues.find(c => c.id === val);
+              if (col) {
+                const rate = getRateForPosition(col.position);
+                if (rate !== null) setHourlyRate(String(rate));
+              }
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="Vyberte kolegu" />
               </SelectTrigger>
