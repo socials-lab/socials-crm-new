@@ -519,13 +519,13 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                             {isLoadingAres && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                             {lead.ico && (
                               <a
-                                href={`https://ares.gov.cz/ekonomicke-subjekty/res/${lead.ico}`}
+                                href={`https://www.hlidacstatu.cz/subjekt/${lead.ico}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
                               >
                                 <ExternalLink className="h-3 w-3" />
-                                ARES
+                                Hlídač státu
                               </a>
                             )}
                           </div>
