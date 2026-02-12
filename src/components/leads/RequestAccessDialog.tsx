@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Plus, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 interface RequestAccessDialogProps {
@@ -23,6 +24,8 @@ interface RequestAccessDialogProps {
   leadId: string;
   onSent?: (platforms: string[]) => void;
 }
+
+const DEFAULT_BCC = ['danny@socials.cz', 'dana.bauerova@socials.cz'];
 
 const DEFAULT_EMAIL_CONTENT = `Dobrý den,
 
@@ -54,23 +57,47 @@ export function RequestAccessDialog({
     return `Žádost o nasdílení přístupů - ${companyName} / Socials`;
   };
 
+  const [toEmails, setToEmails] = useState<string[]>([]);
+  const [newToEmail, setNewToEmail] = useState('');
+  const [bccEmails, setBccEmails] = useState<string[]>(DEFAULT_BCC);
+  const [newBccEmail, setNewBccEmail] = useState('');
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
   const [emailContent, setEmailContent] = useState(DEFAULT_EMAIL_CONTENT);
   const [isSending, setIsSending] = useState(false);
 
+  const addEmail = (
+    email: string,
+    list: string[],
+    setList: (v: string[]) => void,
+    setInput: (v: string) => void
+  ) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast.error('Neplatný email');
+      return;
+    }
+    if (list.includes(trimmed)) {
+      toast.error('Email už je v seznamu');
+      return;
+    }
+    setList([...list, trimmed]);
+    setInput('');
+  };
+
+  const removeEmail = (email: string, list: string[], setList: (v: string[]) => void) => {
+    setList(list.filter(e => e !== email));
+  };
+
   const handleSend = async () => {
-    if (!contactEmail) {
-      toast.error('Kontakt nemá vyplněný email');
+    if (!contactEmail && toEmails.length === 0) {
+      toast.error('Zadejte alespoň jednoho příjemce');
       return;
     }
 
     setIsSending(true);
-
-    // Mock sending - will be replaced with actual Edge Function
     await new Promise(resolve => setTimeout(resolve, 1500));
-
     onSent?.(['Google Analytics 4', 'Facebook Business Manager', 'Google Ads', 'S-klik']);
-
     setIsSending(false);
     toast.success('Žádost o přístupy byla odeslána');
     onOpenChange(false);
@@ -78,39 +105,106 @@ export function RequestAccessDialog({
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
+      setToEmails([]);
+      setNewToEmail('');
+      setBccEmails(DEFAULT_BCC);
+      setNewBccEmail('');
       setEmailSubject(getDefaultSubject());
       setEmailContent(DEFAULT_EMAIL_CONTENT);
     }
     onOpenChange(newOpen);
   };
 
+  const EmailTagList = ({
+    emails,
+    onRemove,
+    newEmail,
+    onNewEmailChange,
+    onAdd,
+    placeholder,
+  }: {
+    emails: string[];
+    onRemove: (e: string) => void;
+    newEmail: string;
+    onNewEmailChange: (v: string) => void;
+    onAdd: () => void;
+    placeholder: string;
+  }) => (
+    <div className="space-y-2">
+      {emails.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {emails.map(email => (
+            <Badge key={email} variant="secondary" className="gap-1 pr-1 font-normal">
+              {email}
+              <button
+                type="button"
+                onClick={() => onRemove(email)}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Input
+          value={newEmail}
+          onChange={(e) => onNewEmailChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } }}
+          placeholder={placeholder}
+          className="text-sm"
+        />
+        <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={onAdd}>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>📧 Žádost o nasdílení přístupů</DialogTitle>
           <DialogDescription>
-            Vyberte platformy a upravte znění emailu před odesláním.
+            Upravte příjemce a znění emailu před odesláním.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Recipient Info */}
-          <div className="p-3 rounded-lg bg-muted/50 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Příjemce:</span>
-              <span className="font-medium">{contactName}</span>
-              {contactEmail && (
-                <span className="text-muted-foreground">({contactEmail})</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-muted-foreground">Společnost:</span>
-              <span className="font-medium">{companyName}</span>
-            </div>
+          {/* To */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Komu</Label>
+            {contactEmail && (
+              <Badge variant="outline" className="font-normal">
+                {contactName} ({contactEmail})
+              </Badge>
+            )}
+            <EmailTagList
+              emails={toEmails}
+              onRemove={(e) => removeEmail(e, toEmails, setToEmails)}
+              newEmail={newToEmail}
+              onNewEmailChange={setNewToEmail}
+              onAdd={() => addEmail(newToEmail, toEmails, setToEmails, setNewToEmail)}
+              placeholder="Přidat dalšího příjemce..."
+            />
           </div>
 
-          {/* Email Subject */}
+          {/* BCC */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Skrytá kopie (BCC)</Label>
+            <EmailTagList
+              emails={bccEmails}
+              onRemove={(e) => removeEmail(e, bccEmails, setBccEmails)}
+              newEmail={newBccEmail}
+              onNewEmailChange={setNewBccEmail}
+              onAdd={() => addEmail(newBccEmail, bccEmails, setBccEmails, setNewBccEmail)}
+              placeholder="Přidat BCC..."
+            />
+          </div>
+
+          {/* Subject */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Předmět emailu</Label>
             <Input
@@ -120,7 +214,7 @@ export function RequestAccessDialog({
             />
           </div>
 
-          {/* Email Content */}
+          {/* Content */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Obsah emailu</Label>
             <Textarea
@@ -139,7 +233,7 @@ export function RequestAccessDialog({
           </Button>
           <Button
             onClick={handleSend}
-            disabled={isSending || !contactEmail}
+            disabled={isSending || (!contactEmail && toEmails.length === 0)}
           >
             {isSending ? (
               <>
