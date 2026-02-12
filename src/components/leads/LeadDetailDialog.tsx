@@ -358,6 +358,16 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                       toast.success('✅ Smlouva byla podepsána!');
                     }}
                     onConvert={handleConvertClick}
+                    onRemoveService={(index) => {
+                      const currentServices = [...(lead.potential_services || [])];
+                      currentServices.splice(index, 1);
+                      const newEstimatedPrice = currentServices.reduce((sum, s) => sum + s.price, 0);
+                      updateLead(lead.id, {
+                        potential_services: currentServices,
+                        estimated_price: newEstimatedPrice,
+                      });
+                      toast.success('Služba byla odebrána');
+                    }}
                   />
                 </div>
 
@@ -601,7 +611,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
               </div>
             </ScrollArea>
 
-            {/* Right column: Timeline + Notes */}
+            {/* Right column: Notes + Collapsible Timeline */}
             <div className="w-[380px] flex flex-col min-h-0">
               <ScrollArea className="flex-1">
                 <div className="p-5 space-y-4">
@@ -658,29 +668,41 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                     </Button>
                   </div>
 
-                  {/* Timeline */}
-                  <LeadCommunicationTimeline
-                    lead={lead}
-                    onRequestAccess={() => setIsRequestAccessOpen(true)}
-                    onSendOnboarding={() => setIsOnboardingFormOpen(true)}
-                    onSendOffer={() => setIsSendOfferOpen(true)}
-                    onCreateOffer={() => setIsCreateOfferOpen(true)}
-                    onMarkAccessReceived={() => {
-                      updateLead(lead.id, { 
-                        access_received_at: new Date().toISOString(),
-                        stage: 'access_received' as LeadStage 
-                      });
-                      toast.success('🔑 Přístupy byly přijaty!');
-                    }}
-                    onMarkContractSent={() => {
-                      updateLead(lead.id, { contract_sent_at: new Date().toISOString() });
-                      toast.success('✉️ Smlouva byla označena jako odeslaná');
-                    }}
-                    onMarkContractSigned={() => {
-                      updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
-                      toast.success('✅ Smlouva byla podepsána!');
-                    }}
-                  />
+                  {/* Collapsible Timeline */}
+                  <Collapsible>
+                    <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
+                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Historie komunikace</span>
+                      <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-auto">
+                        {(lead.notes?.length || 0) + (lead.access_request_sent_at ? 1 : 0) + (lead.offer_sent_at ? 1 : 0)} událostí
+                      </Badge>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3">
+                      <LeadCommunicationTimeline
+                        lead={lead}
+                        onRequestAccess={() => setIsRequestAccessOpen(true)}
+                        onSendOnboarding={() => setIsOnboardingFormOpen(true)}
+                        onSendOffer={() => setIsSendOfferOpen(true)}
+                        onCreateOffer={() => setIsCreateOfferOpen(true)}
+                        onMarkAccessReceived={() => {
+                          updateLead(lead.id, { 
+                            access_received_at: new Date().toISOString(),
+                            stage: 'access_received' as LeadStage 
+                          });
+                          toast.success('🔑 Přístupy byly přijaty!');
+                        }}
+                        onMarkContractSent={() => {
+                          updateLead(lead.id, { contract_sent_at: new Date().toISOString() });
+                          toast.success('✉️ Smlouva byla označena jako odeslaná');
+                        }}
+                        onMarkContractSigned={() => {
+                          updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
+                          toast.success('✅ Smlouva byla podepsána!');
+                        }}
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
               </ScrollArea>
             </div>
