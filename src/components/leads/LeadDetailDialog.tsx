@@ -765,27 +765,6 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                   </CollapsibleContent>
                 </Collapsible>
 
-                {/* Billing info */}
-                <Collapsible>
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Fakturační údaje</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-6 pt-3">
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <InlineEditField
-                          value={lead.billing_email}
-                          onSave={(v) => { updateLead(lead.id, { billing_email: v }); toast.success('Uloženo'); }}
-                          placeholder="Fakturační e-mail"
-                          emptyText="Zadat fakturační e-mail"
-                        />
-                      </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
 
                 {/* Conversion status */}
                 {lead.converted_to_client_id && (
