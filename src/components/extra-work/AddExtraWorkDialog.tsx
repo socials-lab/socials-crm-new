@@ -18,11 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { TrendingUp, ChevronDown, Info } from 'lucide-react';
+import { TrendingUp, Info } from 'lucide-react';
 import type { ExtraWork } from '@/types/crm';
 
 const EXTRA_WORK_TEMPLATES = [
@@ -288,36 +287,21 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
             </div>
           </div>
 
-          {/* Hourly rate cheatsheet */}
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="flex items-center gap-1.5 text-xs text-muted-foreground px-0 h-auto py-1">
-                <Info className="h-3.5 w-3.5" />
-                Tahák hodinovek
-                <ChevronDown className="h-3.5 w-3.5" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="mt-2 rounded-md border text-sm">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left px-3 py-1.5 font-medium">Pozice</th>
-                      <th className="text-right px-3 py-1.5 font-medium">Hodinovka</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {HOURLY_RATE_CHEATSHEET.map(item => (
-                      <tr key={item.position} className="border-b last:border-0">
-                        <td className="px-3 py-1.5">{item.position}</td>
-                        <td className="px-3 py-1.5 text-right font-medium">{formatCurrency(item.rate)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+          {/* Hourly rate cheatsheet - always visible */}
+          <div className="rounded-md border text-xs">
+            <div className="px-3 py-1.5 bg-muted/50 border-b font-medium flex items-center gap-1.5">
+              <Info className="h-3.5 w-3.5 text-muted-foreground" />
+              Sazby dle pozice
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 px-3 py-2">
+              {HOURLY_RATE_CHEATSHEET.map(item => (
+                <div key={item.position} className="flex justify-between py-0.5">
+                  <span className="text-muted-foreground">{item.position}</span>
+                  <span className="font-medium">{formatCurrency(item.rate)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Upsell section */}
           <div className="p-4 rounded-lg bg-muted/50 border space-y-3">
