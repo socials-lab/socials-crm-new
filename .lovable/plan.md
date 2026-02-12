@@ -1,77 +1,54 @@
 
+## Automatické vyhledávání z ARES + odstranění sekce Nabídka
 
-## Redesign detailu leadu - z Sheet na Dialog s taby
+### Co se změní
 
-Aktualne je detail leadu v pravem panelu (Sheet), ktery je uzky a nepohodlny pro tolik obsahu. Prevedeme ho na velky centralni Dialog s tabovym rozlozenim, pridame novy typ poznamek (call notes) a celou komunikacni historii (timeline).
+**1. Automatické vyhledávání při zadání IČO**
+- Odstranění tlačítek "Lupa" a "ARES" 
+- Debounced automatické vyhledávání po zadání 8 číslic do pole IČO (500ms debounce)
+- Nahrazení mock dat za reálné ARES API (`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/{ico}`)
+- Vizuální indikátor načítání přímo v inputu (spinner)
+- Po úspěšném načtení se automaticky vyplní: název firmy, DIČ, sídlo (ulice, město, PSČ, země), právní forma
 
-### Hlavni zmeny
+**2. Nová data z ARES**
+- **Jednatelé / statutární orgán** - z VR endpointu (`/ekonomicke-subjekty-vr/{ico}`), zobrazení jmen jednatelů
+- **Sídlo firmy** - celá adresa ze `sidlo.textovaAdresa`
+- **Právní forma** - kód + název (s.r.o., a.s., OSVČ apod.)
+- **Datum vzniku** - `datumVzniku`
+- **CZ-NACE** - obor podnikání (první položka z `czNace`)
+- **Odkaz na ARES** - automaticky generovaný odkaz `https://ares.gov.cz/ekonomicke-subjekty/res/{ico}`
+- **Obrat firmy** - ARES tuto informaci bohužel neposkytuje (není ve veřejném API). Bude zobrazena poznámka s odkazem na Justice.cz kde lze sbírku listin najít
 
-**1. Sheet -> Dialog (centralni modalni okno)**
-- Nahradime `Sheet` komponentu za `Dialog` s `max-w-4xl` a vyskou `90vh`
-- Uvnitr `ScrollArea` pro scrollovani obsahu
-- Header: nazev firmy, stage badge, tlacitka (Upravit, Historie, Prevest)
+**3. Odstranění sekce Nabídka z formuláře**
+- Celá sekce "Nabídka" (řádky 708-810) bude odstraněna z `AddLeadDialog`
+- Pole `potential_service`, `offer_type`, `estimated_price`, `currency`, `offer_url` nebudou povinná při vytváření leadu
+- Validační schéma bude upraveno - tyto položky budou mít výchozí hodnoty
+- Nabídka se bude zadávat až po vytvoření leadu v detailu (tab Nabídka v LeadDetailDialog)
 
-**2. Tabove rozlozeni (4 taby)**
+**4. Zobrazení ARES dat v detailu leadu (LeadDetailDialog)**
+- V tabu "Přehled" přidání sekce s daty z ARES: jednatelé, právní forma, datum vzniku, odkaz na ARES
+- Readonly informační panel s daty načtenými při vytváření
 
-```text
-[ Prehled | Komunikace | Nabidka | Poznamky ]
-```
+### Technické změny
 
-- **Prehled** - firemni udaje, kontakt, obchodni info, fakturacni udaje, meta (soucasne sekce 1-2 zhustenejsi)
-- **Komunikace** - timeline vsech komunikacnich udalosti (zadost o pristupy, onboarding, smlouva, odeslani nabidky) + akce. Celkova historie prace s leadem v chronologickem poradi
-- **Nabidka** - sluzby v nabidce, tvorba/odeslani nabidky, celkova cena. Pridavani sluzeb az po nasdileni pristupu (kontrola `access_received_at`)
-- **Poznamky** - vsechny poznamky vcetne novych typu (bezna poznamka, poznamka z callu, interni poznamka)
+**Soubory k úpravě:**
 
-**3. Typy poznamek**
-- Rozsireni `LeadNote` typu o pole `note_type`: `'general' | 'call' | 'internal'`
-- Kazdy typ bude mit vizualni odliseni (ikona, barva badge)
-- Pri pridavani poznamky se vybere typ pomoci segmentovanych tlacitek
-- Call poznamky budou mit navic pole pro datum a cas hovoru a ucely poznamek z telefonatu
+1. **`src/components/leads/AddLeadDialog.tsx`**
+   - Nahrazení `handleAresLookup` za debounced auto-lookup na onChange IČO pole
+   - Reálné ARES API volání (2 endpointy: základní + VR pro jednatele)
+   - Odstranění mock dat (`MOCK_ARES_DATA`)
+   - Odstranění tlačítek Search/ARES
+   - Přidání zobrazení jednatelů (read-only badge list)
+   - Přidání odkazu na ARES profil
+   - Odstranění celé sekce "Nabídka" (service, offer_type, price, currency, offer_url)
+   - Úprava zod schématu - `potential_service`, `estimated_price` nepovinné s defaulty
+   - Přidání nových polí do stavu: `aresDirectors`, `aresLegalForm`, `aresFounded`
 
-**4. Komunikacni timeline (tab Komunikace)**
-- Chronologicky serazene udalosti z existujicich timestampu leadu:
-  - `access_request_sent_at` - Zadost o pristupy odeslana
-  - `access_received_at` - Pristupy prijaty
-  - `onboarding_form_sent_at` - Onboarding formular odeslan
-  - `onboarding_form_completed_at` - Formular vypnen
-  - `offer_created_at` - Nabidka vytvorena
-  - `offer_sent_at` - Nabidka odeslana
-  - `contract_created_at` / `contract_sent_at` / `contract_signed_at` - Smlouva
-  - Plus poznamky z `lead.notes` (interleavovane podle datumu)
-- Kazda udalost ma akci (tlacitko) pro dalsi krok (napr. u "Cekame na pristupy" -> "Prijato")
+2. **`src/components/leads/LeadDetailDialog.tsx`**
+   - V tabu Přehled přidání odkazu na ARES (již tam je, jen ověření)
+   - Zobrazení jednatelů pokud jsou uloženi v lead datech
 
-**5. Omezeni pridavani sluzeb**
-- V tabu Nabidka: tlacitko "Pridat sluzbu" bude disabled pokud `!lead.access_received_at`
-- Zobrazi se informacni hlaska "Sluzby lze pridavat az po nasdileni pristupu"
+3. **`src/types/crm.ts`**
+   - Přidání volitelných polí do Lead typu: `legal_form`, `founded_date`, `directors`, `ares_nace`
 
-### Technicke zmeny
-
-**Soubory k uprave:**
-
-1. **`src/types/crm.ts`** - Rozsireni `LeadNote` o `note_type: 'general' | 'call' | 'internal'` a volitelne `call_date: string | null`
-
-2. **`src/components/leads/LeadDetailSheet.tsx`** -> prejmenovani na `LeadDetailDialog.tsx`
-   - Nahrada Sheet za Dialog
-   - Pridani Tabs (Prehled, Komunikace, Nabidka, Poznamky)
-   - Rozdeleni soucasneho obsahu do tabu
-   - Komunikacni timeline z existujicich timestamp poli
-   - Poznamky s vyberem typu
-
-3. **`src/hooks/useLeadsData.tsx`** - Uprava `addNote` funkce pro podporu `note_type` a `call_date`
-
-4. **`src/components/leads/LeadsKanban.tsx`** a **`src/components/leads/LeadsTable.tsx`** a **`src/pages/Leads.tsx`** - Update importu z LeadDetailSheet na LeadDetailDialog
-
-5. **Nova komponenta `src/components/leads/LeadCommunicationTimeline.tsx`** - timeline komponent zobrazujici chronologicky vsechny udalosti + akcni tlacitka
-
-6. **Nova komponenta `src/components/leads/LeadNotesTab.tsx`** - oddeleny tab s poznamkami, vyber typu, filtrovani
-
-**Datovy model** - DB migrace neni nutna, protoze `notes` jsou ulozeny jako JSONB pole v tabulce `leads`. Staci pridat nove pole do JSON struktury poznamky.
-
-### Vizualni styl
-
-- Dialog: `max-w-4xl`, `h-[90vh]`, `overflow-hidden`
-- Tabs: plna sirka, pod headerem
-- Kazdy tab content: vlastni `ScrollArea`
-- Timeline: vertikalni cara s ikonami a timestampy vlevo, obsah vpravo
-- Poznamky: barevne badges podle typu (modra = call, seda = obecna, zluta = interni)
-
+**Poznámka k obratu:** ARES API neposkytuje finanční údaje (obrat, zisk). Tyto informace jsou dostupné pouze ve sbírkách listin na Justice.cz. Do UI přidáme odkaz na `https://or.justice.cz/ias/ui/rejstrik-$firma?ico={ico}` kde si uživatel může tyto údaje dohledat ručně.
