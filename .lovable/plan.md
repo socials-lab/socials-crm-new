@@ -1,81 +1,40 @@
 
-## Editace viceprace + schvalovaci flow klientem
 
-### Prehled
+## Vzory viceprace, tahak hodinovek, odstraneni nepotrebnych poli
 
-Pridame:
-1. **Edit dialog** pro viceprace (zmena kolegy, hodin, sazby, popisu)
-2. **Schvalovaci flow** -- klient musi schvalit viceprace pres verejnou stranku, nez se na ni zacne pracovat
-3. **Odeslani/kopirovani odkazu** klientovi
+### Co se zmeni
 
-### Flow schvalovani
+1. **Vzory (prednastavene sablony) viceprace** -- nad formularem budou klikatelne chipy s nejcastejsimi vicepracemi. Po kliknuti se predvyplni nazev a hodinova sazba:
+   - "Nastaveni analytiky" (1 900 Kc/h)
+   - "Tvorba videi" (1 600 Kc/h)
 
-```text
-Vytvoreni viceprace (status: pending_approval)
-        |
-        v
-CRM uzivatel posle klientovi odkaz na schvalovaci stranku
-  (email nebo kopirovani URL)
-        |
-        v
-Klient na verejne strance vidi seznam viceprace a schvali/zamitne
-        |
-  +-----+------+
-  |            |
-  v            v
-approved    rejected
-(in_progress)  (cancelled/pending_approval)
-        |
-        v
-Prace probiha -> ready_to_invoice -> invoiced
-```
+2. **Tahak hodinovek** -- pod polem "Sazba" se zobrazi rozbalovaci sekce (Collapsible) s tabulkou hodinovek pro kolegy:
 
-### Zmeny v databazi
+| Pozice | Hodinovka |
+|--------|-----------|
+| Meta Ads | 1 700 Kc |
+| PPC | 1 700 Kc |
+| Analytika | 1 900 Kc |
+| Grafika / video | 1 500 Kc |
+| SEO | 1 500 Kc |
+| Tvorba landing pages pomoci AI | 2 500 Kc |
+| AI SEO | 1 800 Kc |
 
-Pridame do tabulky `extra_works`:
-- `approval_token` (text, unique) -- UUID token pro verejny odkaz
-- `client_approval_email` (text) -- email kam se posilal odkaz
-- `client_approved_at` (timestamptz) -- kdy klient schvalil
-- `client_rejected_at` (timestamptz) -- kdy klient zamitl
-- `client_rejection_reason` (text) -- duvod zamitnuti
+3. **Odstraneni poli**:
+   - "Datum prace" -- odstranime uplne
+   - "Fakturacni obdobi" -- odstranime uplne
+   - Z `handleSubmit` se tyto hodnoty nebudou odesilat (nebo se nastavi na defaulty)
 
-### Novy stav
+### Technicke detaily
 
-Pridame do enumu `extra_work_status` hodnotu `rejected`, aby klient mohl viceprace zamitnout.
+**Upravovany soubor:** `src/components/extra-work/AddExtraWorkDialog.tsx`
 
-### Soubory
+- Pridame konstantu `EXTRA_WORK_TEMPLATES` s prednastavenymi sablonam (nazev + sazba)
+- Pridame konstantu `HOURLY_RATE_CHEATSHEET` s tabulkou hodinovek
+- Nad pole "Nazev" pridame radek s klikatelnymi chipy (Button variant outline), po kliknuti se vyplni `name` a `hourlyRate`
+- Pod pole "Sazba" pridame Collapsible komponentu s tahkem hodinovek
+- Odstranime cely blok s "Datum prace" (Calendar/Popover)
+- Odstranime cely blok s "Fakturacni obdobi" (Select)
+- Odstranime stav `workDate` a `billingPeriod`
+- V `handleSubmit` nastavime `work_date` na dnesni datum (automaticky) a `billing_period` na aktualni mesic
 
-| Soubor | Akce | Popis |
-|--------|------|-------|
-| `src/components/extra-work/EditExtraWorkDialog.tsx` | Novy | Dialog pro editaci viceprace (kolega, hodiny, sazba, popis) |
-| `src/components/extra-work/SendApprovalDialog.tsx` | Novy | Dialog s moznosti zadat email klienta nebo zkopirovat odkaz |
-| `src/pages/ExtraWorkApproval.tsx` | Novy | Verejna stranka kde klient schvali/zamitne viceprace |
-| `src/components/extra-work/ExtraWorkTable.tsx` | Uprava | Pridat tlacitko "Editovat" a "Odeslat ke schvaleni" v dropdown menu |
-| `src/pages/ExtraWork.tsx` | Uprava | Napojit edit dialog |
-| `src/types/crm.ts` | Uprava | Pridat nova pole do ExtraWork interface, pridat `rejected` status |
-| `src/App.tsx` | Uprava | Pridat route `/extra-work-approval/:token` |
-| DB migrace | Nova | Pridat sloupce a enum hodnotu |
-| `supabase/functions/send-extra-work-approval/index.ts` | Novy | Edge function pro odeslani emailu se schvalovacim odkazem (stub jako send-onboarding-summary) |
-
-### Detaily implementace
-
-**EditExtraWorkDialog**: Predvyplneny formular s moznosti zmenit kolegu, pocet hodin, sazbu (automaticky prepocet castky), nazev, popis. Nelze editovat viceprace ve stavu `invoiced`.
-
-**SendApprovalDialog**: 
-- Predvyplneny email z kontaktu klienta (`client_contacts` nebo `clients.main_contact_email`)
-- Tlacitko "Odeslat email" (vola edge function)
-- Tlacitko "Zkopirovat odkaz" (kopirovani URL do schranky)
-- Generuje unikatni `approval_token` pri prvnim pouziti
-
-**ExtraWorkApproval (verejna stranka)**:
-- Nacte viceprace podle tokenu (z DB)
-- Zobrazi: nazev, popis, hodiny, sazba, castka, klient, zakazka
-- Tlacitka: "Schvaluji" (zmeni status na `in_progress`) a "Zamitnout" (s moznosti duvodu)
-- Po akci zobrazi potvrzeni
-- Branding Socials (logo, barvy) -- stejny styl jako UpgradeOfferPage
-
-**RLS**: Verejna stranka bude pristupovat pres edge function (service role), ne primo z klienta. Alternativne pridame RLS policy pro anon read by token.
-
-### Technicka poznamka
-
-Edge function `send-extra-work-approval` bude zatim jen logovat payload (jako send-onboarding-summary). Pro skutecne odesilani emailu bude potreba napojit Resend API pozdeji.
