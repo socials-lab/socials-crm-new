@@ -1,35 +1,60 @@
 
 
-## Oprava údajů o jednatelích leadu Socials Advertising s.r.o.
+## Implementace automatického získávání finančních údajů z Hlídače státu
 
-### Co je špatně
-V demo leadu jsou uvedeni fiktivní jednatelé (Daniel Kocián 70%, Petra Nováková 30%). Správné údaje z obchodního rejstříku jsou jiné.
+### Přehled
+Napojení na API Hlídače státu (`/api/v2/firmy/ico/{ico}`) pro automatické zobrazení obratu, zisku a dalších finančních údajů přímo v detailu leadu. Nahradí stávající odkaz na Justice.cz.
 
-### Skutečné údaje z rejstříku (IČO 08186464)
+### Kroky implementace
 
-| Osoba | Role | Podíl |
-|-------|------|-------|
-| Daniel Bauer | Jednatel (od 23.5.2019) | 80 % |
-| Otakar Lucák | Jednatel (od 26.8.2021) | 20 % |
+#### 1. Uložení API klíče
+Uložení tokenu `311be6aa861040cbaa6ae0813f727bc1` jako Supabase secret `HLIDAC_STATU_API_KEY`.
 
-- Sídlo: Korunní 2569/108, Vinohrady, 101 00 Praha
-- Základní kapitál: 100 000 Kč
-- Založena: 23.5.2019
-- DIČ: CZ08186464
-- Spisová značka: C 314420/MSPH
+#### 2. Edge funkce `company-financials`
+Nová Supabase edge funkce v `supabase/functions/company-financials/index.ts`:
+- Přijímá parametr `ico`
+- Volá `https://api.hlidacstatu.cz/api/v2/firmy/ico/{ico}` s hlavičkou `Authorization: Token {key}`
+- Vrací zpracovaná finanční data (obrat, zisk, počet zaměstnanců, roky)
+- CORS headers pro volání z webové aplikace
+- Registrace v `supabase/config.toml` s `verify_jwt = false`
 
-### Co se změní
+#### 3. React hook `useCompanyFinancials`
+Nový hook v `src/hooks/useCompanyFinancials.tsx`:
+- Přijímá IČO jako parametr
+- Volá edge funkci přes Supabase client (`supabase.functions.invoke`)
+- Cachuje výsledky pomocí React Query
+- Stavy: loading, error, data
 
-Soubor `src/hooks/useLeadsData.tsx` -- aktualizace demo leadu:
+#### 4. UI komponenta `CompanyFinancials`
+Nová komponenta v `src/components/leads/CompanyFinancials.tsx`:
+- Zobrazí karty s posledním dostupným obratem a ziskem
+- Zobrazí trend (meziroční změna)
+- Kompaktní design do stávajícího collapsible "Firemní údaje"
+- Nahradí stávající odkaz "hledat na Justice.cz" (řádky 491-504 v LeadDetailDialog)
+- Loading skeleton + error state
 
-1. **directors** -- oprava na skutečné jednatele:
-   - Daniel Bauer, Jednatel, 80 %
-   - Otakar Lucák, Jednatel, 20 %
-2. **founded_date** -- oprava na `2019-05-23`
-3. **contact_name** -- oprava na `Daniel Bauer` (hlavní jednatel)
-4. **contact_phone** -- oprava na `+420 774 536 699` (z rejstříku)
-5. **contact_email** -- ponechat `danny@socials.cz` nebo změnit na `socials@socials.cz` (oficiální e-mail z rejstříku)
-6. **dic** -- doplnit `CZ08186464`
+#### 5. Úprava LeadDetailDialog
+- Nahrazení statického odkazu na Justice.cz komponentou `CompanyFinancials`
+- Komponenta se zobrazí pouze pokud lead má vyplněné IČO
 
-Jedná se o jedinou změnu v jednom souboru, pouze úprava hodnot v objektu `demoSocialsLead`.
+---
+
+### Technické detaily
+
+**API endpoint:** `GET /api/v2/firmy/ico/{ico}`
+
+**Hlavička:** `Authorization: Token 311be6aa861040cbaa6ae0813f727bc1`
+
+**Očekávaná struktura odpovědi** (na základě Swagger dokumentace):
+- Firma obsahuje finanční údaje z účetních závěrek
+- Obrat, zisk, počet zaměstnanců za jednotlivé roky
+
+**Soubory k vytvoření:**
+- `supabase/functions/company-financials/index.ts`
+- `src/hooks/useCompanyFinancials.tsx`
+- `src/components/leads/CompanyFinancials.tsx`
+
+**Soubory k úpravě:**
+- `supabase/config.toml` -- přidání `[functions.company-financials]`
+- `src/components/leads/LeadDetailDialog.tsx` -- nahrazení odkazu na Justice.cz komponentou
 
