@@ -1,42 +1,34 @@
 
 
-## Synchronizace IČO z onboarding formuláře zpět do leadu
+## Vylepšení detailu klienta -- doplnění údajů z leadu
 
-### Problém
-Klient může v onboarding formuláři změnit IČO (a tím i další firemní údaje), ale při odeslání formuláře se tyto změny nezapíší zpět do leadu. Lead tak zůstane s původním (odhadovaným) IČO.
+### Co se změní
 
-### Řešení
-V `onSubmit` funkci v `src/pages/OnboardingForm.tsx` rozšířit volání `updateLead` o všechny firemní údaje z formuláře, aby lead vždy obsahoval finální data od klienta.
+V rozbalené kartě klienta se do sekce "Firemní údaje" přidají:
+
+1. **Spolehlivý plátce DPH** -- barevný badge vedle DIČ (zelený = spolehlivý, červený = nespolehlivý), využívající existující hook `useVatReliability`
+2. **Odkaz na Hlídač státu** -- vedle odkazu na ARES přidat ikonu s odkazem na `https://www.hlidacstatu.cz/subjekt/{ico}`
+3. **Finanční varování (dotace, insolvence)** -- zobrazit `CompanyFinancials` komponentu pod firemní údaje klienta, stejně jako u leadu
 
 ### Technické detaily
 
-**Soubor:** `src/pages/OnboardingForm.tsx`
+**Soubor: `src/pages/Clients.tsx`**
 
-**Změna:** V metodě `onSubmit` (cca řádek 344) rozšířit objekt předávaný do `updateLead` o tyto pole:
+1. Importovat `useVatReliability` hook a ikony `ShieldCheck`, `ShieldAlert`
+2. V sekci "Firemní údaje" (řádek ~480-527):
+   - U řádku s IČO (řádek ~482) přidat vedle ARES ikony i odkaz na Hlídač státu
+   - U řádku s DIČ (řádek ~494-496) přidat VAT reliability badge -- volat `useVatReliability(client.dic)` a zobrazit výsledek jako barevný štítek
+3. Pod sekci firemních údajů přidat `CompanyFinancials` komponentu pro zobrazení varování o dotacích a insolvenci
 
-```typescript
-await updateLead(lead.id, {
-  // Existující pole
-  onboarding_form_completed_at: new Date().toISOString(),
-  contract_url: mockContractUrl,
-  contract_created_at: new Date().toISOString(),
-  // Nově přidaná pole -- finální data od klienta
-  ico: data.ico,
-  dic: data.dic || null,
-  company_name: data.company_name,
-  website: data.website || null,
-  industry: data.industry || null,
-  billing_street: data.billing_street || null,
-  billing_city: data.billing_city || null,
-  billing_zip: data.billing_zip || null,
-  billing_country: data.billing_country || null,
-  billing_email: data.billing_email || null,
-});
+Protože `useVatReliability` je hook a nelze ho volat podmíněně uvnitř mapy, vytvoří se malá pomocná komponenta `ClientCompanyInfo`, která zapouzdří volání hooku pro konkrétního klienta.
+
+**Nová komponenta (inline v `Clients.tsx` nebo samostatný soubor):**
+
+```text
+ClientVatBadge({ dic }) 
+  -> useVatReliability(dic)
+  -> zobrazí ShieldCheck (zelený) nebo ShieldAlert (červený) badge
 ```
 
-Tím se zajistí, že:
-- IČO v leadu bude vždy finální (to, které klient potvrdil v onboarding formuláři)
-- Všechny související údaje (název, DIČ, sídlo, fakturační email) budou synchronizovány
-- Klient vytvořený z leadu bude mít stejné údaje jako lead
+Žádné nové závislosti ani databázové změny nejsou potřeba -- vše využívá existující kód.
 
-Žádné další soubory není třeba měnit -- formulář již sleduje změny IČO (stav `icoChanged`) a ARES lookup funguje správně.
