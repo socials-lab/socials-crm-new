@@ -8,12 +8,14 @@ import {
   ClipboardList, 
   FileSignature, 
   ArrowRightLeft,
-  Loader2
+  ExternalLink,
+  X,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { Lead } from '@/types/crm';
+import type { Lead, LeadService } from '@/types/crm';
 
 interface FlowStep {
   id: string;
@@ -27,6 +29,7 @@ interface FlowStep {
     variant?: 'default' | 'outline';
   };
   detail?: string;
+  customContent?: React.ReactNode;
 }
 
 interface LeadFlowStepperProps {
@@ -40,6 +43,7 @@ interface LeadFlowStepperProps {
   onMarkContractSent: () => void;
   onMarkContractSigned: () => void;
   onConvert: () => void;
+  onRemoveService?: (index: number) => void;
 }
 
 const formatDate = (date: string) => {
@@ -49,6 +53,47 @@ const formatDate = (date: string) => {
     year: 'numeric',
   });
 };
+
+function ServicesInlineList({ 
+  services, 
+  currency, 
+  onRemove 
+}: { 
+  services: LeadService[]; 
+  currency: string;
+  onRemove?: (index: number) => void;
+}) {
+  if (services.length === 0) return null;
+  const total = services.reduce((sum, s) => sum + s.price, 0);
+  
+  return (
+    <div className="mt-1.5 space-y-1">
+      {services.map((s, i) => (
+        <div key={i} className="flex items-center gap-1.5 text-xs group">
+          <span className="text-muted-foreground">•</span>
+          <span className="flex-1 truncate">{s.name}</span>
+          {s.selected_tier && (
+            <Badge variant="outline" className="text-[10px] h-4 px-1">{s.selected_tier}</Badge>
+          )}
+          <span className="font-medium tabular-nums">{s.price.toLocaleString()} {currency}</span>
+          {onRemove && (
+            <button
+              onClick={() => onRemove(i)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      ))}
+      {services.length > 1 && (
+        <div className="flex items-center justify-end text-xs font-medium pt-0.5 border-t border-border/50">
+          Celkem: {total.toLocaleString()} {currency}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function LeadFlowStepper({
   lead,
@@ -61,6 +106,7 @@ export function LeadFlowStepper({
   onMarkContractSent,
   onMarkContractSigned,
   onConvert,
+  onRemoveService,
 }: LeadFlowStepperProps) {
   const servicesCount = lead.potential_services?.length || 0;
   const hasOffer = !!lead.offer_url;
@@ -113,6 +159,13 @@ export function LeadFlowStepper({
         onClick: onAddService,
         variant: 'outline',
       },
+      customContent: servicesCount > 0 ? (
+        <ServicesInlineList
+          services={lead.potential_services!}
+          currency={lead.currency}
+          onRemove={onRemoveService}
+        />
+      ) : undefined,
     },
     {
       id: 'offer-created',
@@ -129,6 +182,17 @@ export function LeadFlowStepper({
         onClick: onCreateOffer,
         variant: 'outline',
       } : undefined,
+      customContent: lead.offer_url ? (
+        <a
+          href={lead.offer_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+        >
+          <ExternalLink className="h-3 w-3" />
+          Zobrazit nabídku
+        </a>
+      ) : undefined,
     },
     {
       id: 'offer-sent',
@@ -196,7 +260,6 @@ export function LeadFlowStepper({
     },
   ];
 
-  // Find the first incomplete step index for "current" highlight
   const currentStepIndex = steps.findIndex(s => !s.isComplete);
 
   return (
@@ -206,28 +269,31 @@ export function LeadFlowStepper({
         const isFuture = !step.isComplete && index > currentStepIndex;
         
         return (
-          <div key={step.id} className="flex gap-3 relative">
-            {/* Vertical connector line */}
-            {index < steps.length - 1 && (
-              <div className={cn(
-                "absolute left-[11px] top-6 bottom-0 w-px",
-                step.isComplete ? "bg-green-500/40" : "bg-border"
-              )} />
+          <div
+            key={step.id}
+            className={cn(
+              "flex gap-2.5 items-start p-2 rounded-lg transition-colors",
+              step.isComplete && "bg-muted/30",
+              isCurrent && "bg-amber-500/5 ring-1 ring-amber-500/20",
             )}
-            
-            {/* Icon circle */}
+          >
+            {/* Checkbox-style icon */}
             <div className={cn(
-              "flex items-center justify-center w-6 h-6 rounded-full flex-shrink-0 z-10 transition-colors",
+              "flex items-center justify-center w-5 h-5 rounded mt-0.5 flex-shrink-0 transition-colors",
               step.isComplete && "bg-green-500 text-white",
-              isCurrent && "bg-amber-500 text-white ring-2 ring-amber-500/30",
-              isFuture && "bg-muted text-muted-foreground border border-border",
+              isCurrent && "bg-amber-500 text-white",
+              isFuture && "border border-border bg-background text-muted-foreground",
             )}>
-              {step.icon}
+              {step.isComplete ? (
+                <Check className="h-3 w-3" />
+              ) : (
+                <span className="text-[10px] font-medium">{index + 1}</span>
+              )}
             </div>
             
             {/* Content */}
-            <div className="flex-1 min-w-0 pb-3">
-              <div className="flex items-center gap-2 flex-wrap min-h-[24px]">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap min-h-[20px]">
                 <span className={cn(
                   "text-sm",
                   step.isComplete && "font-medium",
@@ -237,21 +303,22 @@ export function LeadFlowStepper({
                   {step.label}
                 </span>
                 {step.completedAt && (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     {formatDate(step.completedAt)}
                   </span>
                 )}
                 {step.detail && (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     • {step.detail}
                   </span>
                 )}
               </div>
+              {step.customContent}
               {step.action && (
                 <Button
                   variant={step.action.variant || 'outline'}
                   size="sm"
-                  className="mt-1 h-7 text-xs"
+                  className="mt-1 h-6 text-xs px-2"
                   onClick={step.action.onClick}
                 >
                   {step.action.label}
