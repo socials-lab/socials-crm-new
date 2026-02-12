@@ -388,15 +388,11 @@ function EngagementsContent() {
           const totalServicesAmount = engagementServicesList
             .filter(s => s.is_active)
             .reduce((sum, s) => {
-              // For Creative Boost, calculate from USED credits for the FILTERED month only
               if (s.service_id === CREATIVE_BOOST_SERVICE_ID) {
-                const cbSummary = getClientMonthSummaryByEngagementServiceId(s.id, filterYear, filterMonth);
-                // If there's summary data for this month, use estimated invoice
-                if (cbSummary) {
-                  return sum + cbSummary.estimatedInvoice;
-                }
-                // If no data for this month, return 0 (not fallback to max)
-                return sum;
+                // Use package price (maxCredits * pricePerCredit) for retainer display
+                const maxCredits = s.creative_boost_max_credits || 0;
+                const pricePerCredit = s.creative_boost_price_per_credit || 400;
+                return sum + (maxCredits * pricePerCredit);
               }
               return sum + s.price;
             }, 0);
