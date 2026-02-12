@@ -166,6 +166,7 @@ export default function Services() {
           credits: t.baseCredits,
           description: t.description,
           id: t.id,
+          category: t.category,
         }))
       : undefined;
 
