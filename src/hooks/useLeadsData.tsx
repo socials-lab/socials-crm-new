@@ -62,7 +62,7 @@ interface LeadsDataContextType {
   updateLeadStage: (id: string, stage: LeadStage) => Promise<void>;
   
   // Notes
-  addNote: (leadId: string, text: string, noteType?: LeadNoteType, callDate?: string | null) => Promise<void>;
+  addNote: (leadId: string, text: string, noteType?: LeadNoteType, callDate?: string | null, subject?: string | null, recipients?: string[] | null) => Promise<void>;
   
   // Helpers
   getLeadById: (id: string) => Lead | undefined;
@@ -240,7 +240,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     await updateLeadMutation.mutateAsync({ id, data: { stage } });
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
-  const addNote = useCallback(async (leadId: string, text: string, noteType: LeadNoteType = 'general', callDate: string | null = null) => {
+  const addNote = useCallback(async (leadId: string, text: string, noteType: LeadNoteType = 'general', callDate: string | null = null, subject: string | null = null, recipients: string[] | null = null) => {
     // For now, notes are stored in lead history (will be proper table later)
     addHistoryEntry(leadId, 'note_added', null, null, text.substring(0, 100) + (text.length > 100 ? '...' : ''));
     
@@ -255,8 +255,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         text,
         note_type: noteType,
         call_date: callDate,
-        subject: null,
-        recipients: null,
+        subject: subject,
+        recipients: recipients,
         created_at: new Date().toISOString(),
       };
       const updatedNotes = [...lead.notes, newNote];
