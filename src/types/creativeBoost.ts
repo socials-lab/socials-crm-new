@@ -4,10 +4,8 @@ export type OutputCategory =
   | 'banner' 
   | 'banner_translation' 
   | 'banner_revision' 
-  | 'ai_photo' 
   | 'video' 
-  | 'video_translation' 
-  | 'video_revision';
+  | 'video_translation';
 
 export type ItemStatus = 'draft' | 'confirmed';
 
