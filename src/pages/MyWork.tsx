@@ -179,7 +179,15 @@ function MyWorkContent() {
     });
   }, [extraWorks, currentColleague, currentYear, currentMonth]);
   
-  const totalExtraWork = myExtraWorks.reduce((sum, ew) => sum + ew.amount, 0);
+  // Calculate colleague earnings from extra work using their hourly rate × hours
+  const getColleagueExtraWorkAmount = (ew: typeof extraWorks[0]) => {
+    if (currentColleague?.internal_hourly_cost && ew.hours_worked) {
+      return currentColleague.internal_hourly_cost * ew.hours_worked;
+    }
+    return ew.amount; // fallback to client amount if no hourly rate or hours
+  };
+
+  const totalExtraWork = myExtraWorks.reduce((sum, ew) => sum + getColleagueExtraWorkAmount(ew), 0);
 
   // Internal work this month
   const internalWorkThisMonth = getRewardsByMonth(currentYear, currentMonth);
@@ -210,10 +218,13 @@ function MyWorkContent() {
 
   const extraWorksForInvoice = myExtraWorks.map((ew) => {
     const client = clients.find(c => c.id === ew.client_id);
+    const colleagueAmount = getColleagueExtraWorkAmount(ew);
     return {
       clientName: client?.brand_name || client?.name || 'Neznámý klient',
       name: ew.name,
-      amount: ew.amount,
+      amount: colleagueAmount,
+      hours: ew.hours_worked,
+      hourlyRate: currentColleague?.internal_hourly_cost,
     };
   });
 
@@ -363,10 +374,18 @@ function MyWorkContent() {
                 </div>
                 {myExtraWorks.map((ew) => {
                   const client = clients.find(c => c.id === ew.client_id);
+                  const colleagueAmount = getColleagueExtraWorkAmount(ew);
                   return (
                     <div key={ew.id} className="flex items-center justify-between py-1">
-                      <span className="text-sm truncate">{client?.brand_name || client?.name} – {ew.name}</span>
-                      <span className="font-medium">{ew.amount.toLocaleString()} Kč</span>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-sm truncate">{client?.brand_name || client?.name} – {ew.name}</span>
+                        {ew.hours_worked && currentColleague?.internal_hourly_cost && (
+                          <Badge variant="secondary" className="text-xs shrink-0">
+                            {ew.hours_worked}h × {currentColleague.internal_hourly_cost} Kč
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="font-medium">{colleagueAmount.toLocaleString()} Kč</span>
                     </div>
                   );
                 })}
