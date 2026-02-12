@@ -269,6 +269,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       directors: aresDirectors.length > 0 ? aresDirectors : null,
       ares_nace: aresNace,
       court_registration: null,
+      vat_payer_status: null,
       created_by: user?.id || null,
       updated_by: user?.id || null,
     };

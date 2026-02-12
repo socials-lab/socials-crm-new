@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.company-financials]
 verify_jwt = false
+
+[functions.vat-reliability]
+verify_jwt = false
