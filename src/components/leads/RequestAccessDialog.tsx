@@ -22,7 +22,7 @@ interface RequestAccessDialogProps {
   contactEmail: string | null;
   companyName: string;
   leadId: string;
-  onSent?: (platforms: string[]) => void;
+  onSent?: (platforms: string[], emailData: { subject: string; body: string; recipients: string[] }) => void;
 }
 
 const DEFAULT_BCC = ['danny@socials.cz', 'dana.bauerova@socials.cz'];
@@ -97,7 +97,11 @@ export function RequestAccessDialog({
 
     setIsSending(true);
     await new Promise(resolve => setTimeout(resolve, 1500));
-    onSent?.(['Google Analytics 4', 'Facebook Business Manager', 'Google Ads', 'S-klik']);
+    onSent?.(['Google Analytics 4', 'Facebook Business Manager', 'Google Ads', 'S-klik'], {
+      subject: emailSubject,
+      body: emailContent,
+      recipients: toEmails,
+    });
     setIsSending(false);
     toast.success('Žádost o přístupy byla odeslána');
     onOpenChange(false);

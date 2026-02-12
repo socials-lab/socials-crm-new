@@ -849,12 +849,15 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         contactEmail={lead.contact_email}
         companyName={lead.company_name}
         leadId={lead.id}
-        onSent={(platforms) => {
+        onSent={(platforms, emailData) => {
           updateLead(lead.id, {
             access_request_sent_at: new Date().toISOString(),
             access_request_platforms: platforms,
             stage: 'waiting_access' as LeadStage,
           });
+          if (emailData) {
+            addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
+          }
         }}
       />
 
@@ -862,11 +865,14 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         open={isOnboardingFormOpen}
         onOpenChange={setIsOnboardingFormOpen}
         lead={lead}
-        onSent={(formUrl) => {
+        onSent={(formUrl, emailData) => {
           updateLead(lead.id, {
             onboarding_form_sent_at: new Date().toISOString(),
             onboarding_form_url: formUrl,
           });
+          if (emailData) {
+            addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
+          }
         }}
       />
 
@@ -874,12 +880,15 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         open={isSendOfferOpen}
         onOpenChange={setIsSendOfferOpen}
         lead={lead}
-        onSent={(ownerId) => {
+        onSent={(ownerId, emailData) => {
           updateLead(lead.id, {
             offer_sent_at: new Date().toISOString(),
             offer_sent_by_id: ownerId,
             stage: 'offer_sent' as LeadStage,
           });
+          if (emailData) {
+            addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
+          }
         }}
       />
 

@@ -27,7 +27,7 @@ interface SendOfferDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead;
-  onSent?: (ownerId: string) => void;
+  onSent?: (ownerId: string, emailData: { subject: string; body: string; recipients: string[] }) => void;
 }
 
 export function SendOfferDialog({
@@ -116,7 +116,11 @@ ${selectedOwner.phone || ''}`);
     // Mock sending - will be replaced with actual Edge Function
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    onSent?.(selectedOwnerId);
+    onSent?.(selectedOwnerId, {
+      subject: emailSubject,
+      body: emailContent,
+      recipients: lead.contact_email ? [lead.contact_email] : [],
+    });
     
     setIsSending(false);
     toast.success('📤 Nabídka byla odeslána!');
