@@ -69,9 +69,13 @@ serve(async (req) => {
     const paddedIco = ico.toString().padStart(8, '0');
     const aresUrl = `https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${paddedIco}`;
     
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch(aresUrl, {
       headers: { "Accept": "application/json" },
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 
     if (!response.ok) {
       const durationMs = Date.now() - startTime;

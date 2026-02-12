@@ -60,6 +60,9 @@ serve(async (req) => {
       pocet: 10,
     };
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch(aresUrl, {
       method: "POST",
       headers: { 
@@ -67,7 +70,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(requestBody),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 
     if (!response.ok) {
       const durationMs = Date.now() - startTime;

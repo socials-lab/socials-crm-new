@@ -18,6 +18,15 @@ interface SearchResponse {
   error?: string;
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Časový limit vypršel')), ms)
+    ),
+  ]);
+}
+
 export function useAresSearch() {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,35 +35,46 @@ export function useAresSearch() {
   // Cache for recent searches
   const cacheRef = useRef<Map<string, CompanySearchResult[]>>(new Map());
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Tracks the latest request - stale requests are ignored
+  const requestIdRef = useRef(0);
 
   const searchCompanies = useCallback(async (query: string): Promise<CompanySearchResult[]> => {
-    // Clear previous debounce timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+    const requestId = ++requestIdRef.current;
 
     // Check cache first
     const cacheKey = query.trim().toLowerCase();
     if (cacheRef.current.has(cacheKey)) {
       const cachedResults = cacheRef.current.get(cacheKey)!;
-      setResults(cachedResults);
+      if (requestId === requestIdRef.current) {
+        setResults(cachedResults);
+      }
       return cachedResults;
     }
 
     // Validate query length
     if (query.trim().length < 3) {
-      setResults([]);
-      setError(null);
+      if (requestId === requestIdRef.current) {
+        setResults([]);
+        setError(null);
+      }
       return [];
     }
 
-    setIsSearching(true);
-    setError(null);
+    if (requestId === requestIdRef.current) {
+      setIsSearching(true);
+      setError(null);
+    }
 
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke('ares-search', {
-        body: { query: query.trim() },
-      });
+      const { data, error: invokeError } = await withTimeout(
+        supabase.functions.invoke('ares-search', {
+          body: { query: query.trim() },
+        }),
+        15000
+      );
+
+      // Stale request - ignore
+      if (requestId !== requestIdRef.current) return [];
 
       if (invokeError) throw invokeError;
 
@@ -80,12 +100,17 @@ export function useAresSearch() {
       setResults(companies);
       return companies;
     } catch (err) {
+      // Stale request - ignore
+      if (requestId !== requestIdRef.current) return [];
       const errorMessage = err instanceof Error ? err.message : 'Chyba při vyhledávání';
       setError(errorMessage);
       setResults([]);
       return [];
     } finally {
-      setIsSearching(false);
+      // Only the latest request controls loading state
+      if (requestId === requestIdRef.current) {
+        setIsSearching(false);
+      }
     }
   }, []);
 
@@ -98,15 +123,19 @@ export function useAresSearch() {
 
     // Set new timer
     debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = null;
       onStart?.();
       searchCompanies(query);
     }, delay);
   }, [searchCompanies]);
 
-  // Clear results
+  // Clear results and cancel any in-flight requests
   const clearResults = useCallback(() => {
+    // Bump request ID so any in-flight request is ignored when it resolves
+    requestIdRef.current++;
     setResults([]);
     setError(null);
+    setIsSearching(false);
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
@@ -116,6 +145,7 @@ export function useAresSearch() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      requestIdRef.current++;
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
