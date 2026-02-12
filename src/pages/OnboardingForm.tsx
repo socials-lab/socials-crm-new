@@ -1283,10 +1283,11 @@ export default function OnboardingForm() {
 
           {/* Footer */}
           <p className="text-center text-sm text-muted-foreground mt-8">
-            Potřebujete pomoct?{' '}
-            <a href="mailto:info@socials.cz" className="text-primary hover:underline">
-              Kontaktujte nás
+            Potřebujete pomoct? Obraťte se na{' '}
+            <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">
+              {ownerName}
             </a>
+            {' '}– <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
           </p>
         </div>
       </div>
