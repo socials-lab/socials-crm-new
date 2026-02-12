@@ -31,6 +31,18 @@ const NOTE_TYPE_CONFIG: Record<LeadNoteType, { label: string; icon: React.ReactN
     color: 'text-amber-600',
     badgeColor: 'bg-amber-500/10 text-amber-700 border-amber-500/30',
   },
+  email_sent: {
+    label: 'Odeslaný e-mail',
+    icon: <MessageSquare className="h-3.5 w-3.5" />,
+    color: 'text-emerald-600',
+    badgeColor: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
+  },
+  email_received: {
+    label: 'Přijatý e-mail',
+    icon: <MessageSquare className="h-3.5 w-3.5" />,
+    color: 'text-cyan-600',
+    badgeColor: 'bg-cyan-500/10 text-cyan-700 border-cyan-500/30',
+  },
 };
 
 export function LeadNotesTab({ lead, onAddNote }: LeadNotesTabProps) {

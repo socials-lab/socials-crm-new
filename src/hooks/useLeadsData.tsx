@@ -255,6 +255,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         text,
         note_type: noteType,
         call_date: callDate,
+        subject: null,
+        recipients: null,
         created_at: new Date().toISOString(),
       };
       const updatedNotes = [...lead.notes, newNote];

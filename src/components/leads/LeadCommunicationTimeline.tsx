@@ -9,22 +9,13 @@ import {
   Phone,
   Lock,
   ArrowRightLeft,
-  Plus
+  Plus,
+  Mail,
+  MailOpen,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { Lead, LeadStage, LeadNote } from '@/types/crm';
-
-interface TimelineEvent {
-  id: string;
-  date: string;
-  icon: React.ReactNode;
-  title: string;
-  description?: string;
-  color: string;
-  action?: React.ReactNode;
-}
+import type { Lead, LeadNote } from '@/types/crm';
 
 interface LeadCommunicationTimelineProps {
   lead: Lead;
@@ -35,6 +26,18 @@ interface LeadCommunicationTimelineProps {
   onMarkAccessReceived: () => void;
   onMarkContractSent: () => void;
   onMarkContractSigned: () => void;
+}
+
+interface TimelineEvent {
+  id: string;
+  date: string;
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  color: string;
+  subject?: string | null;
+  recipients?: string[] | null;
+  noteType?: string;
 }
 
 const formatDate = (date: string) => {
@@ -49,15 +52,7 @@ const formatDate = (date: string) => {
 
 export function LeadCommunicationTimeline({
   lead,
-  onRequestAccess,
-  onSendOnboarding,
-  onSendOffer,
-  onCreateOffer,
-  onMarkAccessReceived,
-  onMarkContractSent,
-  onMarkContractSigned,
 }: LeadCommunicationTimelineProps) {
-  // Build timeline events from lead timestamps + notes
   const events: TimelineEvent[] = [];
 
   // Lead created
@@ -73,28 +68,47 @@ export function LeadCommunicationTimeline({
 
   // Notes interleaved
   lead.notes.forEach((note) => {
-    const noteIcon = note.note_type === 'call' 
-      ? <Phone className="h-3.5 w-3.5" /> 
-      : note.note_type === 'internal'
-        ? <Lock className="h-3.5 w-3.5" />
-        : <MessageSquare className="h-3.5 w-3.5" />;
-    const noteColor = note.note_type === 'call' 
-      ? 'bg-blue-500' 
-      : note.note_type === 'internal'
-        ? 'bg-amber-500'
-        : 'bg-slate-400';
+    let noteIcon: React.ReactNode;
+    let noteColor: string;
+    let noteTitle: string;
+
+    switch (note.note_type) {
+      case 'call':
+        noteIcon = <Phone className="h-3.5 w-3.5" />;
+        noteColor = 'bg-blue-500';
+        noteTitle = 'Záznam z hovoru';
+        break;
+      case 'internal':
+        noteIcon = <Lock className="h-3.5 w-3.5" />;
+        noteColor = 'bg-amber-500';
+        noteTitle = 'Interní poznámka';
+        break;
+      case 'email_sent':
+        noteIcon = <Mail className="h-3.5 w-3.5" />;
+        noteColor = 'bg-emerald-500';
+        noteTitle = note.subject ? `📧 ${note.subject}` : 'E-mail odeslán';
+        break;
+      case 'email_received':
+        noteIcon = <MailOpen className="h-3.5 w-3.5" />;
+        noteColor = 'bg-cyan-500';
+        noteTitle = note.subject ? `📨 ${note.subject}` : 'E-mail přijat';
+        break;
+      default:
+        noteIcon = <MessageSquare className="h-3.5 w-3.5" />;
+        noteColor = 'bg-slate-400';
+        noteTitle = 'Poznámka';
+    }
     
     events.push({
       id: `note-${note.id}`,
       date: note.call_date || note.created_at,
       icon: noteIcon,
-      title: note.note_type === 'call' 
-        ? 'Záznam z hovoru' 
-        : note.note_type === 'internal'
-          ? 'Interní poznámka'
-          : 'Poznámka',
+      title: noteTitle,
       description: note.text,
       color: noteColor,
+      subject: note.subject,
+      recipients: note.recipients,
+      noteType: note.note_type,
     });
   });
 
@@ -214,119 +228,56 @@ export function LeadCommunicationTimeline({
   // Sort by date descending (newest first)
   events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // Pending actions section
-  const pendingActions: React.ReactNode[] = [];
-
-  if (!lead.access_request_sent_at) {
-    pendingActions.push(
-      <Button key="access" variant="outline" size="sm" className="w-full justify-start gap-2" onClick={onRequestAccess}>
-        <KeyRound className="h-4 w-4" />
-        Odeslat žádost o přístupy
-      </Button>
-    );
-  } else if (!lead.access_received_at) {
-    pendingActions.push(
-      <Button key="access-recv" variant="default" size="sm" className="w-full justify-start gap-2" onClick={onMarkAccessReceived}>
-        <CheckCircle2 className="h-4 w-4" />
-        Potvrdit přijetí přístupů
-      </Button>
-    );
-  }
-
-  if (!lead.offer_url && (lead.potential_services?.length || 0) > 0) {
-    pendingActions.push(
-      <Button key="create-offer" variant="outline" size="sm" className="w-full justify-start gap-2" onClick={onCreateOffer}>
-        <Link2 className="h-4 w-4" />
-        Vytvořit nabídku
-      </Button>
-    );
-  }
-
-  if (lead.offer_url && !lead.offer_sent_at) {
-    pendingActions.push(
-      <Button key="send-offer" variant="outline" size="sm" className="w-full justify-start gap-2" onClick={onSendOffer}>
-        <Send className="h-4 w-4" />
-        Odeslat nabídku
-      </Button>
-    );
-  }
-
-  if (!lead.onboarding_form_sent_at) {
-    pendingActions.push(
-      <Button key="onboarding" variant="outline" size="sm" className="w-full justify-start gap-2" onClick={onSendOnboarding}>
-        <ClipboardList className="h-4 w-4" />
-        Odeslat onboarding formulář
-      </Button>
-    );
-  }
-
-  if (lead.contract_url && !lead.contract_sent_at) {
-    pendingActions.push(
-      <Button key="contract-send" variant="outline" size="sm" className="w-full justify-start gap-2" onClick={onMarkContractSent}>
-        <Send className="h-4 w-4" />
-        Označit smlouvu jako odeslanou
-      </Button>
-    );
-  }
-
-  if (lead.contract_sent_at && !lead.contract_signed_at) {
-    pendingActions.push(
-      <Button key="contract-sign" variant="default" size="sm" className="w-full justify-start gap-2" onClick={onMarkContractSigned}>
-        <CheckCircle2 className="h-4 w-4" />
-        Potvrdit podpis smlouvy
-      </Button>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Pending Actions */}
-      {pendingActions.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground">Čekající akce</h4>
-          <div className="space-y-2">
-            {pendingActions}
+    <div className="space-y-1">
+      <h4 className="text-sm font-medium text-muted-foreground mb-3">Historie komunikace</h4>
+      {events.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">Zatím žádné události</p>
+      ) : (
+        <div className="relative">
+          {/* Vertical line */}
+          <div className="absolute left-[11px] top-2 bottom-2 w-px bg-border" />
+          
+          <div className="space-y-4">
+            {events.map((event) => (
+              <div key={event.id} className="flex gap-3 relative">
+                {/* Icon dot */}
+                <div className={cn(
+                  "flex items-center justify-center w-6 h-6 rounded-full text-white flex-shrink-0 z-10",
+                  event.color
+                )}>
+                  {event.icon}
+                </div>
+                
+                {/* Content */}
+                <div className="flex-1 min-w-0 pb-1">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-sm font-medium">{event.title}</span>
+                    <span className="text-xs text-muted-foreground">{formatDate(event.date)}</span>
+                  </div>
+                  {/* Email recipients */}
+                  {event.recipients && event.recipients.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Příjemci: {event.recipients.join(', ')}
+                    </p>
+                  )}
+                  {event.description && (
+                    <div className={cn(
+                      "text-sm mt-1 whitespace-pre-wrap",
+                      event.noteType === 'email_sent' && "p-2 rounded border bg-emerald-500/5 border-emerald-500/20 text-foreground",
+                      event.noteType === 'email_received' && "p-2 rounded border bg-cyan-500/5 border-cyan-500/20 text-foreground",
+                      event.noteType === 'internal' && "text-amber-700",
+                      (!event.noteType || event.noteType === 'general' || event.noteType === 'call') && "text-muted-foreground",
+                    )}>
+                      {event.description}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
-
-      {/* Timeline */}
-      <div className="space-y-1">
-        <h4 className="text-sm font-medium text-muted-foreground mb-3">Historie komunikace</h4>
-        {events.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Zatím žádné události</p>
-        ) : (
-          <div className="relative">
-            {/* Vertical line */}
-            <div className="absolute left-[11px] top-2 bottom-2 w-px bg-border" />
-            
-            <div className="space-y-4">
-              {events.map((event) => (
-                <div key={event.id} className="flex gap-3 relative">
-                  {/* Icon dot */}
-                  <div className={cn(
-                    "flex items-center justify-center w-6 h-6 rounded-full text-white flex-shrink-0 z-10",
-                    event.color
-                  )}>
-                    {event.icon}
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 pb-1">
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-sm font-medium">{event.title}</span>
-                      <span className="text-xs text-muted-foreground">{formatDate(event.date)}</span>
-                    </div>
-                    {event.description && (
-                      <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-wrap">{event.description}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
