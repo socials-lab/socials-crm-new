@@ -1,34 +1,30 @@
 
 
-## Vylepšení detailu klienta -- doplnění údajů z leadu
+## Redesign veřejné nabídky -- lepší rozestupy, Loom embed, nové CTA
 
-### Co se změní
+### Co se zmeni
 
-V rozbalené kartě klienta se do sekce "Firemní údaje" přidají:
+1. **Vice prostoru mezi sekcemi** -- zvetsit mezery (mb-6 -> mb-10/mb-12), pridaт padding do karet, vetsi line-height u textu
+2. **Loom video embed** -- pridat pole `loom_url` do typu `PublicOffer` a mock dat; na strance zobrazit embedded Loom iframe (16:9 aspect ratio) v sekci auditu/doporuceni
+3. **CTA zmena** -- vsechny "Zahajit spolupraci" / "Zacit spolupraci" prejmenovaт na "Vyplnit onboarding formular"; odstranit cervene/destructive CTA; sjednotit styl tlacitek
+4. **Graficke vylepseni** -- vetsi hero sekce, jemnejsi stiny, vizualne cistejsi ServiceCard
 
-1. **Spolehlivý plátce DPH** -- barevný badge vedle DIČ (zelený = spolehlivý, červený = nespolehlivý), využívající existující hook `useVatReliability`
-2. **Odkaz na Hlídač státu** -- vedle odkazu na ARES přidat ikonu s odkazem na `https://www.hlidacstatu.cz/subjekt/{ico}`
-3. **Finanční varování (dotace, insolvence)** -- zobrazit `CompanyFinancials` komponentu pod firemní údaje klienta, stejně jako u leadu
+### Technicke detaily
 
-### Technické detaily
+**`src/types/publicOffer.ts`**
+- Pridat `loom_url?: string` do `PublicOffer` interface
 
-**Soubor: `src/pages/Clients.tsx`**
+**`src/data/publicOffersMockData.ts`**
+- Pridat `loom_url` do testovaci nabidky (napr. `https://www.loom.com/embed/example123`)
 
-1. Importovat `useVatReliability` hook a ikony `ShieldCheck`, `ShieldAlert`
-2. V sekci "Firemní údaje" (řádek ~480-527):
-   - U řádku s IČO (řádek ~482) přidat vedle ARES ikony i odkaz na Hlídač státu
-   - U řádku s DIČ (řádek ~494-496) přidat VAT reliability badge -- volat `useVatReliability(client.dic)` a zobrazit výsledek jako barevný štítek
-3. Pod sekci firemních údajů přidat `CompanyFinancials` komponentu pro zobrazení varování o dotacích a insolvenci
+**`src/pages/PublicOfferPage.tsx`**
+- **Header CTA** (radek 562-567): zmenit text na "Vyplnit onboarding formular"
+- **Loom embed**: pod sekci "Co jsme zjistili" pridat iframe s Loom videem pokud existuje `offer.loom_url` -- pouzit AspectRatio (16:9) s rounded corners
+- **Spacing**: zvetsit mezery mezi hlavnimi sekcemi z `mb-6` na `mb-10` nebo `mb-12`
+- **Pricing CTA** (radek 746-755): zmenit text a odstranit `bg-foreground` styl, pouzit `bg-primary`
+- **Bottom CTA section** (radek 784-806): zmenit text na "Vyplnit onboarding formular", odstranit cerveny styl
+- **Mobile sticky CTA** (radek 835-850): zmenit text
+- **ServiceCard**: pridat vetsi padding (p-5 -> p-6), vetsi gap mezi kartami (space-y-3 -> space-y-4)
 
-Protože `useVatReliability` je hook a nelze ho volat podmíněně uvnitř mapy, vytvoří se malá pomocná komponenta `ClientCompanyInfo`, která zapouzdří volání hooku pro konkrétního klienta.
-
-**Nová komponenta (inline v `Clients.tsx` nebo samostatný soubor):**
-
-```text
-ClientVatBadge({ dic }) 
-  -> useVatReliability(dic)
-  -> zobrazí ShieldCheck (zelený) nebo ShieldAlert (červený) badge
-```
-
-Žádné nové závislosti ani databázové změny nejsou potřeba -- vše využívá existující kód.
+Zadne nove zavislosti -- Loom embed je standardni iframe.
 
