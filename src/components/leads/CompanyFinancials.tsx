@@ -124,12 +124,12 @@ export function CompanyFinancials({ ico }: CompanyFinancialsProps) {
           <ExternalLink className="h-3 w-3" />
         </a>
         <a
-          href={data.kurzyUrl}
+          href={`https://ares.gov.cz/ekonomicke-subjekty/res/${ico}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
         >
-          Kurzy.cz
+          ARES
           <ExternalLink className="h-3 w-3" />
         </a>
       </div>
