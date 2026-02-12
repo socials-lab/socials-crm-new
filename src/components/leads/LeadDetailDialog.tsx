@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
 import { 
   Building2, 
   Globe, 
@@ -66,6 +67,7 @@ import type { Lead, LeadStage, LeadService, LeadNoteType } from '@/types/crm';
 import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { fetchAresData } from '@/utils/aresUtils';
 
 interface LeadDetailDialogProps {
   lead: Lead | null;
@@ -129,6 +131,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [callDate, setCallDate] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailRecipients, setEmailRecipients] = useState('');
+  const [isLoadingAres, setIsLoadingAres] = useState(false);
   const isProcessingWarning = useRef(false);
 
   const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
@@ -410,10 +413,38 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                           <div className="flex items-center gap-2">
                             <InlineEditField
                               value={lead.ico}
-                              onSave={(v) => { updateLead(lead.id, { ico: v }); toast.success('Uloženo'); }}
+                              onSave={async (v) => {
+                                updateLead(lead.id, { ico: v });
+                                toast.success('IČO uloženo');
+                                const cleanIco = v.replace(/\s/g, '');
+                                if (cleanIco.length === 8 && /^\d{8}$/.test(cleanIco)) {
+                                  setIsLoadingAres(true);
+                                  const data = await fetchAresData(cleanIco);
+                                  if (data) {
+                                    const updates: Partial<Lead> = {};
+                                    if (data.street) updates.billing_street = data.street;
+                                    if (data.city) updates.billing_city = data.city;
+                                    if (data.zip) updates.billing_zip = data.zip;
+                                    if (data.companyName && !lead.company_name) updates.company_name = data.companyName;
+                                    if (data.dic) updates.dic = data.dic;
+                                    if (data.legalForm) (updates as any).legal_form = data.legalForm;
+                                    if (data.foundedDate) (updates as any).founded_date = data.foundedDate;
+                                    if (data.nace) (updates as any).ares_nace = data.nace;
+                                    if (data.directors?.length) (updates as any).directors = data.directors;
+                                    if (Object.keys(updates).length > 0) {
+                                      updateLead(lead.id, updates);
+                                      toast.success('Adresa a údaje doplněny z ARES');
+                                    }
+                                  } else {
+                                    toast.error('Subjekt nebyl nalezen v ARES');
+                                  }
+                                  setIsLoadingAres(false);
+                                }
+                              }}
                               placeholder="Zadat IČO"
                               displayClassName="font-medium"
                             />
+                            {isLoadingAres && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                             {lead.ico && (
                               <a
                                 href={`https://ares.gov.cz/ekonomicke-subjekty/res/${lead.ico}`}
