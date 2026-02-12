@@ -505,12 +505,14 @@ export interface LeadService {
   billing_type: 'monthly' | 'one_off';
 }
 
-export type LeadNoteType = 'general' | 'call' | 'internal';
+export type LeadNoteType = 'general' | 'call' | 'internal' | 'email_sent' | 'email_received';
 
 export const LEAD_NOTE_TYPE_LABELS: Record<LeadNoteType, string> = {
   general: 'Poznámka',
   call: 'Záznam z hovoru',
   internal: 'Interní poznámka',
+  email_sent: 'Odeslaný e-mail',
+  email_received: 'Přijatý e-mail',
 };
 
 export interface LeadNote {
@@ -521,6 +523,8 @@ export interface LeadNote {
   text: string;
   note_type: LeadNoteType;
   call_date: string | null;
+  subject: string | null;
+  recipients: string[] | null;
   created_at: string;
 }
 
