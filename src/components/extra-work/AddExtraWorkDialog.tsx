@@ -22,7 +22,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { TrendingUp, Info } from 'lucide-react';
-import type { ExtraWork } from '@/types/crm';
+import type { ExtraWork as ExtraWorkType } from '@/types/crm';
 
 const EXTRA_WORK_TEMPLATES = [
   { name: 'Nastavení analytiky', rate: 1900 },
@@ -54,8 +54,8 @@ function getRateForPosition(position: string): number | null {
 interface AddExtraWorkDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (data: any) => Promise<ExtraWork>;
-  onCreated?: (work: ExtraWork) => void;
+  onAdd: (data: any) => void;
+  onCreated?: (work: ExtraWorkType) => void;
 }
 
 export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: AddExtraWorkDialogProps) {
@@ -102,7 +102,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
     setHourlyRate(String(template.rate));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!engagementId || !colleagueId || !name || !selectedEngagement) return;
 
     const today = new Date();
@@ -122,7 +122,28 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
       notes,
     };
 
-    const result = await onAdd(insertData);
+    // Create a mock result with generated id for frontend-only flow
+    const mockResult: ExtraWorkType = {
+      ...insertData,
+      id: crypto.randomUUID(),
+      status: 'pending_approval' as const,
+      approval_date: null,
+      approved_by: null,
+      invoice_id: null,
+      invoice_number: null,
+      invoiced_at: null,
+      approval_token: null,
+      client_approval_email: null,
+      client_approved_at: null,
+      client_rejected_at: null,
+      client_rejection_reason: null,
+      upsold_by_id: upsoldById,
+      upsell_commission_percent: upsoldById ? 10 : null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    onAdd(insertData);
 
     toast({
       title: 'Vícepráce přidána',
@@ -140,8 +161,8 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
     onOpenChange(false);
 
     // After closing, trigger approval dialog
-    if (onCreated && result) {
-      onCreated(result);
+    if (onCreated) {
+      onCreated(mockResult);
     }
   };
 
