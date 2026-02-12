@@ -351,16 +351,6 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
             )}
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="notes">Poznámky</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Interní poznámky..."
-              rows={2}
-            />
-          </div>
         </div>
 
         <DialogFooter>
