@@ -1,64 +1,77 @@
 
 
-## Sidebar - vizualni clusterovani do skupin
+## Redesign detailu leadu - z Sheet na Dialog s taby
 
-Aktualne je vsech 17+ polozek v jednom plache seznamu bez vizualniho oddeleni. Prehlednosti pomuzeme pridanim nazvu skupin (SidebarGroupLabel) a jemnych vizualnich oddelovacu.
+Aktualne je detail leadu v pravem panelu (Sheet), ktery je uzky a nepohodlny pro tolik obsahu. Prevedeme ho na velky centralni Dialog s tabovym rozlozenim, pridame novy typ poznamek (call notes) a celou komunikacni historii (timeline).
 
-### Navrzene skupiny
+### Hlavni zmeny
+
+**1. Sheet -> Dialog (centralni modalni okno)**
+- Nahradime `Sheet` komponentu za `Dialog` s `max-w-4xl` a vyskou `90vh`
+- Uvnitr `ScrollArea` pro scrollovani obsahu
+- Header: nazev firmy, stage badge, tlacitka (Upravit, Historie, Prevest)
+
+**2. Tabove rozlozeni (4 taby)**
 
 ```text
-┌──────────────────────────┐
-│  SOCIALS CRM (logo)      │
-├──────────────────────────┤
-│  🏠 Prehled              │
-│  👤 Muj prehled          │
-├──── OBCHOD ─────────────┤
-│  🎯 Leady               │
-│  🏢 Klienti             │
-│  📇 Kontakty            │
-│  📋 Zakazky             │
-│  📝 Navrhy zmen         │
-├──── PRACE & DODAVKA ────┤
-│  🔧 Viceprace           │
-│  💰 Provize             │
-│  🎨 Creative Boost      │
-│  📅 Meetingy            │
-├──── FINANCE ────────────┤
-│  🧾 Fakturace           │
-│  📦 Sluzby              │
-├──── TYM & INTERNI ──────┤
-│  👥 Kolegove            │
-│  🎓 Nabor               │
-│  💡 Feedback Zone        │
-│  📚 Akademie            │
-├──── REPORTING ──────────┤
-│  📊 Analytika           │
-├──────────────────────────┤
-│  ⚙️ Nastaveni           │
-└──────────────────────────┘
+[ Prehled | Komunikace | Nabidka | Poznamky ]
 ```
+
+- **Prehled** - firemni udaje, kontakt, obchodni info, fakturacni udaje, meta (soucasne sekce 1-2 zhustenejsi)
+- **Komunikace** - timeline vsech komunikacnich udalosti (zadost o pristupy, onboarding, smlouva, odeslani nabidky) + akce. Celkova historie prace s leadem v chronologickem poradi
+- **Nabidka** - sluzby v nabidce, tvorba/odeslani nabidky, celkova cena. Pridavani sluzeb az po nasdileni pristupu (kontrola `access_received_at`)
+- **Poznamky** - vsechny poznamky vcetne novych typu (bezna poznamka, poznamka z callu, interni poznamka)
+
+**3. Typy poznamek**
+- Rozsireni `LeadNote` typu o pole `note_type`: `'general' | 'call' | 'internal'`
+- Kazdy typ bude mit vizualni odliseni (ikona, barva badge)
+- Pri pridavani poznamky se vybere typ pomoci segmentovanych tlacitek
+- Call poznamky budou mit navic pole pro datum a cas hovoru a ucely poznamek z telefonatu
+
+**4. Komunikacni timeline (tab Komunikace)**
+- Chronologicky serazene udalosti z existujicich timestampu leadu:
+  - `access_request_sent_at` - Zadost o pristupy odeslana
+  - `access_received_at` - Pristupy prijaty
+  - `onboarding_form_sent_at` - Onboarding formular odeslan
+  - `onboarding_form_completed_at` - Formular vypnen
+  - `offer_created_at` - Nabidka vytvorena
+  - `offer_sent_at` - Nabidka odeslana
+  - `contract_created_at` / `contract_sent_at` / `contract_signed_at` - Smlouva
+  - Plus poznamky z `lead.notes` (interleavovane podle datumu)
+- Kazda udalost ma akci (tlacitko) pro dalsi krok (napr. u "Cekame na pristupy" -> "Prijato")
+
+**5. Omezeni pridavani sluzeb**
+- V tabu Nabidka: tlacitko "Pridat sluzbu" bude disabled pokud `!lead.access_received_at`
+- Zobrazi se informacni hlaska "Sluzby lze pridavat az po nasdileni pristupu"
 
 ### Technicke zmeny
 
-**Soubor: `src/components/layout/AppSidebar.tsx`**
+**Soubory k uprave:**
 
-1. **Restrukturovat `mainNavItems`** - rozdelit na pole skupin, kazda s nazvem (`label`) a polem polozek (`items`):
-   - `null` label pro "Osobni prehledy" (bez nadpisu, jen Prehled + Muj prehled)
-   - `"Obchod"` - Leady, Klienti, Kontakty, Zakazky, Navrhy zmen
-   - `"Prace & dodavka"` - Viceprace, Provize, Creative Boost, Meetingy
-   - `"Finance"` - Fakturace, Sluzby
-   - `"Tym & interni"` - Kolegove, Nabor, Feedback Zone, Akademie
-   - `"Reporting"` - Analytika
+1. **`src/types/crm.ts`** - Rozsireni `LeadNote` o `note_type: 'general' | 'call' | 'internal'` a volitelne `call_date: string | null`
 
-2. **Pouzit `SidebarGroupLabel`** - importovat a pouzit pro nazvy skupin. Styl: maly, uppercase, sedy text (uz je v shadcn default).
+2. **`src/components/leads/LeadDetailSheet.tsx`** -> prejmenovani na `LeadDetailDialog.tsx`
+   - Nahrada Sheet za Dialog
+   - Pridani Tabs (Prehled, Komunikace, Nabidka, Poznamky)
+   - Rozdeleni soucasneho obsahu do tabu
+   - Komunikacni timeline z existujicich timestamp poli
+   - Poznamky s vyberem typu
 
-3. **Kazda skupina jako vlastni `SidebarGroup`** - s `SidebarGroupLabel` a `SidebarGroupContent > SidebarMenu`.
+3. **`src/hooks/useLeadsData.tsx`** - Uprava `addNote` funkce pro podporu `note_type` a `call_date`
 
-4. **Vizualni mezery** - kazda SidebarGroup bude mit `pt-2` a jemny separator (Separator komponent nebo border-top) mezi skupinami pro vizualni oddeleni.
+4. **`src/components/leads/LeadsKanban.tsx`** a **`src/components/leads/LeadsTable.tsx`** a **`src/pages/Leads.tsx`** - Update importu z LeadDetailSheet na LeadDetailDialog
 
-5. **Filtrovani zustava** - logika `canViewPage` a `requiresColleague` se aplikuje na kazdou skupinu zvlast. Skupiny, ktere nemaji zadnou viditelnou polozku, se nezobrazuji.
+5. **Nova komponenta `src/components/leads/LeadCommunicationTimeline.tsx`** - timeline komponent zobrazujici chronologicky vsechny udalosti + akcni tlacitka
 
-6. **Nastaveni** zustane dole s `mt-auto`.
+6. **Nova komponenta `src/components/leads/LeadNotesTab.tsx`** - oddeleny tab s poznamkami, vyber typu, filtrovani
 
-Zadne dalsi soubory se nemeni. Mobilni navigace (MobileBottomNav) zustava beze zmen.
+**Datovy model** - DB migrace neni nutna, protoze `notes` jsou ulozeny jako JSONB pole v tabulce `leads`. Staci pridat nove pole do JSON struktury poznamky.
+
+### Vizualni styl
+
+- Dialog: `max-w-4xl`, `h-[90vh]`, `overflow-hidden`
+- Tabs: plna sirka, pod headerem
+- Kazdy tab content: vlastni `ScrollArea`
+- Timeline: vertikalni cara s ikonami a timestampy vlevo, obsah vpravo
+- Poznamky: barevne badges podle typu (modra = call, seda = obecna, zluta = interni)
 
