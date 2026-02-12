@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
 import type { ExtraWork } from '@/types/crm';
-import { Copy, Mail, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Copy, Mail, CheckCircle2, Eye, EyeOff, ClipboardCheck } from 'lucide-react';
 
 // localStorage helper for approval tokens
 const APPROVAL_STORAGE_KEY = 'extra_work_approvals';
@@ -236,6 +236,38 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
             </Button>
           </div>
 
+          <Separator />
+
+          <div className="space-y-2">
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => {
+                const token = getOrCreateToken();
+                const targetEmail = email || defaultEmail;
+                saveApproval({
+                  extraWorkId: extraWork.id,
+                  token,
+                  email: targetEmail || null,
+                  createdAt: new Date().toISOString(),
+                });
+                storeExtraWorkForApproval(extraWork, {
+                  clientName: clientName,
+                  engagementName: engagement?.name,
+                  colleagueName: colleague?.full_name,
+                  colleagueEmail: colleague?.email,
+                });
+                toast({ title: '✅ Označeno jako odeslané', description: 'Vícepráce byla označena jako čekající na schválení.' });
+                onOpenChange(false);
+              }}
+            >
+              <ClipboardCheck className="h-4 w-4 mr-2" /> Označit jako odeslané
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Použijte, pokud jste odkaz poslali ručně (např. přes Freelo). Zaznamená se odeslání bez skutečného emailu.
+            </p>
+          </div>
+
           <p className="text-xs text-muted-foreground">
             Demo režim – email se neodesílá, data jsou v localStorage.
           </p>
@@ -267,7 +299,7 @@ export interface ExtraWorkApprovalData {
   colleagueEmail?: string;
 }
 
-function storeExtraWorkForApproval(work: ExtraWork, meta: { clientName?: string; engagementName?: string; colleagueName?: string; colleagueEmail?: string }) {
+export function storeExtraWorkForApproval(work: ExtraWork, meta: { clientName?: string; engagementName?: string; colleagueName?: string; colleagueEmail?: string }) {
   const stored = getStoredExtraWorks();
   const data: ExtraWorkApprovalData = {
     id: work.id,
