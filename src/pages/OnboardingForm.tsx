@@ -483,8 +483,46 @@ export default function OnboardingForm() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-lg w-full">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+        {/* CSS Confetti */}
+        <style>{`
+          @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+          }
+          .confetti-piece {
+            position: fixed;
+            top: -10px;
+            animation: confetti-fall linear forwards;
+            z-index: 50;
+          }
+        `}</style>
+        {Array.from({ length: 35 }).map((_, i) => {
+          const colors = ['#FF0000', '#FF6B35', '#FFD700', '#00C851', '#2196F3', '#9C27B0', '#FF4081', '#00BCD4'];
+          const color = colors[i % colors.length];
+          const left = Math.random() * 100;
+          const size = Math.random() * 8 + 5;
+          const duration = Math.random() * 2 + 2.5;
+          const delay = Math.random() * 1.5;
+          const shape = i % 3 === 0 ? '50%' : i % 3 === 1 ? '0' : '2px';
+          return (
+            <div
+              key={i}
+              className="confetti-piece"
+              style={{
+                left: `${left}%`,
+                width: `${size}px`,
+                height: `${size * (i % 2 === 0 ? 1 : 1.5)}px`,
+                backgroundColor: color,
+                borderRadius: shape,
+                animationDuration: `${duration}s`,
+                animationDelay: `${delay}s`,
+              }}
+            />
+          );
+        })}
+
+        <Card className="max-w-lg w-full relative z-10">
           <CardHeader className="text-center">
             <img src={socialsLogo} alt="Socials" className="h-10 mx-auto mb-4" />
             <div className="flex justify-center mb-4">
@@ -496,7 +534,6 @@ export default function OnboardingForm() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Co bude následovat */}
             <div className="space-y-4">
               <h3 className="font-semibold text-center text-lg">Co bude následovat?</h3>
               
@@ -506,10 +543,7 @@ export default function OnboardingForm() {
                   <div>
                     <p className="font-medium">📧 Smlouva k podpisu</p>
                     <p className="text-sm text-muted-foreground">
-                      Do 24 hodin vám na e-mail dorazí smlouva ke kontrole a podpisu přes DigiSign.
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                      Do 24 hodin vám pošleme smlouvu k podpisu přes DigiSign.
                     </p>
                   </div>
                 </div>
@@ -517,13 +551,9 @@ export default function OnboardingForm() {
                 <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                   <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">2</div>
                   <div>
-                    <p className="font-medium">📞 Osobní kontakt</p>
+                    <p className="font-medium">📁 Projekt ve Freelu</p>
                     <p className="text-sm text-muted-foreground">
-                      Po podpisu smlouvy vás bude kontaktovat <strong>{ownerName}</strong>, 
-                      se kterým budete řešit celý projekt.
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                      Po podpisu vytvoříme projekt ve Freelu a přidáme vám tam přístup.
                     </p>
                   </div>
                 </div>
@@ -531,16 +561,27 @@ export default function OnboardingForm() {
                 <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                   <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">3</div>
                   <div>
-                    <p className="font-medium">🚀 Zahájení spolupráce</p>
+                    <p className="font-medium">📞 Onboarding telefonát</p>
                     <p className="text-sm text-muted-foreground">
-                      Společně naplánujeme první kroky a pustíme se do práce!
+                      Spojí se s vámi specialista, který vás bude mít na starosti a domluví onboarding telefonát.
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">4</div>
+                  <div>
+                    <p className="font-medium">🚀 Pustíme se do práce!</p>
+                    <p className="text-sm text-muted-foreground">
+                      Společně rozjedeme váš projekt naplno.
                     </p>
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="text-center py-4">
+              <p className="text-xl font-bold">🤝 Těšíme se na spolupráci!</p>
             </div>
             
             <div className="text-center pt-4 border-t">
