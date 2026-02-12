@@ -3,8 +3,10 @@ import { useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, CheckCircle2, XCircle, Loader2, User, Building2, Briefcase, Mail } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertCircle, CheckCircle2, XCircle, Loader2, User, Building2, Briefcase, Mail, Clock } from 'lucide-react';
 import socialsLogo from '@/assets/socials-logo.png';
 import { getApprovalByToken, getStoredExtraWorks, updateStoredExtraWorkStatus } from '@/components/extra-work/SendApprovalDialog';
 import type { ExtraWorkApprovalData } from '@/components/extra-work/SendApprovalDialog';
@@ -16,6 +18,11 @@ export default function ExtraWorkApproval({ testMode = false }: { testMode?: boo
   const [actionState, setActionState] = useState<'idle' | 'approved' | 'rejected'>('idle');
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const [email, setEmail] = useState('');
+  const [agreedToApproval, setAgreedToApproval] = useState(false);
+  const [approvalEmail, setApprovalEmail] = useState('');
+  const [approvalTime, setApprovalTime] = useState<string | null>(null);
+  const [rejectionTime, setRejectionTime] = useState<string | null>(null);
 
   useEffect(() => {
     if (testMode) {
@@ -56,14 +63,18 @@ export default function ExtraWorkApproval({ testMode = false }: { testMode?: boo
   }, [token, testMode]);
 
   const handleApprove = () => {
-    if (!data) return;
+    if (!data || !email || !agreedToApproval) return;
     if (!testMode) updateStoredExtraWorkStatus(data.id, 'in_progress');
+    const now = new Date().toISOString();
+    setApprovalEmail(email);
+    setApprovalTime(now);
     setActionState('approved');
   };
 
   const handleReject = () => {
     if (!data) return;
     if (!testMode) updateStoredExtraWorkStatus(data.id, 'rejected');
+    setRejectionTime(new Date().toISOString());
     setActionState('rejected');
   };
 
@@ -103,29 +114,52 @@ export default function ExtraWorkApproval({ testMode = false }: { testMode?: boo
       <main className="container max-w-3xl mx-auto px-4 py-8">
         {actionState === 'approved' && (
           <Card className="mb-8 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-            <CardContent className="pt-8 pb-8 text-center">
-              <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-green-700 mb-2">Děkujeme za schválení! 🎉</h2>
+            <CardContent className="pt-8 pb-8 text-center space-y-4">
+              <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto" />
+              <h2 className="text-2xl font-bold text-green-700">Děkujeme za schválení! 🎉</h2>
               <p className="text-green-600">Vícepráce byla schválena a práce může začít.</p>
+              <div className="mt-4 pt-4 border-t border-green-200 space-y-2 text-sm text-left max-w-xs mx-auto">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-green-600 shrink-0" />
+                  <span className="text-muted-foreground">Schválil/a:</span>
+                  <span className="font-medium">{approvalEmail}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-green-600 shrink-0" />
+                  <span className="text-muted-foreground">Datum:</span>
+                  <span className="font-medium">{approvalTime ? new Date(approvalTime).toLocaleString('cs-CZ') : ''}</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {actionState === 'rejected' && (
           <Card className="mb-8 border-red-200 bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20">
-            <CardContent className="pt-8 pb-8 text-center">
-              <XCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-red-700 mb-2">Vícepráce zamítnuta</h2>
+            <CardContent className="pt-8 pb-8 text-center space-y-4">
+              <XCircle className="h-16 w-16 text-red-600 mx-auto" />
+              <h2 className="text-2xl font-bold text-red-700">Vícepráce zamítnuta</h2>
               <p className="text-red-600">Děkujeme za vaši odpověď. Budeme vás kontaktovat.</p>
+              {rejectionTime && (
+                <div className="mt-4 pt-4 border-t border-red-200 text-sm">
+                  <div className="flex items-center gap-2 justify-center">
+                    <Clock className="h-4 w-4 text-red-600 shrink-0" />
+                    <span className="text-muted-foreground">Zamítnuto:</span>
+                    <span className="font-medium">{new Date(rejectionTime).toLocaleString('cs-CZ')}</span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
 
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">Schválení vícepráce</h1>
-          {data.clientName && (
-            <p className="text-muted-foreground">pro klienta <span className="font-medium text-foreground">{data.clientName}</span></p>
-          )}
+          <p className="text-muted-foreground max-w-lg mx-auto">
+            Dobrý den, rádi bychom Vás požádali o schválení následující vícepráce
+            {data.engagementName ? ` v rámci zakázky „${data.engagementName}"` : ''}.
+            Prosím, prohlédněte si detaily níže a potvrďte svůj souhlas.
+          </p>
         </div>
 
         {/* Context info */}
@@ -190,18 +224,49 @@ export default function ExtraWorkApproval({ testMode = false }: { testMode?: boo
 
         {actionState === 'idle' && (
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="pt-6 space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="approval-email">Váš e-mail <span className="text-destructive">*</span></Label>
+                <Input
+                  id="approval-email"
+                  type="email"
+                  placeholder="vas@email.cz"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Pro ověření identity zadejte svůj e-mail.</p>
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="agree-approval"
+                  checked={agreedToApproval}
+                  onCheckedChange={(checked) => setAgreedToApproval(checked === true)}
+                />
+                <Label htmlFor="agree-approval" className="text-sm leading-snug cursor-pointer">
+                  Souhlasím s provedením této vícepráce a jejím zařazením do fakturace.
+                </Label>
+              </div>
+
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={handleApprove}
+                disabled={!email || !agreedToApproval}
+              >
+                <CheckCircle2 className="h-5 w-5 mr-2" /> Schvaluji vícepráci
+              </Button>
+
               {!showRejectForm ? (
-                <div className="flex gap-3">
-                  <Button size="lg" className="flex-1" onClick={handleApprove}>
-                    <CheckCircle2 className="h-5 w-5 mr-2" /> Schvaluji vícepráci
-                  </Button>
-                  <Button size="lg" variant="outline" className="flex-1" onClick={() => setShowRejectForm(true)}>
-                    <XCircle className="h-5 w-5 mr-2" /> Zamítnout
-                  </Button>
-                </div>
+                <button
+                  type="button"
+                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                  onClick={() => setShowRejectForm(true)}
+                >
+                  Chci vícepráci zamítnout
+                </button>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 pt-2 border-t">
                   <Label>Důvod zamítnutí (volitelné)</Label>
                   <Textarea
                     value={rejectionReason}
