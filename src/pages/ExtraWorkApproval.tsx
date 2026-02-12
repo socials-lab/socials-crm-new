@@ -183,6 +183,7 @@ export default function ExtraWorkApproval({ testMode = false }: { testMode?: boo
                 <span className="text-muted-foreground">Celkem:</span>
                 <span className="font-semibold text-lg">{formatCurrency(data.amount, data.currency)}</span>
               </div>
+              <p className="text-xs text-muted-foreground pt-2">Částka je uvedena bez DPH. Po dokončení bude přidána do nejbližší faktury.</p>
             </div>
           </CardContent>
         </Card>
