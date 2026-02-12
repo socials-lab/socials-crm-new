@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Loader2, ExternalLink, Users, Building2, Calendar, Briefcase, Scale } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const leadSchema = z.object({
   company_name: z.string().min(1, 'Název firmy je povinný'),
@@ -77,6 +78,12 @@ const SOURCE_OPTIONS: { value: LeadSource; label: string }[] = [
   { value: 'other', label: 'Jiný' },
 ];
 
+interface DirectorInfo {
+  name: string;
+  role: string; // 'jednatel' | 'společník' | 'jednatel, společník'
+  ownership_percent: number | null;
+}
+
 interface AresData {
   companyName: string;
   dic: string | null;
@@ -87,7 +94,7 @@ interface AresData {
   legalForm: string | null;
   foundedDate: string | null;
   nace: string | null;
-  directors: string[];
+  directors: DirectorInfo[];
 }
 
 async function fetchAresData(ico: string): Promise<AresData | null> {
@@ -101,13 +108,17 @@ async function fetchAresData(ico: string): Promise<AresData | null> {
     const legalFormCode = basic.pravniForma;
     const legalFormLabel = legalFormCode ? `${legalFormCode}` : null;
 
-    // Try to get directors from VR
-    let directors: string[] = [];
+    // Try to get directors and shareholders from VR
+    let directors: DirectorInfo[] = [];
     try {
       const vrRes = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/${ico}`);
       if (vrRes.ok) {
         const vr = await vrRes.json();
-        const statutarniOrgan = vr?.zaznamy?.[0]?.statutarniOrgan;
+        const zaznam = vr?.zaznamy?.[0];
+        
+        // Parse directors (statutární orgán)
+        const directorNames = new Set<string>();
+        const statutarniOrgan = zaznam?.statutarniOrgan;
         if (statutarniOrgan && Array.isArray(statutarniOrgan)) {
           for (const organ of statutarniOrgan) {
             if (organ.clenove && Array.isArray(organ.clenove)) {
@@ -116,12 +127,55 @@ async function fetchAresData(ico: string): Promise<AresData | null> {
                 const jmeno = fo?.jmeno;
                 const prijmeni = fo?.prijmeni;
                 if (jmeno && prijmeni) {
-                  directors.push(`${jmeno} ${prijmeni}`);
+                  directorNames.add(`${jmeno} ${prijmeni}`);
                 }
               }
             }
           }
         }
+
+        // Parse shareholders (společníci) with ownership
+        const shareholderMap = new Map<string, number>();
+        const spolecnici = zaznam?.spolecnici;
+        let totalVklad = 0;
+        
+        // First pass: calculate total
+        if (spolecnici && Array.isArray(spolecnici)) {
+          for (const s of spolecnici) {
+            const vklad = s?.vklad?.souhrn?.hodnota ?? s?.podpiravni?.vklad?.souhrn?.hodnota ?? 0;
+            totalVklad += vklad;
+          }
+          // Second pass: extract names and percentages
+          for (const s of spolecnici) {
+            const fo = s?.fospiravni || s;
+            const jmeno = fo?.jmeno;
+            const prijmeni = fo?.prijmeni;
+            const vklad = s?.vklad?.souhrn?.hodnota ?? s?.podpiravni?.vklad?.souhrn?.hodnota ?? 0;
+            if (jmeno && prijmeni) {
+              const name = `${jmeno} ${prijmeni}`;
+              const percent = totalVklad > 0 ? Math.round((vklad / totalVklad) * 100) : null;
+              shareholderMap.set(name, percent ?? 0);
+            }
+          }
+        }
+
+        // Combine: directors + shareholders
+        const allNames = new Set([...directorNames, ...shareholderMap.keys()]);
+        for (const name of allNames) {
+          const isDirector = directorNames.has(name);
+          const isShareholder = shareholderMap.has(name);
+          const percent = shareholderMap.get(name) ?? null;
+          
+          let role = '';
+          if (isDirector && isShareholder) role = 'jednatel, společník';
+          else if (isDirector) role = 'jednatel';
+          else role = 'společník';
+          
+          directors.push({ name, role, ownership_percent: percent });
+        }
+        
+        // Sort: highest ownership first
+        directors.sort((a, b) => (b.ownership_percent ?? 0) - (a.ownership_percent ?? 0));
       }
     } catch {
       // VR endpoint may not exist for all subjects
@@ -149,7 +203,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
   const { colleagues } = useCRMData();
   const { user } = useAuth();
   const [isLoadingAres, setIsLoadingAres] = useState(false);
-  const [aresDirectors, setAresDirectors] = useState<string[]>([]);
+  const [aresDirectors, setAresDirectors] = useState<DirectorInfo[]>([]);
   const [aresLegalForm, setAresLegalForm] = useState<string | null>(null);
   const [aresFounded, setAresFounded] = useState<string | null>(null);
   const [aresNace, setAresNace] = useState<string | null>(null);
@@ -241,7 +295,12 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         summary: lead.summary,
         probability_percent: lead.probability_percent,
       });
-      setAresDirectors(lead.directors || []);
+      // Backward compat: convert old string[] to DirectorInfo[]
+      const rawDirectors = lead.directors || [];
+      const converted: DirectorInfo[] = rawDirectors.map(d => 
+        typeof d === 'string' ? { name: d, role: 'jednatel', ownership_percent: null } : d
+      );
+      setAresDirectors(converted);
       setAresLegalForm(lead.legal_form || null);
       setAresFounded(lead.founded_date || null);
       setAresNace(lead.ares_nace || null);
@@ -443,12 +502,24 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-sm">
                         <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">Jednatelé:</span>
+                        <span className="text-muted-foreground">Jednatelé / společníci:</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5 pl-5">
-                        {aresDirectors.map((d, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">{d}</Badge>
-                        ))}
+                        {aresDirectors.map((d, i) => {
+                          const isTopOwner = i === 0 && d.ownership_percent !== null && d.ownership_percent > 0;
+                          const label = d.ownership_percent !== null 
+                            ? `${d.name} (${d.role}, ${d.ownership_percent}%)` 
+                            : `${d.name} (${d.role})`;
+                          return (
+                            <Badge 
+                              key={i} 
+                              variant={isTopOwner ? "default" : "secondary"} 
+                              className={cn("text-xs", isTopOwner && "bg-amber-500/90 hover:bg-amber-500 text-white border-amber-600")}
+                            >
+                              {isTopOwner && '👑 '}{label}
+                            </Badge>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
