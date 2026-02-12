@@ -1,64 +1,78 @@
 
 
-## Vylepšení detailu leadu - 4 oblasti
+## Inline editace v detailu leadu
 
-### 1. Kontaktní osoba: telefon + role
+### Aktuální stav
+Kliknutí na "Upravit" otevírá nový dialog (AddLeadDialog) se všemi poli. Uživatel musí opustit detail, vyplnit formulář a uložit.
 
-V sekci "Kontaktní osoba" (collapsible) chybí telefon a pozice ve firmě. Přidám `contact_phone` a `contact_position` do zobrazení.
+### Nový přístup
+Pole v detailu leadu budou přímo editovatelná. Kliknutím na hodnotu se přepne na input, po odkliknutí/Enteru se uloží. Tlačítko "Upravit" z headeru zmizí.
 
-**Soubor:** `src/components/leads/LeadDetailDialog.tsx` (řádky 473-507)
-- Přidat řádek s telefonem pod email (ikona Phone + odkaz `tel:`)
-- Zobrazit pozici/roli vedle jména kontaktu
+### Komponenta `InlineEditField`
+Nová sdílená komponenta pro inline editaci:
+- **Zobrazení**: text s jemnou hover indikací (podtržení/ikona tužky)
+- **Editace**: klik přepne na input/textarea/select
+- **Uložení**: blur nebo Enter zavolá `updateLead()`
+- **Zrušení**: Escape vrátí původní hodnotu
+- Varianty: `text`, `textarea`, `select`, `number`, `url`
 
-### 2. Vizuální odlišení Procesu vs Historie
+### Změny v souborech
 
-Aktuálně oba sloupce vypadají jako timeline s kolečky a čárami. Řešení:
+**1. Nový soubor: `src/components/leads/InlineEditField.tsx`**
+- Generická komponenta s props: `value`, `onSave`, `type`, `options` (pro select), `placeholder`, `prefix`, `suffix`
+- Hover stav: `cursor-pointer border-b border-dashed border-transparent hover:border-muted-foreground/40`
+- Edit stav: renderuje odpovídající input element
+- Auto-focus při přepnutí do edit módu
 
-**Flow stepper (levý sloupec)** - vizuální redesign:
-- Nahradit timeline styl za **kompaktní checklist/karty** - každý krok jako řádek s checkbox ikonou místo kruhů s čárou
-- Použít pozadí (`bg-muted/30` rounded karty) pro dokončené kroky
-- Akční tlačítka zvýraznit barvou
+**2. `src/components/leads/LeadDetailDialog.tsx`**
+- Odstranit tlačítko "Upravit" z headeru a prop `onEdit`
+- Odstranit import a použití `AddLeadDialog` pro editaci (ponechat pro vytváření nových leadů)
+- Nahradit statické texty za `InlineEditField` komponenty:
 
-**Historie komunikace (pravý sloupec)** - default skrytá:
-- Timeline se defaultně nezobrazuje
-- Místo ní tlačítko "Zobrazit historii (X událostí)" které timeline rozbalí/sbalí
-- Inline formulář pro poznámky zůstane vždy viditelný nahoře
+| Sekce | Pole | Typ |
+|-------|------|-----|
+| Header | Název firmy | text |
+| Header | Odhadovaná cena | number |
+| Firemní údaje | IČO | text (s ARES lookup) |
+| Firemní údaje | DIČ | text |
+| Firemní údaje | Web | url |
+| Firemní údaje | Obor | text |
+| Firemní údaje | Adresa (ulice, město, PSČ) | text |
+| Kontakt | Jméno | text |
+| Kontakt | Pozice | text |
+| Kontakt | Email | text |
+| Kontakt | Telefon | text |
+| Obchodní info | Zdroj | select |
+| Obchodní info | Pravděpodobnost | number (%) |
+| Obchodní info | Měsíční investice | number |
+| Obchodní info | Zpráva od klienta | textarea |
+| Obchodní info | Shrnutí | textarea |
+| Fakturace | Fakturační email | text |
 
-**Soubory:**
-- `src/components/leads/LeadFlowStepper.tsx` - redesign na checklist karty (bez vertical line)
-- `src/components/leads/LeadDetailDialog.tsx` - obalit timeline do collapsible
-- `src/components/leads/LeadCommunicationTimeline.tsx` - beze změn (jen wrapper v parent)
+Každé pole při uložení volá `updateLead(lead.id, { [field]: newValue })` a zobrazí toast.
 
-### 3. Služby v nabídce - zobrazení + editace + mazání
+**3. `src/pages/Leads.tsx`**
+- Odstranit prop `onEdit` z `LeadDetailDialog`
+- Odstranit state `editingLead` a logiku pro otevření edit dialogu z detailu (ponechat AddLeadDialog jen pro "Přidat lead")
 
-Po přidání služby uživatel nevidí co přidal. Řešení:
+### Interakční vzor
 
-**V flow stepperu** pod krokem "Služby v nabídce":
-- Zobrazit seznam přidaných služeb s názvem, cenou a tierem
-- U každé služby tlačítko pro smazání (X)
-- Celková suma nabídky pod seznamem
+```text
++------------------------------------------+
+|  Firemní údaje                           |
+|                                          |
+|  IČO          DIČ                        |
+|  [12345678]   [CZ12345678]               |
+|   ^hover: dashed underline               |
+|   ^click: inline input appears           |
+|                                          |
+|  Web                                     |
+|  [www.firma.cz] <- klikni a uprav        |
++------------------------------------------+
+```
 
-**Soubor:** `src/components/leads/LeadFlowStepper.tsx`
-- Rozšířit krok `services` o inline zobrazení `lead.potential_services`
-- Přidat callback `onRemoveService` pro mazání
-- Zobrazit sumář ceny
-
-**Soubor:** `src/components/leads/LeadDetailDialog.tsx`
-- Přidat handler `handleRemoveService` který odebere službu z `potential_services`
-- Předat nový prop `onRemoveService` do LeadFlowStepper
-
-### 4. Zobrazení vytvořené nabídky
-
-Pokud existuje `offer_url`, zobrazit v kroku "Nabídka vytvořena" odkaz na nabídku.
-
-**Soubor:** `src/components/leads/LeadFlowStepper.tsx`
-- V kroku `offer-created`: pokud `lead.offer_url` existuje, zobrazit odkaz "Zobrazit nabídku" (ExternalLink ikona)
-
-### Technické změny - shrnutí
-
-| Soubor | Změna |
-|--------|-------|
-| `LeadFlowStepper.tsx` | Redesign na checklist styl; služby inline s mazáním; odkaz na nabídku |
-| `LeadDetailDialog.tsx` | Telefon + role u kontaktu; collapsible timeline; handler pro mazání služby |
-| `LeadCommunicationTimeline.tsx` | Beze změn |
-
+### Co zůstane beze změny
+- `AddLeadDialog` zůstane pro vytváření nových leadů (tlačítko "Přidat lead" na stránce Leads)
+- Stav (stage) a odpovědná osoba - už jsou editovatelné přes Select v headeru
+- Proces (LeadFlowStepper) - beze změn
+- Poznámky a historie - beze změn
