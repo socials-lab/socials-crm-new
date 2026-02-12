@@ -585,15 +585,13 @@ export default function OnboardingForm() {
             </div>
             
             <div className="text-center pt-4 border-t">
-              <p className="text-sm text-muted-foreground mb-2">
-                Máte dotazy? {ownerName} je tu pro vás.
+              <p className="text-sm text-muted-foreground">
+                Potřebujete pomoct? Obraťte se na {ownerName}
+                {ownerPhone && (
+                  <> – <a href={`tel:${ownerPhone}`} className="text-primary hover:underline">{ownerPhone}</a></>
+                )}
+                {' '}| <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
               </p>
-              <a 
-                href={`mailto:${ownerEmail}`}
-                className="text-primary hover:underline"
-              >
-                {ownerEmail}
-              </a>
             </div>
           </CardContent>
         </Card>
