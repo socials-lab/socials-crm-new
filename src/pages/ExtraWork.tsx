@@ -57,9 +57,8 @@ export default function ExtraWork() {
     };
   }, [extraWorks]);
 
-  const handleAddExtraWork = async (data: any) => {
-    const result = await addExtraWork(data);
-    return result;
+  const handleAddExtraWork = (data: any) => {
+    addExtraWork(data);
   };
 
   const handleUpdate = (id: string, data: Partial<ExtraWorkType>) => {
