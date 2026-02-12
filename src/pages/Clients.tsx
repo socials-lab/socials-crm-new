@@ -48,6 +48,8 @@ import { EndClientDialog } from '@/components/clients/EndClientDialog';
 import { useUserRole } from '@/hooks/useUserRole';
 import type { ClientStatus, Client, ClientContact, ClientTier, TerminationReason, TerminationInitiatedBy } from '@/types/crm';
 import { cn } from '@/lib/utils';
+import { ClientVatBadge } from '@/components/clients/ClientVatBadge';
+import { CompanyFinancials } from '@/components/leads/CompanyFinancials';
 import { toast } from 'sonner';
 
 const tierConfig: Record<ClientTier, { label: string; color: string; icon: string }> = {
@@ -488,11 +490,25 @@ export default function Clients() {
                             onClick={(e) => e.stopPropagation()}
                             title="Otevřít v ARES"
                           >
-                            <Database className="h-3.5 w-3.5" />
+                          <Database className="h-3.5 w-3.5" />
+                          </a>
+                          <a 
+                            href={`https://www.hlidacstatu.cz/subjekt/${client.ico}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-primary hover:text-primary/80 flex items-center gap-1"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Otevřít na Hlídači státu"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         </p>
                         {client.dic && (
-                          <p><span className="text-muted-foreground">DIČ:</span> <span className="font-mono">{client.dic}</span></p>
+                          <p className="flex items-center gap-2">
+                            <span className="text-muted-foreground">DIČ:</span> 
+                            <span className="font-mono">{client.dic}</span>
+                            <ClientVatBadge dic={client.dic} />
+                          </p>
                         )}
                         {client.website && (
                           <p className="flex items-center gap-2">
@@ -523,6 +539,9 @@ export default function Clients() {
                           <span className="text-muted-foreground">Spolupráce od:</span>
                           {new Date(client.start_date).toLocaleDateString('cs-CZ')}
                         </p>
+                        {client.ico && (
+                          <CompanyFinancials ico={client.ico} />
+                        )}
                       </div>
                     </div>
 
