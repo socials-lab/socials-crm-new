@@ -196,11 +196,11 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         converted_to_client_id: null,
         converted_to_engagement_id: null,
         converted_at: null,
-        billing_street: null,
-        billing_city: null,
-        billing_zip: null,
-        billing_country: null,
-        billing_email: null,
+        billing_street: 'Rohanské nábřeží 678/23',
+        billing_city: 'Praha',
+        billing_zip: '186 00',
+        billing_country: 'Česká republika',
+        billing_email: 'fakturace@socials.cz',
         notes: [
           {
             id: 'note-demo-1',
