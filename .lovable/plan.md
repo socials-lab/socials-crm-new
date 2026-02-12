@@ -1,47 +1,35 @@
 
 
-## Přidání vzorového leadu Socials Advertising s.r.o.
+## Oprava údajů o jednatelích leadu Socials Advertising s.r.o.
 
-Na základě IČO 08186464 se jedná o firmu **Socials Advertising s.r.o.** (web: socials.cz) -- agentura zaměřená na výkonnostní reklamu (Meta Ads, PPC, video/banner kreativy).
+### Co je špatně
+V demo leadu jsou uvedeni fiktivní jednatelé (Daniel Kocián 70%, Petra Nováková 30%). Správné údaje z obchodního rejstříku jsou jiné.
 
-### Co se udělá
+### Skutečné údaje z rejstříku (IČO 08186464)
 
-1. **SQL migrace** -- nový INSERT do tabulky `leads` s reálnými údaji firmy:
-   - Název: Socials Advertising s.r.o.
-   - IČO: 08186464
-   - Web: https://www.socials.cz
-   - Obor: Marketing / Online reklama
-   - Stav: `new_lead`
-   - Zdroj: `inbound`
-   - Kontaktní údaje (vzorové)
-   - UUID: `20000000-0000-0000-0000-000000000002`
+| Osoba | Role | Podíl |
+|-------|------|-------|
+| Daniel Bauer | Jednatel (od 23.5.2019) | 80 % |
+| Otakar Lucák | Jednatel (od 26.8.2021) | 20 % |
 
-2. **Soubor `docs/supabase-migration-complete.sql`** -- přidání INSERT příkazu za existující lead (řádek ~679)
+- Sídlo: Korunní 2569/108, Vinohrady, 101 00 Praha
+- Základní kapitál: 100 000 Kč
+- Založena: 23.5.2019
+- DIČ: CZ08186464
+- Spisová značka: C 314420/MSPH
 
-3. **Spuštění SQL** -- vložení záznamu přímo do databáze, aby se lead ihned zobrazil v aplikaci
+### Co se změní
 
-### Technické detaily
+Soubor `src/hooks/useLeadsData.tsx` -- aktualizace demo leadu:
 
-```sql
-INSERT INTO public.leads (
-  id, company_name, ico, website, industry, 
-  contact_name, contact_email, stage, source, 
-  estimated_price, currency, probability_percent
-) VALUES (
-  '20000000-0000-0000-0000-000000000002',
-  'Socials Advertising s.r.o.',
-  '08186464',
-  'https://www.socials.cz',
-  'Marketing',
-  'Kontaktní osoba',
-  'info@socials.cz',
-  'new_lead',
-  'inbound',
-  50000,
-  'CZK',
-  50
-);
-```
+1. **directors** -- oprava na skutečné jednatele:
+   - Daniel Bauer, Jednatel, 80 %
+   - Otakar Lucák, Jednatel, 20 %
+2. **founded_date** -- oprava na `2019-05-23`
+3. **contact_name** -- oprava na `Daniel Bauer` (hlavní jednatel)
+4. **contact_phone** -- oprava na `+420 774 536 699` (z rejstříku)
+5. **contact_email** -- ponechat `danny@socials.cz` nebo změnit na `socials@socials.cz` (oficiální e-mail z rejstříku)
+6. **dic** -- doplnit `CZ08186464`
 
-Žádné změny ve frontendovém kódu nejsou potřeba -- lead se automaticky načte z databáze přes existující `useLeadsData` hook.
+Jedná se o jedinou změnu v jednom souboru, pouze úprava hodnot v objektu `demoSocialsLead`.
 
