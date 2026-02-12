@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calculator, Info, Megaphone, Building2 } from 'lucide-react';
+import { Calculator, Info, Megaphone, Building2, Briefcase } from 'lucide-react';
 import { format } from 'date-fns';
 import type { ActivityReward, ActivityCategory } from '@/hooks/useActivityRewards';
 import { CATEGORY_LABELS, generateInvoiceItemName } from '@/hooks/useActivityRewards';
@@ -29,6 +29,7 @@ interface AddActivityRewardDialogProps {
   onOpenChange: (open: boolean) => void;
   onAdd: (reward: Omit<ActivityReward, 'id' | 'created_at' | 'invoice_item_name'>) => void;
   colleagueId: string;
+  clientNames?: string[];
 }
 
 export function AddActivityRewardDialog({
@@ -36,9 +37,11 @@ export function AddActivityRewardDialog({
   onOpenChange,
   onAdd,
   colleagueId,
+  clientNames = [],
 }: AddActivityRewardDialogProps) {
   const [category, setCategory] = useState<ActivityCategory>('marketing');
   const [description, setDescription] = useState('');
+  const [clientName, setClientName] = useState('');
   const [billingType, setBillingType] = useState<'fixed' | 'hourly'>('fixed');
   const [amount, setAmount] = useState('');
   const [hours, setHours] = useState('');
@@ -54,7 +57,7 @@ export function AddActivityRewardDialog({
     }
   }, [hours, hourlyRate, billingType, isAmountManual]);
 
-  const invoiceItemName = description ? generateInvoiceItemName(category, description) : '';
+  const invoiceItemName = description ? generateInvoiceItemName(category, description, category === 'client_work' ? clientName : undefined) : '';
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
@@ -83,6 +86,7 @@ export function AddActivityRewardDialog({
 
   const handleSubmit = () => {
     if (!description || !amount || Number(amount) <= 0) return;
+    if (category === 'client_work' && !clientName) return;
 
     onAdd({
       colleague_id: colleagueId,
@@ -93,6 +97,7 @@ export function AddActivityRewardDialog({
       hours: billingType === 'hourly' && hours ? Number(hours) : null,
       hourly_rate: billingType === 'hourly' && hourlyRate ? Number(hourlyRate) : null,
       activity_date: activityDate,
+      client_name: category === 'client_work' ? clientName : undefined,
     });
     handleClose();
   };
@@ -100,6 +105,7 @@ export function AddActivityRewardDialog({
   const handleClose = () => {
     setCategory('marketing');
     setDescription('');
+    setClientName('');
     setBillingType('fixed');
     setAmount('');
     setHours('');
@@ -111,58 +117,87 @@ export function AddActivityRewardDialog({
 
   const isCalculated = billingType === 'hourly' && !isAmountManual && hours && hourlyRate;
 
+  const categoryDescriptions: Record<ActivityCategory, string> = {
+    marketing: 'Content, videa, podcasty, webináře, brandové aktivity',
+    overhead: 'Interní vývoj, sales, administrativa, optimalizace procesů',
+    client_work: 'Manuálně přidaná práce na konkrétním klientovi',
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Přidat položku k fakturaci</DialogTitle>
+          <DialogTitle>Přidat položku</DialogTitle>
           <DialogDescription>
-            Činnost mimo přímou práci na klientech (Marketing nebo Režijní služby).
+            Manuální přidání položky pro fakturaci.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* SOP Info Alert */}
-          <Alert className="bg-primary/5 border-primary/20">
-            <Info className="h-4 w-4 text-primary" />
-            <AlertDescription className="text-xs">
-              <strong>Formát položky na faktuře:</strong>
-              <br />
-              • Marketing – popis činnosti
-              <br />
-              • Režijní služby – popis činnosti
-            </AlertDescription>
-          </Alert>
-
           {/* Category Selection */}
           <div className="space-y-2">
             <Label>Kategorie</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 type="button"
                 variant={category === 'marketing' ? 'default' : 'outline'}
-                className="justify-start gap-2"
+                className="justify-start gap-1.5 text-xs px-2"
                 onClick={() => setCategory('marketing')}
               >
-                <Megaphone className="h-4 w-4" />
+                <Megaphone className="h-3.5 w-3.5" />
                 Marketing
               </Button>
               <Button
                 type="button"
                 variant={category === 'overhead' ? 'default' : 'outline'}
-                className="justify-start gap-2"
+                className="justify-start gap-1.5 text-xs px-2"
                 onClick={() => setCategory('overhead')}
               >
-                <Building2 className="h-4 w-4" />
-                Režijní služby
+                <Building2 className="h-3.5 w-3.5" />
+                Interní
+              </Button>
+              <Button
+                type="button"
+                variant={category === 'client_work' ? 'default' : 'outline'}
+                className="justify-start gap-1.5 text-xs px-2"
+                onClick={() => setCategory('client_work')}
+              >
+                <Briefcase className="h-3.5 w-3.5" />
+                Klient
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              {category === 'marketing' 
-                ? 'Content, videa, podcasty, webináře, brandové aktivity'
-                : 'Interní vývoj, sales, administrativa, optimalizace procesů'}
+              {categoryDescriptions[category]}
             </p>
           </div>
+
+          {/* Client name for client_work */}
+          {category === 'client_work' && (
+            <div className="space-y-2">
+              <Label htmlFor="clientName">Klient</Label>
+              {clientNames.length > 0 ? (
+                <Select value={clientName} onValueChange={setClientName}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vyberte klienta..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientNames.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="clientName"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="Název klienta..."
+                />
+              )}
+            </div>
+          )}
 
           {/* Description */}
           <div className="space-y-2">
@@ -171,15 +206,19 @@ export function AddActivityRewardDialog({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={category === 'marketing' 
-                ? 'Např. tvorba video obsahu, správa contentu Socials...'
-                : 'Např. interní reportingová šablona, sales aktivity...'}
+              placeholder={
+                category === 'marketing' 
+                  ? 'Např. tvorba video obsahu, správa contentu Socials...'
+                  : category === 'overhead'
+                    ? 'Např. interní reportingová šablona, sales aktivity...'
+                    : 'Např. extra analytika, ad-hoc konzultace...'
+              }
               rows={2}
             />
           </div>
 
           {/* Generated Invoice Item Name Preview */}
-          {description && (
+          {description && (category !== 'client_work' || clientName) && (
             <div className="p-3 rounded-lg bg-muted/50 border">
               <p className="text-xs text-muted-foreground mb-1">Název položky na faktuře:</p>
               <p className="text-sm font-medium text-primary">{invoiceItemName}</p>
@@ -268,7 +307,7 @@ export function AddActivityRewardDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!description || !amount || Number(amount) <= 0}
+            disabled={!description || !amount || Number(amount) <= 0 || (category === 'client_work' && !clientName)}
           >
             Přidat položku
           </Button>

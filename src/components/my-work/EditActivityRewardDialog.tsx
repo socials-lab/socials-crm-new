@@ -18,8 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calculator, Info, Megaphone, Building2, Trash2 } from 'lucide-react';
+import { Calculator, Megaphone, Building2, Briefcase, Trash2 } from 'lucide-react';
 import type { ActivityReward, ActivityCategory } from '@/hooks/useActivityRewards';
 import { generateInvoiceItemName } from '@/hooks/useActivityRewards';
 
@@ -29,6 +28,7 @@ interface EditActivityRewardDialogProps {
   reward: ActivityReward | null;
   onUpdate: (rewardId: string, updates: Partial<Omit<ActivityReward, 'id' | 'created_at'>>) => void;
   onDelete: (rewardId: string) => void;
+  clientNames?: string[];
 }
 
 export function EditActivityRewardDialog({
@@ -37,9 +37,11 @@ export function EditActivityRewardDialog({
   reward,
   onUpdate,
   onDelete,
+  clientNames = [],
 }: EditActivityRewardDialogProps) {
   const [category, setCategory] = useState<ActivityCategory>('marketing');
   const [description, setDescription] = useState('');
+  const [clientName, setClientName] = useState('');
   const [billingType, setBillingType] = useState<'fixed' | 'hourly'>('fixed');
   const [amount, setAmount] = useState('');
   const [hours, setHours] = useState('');
@@ -47,11 +49,11 @@ export function EditActivityRewardDialog({
   const [activityDate, setActivityDate] = useState('');
   const [isAmountManual, setIsAmountManual] = useState(false);
 
-  // Populate form when reward changes
   useEffect(() => {
     if (reward) {
       setCategory(reward.category);
       setDescription(reward.description);
+      setClientName(reward.client_name || '');
       setBillingType(reward.billing_type);
       setAmount(reward.amount.toString());
       setHours(reward.hours?.toString() || '');
@@ -61,7 +63,6 @@ export function EditActivityRewardDialog({
     }
   }, [reward]);
 
-  // Auto-calculate amount when hours and hourly rate change
   useEffect(() => {
     if (billingType === 'hourly' && !isAmountManual && hours && hourlyRate) {
       const calculated = Number(hours) * Number(hourlyRate);
@@ -69,21 +70,16 @@ export function EditActivityRewardDialog({
     }
   }, [hours, hourlyRate, billingType, isAmountManual]);
 
-  const invoiceItemName = description ? generateInvoiceItemName(category, description) : '';
+  const invoiceItemName = description ? generateInvoiceItemName(category, description, category === 'client_work' ? clientName : undefined) : '';
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
-    if (billingType === 'hourly') {
-      setIsAmountManual(true);
-    }
+    if (billingType === 'hourly') setIsAmountManual(true);
   };
 
   const handleHoursOrRateChange = (field: 'hours' | 'rate', value: string) => {
-    if (field === 'hours') {
-      setHours(value);
-    } else {
-      setHourlyRate(value);
-    }
+    if (field === 'hours') setHours(value);
+    else setHourlyRate(value);
     setIsAmountManual(false);
   };
 
@@ -98,6 +94,7 @@ export function EditActivityRewardDialog({
 
   const handleSubmit = () => {
     if (!reward || !description || !amount || Number(amount) <= 0) return;
+    if (category === 'client_work' && !clientName) return;
 
     onUpdate(reward.id, {
       category,
@@ -107,6 +104,7 @@ export function EditActivityRewardDialog({
       hours: billingType === 'hourly' && hours ? Number(hours) : null,
       hourly_rate: billingType === 'hourly' && hourlyRate ? Number(hourlyRate) : null,
       activity_date: activityDate,
+      client_name: category === 'client_work' ? clientName : undefined,
     });
     onOpenChange(false);
   };
@@ -121,58 +119,87 @@ export function EditActivityRewardDialog({
 
   if (!reward) return null;
 
+  const categoryDescriptions: Record<ActivityCategory, string> = {
+    marketing: 'Content, videa, podcasty, webináře, brandové aktivity',
+    overhead: 'Interní vývoj, sales, administrativa, optimalizace procesů',
+    client_work: 'Manuálně přidaná práce na konkrétním klientovi',
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Upravit položku</DialogTitle>
           <DialogDescription>
-            Úprava interní práce (Marketing nebo Režijní služby).
+            Úprava manuálně přidané položky.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* SOP Info Alert */}
-          <Alert className="bg-primary/5 border-primary/20">
-            <Info className="h-4 w-4 text-primary" />
-            <AlertDescription className="text-xs">
-              <strong>Formát položky na faktuře:</strong>
-              <br />
-              • Režijní služba – Marketing – popis
-              <br />
-              • Režijní služba – Režijní služby – popis
-            </AlertDescription>
-          </Alert>
-
           {/* Category Selection */}
           <div className="space-y-2">
             <Label>Kategorie</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 type="button"
                 variant={category === 'marketing' ? 'default' : 'outline'}
-                className="justify-start gap-2"
+                className="justify-start gap-1.5 text-xs px-2"
                 onClick={() => setCategory('marketing')}
               >
-                <Megaphone className="h-4 w-4" />
+                <Megaphone className="h-3.5 w-3.5" />
                 Marketing
               </Button>
               <Button
                 type="button"
                 variant={category === 'overhead' ? 'default' : 'outline'}
-                className="justify-start gap-2"
+                className="justify-start gap-1.5 text-xs px-2"
                 onClick={() => setCategory('overhead')}
               >
-                <Building2 className="h-4 w-4" />
-                Režijní služby
+                <Building2 className="h-3.5 w-3.5" />
+                Interní
+              </Button>
+              <Button
+                type="button"
+                variant={category === 'client_work' ? 'default' : 'outline'}
+                className="justify-start gap-1.5 text-xs px-2"
+                onClick={() => setCategory('client_work')}
+              >
+                <Briefcase className="h-3.5 w-3.5" />
+                Klient
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              {category === 'marketing' 
-                ? 'Content, videa, podcasty, webináře, brandové aktivity'
-                : 'Interní vývoj, sales, administrativa, optimalizace procesů'}
+              {categoryDescriptions[category]}
             </p>
           </div>
+
+          {/* Client name for client_work */}
+          {category === 'client_work' && (
+            <div className="space-y-2">
+              <Label htmlFor="edit-clientName">Klient</Label>
+              {clientNames.length > 0 ? (
+                <Select value={clientName} onValueChange={setClientName}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vyberte klienta..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientNames.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="edit-clientName"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="Název klienta..."
+                />
+              )}
+            </div>
+          )}
 
           {/* Description */}
           <div className="space-y-2">
@@ -181,18 +208,22 @@ export function EditActivityRewardDialog({
               id="edit-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={category === 'marketing' 
-                ? 'Např. tvorba video obsahu, správa contentu Socials...'
-                : 'Např. interní reportingová šablona, sales aktivity...'}
+              placeholder={
+                category === 'marketing' 
+                  ? 'Např. tvorba video obsahu, správa contentu Socials...'
+                  : category === 'overhead'
+                    ? 'Např. interní reportingová šablona, sales aktivity...'
+                    : 'Např. extra analytika, ad-hoc konzultace...'
+              }
               rows={2}
             />
           </div>
 
           {/* Generated Invoice Item Name Preview */}
-          {description && (
+          {description && (category !== 'client_work' || clientName) && (
             <div className="p-3 rounded-lg bg-muted/50 border">
               <p className="text-xs text-muted-foreground mb-1">Název položky na faktuře:</p>
-              <p className="text-sm font-medium text-primary">Režijní služba – {invoiceItemName}</p>
+              <p className="text-sm font-medium text-primary">{invoiceItemName}</p>
             </div>
           )}
 
@@ -221,7 +252,6 @@ export function EditActivityRewardDialog({
             </Select>
           </div>
 
-          {/* Hours and Rate for hourly billing */}
           {billingType === 'hourly' && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -250,7 +280,6 @@ export function EditActivityRewardDialog({
             </div>
           )}
 
-          {/* Total Amount */}
           <div className="space-y-2">
             <Label htmlFor="edit-amount" className="flex items-center gap-1.5">
               Celková částka (Kč)
@@ -286,7 +315,7 @@ export function EditActivityRewardDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!description || !amount || Number(amount) <= 0}
+            disabled={!description || !amount || Number(amount) <= 0 || (category === 'client_work' && !clientName)}
           >
             Uložit změny
           </Button>
