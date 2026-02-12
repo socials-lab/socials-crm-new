@@ -163,12 +163,47 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Mock Creative Boost engagement_service for Test Client
+  const CREATIVE_BOOST_ENGAGEMENT_SERVICE = {
+    id: 'f0000000-0000-0000-0000-000000000002',
+    engagement_id: 'e0000000-0000-0000-0000-000000000001',
+    service_id: 'srv-3',
+    name: 'Creative Boost',
+    price: 75000,
+    billing_type: 'monthly',
+    currency: 'CZK',
+    is_active: true,
+    creative_boost_max_credits: 50,
+    creative_boost_min_credits: 30,
+    creative_boost_price_per_credit: 1500,
+    invoicing_status: null,
+    invoiced_at: null,
+    invoiced_in_period: null,
+    invoice_id: null,
+    selected_tier: null,
+    notes: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
   const { data: engagementServices = [], isLoading: engServicesLoading } = useQuery({
     queryKey: ['engagement_services'],
     queryFn: async () => {
       const { data, error } = await (supabase as any).from('engagement_services').select('*');
       if (error) throw error;
-      return data || [];
+      const dbServices = data || [];
+      
+      // Add Creative Boost mock for Test Client if not already in DB
+      const hasCreativeBoostForTestClient = dbServices.some((es: any) => 
+        es.engagement_id === 'e0000000-0000-0000-0000-000000000001' && 
+        (es.service_id === 'srv-3' || es.name?.toLowerCase().includes('creative boost'))
+      );
+      
+      if (!hasCreativeBoostForTestClient) {
+        return [...dbServices, CREATIVE_BOOST_ENGAGEMENT_SERVICE];
+      }
+      
+      return dbServices;
     },
   });
 
@@ -201,7 +236,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
 
   // Creative Boost mock service - will be merged with Supabase data
   const CREATIVE_BOOST_SERVICE: Service = {
-    id: 'service-creative-boost-mock',
+    id: 'srv-3',
     code: 'CREATIVE_BOOST',
     name: 'Creative Boost',
     service_type: 'addon',
