@@ -27,6 +27,11 @@ import type { ExtraWork as ExtraWorkType } from '@/types/crm';
 const EXTRA_WORK_TEMPLATES = [
   { name: 'Nastavení analytiky', rate: 1900 },
   { name: 'Tvorba videí', rate: 1600 },
+  { name: 'Business Manager setup', rate: 1800 },
+  { name: 'Audit kampaní', rate: 1800 },
+  { name: 'Tvorba kreativ', rate: 1500 },
+  { name: 'SEO audit', rate: 1500 },
+  { name: 'Nastavení konverzí', rate: 1900 },
 ];
 
 const HOURLY_RATE_CHEATSHEET = [
