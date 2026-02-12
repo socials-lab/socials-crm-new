@@ -174,36 +174,6 @@ export default function MyProfile() {
     toast.success('Údaje načteny z ARES');
   }
 
-  async function handleAresLookup() {
-    const ico = form.getValues('ico');
-    if (!ico || ico.length < 8) {
-      toast.error('Zadejte platné IČO (8 číslic)');
-      return;
-    }
-
-    const result = await lookupCompany(ico);
-    if (result) {
-      form.setValue('company_name', result.name || '');
-      form.setValue('dic', result.dic || '');
-      if (result.address) {
-        const addressParts = result.address.split(',');
-        if (addressParts.length >= 2) {
-          form.setValue('billing_street', addressParts[0].trim());
-          const cityZip = addressParts[addressParts.length - 1].trim().split(' ');
-          if (cityZip.length >= 2) {
-            form.setValue('billing_zip', cityZip[0]);
-            form.setValue('billing_city', cityZip.slice(1).join(' '));
-          } else {
-            form.setValue('billing_city', cityZip[0]);
-          }
-        } else {
-          form.setValue('billing_street', result.address);
-        }
-      }
-      toast.success('Údaje načteny z ARES');
-    }
-  }
-
   if (!colleagueId) {
     return (
       <div className="p-6">
