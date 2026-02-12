@@ -52,13 +52,13 @@ const navGroups: NavGroup[] = [
       { title: '💰 Provize', url: '/upsells', page: 'upsells' },
       { title: '🎨 Creative Boost', url: '/creative-boost', page: 'creative-boost' },
       { title: '📅 Meetingy', url: '/meetings', page: 'meetings' },
+      { title: '📦 Služby', url: '/services', page: 'services' },
     ],
   },
   {
     label: 'Finance',
     items: [
       { title: '🧾 Fakturace', url: '/invoicing', page: 'invoicing' },
-      { title: '📦 Služby', url: '/services', page: 'services' },
     ],
   },
   {
