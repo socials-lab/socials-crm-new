@@ -148,7 +148,12 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     });
 
     // Store extra work data for the public approval page
-    storeExtraWorkForApproval(extraWork);
+    storeExtraWorkForApproval(extraWork, {
+      clientName: clientName,
+      engagementName: engagement?.name,
+      colleagueName: colleague?.full_name,
+      colleagueEmail: colleague?.email,
+    });
 
     toast({ title: '📧 Email "odeslán"', description: `Demo: schvalovací email pro ${targetEmail}. Použijte odkaz pro simulaci.` });
     onOpenChange(false);
@@ -247,7 +252,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
 // localStorage helper for storing extra work data for the public approval page
 const EXTRA_WORKS_CACHE_KEY = 'extra_work_approval_data';
 
-interface ExtraWorkApprovalData {
+export interface ExtraWorkApprovalData {
   id: string;
   name: string;
   description: string;
@@ -256,9 +261,13 @@ interface ExtraWorkApprovalData {
   hours_worked: number | null;
   hourly_rate: number | null;
   status: string;
+  clientName?: string;
+  engagementName?: string;
+  colleagueName?: string;
+  colleagueEmail?: string;
 }
 
-function storeExtraWorkForApproval(work: ExtraWork) {
+function storeExtraWorkForApproval(work: ExtraWork, meta: { clientName?: string; engagementName?: string; colleagueName?: string; colleagueEmail?: string }) {
   const stored = getStoredExtraWorks();
   const data: ExtraWorkApprovalData = {
     id: work.id,
@@ -269,6 +278,7 @@ function storeExtraWorkForApproval(work: ExtraWork) {
     hours_worked: work.hours_worked,
     hourly_rate: work.hourly_rate,
     status: work.status,
+    ...meta,
   };
   const idx = stored.findIndex(s => s.id === data.id);
   if (idx >= 0) stored[idx] = data;
