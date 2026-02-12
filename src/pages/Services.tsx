@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { ServiceFormDialog } from '@/components/services/ServiceFormDialog';
 import { DeleteServiceDialog } from '@/components/services/DeleteServiceDialog';
 import { ServiceDetailView, type ServiceDetailData } from '@/components/services/ServiceDetailView';
@@ -37,6 +38,7 @@ const categoryLabels: Record<ServiceCategory, string> = {
 
 export default function Services() {
   const { services, engagementServices, clients, engagements, addService, updateService, deleteService, toggleServiceActive } = useCRMData();
+  const { outputTypes: cbOutputTypes, updateOutputType, addOutputType, removeOutputType } = useCreativeBoostData();
   const navigate = useNavigate();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -156,6 +158,17 @@ export default function Services() {
     
     // Get service detail from constants
     const constantDetail = getServiceDetail(service.code);
+    
+    // For Creative Boost, merge outputTypes from the CB hook (single source of truth)
+    const cbOutputTypesForView = service.code === 'CREATIVE_BOOST'
+      ? cbOutputTypes.filter(t => t.isActive).map(t => ({
+          name: t.name,
+          credits: t.baseCredits,
+          description: t.description,
+          id: t.id,
+        }))
+      : undefined;
+
     const serviceDetailData: ServiceDetailData | undefined = constantDetail ? {
       tagline: constantDetail.tagline,
       platforms: constantDetail.platforms,
@@ -165,7 +178,10 @@ export default function Services() {
       management_items: constantDetail.management,
       tier_comparison: constantDetail.tierComparison,
       tier_prices: constantDetail.tierPricing || null,
-      credit_pricing: constantDetail.creditPricing || null,
+      credit_pricing: constantDetail.creditPricing ? {
+        ...constantDetail.creditPricing,
+        outputTypes: cbOutputTypesForView,
+      } : null,
     } : undefined;
 
     return (
@@ -357,14 +373,35 @@ export default function Services() {
               </div>
               <ServiceDetailView
                 data={serviceDetailData}
-                onCreditPricingUpdate={serviceDetailData?.credit_pricing ? (outputTypes) => {
-                  const currentDetail = getServiceDetail(service.code);
-                  if (currentDetail?.creditPricing) {
-                    const updatedCreditPricing = { ...currentDetail.creditPricing, outputTypes };
-                    // Update the service detail constants in memory
-                    currentDetail.creditPricing.outputTypes = outputTypes;
-                    toast.success('Ceník kreditů byl aktualizován');
-                  }
+                onCreditPricingUpdate={service.code === 'CREATIVE_BOOST' ? (updatedTypes) => {
+                  // Sync with the global CB output types
+                  const currentIds = cbOutputTypes.filter(t => t.isActive).map(t => t.id);
+                  const updatedIds = updatedTypes.filter(t => (t as any).id).map(t => (t as any).id);
+                  
+                  // Remove deleted types
+                  currentIds.forEach(id => {
+                    if (!updatedIds.includes(id)) {
+                      removeOutputType(id);
+                    }
+                  });
+                  
+                  // Update or add types
+                  updatedTypes.forEach(t => {
+                    const existingId = (t as any).id;
+                    if (existingId) {
+                      updateOutputType(existingId, { name: t.name, baseCredits: t.credits });
+                    } else if (t.name) {
+                      addOutputType({
+                        name: t.name,
+                        category: 'banner',
+                        baseCredits: t.credits,
+                        description: t.description || '',
+                        isActive: true,
+                      });
+                    }
+                  });
+                  
+                  toast.success('Ceník kreditů byl aktualizován');
                 } : undefined}
               />
             </div>
