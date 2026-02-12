@@ -1,69 +1,62 @@
 
 
-## Oprava pridavani viceprace + klientske schvalovani pres Supabase
+## Redesign viceprace flow podle vzoru "Navrhy zmen"
 
-### Problem
+### Aktualni stav
 
-Pridavani viceprace selhava, protoze kod posila do databaze sloupce, ktere v tabulce `extra_works` neexistuji (`approval_token`, `client_approval_email`, `client_approved_at`, `client_rejected_at`, `client_rejection_reason`, `upsold_by_id`, `upsell_commission_percent`). Insert tichy selze kvuli `(supabase as any)` ktery obchazi typovou kontrolu.
+Viceprace pouziva tabulkovy/kanban pohled s inline status dropdowny a filtrovanim. Navrhy zmen pouziva prehledny tab-based layout rozdeleny podle stavu workflow (Cekajici, Ceka na klienta, Klient potvrdil, Aktivovane, Zamitnute) s kartovym zobrazenim.
 
-Schvalovaci stranka (`ExtraWorkApproval`) aktualne funguje pres localStorage -- neni propojena se Supabase.
+### Zmeny
 
-### Reseni
+Stranka ExtraWork.tsx se prepise na tab-based layout s kartovym zobrazenim, stejne jako Modifications.tsx:
 
-#### 1. Pridani chybejicich sloupcu do DB
+**1. Nova komponenta `ExtraWorkCard`**
+- Kartove zobrazeni jedne viceprace (podobne jako `ModificationRequestCard`)
+- Zobrazuje: nazev, klient, zakazka, kolega, hodiny x sazba = castka, upsell badge
+- Akce podle stavu:
+  - `pending_approval`: tlacitka "Odeslat ke schvaleni" (otevre SendApprovalDialog) + "Upravit" + "Smazat"
+  - `pending_approval` (s tokenem, odeslano klientovi): badge "Ceka na klienta" + "Zkopirovat odkaz" + "Odeslat email"
+  - `in_progress` (klient schvalil): badge "Klient schvalil" + tlacitko "K fakturaci"
+  - `ready_to_invoice`: badge "K fakturaci"
+  - `invoiced`: badge "Vyfakturovano"
+  - `rejected`: badge "Zamitnuto" + "Smazat"
 
-Migrace prida do tabulky `extra_works`:
+**2. Prepis ExtraWork.tsx**
+- Odebrat table/kanban toggle, ExtraWorkTable a ExtraWorkKanban
+- Pridat Tabs s peti zalozkami:
+  - Cekajici (pending_approval bez tokenu)
+  - Ceka na klienta (pending_approval s tokenem)
+  - Schvaleno klientem (in_progress -- presunuto po klientskem schvaleni)
+  - K fakturaci / Vyfakturovano (ready_to_invoice + invoiced)
+  - Zamitnute (rejected)
+- Zachovat KPI karty nahore
+- Zachovat tlacitko "Pridat vicepraci"
 
-| Sloupec | Typ | Vychozi |
-|---------|-----|---------|
-| `approval_token` | text | NULL |
-| `client_approval_email` | text | NULL |
-| `client_approved_at` | timestamptz | NULL |
-| `client_rejected_at` | timestamptz | NULL |
-| `client_rejection_reason` | text | NULL |
-| `upsold_by_id` | uuid | NULL |
-| `upsell_commission_percent` | numeric | NULL |
-
-Zaroven se prida RLS policy pro anonymni pristup k schvalovaci strance (SELECT pres `approval_token`).
-
-#### 2. Uprava AddExtraWorkDialog
-
-- Po uspesnem pridani viceprace se automaticky otevre `SendApprovalDialog` pro odeslani ke schvaleni klientem
-- Tok: Pridat vicepraci -> ulozi se do DB -> otevre se dialog pro odeslani schvalovaciho odkazu
-
-#### 3. Prepojeni SendApprovalDialog na Supabase
-
-- Misto localStorage token generovat a ukladat primo do DB sloupce `approval_token`
-- Update `extra_works` zaznamu s tokenem a emailem
-
-#### 4. Prepojeni ExtraWorkApproval stranky na edge funkci
-
-- Schvalovaci stranka bude nacitat data z edge funkce `send-extra-work-approval?action=get-by-token`
-- Schvaleni/zamitnuti bude volat `action=approve` / `action=reject`
-- Odstraneni zavislosti na localStorage
-
-#### 5. Edge funkce -- uz existuje a je funkcni
-
-Edge funkce `send-extra-work-approval` uz obsahuje vsechny potrebne endpointy (get-by-token, approve, reject). Jen je potreba pridat RLS policy aby edge funkce (pouziva service role key) mela pristup.
+**3. Uprava statusoveho flow**
+- `pending_approval` = vytvoreno, jeste neodeslano klientovi
+- `pending_approval` + `approval_token` existuje = odeslano, ceka na klienta
+- `in_progress` = klient schvalil (nastavi se na approval page)
+- `ready_to_invoice` = admin presune k fakturaci
+- `invoiced` = vyfakturovano
+- `rejected` = klient nebo admin zamitl
 
 ### Technicke detaily
 
-**Migrace SQL:**
-
-```text
-ALTER TABLE extra_works
-  ADD COLUMN IF NOT EXISTS approval_token text,
-  ADD COLUMN IF NOT EXISTS client_approval_email text,
-  ADD COLUMN IF NOT EXISTS client_approved_at timestamptz,
-  ADD COLUMN IF NOT EXISTS client_rejected_at timestamptz,
-  ADD COLUMN IF NOT EXISTS client_rejection_reason text,
-  ADD COLUMN IF NOT EXISTS upsold_by_id uuid,
-  ADD COLUMN IF NOT EXISTS upsell_commission_percent numeric;
-```
+**Nove soubory:**
+- `src/components/extra-work/ExtraWorkCard.tsx` -- kartova komponenta pro jednu vicepraci
 
 **Upravene soubory:**
-- `src/components/extra-work/AddExtraWorkDialog.tsx` -- po pridani otevre approval dialog
-- `src/components/extra-work/SendApprovalDialog.tsx` -- prepojit na Supabase misto localStorage
-- `src/pages/ExtraWorkApproval.tsx` -- nacitat data z edge funkce misto localStorage
-- `src/pages/ExtraWork.tsx` -- propojit flow (po add -> send approval)
+- `src/pages/ExtraWork.tsx` -- kompletni prepis na tab-based layout s Tabs komponentou
+  - Import `Tabs, TabsContent, TabsList, TabsTrigger` z `@/components/ui/tabs`
+  - Rozdeleni extraWorks do skupin podle stavu (useMemo)
+  - Kazda TabsContent zobrazuje grid ExtraWorkCard komponent
+  - Prazdne stavy zobrazuji placeholder (ikona + text), stejne jako u Modifications
 
+**Zachovane soubory (beze zmen):**
+- `AddExtraWorkDialog.tsx` -- dialog pro pridani
+- `EditExtraWorkDialog.tsx` -- dialog pro upravu
+- `SendApprovalDialog.tsx` -- dialog pro odeslani ke schvaleni
+- `ExtraWorkApproval.tsx` -- verejna stranka pro klienta
+
+**Smazane importy/zavislosti:**
+- ExtraWorkTable a ExtraWorkKanban se prestanu importovat v ExtraWork.tsx (soubory zustanou pro pripad potreby)
