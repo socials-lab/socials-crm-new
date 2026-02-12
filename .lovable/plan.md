@@ -1,36 +1,39 @@
 
 
-## Uvod a emailova verifikace na schvalovaci strance viceprace
+## Jak funguje Creative Boost
 
-Pridame uvodni text a verifikacni formular podle vzoru ze stranky "Navrhy zmen" (`UpgradeOfferPage.tsx`).
+Creative Boost je kreditovy system pro kreativni vystupy (bannery, videa, AI fotky). Logika:
 
-### Zmeny v `ExtraWorkApproval.tsx`
+1. **Typy vystupu** (`outputTypes`) -- cenik s kreditovymi hodnotami (napr. Meta Ads banner = 4 kredity, Standard video = 12 kreditu)
+2. **Mesicni zaznamy klientu** (`clientMonths`) -- kazdy klient ma pro kazdy mesic nastaveni: min/max kreditu, cena za kredit, prirazeny grafik, odkaz na zakazku
+3. **Vystupy** (`outputs`) -- tabulka co se udelalo: typ vystupu, pocet klasickych a express kusu, kdo to delal
+4. **Express prirazka** -- express vystupy stoji 1.5x zakladnich kreditu
+5. **Fakturace** -- fakturuje se balik (maxCredits * pricePerCredit), ne skutecna spotreba
+6. **Auto-sync** -- `ensureClientMonthsForActiveEngagements` automaticky vytvari mesicni zaznamy pro aktivni zakazky s CB sluzbou
 
-**1. Uvodni text**
-- Pod nadpis "Schvaleni viceprace" pridame odstavec s osobnim oslovenim, napr.:
-  *"Dobry den, radi bychom Vas pozadali o schvaleni nasledujici viceprace v ramci Vasi zakazky. Prosim, prohlednete si detaily nize a potvrdte souhlas."*
+### Problem
 
-**2. Verifikacni formular (vzor z UpgradeOfferPage)**
-- Misto dvou tlacitek (Schvalit / Zamitnout) pridame formular:
-  - **Email input** (povinny) -- klient musi zadat svuj email jako verifikaci identity
-  - **Checkbox** -- "Souhlasim s touto viceprace" (pro schvaleni)
-  - **Tlacitko "Schvalit vicepraci"** -- aktivni jen kdyz je vyplneny email a zaskrtnuty checkbox
-  - **Odkaz/tlacitko "Zamitnout"** -- zachova stavajici flow se zamitnutim a duvodem
-- Po schvaleni se ulozi `client_approval_email` a `client_approved_at` (stejne jako u navrhu zmen)
+Stavajici demo data pouzivaji `cli-1`, `cli-2`, `cli-8` (fiktivni ID), ktere neexistuji v CRM datech. Jediny funkcni zaznam je pro Test Client (`c0000000-...`) na leden 2026. Aktualni mesic (unor 2026) nema zadna data, proto je stranka prazdna.
 
-**3. Stav po schvaleni -- detail potvrzeni**
-- Po uspesnem schvaleni zobrazime detail s emailem klienta a casem potvrzeni (stejne jako UpgradeOfferPage)
-- Po zamitnuti zobrazime detail s casem zamitnuti
+### Reseni -- demo data pro unor 2026
 
-**4. Mock data v testMode**
-- Test mode zustava funkcni, schvaleni/zamitnuti meni jen vizualni stav
+Pridame do `creativeBoostMockData.ts` zaznamy pro aktualni mesic (unor 2026) pro Test Client:
+
+1. **Novy `CreativeBoostClientMonth`** pro `c0000000-...-000000000001`, rok 2026, mesic 2, s nastavenim 30-50 kreditu, 400 Kc/kredit, prirazeny grafik, odkaz na zakazku `e0000000-...`
+2. **Nove `ClientMonthOutput` zaznamy** -- 3-4 ruzne vystupy (bannery, video, AI fotka) s ruznymi pocty, vcetne express polozek
+3. **Kolega ID** pouzijeme `abeb4751-9691-42bc-8b21-fdf6c90d6524` (existujici v DB)
 
 ### Technicke detaily
 
-- Pridame stavy: `email` (string), `agreedToApproval` (boolean)
-- Import `Input`, `Label`, `Checkbox` komponent
-- Funkce `handleApprove` bude vyzadovat vyplneny email a souhlas
-- Pri schvaleni ulozime email a cas do dat (v testMode jen vizualne)
-- Formular pro zamitnuti zustava (textarea s duvodem), ale presuneme ho jako sekundarni akci pod hlavni formular
-- Ve stavu "approved" zobrazime potvrzovaci kartu s emailem a casem (vzor z UpgradeOfferPage radky 306-346)
+Soubor: `src/data/creativeBoostMockData.ts`
+
+Pridame:
+- 1x `CreativeBoostClientMonth` zaznam (id: `cbm-test-client-2026-02`, mesic 2, rok 2026)
+- 4x `ClientMonthOutput` zaznamy:
+  - `banner_meta_2sizes`: 2 klasicke + 1 express
+  - `video_standard`: 1 klasicky
+  - `ai_product_photo`: 2 klasicke
+  - `banner_revision`: 1 klasicky
+
+To dava cca 2*4 + 1*4*1.5 + 1*12 + 2*2 + 1*1 = 8 + 6 + 12 + 4 + 1 = 31 kreditu z 50 (62% vyuziti) -- realisticka hodnota pro testovani.
 
