@@ -7,6 +7,7 @@ import { ExtraWorkKanban } from '@/components/extra-work/ExtraWorkKanban';
 import { AddExtraWorkDialog } from '@/components/extra-work/AddExtraWorkDialog';
 import { EditExtraWorkDialog } from '@/components/extra-work/EditExtraWorkDialog';
 import { SendApprovalDialog } from '@/components/extra-work/SendApprovalDialog';
+import { storeExtraWorkForApproval } from '@/pages/ExtraWorkApproval';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { ExtraWork as ExtraWorkType, ExtraWorkStatus } from '@/types/crm';
 import { Plus, Clock, Loader2, FileText, Receipt, LayoutList, Columns3 } from 'lucide-react';
@@ -15,7 +16,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 type ViewMode = 'table' | 'kanban';
 
 export default function ExtraWork() {
-  const { extraWorks, addExtraWork, updateExtraWork, deleteExtraWork } = useCRMData();
+  const { extraWorks, addExtraWork, updateExtraWork, deleteExtraWork, getClientById, getEngagementById, getColleagueById } = useCRMData();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editWork, setEditWork] = useState<ExtraWorkType | null>(null);
   const [approvalWork, setApprovalWork] = useState<ExtraWorkType | null>(null);
@@ -137,7 +138,26 @@ export default function ExtraWork() {
           onUpdate={handleUpdate}
           onDelete={handleDelete}
           onEdit={(work) => setEditWork(work)}
-          onSendApproval={(work) => setApprovalWork(work)}
+          onSendApproval={(work) => {
+            // Store data for public page access
+            const client = getClientById(work.client_id);
+            const engagement = work.engagement_id ? getEngagementById(work.engagement_id) : null;
+            const colleague = getColleagueById(work.colleague_id);
+            storeExtraWorkForApproval({
+              id: work.id,
+              name: work.name,
+              description: work.description,
+              amount: work.amount,
+              currency: work.currency,
+              hours_worked: work.hours_worked,
+              hourly_rate: work.hourly_rate,
+              status: work.status,
+              client_name: client?.brand_name || client?.name || '',
+              engagement_name: engagement?.name || '',
+              colleague_name: colleague?.full_name || '',
+            });
+            setApprovalWork(work);
+          }}
           filterStatus={filterStatus}
           onFilterStatusChange={setFilterStatus}
           filterClientId={filterClientId}
