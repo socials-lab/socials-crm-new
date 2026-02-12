@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
-export type ActivityCategory = 'marketing' | 'overhead';
+export type ActivityCategory = 'marketing' | 'overhead' | 'client_work';
 
 export interface ActivityReward {
   id: string;
@@ -15,14 +15,19 @@ export interface ActivityReward {
   hourly_rate: number | null;
   activity_date: string;
   created_at: string;
+  client_name?: string;
 }
 
 export const CATEGORY_LABELS: Record<ActivityCategory, string> = {
   marketing: 'Marketing',
-  overhead: 'Režijní služby',
+  overhead: 'Interní práce',
+  client_work: 'Práce na klientovi',
 };
 
-export function generateInvoiceItemName(category: ActivityCategory, description: string): string {
+export function generateInvoiceItemName(category: ActivityCategory, description: string, clientName?: string): string {
+  if (category === 'client_work' && clientName) {
+    return `Přímá služba – ${clientName} – ${description}`;
+  }
   return `${CATEGORY_LABELS[category]} – ${description}`;
 }
 
@@ -61,7 +66,7 @@ const SAMPLE_REWARDS: ActivityReward[] = [
     colleague_id: 'demo-colleague',
     category: 'overhead',
     description: 'interní reportingová šablona',
-    invoice_item_name: 'Režijní služby – interní reportingová šablona',
+    invoice_item_name: 'Interní práce – interní reportingová šablona',
     billing_type: 'fixed',
     amount: 8000,
     hours: null,
@@ -74,7 +79,7 @@ const SAMPLE_REWARDS: ActivityReward[] = [
     colleague_id: 'demo-colleague',
     category: 'overhead',
     description: 'sales aktivity a příprava nabídek',
-    invoice_item_name: 'Režijní služby – sales aktivity a příprava nabídek',
+    invoice_item_name: 'Interní práce – sales aktivity a příprava nabídek',
     billing_type: 'hourly',
     amount: 2500,
     hours: 5,
@@ -85,22 +90,23 @@ const SAMPLE_REWARDS: ActivityReward[] = [
   {
     id: 'sample-5',
     colleague_id: 'demo-colleague',
-    category: 'marketing',
-    description: 'podcast Socials Insider',
-    invoice_item_name: 'Marketing – podcast Socials Insider',
+    category: 'client_work',
+    description: 'extra analytika',
+    invoice_item_name: 'Přímá služba – ACME Corp – extra analytika',
     billing_type: 'fixed',
     amount: 5000,
     hours: null,
     hourly_rate: null,
-    activity_date: '2025-12-15',
-    created_at: '2025-12-15T16:00:00Z',
+    activity_date: '2026-01-15',
+    created_at: '2026-01-15T16:00:00Z',
+    client_name: 'ACME Corp',
   },
   {
     id: 'sample-6',
     colleague_id: 'demo-colleague',
     category: 'overhead',
     description: 'automatizace interních procesů',
-    invoice_item_name: 'Režijní služby – automatizace interních procesů',
+    invoice_item_name: 'Interní práce – automatizace interních procesů',
     billing_type: 'hourly',
     amount: 6000,
     hours: 12,
@@ -169,6 +175,7 @@ export function useActivityRewards(colleagueId: string | null) {
     return {
       marketing: monthRewards.filter(r => r.category === 'marketing'),
       overhead: monthRewards.filter(r => r.category === 'overhead'),
+      client_work: monthRewards.filter(r => r.category === 'client_work'),
     };
   }, [getRewardsByMonth]);
 
@@ -197,7 +204,7 @@ export function useActivityRewards(colleagueId: string | null) {
   }, [rewards, colleagueId]);
 
   const addReward = useCallback((reward: Omit<ActivityReward, 'id' | 'created_at' | 'invoice_item_name'> & { invoice_item_name?: string }) => {
-    const invoiceItemName = reward.invoice_item_name || generateInvoiceItemName(reward.category, reward.description);
+    const invoiceItemName = reward.invoice_item_name || generateInvoiceItemName(reward.category, reward.description, reward.client_name);
     
     const newReward: ActivityReward = {
       ...reward,
@@ -218,10 +225,11 @@ export function useActivityRewards(colleagueId: string | null) {
       
       const updatedReward = { ...r, ...updates };
       // Regenerate invoice_item_name if category or description changed
-      if (updates.category || updates.description) {
+      if (updates.category || updates.description || updates.client_name) {
         updatedReward.invoice_item_name = generateInvoiceItemName(
           updates.category || r.category,
-          updates.description || r.description
+          updates.description || r.description,
+          updates.client_name || r.client_name
         );
       }
       return updatedReward;

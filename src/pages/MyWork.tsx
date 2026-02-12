@@ -15,6 +15,7 @@ import {
   Users,
   Package,
   GraduationCap,
+  Briefcase as BriefcaseIcon,
   Building2,
   Plus,
   CalendarDays,
@@ -381,13 +382,13 @@ function MyWorkContent() {
           </CardContent>
         </Card>
 
-        {/* NEW: Internal Work Section */}
+        {/* Manual Items Section */}
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-primary" />
-                Interní práce
+                <FileText className="h-4 w-4 text-primary" />
+                Manuální položky
               </CardTitle>
               <Button 
                 size="sm" 
@@ -402,23 +403,48 @@ function MyWorkContent() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Práce mimo klienty (marketing, režijní služby) – pro fakturaci
+              Manuálně přidané položky (marketing, interní práce, práce na klientovi) – pro fakturaci
             </p>
             
             {internalWorkThisMonth.length === 0 ? (
               <div className="text-center py-4">
-                <p className="text-sm text-muted-foreground">Žádná interní práce tento měsíc</p>
+                <p className="text-sm text-muted-foreground">Žádné manuální položky tento měsíc</p>
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   className="mt-2"
                   onClick={() => setShowAddActivityDialog(true)}
                 >
-                  Přidat činnost
+                  Přidat položku
                 </Button>
               </div>
             ) : (
               <>
+                {/* Client Work */}
+                {categorizedInternalWork.client_work.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Briefcase className="h-3 w-3" />
+                      <span>{CATEGORY_LABELS.client_work}</span>
+                    </div>
+                    {categorizedInternalWork.client_work.slice(0, 3).map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => setEditingReward(item)}
+                        className="w-full flex items-center justify-between py-1 pl-5 hover:bg-muted/50 rounded px-2 text-left"
+                      >
+                        <span className="text-sm truncate">{item.invoice_item_name}</span>
+                        <span className="font-medium">{item.amount.toLocaleString()} Kč</span>
+                      </button>
+                    ))}
+                    {categorizedInternalWork.client_work.length > 3 && (
+                      <p className="text-xs text-muted-foreground pl-5">
+                        +{categorizedInternalWork.client_work.length - 3} dalších položek
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Marketing */}
                 {categorizedInternalWork.marketing.length > 0 && (
                   <div className="space-y-1.5">
@@ -427,10 +453,14 @@ function MyWorkContent() {
                       <span>{CATEGORY_LABELS.marketing}</span>
                     </div>
                     {categorizedInternalWork.marketing.slice(0, 3).map((item) => (
-                      <div key={item.id} className="flex items-center justify-between py-1 pl-5">
+                      <button
+                        key={item.id}
+                        onClick={() => setEditingReward(item)}
+                        className="w-full flex items-center justify-between py-1 pl-5 hover:bg-muted/50 rounded px-2 text-left"
+                      >
                         <span className="text-sm truncate">{item.invoice_item_name}</span>
                         <span className="font-medium">{item.amount.toLocaleString()} Kč</span>
-                      </div>
+                      </button>
                     ))}
                     {categorizedInternalWork.marketing.length > 3 && (
                       <p className="text-xs text-muted-foreground pl-5">
@@ -440,7 +470,7 @@ function MyWorkContent() {
                   </div>
                 )}
                 
-                {/* Overhead */}
+                {/* Overhead / Internal */}
                 {categorizedInternalWork.overhead.length > 0 && (
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -448,10 +478,14 @@ function MyWorkContent() {
                       <span>{CATEGORY_LABELS.overhead}</span>
                     </div>
                     {categorizedInternalWork.overhead.slice(0, 3).map((item) => (
-                      <div key={item.id} className="flex items-center justify-between py-1 pl-5">
+                      <button
+                        key={item.id}
+                        onClick={() => setEditingReward(item)}
+                        className="w-full flex items-center justify-between py-1 pl-5 hover:bg-muted/50 rounded px-2 text-left"
+                      >
                         <span className="text-sm truncate">{item.invoice_item_name}</span>
                         <span className="font-medium">{item.amount.toLocaleString()} Kč</span>
-                      </div>
+                      </button>
                     ))}
                     {categorizedInternalWork.overhead.length > 3 && (
                       <p className="text-xs text-muted-foreground pl-5">
@@ -464,7 +498,7 @@ function MyWorkContent() {
                 <Separator />
                 
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">Celkem interní práce</span>
+                  <span className="font-medium">Celkem manuální položky</span>
                   <span className="text-lg font-bold text-primary">{activityCurrentMonthTotal.toLocaleString()} Kč</span>
                 </div>
               </>
@@ -572,6 +606,7 @@ function MyWorkContent() {
           onOpenChange={setShowAddActivityDialog}
           onAdd={addReward}
           colleagueId={currentColleague.id}
+          clientNames={myWorkData.clientData.map(cd => cd.client.brand_name || cd.client.name)}
         />
       )}
 
@@ -582,6 +617,7 @@ function MyWorkContent() {
         reward={editingReward}
         onUpdate={updateReward}
         onDelete={deleteReward}
+        clientNames={myWorkData.clientData.map(cd => cd.client.brand_name || cd.client.name)}
       />
     </div>
   );
