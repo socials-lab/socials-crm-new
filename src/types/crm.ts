@@ -361,7 +361,7 @@ export type InvoiceStatus = 'draft' | 'ready' | 'issued' | 'paid';
 export type LineItemSource = 'engagement' | 'manual' | 'creative_boost' | 'extra_work' | 'one_off';
 
 // Extra Work types - unified linear workflow
-export type ExtraWorkStatus = 'pending_approval' | 'in_progress' | 'ready_to_invoice' | 'invoiced';
+export type ExtraWorkStatus = 'pending_approval' | 'in_progress' | 'ready_to_invoice' | 'invoiced' | 'rejected';
 
 export interface ExtraWork {
   id: string;
@@ -388,6 +388,13 @@ export interface ExtraWork {
   invoice_id: string | null;
   invoice_number: string | null;
   invoiced_at: string | null;
+  
+  // Client approval flow
+  approval_token: string | null;
+  client_approval_email: string | null;
+  client_approved_at: string | null;
+  client_rejected_at: string | null;
+  client_rejection_reason: string | null;
   
   // Upsell tracking - who sold this extra work
   upsold_by_id: string | null;

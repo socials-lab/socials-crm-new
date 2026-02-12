@@ -52,6 +52,9 @@ import {
   Receipt,
   Trash2,
   TrendingUp,
+  Pencil,
+  Send,
+  XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +63,8 @@ interface ExtraWorkTableProps {
   extraWorks: ExtraWork[];
   onUpdate: (id: string, data: Partial<ExtraWork>) => void;
   onDelete: (id: string) => void;
+  onEdit?: (work: ExtraWork) => void;
+  onSendApproval?: (work: ExtraWork) => void;
   filterStatus?: ExtraWorkStatus | 'all';
   onFilterStatusChange?: (status: ExtraWorkStatus | 'all') => void;
   filterClientId?: string | 'all';
@@ -74,6 +79,8 @@ export function ExtraWorkTable({
   extraWorks,
   onUpdate,
   onDelete,
+  onEdit,
+  onSendApproval,
   filterStatus = 'all',
   onFilterStatusChange,
   filterClientId = 'all',
@@ -219,11 +226,12 @@ export function ExtraWorkTable({
 
   // Status icon component
   const StatusIcon = ({ status }: { status: ExtraWorkStatus }) => {
-    const icons = {
+    const icons: Record<ExtraWorkStatus, typeof Clock> = {
       pending_approval: Clock,
       in_progress: Loader2,
       ready_to_invoice: FileText,
       invoiced: Receipt,
+      rejected: XCircle,
     };
     const Icon = icons[status];
     return <Icon className="h-3.5 w-3.5" />;
@@ -347,6 +355,7 @@ export function ExtraWorkTable({
               <SelectItem value="in_progress">V procesu</SelectItem>
               <SelectItem value="ready_to_invoice">K fakturaci</SelectItem>
               <SelectItem value="invoiced">Vyfakturováno</SelectItem>
+              <SelectItem value="rejected">Zamítnuto</SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -537,6 +546,9 @@ export function ExtraWorkTable({
                           <SelectItem value="ready_to_invoice" className="text-xs">
                             K fakturaci
                           </SelectItem>
+                          <SelectItem value="rejected" className="text-xs">
+                            Zamítnuto
+                          </SelectItem>
                           <SelectItem value="invoiced" disabled className="text-xs">
                             Vyfakturováno
                           </SelectItem>
@@ -553,6 +565,18 @@ export function ExtraWorkTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {!isInvoiced && onEdit && (
+                            <DropdownMenuItem onClick={() => onEdit(work)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Editovat
+                            </DropdownMenuItem>
+                          )}
+                          {work.status === 'pending_approval' && onSendApproval && (
+                            <DropdownMenuItem onClick={() => onSendApproval(work)}>
+                              <Send className="h-4 w-4 mr-2" />
+                              Odeslat ke schválení
+                            </DropdownMenuItem>
+                          )}
                           {work.status === 'invoiced' && work.invoice_number && (
                             <DropdownMenuItem>
                               <Eye className="h-4 w-4 mr-2" />
