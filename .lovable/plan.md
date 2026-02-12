@@ -1,30 +1,38 @@
 
 
-## Inline editace ceníku kreditů
+## Propojení ceníku kreditů se všemi zakázkami
 
-Tabulka kreditů v detailu služby Creative Boost bude přímo editovatelná -- bez nutnosti otevírat dialogové okno.
+### Současný stav
 
-### Co se změní
+Existují dvě nezávislé kopie typů výstupů:
+1. **Service Details** (`serviceDetails.ts`) -- zjednodušený ceník (název, kredity, popis) zobrazený v detailu služby
+2. **Creative Boost Mock Data** (`creativeBoostMockData.ts`) -- plný ceník (id, název, kategorie, baseCredits) používaný všude jinde v aplikaci
 
-**Tabulka výstupů bude inline editovatelná:**
-- Název výstupu -- kliknutím se změní na textový input
-- Kredity -- kliknutím se změní na číselný input
-- Tlačítko pro smazání řádku (ikona X na konci každého řádku)
-- Tlačítko "Přidat typ" pod tabulkou pro přidání nového řádku
-- Změny se ukládají automaticky po opuštění pole (onBlur) nebo stisknutí Enter
+Editace v detailu služby mění jen první kopii a nikam se nepropisuje.
+
+### Řešení -- jeden zdroj pravdy
+
+Odstraníme duplicitu: ceník v `serviceDetails.ts` zrušíme a detail služby bude číst a zapisovat přímo do `creativeBoostMockData.ts` přes `useCreativeBoostData` hook.
 
 ### Technické detaily
 
-**Soubor: `src/components/services/ServiceDetailView.tsx`**
-- Komponenta dostane nový prop `onUpdate` (volitelný) -- callback pro uložení změn credit_pricing
-- Pokud je `onUpdate` předán, tabulka se zobrazí v editovatelném režimu
-- Každá buňka (název, kredity) bude obsahovat inline input místo prostého textu
-- Přidáme sloupec s tlačítkem pro smazání řádku
-- Pod tabulku přidáme tlačítko "Přidat typ výstupu"
-- Při každé změně se volá `onUpdate` s aktualizovaným polem `outputTypes`
+**1. `src/pages/Services.tsx`**
+- Callback `onCreditPricingUpdate` bude volat `updateOutputType` z `useCreativeBoostData` pro každý změněný řádek
+- Při přidání nového řádku zavolá `addOutputType`
+- Při smazání řádku zavolá existující nebo novou funkci pro deaktivaci/smazání výstupu
+- Data pro `ServiceDetailView` se namapují z `outputTypes` hooku místo z `serviceDetails.ts`
 
-**Soubor: `src/pages/Services.tsx`**
-- Předáme `onUpdate` callback do `ServiceDetailView`, který zavolá `updateService` pro uložení změn
+**2. `src/components/services/ServiceDetailView.tsx`**
+- Žádná změna struktury -- stále přijímá `credit_pricing` prop s `outputTypes`
+- Inline editace funguje stejně, jen data teď pocházejí z jiného zdroje
 
-Editovatelná tabulka bude vizuálně stejná jako aktuální, jen s tím rozdílem, že hodnoty půjde přímo měnit kliknutím.
+**3. `src/constants/serviceDetails.ts`**
+- Ze sekce `CREATIVE_BOOST.creditPricing` odstraníme pole `outputTypes` (zůstane jen `basePrice`, `currency`, `expressMultiplier`)
+- Typy výstupů se budou načítat dynamicky z mock dat
 
+**4. `src/hooks/useCreativeBoostData.tsx`**
+- Přidáme funkci `removeOutputType(id)` pro smazání typu výstupu (nebo deaktivaci přes `isActive: false`)
+
+### Výsledek
+
+Jakákoliv úprava ceníku v detailu služby se okamžitě projeví ve všech zakázkách, v Creative Boost přehledu, ve fakturaci i v odměnách -- protože všechny čtou ze stejného zdroje dat.
