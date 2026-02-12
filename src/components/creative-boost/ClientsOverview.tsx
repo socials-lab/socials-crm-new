@@ -13,8 +13,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, ChevronDown, ChevronUp, Palette, Zap, MoreVertical, Settings, ExternalLink, History, Image, Video } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Palette, Zap, MoreVertical, Settings, ExternalLink, History, Image, Video, Share2, Check, Copy } from 'lucide-react';
 import { SettingsHistoryDialog } from './SettingsHistoryDialog';
+import { saveCreativeBoostShare } from '@/pages/PublicCreativeBoostPage';
 import type { MonthStatus, ClientMonthOutput, OutputCategory } from '@/types/creativeBoost';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +71,8 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [settingsDialogClient, setSettingsDialogClient] = useState<string | null>(null);
   const [historyDialogClient, setHistoryDialogClient] = useState<string | null>(null);
+  const [shareDialogUrl, setShareDialogUrl] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   // Auto-sync: Ensure Creative Boost records exist for all active engagements
   useEffect(() => {
@@ -321,6 +324,41 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                       <DropdownMenuItem onClick={() => setHistoryDialogClient(summary.clientId)}>
                         <History className="h-4 w-4 mr-2" />
                         Historie změn
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {
+                        const token = crypto.randomUUID();
+                        const outputs = getClientOutputs(summary.clientId, year, month)
+                          .filter(o => o.normalCount > 0 || o.expressCount > 0)
+                          .map(o => {
+                            const ot = activeOutputTypes.find(t => t.id === o.outputTypeId);
+                            const creds = calculateOutputCredits(o.outputTypeId, o.normalCount, o.expressCount);
+                            return {
+                              typeName: ot?.name ?? o.outputTypeId,
+                              category: ot?.category ?? 'banner',
+                              normalCount: o.normalCount,
+                              expressCount: o.expressCount,
+                              credits: creds.totalCredits,
+                            };
+                          });
+                        saveCreativeBoostShare({
+                          token,
+                          clientId: summary.clientId,
+                          clientName: summary.clientName,
+                          brandName: summary.brandName,
+                          year,
+                          month,
+                          maxCredits: summary.maxCredits,
+                          usedCredits: summary.usedCredits,
+                          pricePerCredit: summary.pricePerCredit,
+                          outputs,
+                          createdAt: new Date().toISOString(),
+                        });
+                        const url = `${window.location.origin}/creative-boost-share/${token}`;
+                        setShareDialogUrl(url);
+                        setShareCopied(false);
+                      }}>
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Sdílet s klientem
                       </DropdownMenuItem>
                       {linkedEngagement && (
                         <DropdownMenuItem onClick={() => navigate(`/engagements?highlight=${linkedEngagement.id}`)}>
@@ -713,6 +751,42 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
         clientName={historyDialogClient ? (summaries.find(s => s.clientId === historyDialogClient)?.brandName ?? '') : ''}
         history={historyDialogClient ? getSettingsHistory(historyDialogClient, year, month) : []}
       />
+
+      {/* Share Dialog */}
+      <Dialog open={!!shareDialogUrl} onOpenChange={(open) => !open && setShareDialogUrl(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sdílet přehled s klientem</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Zkopírujte odkaz a pošlete ho klientovi. Klient uvidí aktuální stav čerpání kreditů bez nutnosti přihlášení.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={shareDialogUrl ?? ''}
+                className="text-sm"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                onClick={() => {
+                  if (shareDialogUrl) {
+                    navigator.clipboard.writeText(shareDialogUrl);
+                    setShareCopied(true);
+                    setTimeout(() => setShareCopied(false), 2000);
+                  }
+                }}
+              >
+                {shareCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
