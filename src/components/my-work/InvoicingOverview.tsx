@@ -52,6 +52,8 @@ interface ExtraWorkForInvoice {
   clientName: string;
   name: string;
   amount: number;
+  hours?: number | null;
+  hourlyRate?: number | null;
 }
 
 interface InvoicingOverviewProps {
@@ -204,10 +206,13 @@ export function InvoicingOverview({
 
       // 4. Extra work (format: "Přímá služba – [klient] – [název práce]")
       extraWorkItems.forEach((ew, idx) => {
+        const hoursNote = ew.hours && ew.hourlyRate 
+          ? ` (${ew.hours}h × ${ew.hourlyRate} Kč)`
+          : '';
         items.push({
           id: `extra-${idx}`,
           category: 'client',
-          invoiceName: `Přímá služba – ${ew.clientName} – ${ew.name}`,
+          invoiceName: `Přímá služba – ${ew.clientName} – ${ew.name}${hoursNote}`,
           amount: ew.amount,
         });
       });
