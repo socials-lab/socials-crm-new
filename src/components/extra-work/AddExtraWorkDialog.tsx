@@ -98,6 +98,11 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
       notes,
       upsold_by_id: upsoldById,
       upsell_commission_percent: upsoldById ? 10 : null,
+      approval_token: null,
+      client_approval_email: null,
+      client_approved_at: null,
+      client_rejected_at: null,
+      client_rejection_reason: null,
     });
 
     toast({

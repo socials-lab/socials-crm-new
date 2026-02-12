@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { ExtraWorkTable } from '@/components/extra-work/ExtraWorkTable';
 import { ExtraWorkKanban } from '@/components/extra-work/ExtraWorkKanban';
 import { AddExtraWorkDialog } from '@/components/extra-work/AddExtraWorkDialog';
+import { EditExtraWorkDialog } from '@/components/extra-work/EditExtraWorkDialog';
+import { SendApprovalDialog } from '@/components/extra-work/SendApprovalDialog';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { ExtraWork as ExtraWorkType, ExtraWorkStatus } from '@/types/crm';
 import { Plus, Clock, Loader2, FileText, Receipt, LayoutList, Columns3 } from 'lucide-react';
@@ -15,6 +17,8 @@ type ViewMode = 'table' | 'kanban';
 export default function ExtraWork() {
   const { extraWorks, addExtraWork, updateExtraWork, deleteExtraWork } = useCRMData();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editWork, setEditWork] = useState<ExtraWorkType | null>(null);
+  const [approvalWork, setApprovalWork] = useState<ExtraWorkType | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [filterStatus, setFilterStatus] = useState<ExtraWorkStatus | 'all'>('all');
   const [filterClientId, setFilterClientId] = useState<string | 'all'>('all');
@@ -132,6 +136,8 @@ export default function ExtraWork() {
           extraWorks={extraWorks}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
+          onEdit={(work) => setEditWork(work)}
+          onSendApproval={(work) => setApprovalWork(work)}
           filterStatus={filterStatus}
           onFilterStatusChange={setFilterStatus}
           filterClientId={filterClientId}
@@ -153,6 +159,24 @@ export default function ExtraWork() {
         onOpenChange={setIsAddDialogOpen}
         onAdd={handleAddExtraWork}
       />
+
+      {editWork && (
+        <EditExtraWorkDialog
+          open={!!editWork}
+          onOpenChange={(open) => !open && setEditWork(null)}
+          extraWork={editWork}
+          onSave={handleUpdate}
+        />
+      )}
+
+      {approvalWork && (
+        <SendApprovalDialog
+          open={!!approvalWork}
+          onOpenChange={(open) => !open && setApprovalWork(null)}
+          extraWork={approvalWork}
+          onUpdate={handleUpdate}
+        />
+      )}
     </div>
   );
 }

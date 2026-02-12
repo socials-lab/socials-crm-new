@@ -41,6 +41,7 @@ import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import PublicOfferPage from "./pages/PublicOfferPage";
 import UpgradeOfferPage from "./pages/UpgradeOfferPage";
+import ExtraWorkApproval from "./pages/ExtraWorkApproval";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ const App = () => (
                             <Route path="/offer/:token" element={<PublicOfferPage />} />
                             <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
                             <Route path="/upgrade/:token" element={<UpgradeOfferPage />} />
+                            <Route path="/extra-work-approval/:token" element={<ExtraWorkApproval />} />
                             
                             {/* Protected routes */}
                             <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
