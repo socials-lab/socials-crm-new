@@ -1,38 +1,38 @@
 
 
-## Propojení ceníku kreditů se všemi zakázkami
+## Aktualizace typů výstupů podle ceníku
 
-### Současný stav
+Nahradíme stávající typy výstupů v `src/data/creativeBoostMockData.ts` přesnými položkami z ceníku.
 
-Existují dvě nezávislé kopie typů výstupů:
-1. **Service Details** (`serviceDetails.ts`) -- zjednodušený ceník (název, kredity, popis) zobrazený v detailu služby
-2. **Creative Boost Mock Data** (`creativeBoostMockData.ts`) -- plný ceník (id, název, kategorie, baseCredits) používaný všude jinde v aplikaci
+### Bannery (8 položek)
 
-Editace v detailu služby mění jen první kopii a nikam se nepropisuje.
+| Název | Kredity | Kategorie |
+|-------|---------|-----------|
+| Brand kit (jen na začátku spolupráce) | 4 | banner |
+| Rámeček pro katalogové kampaně | 1 | banner |
+| Meta Ads bannery ve 2 rozměrech | 4 | banner |
+| Překlad Meta Ads bannerů | 1 | banner_translation |
+| Set PPC bannerů (1 rozměr) | 1 | banner |
+| Překlad PPC banneru (1 rozměr) | 0.5 | banner_translation |
+| Úprava již vytvořených Meta Ads | 1 | banner_revision |
+| Příprava bannerů na Homepage | 2 | banner |
 
-### Řešení -- jeden zdroj pravdy
+### Videa (6 položek)
 
-Odstraníme duplicitu: ceník v `serviceDetails.ts` zrušíme a detail služby bude číst a zapisovat přímo do `creativeBoostMockData.ts` přes `useCreativeBoostData` hook.
+| Název | Kredity | Kategorie |
+|-------|---------|-----------|
+| S video (základní editace, do 30s) | 6 | video |
+| M video (větší editace, do 30s) | 10 | video |
+| L video (komplexní editace, do 45s) | 12 | video |
+| Alternativní hook na začátku videa | 2 | video |
+| Menší úprava videa (úprava textů) | 2 | video |
+| Překlad videa | 2 | video_translation |
 
 ### Technické detaily
 
-**1. `src/pages/Services.tsx`**
-- Callback `onCreditPricingUpdate` bude volat `updateOutputType` z `useCreativeBoostData` pro každý změněný řádek
-- Při přidání nového řádku zavolá `addOutputType`
-- Při smazání řádku zavolá existující nebo novou funkci pro deaktivaci/smazání výstupu
-- Data pro `ServiceDetailView` se namapují z `outputTypes` hooku místo z `serviceDetails.ts`
+**Soubor: `src/data/creativeBoostMockData.ts`**
+- Kompletně nahradíme pole `outputTypes` za 14 nových položek odpovídajících ceníku
+- Odstraníme položky, které v ceníku nejsou (AI produktová fotka, video Standard/AI b-roll balíčky, revize videí/bannerů jako samostatné kategorie)
+- Zachováme stávající strukturu (`id`, `name`, `category`, `baseCredits`, `description`, `isActive`, `createdAt`, `updatedAt`)
+- Případné reference na smazaná ID v mock datech klientských měsíců (`creativeBoostMockData.ts`) aktualizujeme na nová ID
 
-**2. `src/components/services/ServiceDetailView.tsx`**
-- Žádná změna struktury -- stále přijímá `credit_pricing` prop s `outputTypes`
-- Inline editace funguje stejně, jen data teď pocházejí z jiného zdroje
-
-**3. `src/constants/serviceDetails.ts`**
-- Ze sekce `CREATIVE_BOOST.creditPricing` odstraníme pole `outputTypes` (zůstane jen `basePrice`, `currency`, `expressMultiplier`)
-- Typy výstupů se budou načítat dynamicky z mock dat
-
-**4. `src/hooks/useCreativeBoostData.tsx`**
-- Přidáme funkci `removeOutputType(id)` pro smazání typu výstupu (nebo deaktivaci přes `isActive: false`)
-
-### Výsledek
-
-Jakákoliv úprava ceníku v detailu služby se okamžitě projeví ve všech zakázkách, v Creative Boost přehledu, ve fakturaci i v odměnách -- protože všechny čtou ze stejného zdroje dat.
