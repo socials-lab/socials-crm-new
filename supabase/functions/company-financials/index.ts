@@ -1,11 +1,9 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -21,67 +19,59 @@ serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get('HLIDAC_STATU_API_KEY');
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'API key not configured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Use basic endpoint - returns company name and basic info
-    const apiUrl = `https://api.hlidacstatu.cz/api/v2/firmy/ico/${encodeURIComponent(ico)}`;
-    const response = await fetch(apiUrl, {
-      headers: {
-        'Authorization': `Token ${apiKey}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Hlidac statu API error: ${response.status} - ${errorText}`);
-      return new Response(JSON.stringify({ error: `API returned ${response.status}` }), {
-        status: response.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const data = await response.json();
-
-    // Try GetDetailInfo for financial data (may require paid license)
-    let detailData = null;
+    // Scrape Hlídač státu public page (no API key needed)
+    let hlidacData: Record<string, any> = {};
     try {
-      const detailUrl = `https://api.hlidacstatu.cz/api/v2/firmy/GetDetailInfo?icos=${encodeURIComponent(ico)}`;
-      const detailResponse = await fetch(detailUrl, {
-        headers: { 'Authorization': `Token ${apiKey}` },
+      const hlidacRes = await fetch(`https://www.hlidacstatu.cz/subjekt/${encodeURIComponent(ico)}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CRM/1.0)' },
       });
-      if (detailResponse.ok) {
-        const detailArray = await detailResponse.json();
-        detailData = Array.isArray(detailArray) ? detailArray[0] : detailArray;
+      if (hlidacRes.ok) {
+        const html = await hlidacRes.text();
+        hlidacData = parseHlidacHtml(html, ico);
       } else {
-        await detailResponse.text(); // consume body
+        await hlidacRes.text(); // consume body
       }
     } catch (e) {
-      console.log('GetDetailInfo not available:', e.message);
+      console.log('Hlídač státu scrape failed:', e.message);
     }
 
-    const bi = detailData?.business_info || {};
+    // Scrape kurzy.cz for additional data (základní kapitál, DIČ, etc.)
+    let kurzyData: Record<string, any> = {};
+    try {
+      const kurzyRes = await fetch(`https://rejstrik-firem.kurzy.cz/${encodeURIComponent(ico)}/`, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CRM/1.0)' },
+      });
+      if (kurzyRes.ok) {
+        const html = await kurzyRes.text();
+        kurzyData = parseKurzyHtml(html);
+      } else {
+        await kurzyRes.text();
+      }
+    } catch (e) {
+      console.log('Kurzy.cz scrape failed:', e.message);
+    }
 
     const result = {
-      ico: data.ico || ico,
-      name: data.jmeno || detailData?.nazev || null,
-      datoveSchranky: data.datoveSchranky || [],
-      zalozena: data.zalozena || null,
-      // Financial data from GetDetailInfo (if available)
-      obrat: bi.obrat || null,
-      pocetZamestnancu: bi.pocet_Zamestnancu || null,
-      oborPodnikani: bi.obor_Podnikani || null,
-      platceDPH: bi.platce_DPH || null,
-      nespolehlivyPlatce: bi.je_nespolehlivym_platcem_DPHKod || null,
-      dluhVZP: bi.ma_dluh_vzp || null,
-      rizika: detailData?.rizika || null,
-      // Profile URL for full info
+      ico,
+      name: hlidacData.name || kurzyData.name || null,
+      datoveSchranky: hlidacData.datoveSchranky || [],
+      zalozena: hlidacData.zalozena || kurzyData.zalozena || null,
+      zakladniKapital: kurzyData.zakladniKapital || null,
+      dic: kurzyData.dic || null,
+      platceDPH: kurzyData.dic ? 'ano' : null,
+      // Contracts from Hlídač státu
+      smlouvyCount: hlidacData.smlouvyCount ?? null,
+      smlouvyTotal: hlidacData.smlouvyTotal ?? null,
+      smlouvyRok: hlidacData.smlouvyRok ?? null,
+      smlouvyRokCount: hlidacData.smlouvyRokCount ?? null,
+      smlouvyRokTotal: hlidacData.smlouvyRokTotal ?? null,
+      // Subsidies
+      dotace: hlidacData.dotace || null,
+      // Insolvency
+      insolvence: hlidacData.insolvence || null,
+      // Profile URLs
       profileUrl: `https://www.hlidacstatu.cz/subjekt/${ico}`,
+      kurzyUrl: `https://rejstrik-firem.kurzy.cz/${ico}/`,
     };
 
     return new Response(JSON.stringify(result), {
@@ -95,3 +85,81 @@ serve(async (req) => {
     });
   }
 });
+
+function parseHlidacHtml(html: string, ico: string): Record<string, any> {
+  const result: Record<string, any> = {};
+
+  // Company name - look for h3 tag with company name
+  const nameMatch = html.match(/<h3[^>]*>\s*([^<]+)\s*<\/h3>/i);
+  if (nameMatch) {
+    result.name = nameMatch[1].trim();
+  }
+
+  // Založeno (founded date)
+  const zalozenaMatch = html.match(/Založeno\s*<\/td>\s*<td[^>]*>\s*([^<]+)/i) 
+    || html.match(/Založeno[^<]*<[^>]*>\s*(\d{1,2}\.\d{1,2}\.\d{4})/i);
+  if (zalozenaMatch) {
+    result.zalozena = zalozenaMatch[1].trim();
+  }
+
+  // Datová schránka
+  const dsMatch = html.match(/Datová schránka\s*<\/td>\s*<td[^>]*>\s*([a-z0-9]+)/i)
+    || html.match(/Datová schránka[^<]*<[^>]*>\s*([a-z0-9]+)/i);
+  if (dsMatch) {
+    result.datoveSchranky = [dsMatch[1].trim()];
+  }
+
+  // Contracts - "evidujeme <a>X smluv</a> za celkem <span>Y Kč</span>"
+  // Strip HTML tags first for easier matching
+  const textOnly = html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+  
+  const smlouvyMatch = textOnly.match(/evidujeme\s+(\d+)\s+smluv[^z]*za celkem\s+([\d\s,]+)\s*Kč/i);
+  if (smlouvyMatch) {
+    result.smlouvyCount = parseInt(smlouvyMatch[1]);
+    result.smlouvyTotal = smlouvyMatch[2].trim();
+  }
+
+  // Current year contracts - "V roce 2025 uzavřel subjekt X smluv za Y Kč"
+  const rokMatch = textOnly.match(/V roce (\d{4}) uzavřel subjekt\s+(\d+)\s+smluv/i);
+  if (rokMatch) {
+    result.smlouvyRok = rokMatch[1];
+    result.smlouvyRokCount = parseInt(rokMatch[2]);
+  }
+  const rokTotalMatch = textOnly.match(/V roce \d{4} uzavřel subjekt\s+\d+\s+smluv[^K]*za\s+([\d\s,]+)\s*Kč/i);
+  if (rokTotalMatch) {
+    result.smlouvyRokTotal = rokTotalMatch[1].trim();
+  }
+
+  return result;
+}
+
+function parseKurzyHtml(html: string): Record<string, any> {
+  const result: Record<string, any> = {};
+  const textOnly = html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+
+  // Základní kapitál - "Z. KAPITÁL: 100 000 Kč"
+  const kapitalMatch = textOnly.match(/Z\.\s*KAPITÁL[:\s]+([\d\s]+)\s*Kč/i);
+  if (kapitalMatch) {
+    result.zakladniKapital = kapitalMatch[1].trim().replace(/\s+/g, ' ') + ' Kč';
+  }
+
+  // DIČ
+  const dicMatch = textOnly.match(/DIČ[^:]*:\s*(CZ\d+)/i);
+  if (dicMatch) {
+    result.dic = dicMatch[1];
+  }
+
+  // Company name
+  const nameMatch = textOnly.match(/NÁZEV:\s+([^\n]+?)(?:\s+IČO|\s+Z\.\s*KAPITÁL)/i);
+  if (nameMatch) {
+    result.name = nameMatch[1].trim();
+  }
+
+  // Founded date
+  const zalozenaMatch = textOnly.match(/Datum vzniku[^:]*:\s*(\d{1,2}\.\s*\w+\s*\d{4})/i);
+  if (zalozenaMatch) {
+    result.zalozena = zalozenaMatch[1].trim();
+  }
+
+  return result;
+}

@@ -5,14 +5,18 @@ export interface CompanyFinancialsData {
   name: string | null;
   datoveSchranky: string[];
   zalozena: string | null;
-  obrat: string | null;
-  pocetZamestnancu: string | null;
-  oborPodnikani: string | null;
+  zakladniKapital: string | null;
+  dic: string | null;
   platceDPH: string | null;
-  nespolehlivyPlatce: string | null;
-  dluhVZP: string | null;
-  rizika: string | null;
+  smlouvyCount: number | null;
+  smlouvyTotal: string | null;
+  smlouvyRok: string | null;
+  smlouvyRokCount: number | null;
+  smlouvyRokTotal: string | null;
+  dotace: string | null;
+  insolvence: string | null;
   profileUrl: string;
+  kurzyUrl: string;
 }
 
 export function useCompanyFinancials(ico: string | null | undefined) {
@@ -36,7 +40,7 @@ export function useCompanyFinancials(ico: string | null | undefined) {
       return response.json();
     },
     enabled: !!ico && ico.length >= 2,
-    staleTime: 1000 * 60 * 60, // 1 hour cache
+    staleTime: 1000 * 60 * 60,
     retry: 1,
   });
 }

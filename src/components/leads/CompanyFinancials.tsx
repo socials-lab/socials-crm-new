@@ -1,7 +1,6 @@
-import { ExternalLink, Building2, Users, Banknote, Shield, AlertTriangle } from 'lucide-react';
+import { ExternalLink, Building2, Calendar, FileText, Banknote, Shield, AlertTriangle, Landmark } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCompanyFinancials } from '@/hooks/useCompanyFinancials';
-import { cn } from '@/lib/utils';
 
 interface CompanyFinancialsProps {
   ico: string;
@@ -35,11 +34,9 @@ export function CompanyFinancials({ ico }: CompanyFinancialsProps) {
     );
   }
 
-  const hasFinancialData = data.obrat || data.pocetZamestnancu;
-
   return (
-    <div className="space-y-2 pt-1">
-      {/* Company name confirmation */}
+    <div className="space-y-2.5 pt-1">
+      {/* Company name */}
       {data.name && (
         <div className="text-xs text-muted-foreground">
           <span className="font-medium text-foreground">{data.name}</span>
@@ -49,64 +46,93 @@ export function CompanyFinancials({ ico }: CompanyFinancialsProps) {
         </div>
       )}
 
-      {/* Financial data (if available from premium API) */}
-      {hasFinancialData && (
-        <div className="grid grid-cols-2 gap-2">
-          {data.obrat && (
-            <div className="rounded-lg border bg-card p-2.5">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Banknote className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Obrat</span>
-              </div>
-              <p className="text-sm font-semibold">{data.obrat}</p>
+      {/* Key info grid */}
+      <div className="grid grid-cols-2 gap-2">
+        {data.zalozena && (
+          <div className="rounded-lg border bg-card p-2.5">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Založeno</span>
             </div>
-          )}
-          {data.pocetZamestnancu && (
-            <div className="rounded-lg border bg-card p-2.5">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Zaměstnanci</span>
-              </div>
-              <p className="text-sm font-semibold">{data.pocetZamestnancu}</p>
+            <p className="text-sm font-semibold">{data.zalozena}</p>
+          </div>
+        )}
+        {data.zakladniKapital && (
+          <div className="rounded-lg border bg-card p-2.5">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Landmark className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Základní kapitál</span>
             </div>
-          )}
-        </div>
-      )}
+            <p className="text-sm font-semibold">{data.zakladniKapital}</p>
+          </div>
+        )}
+      </div>
 
-      {/* Risk info */}
-      {data.rizika && (
-        <div className="flex items-center gap-1.5 text-xs text-amber-600">
-          <AlertTriangle className="h-3 w-3" />
-          <span>{data.rizika}</span>
+      {/* Contracts summary */}
+      {data.smlouvyCount !== null && data.smlouvyCount !== undefined && (
+        <div className="rounded-lg border bg-card p-2.5">
+          <div className="flex items-center gap-1.5 mb-1">
+            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Registr smluv</span>
+          </div>
+          <p className="text-sm font-semibold">
+            {data.smlouvyCount} smluv
+            {data.smlouvyTotal && data.smlouvyTotal !== '0' && ` za ${data.smlouvyTotal} Kč`}
+          </p>
+          {data.smlouvyRok && data.smlouvyRokCount !== null && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              V {data.smlouvyRok}: {data.smlouvyRokCount} smluv
+              {data.smlouvyRokTotal && data.smlouvyRokTotal !== '0' && ` za ${data.smlouvyRokTotal} Kč`}
+            </p>
+          )}
         </div>
       )}
 
       {/* DPH info */}
-      {data.nespolehlivyPlatce && data.nespolehlivyPlatce !== '0' && (
-        <div className="flex items-center gap-1.5 text-xs text-destructive">
+      {data.dic && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Shield className="h-3 w-3" />
-          <span>Nespolehlivý plátce DPH</span>
+          <span>DIČ: {data.dic} · Plátce DPH</span>
         </div>
       )}
 
-      {/* VZP debt */}
-      {data.dluhVZP && data.dluhVZP !== 'ne' && data.dluhVZP !== '0' && (
+      {/* Subsidies */}
+      {data.dotace && data.dotace !== 'žádné' && (
+        <div className="flex items-center gap-1.5 text-xs text-amber-600">
+          <Banknote className="h-3 w-3" />
+          <span>Dotace: {data.dotace}</span>
+        </div>
+      )}
+
+      {/* Insolvency warning */}
+      {data.insolvence && (
         <div className="flex items-center gap-1.5 text-xs text-destructive">
           <AlertTriangle className="h-3 w-3" />
-          <span>Dluh VZP: {data.dluhVZP}</span>
+          <span>Insolvence: {data.insolvence}</span>
         </div>
       )}
 
-      {/* Link to full profile */}
-      <a
-        href={data.profileUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
-      >
-        Zobrazit na Hlídači státu
-        <ExternalLink className="h-3 w-3" />
-      </a>
+      {/* Links */}
+      <div className="flex flex-wrap gap-3">
+        <a
+          href={data.profileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
+        >
+          Hlídač státu
+          <ExternalLink className="h-3 w-3" />
+        </a>
+        <a
+          href={data.kurzyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
+        >
+          Kurzy.cz
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </div>
     </div>
   );
 }
