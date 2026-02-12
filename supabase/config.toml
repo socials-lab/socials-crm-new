@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.vat-reliability]
 verify_jwt = false
+
+[functions.send-onboarding-summary]
+verify_jwt = false

@@ -363,6 +363,74 @@ export default function OnboardingForm() {
       
       // Mark lead as converted
       await markLeadAsConverted(lead.id, newClient.id, '');
+
+      // Send onboarding summary (best effort - failure doesn't block submission)
+      try {
+        const orderSummary = getOrderSummary();
+        const summaryPayload = {
+          companyName: data.company_name,
+          ico: data.ico,
+          dic: data.dic || null,
+          website: data.website || null,
+          billingAddress: {
+            street: data.billing_street || null,
+            city: data.billing_city || null,
+            zip: data.billing_zip || null,
+            country: data.billing_country || null,
+            email: data.billing_email || null,
+          },
+          services: [
+            ...orderSummary.monthlyServices.map(s => ({
+              name: s.name,
+              price: s.price,
+              currency: s.currency || 'CZK',
+              billingType: 'monthly',
+              proratedPrice: s.proratedPrice,
+            })),
+            ...orderSummary.oneOffServices.map(s => ({
+              name: s.name,
+              price: s.price,
+              currency: s.currency || 'CZK',
+              billingType: 'one_off',
+            })),
+          ],
+          startDate: format(data.startDate, 'yyyy-MM-dd'),
+          isProrated: orderSummary.isProrated,
+          remainingDays: orderSummary.remainingDays,
+          daysInMonth: orderSummary.daysInMonth,
+          monthlyTotal: orderSummary.monthlyTotal,
+          proratedMonthlyTotal: orderSummary.proratedMonthlyTotal,
+          oneOffTotal: orderSummary.oneOffTotal,
+          signatories: data.signatories.map(s => ({
+            name: s.name,
+            email: s.email,
+            phone: s.phone || null,
+          })),
+          projectContacts: (data.useSignatoriesForProject ? data.signatories : data.projectContacts).map(c => ({
+            name: c.name,
+            email: c.email,
+            phone: c.phone || null,
+          })),
+          recipients: {
+            to: [
+              data.signatories[0]?.email,
+              ownerEmail,
+            ].filter(Boolean),
+            bcc: ['danny@socials.cz', 'dana.bauerova@socials.cz'],
+          },
+        };
+        console.log('Onboarding summary payload:', summaryPayload);
+        await fetch(
+          'https://empndmpeyrdycjdesoxr.supabase.co/functions/v1/send-onboarding-summary',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(summaryPayload),
+          }
+        );
+      } catch (summaryError) {
+        console.error('Failed to send onboarding summary:', summaryError);
+      }
       
       setIsSubmitted(true);
     } catch (error) {
