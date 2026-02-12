@@ -126,16 +126,10 @@ const PROCESS_STEPS = [
     number: 2,
     icon: FileSignature,
     title: 'Smlouva k podpisu',
-    description: 'Do 5 minut',
+    description: 'Do 24 hodin',
   },
   {
     number: 3,
-    icon: UserCheck,
-    title: 'Account manager',
-    description: 'Váš kontakt',
-  },
-  {
-    number: 4,
     icon: Phone,
     title: 'Onboarding a start',
     description: 'Jdeme na to',
@@ -817,7 +811,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               </Link>
             </Button>
             <p className="mt-4 text-xs text-muted-foreground">
-              ✅ Smlouva do 5 minut
+              ✅ Smlouva do 24 hodin
             </p>
           </div>
         </section>
@@ -860,6 +854,15 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 className="text-primary hover:underline inline-flex items-center gap-1"
               >
                 Více o nás
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <a 
+                href="https://www.socials.cz/socials-podcast" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                🎙️ Socials Podcast
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
