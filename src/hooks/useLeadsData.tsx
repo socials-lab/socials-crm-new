@@ -1,7 +1,7 @@
 import { useState, useCallback, createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Lead, LeadStage, LeadNote, LeadChangeType, LeadHistoryEntry } from '@/types/crm';
+import type { Lead, LeadStage, LeadNote, LeadChangeType, LeadHistoryEntry, LeadNoteType } from '@/types/crm';
 
 // Field labels for history display
 const LEAD_FIELD_LABELS: Record<string, string> = {
@@ -62,7 +62,7 @@ interface LeadsDataContextType {
   updateLeadStage: (id: string, stage: LeadStage) => Promise<void>;
   
   // Notes
-  addNote: (leadId: string, text: string) => Promise<void>;
+  addNote: (leadId: string, text: string, noteType?: LeadNoteType, callDate?: string | null) => Promise<void>;
   
   // Helpers
   getLeadById: (id: string) => Lead | undefined;
@@ -240,13 +240,29 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     await updateLeadMutation.mutateAsync({ id, data: { stage } });
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
-  const addNote = useCallback(async (leadId: string, text: string) => {
+  const addNote = useCallback(async (leadId: string, text: string, noteType: LeadNoteType = 'general', callDate: string | null = null) => {
     // For now, notes are stored in lead history (will be proper table later)
     addHistoryEntry(leadId, 'note_added', null, null, text.substring(0, 100) + (text.length > 100 ? '...' : ''));
     
-    // Update lead's updated_at
-    await updateLeadMutation.mutateAsync({ id: leadId, data: {} });
-  }, [updateLeadMutation, addHistoryEntry]);
+    // Add note to lead's notes array
+    const lead = leads.find(l => l.id === leadId);
+    if (lead) {
+      const newNote: LeadNote = {
+        id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        lead_id: leadId,
+        author_id: '',
+        author_name: 'User',
+        text,
+        note_type: noteType,
+        call_date: callDate,
+        created_at: new Date().toISOString(),
+      };
+      const updatedNotes = [...lead.notes, newNote];
+      await updateLeadMutation.mutateAsync({ id: leadId, data: { notes: updatedNotes as any } });
+    } else {
+      await updateLeadMutation.mutateAsync({ id: leadId, data: {} });
+    }
+  }, [leads, updateLeadMutation, addHistoryEntry]);
 
   const getLeadById = useCallback((id: string) => leads.find(l => l.id === id), [leads]);
   
