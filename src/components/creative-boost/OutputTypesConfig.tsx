@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Pencil, Image, Video, Languages, Sparkles, RotateCcw } from 'lucide-react';
+import { Plus, Pencil, Image, Video, Languages, RotateCcw } from 'lucide-react';
 import type { OutputType, OutputCategory } from '@/types/creativeBoost';
 import { cn } from '@/lib/utils';
 

@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { getRewardPerCredit } from '@/data/creativeBoostRewardsMockData';
+import { getRewards } from '@/data/creativeBoostRewardsMockData';
 import type { EngagementService } from '@/types/crm';
 import type { ClientMonthSummary } from '@/types/creativeBoost';
 
@@ -26,7 +26,7 @@ interface CreativeBoostCreditOverviewProps {
   month: number;
   canSeeFinancials: boolean;
   assignedColleagueAssignmentId?: string | null; // ID of assignment for reward lookup
-  onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number; colleagueRewardPerCredit?: number }) => void;
+  onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number; bannerRewardPerCredit?: number; videoRewardPerCredit?: number }) => void;
   onDelete: () => void;
 }
 
@@ -47,13 +47,14 @@ export function CreativeBoostCreditOverview({
   const [isEditing, setIsEditing] = useState(false);
   const [tempMaxCredits, setTempMaxCredits] = useState('');
   const [tempPricePerCredit, setTempPricePerCredit] = useState('');
-  const [tempColleagueReward, setTempColleagueReward] = useState('');
+  const [tempBannerReward, setTempBannerReward] = useState('');
+  const [tempVideoReward, setTempVideoReward] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const maxCredits = engagementService.creative_boost_max_credits ?? 0;
   const pricePerCredit = engagementService.creative_boost_price_per_credit ?? 0;
-  // Get reward from assignment if available, otherwise fallback to default
-  const colleagueRewardPerCredit = getRewardPerCredit(assignedColleagueAssignmentId ?? null);
+  // Get rewards from assignment if available, otherwise fallback to defaults
+  const rewards = getRewards(assignedColleagueAssignmentId ?? null);
   
   const usedCredits = summary?.usedCredits ?? 0;
   const progressPercent = maxCredits > 0 ? Math.min((usedCredits / maxCredits) * 100, 100) : 0;
@@ -63,7 +64,8 @@ export function CreativeBoostCreditOverview({
     e.stopPropagation();
     setTempMaxCredits(String(maxCredits));
     setTempPricePerCredit(String(pricePerCredit));
-    setTempColleagueReward(String(colleagueRewardPerCredit));
+    setTempBannerReward(String(rewards.bannerRewardPerCredit));
+    setTempVideoReward(String(rewards.videoRewardPerCredit));
     setIsEditing(true);
   };
   
@@ -72,7 +74,8 @@ export function CreativeBoostCreditOverview({
     onUpdateSettings({
       maxCredits: parseInt(tempMaxCredits) || 0,
       pricePerCredit: parseInt(tempPricePerCredit) || 0,
-      colleagueRewardPerCredit: parseInt(tempColleagueReward) || 0,
+      bannerRewardPerCredit: parseInt(tempBannerReward) || 0,
+      videoRewardPerCredit: parseInt(tempVideoReward) || 0,
     });
     setIsEditing(false);
   };
@@ -154,14 +157,26 @@ export function CreativeBoostCreditOverview({
                 <span className="text-xs text-muted-foreground">Kč/kr</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">🎨 Odměna grafika:</span>
+                <span className="text-xs text-muted-foreground">🖼️ Banner:</span>
                 <Input
                   type="number"
-                  value={tempColleagueReward}
-                  onChange={(e) => setTempColleagueReward(e.target.value)}
-                  className="h-7 w-20 text-xs"
+                  value={tempBannerReward}
+                  onChange={(e) => setTempBannerReward(e.target.value)}
+                  className="h-7 w-16 text-xs"
+                  placeholder="80"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="text-xs text-muted-foreground">Kč/kr</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">🎬 Video:</span>
+                <Input
+                  type="number"
+                  value={tempVideoReward}
+                  onChange={(e) => setTempVideoReward(e.target.value)}
+                  className="h-7 w-16 text-xs"
                   placeholder="80"
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -230,12 +245,9 @@ export function CreativeBoostCreditOverview({
             <span className="text-[10px] text-muted-foreground">
               {maxCredits} kreditů{canSeeFinancials && ` • ${pricePerCredit.toLocaleString()} Kč/kredit`}
             </span>
-            {canSeeFinancials && colleagueRewardPerCredit > 0 && (
+            {canSeeFinancials && (rewards.bannerRewardPerCredit > 0 || rewards.videoRewardPerCredit > 0) && (
               <span className="text-[10px] text-muted-foreground">
-                🎨 Odměna grafika: {colleagueRewardPerCredit.toLocaleString()} Kč/kredit 
-                <span className="text-green-600 font-medium ml-1">
-                  ({(maxCredits * colleagueRewardPerCredit).toLocaleString()} Kč/měs)
-                </span>
+                🖼️ Banner: {rewards.bannerRewardPerCredit} Kč/kr • 🎬 Video: {rewards.videoRewardPerCredit} Kč/kr
               </span>
             )}
           </div>

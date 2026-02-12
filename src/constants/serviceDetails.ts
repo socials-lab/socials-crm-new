@@ -31,7 +31,8 @@ export interface ServiceDetail {
     basePrice: number;
     currency: string;
     expressMultiplier: number;
-    colleagueRewardPerCredit: number; // Default reward per credit for graphic designer
+    bannerRewardPerCredit: number;
+    videoRewardPerCredit: number;
   };
 }
 
@@ -216,7 +217,8 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
       basePrice: 400,
       currency: 'CZK',
       expressMultiplier: 1.5,
-      colleagueRewardPerCredit: 80,
+      bannerRewardPerCredit: 80,
+      videoRewardPerCredit: 80,
     },
   },
 
