@@ -616,14 +616,6 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                           />
                         </div>
                       </div>
-                      <div>
-                        <span className="text-muted-foreground text-xs">Obor</span>
-                        <InlineEditField
-                          value={lead.industry}
-                          onSave={(v) => { updateLead(lead.id, { industry: v }); toast.success('Uloženo'); }}
-                          placeholder="Zadat obor"
-                        />
-                      </div>
                       {lead.ico && (
                         <CompanyFinancials ico={lead.ico} />
                       )}
