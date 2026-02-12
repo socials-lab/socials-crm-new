@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,87 +6,121 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import socialsLogo from '@/assets/socials-logo.png';
-import { getApprovalByToken } from '@/components/extra-work/SendApprovalDialog';
+import { supabase } from '@/integrations/supabase/client';
 
-// Read extra works from the react-query cache via a global helper
-// Since this is a public page without CRM context, we read from localStorage
-const EXTRA_WORKS_CACHE_KEY = 'extra_work_approval_data';
-
-interface ExtraWorkApprovalData {
+interface ExtraWorkData {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   amount: number;
   currency: string;
   hours_worked: number | null;
   hourly_rate: number | null;
   status: string;
-  client_name: string;
-  engagement_name: string;
-  colleague_name: string;
-}
-
-// Store extra work data for public page access
-export function storeExtraWorkForApproval(data: ExtraWorkApprovalData) {
-  const stored = getStoredExtraWorks();
-  const idx = stored.findIndex(s => s.id === data.id);
-  if (idx >= 0) stored[idx] = data;
-  else stored.push(data);
-  localStorage.setItem(EXTRA_WORKS_CACHE_KEY, JSON.stringify(stored));
-}
-
-function getStoredExtraWorks(): ExtraWorkApprovalData[] {
-  try {
-    return JSON.parse(localStorage.getItem(EXTRA_WORKS_CACHE_KEY) || '[]');
-  } catch { return []; }
-}
-
-function updateStoredExtraWorkStatus(id: string, status: string, rejectionReason?: string) {
-  const stored = getStoredExtraWorks();
-  const idx = stored.findIndex(s => s.id === id);
-  if (idx >= 0) {
-    stored[idx].status = status;
-    localStorage.setItem(EXTRA_WORKS_CACHE_KEY, JSON.stringify(stored));
-  }
+  clients: { name: string; brand_name: string | null } | null;
+  engagements: { name: string } | null;
+  colleagues: { full_name: string } | null;
 }
 
 export default function ExtraWorkApproval() {
   const { token } = useParams<{ token: string }>();
-  const [data, setData] = useState<ExtraWorkApprovalData | null>(null);
+  const [data, setData] = useState<ExtraWorkData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [actionState, setActionState] = useState<'idle' | 'approved' | 'rejected'>('idle');
+  const [actionState, setActionState] = useState<'idle' | 'approved' | 'rejected' | 'submitting'>('idle');
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
 
   useEffect(() => {
     if (!token) { setIsLoading(false); return; }
 
-    const approval = getApprovalByToken(token);
-    if (!approval) { setIsLoading(false); return; }
+    const fetchData = async () => {
+      try {
+        const { data: result, error } = await supabase.functions.invoke('send-extra-work-approval', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          body: undefined,
+        });
 
-    const works = getStoredExtraWorks();
-    const work = works.find(w => w.id === approval.extraWorkId);
-    if (work) {
-      setData(work);
-      if (work.status === 'in_progress' || work.status === 'ready_to_invoice' || work.status === 'invoiced') {
-        setActionState('approved');
-      } else if (work.status === 'rejected') {
-        setActionState('rejected');
+        // Edge function GET with query params isn't straightforward with invoke, so use fetch directly
+        const res = await fetch(
+          `https://empndmpeyrdycjdesoxr.supabase.co/functions/v1/send-extra-work-approval?action=get-by-token&token=${token}`,
+          {
+            headers: {
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtcG5kbXBleXJkeWNqZGVzb3hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1OTQ5NTUsImV4cCI6MjA4MTE3MDk1NX0.X3I3FU2QRZD16rLwePdC3C2r7UIlGQuvJ6wWZnzgGEQ',
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!res.ok) { setIsLoading(false); return; }
+        const json = await res.json();
+        
+        if (json.data) {
+          setData(json.data);
+          const s = json.data.status;
+          if (s === 'in_progress' || s === 'ready_to_invoice' || s === 'invoiced') {
+            setActionState('approved');
+          } else if (s === 'rejected') {
+            setActionState('rejected');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching extra work:', err);
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    fetchData();
   }, [token]);
 
-  const handleApprove = () => {
-    if (!data) return;
-    updateStoredExtraWorkStatus(data.id, 'in_progress');
-    setActionState('approved');
+  const handleApprove = async () => {
+    if (!token) return;
+    setActionState('submitting');
+    try {
+      const res = await fetch(
+        `https://empndmpeyrdycjdesoxr.supabase.co/functions/v1/send-extra-work-approval?action=approve`,
+        {
+          method: 'POST',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtcG5kbXBleXJkeWNqZGVzb3hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1OTQ5NTUsImV4cCI6MjA4MTE3MDk1NX0.X3I3FU2QRZD16rLwePdC3C2r7UIlGQuvJ6wWZnzgGEQ',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token }),
+        }
+      );
+      if (res.ok) {
+        setActionState('approved');
+      } else {
+        setActionState('idle');
+      }
+    } catch {
+      setActionState('idle');
+    }
   };
 
-  const handleReject = () => {
-    if (!data) return;
-    updateStoredExtraWorkStatus(data.id, 'rejected', rejectionReason);
-    setActionState('rejected');
+  const handleReject = async () => {
+    if (!token) return;
+    setActionState('submitting');
+    try {
+      const res = await fetch(
+        `https://empndmpeyrdycjdesoxr.supabase.co/functions/v1/send-extra-work-approval?action=reject`,
+        {
+          method: 'POST',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtcG5kbXBleXJkeWNqZGVzb3hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1OTQ5NTUsImV4cCI6MjA4MTE3MDk1NX0.X3I3FU2QRZD16rLwePdC3C2r7UIlGQuvJ6wWZnzgGEQ',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token, reason: rejectionReason }),
+        }
+      );
+      if (res.ok) {
+        setActionState('rejected');
+      } else {
+        setActionState('idle');
+      }
+    } catch {
+      setActionState('idle');
+    }
   };
 
   const formatCurrency = (amount: number, currency: string = 'CZK') =>
@@ -113,6 +147,10 @@ export default function ExtraWorkApproval() {
       </div>
     );
   }
+
+  const clientName = data.clients?.brand_name || data.clients?.name || '';
+  const engagementName = data.engagements?.name || '';
+  const colleagueName = data.colleagues?.full_name || '';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
@@ -146,9 +184,9 @@ export default function ExtraWorkApproval() {
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">Schválení vícepráce</h1>
           <p className="text-muted-foreground">
-            Pro: <span className="font-medium text-foreground">{data.client_name}</span>
-            {data.engagement_name && (
-              <> – <span className="font-medium text-foreground">{data.engagement_name}</span></>
+            Pro: <span className="font-medium text-foreground">{clientName}</span>
+            {engagementName && (
+              <> – <span className="font-medium text-foreground">{engagementName}</span></>
             )}
           </p>
         </div>
@@ -170,25 +208,26 @@ export default function ExtraWorkApproval() {
                 <span className="text-muted-foreground">Celkem:</span>
                 <span className="font-semibold text-lg">{formatCurrency(data.amount, data.currency)}</span>
               </div>
-              {data.colleague_name && (
+              {colleagueName && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Řešitel:</span>
-                  <span>{data.colleague_name}</span>
+                  <span>{colleagueName}</span>
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {actionState === 'idle' && (
+        {(actionState === 'idle' || actionState === 'submitting') && (
           <Card>
             <CardContent className="pt-6 space-y-4">
               {!showRejectForm ? (
                 <div className="flex gap-3">
-                  <Button size="lg" className="flex-1" onClick={handleApprove}>
-                    <CheckCircle2 className="h-5 w-5 mr-2" /> Schvaluji vícepráci
+                  <Button size="lg" className="flex-1" onClick={handleApprove} disabled={actionState === 'submitting'}>
+                    {actionState === 'submitting' ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <CheckCircle2 className="h-5 w-5 mr-2" />}
+                    Schvaluji vícepráci
                   </Button>
-                  <Button size="lg" variant="outline" className="flex-1" onClick={() => setShowRejectForm(true)}>
+                  <Button size="lg" variant="outline" className="flex-1" onClick={() => setShowRejectForm(true)} disabled={actionState === 'submitting'}>
                     <XCircle className="h-5 w-5 mr-2" /> Zamítnout
                   </Button>
                 </div>
@@ -202,10 +241,11 @@ export default function ExtraWorkApproval() {
                     rows={3}
                   />
                   <div className="flex gap-2">
-                    <Button variant="destructive" onClick={handleReject} className="flex-1">
+                    <Button variant="destructive" onClick={handleReject} className="flex-1" disabled={actionState === 'submitting'}>
+                      {actionState === 'submitting' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                       Potvrdit zamítnutí
                     </Button>
-                    <Button variant="outline" onClick={() => setShowRejectForm(false)}>Zpět</Button>
+                    <Button variant="outline" onClick={() => setShowRejectForm(false)} disabled={actionState === 'submitting'}>Zpět</Button>
                   </div>
                 </div>
               )}

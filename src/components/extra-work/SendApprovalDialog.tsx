@@ -12,36 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import type { ExtraWork } from '@/types/crm';
-import { Copy, Mail, CheckCircle2, Loader2 } from 'lucide-react';
-
-// localStorage helper for approval tokens
-const APPROVAL_STORAGE_KEY = 'extra_work_approvals';
-
-interface StoredApproval {
-  extraWorkId: string;
-  token: string;
-  email: string | null;
-  createdAt: string;
-}
-
-function getStoredApprovals(): StoredApproval[] {
-  try {
-    return JSON.parse(localStorage.getItem(APPROVAL_STORAGE_KEY) || '[]');
-  } catch { return []; }
-}
-
-function saveApproval(approval: StoredApproval) {
-  const approvals = getStoredApprovals();
-  const idx = approvals.findIndex(a => a.extraWorkId === approval.extraWorkId);
-  if (idx >= 0) approvals[idx] = approval;
-  else approvals.push(approval);
-  localStorage.setItem(APPROVAL_STORAGE_KEY, JSON.stringify(approvals));
-}
-
-export function getApprovalByToken(token: string): StoredApproval | undefined {
-  return getStoredApprovals().find(a => a.token === token);
-}
+import { Copy, Mail, CheckCircle2 } from 'lucide-react';
 
 interface SendApprovalDialogProps {
   open: boolean;
@@ -55,6 +28,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const client = useMemo(() => getClientById(extraWork.client_id), [extraWork.client_id, getClientById]);
 
@@ -64,54 +38,84 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     return primary?.email || contacts[0]?.email || client?.main_contact_email || '';
   }, [extraWork.client_id, clientContacts, client]);
 
-  const getOrCreateToken = (): string => {
-    // Check if token already exists for this work
-    const existing = getStoredApprovals().find(a => a.extraWorkId === extraWork.id);
-    if (existing) return existing.token;
+  const getOrCreateToken = async (): Promise<string> => {
+    // If token already exists on the extra work, reuse it
+    if (extraWork.approval_token) return extraWork.approval_token;
 
     const token = crypto.randomUUID();
-    saveApproval({
-      extraWorkId: extraWork.id,
-      token,
-      email: null,
-      createdAt: new Date().toISOString(),
-    });
+    const { error } = await (supabase as any)
+      .from('extra_works')
+      .update({ approval_token: token })
+      .eq('id', extraWork.id);
+
+    if (error) {
+      console.error('Failed to save approval token:', error);
+      throw error;
+    }
+
     onUpdate(extraWork.id, { approval_token: token } as any);
     return token;
   };
 
-  const getApprovalUrl = () => {
-    const token = getOrCreateToken();
+  const getApprovalUrl = async () => {
+    const token = await getOrCreateToken();
     return `${window.location.origin}/extra-work-approval/${token}`;
   };
 
-  const handleCopyLink = () => {
-    const url = getApprovalUrl();
-    navigator.clipboard.writeText(url);
-    setLinkCopied(true);
-    setTimeout(() => setLinkCopied(false), 2000);
-    toast({ title: 'Odkaz zkopírován', description: 'Schvalovací odkaz byl zkopírován do schránky.' });
+  const handleCopyLink = async () => {
+    try {
+      setIsSaving(true);
+      const url = await getApprovalUrl();
+      navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+      toast({ title: 'Odkaz zkopírován', description: 'Schvalovací odkaz byl zkopírován do schránky.' });
+    } catch {
+      toast({ title: 'Chyba', description: 'Nepodařilo se vytvořit odkaz.', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleSendEmail = () => {
+  const handleSendEmail = async () => {
     const targetEmail = email || defaultEmail;
     if (!targetEmail) {
       toast({ title: 'Chyba', description: 'Zadejte email.', variant: 'destructive' });
       return;
     }
 
-    const token = getOrCreateToken();
-    saveApproval({
-      extraWorkId: extraWork.id,
-      token,
-      email: targetEmail,
-      createdAt: new Date().toISOString(),
-    });
+    try {
+      setIsSaving(true);
+      const token = await getOrCreateToken();
 
-    onUpdate(extraWork.id, { client_approval_email: targetEmail } as any);
+      // Update email in DB
+      await (supabase as any)
+        .from('extra_works')
+        .update({ client_approval_email: targetEmail })
+        .eq('id', extraWork.id);
 
-    toast({ title: '📧 Email "odeslán"', description: `Demo: schvalovací email pro ${targetEmail}. Použijte odkaz pro simulaci.` });
-    onOpenChange(false);
+      // Call edge function to send email
+      await supabase.functions.invoke('send-extra-work-approval', {
+        body: {
+          token,
+          email: targetEmail,
+          extraWorkName: extraWork.name,
+          amount: extraWork.amount,
+          currency: extraWork.currency,
+          clientName: client?.brand_name || client?.name || '',
+        },
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      onUpdate(extraWork.id, { client_approval_email: targetEmail } as any);
+
+      toast({ title: '📧 Email odeslán', description: `Schvalovací email byl odeslán na ${targetEmail}.` });
+      onOpenChange(false);
+    } catch {
+      toast({ title: 'Chyba', description: 'Nepodařilo se odeslat email.', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -136,10 +140,10 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleSendEmail} className="flex-1">
+            <Button onClick={handleSendEmail} className="flex-1" disabled={isSaving}>
               <Mail className="h-4 w-4 mr-2" /> Odeslat email
             </Button>
-            <Button variant="outline" onClick={handleCopyLink}>
+            <Button variant="outline" onClick={handleCopyLink} disabled={isSaving}>
               {linkCopied ? (
                 <><CheckCircle2 className="h-4 w-4 mr-2 text-green-600" /> Zkopírováno</>
               ) : (
@@ -149,7 +153,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Demo režim – email se neodesílá, data jsou v localStorage.
+            Klient obdrží odkaz pro schválení nebo zamítnutí vícepráce.
           </p>
         </div>
 

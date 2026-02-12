@@ -54,10 +54,11 @@ function getRateForPosition(position: string): number | null {
 interface AddExtraWorkDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (data: Omit<ExtraWork, 'id' | 'created_at' | 'updated_at' | 'status' | 'approval_date' | 'approved_by' | 'invoice_id' | 'invoice_number' | 'invoiced_at'>) => void;
+  onAdd: (data: any) => Promise<ExtraWork>;
+  onCreated?: (work: ExtraWork) => void;
 }
 
-export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDialogProps) {
+export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: AddExtraWorkDialogProps) {
   const { engagements, colleagues, getClientById } = useCRMData();
   const { toast } = useToast();
   
@@ -101,12 +102,12 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
     setHourlyRate(String(template.rate));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!engagementId || !colleagueId || !name || !selectedEngagement) return;
 
     const today = new Date();
 
-    onAdd({
+    const insertData: any = {
       client_id: selectedEngagement.client_id,
       engagement_id: engagementId,
       colleague_id: colleagueId,
@@ -119,14 +120,9 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
       work_date: format(today, 'yyyy-MM-dd'),
       billing_period: format(today, 'yyyy-MM'),
       notes,
-      upsold_by_id: upsoldById,
-      upsell_commission_percent: upsoldById ? 10 : null,
-      approval_token: null,
-      client_approval_email: null,
-      client_approved_at: null,
-      client_rejected_at: null,
-      client_rejection_reason: null,
-    });
+    };
+
+    const result = await onAdd(insertData);
 
     toast({
       title: 'Vícepráce přidána',
@@ -142,6 +138,11 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
     setNotes('');
     setUpsoldById(null);
     onOpenChange(false);
+
+    // After closing, trigger approval dialog
+    if (onCreated && result) {
+      onCreated(result);
+    }
   };
 
   const isValid = engagementId && colleagueId && name && hoursWorked && hourlyRate;
