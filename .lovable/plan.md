@@ -1,37 +1,64 @@
 
 
-## Jednatelé s podíly vlastnictví z ARES
+## Vylepšení detailu leadu - 4 oblasti
 
-### Co se změní
+### 1. Kontaktní osoba: telefon + role
 
-**1. Rozšíření dat z ARES VR endpointu**
-- Kromě jmen jednatelů se z VR API vytáhnou i **společníci** (`spolecnici`) s jejich podíly (`podpiravni.vklad.souhrn.hodnota` / celkový vklad)
-- Kombinace dat: jednatel + vlastnický podíl (pokud je zároveň společníkem)
-- Nový typ `directors` z `string[]` na `{ name: string; ownership_percent: number | null }[]`
+V sekci "Kontaktní osoba" (collapsible) chybí telefon a pozice ve firmě. Přidám `contact_phone` a `contact_position` do zobrazení.
 
-**2. Úprava `fetchAresData` v AddLeadDialog.tsx**
-- Parsování `zaznamy[0].spolecnici` pro vlastnické podíly
-- Spojení se seznamem jednatelů - přiřazení procent podle jména
-- Pokud jednatel není společník, zobrazí se bez procent
-- Pokud společník není jednatel, zobrazí se také (jako "Společník")
+**Soubor:** `src/components/leads/LeadDetailDialog.tsx` (řádky 473-507)
+- Přidat řádek s telefonem pod email (ikona Phone + odkaz `tel:`)
+- Zobrazit pozici/roli vedle jména kontaktu
 
-**3. Zobrazení v AddLeadDialog (ARES info panel)**
-- Místo prostých badge s jménem: `Jan Novák (50%)` nebo `Jan Novák (jednatel, 50%)`
-- Vizuálně zvýrazněný decision maker (nejvyšší podíl)
+### 2. Vizuální odlišení Procesu vs Historie
 
-**4. Zobrazení v LeadDetailDialog (tab Přehled)**  
-- Stejný formát: jméno + podíl + role (jednatel/společník)
-- Badge s procentem vlastnictví
+Aktuálně oba sloupce vypadají jako timeline s kolečky a čárami. Řešení:
 
-**5. Úprava typu v crm.ts**
-- `directors: string[] | null` -> `directors: Array<{ name: string; role: string; ownership_percent: number | null }> | null`
-- Zpětná kompatibilita: pokud jsou uloženy staré string[], konvertovat při zobrazení
+**Flow stepper (levý sloupec)** - vizuální redesign:
+- Nahradit timeline styl za **kompaktní checklist/karty** - každý krok jako řádek s checkbox ikonou místo kruhů s čárou
+- Použít pozadí (`bg-muted/30` rounded karty) pro dokončené kroky
+- Akční tlačítka zvýraznit barvou
 
-### Technické změny
+**Historie komunikace (pravý sloupec)** - default skrytá:
+- Timeline se defaultně nezobrazuje
+- Místo ní tlačítko "Zobrazit historii (X událostí)" které timeline rozbalí/sbalí
+- Inline formulář pro poznámky zůstane vždy viditelný nahoře
 
-**Soubory k úpravě:**
+**Soubory:**
+- `src/components/leads/LeadFlowStepper.tsx` - redesign na checklist karty (bez vertical line)
+- `src/components/leads/LeadDetailDialog.tsx` - obalit timeline do collapsible
+- `src/components/leads/LeadCommunicationTimeline.tsx` - beze změn (jen wrapper v parent)
 
-1. **`src/types/crm.ts`** - změna typu `directors`
-2. **`src/components/leads/AddLeadDialog.tsx`** - rozšíření `fetchAresData`, parsování společníků + podílů, úprava zobrazení
-3. **`src/components/leads/LeadDetailDialog.tsx`** - úprava zobrazení jednatelů s podíly
+### 3. Služby v nabídce - zobrazení + editace + mazání
+
+Po přidání služby uživatel nevidí co přidal. Řešení:
+
+**V flow stepperu** pod krokem "Služby v nabídce":
+- Zobrazit seznam přidaných služeb s názvem, cenou a tierem
+- U každé služby tlačítko pro smazání (X)
+- Celková suma nabídky pod seznamem
+
+**Soubor:** `src/components/leads/LeadFlowStepper.tsx`
+- Rozšířit krok `services` o inline zobrazení `lead.potential_services`
+- Přidat callback `onRemoveService` pro mazání
+- Zobrazit sumář ceny
+
+**Soubor:** `src/components/leads/LeadDetailDialog.tsx`
+- Přidat handler `handleRemoveService` který odebere službu z `potential_services`
+- Předat nový prop `onRemoveService` do LeadFlowStepper
+
+### 4. Zobrazení vytvořené nabídky
+
+Pokud existuje `offer_url`, zobrazit v kroku "Nabídka vytvořena" odkaz na nabídku.
+
+**Soubor:** `src/components/leads/LeadFlowStepper.tsx`
+- V kroku `offer-created`: pokud `lead.offer_url` existuje, zobrazit odkaz "Zobrazit nabídku" (ExternalLink ikona)
+
+### Technické změny - shrnutí
+
+| Soubor | Změna |
+|--------|-------|
+| `LeadFlowStepper.tsx` | Redesign na checklist styl; služby inline s mazáním; odkaz na nabídku |
+| `LeadDetailDialog.tsx` | Telefon + role u kontaktu; collapsible timeline; handler pro mazání služby |
+| `LeadCommunicationTimeline.tsx` | Beze změn |
 
