@@ -43,6 +43,8 @@ import { cn } from '@/lib/utils';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAresLookup } from '@/hooks/useAresLookup';
+import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
+import type { CompanySearchResult } from '@/hooks/useAresSearch';
 import { toast } from 'sonner';
 
 const profileSchema = z.object({
@@ -161,6 +163,46 @@ export default function MyProfile() {
       setIsSubmitting(false);
     }
   };
+
+  function handleCompanySelect(company: CompanySearchResult) {
+    form.setValue('company_name', company.name);
+    form.setValue('ico', company.ico);
+    form.setValue('dic', company.dic || '');
+    form.setValue('billing_street', company.billing_street);
+    form.setValue('billing_city', company.billing_city);
+    form.setValue('billing_zip', company.billing_zip);
+    toast.success('Údaje načteny z ARES');
+  }
+
+  async function handleAresLookup() {
+    const ico = form.getValues('ico');
+    if (!ico || ico.length < 8) {
+      toast.error('Zadejte platné IČO (8 číslic)');
+      return;
+    }
+
+    const result = await lookupCompany(ico);
+    if (result) {
+      form.setValue('company_name', result.name || '');
+      form.setValue('dic', result.dic || '');
+      if (result.address) {
+        const addressParts = result.address.split(',');
+        if (addressParts.length >= 2) {
+          form.setValue('billing_street', addressParts[0].trim());
+          const cityZip = addressParts[addressParts.length - 1].trim().split(' ');
+          if (cityZip.length >= 2) {
+            form.setValue('billing_zip', cityZip[0]);
+            form.setValue('billing_city', cityZip.slice(1).join(' '));
+          } else {
+            form.setValue('billing_city', cityZip[0]);
+          }
+        } else {
+          form.setValue('billing_street', result.address);
+        }
+      }
+      toast.success('Údaje načteny z ARES');
+    }
+  }
 
   if (!colleagueId) {
     return (
@@ -441,6 +483,25 @@ export default function MyProfile() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="company_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Název firmy / Jméno OSVČ</FormLabel>
+                    <FormControl>
+                      <CompanySearchInput
+                        value={field.value || ''}
+                        onChange={(value) => field.onChange(value || null)}
+                        onSelect={handleCompanySelect}
+                        placeholder="Zadejte název firmy (min. 3 znaky)..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -464,6 +525,7 @@ export default function MyProfile() {
                           onClick={handleAresLookup}
                           disabled={isLoadingAres}
                           title="Načíst údaje z ARES"
+                          className="shrink-0"
                         >
                           {isLoadingAres ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -496,25 +558,6 @@ export default function MyProfile() {
                   )}
                 />
               </div>
-
-              <FormField
-                control={form.control}
-                name="company_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Název firmy / Jméno OSVČ</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Jan Novák"
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value || null)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <Separator />
 
