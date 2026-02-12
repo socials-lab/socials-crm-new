@@ -429,7 +429,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                         <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                           <span>Obrat firmy:</span>
                           <a
-                            href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${lead.ico}`}
+                            href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${lead.ico}&firma=${encodeURIComponent(lead.company_name)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-primary hover:underline inline-flex items-center gap-1"
