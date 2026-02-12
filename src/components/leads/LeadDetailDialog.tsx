@@ -17,6 +17,7 @@ import {
   Lock,
   Plus,
   Send,
+  Scale,
 } from 'lucide-react';
 import {
   Dialog,
@@ -414,14 +415,12 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                             <InlineEditField
                               value={lead.ico}
                               onSave={async (v) => {
-                                updateLead(lead.id, { ico: v });
-                                toast.success('IČO uloženo');
                                 const cleanIco = v.replace(/\s/g, '');
                                 if (cleanIco.length === 8 && /^\d{8}$/.test(cleanIco)) {
                                   setIsLoadingAres(true);
                                   const data = await fetchAresData(cleanIco);
+                                  const updates: Partial<Lead> = { ico: v };
                                   if (data) {
-                                    const updates: Partial<Lead> = {};
                                     if (data.street) updates.billing_street = data.street;
                                     if (data.city) updates.billing_city = data.city;
                                     if (data.zip) updates.billing_zip = data.zip;
@@ -431,14 +430,18 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                                     if (data.foundedDate) (updates as any).founded_date = data.foundedDate;
                                     if (data.nace) (updates as any).ares_nace = data.nace;
                                     if (data.directors?.length) (updates as any).directors = data.directors;
-                                    if (Object.keys(updates).length > 0) {
-                                      updateLead(lead.id, updates);
-                                      toast.success('Adresa a údaje doplněny z ARES');
-                                    }
+                                    if (data.spisovaZnacka) updates.court_registration = data.spisovaZnacka;
+                                  }
+                                  updateLead(lead.id, updates);
+                                  if (data) {
+                                    toast.success('IČO uloženo, údaje doplněny z ARES');
                                   } else {
-                                    toast.error('Subjekt nebyl nalezen v ARES');
+                                    toast.error('IČO uloženo, ale subjekt nebyl nalezen v ARES');
                                   }
                                   setIsLoadingAres(false);
+                                } else {
+                                  updateLead(lead.id, { ico: v });
+                                  toast.success('IČO uloženo');
                                 }
                               }}
                               placeholder="Zadat IČO"
@@ -476,6 +479,12 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                       )}
                       {lead.ares_nace && (
                         <p className="text-muted-foreground">CZ-NACE: <span className="font-medium text-foreground">{lead.ares_nace}</span></p>
+                      )}
+                      {lead.court_registration && (
+                        <p className="text-muted-foreground flex items-center gap-1.5">
+                          <Scale className="h-3.5 w-3.5" />
+                          Spisová značka: <span className="font-medium text-foreground">{lead.court_registration}</span>
+                        </p>
                       )}
                       {lead.directors && lead.directors.length > 0 && (
                         <div>
