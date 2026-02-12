@@ -42,6 +42,7 @@ import AuthCallback from "./pages/AuthCallback";
 import PublicOfferPage from "./pages/PublicOfferPage";
 import UpgradeOfferPage from "./pages/UpgradeOfferPage";
 import ExtraWorkApproval from "./pages/ExtraWorkApproval";
+import PublicCreativeBoostPage from "./pages/PublicCreativeBoostPage";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,8 @@ const App = () => (
                             <Route path="/upgrade/:token" element={<UpgradeOfferPage />} />
                             <Route path="/extra-work-approval/:token" element={<ExtraWorkApproval />} />
                             <Route path="/extra-work-approval-test" element={<ExtraWorkApproval testMode />} />
+                            <Route path="/creative-boost-share/:token" element={<PublicCreativeBoostPage />} />
+                            <Route path="/creative-boost-share-test" element={<PublicCreativeBoostPage testToken="test" />} />
                             
                             {/* Protected routes */}
                             <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
