@@ -28,10 +28,11 @@ import {
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
-import type { Lead, LeadStage, LeadSource, LeadOfferType } from '@/types/crm';
+import type { Lead, LeadSource } from '@/types/crm';
 import { toast } from 'sonner';
-import { useEffect, useState } from 'react';
-import { Loader2, Search } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { Loader2, ExternalLink, Users, Building2, Calendar, Briefcase, Scale } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const leadSchema = z.object({
   company_name: z.string().min(1, 'Název firmy je povinný'),
@@ -54,13 +55,8 @@ const leadSchema = z.object({
   source_custom: z.string().optional().nullable(),
   client_message: z.string().optional().nullable(),
   ad_spend_monthly: z.coerce.number().min(0).optional().nullable(),
-  summary: z.string(),
-  potential_service: z.string().min(1, 'Služba je povinná'),
-  offer_type: z.enum(['retainer', 'one_off'] as const),
-  estimated_price: z.coerce.number().min(0, 'Cena musí být kladná'),
-  currency: z.string().default('CZK'),
-  probability_percent: z.coerce.number().min(0).max(100),
-  offer_url: z.string().url('Zadejte platnou URL').or(z.literal('')).optional().nullable(),
+  summary: z.string().default(''),
+  probability_percent: z.coerce.number().min(0).max(100).default(30),
 });
 
 type LeadFormData = z.infer<typeof leadSchema>;
@@ -81,86 +77,85 @@ const SOURCE_OPTIONS: { value: LeadSource; label: string }[] = [
   { value: 'other', label: 'Jiný' },
 ];
 
-const SERVICE_OPTIONS = [
-  'Performance Boost',
-  'Socials Boost',
-  'Creative Boost',
-  'Lead Gen Funnel',
-  'Analytics Setup',
-  'Strategy Consulting',
-];
+interface AresData {
+  companyName: string;
+  dic: string | null;
+  street: string | null;
+  city: string | null;
+  zip: string | null;
+  country: string;
+  legalForm: string | null;
+  foundedDate: string | null;
+  nace: string | null;
+  directors: string[];
+}
 
-// Mock ARES data for demo
-const MOCK_ARES_DATA: Record<string, { company_name: string; dic: string; billing_street: string; billing_city: string; billing_zip: string; billing_country: string }> = {
-  '12345678': {
-    company_name: 'Demo Firma s.r.o.',
-    dic: 'CZ12345678',
-    billing_street: 'Václavské náměstí 1',
-    billing_city: 'Praha',
-    billing_zip: '110 00',
-    billing_country: 'Česká republika',
-  },
-  '87654321': {
-    company_name: 'Test Company a.s.',
-    dic: 'CZ87654321',
-    billing_street: 'Masarykova 123',
-    billing_city: 'Brno',
-    billing_zip: '602 00',
-    billing_country: 'Česká republika',
-  },
-  '11223344': {
-    company_name: 'Innovation Labs s.r.o.',
-    dic: 'CZ11223344',
-    billing_street: 'Technologická 5',
-    billing_city: 'Ostrava',
-    billing_zip: '708 00',
-    billing_country: 'Česká republika',
-  },
-};
+async function fetchAresData(ico: string): Promise<AresData | null> {
+  try {
+    // Fetch basic data
+    const basicRes = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
+    if (!basicRes.ok) return null;
+    const basic = await basicRes.json();
+
+    const sidlo = basic.sidlo || {};
+    const legalFormCode = basic.pravniForma;
+    const legalFormLabel = legalFormCode ? `${legalFormCode}` : null;
+
+    // Try to get directors from VR
+    let directors: string[] = [];
+    try {
+      const vrRes = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/${ico}`);
+      if (vrRes.ok) {
+        const vr = await vrRes.json();
+        const statutarniOrgan = vr?.zaznamy?.[0]?.statutarniOrgan;
+        if (statutarniOrgan && Array.isArray(statutarniOrgan)) {
+          for (const organ of statutarniOrgan) {
+            if (organ.clenove && Array.isArray(organ.clenove)) {
+              for (const clen of organ.clenove) {
+                const fo = clen.fospiravni || clen.fospiravny || clen.clenstvi?.ospiravni || clen;
+                const jmeno = fo?.jmeno;
+                const prijmeni = fo?.prijmeni;
+                if (jmeno && prijmeni) {
+                  directors.push(`${jmeno} ${prijmeni}`);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // VR endpoint may not exist for all subjects
+    }
+
+    return {
+      companyName: basic.obchodniJmeno || basic.nazev || '',
+      dic: basic.dic || null,
+      street: sidlo.textovaAdresa || [sidlo.nazevUlice, sidlo.cisloDomovni ? `${sidlo.cisloDomovni}${sidlo.cisloOrientacni ? '/' + sidlo.cisloOrientacni : ''}` : null].filter(Boolean).join(' ') || null,
+      city: sidlo.nazevObce || null,
+      zip: sidlo.psc ? String(sidlo.psc) : null,
+      country: 'Česká republika',
+      legalForm: legalFormLabel,
+      foundedDate: basic.datumVzniku || null,
+      nace: basic.czNace && basic.czNace.length > 0 ? basic.czNace[0] : null,
+      directors,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) {
   const { addLead, updateLead } = useLeadsData();
   const { colleagues } = useCRMData();
   const { user } = useAuth();
   const [isLoadingAres, setIsLoadingAres] = useState(false);
+  const [aresDirectors, setAresDirectors] = useState<string[]>([]);
+  const [aresLegalForm, setAresLegalForm] = useState<string | null>(null);
+  const [aresFounded, setAresFounded] = useState<string | null>(null);
+  const [aresNace, setAresNace] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
-  
-  const handleAresLookup = async () => {
-    const ico = form.getValues('ico');
-    if (!ico || ico.length < 8) {
-      toast.error('Zadejte platné IČO (8 číslic)');
-      return;
-    }
-    
-    setIsLoadingAres(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check mock data first
-    const mockData = MOCK_ARES_DATA[ico];
-    if (mockData) {
-      form.setValue('company_name', mockData.company_name);
-      form.setValue('dic', mockData.dic);
-      form.setValue('billing_street', mockData.billing_street);
-      form.setValue('billing_city', mockData.billing_city);
-      form.setValue('billing_zip', mockData.billing_zip);
-      form.setValue('billing_country', mockData.billing_country);
-      toast.success('Údaje načteny z ARES');
-    } else {
-      // Generate random mock data for any IČO
-      form.setValue('company_name', `Společnost ${ico} s.r.o.`);
-      form.setValue('dic', `CZ${ico}`);
-      form.setValue('billing_street', 'Ulice 123');
-      form.setValue('billing_city', 'Praha');
-      form.setValue('billing_zip', '100 00');
-      form.setValue('billing_country', 'Česká republika');
-      toast.success('Údaje načteny z ARES (demo)');
-    }
-    
-    setIsLoadingAres(false);
-  };
 
   const form = useForm<LeadFormData>({
     resolver: zodResolver(leadSchema),
@@ -186,14 +181,39 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       client_message: '',
       ad_spend_monthly: null,
       summary: '',
-      potential_service: '',
-      offer_type: 'retainer',
-      estimated_price: 0,
-      currency: 'CZK',
       probability_percent: 30,
-      offer_url: '',
     },
   });
+
+  const handleIcoChange = useCallback((value: string) => {
+    // Clear previous debounce
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    // Only auto-search when exactly 8 digits
+    const cleanIco = value.replace(/\s/g, '');
+    if (cleanIco.length === 8 && /^\d{8}$/.test(cleanIco)) {
+      debounceRef.current = setTimeout(async () => {
+        setIsLoadingAres(true);
+        const data = await fetchAresData(cleanIco);
+        if (data) {
+          form.setValue('company_name', data.companyName);
+          if (data.dic) form.setValue('dic', data.dic);
+          if (data.street) form.setValue('billing_street', data.street);
+          if (data.city) form.setValue('billing_city', data.city);
+          if (data.zip) form.setValue('billing_zip', data.zip);
+          form.setValue('billing_country', data.country);
+          setAresDirectors(data.directors);
+          setAresLegalForm(data.legalForm);
+          setAresFounded(data.foundedDate);
+          setAresNace(data.nace);
+          toast.success('Údaje načteny z ARES');
+        } else {
+          toast.error('Subjekt nebyl nalezen v ARES');
+        }
+        setIsLoadingAres(false);
+      }, 500);
+    }
+  }, [form]);
 
   useEffect(() => {
     if (lead) {
@@ -219,13 +239,12 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         client_message: lead.client_message || '',
         ad_spend_monthly: lead.ad_spend_monthly,
         summary: lead.summary,
-        potential_service: lead.potential_service,
-        offer_type: lead.offer_type,
-        estimated_price: lead.estimated_price,
-        currency: lead.currency,
         probability_percent: lead.probability_percent,
-        offer_url: lead.offer_url || '',
       });
+      setAresDirectors(lead.directors || []);
+      setAresLegalForm(lead.legal_form || null);
+      setAresFounded(lead.founded_date || null);
+      setAresNace(lead.ares_nace || null);
     } else {
       form.reset({
         company_name: '',
@@ -249,13 +268,12 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         client_message: '',
         ad_spend_monthly: null,
         summary: '',
-        potential_service: '',
-        offer_type: 'retainer',
-        estimated_price: 0,
-        currency: 'CZK',
         probability_percent: 30,
-        offer_url: '',
       });
+      setAresDirectors([]);
+      setAresLegalForm(null);
+      setAresFounded(null);
+      setAresNace(null);
     }
   }, [lead, form]);
 
@@ -282,12 +300,12 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       client_message: data.client_message || null,
       ad_spend_monthly: data.ad_spend_monthly || null,
       summary: data.summary,
-      potential_service: data.potential_service,
-      offer_type: data.offer_type,
-      estimated_price: data.estimated_price,
-      currency: data.currency,
+      potential_service: lead?.potential_service || '',
+      offer_type: lead?.offer_type || 'retainer' as const,
+      estimated_price: lead?.estimated_price || 0,
+      currency: lead?.currency || 'CZK',
       probability_percent: data.probability_percent,
-      offer_url: data.offer_url || null,
+      offer_url: lead?.offer_url || null,
       offer_created_at: lead?.offer_created_at || null,
       potential_services: lead?.potential_services || [],
       access_request_sent_at: lead?.access_request_sent_at || null,
@@ -305,6 +323,10 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       qualification_status: lead?.qualification_status || 'pending',
       qualification_reason: lead?.qualification_reason || null,
       qualified_at: lead?.qualified_at || null,
+      legal_form: aresLegalForm,
+      founded_date: aresFounded,
+      directors: aresDirectors.length > 0 ? aresDirectors : null,
+      ares_nace: aresNace,
       created_by: user?.id || null,
       updated_by: user?.id || null,
     };
@@ -318,6 +340,8 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
     }
     onOpenChange(false);
   };
+
+  const icoValue = form.watch('ico');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -335,6 +359,33 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
+                  name="ico"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>IČO *</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            placeholder="12345678"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              handleIcoChange(e.target.value);
+                            }}
+                          />
+                          {isLoadingAres && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="company_name"
                   render={({ field }) => (
                     <FormItem>
@@ -346,37 +397,78 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="ico"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>IČO *</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input placeholder="12345678" {...field} />
-                        </FormControl>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleAresLookup}
-                          disabled={isLoadingAres}
-                          className="shrink-0"
-                        >
-                          {isLoadingAres ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Search className="h-4 w-4" />
-                          )}
-                          <span className="ml-1 hidden sm:inline">ARES</span>
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
+
+              {/* ARES info panel */}
+              {(aresDirectors.length > 0 || aresLegalForm || aresFounded || aresNace || (icoValue && icoValue.length === 8)) && (
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Data z ARES</span>
+                    {icoValue && icoValue.length === 8 && (
+                      <a
+                        href={`https://ares.gov.cz/ekonomicke-subjekty/res/${icoValue}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Otevřít v ARES
+                      </a>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                    {aresLegalForm && (
+                      <div className="flex items-center gap-2">
+                        <Scale className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">Právní forma:</span>
+                        <span className="font-medium">{aresLegalForm}</span>
+                      </div>
+                    )}
+                    {aresFounded && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">Vznik:</span>
+                        <span className="font-medium">{new Date(aresFounded).toLocaleDateString('cs-CZ')}</span>
+                      </div>
+                    )}
+                    {aresNace && (
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">CZ-NACE:</span>
+                        <span className="font-medium">{aresNace}</span>
+                      </div>
+                    )}
+                  </div>
+                  {aresDirectors.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">Jednatelé:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 pl-5">
+                        {aresDirectors.map((d, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{d}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {icoValue && icoValue.length === 8 && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t">
+                      <Building2 className="h-3 w-3" />
+                      <span>Obrat firmy není v ARES dostupný –</span>
+                      <a
+                        href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${icoValue}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        hledat na Justice.cz
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
@@ -424,7 +516,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
 
             {/* Billing Address Section */}
             <div className="space-y-4">
-              <h4 className="font-medium text-sm border-b pb-2">Fakturační adresa</h4>
+              <h4 className="font-medium text-sm border-b pb-2">Sídlo firmy / Fakturační adresa</h4>
 
               <FormField
                 control={form.control}
@@ -574,11 +666,14 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="new_lead">Nový lead</SelectItem>
-                          <SelectItem value="contacted">Kontaktováno</SelectItem>
-                          <SelectItem value="in_progress">Probíhá jednání</SelectItem>
+                          <SelectItem value="meeting_done">Schůzka proběhla</SelectItem>
+                          <SelectItem value="waiting_access">Čekáme na přístupy</SelectItem>
+                          <SelectItem value="access_received">Přístupy přijaty</SelectItem>
+                          <SelectItem value="preparing_offer">Příprava nabídky</SelectItem>
                           <SelectItem value="offer_sent">Nabídka odeslána</SelectItem>
                           <SelectItem value="won">Vyhráno</SelectItem>
                           <SelectItem value="lost">Prohráno</SelectItem>
+                          <SelectItem value="postponed">Odloženo</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -698,110 +793,6 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                     <FormLabel>Shrnutí / poznámka</FormLabel>
                     <FormControl>
                       <Textarea placeholder="Zájem o Performance Boost..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Offer Section */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm border-b pb-2">Nabídka</h4>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="potential_service"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Služba *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Vyberte službu" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {SERVICE_OPTIONS.map(s => (
-                            <SelectItem key={s} value={s}>
-                              {s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="offer_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Typ nabídky</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="retainer">Paušál</SelectItem>
-                          <SelectItem value="one_off">Jednorázová zakázka</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <FormField
-                  control={form.control}
-                  name="estimated_price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Odhadovaná cena</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="50000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="currency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Měna</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="CZK">CZK</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="offer_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Odkaz na nabídku</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://freelo.io/project/..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
