@@ -355,7 +355,18 @@ export default function Services() {
                   Upravit detaily
                 </Button>
               </div>
-              <ServiceDetailView data={serviceDetailData} />
+              <ServiceDetailView
+                data={serviceDetailData}
+                onCreditPricingUpdate={serviceDetailData?.credit_pricing ? (outputTypes) => {
+                  const currentDetail = getServiceDetail(service.code);
+                  if (currentDetail?.creditPricing) {
+                    const updatedCreditPricing = { ...currentDetail.creditPricing, outputTypes };
+                    // Update the service detail constants in memory
+                    currentDetail.creditPricing.outputTypes = outputTypes;
+                    toast.success('Ceník kreditů byl aktualizován');
+                  }
+                } : undefined}
+              />
             </div>
 
             {/* Active Clients */}
