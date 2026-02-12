@@ -144,7 +144,7 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label>Hodiny *</Label>
               <Input type="number" step="0.5" value={hoursWorked} onChange={(e) => setHoursWorked(e.target.value)} />
@@ -153,10 +153,26 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
               <Label>Sazba (Kč/h) *</Label>
               <Input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
-              <Label className="text-muted-foreground">Částka</Label>
+              <Label className="text-muted-foreground text-xs">💰 Částka klient</Label>
               <div className="px-3 py-2 bg-muted/50 rounded-md text-sm font-semibold">
                 {formatCurrency(calculatedAmount)}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label className="text-muted-foreground text-xs">🧑‍💻 Odměna kolega</Label>
+              <div className="px-3 py-2 bg-muted/50 rounded-md text-sm font-semibold">
+                {(() => {
+                  const col = activeColleagues.find(c => c.id === colleagueId);
+                  const hours = parseFloat(hoursWorked) || 0;
+                  if (col?.internal_hourly_cost && hours > 0) {
+                    return formatCurrency(Math.round(hours * col.internal_hourly_cost));
+                  }
+                  return '—';
+                })()}
               </div>
             </div>
           </div>
