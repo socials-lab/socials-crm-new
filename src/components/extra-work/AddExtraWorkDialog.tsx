@@ -31,21 +31,21 @@ const EXTRA_WORK_TEMPLATES = [
 ];
 
 const HOURLY_RATE_CHEATSHEET = [
-  { position: 'Meta Ads', rate: 1700 },
-  { position: 'PPC', rate: 1700 },
+  { position: 'Meta Ads', rate: 1800 },
+  { position: 'PPC', rate: 1800 },
   { position: 'Analytika', rate: 1900 },
   { position: 'Grafika / video', rate: 1500 },
   { position: 'SEO', rate: 1500 },
   { position: 'Tvorba landing pages pomocí AI', rate: 2500 },
-  { position: 'AI SEO', rate: 1800 },
+  { position: 'AI SEO', rate: 1900 },
 ];
 
 function getRateForPosition(position: string): number | null {
   const p = position.toLowerCase();
-  if (p.includes('ai seo')) return 1800;
+  if (p.includes('ai seo')) return 1900;
   if (p.includes('landing') || (p.includes('ai') && !p.includes('seo'))) return 2500;
-  if (p.includes('meta') || p.includes('facebook') || p.includes('socials')) return 1700;
-  if (p.includes('ppc') || p.includes('google') || p.includes('search')) return 1700;
+  if (p.includes('meta') || p.includes('facebook') || p.includes('socials')) return 1800;
+  if (p.includes('ppc') || p.includes('google') || p.includes('search')) return 1800;
   if (p.includes('analytik') || p.includes('analytics') || p.includes('analytika')) return 1900;
   if (p.includes('grafi') || p.includes('video') || p.includes('design')) return 1500;
   if (p.includes('seo')) return 1500;
