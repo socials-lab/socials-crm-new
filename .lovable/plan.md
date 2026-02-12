@@ -1,38 +1,38 @@
 
 
-## Aktualizace typů výstupů podle ceníku
+## Pridani Creative Boost sluzby do zakazky Test Client
 
-Nahradíme stávající typy výstupů v `src/data/creativeBoostMockData.ts` přesnými položkami z ceníku.
+### Problem
 
-### Bannery (8 položek)
+Creative Boost sluzba se v zakazce Test Client nezobrazuje, protoze:
 
-| Název | Kredity | Kategorie |
-|-------|---------|-----------|
-| Brand kit (jen na začátku spolupráce) | 4 | banner |
-| Rámeček pro katalogové kampaně | 1 | banner |
-| Meta Ads bannery ve 2 rozměrech | 4 | banner |
-| Překlad Meta Ads bannerů | 1 | banner_translation |
-| Set PPC bannerů (1 rozměr) | 1 | banner |
-| Překlad PPC banneru (1 rozměr) | 0.5 | banner_translation |
-| Úprava již vytvořených Meta Ads | 1 | banner_revision |
-| Příprava bannerů na Homepage | 2 | banner |
+1. **Nesouhlasi ID sluzby**: Kod pouziva `CREATIVE_BOOST_SERVICE_ID = 'srv-3'`, ale mock sluzba v `useCRMData.tsx` ma `id: 'service-creative-boost-mock'`. Tyto hodnoty se nikde neprotnout.
+2. **V DB neexistuje zaznam engagement_service** pro Creative Boost na zakazce Test Client -- existuje tam jen Socials Boost.
 
-### Videa (6 položek)
+### Reseni
 
-| Název | Kredity | Kategorie |
-|-------|---------|-----------|
-| S video (základní editace, do 30s) | 6 | video |
-| M video (větší editace, do 30s) | 10 | video |
-| L video (komplexní editace, do 45s) | 12 | video |
-| Alternativní hook na začátku videa | 2 | video |
-| Menší úprava videa (úprava textů) | 2 | video |
-| Překlad videa | 2 | video_translation |
+**1. Sjednotit ID Creative Boost sluzby** (`src/hooks/useCRMData.tsx`)
+- Zmenit `id` mock sluzby z `'service-creative-boost-mock'` na `'srv-3'`, aby odpovidal konstante `CREATIVE_BOOST_SERVICE_ID` pouzivane v `Engagements.tsx` i `useCreativeBoostData.tsx`.
 
-### Technické detaily
+**2. Pridat demo engagement_service pro Creative Boost** (`src/hooks/useCRMData.tsx`)
+- Do query pro `engagement_services` pridat mock zaznam Creative Boost pro Test Client engagement (`e0000000-0000-0000-0000-000000000001`):
+  - `id: 'f0000000-0000-0000-0000-000000000002'` (odpovida existujicim mock datum v `creativeBoostRewardsMockData.ts`)
+  - `service_id: 'srv-3'`
+  - `name: 'Creative Boost'`
+  - `price: 75000` (50 kreditu x 1500 Kc)
+  - `billing_type: 'monthly'`
+  - `creative_boost_max_credits: 50`
+  - `creative_boost_price_per_credit: 1500`
+  - `is_active: true`
 
-**Soubor: `src/data/creativeBoostMockData.ts`**
-- Kompletně nahradíme pole `outputTypes` za 14 nových položek odpovídajících ceníku
-- Odstraníme položky, které v ceníku nejsou (AI produktová fotka, video Standard/AI b-roll balíčky, revize videí/bannerů jako samostatné kategorie)
-- Zachováme stávající strukturu (`id`, `name`, `category`, `baseCredits`, `description`, `isActive`, `createdAt`, `updatedAt`)
-- Případné reference na smazaná ID v mock datech klientských měsíců (`creativeBoostMockData.ts`) aktualizujeme na nová ID
+Tenhle mock zaznam se prida do pole `engagementServices`, pokud jeste v DB neexistuje -- stejny vzor jako u mock sluzby.
+
+**3. Zajistit Creative Boost client month pro demo** (`src/data/creativeBoostMockData.ts`)
+- Overit, ze existuji mock data `clientMonths` pro Test Client (`client-1`) s `engagementServiceId: 'f0000000-0000-0000-0000-000000000002'`. Pokud ne, pridat je.
+
+### Vysledek
+
+Po implementaci se v zakazce Test Client objevi:
+- Karta Socials Boost (stavajici, z DB)
+- Karta Creative Boost s nastavenim kreditu, cenou za kredit a odmenami pro grafika (banner 80 Kc / video 100 Kc)
 
