@@ -60,7 +60,6 @@ export default function Leads() {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [kpiPeriod, setKpiPeriod] = useState<KPIPeriod>('this_month');
 
   // Derive selectedLead from context to always have fresh data
@@ -136,13 +135,7 @@ export default function Leads() {
     setIsDetailOpen(true);
   };
 
-  const handleEditLead = (lead: Lead) => {
-    setEditingLead(lead);
-    setIsAddDialogOpen(true);
-  };
-
   const handleAddNew = () => {
-    setEditingLead(null);
     setIsAddDialogOpen(true);
   };
 
@@ -298,14 +291,12 @@ export default function Leads() {
         lead={selectedLead}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
-        onEdit={handleEditLead}
       />
 
       {/* Add/Edit Dialog */}
       <AddLeadDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        lead={editingLead}
       />
     </div>
   );
