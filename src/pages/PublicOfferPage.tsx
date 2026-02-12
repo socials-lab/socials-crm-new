@@ -620,25 +620,16 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           </div>
         )}
 
-        {/* Audit - What we found */}
+        {/* Audit - What we found & recommendations */}
         {offer.audit_summary && (
           <section className="mb-10">
             <div className="p-5 rounded-xl bg-muted/50 border">
               <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                🔍 Co jsme zjistili
+                🔍 Co jsme zjistili & doporučení pro vás
               </h2>
               <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
                 {offer.audit_summary}
               </p>
-              
-              {/* Recommendation intro */}
-              {offer.recommendation_intro && (
-                <div className="mt-4 pt-3 border-t border-border/50">
-                  <p className="text-sm font-medium text-foreground">
-                    {offer.recommendation_intro}
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Loom video embed */}
