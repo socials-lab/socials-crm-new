@@ -1,45 +1,34 @@
 
 
-## Poměrná fakturace prvního měsíce v souhrnu objednávky
+## Thank You screen s confetti celebration
 
 ### Co se změní
 
-V kroku 6 (Souhrn a potvrzení) se u měsíčních služeb automaticky vypočítá a zobrazí poměrná částka za první měsíc, pokud klient zvolí datum zahájení jiné než 1. den v měsíci. Jednorázové služby zůstanou beze změny -- platí se vždy celá částka.
+Celá sekce `isSubmitted` (řádky 484-560) se přepracuje na slavnostnější "thank you" obrazovku s confetti animací a upraveným obsahem dle zadání.
 
-### Logika výpočtu
+### Confetti efekt
 
-- Vzít `startDate` z formuláře
-- Pokud den zahájení > 1:
-  - Spočítat počet dnů v daném měsíci (`getDaysInMonth`)
-  - Spočítat zbývající dny = dny v měsíci - den zahájení + 1
-  - Poměrná cena = `(cena / dny v měsíci) * zbývající dny`, zaokrouhleno na celá čísla
-- Pokud den zahájení = 1: zobrazit plnou cenu bez poznámky
+- Přidám CSS-only confetti animaci (žádná nová závislost) -- barevné čtverečky padající z vrchu obrazovky pomocí `@keyframes`
+- Alternativně použiji canvas-confetti knihovnu pro realističtější efekt -- ale protože chceme minimalizovat závislosti, půjdu cestou CSS animace s ~20 barevnými částicemi
 
-### Změny v UI (soubor `src/pages/OnboardingForm.tsx`)
+### Nový obsah kroků
 
-**1. Rozšířit funkci `getOrderSummary()`**
-- Přidat vstup `startDate` z formuláře
-- Pro měsíční služby vypočítat `proratedPrice` vedle standardní `price`
-- Vrátit i `proratedMonthlyTotal`, `remainingDays`, `daysInMonth`, `isProrated` (boolean)
+1. **Do 24 hodin vám pošleme smlouvu** k podpisu přes DigiSign
+2. **Po podpisu vytvoříme projekt ve Freelu** a přidáme vám tam přístup
+3. **Spojí se s vámi specialista**, který vás bude mít na starosti a domluví onboarding telefonát
+4. **Pustíme se do práce!**
 
-**2. U každé měsíční služby zobrazit dvě hodnoty (pokud isProrated)**
-- Původní cena přeškrtnutá nebo šedá: "25 000 Kč/měs"
-- Pod ní poměrná částka: "17 742 Kč za únor (22 z 28 dnů)"
-
-**3. V celkovém součtu měsíčních služeb**
-- Místo "Měsíční platba celkem: 50 000 Kč" zobrazit:
-  - "První faktura (poměrná část): 35 484 Kč"
-  - Pod tím menším písmem: "Od dalšího měsíce: 50 000 Kč/měs"
-
-**4. Jednorázové služby**
-- Žádná změna -- zobrazí se vždy plná cena
+Zakončeno textem: **"Těšíme se na spolupráci!"**
 
 ### Technické detaily
 
-- Využít `getDaysInMonth` z `date-fns` (již nainstalován)
-- Výpočet: `Math.round((price / daysInMonth) * remainingDays)`
-- `remainingDays = daysInMonth - startDate.getDate() + 1`
-- `isProrated = startDate.getDate() > 1`
-- Pokud `startDate` není vyplněno, zobrazit plné ceny bez poměru
+**Soubor: `src/pages/OnboardingForm.tsx`** (řádky 484-560)
 
-Žádné nové závislosti.
+- Přidat CSS confetti animaci přímo v komponentě pomocí inline `<style>` tagu nebo přes Tailwind keyframes
+- Confetti se spustí automaticky po zobrazení thank you screenu
+- 30-40 barevných částic padajících z vrchu s různou rychlostí a rotací
+- Animace trvá ~4 sekundy a pak zmizí
+- Přepsat obsah 4 kroků dle zadání
+- Odstranit opakující se "Dotazy?" u každého kroku -- kontakt bude pouze dole
+- Přidat větší nadpis "Těšíme se na spolupráci!" na konec
+- Zachovat kontakt na obchodníka ve footeru
