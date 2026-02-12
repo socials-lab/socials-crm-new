@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, addMonths, startOfMonth } from 'date-fns';
+import { format, addMonths, startOfMonth, getDaysInMonth, getDate } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -380,11 +380,25 @@ export default function OnboardingForm() {
     
     const monthlyTotal = monthlyServices.reduce((sum, s) => sum + s.price, 0);
     const oneOffTotal = oneOffServices.reduce((sum, s) => sum + s.price, 0);
-    
-    return { monthlyServices, oneOffServices, monthlyTotal, oneOffTotal };
+
+    const startDate = form.getValues('startDate');
+    const startDay = startDate ? getDate(startDate) : 1;
+    const isProrated = startDay > 1;
+    const daysInMonth = startDate ? getDaysInMonth(startDate) : 30;
+    const remainingDays = isProrated ? daysInMonth - startDay + 1 : daysInMonth;
+
+    const proratedServices = monthlyServices.map(s => ({
+      ...s,
+      proratedPrice: isProrated ? Math.round((s.price / daysInMonth) * remainingDays) : s.price,
+    }));
+
+    const proratedMonthlyTotal = proratedServices.reduce((sum, s) => sum + s.proratedPrice, 0);
+    const monthName = startDate ? format(startDate, 'LLLL', { locale: cs }) : '';
+
+    return { monthlyServices: proratedServices, oneOffServices, monthlyTotal, oneOffTotal, isProrated, remainingDays, daysInMonth, proratedMonthlyTotal, monthName };
   };
 
-  const { monthlyServices, oneOffServices, monthlyTotal, oneOffTotal } = getOrderSummary();
+  const { monthlyServices, oneOffServices, monthlyTotal, oneOffTotal, isProrated, remainingDays, daysInMonth, proratedMonthlyTotal, monthName } = getOrderSummary();
 
   const formatPrice = (price: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -1142,15 +1156,31 @@ export default function OnboardingForm() {
                                       )}
                                     </div>
                                   </div>
-                                  <p className="font-medium text-right">
-                                    {formatPrice(service.price, service.currency)}<span className="text-muted-foreground">/měs</span>
-                                  </p>
+                                  <div className="text-right">
+                                    {isProrated ? (
+                                      <>
+                                        <p className="text-sm text-muted-foreground line-through">{formatPrice(service.price, service.currency)}/měs</p>
+                                        <p className="font-medium">{formatPrice(service.proratedPrice, service.currency)} <span className="text-muted-foreground text-xs">za {monthName} ({remainingDays} z {daysInMonth} dnů)</span></p>
+                                      </>
+                                    ) : (
+                                      <p className="font-medium">
+                                        {formatPrice(service.price, service.currency)}<span className="text-muted-foreground">/měs</span>
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
                             <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 border-t">
-                              <p className="font-medium">Měsíční platba celkem</p>
-                              <p className="font-bold text-lg">{formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                              {isProrated ? (
+                                <div>
+                                  <p className="font-medium">První faktura (poměrná část)</p>
+                                  <p className="text-xs text-muted-foreground">Od dalšího měsíce: {formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs</p>
+                                </div>
+                              ) : (
+                                <p className="font-medium">Měsíční platba celkem</p>
+                              )}
+                              <p className="font-bold text-lg">{formatPrice(isProrated ? proratedMonthlyTotal : monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
                             </div>
                           </div>
                         </div>
