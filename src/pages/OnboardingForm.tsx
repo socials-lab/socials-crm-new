@@ -270,6 +270,21 @@ export default function OnboardingForm() {
     setIsSubmitting(true);
     
     try {
+      // Test mode: skip DB operations for test-lead (not a valid UUID)
+      if (leadId === 'test-lead') {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('Test mode: skipping DB operations');
+        console.log('Onboarding summary payload (test):', {
+          companyName: data.company_name,
+          services: lead.potential_services,
+          signatories: data.signatories,
+          startDate: format(data.startDate, 'yyyy-MM-dd'),
+        });
+        setIsSubmitted(true);
+        setIsSubmitting(false);
+        return;
+      }
+
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
