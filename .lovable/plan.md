@@ -1,30 +1,46 @@
 
 
-## Redesign veřejné nabídky -- lepší rozestupy, Loom embed, nové CTA
+## Typeform-style step-by-step onboarding formulář
 
-### Co se zmeni
+### Co se změní
 
-1. **Vice prostoru mezi sekcemi** -- zvetsit mezery (mb-6 -> mb-10/mb-12), pridaт padding do karet, vetsi line-height u textu
-2. **Loom video embed** -- pridat pole `loom_url` do typu `PublicOffer` a mock dat; na strance zobrazit embedded Loom iframe (16:9 aspect ratio) v sekci auditu/doporuceni
-3. **CTA zmena** -- vsechny "Zahajit spolupraci" / "Zacit spolupraci" prejmenovaт na "Vyplnit onboarding formular"; odstranit cervene/destructive CTA; sjednotit styl tlacitek
-4. **Graficke vylepseni** -- vetsi hero sekce, jemnejsi stiny, vizualne cistejsi ServiceCard
+Celý formulář se přepracuje z jedné dlouhé stránky na **plynulý krokový průvodce** (typeform style), kde se zobrazuje vždy jen jedna sekce. Uživatel se posouvá tlačítkem "Pokračovat" nebo klávesou Enter.
 
-### Technicke detaily
+### Kroky formuláře
 
-**`src/types/publicOffer.ts`**
-- Pridat `loom_url?: string` do `PublicOffer` interface
+1. **Firemní údaje** -- IČO, DIČ, název, web, obor (s ARES lookup)
+2. **Fakturační adresa** -- ulice, město, PSČ, země, fakturační email
+3. **Osoby pro podpis smlouvy** -- signatáři (dynamický seznam)
+4. **Kontaktní osoby pro projekt** -- checkbox "použít signatáře" + další kontakty
+5. **Datum zahájení** -- kalendář s výběrem data
+6. **Souhrn a potvrzení** -- přehled objednávky, potvrzovací checkbox, odeslání
 
-**`src/data/publicOffersMockData.ts`**
-- Pridat `loom_url` do testovaci nabidky (napr. `https://www.loom.com/embed/example123`)
+### Odstraněno
 
-**`src/pages/PublicOfferPage.tsx`**
-- **Header CTA** (radek 562-567): zmenit text na "Vyplnit onboarding formular"
-- **Loom embed**: pod sekci "Co jsme zjistili" pridat iframe s Loom videem pokud existuje `offer.loom_url` -- pouzit AspectRatio (16:9) s rounded corners
-- **Spacing**: zvetsit mezery mezi hlavnimi sekcemi z `mb-6` na `mb-10` nebo `mb-12`
-- **Pricing CTA** (radek 746-755): zmenit text a odstranit `bg-foreground` styl, pouzit `bg-primary`
-- **Bottom CTA section** (radek 784-806): zmenit text na "Vyplnit onboarding formular", odstranit cerveny styl
-- **Mobile sticky CTA** (radek 835-850): zmenit text
-- **ServiceCard**: pridat vetsi padding (p-5 -> p-6), vetsi gap mezi kartami (space-y-3 -> space-y-4)
+- Sekce "Jak to bude probíhat?" (3 kroky) -- již je v nabídce
 
-Zadne nove zavislosti -- Loom embed je standardni iframe.
+### UX detaily
+
+- Progress bar nahoře ukazující aktuální krok (1/6, 2/6...)
+- Každý krok zabírá celou obrazovku (vertikálně centrovaný)
+- Tlačítko "Pokračovat" validuje aktuální krok před posunem
+- Tlačítko "Zpět" pro návrat na předchozí krok
+- Plynulá animace přechodu mezi kroky (fade/slide)
+- Na posledním kroku tlačítko "Odeslat údaje"
+- Header s logem zůstává viditelný po celou dobu
+
+### Technické detaily
+
+**Soubor: `src/pages/OnboardingForm.tsx`**
+
+- Přidat state `currentStep` (0-5) pro řízení aktuálního kroku
+- Přidat `Progress` komponentu nahoře pro vizuální indikaci postupu
+- Rozdělit obsah `<form>` do 6 bloků, zobrazovat vždy jen `currentStep`
+- Přidat funkci `validateCurrentStep()` která před posunem ověří povinná pole aktuálního kroku pomocí `form.trigger()`
+- Odstranit celou Card s "Jak to bude probíhat?" (řádky 517-547)
+- Navigační tlačítka "Zpět" / "Pokračovat" dole u každého kroku
+- CSS transition pro plynulý přechod (opacity + translateY)
+- Na mobilech plná šířka, na desktopu max-w-2xl jako dosud
+
+Žádné nové závislosti -- využije se existující `Progress` komponenta a React state.
 
