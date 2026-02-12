@@ -1,49 +1,59 @@
 
 
-## Oprava CompanyFinancials - nahrazení nefunkčního Hlídače státu
+## Oprava auto-fill adresy a přidání spisové značky
 
-### Problem
-Hlídač státu API vrací **403 error** - free API token nemá přístup k endpointu `/firmy/ico/`. Celá komponenta `CompanyFinancials` proto nefunguje a zobrazuje pouze nefunkční odkaz.
+### Problem 1: Adresa se nedoplňuje
+V `LeadDetailDialog` se při uložení IČO volá `updateLead` dvakrát rychle za sebou -- jednou pro IČO a podruhé pro adresu z ARES. První volání **nemá `await`**, což způsobuje race condition: obě mutace běží paralelně, invalidují stejný query cache, a druhý update se ztratí.
 
-### Analýza
-- Endpoint `/api/v2/firmy/ico/{ico}` vyžaduje placenou licenci
-- Endpoint `/api/v2/firmy/GetDetailInfo` (obrat, zaměstnanci) rovněž vyžaduje placenou licenci
-- Neexistuje žádný free veřejný API endpoint pro české firemní finanční data (obrat/tržby)
-- ARES API (které už v projektu funguje) poskytuje pouze základní údaje - ne finanční
+**Oprava:** Sloučit oba updateLead volání do jednoho. Nejdříve stáhnout data z ARES, pak uložit IČO + adresu + všechno ostatní najednou v jednom `updateLead` callu.
 
-### Navrhované řešení
+### Problem 2: Chybí spisová značka
+ARES VR API vrací pole `spisovaZnacka` s údaji `soud`, `oddil`, `vlozka` (např. "C 314420 vedená u Městského soudu v Praze"). Tato data se momentálně nescrapují.
 
-Přepsat edge funkci `company-financials` tak, aby **scrapovala finanční data z webu Hlídače státu** (stránka `hlidacstatu.cz/subjekt/{ico}` je veřejně přístupná bez API klíče). Alternativně stáhne data z veřejného rejstříku.
+---
 
-**Konkrétní kroky:**
+### Kroky implementace
 
-#### 1. Přepsat edge funkci `company-financials`
-- Nahradit volání Hlídač státu API přímým scrapováním stránky `https://www.hlidacstatu.cz/subjekt/{ico}` pomocí fetch
-- Parsovat HTML odpověď a extrahovat dostupná finanční data (smlouvy, dotace, rizika)
-- Jako zálohu volat ARES API pro základní údaje (jméno, DS, datum vzniku)
-- Alternativně: volat `https://rejstrik.penize.cz/ares/08186464` kde bývají obratová data
+#### 1. Rozšířit `fetchAresData` v `src/utils/aresUtils.ts`
+- Přidat do `AresData` interface dvě nová pole: `spisovaZnacka: string | null` a `evidpiravnUrad: string | null`
+- Z VR API endpointu extrahovat `spisovaZnacka[0].oddil`, `spisovaZnacka[0].vlozka`, `spisovaZnacka[0].soud`
+- Sestavit čitelný řetězec: "C 314420 vedená u Městského soudu v Praze"
 
-#### 2. Upravit `useCompanyFinancials` hook
-- Volat edge funkci přes `supabase.functions.invoke` místo přímého fetch (správný pattern)
-- Aktualizovat typy odpovědi
+Mapování soudů (kód -> název):
+- MSPH = Městský soud v Praze
+- KSCB = Krajský soud v Českých Budějovicích
+- KSPL = Krajský soud v Plzni
+- KSUL = Krajský soud v Ústí nad Labem
+- KSHK = Krajský soud v Hradci Králové
+- KSBR = Krajský soud v Brně
+- KSOS = Krajský soud v Ostravě
 
-#### 3. Přepsat `CompanyFinancials` komponentu
-- Zobrazit data, která se reálně podaří získat (název firmy, datum vzniku, DS, rizika ze smluv)
-- Zachovat odkaz na profil Hlídače státu (ten funguje, je veřejný)
-- Pokud se nepodaří scraping, zobrazit alespoň data z ARES (ta už máme)
+#### 2. Přidat DB sloupec `court_registration`
+- Přidat sloupec `court_registration TEXT` do tabulky `leads`
+
+#### 3. Aktualizovat typ `Lead` v `src/types/crm.ts`
+- Přidat `court_registration: string | null`
+
+#### 4. Opravit auto-fill v `LeadDetailDialog.tsx`
+- Přepsat handler `onSave` pro IČO pole:
+  - Nejdříve zavolat `fetchAresData` (pokud je IČO validní 8-místný)
+  - Pokud ARES vrátí data, sloučit IČO + adresu + všechna data do JEDNOHO `updateLead` volání
+  - Pokud ARES nevrátí data, uložit pouze IČO
+- Přidat zobrazení spisové značky pod IČO/DIČ v sekci "Firemní údaje"
+
+#### 5. Zobrazení spisové značky v detailu leadu
+- Přidat nový řádek pod IČO/DIČ grid s ikonou `Scale` (lucide) a textem spisové značky
+- Formát: "C 314420, Městský soud v Praze"
+
+---
 
 ### Technické detaily
 
 **Upravené soubory:**
-- `supabase/functions/company-financials/index.ts` - scraping místo API
-- `src/hooks/useCompanyFinancials.tsx` - použít `supabase.functions.invoke`
-- `src/components/leads/CompanyFinancials.tsx` - zobrazit dostupná data
+- `src/utils/aresUtils.ts` -- přidat `spisovaZnacka` do `AresData` a parsování z VR API
+- `src/types/crm.ts` -- přidat `court_registration` do `Lead` interface
+- `src/components/leads/LeadDetailDialog.tsx` -- opravit race condition, zobrazit spisovou značku
+- DB migrace -- přidat sloupec `court_registration` do tabulky `leads`
 
-**Princip scrapingu:**
-```text
-1. Fetch HTML z https://www.hlidacstatu.cz/subjekt/{ico}
-2. Regex/string parsing pro extrakci klíčových dat
-3. Fallback na ARES basic endpoint pro jméno a adresu
-4. Vrátit strukturovaná data
-```
-
+**Kořen problému s adresou:**
+Řádek 417 volá `updateLead(lead.id, { ico: v })` bez `await`, a řádek 435 volá `updateLead(lead.id, updates)`. Obě mutace se odpalují téměř současně. Řešení: jeden `updateLead` call se všemi daty.
