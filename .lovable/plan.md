@@ -1,59 +1,68 @@
 
 
-## Oprava auto-fill adresy a přidání spisové značky
+## Kontrola spolehlivosti plátce DPH
 
-### Problem 1: Adresa se nedoplňuje
-V `LeadDetailDialog` se při uložení IČO volá `updateLead` dvakrát rychle za sebou -- jednou pro IČO a podruhé pro adresu z ARES. První volání **nemá `await`**, což způsobuje race condition: obě mutace běží paralelně, invalidují stejný query cache, a druhý update se ztratí.
+### Jak to funguje
+Ministerstvo financí ČR provozuje **bezplatnou veřejnou SOAP webovou službu** na adrese `https://adisrws.mfcr.cz/dpr/axis2/services/rozhraniCRPDPH.rozhraniCRPDPHSOAP`, která pro zadané DIČ vrátí:
+- **ANO** -- plátce DPH je nespolehlivý
+- **NE** -- plátce DPH je spolehlivý
+- **NENALEZEN** -- subjekt není v registru plátců DPH
 
-**Oprava:** Sloučit oba updateLead volání do jednoho. Nejdříve stáhnout data z ARES, pak uložit IČO + adresu + všechno ostatní najednou v jednom `updateLead` callu.
-
-### Problem 2: Chybí spisová značka
-ARES VR API vrací pole `spisovaZnacka` s údaji `soud`, `oddil`, `vlozka` (např. "C 314420 vedená u Městského soudu v Praze"). Tato data se momentálně nescrapují.
-
----
+Není potřeba žádný API klíč. Limit je 10 000 dotazů/den.
 
 ### Kroky implementace
 
-#### 1. Rozšířit `fetchAresData` v `src/utils/aresUtils.ts`
-- Přidat do `AresData` interface dvě nová pole: `spisovaZnacka: string | null` a `evidpiravnUrad: string | null`
-- Z VR API endpointu extrahovat `spisovaZnacka[0].oddil`, `spisovaZnacka[0].vlozka`, `spisovaZnacka[0].soud`
-- Sestavit čitelný řetězec: "C 314420 vedená u Městského soudu v Praze"
+#### 1. Nová edge funkce `vat-reliability`
+- Přijme DIČ jako query parametr
+- Pošle SOAP request na MFCR endpoint (operace `getStatusNespolehlivyPlatce`)
+- Parsuje XML odpověď a vrátí JSON s hodnotami:
+  - `nespolehlivyPlatce`: "ANO" | "NE" | "NENALEZEN"
+  - `cisloFu`: číslo finančního úřadu (volitelné)
 
-Mapování soudů (kód -> název):
-- MSPH = Městský soud v Praze
-- KSCB = Krajský soud v Českých Budějovicích
-- KSPL = Krajský soud v Plzni
-- KSUL = Krajský soud v Ústí nad Labem
-- KSHK = Krajský soud v Hradci Králové
-- KSBR = Krajský soud v Brně
-- KSOS = Krajský soud v Ostravě
+#### 2. Nový hook `useVatReliability`
+- Volá edge funkci přes `supabase.functions.invoke`
+- Aktivuje se pouze pokud lead má vyplněné DIČ
+- Cachuje výsledek (staleTime 1 hodina)
 
-#### 2. Přidat DB sloupec `court_registration`
-- Přidat sloupec `court_registration TEXT` do tabulky `leads`
+#### 3. Automatické volání při uložení IČO
+- V `LeadDetailDialog.tsx` -- po úspěšném doplnění DIČ z ARES se ihned zavolá kontrola spolehlivosti
+- Výsledek se uloží do leadu (nový sloupec `vat_payer_status`)
 
-#### 3. Aktualizovat typ `Lead` v `src/types/crm.ts`
-- Přidat `court_registration: string | null`
+#### 4. DB migrace
+- Přidat sloupec `vat_payer_status TEXT` do tabulky `leads` (hodnoty: "reliable", "unreliable", "not_found", null)
 
-#### 4. Opravit auto-fill v `LeadDetailDialog.tsx`
-- Přepsat handler `onSave` pro IČO pole:
-  - Nejdříve zavolat `fetchAresData` (pokud je IČO validní 8-místný)
-  - Pokud ARES vrátí data, sloučit IČO + adresu + všechna data do JEDNOHO `updateLead` volání
-  - Pokud ARES nevrátí data, uložit pouze IČO
-- Přidat zobrazení spisové značky pod IČO/DIČ v sekci "Firemní údaje"
-
-#### 5. Zobrazení spisové značky v detailu leadu
-- Přidat nový řádek pod IČO/DIČ grid s ikonou `Scale` (lucide) a textem spisové značky
-- Formát: "C 314420, Městský soud v Praze"
-
----
+#### 5. Zobrazení v UI
+- V sekci "Firemní údaje" pod DIČ:
+  - Spolehlivý plátce: zelený badge "Spolehlivý plátce DPH"
+  - Nespolehlivý plátce: **červený alert s varováním** "NESPOLEHLIVÝ PLÁTCE DPH" -- výrazné upozornění
+  - Nenalezen v registru: šedý text "Není plátce DPH"
+- V demo datech pro Socials Advertising doplnit `vat_payer_status: "reliable"`
 
 ### Technické detaily
 
-**Upravené soubory:**
-- `src/utils/aresUtils.ts` -- přidat `spisovaZnacka` do `AresData` a parsování z VR API
-- `src/types/crm.ts` -- přidat `court_registration` do `Lead` interface
-- `src/components/leads/LeadDetailDialog.tsx` -- opravit race condition, zobrazit spisovou značku
-- DB migrace -- přidat sloupec `court_registration` do tabulky `leads`
+**Nové soubory:**
+- `supabase/functions/vat-reliability/index.ts` -- SOAP volání na MFCR
 
-**Kořen problému s adresou:**
-Řádek 417 volá `updateLead(lead.id, { ico: v })` bez `await`, a řádek 435 volá `updateLead(lead.id, updates)`. Obě mutace se odpalují téměř současně. Řešení: jeden `updateLead` call se všemi daty.
+**Upravené soubory:**
+- `src/hooks/useVatReliability.tsx` -- nový hook (nebo inline v LeadDetailDialog)
+- `src/types/crm.ts` -- přidat `vat_payer_status` do Lead
+- `src/components/leads/LeadDetailDialog.tsx` -- zobrazení badge/alertu, volání při uložení IČO
+- `src/hooks/useLeadsData.tsx` -- demo data
+- DB migrace -- nový sloupec
+
+**SOAP request formát:**
+```text
+POST https://adisrws.mfcr.cz/dpr/axis2/services/rozhraniCRPDPH.rozhraniCRPDPHSOAP
+Content-Type: text/xml
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+  <soapenv:Body>
+    <StatusNespolehlivyPlatceRequest xmlns="http://adis.mfcr.cz/rozhraniCRPDPH/">
+      <dic>CZ08186464</dic>
+    </StatusNespolehlivyPlatceRequest>
+  </soapenv:Body>
+</soapenv:Envelope>
+```
+
+**Odpověď parsování:** Regex na atribut `nespolehlivyPlatce="ANO|NE|NENALEZEN"` z XML.
+
