@@ -1,68 +1,42 @@
 
 
-## Kontrola spolehlivosti plátce DPH
+## Synchronizace IČO z onboarding formuláře zpět do leadu
 
-### Jak to funguje
-Ministerstvo financí ČR provozuje **bezplatnou veřejnou SOAP webovou službu** na adrese `https://adisrws.mfcr.cz/dpr/axis2/services/rozhraniCRPDPH.rozhraniCRPDPHSOAP`, která pro zadané DIČ vrátí:
-- **ANO** -- plátce DPH je nespolehlivý
-- **NE** -- plátce DPH je spolehlivý
-- **NENALEZEN** -- subjekt není v registru plátců DPH
+### Problém
+Klient může v onboarding formuláři změnit IČO (a tím i další firemní údaje), ale při odeslání formuláře se tyto změny nezapíší zpět do leadu. Lead tak zůstane s původním (odhadovaným) IČO.
 
-Není potřeba žádný API klíč. Limit je 10 000 dotazů/den.
-
-### Kroky implementace
-
-#### 1. Nová edge funkce `vat-reliability`
-- Přijme DIČ jako query parametr
-- Pošle SOAP request na MFCR endpoint (operace `getStatusNespolehlivyPlatce`)
-- Parsuje XML odpověď a vrátí JSON s hodnotami:
-  - `nespolehlivyPlatce`: "ANO" | "NE" | "NENALEZEN"
-  - `cisloFu`: číslo finančního úřadu (volitelné)
-
-#### 2. Nový hook `useVatReliability`
-- Volá edge funkci přes `supabase.functions.invoke`
-- Aktivuje se pouze pokud lead má vyplněné DIČ
-- Cachuje výsledek (staleTime 1 hodina)
-
-#### 3. Automatické volání při uložení IČO
-- V `LeadDetailDialog.tsx` -- po úspěšném doplnění DIČ z ARES se ihned zavolá kontrola spolehlivosti
-- Výsledek se uloží do leadu (nový sloupec `vat_payer_status`)
-
-#### 4. DB migrace
-- Přidat sloupec `vat_payer_status TEXT` do tabulky `leads` (hodnoty: "reliable", "unreliable", "not_found", null)
-
-#### 5. Zobrazení v UI
-- V sekci "Firemní údaje" pod DIČ:
-  - Spolehlivý plátce: zelený badge "Spolehlivý plátce DPH"
-  - Nespolehlivý plátce: **červený alert s varováním** "NESPOLEHLIVÝ PLÁTCE DPH" -- výrazné upozornění
-  - Nenalezen v registru: šedý text "Není plátce DPH"
-- V demo datech pro Socials Advertising doplnit `vat_payer_status: "reliable"`
+### Řešení
+V `onSubmit` funkci v `src/pages/OnboardingForm.tsx` rozšířit volání `updateLead` o všechny firemní údaje z formuláře, aby lead vždy obsahoval finální data od klienta.
 
 ### Technické detaily
 
-**Nové soubory:**
-- `supabase/functions/vat-reliability/index.ts` -- SOAP volání na MFCR
+**Soubor:** `src/pages/OnboardingForm.tsx`
 
-**Upravené soubory:**
-- `src/hooks/useVatReliability.tsx` -- nový hook (nebo inline v LeadDetailDialog)
-- `src/types/crm.ts` -- přidat `vat_payer_status` do Lead
-- `src/components/leads/LeadDetailDialog.tsx` -- zobrazení badge/alertu, volání při uložení IČO
-- `src/hooks/useLeadsData.tsx` -- demo data
-- DB migrace -- nový sloupec
+**Změna:** V metodě `onSubmit` (cca řádek 344) rozšířit objekt předávaný do `updateLead` o tyto pole:
 
-**SOAP request formát:**
-```text
-POST https://adisrws.mfcr.cz/dpr/axis2/services/rozhraniCRPDPH.rozhraniCRPDPHSOAP
-Content-Type: text/xml
-
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
-  <soapenv:Body>
-    <StatusNespolehlivyPlatceRequest xmlns="http://adis.mfcr.cz/rozhraniCRPDPH/">
-      <dic>CZ08186464</dic>
-    </StatusNespolehlivyPlatceRequest>
-  </soapenv:Body>
-</soapenv:Envelope>
+```typescript
+await updateLead(lead.id, {
+  // Existující pole
+  onboarding_form_completed_at: new Date().toISOString(),
+  contract_url: mockContractUrl,
+  contract_created_at: new Date().toISOString(),
+  // Nově přidaná pole -- finální data od klienta
+  ico: data.ico,
+  dic: data.dic || null,
+  company_name: data.company_name,
+  website: data.website || null,
+  industry: data.industry || null,
+  billing_street: data.billing_street || null,
+  billing_city: data.billing_city || null,
+  billing_zip: data.billing_zip || null,
+  billing_country: data.billing_country || null,
+  billing_email: data.billing_email || null,
+});
 ```
 
-**Odpověď parsování:** Regex na atribut `nespolehlivyPlatce="ANO|NE|NENALEZEN"` z XML.
+Tím se zajistí, že:
+- IČO v leadu bude vždy finální (to, které klient potvrdil v onboarding formuláři)
+- Všechny související údaje (název, DIČ, sídlo, fakturační email) budou synchronizovány
+- Klient vytvořený z leadu bude mít stejné údaje jako lead
 
+Žádné další soubory není třeba měnit -- formulář již sleduje změny IČO (stav `icoChanged`) a ARES lookup funguje správně.
