@@ -61,6 +61,7 @@ import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
 import { LeadFlowStepper } from './LeadFlowStepper';
 import { LeadCommunicationTimeline } from './LeadCommunicationTimeline';
 import { InlineEditField } from './InlineEditField';
+import { CompanyFinancials } from './CompanyFinancials';
 import type { Lead, LeadStage, LeadService, LeadNoteType } from '@/types/crm';
 import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
@@ -489,18 +490,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                         />
                       </div>
                       {lead.ico && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
-                          <span>Obrat firmy:</span>
-                          <a
-                            href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${lead.ico}&firma=${encodeURIComponent(lead.company_name)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline inline-flex items-center gap-1"
-                          >
-                            hledat na Justice.cz
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </div>
+                        <CompanyFinancials ico={lead.ico} />
                       )}
 
                       {/* Address - inline editable */}
