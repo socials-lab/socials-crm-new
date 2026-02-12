@@ -134,6 +134,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [emailSubject, setEmailSubject] = useState('');
   const [emailRecipients, setEmailRecipients] = useState('');
   const [isLoadingAres, setIsLoadingAres] = useState(false);
+  const [pendingIcoChange, setPendingIcoChange] = useState<string | null>(null);
   const isProcessingWarning = useRef(false);
 
   const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
@@ -299,6 +300,57 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* IČO Change Confirmation Dialog */}
+      <AlertDialog open={!!pendingIcoChange} onOpenChange={(open) => { if (!open) setPendingIcoChange(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              ⚠️ Změna IČO
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Chystáte se změnit IČO z <strong>{lead.ico}</strong> na <strong>{pendingIcoChange}</strong>.
+              Tím se přepíší všechny firemní údaje (název, DIČ, sídlo, jednatelé atd.) daty z ARES.
+              <br /><br />
+              Opravdu chcete pokračovat?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingIcoChange(null)}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={async () => {
+                const newIco = pendingIcoChange!;
+                setPendingIcoChange(null);
+                setIsLoadingAres(true);
+                const data = await fetchAresData(newIco.replace(/\s/g, ''));
+                const updates: Partial<Lead> = { ico: newIco };
+                if (data) {
+                  if (data.street) updates.billing_street = data.street;
+                  if (data.city) updates.billing_city = data.city;
+                  if (data.zip) updates.billing_zip = data.zip;
+                  if (data.companyName) updates.company_name = data.companyName;
+                  if (data.dic) updates.dic = data.dic;
+                  if (data.legalForm) (updates as any).legal_form = data.legalForm;
+                  if (data.foundedDate) (updates as any).founded_date = data.foundedDate;
+                  if (data.nace) (updates as any).ares_nace = data.nace;
+                  if (data.directors?.length) (updates as any).directors = data.directors;
+                  if (data.spisovaZnacka) updates.court_registration = data.spisovaZnacka;
+                }
+                updateLead(lead.id, updates);
+                if (data) {
+                  toast.success('IČO uloženo, údaje doplněny z ARES');
+                } else {
+                  toast.error('IČO uloženo, ale subjekt nebyl nalezen v ARES');
+                }
+                setIsLoadingAres(false);
+              }}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Ano, přepsat údaje
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
           {/* Header */}
@@ -428,6 +480,12 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                               onSave={async (v) => {
                                 const cleanIco = v.replace(/\s/g, '');
                                 if (cleanIco.length === 8 && /^\d{8}$/.test(cleanIco)) {
+                                  // If IČO already exists and is different, ask for confirmation
+                                  if (lead.ico && lead.ico !== v && lead.ico.replace(/\s/g, '') !== cleanIco) {
+                                    setPendingIcoChange(v);
+                                    return;
+                                  }
+                                  // First time or same IČO - fetch ARES directly
                                   setIsLoadingAres(true);
                                   const data = await fetchAresData(cleanIco);
                                   const updates: Partial<Lead> = { ico: v };
