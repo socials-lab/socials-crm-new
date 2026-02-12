@@ -75,7 +75,18 @@ serve(async (req) => {
 
     if (!response.ok) {
       const durationMs = Date.now() - startTime;
-      
+
+      // Parse ARES error body for user-friendly message
+      let userMessage = `Chyba při vyhledávání: ${response.status}`;
+      try {
+        const errorBody = await response.json();
+        if (errorBody.subKod === "VYSTUP_PRILIS_MNOHO_VYSLEDKU") {
+          userMessage = "Příliš mnoho výsledků, upřesněte hledaný název";
+        } else if (errorBody.popis) {
+          userMessage = errorBody.popis;
+        }
+      } catch { /* ignore parse errors */ }
+
       // Log error
       await supabaseAdmin.from('integration_log').insert({
         service: 'ares',
@@ -83,14 +94,15 @@ serve(async (req) => {
         request_payload: { query: queryValue },
         response_status: response.status,
         is_success: false,
-        error_message: `ARES search error: ${response.status}`,
+        error_message: userMessage,
         triggered_by: userId,
         duration_ms: durationMs,
       });
       
+      // Return 200 with error field so supabase.functions.invoke doesn't treat it as a failure
       return new Response(
-        JSON.stringify({ error: `Chyba při vyhledávání: ${response.status}` }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ companies: [], error: userMessage }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
