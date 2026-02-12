@@ -1,12 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { 
   Building2, 
   Globe, 
   User, 
   Mail, 
   Phone, 
-  ExternalLink, 
-  Pencil, 
+  ExternalLink,
   TrendingUp,
   FileText,
   MapPin,
@@ -61,6 +60,7 @@ import { CreateOfferDialog } from './CreateOfferDialog';
 import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
 import { LeadFlowStepper } from './LeadFlowStepper';
 import { LeadCommunicationTimeline } from './LeadCommunicationTimeline';
+import { InlineEditField } from './InlineEditField';
 import type { Lead, LeadStage, LeadService, LeadNoteType } from '@/types/crm';
 import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
@@ -70,7 +70,6 @@ interface LeadDetailDialogProps {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEdit: (lead: Lead) => void;
 }
 
 const STAGE_LABELS: Record<LeadStage, string> = {
@@ -107,7 +106,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
   other: 'Jiný',
 };
 
-export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }: LeadDetailDialogProps) {
+export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDetailDialogProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
@@ -275,7 +274,14 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
           <div className="flex items-center justify-between p-6 pb-4 border-b flex-shrink-0">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
-                <DialogTitle className="text-xl font-semibold">{lead.company_name}</DialogTitle>
+                <DialogTitle className="text-xl font-semibold">
+                  <InlineEditField
+                    value={lead.company_name}
+                    onSave={(v) => { updateLead(lead.id, { company_name: v }); toast.success('Uloženo'); }}
+                    placeholder="Název firmy"
+                    displayClassName="text-xl font-semibold"
+                  />
+                </DialogTitle>
                 <Badge variant="outline" className={cn("text-xs", STAGE_COLORS[lead.stage])}>
                   {STAGE_LABELS[lead.stage]}
                 </Badge>
@@ -283,16 +289,16 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
               <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                 {lead.ico && <span>IČO: {lead.ico}</span>}
                 {owner && <span>• {owner.full_name}</span>}
-                {lead.estimated_price > 0 && (
-                  <span>• {lead.estimated_price.toLocaleString()} {lead.currency}</span>
-                )}
+                <span>•</span>
+                <InlineEditField
+                  value={lead.estimated_price}
+                  onSave={(v) => { updateLead(lead.id, { estimated_price: Number(v) || 0 }); toast.success('Uloženo'); }}
+                  type="number"
+                  suffix={lead.currency}
+                  placeholder="Cena"
+                  emptyText="Zadat cenu"
+                />
               </div>
-            </div>
-            <div className="flex items-center gap-2 ml-4">
-              <Button variant="outline" size="sm" onClick={() => onEdit(lead)}>
-                <Pencil className="h-4 w-4 mr-1" />
-                Upravit
-              </Button>
             </div>
           </div>
 
@@ -386,24 +392,34 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                         <div>
                           <span className="text-muted-foreground text-xs">IČO</span>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{lead.ico}</span>
-                            <a
-                              href={`https://ares.gov.cz/ekonomicke-subjekty/res/${lead.ico}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              ARES
-                            </a>
+                            <InlineEditField
+                              value={lead.ico}
+                              onSave={(v) => { updateLead(lead.id, { ico: v }); toast.success('Uloženo'); }}
+                              placeholder="Zadat IČO"
+                              displayClassName="font-medium"
+                            />
+                            {lead.ico && (
+                              <a
+                                href={`https://ares.gov.cz/ekonomicke-subjekty/res/${lead.ico}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                ARES
+                              </a>
+                            )}
                           </div>
                         </div>
-                        {lead.dic && (
-                          <div>
-                            <span className="text-muted-foreground text-xs">DIČ</span>
-                            <p className="font-medium">{lead.dic}</p>
-                          </div>
-                        )}
+                        <div>
+                          <span className="text-muted-foreground text-xs">DIČ</span>
+                          <InlineEditField
+                            value={lead.dic}
+                            onSave={(v) => { updateLead(lead.id, { dic: v }); toast.success('Uloženo'); }}
+                            placeholder="Zadat DIČ"
+                            displayClassName="font-medium"
+                          />
+                        </div>
                       </div>
                       {lead.legal_form && (
                         <p className="text-muted-foreground">Právní forma: <span className="font-medium text-foreground">{lead.legal_form}</span></p>
@@ -437,17 +453,26 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                           </div>
                         </div>
                       )}
-                      {lead.website && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">Web</span>
                         <div className="flex items-center gap-2">
                           <Globe className="h-4 w-4 text-muted-foreground" />
-                          <a href={lead.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                            {lead.website}
-                          </a>
+                          <InlineEditField
+                            value={lead.website}
+                            onSave={(v) => { updateLead(lead.id, { website: v }); toast.success('Uloženo'); }}
+                            type="url"
+                            placeholder="Zadat web"
+                          />
                         </div>
-                      )}
-                      {lead.industry && (
-                        <p className="text-muted-foreground">Obor: {lead.industry}</p>
-                      )}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Obor</span>
+                        <InlineEditField
+                          value={lead.industry}
+                          onSave={(v) => { updateLead(lead.id, { industry: v }); toast.success('Uloženo'); }}
+                          placeholder="Zadat obor"
+                        />
+                      </div>
                       {lead.ico && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                           <span>Obrat firmy:</span>
@@ -463,19 +488,32 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                         </div>
                       )}
 
-                      {/* Address */}
-                      {(lead.billing_street || lead.billing_city) && (
-                        <div className="flex items-start gap-2 pt-1">
-                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            {lead.billing_street && <p>{lead.billing_street}</p>}
-                            {(lead.billing_zip || lead.billing_city) && (
-                              <p>{[lead.billing_zip, lead.billing_city].filter(Boolean).join(' ')}</p>
-                            )}
-                            {lead.billing_country && <p>{lead.billing_country}</p>}
+                      {/* Address - inline editable */}
+                      <div className="flex items-start gap-2 pt-1">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="space-y-1">
+                          <InlineEditField
+                            value={lead.billing_street}
+                            onSave={(v) => { updateLead(lead.id, { billing_street: v }); toast.success('Uloženo'); }}
+                            placeholder="Ulice"
+                            emptyText="Zadat ulici"
+                          />
+                          <div className="flex items-center gap-2">
+                            <InlineEditField
+                              value={lead.billing_zip}
+                              onSave={(v) => { updateLead(lead.id, { billing_zip: v }); toast.success('Uloženo'); }}
+                              placeholder="PSČ"
+                              emptyText="PSČ"
+                            />
+                            <InlineEditField
+                              value={lead.billing_city}
+                              onSave={(v) => { updateLead(lead.id, { billing_city: v }); toast.success('Uloženo'); }}
+                              placeholder="Město"
+                              emptyText="Město"
+                            />
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
@@ -491,27 +529,38 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                   <CollapsibleContent className="pl-6 pt-3">
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{lead.contact_name}</span>
-                        {lead.contact_position && (
-                          <span className="text-muted-foreground">– {lead.contact_position}</span>
-                        )}
+                        <InlineEditField
+                          value={lead.contact_name}
+                          onSave={(v) => { updateLead(lead.id, { contact_name: v }); toast.success('Uloženo'); }}
+                          placeholder="Jméno kontaktu"
+                          displayClassName="font-medium"
+                        />
+                        <span className="text-muted-foreground">–</span>
+                        <InlineEditField
+                          value={lead.contact_position}
+                          onSave={(v) => { updateLead(lead.id, { contact_position: v }); toast.success('Uloženo'); }}
+                          placeholder="Pozice"
+                          emptyText="Zadat pozici"
+                        />
                       </div>
-                      {lead.contact_email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                          <a href={`mailto:${lead.contact_email}`} className="text-primary hover:underline">
-                            {lead.contact_email}
-                          </a>
-                        </div>
-                      )}
-                      {lead.contact_phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                          <a href={`tel:${lead.contact_phone}`} className="text-primary hover:underline">
-                            {lead.contact_phone}
-                          </a>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                        <InlineEditField
+                          value={lead.contact_email}
+                          onSave={(v) => { updateLead(lead.id, { contact_email: v }); toast.success('Uloženo'); }}
+                          placeholder="E-mail"
+                          emptyText="Zadat e-mail"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        <InlineEditField
+                          value={lead.contact_phone}
+                          onSave={(v) => { updateLead(lead.id, { contact_phone: v }); toast.success('Uloženo'); }}
+                          placeholder="Telefon"
+                          emptyText="Zadat telefon"
+                        />
+                      </div>
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
@@ -528,62 +577,83 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <span className="text-xs text-muted-foreground">Zdroj</span>
-                          <p className="font-medium text-sm">
-                            {lead.source === 'other' && lead.source_custom 
-                              ? lead.source_custom 
-                              : SOURCE_LABELS[lead.source]}
-                          </p>
+                          <InlineEditField
+                            value={lead.source}
+                            onSave={(v) => { updateLead(lead.id, { source: v as Lead['source'] }); toast.success('Uloženo'); }}
+                            type="select"
+                            options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label }))}
+                          />
                         </div>
                         <div>
                           <span className="text-xs text-muted-foreground">Pravděpodobnost</span>
-                          <p className="font-medium text-sm">{lead.probability_percent}%</p>
+                          <InlineEditField
+                            value={lead.probability_percent}
+                            onSave={(v) => { updateLead(lead.id, { probability_percent: Number(v) || 0 }); toast.success('Uloženo'); }}
+                            type="number"
+                            suffix="%"
+                            placeholder="0"
+                            displayClassName="font-medium"
+                          />
                         </div>
                       </div>
-                      {lead.ad_spend_monthly && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                          <Coins className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Měsíční investice:</span>
-                          <span className="font-medium">{lead.ad_spend_monthly.toLocaleString()} Kč</span>
-                        </div>
-                      )}
-                      {lead.client_message && (
-                        <div className="p-3 rounded-lg border-l-4 border-primary/50 bg-muted/30">
-                          <span className="text-xs text-muted-foreground block mb-1">Zpráva od klienta:</span>
-                          <p className="text-sm italic">"{lead.client_message}"</p>
-                        </div>
-                      )}
-                      {lead.summary && (
-                        <div className="p-3 rounded-lg bg-muted/30">
-                          <span className="text-xs text-muted-foreground block mb-1">Shrnutí:</span>
-                          <p className="text-sm">{lead.summary}</p>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                        <Coins className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Měsíční investice:</span>
+                        <InlineEditField
+                          value={lead.ad_spend_monthly}
+                          onSave={(v) => { updateLead(lead.id, { ad_spend_monthly: Number(v) || 0 }); toast.success('Uloženo'); }}
+                          type="number"
+                          suffix="Kč"
+                          placeholder="0"
+                          displayClassName="font-medium"
+                          emptyText="Zadat"
+                        />
+                      </div>
+                      <div className="p-3 rounded-lg border-l-4 border-primary/50 bg-muted/30">
+                        <span className="text-xs text-muted-foreground block mb-1">Zpráva od klienta:</span>
+                        <InlineEditField
+                          value={lead.client_message}
+                          onSave={(v) => { updateLead(lead.id, { client_message: v }); toast.success('Uloženo'); }}
+                          type="textarea"
+                          placeholder="Zadat zprávu od klienta..."
+                          emptyText="Klikni pro přidání zprávy"
+                        />
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/30">
+                        <span className="text-xs text-muted-foreground block mb-1">Shrnutí:</span>
+                        <InlineEditField
+                          value={lead.summary}
+                          onSave={(v) => { updateLead(lead.id, { summary: v }); toast.success('Uloženo'); }}
+                          type="textarea"
+                          placeholder="Zadat shrnutí..."
+                          emptyText="Klikni pro přidání shrnutí"
+                        />
+                      </div>
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
 
                 {/* Billing info */}
-                {lead.billing_email && (
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
-                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Fakturační údaje</span>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pl-6 pt-3">
-                      <div className="space-y-2 text-sm">
-                        {lead.billing_email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4 text-muted-foreground" />
-                            <a href={`mailto:${lead.billing_email}`} className="text-primary hover:underline">
-                              {lead.billing_email}
-                            </a>
-                          </div>
-                        )}
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Fakturační údaje</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pl-6 pt-3">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <InlineEditField
+                          value={lead.billing_email}
+                          onSave={(v) => { updateLead(lead.id, { billing_email: v }); toast.success('Uloženo'); }}
+                          placeholder="Fakturační e-mail"
+                          emptyText="Zadat fakturační e-mail"
+                        />
                       </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 {/* Conversion status */}
                 {lead.converted_to_client_id && (
