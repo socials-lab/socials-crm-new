@@ -1,30 +1,36 @@
 
 
-## Test stranka pro schvaleni viceprace
+## Uvod a emailova verifikace na schvalovaci strance viceprace
 
-Pridam testovaci routu `/extra-work-approval-test`, ktera zobrazi `ExtraWorkApproval` komponentu s mock daty -- bez nutnosti vytvaret skutecnou vicepraci a generovat token.
+Pridame uvodni text a verifikacni formular podle vzoru ze stranky "Navrhy zmen" (`UpgradeOfferPage.tsx`).
 
-### Zmeny
+### Zmeny v `ExtraWorkApproval.tsx`
 
-**1. Uprava `ExtraWorkApproval.tsx`**
-- Pridam volitelny prop `testMode?: boolean`
-- Kdyz je `testMode=true`, komponenta pouzije hardcoded mock data misto cteni z localStorage
-- Mock data: nazev "Redesign homepage banneru", popis, 5h x 1 200 Kc/h = 6 000 Kc
-- Schvaleni/zamitnuti v test modu jen prepne vizualni stav (bez zapisu do localStorage)
+**1. Uvodni text**
+- Pod nadpis "Schvaleni viceprace" pridame odstavec s osobnim oslovenim, napr.:
+  *"Dobry den, radi bychom Vas pozadali o schvaleni nasledujici viceprace v ramci Vasi zakazky. Prosim, prohlednete si detaily nize a potvrdte souhlas."*
 
-**2. Uprava `App.tsx`**
-- Pridam routu: `<Route path="/extra-work-approval-test" element={<ExtraWorkApproval testMode />} />`
-- Umistim vedle existujiciho `/offer-test` vzoru
+**2. Verifikacni formular (vzor z UpgradeOfferPage)**
+- Misto dvou tlacitek (Schvalit / Zamitnout) pridame formular:
+  - **Email input** (povinny) -- klient musi zadat svuj email jako verifikaci identity
+  - **Checkbox** -- "Souhlasim s touto viceprace" (pro schvaleni)
+  - **Tlacitko "Schvalit vicepraci"** -- aktivni jen kdyz je vyplneny email a zaskrtnuty checkbox
+  - **Odkaz/tlacitko "Zamitnout"** -- zachova stavajici flow se zamitnutim a duvodem
+- Po schvaleni se ulozi `client_approval_email` a `client_approved_at` (stejne jako u navrhu zmen)
+
+**3. Stav po schvaleni -- detail potvrzeni**
+- Po uspesnem schvaleni zobrazime detail s emailem klienta a casem potvrzeni (stejne jako UpgradeOfferPage)
+- Po zamitnuti zobrazime detail s casem zamitnuti
+
+**4. Mock data v testMode**
+- Test mode zustava funkcni, schvaleni/zamitnuti meni jen vizualni stav
 
 ### Technicke detaily
 
-**`ExtraWorkApproval.tsx`:**
-- Novy prop `testMode?: boolean`
-- V useEffect: pokud `testMode`, nastavi mock data a preskoci localStorage lookup
-- handleApprove/handleReject v testMode pouze meni actionState bez side effectu
-
-**`App.tsx`:**
-- Nova routa `/extra-work-approval-test` s `<ExtraWorkApproval testMode />`
-
-Po implementaci bude stranka dostupna na `/extra-work-approval-test`.
+- Pridame stavy: `email` (string), `agreedToApproval` (boolean)
+- Import `Input`, `Label`, `Checkbox` komponent
+- Funkce `handleApprove` bude vyzadovat vyplneny email a souhlas
+- Pri schvaleni ulozime email a cas do dat (v testMode jen vizualne)
+- Formular pro zamitnuti zustava (textarea s duvodem), ale presuneme ho jako sekundarni akci pod hlavni formular
+- Ve stavu "approved" zobrazime potvrzovaci kartu s emailem a casem (vzor z UpgradeOfferPage radky 306-346)
 
