@@ -24,16 +24,14 @@ const categoryColors: Record<OutputCategory, string> = {
   banner: 'bg-blue-100 text-blue-700 border-blue-200',
   banner_translation: 'bg-cyan-100 text-cyan-700 border-cyan-200',
   banner_revision: 'bg-blue-50 text-blue-600 border-blue-100',
-  ai_photo: 'bg-amber-100 text-amber-700 border-amber-200',
   video: 'bg-purple-100 text-purple-700 border-purple-200',
   video_translation: 'bg-violet-100 text-violet-700 border-violet-200',
-  video_revision: 'bg-purple-50 text-purple-600 border-purple-100',
 };
 
 // Category grouping
 const categoryGroups = {
-  banner_group: ['banner', 'banner_translation', 'banner_revision', 'ai_photo'] as OutputCategory[],
-  video_group: ['video', 'video_translation', 'video_revision'] as OutputCategory[],
+  banner_group: ['banner', 'banner_translation', 'banner_revision'] as OutputCategory[],
+  video_group: ['video', 'video_translation'] as OutputCategory[],
 };
 
 interface ClientsOverviewProps {
