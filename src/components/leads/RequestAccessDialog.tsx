@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, Check } from 'lucide-react';
+import { Send } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,11 +24,22 @@ interface RequestAccessDialogProps {
   onSent?: (platforms: string[]) => void;
 }
 
-const PLATFORMS = [
-  { id: 'meta_ads', label: 'Meta Ads' },
-  { id: 'google_ads', label: 'Google Ads' },
-  { id: 'sklik', label: 'S-klik' },
-] as const;
+const DEFAULT_EMAIL_CONTENT = `Dobrý den,
+
+Na základě našeho telefonátu Vás prosíme o nasdílení přístupů do níže uvedených marketingových nástrojů. Uděláme audit a připravíme pro vás nabídku na případnou spolupráci.
+
+Google Analytics 4 - Přístup na úrovni celého účtu s oprávněním "Čtení" pošlete na e-mail analytics@socials.cz
+
+Facebook Business Manager - Přidejte nás jako partnery (ID našeho účtu: 1196977750459552) s nejnižší úrovní přístupů k těmto položkám: Reklamní účet, Katalog produktů, Meta Pixel (Datový set), FB stránka.
+
+Google Ads - Zašlete nám ID reklamního účtu. Zašleme žádost o přístup která dorazí na e-mail, na který máte Google Ads účet vedený.
+
+S-klik - Nasdílejte na e-mail mysocials@seznam.cz
+
+Pokud si nebudete vědět rady, zde naleznete návod. Případně klidně napište a pomůžeme :)
+
+Děkujeme a přejeme hezký den,
+Tým Socials`;
 
 export function RequestAccessDialog({
   open,
@@ -40,86 +50,36 @@ export function RequestAccessDialog({
   leadId,
   onSent,
 }: RequestAccessDialogProps) {
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const getDefaultSubject = () => {
     return `Žádost o nasdílení přístupů - ${companyName} / Socials`;
   };
 
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
-  const [emailContent, setEmailContent] = useState('');
+  const [emailContent, setEmailContent] = useState(DEFAULT_EMAIL_CONTENT);
   const [isSending, setIsSending] = useState(false);
 
-  // Generate default email when dialog opens or platforms change
-  const generateDefaultEmail = (platforms: string[]) => {
-    const platformNames = platforms
-      .map(id => PLATFORMS.find(p => p.id === id)?.label)
-      .filter(Boolean)
-      .join(', ');
-
-    return `Dobrý den ${contactName},
-
-rádi bychom Vás požádali o nasdílení přístupů k následujícím reklamním účtům:
-
-${platformNames || '[vyberte platformy]'}
-
-Přístupy prosím nasdílejte na email: ads@socials.cz
-
-Pro Meta Ads: Přidejte nás jako partnera s přístupem k reklamnímu účtu.
-Pro Google Ads: Přidejte email jako uživatele s oprávněním "Správce".
-Pro S-klik: Přidejte email jako uživatele s rolí "Administrátor".
-
-Děkujeme za spolupráci.
-
-S pozdravem,
-Tým Socials`;
-  };
-
-  const handlePlatformToggle = (platformId: string) => {
-    const newSelection = selectedPlatforms.includes(platformId)
-      ? selectedPlatforms.filter(id => id !== platformId)
-      : [...selectedPlatforms, platformId];
-    
-    setSelectedPlatforms(newSelection);
-    setEmailContent(generateDefaultEmail(newSelection));
-  };
-
   const handleSend = async () => {
-    if (selectedPlatforms.length === 0) {
-      toast.error('Vyberte alespoň jednu platformu');
-      return;
-    }
-
     if (!contactEmail) {
       toast.error('Kontakt nemá vyplněný email');
       return;
     }
 
     setIsSending(true);
-    
+
     // Mock sending - will be replaced with actual Edge Function
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Notify parent about sent platforms
-    const platformLabels = selectedPlatforms
-      .map(id => PLATFORMS.find(p => p.id === id)?.label)
-      .filter(Boolean) as string[];
-    onSent?.(platformLabels);
-    
+
+    onSent?.(['Google Analytics 4', 'Facebook Business Manager', 'Google Ads', 'S-klik']);
+
     setIsSending(false);
     toast.success('Žádost o přístupy byla odeslána');
     onOpenChange(false);
-    
-    // Reset state
-    setSelectedPlatforms([]);
-    setEmailContent('');
   };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
-      // Reset when opening
-      setSelectedPlatforms([]);
       setEmailSubject(getDefaultSubject());
-      setEmailContent(generateDefaultEmail([]));
+      setEmailContent(DEFAULT_EMAIL_CONTENT);
     }
     onOpenChange(newOpen);
   };
@@ -135,28 +95,6 @@ Tým Socials`;
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Platform Selection */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Platformy</Label>
-            <div className="flex flex-wrap gap-4">
-              {PLATFORMS.map((platform) => (
-                <div key={platform.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={platform.id}
-                    checked={selectedPlatforms.includes(platform.id)}
-                    onCheckedChange={() => handlePlatformToggle(platform.id)}
-                  />
-                  <Label
-                    htmlFor={platform.id}
-                    className="text-sm font-normal cursor-pointer"
-                  >
-                    {platform.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Recipient Info */}
           <div className="p-3 rounded-lg bg-muted/50 text-sm">
             <div className="flex items-center gap-2">
@@ -188,9 +126,9 @@ Tým Socials`;
             <Textarea
               value={emailContent}
               onChange={(e) => setEmailContent(e.target.value)}
-              rows={10}
-              className="font-mono text-sm"
-              placeholder="Vyberte platformy pro vygenerování emailu..."
+              rows={18}
+              className="font-mono text-sm leading-relaxed"
+              placeholder="Text emailu..."
             />
           </div>
         </div>
@@ -201,7 +139,7 @@ Tým Socials`;
           </Button>
           <Button
             onClick={handleSend}
-            disabled={isSending || selectedPlatforms.length === 0 || !contactEmail}
+            disabled={isSending || !contactEmail}
           >
             {isSending ? (
               <>
