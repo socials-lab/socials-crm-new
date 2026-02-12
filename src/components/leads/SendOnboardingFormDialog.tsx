@@ -19,7 +19,7 @@ interface SendOnboardingFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead;
-  onSent?: (formUrl: string) => void;
+  onSent?: (formUrl: string, emailData: { subject: string; body: string; recipients: string[] }) => void;
 }
 
 export function SendOnboardingFormDialog({
@@ -90,7 +90,11 @@ Tým Socials`;
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     // Notify parent about sent form
-    onSent?.(formUrl);
+    onSent?.(formUrl, {
+      subject: emailSubject,
+      body: emailContent,
+      recipients: lead.contact_email ? [lead.contact_email] : [],
+    });
     
     setIsSending(false);
     toast.success('Onboarding formulář byl odeslán');
