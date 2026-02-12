@@ -1,49 +1,49 @@
 
 
-## Automatické doplnění sídla firmy podle IČO
+## Oprava CompanyFinancials - nahrazení nefunkčního Hlídače státu
 
 ### Problem
-V detailu leadu (`LeadDetailDialog`) se po uložení IČO pouze uloží samotné IČO. Adresa (ulice, město, PSČ) se musí vyplňovat ručně, přestože ARES API už v aplikaci funguje (v `AddLeadDialog`).
+Hlídač státu API vrací **403 error** - free API token nemá přístup k endpointu `/firmy/ico/`. Celá komponenta `CompanyFinancials` proto nefunguje a zobrazuje pouze nefunkční odkaz.
 
-### Řešení
-Když se v detailu leadu uloží nebo změní IČO, automaticky se z ARES API stáhne sídlo firmy a uloží do `billing_street`, `billing_city`, `billing_zip`. Pokud adresa ještě není vyplněná, doplní se automaticky. Pokud už je vyplněná, uživatel dostane potvrzení, zda ji chce přepsat.
+### Analýza
+- Endpoint `/api/v2/firmy/ico/{ico}` vyžaduje placenou licenci
+- Endpoint `/api/v2/firmy/GetDetailInfo` (obrat, zaměstnanci) rovněž vyžaduje placenou licenci
+- Neexistuje žádný free veřejný API endpoint pro české firemní finanční data (obrat/tržby)
+- ARES API (které už v projektu funguje) poskytuje pouze základní údaje - ne finanční
 
-### Kroky implementace
+### Navrhované řešení
 
-1. **Extrahovat `fetchAresData` do sdíleného utility**
-   - Přesunout funkci `fetchAresData` z `AddLeadDialog.tsx` do nového souboru `src/utils/aresUtils.ts`
-   - Zachovat stávající logiku (název firmy, DIČ, adresa, jednatelé, NACE)
-   - V `AddLeadDialog` importovat z nového umístění
+Přepsat edge funkci `company-financials` tak, aby **scrapovala finanční data z webu Hlídače státu** (stránka `hlidacstatu.cz/subjekt/{ico}` je veřejně přístupná bez API klíče). Alternativně stáhne data z veřejného rejstříku.
 
-2. **Upravit `LeadDetailDialog` - handler uložení IČO**
-   - Při uložení IČO (callback `onSave` u `InlineEditField` pro IČO) přidat volání `fetchAresData`
-   - Pokud ARES vrátí adresu a lead nemá vyplněnou adresu: automaticky uložit `billing_street`, `billing_city`, `billing_zip` přes `updateLead`
-   - Pokud lead už adresu má: zobrazit toast s dotazem nebo přímo přepsat (protože nové IČO = nová firma)
-   - Zobrazit loading indikátor během načítání z ARES
-   - Kromě adresy aktualizovat i `company_name` a `dic`, pokud jsou prázdné
+**Konkrétní kroky:**
 
-3. **Upravit `CompanyFinancials` komponentu**
-   - Pokud Hlídač státu vrátí jméno firmy, zobrazit ho jako potvrzení
-   - Přidat tlačítko "Doplnit adresu" pokud z Hlídače státu existují data a adresa v leadu chybí
+#### 1. Přepsat edge funkci `company-financials`
+- Nahradit volání Hlídač státu API přímým scrapováním stránky `https://www.hlidacstatu.cz/subjekt/{ico}` pomocí fetch
+- Parsovat HTML odpověď a extrahovat dostupná finanční data (smlouvy, dotace, rizika)
+- Jako zálohu volat ARES API pro základní údaje (jméno, DS, datum vzniku)
+- Alternativně: volat `https://rejstrik.penize.cz/ares/08186464` kde bývají obratová data
+
+#### 2. Upravit `useCompanyFinancials` hook
+- Volat edge funkci přes `supabase.functions.invoke` místo přímého fetch (správný pattern)
+- Aktualizovat typy odpovědi
+
+#### 3. Přepsat `CompanyFinancials` komponentu
+- Zobrazit data, která se reálně podaří získat (název firmy, datum vzniku, DS, rizika ze smluv)
+- Zachovat odkaz na profil Hlídače státu (ten funguje, je veřejný)
+- Pokud se nepodaří scraping, zobrazit alespoň data z ARES (ta už máme)
 
 ### Technické detaily
 
-**Nový soubor:**
-- `src/utils/aresUtils.ts` - extrahovaná funkce `fetchAresData` + typy `AresData`, `DirectorInfo`
-
 **Upravené soubory:**
-- `src/components/leads/AddLeadDialog.tsx` - import z `aresUtils.ts` místo lokální definice
-- `src/components/leads/LeadDetailDialog.tsx` - rozšířit `onSave` pro IČO o ARES lookup a automatické uložení adresy
+- `supabase/functions/company-financials/index.ts` - scraping místo API
+- `src/hooks/useCompanyFinancials.tsx` - použít `supabase.functions.invoke`
+- `src/components/leads/CompanyFinancials.tsx` - zobrazit dostupná data
 
-**Logika auto-fill při změně IČO v detailu leadu:**
+**Princip scrapingu:**
 ```text
-1. Uživatel uloží nové IČO
-2. Uloží se IČO do DB
-3. Zavolá se fetchAresData(ico)
-4. Pokud ARES vrátí data:
-   a. Pokud billing_street je prázdný -> automaticky uložit adresu + toast "Adresa doplněna z ARES"
-   b. Pokud billing_street není prázdný -> přepsat + toast "Adresa aktualizována z ARES"
-   c. Pokud company_name je prázdný -> doplnit název firmy
-   d. Pokud dic je prázdný -> doplnit DIČ
-5. Pokud ARES nevrátí data -> toast "Nepodařilo se načíst data z ARES"
+1. Fetch HTML z https://www.hlidacstatu.cz/subjekt/{ico}
+2. Regex/string parsing pro extrakci klíčových dat
+3. Fallback na ARES basic endpoint pro jméno a adresu
+4. Vrátit strukturovaná data
 ```
+
