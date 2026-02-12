@@ -1,14 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { AlertCircle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import socialsLogo from '@/assets/socials-logo.png';
+import { getApprovalByToken } from '@/components/extra-work/SendApprovalDialog';
 
-interface ExtraWorkData {
+// Read extra works from the react-query cache via a global helper
+// Since this is a public page without CRM context, we read from localStorage
+const EXTRA_WORKS_CACHE_KEY = 'extra_work_approval_data';
+
+interface ExtraWorkApprovalData {
   id: string;
   name: string;
   description: string;
@@ -17,109 +21,72 @@ interface ExtraWorkData {
   hours_worked: number | null;
   hourly_rate: number | null;
   status: string;
-  clients: { name: string; brand_name: string } | null;
-  engagements: { name: string } | null;
-  colleagues: { full_name: string } | null;
+  client_name: string;
+  engagement_name: string;
+  colleague_name: string;
+}
+
+// Store extra work data for public page access
+export function storeExtraWorkForApproval(data: ExtraWorkApprovalData) {
+  const stored = getStoredExtraWorks();
+  const idx = stored.findIndex(s => s.id === data.id);
+  if (idx >= 0) stored[idx] = data;
+  else stored.push(data);
+  localStorage.setItem(EXTRA_WORKS_CACHE_KEY, JSON.stringify(stored));
+}
+
+function getStoredExtraWorks(): ExtraWorkApprovalData[] {
+  try {
+    return JSON.parse(localStorage.getItem(EXTRA_WORKS_CACHE_KEY) || '[]');
+  } catch { return []; }
+}
+
+function updateStoredExtraWorkStatus(id: string, status: string, rejectionReason?: string) {
+  const stored = getStoredExtraWorks();
+  const idx = stored.findIndex(s => s.id === id);
+  if (idx >= 0) {
+    stored[idx].status = status;
+    localStorage.setItem(EXTRA_WORKS_CACHE_KEY, JSON.stringify(stored));
+  }
 }
 
 export default function ExtraWorkApproval() {
   const { token } = useParams<{ token: string }>();
-  const [data, setData] = useState<ExtraWorkData | null>(null);
+  const [data, setData] = useState<ExtraWorkApprovalData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [actionState, setActionState] = useState<'idle' | 'approving' | 'rejecting' | 'approved' | 'rejected'>('idle');
+  const [actionState, setActionState] = useState<'idle' | 'approved' | 'rejected'>('idle');
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
 
   useEffect(() => {
     if (!token) { setIsLoading(false); return; }
 
-    const fetchData = async () => {
-      try {
-        const { data: result, error } = await supabase.functions.invoke('send-extra-work-approval', {
-          method: 'GET',
-          headers: {},
-          body: undefined,
-        });
+    const approval = getApprovalByToken(token);
+    if (!approval) { setIsLoading(false); return; }
 
-        // Use query params approach instead
-        const res = await fetch(
-          `https://empndmpeyrdycjdesoxr.supabase.co/functions/v1/send-extra-work-approval?action=get-by-token&token=${token}`,
-          {
-            headers: {
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtcG5kbXBleXJkeWNqZGVzb3hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1OTQ5NTUsImV4cCI6MjA4MTE3MDk1NX0.X3I3FU2QRZD16rLwePdC3C2r7UIlGQuvJ6wWZnzgGEQ',
-            },
-          }
-        );
-        const json = await res.json();
-        if (json.data) {
-          setData(json.data);
-          // Check if already processed
-          if (json.data.status === 'in_progress' || json.data.status === 'ready_to_invoice' || json.data.status === 'invoiced') {
-            setActionState('approved');
-          } else if (json.data.status === 'rejected') {
-            setActionState('rejected');
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching extra work:', err);
-      } finally {
-        setIsLoading(false);
+    const works = getStoredExtraWorks();
+    const work = works.find(w => w.id === approval.extraWorkId);
+    if (work) {
+      setData(work);
+      if (work.status === 'in_progress' || work.status === 'ready_to_invoice' || work.status === 'invoiced') {
+        setActionState('approved');
+      } else if (work.status === 'rejected') {
+        setActionState('rejected');
       }
-    };
-
-    fetchData();
+    }
+    setIsLoading(false);
   }, [token]);
 
-  const handleApprove = async () => {
-    if (!token) return;
-    setActionState('approving');
-    try {
-      const res = await fetch(
-        `https://empndmpeyrdycjdesoxr.supabase.co/functions/v1/send-extra-work-approval?action=approve`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtcG5kbXBleXJkeWNqZGVzb3hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1OTQ5NTUsImV4cCI6MjA4MTE3MDk1NX0.X3I3FU2QRZD16rLwePdC3C2r7UIlGQuvJ6wWZnzgGEQ',
-          },
-          body: JSON.stringify({ token }),
-        }
-      );
-      const json = await res.json();
-      if (json.success) {
-        setActionState('approved');
-      } else {
-        setActionState('idle');
-      }
-    } catch {
-      setActionState('idle');
-    }
+  const handleApprove = () => {
+    if (!data) return;
+    updateStoredExtraWorkStatus(data.id, 'in_progress');
+    setActionState('approved');
   };
 
-  const handleReject = async () => {
-    if (!token) return;
-    setActionState('rejecting');
-    try {
-      const res = await fetch(
-        `https://empndmpeyrdycjdesoxr.supabase.co/functions/v1/send-extra-work-approval?action=reject`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtcG5kbXBleXJkeWNqZGVzb3hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1OTQ5NTUsImV4cCI6MjA4MTE3MDk1NX0.X3I3FU2QRZD16rLwePdC3C2r7UIlGQuvJ6wWZnzgGEQ',
-          },
-          body: JSON.stringify({ token, reason: rejectionReason }),
-        }
-      );
-      const json = await res.json();
-      if (json.success) {
-        setActionState('rejected');
-      } else {
-        setActionState('idle');
-      }
-    } catch {
-      setActionState('idle');
-    }
+  const handleReject = () => {
+    if (!data) return;
+    updateStoredExtraWorkStatus(data.id, 'rejected', rejectionReason);
+    setActionState('rejected');
   };
 
   const formatCurrency = (amount: number, currency: string = 'CZK') =>
@@ -149,7 +116,6 @@ export default function ExtraWorkApproval() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container max-w-3xl mx-auto px-4 py-4 flex items-center justify-center">
           <img src={socialsLogo} alt="Socials.cz" className="h-8" />
@@ -157,7 +123,6 @@ export default function ExtraWorkApproval() {
       </header>
 
       <main className="container max-w-3xl mx-auto px-4 py-8">
-        {/* Success/Rejected state */}
         {actionState === 'approved' && (
           <Card className="mb-8 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
             <CardContent className="pt-8 pb-8 text-center">
@@ -178,27 +143,22 @@ export default function ExtraWorkApproval() {
           </Card>
         )}
 
-        {/* Main content */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">Schválení vícepráce</h1>
           <p className="text-muted-foreground">
-            Pro: <span className="font-medium text-foreground">{data.clients?.brand_name || data.clients?.name}</span>
-            {data.engagements && (
-              <> – <span className="font-medium text-foreground">{data.engagements.name}</span></>
+            Pro: <span className="font-medium text-foreground">{data.client_name}</span>
+            {data.engagement_name && (
+              <> – <span className="font-medium text-foreground">{data.engagement_name}</span></>
             )}
           </p>
         </div>
 
-        {/* Details card */}
         <Card className="mb-8">
           <CardContent className="pt-6 space-y-4">
             <div>
               <h3 className="font-semibold text-lg">{data.name}</h3>
-              {data.description && (
-                <p className="text-muted-foreground mt-1">{data.description}</p>
-              )}
+              {data.description && <p className="text-muted-foreground mt-1">{data.description}</p>}
             </div>
-
             <div className="space-y-2 pt-4 border-t">
               {data.hours_worked && data.hourly_rate && (
                 <div className="flex justify-between">
@@ -210,38 +170,26 @@ export default function ExtraWorkApproval() {
                 <span className="text-muted-foreground">Celkem:</span>
                 <span className="font-semibold text-lg">{formatCurrency(data.amount, data.currency)}</span>
               </div>
-              {data.colleagues && (
+              {data.colleague_name && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Řešitel:</span>
-                  <span>{data.colleagues.full_name}</span>
+                  <span>{data.colleague_name}</span>
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Action buttons */}
         {actionState === 'idle' && (
           <Card>
             <CardContent className="pt-6 space-y-4">
               {!showRejectForm ? (
                 <div className="flex gap-3">
-                  <Button
-                    size="lg"
-                    className="flex-1"
-                    onClick={handleApprove}
-                  >
-                    <CheckCircle2 className="h-5 w-5 mr-2" />
-                    Schvaluji vícepráci
+                  <Button size="lg" className="flex-1" onClick={handleApprove}>
+                    <CheckCircle2 className="h-5 w-5 mr-2" /> Schvaluji vícepráci
                   </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setShowRejectForm(true)}
-                  >
-                    <XCircle className="h-5 w-5 mr-2" />
-                    Zamítnout
+                  <Button size="lg" variant="outline" className="flex-1" onClick={() => setShowRejectForm(true)}>
+                    <XCircle className="h-5 w-5 mr-2" /> Zamítnout
                   </Button>
                 </div>
               ) : (
@@ -257,20 +205,12 @@ export default function ExtraWorkApproval() {
                     <Button variant="destructive" onClick={handleReject} className="flex-1">
                       Potvrdit zamítnutí
                     </Button>
-                    <Button variant="outline" onClick={() => setShowRejectForm(false)}>
-                      Zpět
-                    </Button>
+                    <Button variant="outline" onClick={() => setShowRejectForm(false)}>Zpět</Button>
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
-        )}
-
-        {(actionState === 'approving' || actionState === 'rejecting') && (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
         )}
       </main>
     </div>
