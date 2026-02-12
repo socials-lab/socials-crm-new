@@ -10,6 +10,7 @@ import { AlertCircle, CheckCircle2, XCircle, Loader2, User, Building2, Briefcase
 import socialsLogo from '@/assets/socials-logo.png';
 import { getApprovalByToken, getStoredExtraWorks, updateStoredExtraWorkStatus } from '@/components/extra-work/SendApprovalDialog';
 import type { ExtraWorkApprovalData } from '@/components/extra-work/SendApprovalDialog';
+import { notifyExtraWorkColleague } from '@/services/notificationService';
 
 export default function ExtraWorkApproval({ testMode = false }: { testMode?: boolean }) {
   const { token } = useParams<{ token: string }>();
@@ -62,13 +63,23 @@ export default function ExtraWorkApproval({ testMode = false }: { testMode?: boo
     setIsLoading(false);
   }, [token, testMode]);
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!data || !email || !agreedToApproval) return;
     if (!testMode) updateStoredExtraWorkStatus(data.id, 'in_progress');
     const now = new Date().toISOString();
     setApprovalEmail(email);
     setApprovalTime(now);
     setActionState('approved');
+
+    // Notify the assigned colleague
+    if (data.colleagueId && !testMode) {
+      notifyExtraWorkColleague(data.id, data.colleagueId, {
+        type: 'extra_work_approved',
+        title: 'Klient schválil vícepráci',
+        message: `Vícepráce „${data.name}" pro ${data.clientName || 'klienta'} byla schválena. Můžete se pustit do práce!`,
+        link: '/extra-work',
+      });
+    }
   };
 
   const handleReject = () => {

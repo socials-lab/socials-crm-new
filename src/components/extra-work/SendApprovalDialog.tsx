@@ -153,6 +153,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
       engagementName: engagement?.name,
       colleagueName: colleague?.full_name,
       colleagueEmail: colleague?.email,
+      colleagueId: colleague?.id,
     });
 
     toast({ title: '📧 Email "odeslán"', description: `Demo: schvalovací email pro ${targetEmail}. Použijte odkaz pro simulaci.` });
@@ -256,6 +257,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
                   engagementName: engagement?.name,
                   colleagueName: colleague?.full_name,
                   colleagueEmail: colleague?.email,
+                  colleagueId: colleague?.id,
                 });
                 toast({ title: '✅ Označeno jako odeslané', description: 'Vícepráce byla označena jako čekající na schválení.' });
                 onOpenChange(false);
@@ -297,9 +299,10 @@ export interface ExtraWorkApprovalData {
   engagementName?: string;
   colleagueName?: string;
   colleagueEmail?: string;
+  colleagueId?: string;
 }
 
-export function storeExtraWorkForApproval(work: ExtraWork, meta: { clientName?: string; engagementName?: string; colleagueName?: string; colleagueEmail?: string }) {
+export function storeExtraWorkForApproval(work: ExtraWork, meta: { clientName?: string; engagementName?: string; colleagueName?: string; colleagueEmail?: string; colleagueId?: string }) {
   const stored = getStoredExtraWorks();
   const data: ExtraWorkApprovalData = {
     id: work.id,
