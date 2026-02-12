@@ -345,6 +345,16 @@ export default function OnboardingForm() {
         onboarding_form_completed_at: new Date().toISOString(),
         contract_url: mockContractUrl,
         contract_created_at: new Date().toISOString(),
+        ico: data.ico,
+        dic: data.dic || null,
+        company_name: data.company_name,
+        website: data.website || null,
+        industry: data.industry || null,
+        billing_street: data.billing_street || null,
+        billing_city: data.billing_city || null,
+        billing_zip: data.billing_zip || null,
+        billing_country: data.billing_country || null,
+        billing_email: data.billing_email || null,
       });
       
       // Mark lead as converted
