@@ -543,6 +543,12 @@ export interface Lead {
   website: string | null;
   industry: string | null;
   
+  // ARES data
+  legal_form: string | null;
+  founded_date: string | null;
+  directors: string[] | null;
+  ares_nace: string | null;
+  
   // Billing address
   billing_street: string | null;
   billing_city: string | null;

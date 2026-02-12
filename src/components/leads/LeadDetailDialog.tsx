@@ -358,6 +358,25 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                               </div>
                             )}
                           </div>
+                          {lead.legal_form && (
+                            <p className="text-muted-foreground">Právní forma: <span className="font-medium text-foreground">{lead.legal_form}</span></p>
+                          )}
+                          {lead.founded_date && (
+                            <p className="text-muted-foreground">Datum vzniku: <span className="font-medium text-foreground">{new Date(lead.founded_date).toLocaleDateString('cs-CZ')}</span></p>
+                          )}
+                          {lead.ares_nace && (
+                            <p className="text-muted-foreground">CZ-NACE: <span className="font-medium text-foreground">{lead.ares_nace}</span></p>
+                          )}
+                          {lead.directors && lead.directors.length > 0 && (
+                            <div>
+                              <span className="text-muted-foreground text-xs">Jednatelé</span>
+                              <div className="flex flex-wrap gap-1.5 mt-1">
+                                {lead.directors.map((d, i) => (
+                                  <Badge key={i} variant="secondary" className="text-xs">{d}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                           {lead.website && (
                             <div className="flex items-center gap-2">
                               <Globe className="h-4 w-4 text-muted-foreground" />
@@ -368,6 +387,20 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                           )}
                           {lead.industry && (
                             <p className="text-muted-foreground">Obor: {lead.industry}</p>
+                          )}
+                          {lead.ico && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                              <span>Obrat firmy:</span>
+                              <a
+                                href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${lead.ico}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                hledat na Justice.cz
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </div>
                           )}
                         </div>
                       </div>
