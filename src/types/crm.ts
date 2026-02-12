@@ -505,12 +505,22 @@ export interface LeadService {
   billing_type: 'monthly' | 'one_off';
 }
 
+export type LeadNoteType = 'general' | 'call' | 'internal';
+
+export const LEAD_NOTE_TYPE_LABELS: Record<LeadNoteType, string> = {
+  general: 'Poznámka',
+  call: 'Záznam z hovoru',
+  internal: 'Interní poznámka',
+};
+
 export interface LeadNote {
   id: string;
   lead_id: string;
   author_id: string;
   author_name: string;
   text: string;
+  note_type: LeadNoteType;
+  call_date: string | null;
   created_at: string;
 }
 

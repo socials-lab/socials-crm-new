@@ -15,7 +15,7 @@ import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { LeadsKanban } from '@/components/leads/LeadsKanban';
 import { LeadsTable } from '@/components/leads/LeadsTable';
-import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
+import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
 import { AddLeadDialog } from '@/components/leads/AddLeadDialog';
 import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
@@ -293,8 +293,8 @@ export default function Leads() {
         />
       )}
 
-      {/* Detail Sheet */}
-      <LeadDetailSheet
+      {/* Detail Dialog */}
+      <LeadDetailDialog
         lead={selectedLead}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
