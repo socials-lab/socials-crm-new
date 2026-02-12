@@ -35,7 +35,6 @@ interface CreditPricing {
   currency: string;
   expressMultiplier: number;
   colleagueRewardPerCredit: number;
-  outputTypes: { name: string; credits: number; description: string }[];
 }
 
 interface ServiceDetailData {
@@ -299,7 +298,7 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
   const enableCreditPricing = () => {
     setData(prev => ({
       ...prev,
-      credit_pricing: { basePrice: 400, currency: 'CZK', expressMultiplier: 1.5, colleagueRewardPerCredit: 80, outputTypes: [] },
+      credit_pricing: { basePrice: 400, currency: 'CZK', expressMultiplier: 1.5, colleagueRewardPerCredit: 80 },
     }));
   };
 
@@ -315,40 +314,7 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
     }));
   };
 
-  const addOutputType = () => {
-    if (!data.credit_pricing) return;
-    setData(prev => ({
-      ...prev,
-      credit_pricing: {
-        ...prev.credit_pricing!,
-        outputTypes: [...prev.credit_pricing!.outputTypes, { name: '', credits: 1, description: '' }],
-      },
-    }));
-  };
-
-  const removeOutputType = (index: number) => {
-    if (!data.credit_pricing) return;
-    setData(prev => ({
-      ...prev,
-      credit_pricing: {
-        ...prev.credit_pricing!,
-        outputTypes: prev.credit_pricing!.outputTypes.filter((_, i) => i !== index),
-      },
-    }));
-  };
-
-  const updateOutputType = (index: number, field: string, value: string | number) => {
-    if (!data.credit_pricing) return;
-    setData(prev => ({
-      ...prev,
-      credit_pricing: {
-        ...prev.credit_pricing!,
-        outputTypes: prev.credit_pricing!.outputTypes.map((o, i) =>
-          i === index ? { ...o, [field]: value } : o
-        ),
-      },
-    }));
-  };
+  // Output types are now managed inline in ServiceDetailView via useCreativeBoostData
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -735,47 +701,9 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <Label>Typy výstupů</Label>
-                        <Button type="button" variant="outline" size="sm" onClick={addOutputType}>
-                          <Plus className="h-4 w-4 mr-1" />
-                          Přidat
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        {data.credit_pricing.outputTypes.map((output, index) => (
-                          <div key={index} className="grid grid-cols-[1fr,80px,1fr,auto] gap-2 items-center">
-                            <Input
-                              value={output.name}
-                              onChange={(e) => updateOutputType(index, 'name', e.target.value)}
-                              placeholder="Název"
-                            />
-                            <Input
-                              type="number"
-                              step="0.25"
-                              value={output.credits}
-                              onChange={(e) => updateOutputType(index, 'credits', Number(e.target.value))}
-                              placeholder="Kredity"
-                            />
-                            <Input
-                              value={output.description}
-                              onChange={(e) => updateOutputType(index, 'description', e.target.value)}
-                              placeholder="Popis"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeOutputType(index)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Typy výstupů se spravují přímo v tabulce ceníku kreditů v detailu služby.
+                    </p>
                   </CardContent>
                 )}
               </Card>

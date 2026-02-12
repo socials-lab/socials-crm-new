@@ -51,6 +51,7 @@ interface CreativeBoostContextType {
   // Output type operations
   addOutputType: (data: Omit<OutputType, 'id' | 'createdAt' | 'updatedAt'>) => OutputType;
   updateOutputType: (id: string, data: Partial<OutputType>) => void;
+  removeOutputType: (id: string) => void;
 
   // Client operations
   addCreativeBoostClient: (clientId: string, defaults?: Partial<CreativeBoostClient>) => CreativeBoostClient;
@@ -127,6 +128,10 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
     setOutputTypes(prev => prev.map(t =>
       t.id === id ? { ...t, ...data, updatedAt: now() } : t
     ));
+  }, []);
+
+  const removeOutputType = useCallback((id: string) => {
+    setOutputTypes(prev => prev.filter(t => t.id !== id));
   }, []);
 
   // Client operations
@@ -687,6 +692,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       settingsHistory,
       addOutputType,
       updateOutputType,
+      removeOutputType,
       addCreativeBoostClient,
       addClientToMonth,
       removeClientFromMonth,

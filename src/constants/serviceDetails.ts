@@ -32,11 +32,6 @@ export interface ServiceDetail {
     currency: string;
     expressMultiplier: number;
     colleagueRewardPerCredit: number; // Default reward per credit for graphic designer
-    outputTypes: {
-      name: string;
-      credits: number;
-      description: string;
-    }[];
   };
 }
 
@@ -222,16 +217,6 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
       currency: 'CZK',
       expressMultiplier: 1.5,
       colleagueRewardPerCredit: 80,
-      outputTypes: [
-        { name: 'Statický banner', credits: 1, description: '1 kredit za banner' },
-        { name: 'Překlad banneru', credits: 0.5, description: '0.5 kreditu za překlad' },
-        { name: 'Revize banneru', credits: 0.25, description: '0.25 kreditu za revizi' },
-        { name: 'AI foto', credits: 2, description: '2 kredity za AI foto' },
-        { name: 'Video (do 15s)', credits: 4, description: '4 kredity za krátké video' },
-        { name: 'Video (15-30s)', credits: 6, description: '6 kreditů za video' },
-        { name: 'Překlad videa', credits: 2, description: '2 kredity za překlad' },
-        { name: 'Revize videa', credits: 1, description: '1 kredit za revizi' },
-      ],
     },
   },
 

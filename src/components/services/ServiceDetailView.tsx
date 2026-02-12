@@ -30,7 +30,7 @@ interface CreditPricing {
   currency: string;
   expressMultiplier: number;
   colleagueRewardPerCredit?: number;
-  outputTypes: { name: string; credits: number; description: string }[];
+  outputTypes?: { name: string; credits: number; description: string }[];
 }
 
 export interface ServiceDetailData {
@@ -294,7 +294,7 @@ interface CreditPricingSectionProps {
 }
 
 function CreditPricingSection({ creditPricing, onUpdate }: CreditPricingSectionProps) {
-  const [localOutputTypes, setLocalOutputTypes] = useState(creditPricing.outputTypes);
+  const [localOutputTypes, setLocalOutputTypes] = useState(creditPricing.outputTypes || []);
   const isEditable = !!onUpdate;
 
   const handleFieldChange = (index: number, field: 'name' | 'credits', value: string | number) => {
