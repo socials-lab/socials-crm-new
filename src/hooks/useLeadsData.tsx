@@ -132,6 +132,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
           qualification_status: lead.qualification_status || 'pending',
           qualification_reason: lead.qualification_reason || null,
           qualified_at: lead.qualified_at || null,
+          vat_payer_status: lead.vat_payer_status || null,
         };
       });
 
@@ -230,6 +231,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         qualification_status: 'qualified',
         qualification_reason: null,
         qualified_at: '2025-02-10T15:00:00Z',
+        vat_payer_status: 'reliable',
         legal_form: 'Společnost s ručením omezeným',
         founded_date: '2019-05-23',
         directors: [

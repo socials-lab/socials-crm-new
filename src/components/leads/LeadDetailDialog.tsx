@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Loader2, ShieldCheck, ShieldAlert, ShieldX } from 'lucide-react';
 import { 
   Building2, 
   Globe, 
@@ -69,6 +69,7 @@ import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { fetchAresData } from '@/utils/aresUtils';
+import { useVatReliability } from '@/hooks/useVatReliability';
 
 interface LeadDetailDialogProps {
   lead: Lead | null;
@@ -136,6 +137,16 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const isProcessingWarning = useRef(false);
 
   const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
+  
+  // VAT reliability check
+  const { data: vatData, isLoading: isLoadingVat } = useVatReliability(lead?.dic);
+
+  // Auto-save VAT status when fetched
+  useEffect(() => {
+    if (vatData?.vatStatus && lead?.id && vatData.vatStatus !== lead.vat_payer_status) {
+      updateLead(lead.id, { vat_payer_status: vatData.vatStatus } as any);
+    }
+  }, [vatData?.vatStatus, lead?.id]);
 
   if (!lead) return null;
 
@@ -471,6 +482,32 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                           />
                         </div>
                       </div>
+                      {/* VAT Payer Reliability Badge */}
+                      {lead.dic && (
+                        <div className="mt-1">
+                          {isLoadingVat ? (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Ověřuji spolehlivost plátce DPH…
+                            </div>
+                          ) : vatData?.vatStatus === 'reliable' || lead.vat_payer_status === 'reliable' ? (
+                            <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
+                              <ShieldCheck className="h-3 w-3 mr-1" />
+                              Spolehlivý plátce DPH
+                            </Badge>
+                          ) : vatData?.vatStatus === 'unreliable' || lead.vat_payer_status === 'unreliable' ? (
+                            <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive font-medium flex items-center gap-2">
+                              <ShieldAlert className="h-4 w-4" />
+                              ⚠️ NESPOLEHLIVÝ PLÁTCE DPH — Ručení příjemce za nezaplacenou daň!
+                            </div>
+                          ) : vatData?.vatStatus === 'not_found' || lead.vat_payer_status === 'not_found' ? (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <ShieldX className="h-3 w-3" />
+                              Není plátce DPH
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
                       {lead.legal_form && (
                         <p className="text-muted-foreground">Právní forma: <span className="font-medium text-foreground">{lead.legal_form}</span></p>
                       )}

@@ -617,6 +617,9 @@ export interface Lead {
   contract_sent_at: string | null;
   contract_signed_at: string | null;
   
+  // VAT payer reliability
+  vat_payer_status: 'reliable' | 'unreliable' | 'not_found' | null;
+  
   // Meta
   created_at: string;
   updated_at: string;
