@@ -552,6 +552,7 @@ export interface Lead {
   founded_date: string | null;
   directors: Array<{ name: string; role: string; ownership_percent: number | null }> | string[] | null;
   ares_nace: string | null;
+  court_registration: string | null;
   
   // Billing address
   billing_street: string | null;

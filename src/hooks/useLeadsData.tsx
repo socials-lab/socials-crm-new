@@ -237,6 +237,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
           { name: 'Otakar Lucák', role: 'Jednatel (od 26.8.2021)', ownership_percent: 20 },
         ],
         ares_nace: '73110 - Činnosti reklamních agentur',
+        court_registration: 'C 314420, Městský soud v Praze',
         created_at: '2025-02-10T08:00:00Z',
         updated_at: '2025-02-12T14:00:00Z',
         created_by: null,

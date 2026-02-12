@@ -15,7 +15,18 @@ export interface AresData {
   foundedDate: string | null;
   nace: string | null;
   directors: DirectorInfo[];
+  spisovaZnacka: string | null;
 }
+
+const COURT_MAP: Record<string, string> = {
+  MSPH: 'Městský soud v Praze',
+  KSCB: 'Krajský soud v Českých Budějovicích',
+  KSPL: 'Krajský soud v Plzni',
+  KSUL: 'Krajský soud v Ústí nad Labem',
+  KSHK: 'Krajský soud v Hradci Králové',
+  KSBR: 'Krajský soud v Brně',
+  KSOS: 'Krajský soud v Ostravě',
+};
 
 export async function fetchAresData(ico: string): Promise<AresData | null> {
   try {
@@ -28,6 +39,7 @@ export async function fetchAresData(ico: string): Promise<AresData | null> {
     const legalFormLabel = legalFormCode ? `${legalFormCode}` : null;
 
     let directors: DirectorInfo[] = [];
+    let spisovaZnacka: string | null = null;
     try {
       const vrRes = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/${ico}`);
       if (vrRes.ok) {
@@ -88,6 +100,21 @@ export async function fetchAresData(ico: string): Promise<AresData | null> {
         }
 
         directors.sort((a, b) => (b.ownership_percent ?? 0) - (a.ownership_percent ?? 0));
+
+        // Extract spisovaZnacka
+        const szArray = zaznam?.spisovaZnacka;
+        if (szArray && Array.isArray(szArray) && szArray.length > 0) {
+          const sz = szArray[0];
+          const oddil = sz?.oddil;
+          const vlozka = sz?.vlozka;
+          const soudKod = sz?.soud;
+          if (oddil && vlozka) {
+            const soudName = (soudKod && COURT_MAP[soudKod]) || soudKod || '';
+            spisovaZnacka = soudName
+              ? `${oddil} ${vlozka}, ${soudName}`
+              : `${oddil} ${vlozka}`;
+          }
+        }
       }
     } catch {
       // VR endpoint may not exist for all subjects
@@ -104,6 +131,7 @@ export async function fetchAresData(ico: string): Promise<AresData | null> {
       foundedDate: basic.datumVzniku || null,
       nace: basic.czNace && basic.czNace.length > 0 ? basic.czNace[0] : null,
       directors,
+      spisovaZnacka,
     };
   } catch {
     return null;

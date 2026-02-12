@@ -268,6 +268,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       founded_date: aresFounded,
       directors: aresDirectors.length > 0 ? aresDirectors : null,
       ares_nace: aresNace,
+      court_registration: null,
       created_by: user?.id || null,
       updated_by: user?.id || null,
     };
