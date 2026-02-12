@@ -406,11 +406,24 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onEdit }:
                       )}
                       {lead.directors && lead.directors.length > 0 && (
                         <div>
-                          <span className="text-muted-foreground text-xs">Jednatelé</span>
+                          <span className="text-muted-foreground text-xs">Jednatelé / společníci</span>
                           <div className="flex flex-wrap gap-1.5 mt-1">
-                            {lead.directors.map((d, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">{d}</Badge>
-                            ))}
+                            {lead.directors.map((d, i) => {
+                              const dir = typeof d === 'string' ? { name: d, role: 'jednatel', ownership_percent: null } : d;
+                              const isTopOwner = i === 0 && dir.ownership_percent !== null && dir.ownership_percent > 0;
+                              const label = dir.ownership_percent !== null
+                                ? `${dir.name} (${dir.role}, ${dir.ownership_percent}%)`
+                                : `${dir.name} (${dir.role})`;
+                              return (
+                                <Badge 
+                                  key={i} 
+                                  variant={isTopOwner ? "default" : "secondary"} 
+                                  className={cn("text-xs", isTopOwner && "bg-amber-500/90 hover:bg-amber-500 text-white border-amber-600")}
+                                >
+                                  {isTopOwner && '👑 '}{label}
+                                </Badge>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

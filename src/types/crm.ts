@@ -550,7 +550,7 @@ export interface Lead {
   // ARES data
   legal_form: string | null;
   founded_date: string | null;
-  directors: string[] | null;
+  directors: Array<{ name: string; role: string; ownership_percent: number | null }> | string[] | null;
   ares_nace: string | null;
   
   // Billing address
