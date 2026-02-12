@@ -1183,6 +1183,11 @@ export default function OnboardingForm() {
                               <p className="font-bold text-lg">{formatPrice(isProrated ? proratedMonthlyTotal : monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
                             </div>
                           </div>
+                          {isProrated && (
+                            <p className="text-xs text-muted-foreground mt-2 italic">
+                              💡 První měsíc fakturujeme poměrně dle počtu dnů, ve kterých spolupráce probíhá.
+                            </p>
+                          )}
                         </div>
                       )}
 
