@@ -8,7 +8,7 @@ import { AlertCircle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import socialsLogo from '@/assets/socials-logo.png';
 import { getApprovalByToken, getStoredExtraWorks, updateStoredExtraWorkStatus } from '@/components/extra-work/SendApprovalDialog';
 
-export default function ExtraWorkApproval() {
+export default function ExtraWorkApproval({ testMode = false }: { testMode?: boolean }) {
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,6 +17,21 @@ export default function ExtraWorkApproval() {
   const [showRejectForm, setShowRejectForm] = useState(false);
 
   useEffect(() => {
+    if (testMode) {
+      setData({
+        id: 'test-mock',
+        name: 'Redesign homepage banneru',
+        description: 'Kompletní redesign hlavního banneru na homepage včetně responzivních variant pro mobil a tablet.',
+        hours_worked: 5,
+        hourly_rate: 1200,
+        amount: 6000,
+        currency: 'CZK',
+        status: 'pending_approval',
+      });
+      setIsLoading(false);
+      return;
+    }
+
     if (!token) { setIsLoading(false); return; }
 
     const approval = getApprovalByToken(token);
@@ -33,17 +48,17 @@ export default function ExtraWorkApproval() {
       }
     }
     setIsLoading(false);
-  }, [token]);
+  }, [token, testMode]);
 
   const handleApprove = () => {
     if (!data) return;
-    updateStoredExtraWorkStatus(data.id, 'in_progress');
+    if (!testMode) updateStoredExtraWorkStatus(data.id, 'in_progress');
     setActionState('approved');
   };
 
   const handleReject = () => {
     if (!data) return;
-    updateStoredExtraWorkStatus(data.id, 'rejected');
+    if (!testMode) updateStoredExtraWorkStatus(data.id, 'rejected');
     setActionState('rejected');
   };
 
