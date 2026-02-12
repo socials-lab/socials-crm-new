@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, Plus, X } from 'lucide-react';
+import { Send, Plus, X, CheckCircle2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -104,6 +104,16 @@ export function RequestAccessDialog({
     });
     setIsSending(false);
     toast.success('Žádost o přístupy byla odeslána');
+    onOpenChange(false);
+  };
+
+  const handleMarkAsSent = () => {
+    onSent?.(['Google Analytics 4', 'Facebook Business Manager', 'Google Ads', 'S-klik'], {
+      subject: emailSubject,
+      body: emailContent,
+      recipients: toEmails,
+    });
+    toast.success('Žádost o přístupy byla označena jako odeslaná');
     onOpenChange(false);
   };
 
@@ -226,9 +236,16 @@ export function RequestAccessDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleMarkAsSent}
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Označit jako odeslané
           </Button>
           <Button
             onClick={handleSend}
