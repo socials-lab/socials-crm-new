@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -10,10 +10,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
 import type { ExtraWork } from '@/types/crm';
-import { Copy, Mail, CheckCircle2 } from 'lucide-react';
+import { Copy, Mail, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 // localStorage helper for approval tokens
 const APPROVAL_STORAGE_KEY = 'extra_work_approvals';
@@ -51,18 +53,52 @@ interface SendApprovalDialogProps {
 }
 
 export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: SendApprovalDialogProps) {
-  const { getClientById, clientContacts } = useCRMData();
+  const { getClientById, clientContacts, colleagues, engagements } = useCRMData();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
 
   const client = useMemo(() => getClientById(extraWork.client_id), [extraWork.client_id, getClientById]);
+  const colleague = useMemo(() => colleagues.find(c => c.id === extraWork.colleague_id), [extraWork.colleague_id, colleagues]);
+  const engagement = useMemo(() => engagements.find(e => e.id === extraWork.engagement_id), [extraWork.engagement_id, engagements]);
+
+  const clientName = client?.brand_name || client?.name || 'Klient';
 
   const defaultEmail = useMemo(() => {
     const contacts = clientContacts.filter(c => c.client_id === extraWork.client_id);
     const primary = contacts.find(c => c.is_primary);
     return primary?.email || contacts[0]?.email || client?.main_contact_email || '';
   }, [extraWork.client_id, clientContacts, client]);
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: extraWork.currency || 'CZK', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+
+  // Generate default email content
+  useEffect(() => {
+    if (open) {
+      const approvalUrl = getApprovalUrl();
+
+      setEmailSubject(`Schválení vícepráce: ${extraWork.name}`);
+
+      const hoursLine = extraWork.hours_worked && extraWork.hourly_rate
+        ? `\nRozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
+        : '';
+
+      setEmailBody(
+        `Dobrý den,\n\nrádi bychom Vás požádali o schválení následující vícepráce:\n\nNázev: ${extraWork.name}` +
+        (extraWork.description ? `\nPopis: ${extraWork.description}` : '') +
+        hoursLine +
+        `\nCelková částka: ${formatCurrency(extraWork.amount)}` +
+        (engagement ? `\nZakázka: ${engagement.name}` : '') +
+        (colleague ? `\nZpracoval/a: ${colleague.full_name}` : '') +
+        `\n\nPro schválení nebo zamítnutí klikněte na odkaz níže:\n${approvalUrl}` +
+        `\n\nDěkujeme za spolupráci.\n\nS pozdravem,\nSocials`
+      );
+    }
+  }, [open, extraWork.id]);
 
   const getOrCreateToken = (): string => {
     const existing = getStoredApprovals().find(a => a.extraWorkId === extraWork.id);
@@ -98,6 +134,11 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
       return;
     }
 
+    if (!emailSubject.trim()) {
+      toast({ title: 'Chyba', description: 'Předmět emailu nesmí být prázdný.', variant: 'destructive' });
+      return;
+    }
+
     const token = getOrCreateToken();
     saveApproval({
       extraWorkId: extraWork.id,
@@ -115,17 +156,18 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Odeslat ke schválení</DialogTitle>
           <DialogDescription>
-            Pošlete klientovi odkaz pro schválení vícepráce "{extraWork.name}".
+            Pošlete klientovi email pro schválení vícepráce „{extraWork.name}" ({formatCurrency(extraWork.amount)}).
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
+          {/* Recipient */}
           <div className="grid gap-2">
-            <Label>Email klienta</Label>
+            <Label>Příjemce</Label>
             <Input
               type="email"
               value={email || defaultEmail}
@@ -134,6 +176,48 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
             />
           </div>
 
+          {/* Subject */}
+          <div className="grid gap-2">
+            <Label>Předmět</Label>
+            <Input
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              placeholder="Předmět emailu"
+            />
+          </div>
+
+          {/* Body */}
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <Label>Obsah emailu</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setShowPreview(!showPreview)}
+              >
+                {showPreview ? <EyeOff className="h-3.5 w-3.5 mr-1" /> : <Eye className="h-3.5 w-3.5 mr-1" />}
+                {showPreview ? 'Upravit' : 'Náhled'}
+              </Button>
+            </div>
+            {showPreview ? (
+              <div className="rounded-md border bg-muted/30 p-4 text-sm whitespace-pre-wrap min-h-[200px]">
+                {emailBody}
+              </div>
+            ) : (
+              <Textarea
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                rows={10}
+                className="text-sm font-mono"
+                placeholder="Obsah emailu..."
+              />
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Actions */}
           <div className="flex gap-2">
             <Button onClick={handleSendEmail} className="flex-1">
               <Mail className="h-4 w-4 mr-2" /> Odeslat email
