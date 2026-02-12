@@ -824,7 +824,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* Footer - Credibility badges */}
         <footer className="pt-6 border-t">
-          <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
               <span>Meta Business Partner</span>
               <span>•</span>
@@ -834,15 +834,35 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               <span>•</span>
               <span>30 mil. Kč/měsíc ve správě kampaní</span>
             </div>
-            <a 
-              href="https://socials.cz" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-            >
-              Více o nás
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+              <a 
+                href="https://www.socials.cz/pripadove-studie" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Případové studie
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <a 
+                href="https://partneri.shoptet.cz/profesionalove/socials-advertising/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Recenze našich klientů
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <a 
+                href="https://www.socials.cz/o-nas" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Více o nás
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
             <img src={socialsLogo} alt="Socials" className="h-5 opacity-50" />
           </div>
         </footer>
