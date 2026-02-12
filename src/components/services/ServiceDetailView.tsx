@@ -1,8 +1,11 @@
-import { Check, Zap, Target, CreditCard } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Zap, Target, CreditCard, X, Plus } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface SetupItem {
   title: string;
@@ -44,9 +47,10 @@ export interface ServiceDetailData {
 
 interface ServiceDetailViewProps {
   data: ServiceDetailData;
+  onCreditPricingUpdate?: (outputTypes: { name: string; credits: number; description: string }[]) => void;
 }
 
-export function ServiceDetailView({ data }: ServiceDetailViewProps) {
+export function ServiceDetailView({ data, onCreditPricingUpdate }: ServiceDetailViewProps) {
   // Guard against undefined or null data
   if (!data) {
     return (
@@ -264,41 +268,10 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
 
       {/* Credit Pricing for Creative Boost */}
       {hasCreditPricing && data.credit_pricing && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-semibold flex items-center gap-2">
-            <CreditCard className="h-4 w-4 text-chart-4" />
-            Ceník kreditů
-          </h4>
-          
-          <p className="text-xs text-muted-foreground">
-            Cena za kredit a odměna grafika se nastavují na úrovni jednotlivé zakázky.
-          </p>
-
-          {data.credit_pricing.outputTypes && data.credit_pricing.outputTypes.length > 0 && (
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="text-xs font-medium">Typ výstupu</TableHead>
-                    <TableHead className="text-xs font-medium text-center w-20">Kredity</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.credit_pricing.outputTypes.map((output, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="text-xs">
-                        <div>{output.name}</div>
-                      </TableCell>
-                      <TableCell className="text-xs text-center font-medium">
-                        {output.credits}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
+        <CreditPricingSection
+          creditPricing={data.credit_pricing}
+          onUpdate={onCreditPricingUpdate}
+        />
       )}
     </div>
   );
@@ -313,4 +286,126 @@ function renderTierValue(value: string | boolean) {
     );
   }
   return <span className="text-xs">{value}</span>;
+}
+
+interface CreditPricingSectionProps {
+  creditPricing: CreditPricing;
+  onUpdate?: (outputTypes: { name: string; credits: number; description: string }[]) => void;
+}
+
+function CreditPricingSection({ creditPricing, onUpdate }: CreditPricingSectionProps) {
+  const [localOutputTypes, setLocalOutputTypes] = useState(creditPricing.outputTypes);
+  const isEditable = !!onUpdate;
+
+  const handleFieldChange = (index: number, field: 'name' | 'credits', value: string | number) => {
+    const updated = localOutputTypes.map((item, i) =>
+      i === index ? { ...item, [field]: value } : item
+    );
+    setLocalOutputTypes(updated);
+  };
+
+  const handleBlurSave = () => {
+    if (onUpdate) {
+      onUpdate(localOutputTypes);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLElement).blur();
+    }
+  };
+
+  const handleRemove = (index: number) => {
+    const updated = localOutputTypes.filter((_, i) => i !== index);
+    setLocalOutputTypes(updated);
+    if (onUpdate) onUpdate(updated);
+  };
+
+  const handleAdd = () => {
+    const updated = [...localOutputTypes, { name: '', credits: 1, description: '' }];
+    setLocalOutputTypes(updated);
+    if (onUpdate) onUpdate(updated);
+  };
+
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        <CreditCard className="h-4 w-4 text-chart-4" />
+        Ceník kreditů
+      </h4>
+      
+      <p className="text-xs text-muted-foreground">
+        Cena za kredit a odměna grafika se nastavují na úrovni jednotlivé zakázky.
+      </p>
+
+      {localOutputTypes.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="text-xs font-medium">Typ výstupu</TableHead>
+                <TableHead className="text-xs font-medium text-center w-20">Kredity</TableHead>
+                {isEditable && <TableHead className="w-8" />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {localOutputTypes.map((output, index) => (
+                <TableRow key={index}>
+                  <TableCell className="text-xs p-1.5">
+                    {isEditable ? (
+                      <Input
+                        value={output.name}
+                        onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
+                        onBlur={handleBlurSave}
+                        onKeyDown={handleKeyDown}
+                        className="h-7 text-xs"
+                        placeholder="Název výstupu"
+                      />
+                    ) : (
+                      <div>{output.name}</div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs text-center font-medium p-1.5">
+                    {isEditable ? (
+                      <Input
+                        type="number"
+                        min={1}
+                        value={output.credits}
+                        onChange={(e) => handleFieldChange(index, 'credits', parseInt(e.target.value) || 1)}
+                        onBlur={handleBlurSave}
+                        onKeyDown={handleKeyDown}
+                        className="h-7 text-xs text-center w-16 mx-auto"
+                      />
+                    ) : (
+                      output.credits
+                    )}
+                  </TableCell>
+                  {isEditable && (
+                    <TableCell className="p-1.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemove(index)}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {isEditable && (
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleAdd}>
+          <Plus className="h-3 w-3" />
+          Přidat typ výstupu
+        </Button>
+      )}
+    </div>
+  );
 }
