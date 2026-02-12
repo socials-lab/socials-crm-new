@@ -18,15 +18,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, TrendingUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { cs } from 'date-fns/locale';
+import { TrendingUp, ChevronDown, Info } from 'lucide-react';
 import type { ExtraWork } from '@/types/crm';
+
+const EXTRA_WORK_TEMPLATES = [
+  { name: 'Nastavení analytiky', rate: 1900 },
+  { name: 'Tvorba videí', rate: 1600 },
+];
+
+const HOURLY_RATE_CHEATSHEET = [
+  { position: 'Meta Ads', rate: 1700 },
+  { position: 'PPC', rate: 1700 },
+  { position: 'Analytika', rate: 1900 },
+  { position: 'Grafika / video', rate: 1500 },
+  { position: 'SEO', rate: 1500 },
+  { position: 'Tvorba landing pages pomocí AI', rate: 2500 },
+  { position: 'AI SEO', rate: 1800 },
+];
 
 interface AddExtraWorkDialogProps {
   open: boolean;
@@ -44,25 +56,20 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
   const [description, setDescription] = useState('');
   const [hoursWorked, setHoursWorked] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
-  const [workDate, setWorkDate] = useState<Date | undefined>(new Date());
-  const [billingPeriod, setBillingPeriod] = useState('');
   const [notes, setNotes] = useState('');
   const [upsoldById, setUpsoldById] = useState<string | null>(null);
 
-  // Calculated amount
   const calculatedAmount = useMemo(() => {
     const hours = parseFloat(hoursWorked) || 0;
     const rate = parseFloat(hourlyRate) || 0;
     return Math.round(hours * rate);
   }, [hoursWorked, hourlyRate]);
 
-  // Get active engagements
   const activeEngagements = useMemo(() => 
     engagements.filter(e => e.status === 'active'),
     [engagements]
   );
 
-  // Get client from selected engagement
   const selectedEngagement = useMemo(() => 
     engagements.find(e => e.id === engagementId),
     [engagements, engagementId]
@@ -78,10 +85,15 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
     [colleagues]
   );
 
-  const handleSubmit = () => {
-    if (!engagementId || !colleagueId || !name || !workDate || !selectedEngagement) return;
+  const handleTemplateClick = (template: typeof EXTRA_WORK_TEMPLATES[0]) => {
+    setName(template.name);
+    setHourlyRate(String(template.rate));
+  };
 
-    const effectiveBillingPeriod = billingPeriod || format(workDate, 'yyyy-MM');
+  const handleSubmit = () => {
+    if (!engagementId || !colleagueId || !name || !selectedEngagement) return;
+
+    const today = new Date();
 
     onAdd({
       client_id: selectedEngagement.client_id,
@@ -93,8 +105,8 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
       currency: 'CZK',
       hours_worked: hoursWorked ? parseFloat(hoursWorked) : null,
       hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-      work_date: format(workDate, 'yyyy-MM-dd'),
-      billing_period: effectiveBillingPeriod,
+      work_date: format(today, 'yyyy-MM-dd'),
+      billing_period: format(today, 'yyyy-MM'),
       notes,
       upsold_by_id: upsoldById,
       upsell_commission_percent: upsoldById ? 10 : null,
@@ -110,22 +122,18 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
       description: `Vícepráce "${name}" byla úspěšně vytvořena.`,
     });
 
-    // Reset form
     setEngagementId('');
     setColleagueId('');
     setName('');
     setDescription('');
     setHoursWorked('');
     setHourlyRate('');
-    setWorkDate(new Date());
-    setBillingPeriod('');
     setNotes('');
     setUpsoldById(null);
     onOpenChange(false);
   };
 
-  // Engagement is required, colleague, name, and date are required
-  const isValid = engagementId && colleagueId && name && workDate && (hoursWorked && hourlyRate);
+  const isValid = engagementId && colleagueId && name && hoursWorked && hourlyRate;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -166,7 +174,6 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
             </Select>
           </div>
 
-          {/* Show client as readonly info */}
           {client && (
             <div className="grid gap-2">
               <Label className="text-muted-foreground">Klient</Label>
@@ -178,10 +185,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
 
           <div className="grid gap-2">
             <Label htmlFor="colleague">Kolega *</Label>
-            <Select 
-              value={colleagueId} 
-              onValueChange={setColleagueId}
-            >
+            <Select value={colleagueId} onValueChange={setColleagueId}>
               <SelectTrigger>
                 <SelectValue placeholder="Vyberte kolegu" />
               </SelectTrigger>
@@ -193,6 +197,25 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Templates */}
+          <div className="grid gap-2">
+            <Label>Vzory vícepráce</Label>
+            <div className="flex flex-wrap gap-2">
+              {EXTRA_WORK_TEMPLATES.map(t => (
+                <Button
+                  key={t.name}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleTemplateClick(t)}
+                  className="text-xs"
+                >
+                  {t.name} ({formatCurrency(t.rate)}/h)
+                </Button>
+              ))}
+            </div>
           </div>
 
           <div className="grid gap-2">
@@ -246,49 +269,36 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label>Datum práce *</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "justify-start text-left font-normal",
-                    !workDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {workDate ? format(workDate, "d. MMMM yyyy", { locale: cs }) : "Vyberte datum"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={workDate}
-                  onSelect={setWorkDate}
-                  initialFocus
-                  className="pointer-events-auto"
-                  locale={cs}
-                />
-            </PopoverContent>
-          </Popover>
-          </div>
-
-          <div className="grid gap-2">
-            <Label>Fakturační období</Label>
-            <Select value={billingPeriod || (workDate ? format(workDate, 'yyyy-MM') : '')} onValueChange={setBillingPeriod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Automaticky dle data práce" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="2024-10">Říjen 2024</SelectItem>
-                <SelectItem value="2024-11">Listopad 2024</SelectItem>
-                <SelectItem value="2024-12">Prosinec 2024</SelectItem>
-                <SelectItem value="2025-01">Leden 2025</SelectItem>
-                <SelectItem value="2025-02">Únor 2025</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Hourly rate cheatsheet */}
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="flex items-center gap-1.5 text-xs text-muted-foreground px-0 h-auto py-1">
+                <Info className="h-3.5 w-3.5" />
+                Tahák hodinovek
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 rounded-md border text-sm">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left px-3 py-1.5 font-medium">Pozice</th>
+                      <th className="text-right px-3 py-1.5 font-medium">Hodinovka</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {HOURLY_RATE_CHEATSHEET.map(item => (
+                      <tr key={item.position} className="border-b last:border-0">
+                        <td className="px-3 py-1.5">{item.position}</td>
+                        <td className="px-3 py-1.5 text-right font-medium">{formatCurrency(item.rate)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Upsell section */}
           <div className="p-4 rounded-lg bg-muted/50 border space-y-3">
@@ -300,7 +310,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
               <Label htmlFor="upsold-by" className="text-sm text-muted-foreground">Prodal kolega</Label>
               <Select 
                 value={upsoldById || ''} 
-                onValueChange={(val) => setUpsoldById(val || null)}
+                onValueChange={(val) => setUpsoldById(val === 'none' ? null : val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Žádný upsell" />
