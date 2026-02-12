@@ -57,7 +57,7 @@ export function RequestAccessDialog({
     return `Žádost o nasdílení přístupů - ${companyName} / Socials`;
   };
 
-  const [toEmails, setToEmails] = useState<string[]>([]);
+  const [toEmails, setToEmails] = useState<string[]>(contactEmail ? [contactEmail] : []);
   const [newToEmail, setNewToEmail] = useState('');
   const [bccEmails, setBccEmails] = useState<string[]>(DEFAULT_BCC);
   const [newBccEmail, setNewBccEmail] = useState('');
@@ -90,7 +90,7 @@ export function RequestAccessDialog({
   };
 
   const handleSend = async () => {
-    if (!contactEmail && toEmails.length === 0) {
+    if (toEmails.length === 0) {
       toast.error('Zadejte alespoň jednoho příjemce');
       return;
     }
@@ -105,7 +105,7 @@ export function RequestAccessDialog({
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
-      setToEmails([]);
+      setToEmails(contactEmail ? [contactEmail] : []);
       setNewToEmail('');
       setBccEmails(DEFAULT_BCC);
       setNewBccEmail('');
@@ -176,18 +176,13 @@ export function RequestAccessDialog({
           {/* To */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Komu</Label>
-            {contactEmail && (
-              <Badge variant="outline" className="font-normal">
-                {contactName} ({contactEmail})
-              </Badge>
-            )}
             <EmailTagList
               emails={toEmails}
               onRemove={(e) => removeEmail(e, toEmails, setToEmails)}
               newEmail={newToEmail}
               onNewEmailChange={setNewToEmail}
               onAdd={() => addEmail(newToEmail, toEmails, setToEmails, setNewToEmail)}
-              placeholder="Přidat dalšího příjemce..."
+              placeholder="Přidat příjemce..."
             />
           </div>
 
@@ -233,7 +228,7 @@ export function RequestAccessDialog({
           </Button>
           <Button
             onClick={handleSend}
-            disabled={isSending || (!contactEmail && toEmails.length === 0)}
+            disabled={isSending || toEmails.length === 0}
           >
             {isSending ? (
               <>
