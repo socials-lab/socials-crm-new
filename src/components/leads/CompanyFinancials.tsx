@@ -46,48 +46,6 @@ export function CompanyFinancials({ ico }: CompanyFinancialsProps) {
         </div>
       )}
 
-      {/* Key info grid */}
-      <div className="grid grid-cols-2 gap-2">
-        {data.zalozena && (
-          <div className="rounded-lg border bg-card p-2.5">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Založeno</span>
-            </div>
-            <p className="text-sm font-semibold">{data.zalozena}</p>
-          </div>
-        )}
-        {data.zakladniKapital && (
-          <div className="rounded-lg border bg-card p-2.5">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Landmark className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Základní kapitál</span>
-            </div>
-            <p className="text-sm font-semibold">{data.zakladniKapital}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Contracts summary */}
-      {data.smlouvyCount !== null && data.smlouvyCount !== undefined && (
-        <div className="rounded-lg border bg-card p-2.5">
-          <div className="flex items-center gap-1.5 mb-1">
-            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Registr smluv</span>
-          </div>
-          <p className="text-sm font-semibold">
-            {data.smlouvyCount} smluv
-            {data.smlouvyTotal && data.smlouvyTotal !== '0' && ` za ${data.smlouvyTotal} Kč`}
-          </p>
-          {data.smlouvyRok && data.smlouvyRokCount !== null && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              V {data.smlouvyRok}: {data.smlouvyRokCount} smluv
-              {data.smlouvyRokTotal && data.smlouvyRokTotal !== '0' && ` za ${data.smlouvyRokTotal} Kč`}
-            </p>
-          )}
-        </div>
-      )}
-
       {/* DPH info */}
       {data.dic && (
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
