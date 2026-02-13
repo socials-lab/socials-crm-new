@@ -117,7 +117,7 @@ export default function ApplicantOnboardingForm() {
       position: '',
       birthday: undefined,
       personal_email: '',
-      avatar_url: null,
+      avatar_url: '',
       ico: '',
       company_name: '',
       dic: '',
