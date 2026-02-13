@@ -531,7 +531,7 @@ export default function ApplicantOnboardingForm() {
                             disabled={(date) => date > new Date()}
                             initialFocus
                             className="pointer-events-auto"
-                            captionLayout="dropdown-buttons"
+                            captionLayout="dropdown"
                             fromYear={1950}
                             toYear={new Date().getFullYear()}
                           />
