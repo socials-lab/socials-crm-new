@@ -1,38 +1,42 @@
 
 
-## Pridani Creative Boost sluzby do zakazky Test Client
+## Redesign detailu uchazeče + Historie komunikace
 
-### Problem
+### Co se změní
 
-Creative Boost sluzba se v zakazce Test Client nezobrazuje, protoze:
+**1. Změna layoutu z bočního sheetu na centrovaný dialog**
+- Aktuální `ApplicantDetailSheet` používá `Sheet` (boční panel vpravo)
+- Změníme na `Dialog` s `DialogContent` centrovaným uprostřed obrazovky (max-w-4xl)
+- Dvousloupcový layout podobný Lead Detail Sheetu:
+  - **Levý sloupec**: Workflow kroky (komunikace, onboarding) + kontakt/detaily
+  - **Pravý sloupec**: Historie komunikace (timeline) + poznámky
 
-1. **Nesouhlasi ID sluzby**: Kod pouziva `CREATIVE_BOOST_SERVICE_ID = 'srv-3'`, ale mock sluzba v `useCRMData.tsx` ma `id: 'service-creative-boost-mock'`. Tyto hodnoty se nikde neprotnout.
-2. **V DB neexistuje zaznam engagement_service** pro Creative Boost na zakazce Test Client -- existuje tam jen Socials Boost.
+**2. Nová komponenta: ApplicantCommunicationTimeline**
+- Chat-bubble rozhraní stejné jako `LeadCommunicationTimeline`
+- Události generované z dat uchazeče:
+  - Vytvoření uchazeče (`created_at`) -- system event
+  - Pozvánka na pohovor odeslána (`interview_invite_sent_at`) -- sent
+  - Odmítnutí odesláno (`rejection_sent_at`) -- sent
+  - Onboarding formulář odeslán (`onboarding_sent_at`) -- sent
+  - Onboarding vyplněn (`onboarding_completed_at`) -- received
+  - Převod na kolegu (`converted_to_colleague_id`) -- system
+  - Poznámky z pole `notes[]` -- internal (amber styl)
+- Seskupení podle data, chat bubliny (sent = vpravo, received = vlevo, system = uprostřed, internal = amber uprostřed)
 
-### Reseni
+### Technické detaily
 
-**1. Sjednotit ID Creative Boost sluzby** (`src/hooks/useCRMData.tsx`)
-- Zmenit `id` mock sluzby z `'service-creative-boost-mock'` na `'srv-3'`, aby odpovidal konstante `CREATIVE_BOOST_SERVICE_ID` pouzivane v `Engagements.tsx` i `useCreativeBoostData.tsx`.
+**Soubory k vytvoření:**
+- `src/components/recruitment/ApplicantCommunicationTimeline.tsx` -- nová komponenta, vzor z `LeadCommunicationTimeline`
 
-**2. Pridat demo engagement_service pro Creative Boost** (`src/hooks/useCRMData.tsx`)
-- Do query pro `engagement_services` pridat mock zaznam Creative Boost pro Test Client engagement (`e0000000-0000-0000-0000-000000000001`):
-  - `id: 'f0000000-0000-0000-0000-000000000002'` (odpovida existujicim mock datum v `creativeBoostRewardsMockData.ts`)
-  - `service_id: 'srv-3'`
-  - `name: 'Creative Boost'`
-  - `price: 75000` (50 kreditu x 1500 Kc)
-  - `billing_type: 'monthly'`
-  - `creative_boost_max_credits: 50`
-  - `creative_boost_price_per_credit: 1500`
-  - `is_active: true`
+**Soubory k úpravě:**
+- `src/components/recruitment/ApplicantDetailSheet.tsx`:
+  - Přejmenovat na dialog-based komponentu (zachová název souboru pro kompatibilitu)
+  - `Sheet` nahradit `Dialog`, `SheetContent` nahradit `DialogContent`
+  - Rozdělit obsah do dvou sloupců (grid cols-2)
+  - Levý sloupec: workflow kroky (Step 1 komunikace, Step 2 onboarding), kontakt, detaily, přílohy
+  - Pravý sloupec: `ApplicantCommunicationTimeline` nahoře, pod tím inline poznámkový formulář
+  - Motivační dopis přesunout do levého sloupce nebo kolapsovatelné sekce
 
-Tenhle mock zaznam se prida do pole `engagementServices`, pokud jeste v DB neexistuje -- stejny vzor jako u mock sluzby.
-
-**3. Zajistit Creative Boost client month pro demo** (`src/data/creativeBoostMockData.ts`)
-- Overit, ze existuji mock data `clientMonths` pro Test Client (`client-1`) s `engagementServiceId: 'f0000000-0000-0000-0000-000000000002'`. Pokud ne, pridat je.
-
-### Vysledek
-
-Po implementaci se v zakazce Test Client objevi:
-- Karta Socials Boost (stavajici, z DB)
-- Karta Creative Boost s nastavenim kreditu, cenou za kredit a odmenami pro grafika (banner 80 Kc / video 100 Kc)
+**Bez změn v:**
+- `src/pages/Recruitment.tsx` -- props rozhraní zůstává stejné (open, onOpenChange, applicant, onEdit)
 
