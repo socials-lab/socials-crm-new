@@ -57,6 +57,12 @@ const MOCK_APPLICANT_DATA = {
     phone: '+420 777 123 456',
     position: 'Performance Specialist',
   },
+  'test-applicant': {
+    full_name: 'Tereza Testovací',
+    email: 'tereza@test.cz',
+    phone: '+420 600 123 456',
+    position: 'Social Media Specialist',
+  },
 };
 
 interface ARESData {
