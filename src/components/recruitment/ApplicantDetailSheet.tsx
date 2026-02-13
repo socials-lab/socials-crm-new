@@ -105,16 +105,16 @@ export function ApplicantDetailSheet({
     }
   };
 
-  const handleSendInterviewInvite = () => {
-    sendInterviewInvite(applicant.id);
+  const handleSendInterviewInvite = (emailData: { subject: string; message: string; recipients: string[] }) => {
+    sendInterviewInvite(applicant.id, emailData);
   };
 
-  const handleSendRejection = () => {
-    sendRejection(applicant.id);
+  const handleSendRejection = (emailData: { subject: string; message: string; recipients: string[] }) => {
+    sendRejection(applicant.id, emailData);
   };
 
   const handleSendOnboarding = () => {
-    sendOnboarding(applicant.id);
+    // handled inside the dialog via sendOnboarding directly
   };
 
   return (
@@ -156,7 +156,7 @@ export function ApplicantDetailSheet({
         <Separator />
 
         {/* Two-column layout */}
-        <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 divide-x">
+        <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-[55fr_45fr] divide-x">
           {/* LEFT COLUMN: Workflow + Contact + Details */}
           <ScrollArea className="h-[calc(90vh-160px)]">
             <div className="p-6 space-y-6">

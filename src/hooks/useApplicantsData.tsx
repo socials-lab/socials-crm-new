@@ -49,12 +49,12 @@ interface ApplicantsDataContextType {
   updateApplicant: (id: string, updates: Partial<Applicant>) => void;
   deleteApplicant: (id: string) => void;
   updateApplicantStage: (id: string, stage: ApplicantStage) => void;
-  addNote: (applicantId: string, text: string) => void;
+  addNote: (applicantId: string, text: string, options?: { note_type?: ApplicantNote['note_type']; subject?: string; recipients?: string[] }) => void;
   getApplicantById: (id: string) => Applicant | undefined;
   getApplicantsByStage: (stage: ApplicantStage) => Applicant[];
-  sendInterviewInvite: (applicantId: string) => void;
-  sendRejection: (applicantId: string) => void;
-  sendOnboarding: (applicantId: string) => void;
+  sendInterviewInvite: (applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => void;
+  sendRejection: (applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => void;
+  sendOnboarding: (applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => void;
   completeOnboarding: (applicantId: string, data: OnboardingData) => Colleague;
 }
 
@@ -115,7 +115,7 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     updateApplicant(id, { stage });
   }, [updateApplicant]);
 
-  const addNote = useCallback((applicantId: string, text: string) => {
+  const addNote = useCallback((applicantId: string, text: string, options?: { note_type?: ApplicantNote['note_type']; subject?: string; recipients?: string[] }) => {
     const currentUser = colleagues.find(c => c.profile_id === user?.id);
     
     const newNote: ApplicantNote = {
@@ -125,6 +125,9 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
       author_name: currentUser?.full_name || user?.email || 'Unknown',
       text,
       created_at: new Date().toISOString(),
+      note_type: options?.note_type || 'internal',
+      subject: options?.subject || null,
+      recipients: options?.recipients || null,
     };
 
     setApplicants(prev => prev.map(a => 
@@ -134,25 +137,34 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     ));
   }, [colleagues, user]);
 
-  const sendInterviewInvite = useCallback((applicantId: string) => {
+  const sendInterviewInvite = useCallback((applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => {
     updateApplicant(applicantId, { 
       interview_invite_sent_at: new Date().toISOString(),
       stage: 'invited_interview'
     });
-  }, [updateApplicant]);
+    if (emailData) {
+      addNote(applicantId, emailData.message, { note_type: 'email_sent', subject: emailData.subject, recipients: emailData.recipients });
+    }
+  }, [updateApplicant, addNote]);
 
-  const sendRejection = useCallback((applicantId: string) => {
+  const sendRejection = useCallback((applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => {
     updateApplicant(applicantId, { 
       rejection_sent_at: new Date().toISOString(),
       stage: 'rejected'
     });
-  }, [updateApplicant]);
+    if (emailData) {
+      addNote(applicantId, emailData.message, { note_type: 'email_sent', subject: emailData.subject, recipients: emailData.recipients });
+    }
+  }, [updateApplicant, addNote]);
 
-  const sendOnboarding = useCallback((applicantId: string) => {
+  const sendOnboarding = useCallback((applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => {
     updateApplicant(applicantId, { 
       onboarding_sent_at: new Date().toISOString() 
     });
-  }, [updateApplicant]);
+    if (emailData) {
+      addNote(applicantId, emailData.message, { note_type: 'email_sent', subject: emailData.subject, recipients: emailData.recipients });
+    }
+  }, [updateApplicant, addNote]);
 
   const completeOnboarding = useCallback((applicantId: string, data: OnboardingData): Colleague => {
     // Create new colleague from onboarding data
