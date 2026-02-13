@@ -13,7 +13,7 @@ interface SendInterviewInviteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   applicant: Applicant;
-  onSend: () => void;
+  onSend: (emailData: { subject: string; message: string; recipients: string[] }) => void;
 }
 
 export function SendInterviewInviteDialog({ 
@@ -45,7 +45,7 @@ ${senderName}`;
   const handleSend = async () => {
     setIsSending(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    onSend();
+    onSend({ subject, message, recipients: [emailTo] });
     toast.success('Pozvánka na pohovor byla odeslána');
     onOpenChange(false);
     setIsSending(false);

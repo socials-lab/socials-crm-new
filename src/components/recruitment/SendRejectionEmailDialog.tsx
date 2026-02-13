@@ -13,7 +13,7 @@ interface SendRejectionEmailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   applicant: Applicant;
-  onSend: () => void;
+  onSend: (emailData: { subject: string; message: string; recipients: string[] }) => void;
 }
 
 export function SendRejectionEmailDialog({ 
@@ -45,7 +45,7 @@ ${senderName}`;
   const handleSend = async () => {
     setIsSending(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    onSend();
+    onSend({ subject, message, recipients: [emailTo] });
     toast.success('Odmítací email byl odeslán');
     onOpenChange(false);
     setIsSending(false);

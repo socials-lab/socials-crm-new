@@ -63,14 +63,14 @@ ${senderName}`;
   const handleSendEmail = () => {
     const mailtoLink = `mailto:${applicant.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
     window.open(mailtoLink, '_blank');
-    sendOnboarding(applicant.id);
+    sendOnboarding(applicant.id, { subject: emailSubject, message: emailBody, recipients: [applicant.email] });
     onSend?.();
     toast.success('Onboarding byl odeslán');
     onOpenChange(false);
   };
 
   const handleMarkAsSent = () => {
-    sendOnboarding(applicant.id);
+    sendOnboarding(applicant.id, { subject: emailSubject, message: emailBody, recipients: [applicant.email] });
     onSend?.();
     toast.success('Označeno jako odesláno');
     onOpenChange(false);

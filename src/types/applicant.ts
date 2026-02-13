@@ -11,6 +11,8 @@ export type ApplicantStage =
 
 export type ApplicantSource = 'website' | 'linkedin' | 'referral' | 'job_portal' | 'other';
 
+export type ApplicantNoteType = 'general' | 'internal' | 'email_sent' | 'email_received';
+
 export interface ApplicantNote {
   id: string;
   applicant_id: string;
@@ -18,6 +20,9 @@ export interface ApplicantNote {
   author_name: string;
   text: string;
   created_at: string;
+  note_type?: ApplicantNoteType;
+  subject?: string | null;
+  recipients?: string[] | null;
 }
 
 export interface Applicant {

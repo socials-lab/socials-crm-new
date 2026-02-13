@@ -9,6 +9,7 @@ import {
   ClipboardList,
   ArrowRightLeft,
   User,
+  MailOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Applicant } from '@/types/applicant';
@@ -26,6 +27,9 @@ interface TimelineEvent {
   title: string;
   description?: string;
   direction: MessageDirection;
+  subject?: string | null;
+  recipients?: string[] | null;
+  noteType?: string;
   authorName?: string | null;
 }
 
@@ -60,8 +64,51 @@ export function ApplicantCommunicationTimeline({ applicant }: ApplicantCommunica
     });
   }
 
-  // Interview invite sent
-  if (applicant.interview_invite_sent_at) {
+  // Notes (includes email_sent notes from send actions)
+  applicant.notes.forEach((note) => {
+    let noteIcon: React.ReactNode;
+    let noteTitle: string;
+    let direction: MessageDirection;
+
+    switch (note.note_type) {
+      case 'email_sent':
+        noteIcon = <Send className="h-3 w-3" />;
+        noteTitle = note.subject ? `${note.subject}` : 'E-mail odeslán';
+        direction = 'sent';
+        break;
+      case 'email_received':
+        noteIcon = <MailOpen className="h-3 w-3" />;
+        noteTitle = note.subject ? `${note.subject}` : 'E-mail přijat';
+        direction = 'received';
+        break;
+      case 'internal':
+        noteIcon = <Lock className="h-3 w-3" />;
+        noteTitle = 'Interní poznámka';
+        direction = 'internal';
+        break;
+      default:
+        noteIcon = <MessageSquare className="h-3 w-3" />;
+        noteTitle = 'Poznámka';
+        direction = 'internal';
+    }
+
+    events.push({
+      id: `note-${note.id}`,
+      date: note.created_at,
+      icon: noteIcon,
+      title: noteTitle,
+      description: note.text,
+      direction,
+      subject: note.subject,
+      recipients: note.recipients,
+      noteType: note.note_type,
+      authorName: note.author_name,
+    });
+  });
+
+  // System events without email content (only if no email_sent note exists for them)
+  const hasEmailNoteForInvite = applicant.notes.some(n => n.note_type === 'email_sent' && n.subject?.includes('pohovor'));
+  if (applicant.interview_invite_sent_at && !hasEmailNoteForInvite) {
     events.push({
       id: 'interview-invite',
       date: applicant.interview_invite_sent_at,
@@ -71,8 +118,8 @@ export function ApplicantCommunicationTimeline({ applicant }: ApplicantCommunica
     });
   }
 
-  // Rejection sent
-  if (applicant.rejection_sent_at) {
+  const hasEmailNoteForRejection = applicant.notes.some(n => n.note_type === 'email_sent' && n.subject?.includes('přihlášce'));
+  if (applicant.rejection_sent_at && !hasEmailNoteForRejection) {
     events.push({
       id: 'rejection-sent',
       date: applicant.rejection_sent_at,
@@ -82,8 +129,8 @@ export function ApplicantCommunicationTimeline({ applicant }: ApplicantCommunica
     });
   }
 
-  // Onboarding form sent
-  if (applicant.onboarding_sent_at) {
+  const hasEmailNoteForOnboarding = applicant.notes.some(n => n.note_type === 'email_sent' && n.subject?.includes('Onboarding'));
+  if (applicant.onboarding_sent_at && !hasEmailNoteForOnboarding) {
     events.push({
       id: 'onboarding-sent',
       date: applicant.onboarding_sent_at,
@@ -114,19 +161,6 @@ export function ApplicantCommunicationTimeline({ applicant }: ApplicantCommunica
       direction: 'system',
     });
   }
-
-  // Notes
-  applicant.notes.forEach((note) => {
-    events.push({
-      id: `note-${note.id}`,
-      date: note.created_at,
-      icon: <Lock className="h-3 w-3" />,
-      title: 'Interní poznámka',
-      description: note.text,
-      direction: 'internal',
-      authorName: note.author_name,
-    });
-  });
 
   // Sort oldest first (chat order)
   events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -221,7 +255,19 @@ export function ApplicantCommunicationTimeline({ applicant }: ApplicantCommunica
                         )}>
                           {event.title}
                         </span>
+                        {event.authorName && (
+                          <span className="text-[10px] text-muted-foreground ml-auto">
+                            {event.authorName}
+                          </span>
+                        )}
                       </div>
+
+                      {/* Recipients */}
+                      {event.recipients && event.recipients.length > 0 && (
+                        <p className="text-[10px] text-muted-foreground mb-1">
+                          {isSent ? 'Komu' : 'Od'}: {event.recipients.join(', ')}
+                        </p>
+                      )}
 
                       {/* Content */}
                       {event.description && (
