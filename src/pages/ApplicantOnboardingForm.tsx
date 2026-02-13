@@ -38,7 +38,7 @@ const formSchema = z.object({
   position: z.string().min(2, 'Pozice je povinná'),
   birthday: z.date({ required_error: 'Datum narození je povinné' }),
   personal_email: z.string().email('Neplatný email').optional().or(z.literal('')),
-  avatar_url: z.string().nullable().optional(),
+  avatar_url: z.string().min(1, 'Profilová fotka je povinná'),
   ico: z.string().min(8, 'IČO musí mít 8 číslic').max(8, 'IČO musí mít 8 číslic'),
   company_name: z.string().min(1, 'Název firmy je povinný'),
   dic: z.string().optional(),
@@ -89,7 +89,7 @@ const stepIcons = [Sparkles, User, Heart, Building, MapPin, CheckCircle2];
 const stepFieldMap: Record<number, string[]> = {
   0: [],
   1: ['full_name', 'email', 'phone', 'position'],
-  2: ['birthday'],
+  2: ['birthday', 'avatar_url'],
   3: ['ico', 'company_name'],
   4: ['billing_street', 'billing_city', 'billing_zip', 'hourly_rate', 'bank_account'],
   5: [],
@@ -544,22 +544,6 @@ export default function ApplicantOnboardingForm() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="personal_email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Soukromý email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="jan@gmail.com" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Pro interní komunikaci (nepovinné)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
             </CardContent>
           </Card>
@@ -784,8 +768,7 @@ export default function ApplicantOnboardingForm() {
 
                 <SummarySection title="Osobní údaje" icon={<Heart className="h-4 w-4" />}>
                   <SummaryRow label="Datum narození" value={values.birthday ? format(values.birthday, "d. MMMM yyyy", { locale: cs }) : '—'} />
-                  <SummaryRow label="Soukromý email" value={values.personal_email || '—'} />
-                  <SummaryRow label="Profilová fotka" value={values.avatar_url ? '✅ Nahrána' : '—'} />
+                  <SummaryRow label="Profilová fotka" value={values.avatar_url ? '✅ Nahrána' : '❌ Chybí'} />
                 </SummarySection>
 
                 <SummarySection title="Fakturační údaje" icon={<Building className="h-4 w-4" />}>
