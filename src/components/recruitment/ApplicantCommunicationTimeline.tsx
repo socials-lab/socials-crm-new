@@ -271,7 +271,7 @@ export function ApplicantCommunicationTimeline({ applicant }: ApplicantCommunica
 
                       {/* Content */}
                       {event.description && (
-                        <p className="text-sm whitespace-pre-wrap">{event.description}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words overflow-hidden">{event.description}</p>
                       )}
 
                       {/* Timestamp */}
