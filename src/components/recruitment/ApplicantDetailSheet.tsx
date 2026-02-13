@@ -167,7 +167,7 @@ export function ApplicantDetailSheet({
         <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-[55fr_45fr] divide-x">
           {/* LEFT COLUMN: Workflow + Contact + Details */}
           <ScrollArea className="h-[calc(90vh-160px)]">
-            <div className="p-6 space-y-6">
+            <div className="p-6 pb-12 space-y-6">
               {/* STEP 1: Communication with applicant */}
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm flex items-center gap-2">
