@@ -1,42 +1,43 @@
 
 
-## Redesign detailu uchazeče + Historie komunikace
+## Redesign Applicant Onboarding Form -- Typeform-style wizard
 
-### Co se změní
+### Co se zmeni
 
-**1. Změna layoutu z bočního sheetu na centrovaný dialog**
-- Aktuální `ApplicantDetailSheet` používá `Sheet` (boční panel vpravo)
-- Změníme na `Dialog` s `DialogContent` centrovaným uprostřed obrazovky (max-w-4xl)
-- Dvousloupcový layout podobný Lead Detail Sheetu:
-  - **Levý sloupec**: Workflow kroky (komunikace, onboarding) + kontakt/detaily
-  - **Pravý sloupec**: Historie komunikace (timeline) + poznámky
+Aktualni formular (`/applicant-onboarding/:id`) je jeden dlouhy formular na jedne strance. Prepiseme ho do krokoveho wizardu ve stejnem stylu jako klientsky onboarding (`/onboarding/:leadId`) -- sticky header s progress barem, kroky s navigaci Zpet/Pokracovat, a thank-you page s confetti.
 
-**2. Nová komponenta: ApplicantCommunicationTimeline**
-- Chat-bubble rozhraní stejné jako `LeadCommunicationTimeline`
-- Události generované z dat uchazeče:
-  - Vytvoření uchazeče (`created_at`) -- system event
-  - Pozvánka na pohovor odeslána (`interview_invite_sent_at`) -- sent
-  - Odmítnutí odesláno (`rejection_sent_at`) -- sent
-  - Onboarding formulář odeslán (`onboarding_sent_at`) -- sent
-  - Onboarding vyplněn (`onboarding_completed_at`) -- received
-  - Převod na kolegu (`converted_to_colleague_id`) -- system
-  - Poznámky z pole `notes[]` -- internal (amber styl)
-- Seskupení podle data, chat bubliny (sent = vpravo, received = vlevo, system = uprostřed, internal = amber uprostřed)
+### Kroky formulare (5 kroku)
 
-### Technické detaily
+1. **O tobe** -- jmeno, email, telefon, pozice (predvyplnene z prihlasky, editovatelne)
+2. **Osobni udaje** -- profilova fotka (avatar), datum narozeni, soukromy email
+3. **Fakturacni udaje** -- ICO + ARES tlacitko, nazev firmy, DIC
+4. **Fakturacni adresa a platba** -- ulice, mesto, PSC, hodinova sazba, cislo uctu
+5. **Souhrn** -- prehled vsech vyplnenych udaju, tlacitko "Odeslat"
 
-**Soubory k vytvoření:**
-- `src/components/recruitment/ApplicantCommunicationTimeline.tsx` -- nová komponenta, vzor z `LeadCommunicationTimeline`
+### Thank-you page
 
-**Soubory k úpravě:**
-- `src/components/recruitment/ApplicantDetailSheet.tsx`:
-  - Přejmenovat na dialog-based komponentu (zachová název souboru pro kompatibilitu)
-  - `Sheet` nahradit `Dialog`, `SheetContent` nahradit `DialogContent`
-  - Rozdělit obsah do dvou sloupců (grid cols-2)
-  - Levý sloupec: workflow kroky (Step 1 komunikace, Step 2 onboarding), kontakt, detaily, přílohy
-  - Pravý sloupec: `ApplicantCommunicationTimeline` nahoře, pod tím inline poznámkový formulář
-  - Motivační dopis přesunout do levého sloupce nebo kolapsovatelné sekce
+Po odeslani se zobrazi success screen s confetti (stejny styl jako klientsky onboarding):
+- Zelena ikona + "Dekujeme!"
+- 2 nasledujici kroky:
+  1. "Poslem ti smlouvu k podpisu" 
+  2. "Ozveme se s dalsim postupem spoluprace"
+- Paticka "Tesime se na spolupraci!"
 
-**Bez změn v:**
-- `src/pages/Recruitment.tsx` -- props rozhraní zůstává stejné (open, onOpenChange, applicant, onEdit)
+### Styl textu
+
+- Vsude tykani (ty/tvuj misto Vas/Vase)
+- Neformalni, pratelsky ton
+
+### Technicke detaily
+
+**Soubor k uprave:** `src/pages/ApplicantOnboardingForm.tsx` -- kompletni prepis
+
+Hlavni zmeny:
+- Pridat `currentStep` state a navigaci `goNext`/`goBack` s per-step validaci
+- Sticky header s logem, progress barem a cislem kroku (vzor z OnboardingForm.tsx)
+- 5 kroku s animovanymi prechody
+- Kazdy krok ve vlastni Card s ikonou a titulkem
+- Thank-you page s CSS confetti animaci a roadmap kroky
+- Zachovat stavajici ARES validaci, schema i submit logiku
+- Tykaci texty ve vsech labelech a popisech
 
