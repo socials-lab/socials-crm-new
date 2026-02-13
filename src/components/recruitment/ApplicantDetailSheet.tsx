@@ -58,6 +58,7 @@ import { ConvertApplicantDialog } from './ConvertApplicantDialog';
 import { SendInterviewInviteDialog } from './SendInterviewInviteDialog';
 import { SendRejectionEmailDialog } from './SendRejectionEmailDialog';
 import { ApplicantCommunicationTimeline } from './ApplicantCommunicationTimeline';
+import { InlineEditField } from '@/components/leads/InlineEditField';
 
 interface ApplicantDetailSheetProps {
   applicant: Applicant | null;
@@ -72,7 +73,7 @@ export function ApplicantDetailSheet({
   onOpenChange, 
   onEdit 
 }: ApplicantDetailSheetProps) {
-  const { updateApplicantStage, addNote, sendInterviewInvite, sendRejection, sendOnboarding } = useApplicantsData();
+  const { updateApplicantStage, updateApplicant, addNote, sendInterviewInvite, sendRejection, sendOnboarding } = useApplicantsData();
   const { colleagues } = useCRMData();
   const [newNote, setNewNote] = useState('');
   const [isOnboardingDialogOpen, setIsOnboardingDialogOpen] = useState(false);
@@ -124,8 +125,19 @@ export function ApplicantDetailSheet({
         <DialogHeader className="px-6 pt-6 pb-4 space-y-3">
           <div className="flex items-start justify-between">
             <div>
-              <DialogTitle className="text-xl">{applicant.full_name}</DialogTitle>
-              <p className="text-muted-foreground">{applicant.position}</p>
+              <DialogTitle className="text-xl">
+                <InlineEditField
+                  value={applicant.full_name}
+                  onSave={(v) => updateApplicant(applicant.id, { full_name: v })}
+                  displayClassName="text-xl font-semibold"
+                />
+              </DialogTitle>
+              <InlineEditField
+                value={applicant.position}
+                onSave={(v) => updateApplicant(applicant.id, { position: v })}
+                displayClassName="text-muted-foreground"
+                emptyText="Přidej pozici..."
+              />
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(applicant)}>
@@ -410,18 +422,21 @@ export function ApplicantDetailSheet({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${applicant.email}`} className="text-primary hover:underline">
-                      {applicant.email}
-                    </a>
+                    <InlineEditField
+                      value={applicant.email}
+                      onSave={(v) => updateApplicant(applicant.id, { email: v })}
+                      displayClassName="text-primary"
+                      emptyText="Přidej email..."
+                    />
                   </div>
-                  {applicant.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <a href={`tel:${applicant.phone}`} className="text-primary hover:underline">
-                        {applicant.phone}
-                      </a>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <InlineEditField
+                      value={applicant.phone}
+                      onSave={(v) => updateApplicant(applicant.id, { phone: v || null })}
+                      emptyText="Přidej telefon..."
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -433,14 +448,23 @@ export function ApplicantDetailSheet({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    <span>{applicant.position}</span>
+                    <InlineEditField
+                      value={applicant.position}
+                      onSave={(v) => updateApplicant(applicant.id, { position: v })}
+                      emptyText="Přidej pozici..."
+                    />
                   </div>
-                  {applicant.hourly_rate && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span>Hodinová sazba: <strong>{applicant.hourly_rate} Kč/h</strong></span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 text-sm">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Hodinová sazba:</span>
+                    <InlineEditField
+                      value={applicant.hourly_rate}
+                      onSave={(v) => updateApplicant(applicant.id, { hourly_rate: v ? Number(v) : null })}
+                      type="number"
+                      suffix="Kč/h"
+                      emptyText="Přidej sazbu..."
+                    />
+                  </div>
                   <div className="flex items-center gap-2 text-sm">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span>Odpovědný: {owner?.full_name || 'Nepřiřazeno'}</span>
