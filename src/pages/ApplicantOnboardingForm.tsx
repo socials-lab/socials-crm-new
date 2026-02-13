@@ -711,8 +711,7 @@ export default function ApplicantOnboardingForm() {
               <p className="text-sm text-muted-foreground">Tvoje hodinová sazba a kam ti pošleme peníze.</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
+              <FormField
                   control={form.control}
                   name="hourly_rate"
                   render={({ field }) => (
@@ -744,7 +743,6 @@ export default function ApplicantOnboardingForm() {
                     </FormItem>
                   )}
                 />
-              </div>
             </CardContent>
           </Card>
         );
