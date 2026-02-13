@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
+import { Progress } from '@/components/ui/progress';
 import {
   Popover,
   PopoverContent,
@@ -21,7 +22,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { CheckCircle, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle, CalendarIcon, Heart, Camera } from 'lucide-react';
+import { CheckCircle2, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle, CalendarIcon, Heart, Camera, ArrowLeft, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -30,37 +31,25 @@ import socialsLogo from '@/assets/socials-logo.png';
 import { AvatarUpload } from '@/components/forms/AvatarUpload';
 
 const formSchema = z.object({
-  // Pre-filled from application
   full_name: z.string().min(2, 'Jméno je povinné'),
   email: z.string().email('Neplatný email'),
   phone: z.string().min(9, 'Telefon je povinný'),
   position: z.string().min(2, 'Pozice je povinná'),
-  
-  // Personal info (new section)
   birthday: z.date({ required_error: 'Datum narození je povinné' }),
   personal_email: z.string().email('Neplatný email').optional().or(z.literal('')),
   avatar_url: z.string().nullable().optional(),
-  
-  // Company info (ARES validated)
   ico: z.string().min(8, 'IČO musí mít 8 číslic').max(8, 'IČO musí mít 8 číslic'),
   company_name: z.string().min(1, 'Název firmy je povinný'),
   dic: z.string().optional(),
-  
-  // Billing address
   billing_street: z.string().min(1, 'Ulice je povinná'),
   billing_city: z.string().min(1, 'Město je povinné'),
   billing_zip: z.string().min(5, 'PSČ je povinné'),
-  
-  // Hourly rate
   hourly_rate: z.coerce.number().min(100, 'Minimální hodinová sazba je 100 Kč'),
-  
-  // Bank account
   bank_account: z.string().min(1, 'Číslo účtu je povinné'),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
-// Mock data for testing - in production would fetch from API
 const MOCK_APPLICANT_DATA = {
   'mock-applicant-1': {
     full_name: 'Jan Novák',
@@ -78,8 +67,29 @@ interface ARESData {
   billing_zip: string;
 }
 
+const TOTAL_STEPS = 5;
+const stepLabels = [
+  'O tobě',
+  'Osobní údaje',
+  'Fakturační údaje',
+  'Adresa a platba',
+  'Souhrn',
+];
+
+const stepIcons = [User, Heart, Building, MapPin, CheckCircle2];
+
+const stepFieldMap: Record<number, string[]> = {
+  0: ['full_name', 'email', 'phone', 'position'],
+  1: ['birthday'],
+  2: ['ico', 'company_name'],
+  3: ['billing_street', 'billing_city', 'billing_zip', 'hourly_rate', 'bank_account'],
+  4: [],
+};
+
 export default function ApplicantOnboardingForm() {
   const { applicantId } = useParams<{ applicantId: string }>();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,17 +119,12 @@ export default function ApplicantOnboardingForm() {
     },
   });
 
-  // Load applicant data
   useEffect(() => {
     if (applicantId) {
-      // Simulate API call
       setTimeout(() => {
         const data = MOCK_APPLICANT_DATA[applicantId as keyof typeof MOCK_APPLICANT_DATA];
         if (data) {
-          form.reset({
-            ...form.getValues(),
-            ...data,
-          });
+          form.reset({ ...form.getValues(), ...data });
           setIsLoading(false);
         } else {
           setNotFound(true);
@@ -129,26 +134,17 @@ export default function ApplicantOnboardingForm() {
     }
   }, [applicantId, form]);
 
-  // ARES validation function
   const validateARES = async (ico: string) => {
     if (ico.length !== 8) {
       setAresError('IČO musí mít přesně 8 číslic');
       return;
     }
-
     setIsValidatingARES(true);
     setAresError(null);
-
     try {
       const response = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
-      
-      if (!response.ok) {
-        throw new Error('Subjekt nebyl nalezen v ARES');
-      }
-
+      if (!response.ok) throw new Error('Subjekt nebyl nalezen v ARES');
       const data = await response.json();
-      
-      // Extract data from ARES response
       const aresData: ARESData = {
         company_name: data.obchodniJmeno || '',
         dic: data.dic || '',
@@ -156,14 +152,11 @@ export default function ApplicantOnboardingForm() {
         billing_city: data.sidlo?.nazevObce || '',
         billing_zip: data.sidlo?.psc?.toString() || '',
       };
-
-      // Update form with ARES data
       form.setValue('company_name', aresData.company_name);
       if (aresData.dic) form.setValue('dic', aresData.dic);
       if (aresData.billing_street) form.setValue('billing_street', aresData.billing_street);
       if (aresData.billing_city) form.setValue('billing_city', aresData.billing_city);
       if (aresData.billing_zip) form.setValue('billing_zip', aresData.billing_zip);
-
       setAresValidated(true);
       toast.success(`Údaje načteny z ARES: ${aresData.company_name}`);
     } catch (error) {
@@ -174,23 +167,40 @@ export default function ApplicantOnboardingForm() {
     }
   };
 
+  const validateCurrentStep = useCallback(async () => {
+    const fields = stepFieldMap[currentStep] as any[];
+    if (fields.length === 0) return true;
+    return await form.trigger(fields);
+  }, [currentStep, form]);
+
+  const goNext = async () => {
+    const isValid = await validateCurrentStep();
+    if (!isValid) return;
+    setStepDirection('forward');
+    setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goBack = () => {
+    setStepDirection('backward');
+    setCurrentStep(prev => Math.max(prev - 1, 0));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
-    
-    // Simulate API call - in production would call backend to:
-    // 1. Update applicant with onboarding_completed_at
-    // 2. Create new colleague record
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
     console.log('Onboarding data submitted:', data);
-    toast.success('Onboarding dokončen! Byl jste přidán do týmu.');
+    toast.success('Onboarding dokončen! Vítej v týmu.');
     setIsSubmitted(true);
     setIsSubmitting(false);
   };
 
+  const progressValue = ((currentStep + 1) / TOTAL_STEPS) * 100;
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -198,10 +208,13 @@ export default function ApplicantOnboardingForm() {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-8 pb-8 space-y-4">
-            <h2 className="text-2xl font-bold">Odkaz nenalezen</h2>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <img src={socialsLogo} alt="Socials" className="h-10 mx-auto mb-4" />
+            <CardTitle className="text-destructive">Odkaz nenalezen</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
             <p className="text-muted-foreground">
               Tento onboarding odkaz není platný nebo již vypršel.
             </p>
@@ -213,427 +226,596 @@ export default function ApplicantOnboardingForm() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-8 pb-8 space-y-4">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+        <style>{`
+          @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+          }
+          .confetti-piece {
+            position: fixed;
+            top: -10px;
+            animation: confetti-fall linear forwards;
+            z-index: 50;
+          }
+        `}</style>
+        {Array.from({ length: 35 }).map((_, i) => {
+          const colors = ['#FF0000', '#FF6B35', '#FFD700', '#00C851', '#2196F3', '#9C27B0', '#FF4081', '#00BCD4'];
+          const color = colors[i % colors.length];
+          const left = Math.random() * 100;
+          const size = Math.random() * 8 + 5;
+          const duration = Math.random() * 2 + 2.5;
+          const delay = Math.random() * 1.5;
+          const shape = i % 3 === 0 ? '50%' : i % 3 === 1 ? '0' : '2px';
+          return (
+            <div
+              key={i}
+              className="confetti-piece"
+              style={{
+                left: `${left}%`,
+                width: `${size}px`,
+                height: `${size * (i % 2 === 0 ? 1 : 1.5)}px`,
+                backgroundColor: color,
+                borderRadius: shape,
+                animationDuration: `${duration}s`,
+                animationDelay: `${delay}s`,
+              }}
+            />
+          );
+        })}
+
+        <Card className="max-w-lg w-full relative z-10">
+          <CardHeader className="text-center">
+            <img src={socialsLogo} alt="Socials" className="h-10 mx-auto mb-4" />
+            <div className="flex justify-center mb-4">
+              <CheckCircle2 className="h-16 w-16 text-green-500" />
             </div>
-            <h2 className="text-2xl font-bold">Onboarding dokončen!</h2>
-            <p className="text-muted-foreground">
-              Děkujeme za vyplnění všech údajů. Vaše fakturační údaje byly uloženy a můžete začít spolupracovat.
+            <CardTitle className="text-2xl">🎉 Děkujeme!</CardTitle>
+            <p className="text-base text-muted-foreground mt-2">
+              Tvoje údaje byly úspěšně odeslány.
             </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-center text-lg">Co bude následovat?</h3>
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold shrink-0 text-sm">1</div>
+                  <div>
+                    <p className="font-medium">📧 Pošleme ti smlouvu k podpisu</p>
+                    <p className="text-sm text-muted-foreground">
+                      V nejbližší době ti pošleme smlouvu o spolupráci k podpisu.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">2</div>
+                  <div>
+                    <p className="font-medium">📞 Ozveme se s dalším postupem</p>
+                    <p className="text-sm text-muted-foreground">
+                      Domluvíme se na všem potřebném pro start spolupráce.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center py-4">
+              <p className="text-xl font-bold">🤝 Těšíme se na spolupráci!</p>
+            </div>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted py-8 px-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <img 
-            src={socialsLogo} 
-            alt="Socials" 
-            className="h-12 mx-auto"
-          />
-          <div>
-            <h1 className="text-3xl font-bold">Vítejte v týmu!</h1>
-            <p className="text-muted-foreground mt-2">
-              Pro dokončení nástupu vyplňte prosím fakturační údaje pro spolupráci na IČO.
-            </p>
-          </div>
-        </div>
+  const StepIcon = stepIcons[currentStep];
 
-        {/* Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Onboarding formulář</CardTitle>
-            <CardDescription>
-              Zkontrolujte předvyplněné údaje a doplňte fakturační informace
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Pre-filled info */}
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Základní údaje (z přihlášky)
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="full_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Celé jméno *</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="position"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pozice *</FormLabel>
-                          <FormControl>
-                            <Input {...field} readOnly className="bg-muted" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email *</FormLabel>
-                          <FormControl>
-                            <Input type="email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Telefon *</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Personal info - NEW SECTION */}
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Heart className="h-4 w-4" />
-                    Osobní údaje
-                  </h3>
-
-                  {/* Avatar Upload */}
-                  <FormField
-                    control={form.control}
-                    name="avatar_url"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col items-center">
-                        <FormLabel className="flex items-center gap-2">
-                          <Camera className="h-4 w-4" />
-                          Profilová fotka *
-                        </FormLabel>
-                        <FormControl>
-                          <AvatarUpload
-                            value={field.value || null}
-                            onChange={field.onChange}
-                            name={form.watch('full_name')}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-center">
-                          Nahrajte svou fotku ve formátu 1:1 pro profil v CRM
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="birthday"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Datum narození *</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-full pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "d. MMMM yyyy", { locale: cs })
-                                  ) : (
-                                    <span>Vybrat datum</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) => date > new Date()}
-                                initialFocus
-                                className="pointer-events-auto"
-                                captionLayout="dropdown-buttons"
-                                fromYear={1950}
-                                toYear={new Date().getFullYear()}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormDescription>
-                            Pro sledování narozenin v týmu
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="personal_email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Soukromý email</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="jan@gmail.com" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Pro interní komunikaci (nepovinné)
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Company/IČO info */}
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Building className="h-4 w-4" />
-                    Fakturační údaje (IČO)
-                  </h3>
-
-                  <FormField
-                    control={form.control}
-                    name="ico"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>IČO *</FormLabel>
-                        <div className="flex gap-2">
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="12345678"
-                              maxLength={8}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                setAresValidated(false);
-                                setAresError(null);
-                              }}
-                            />
-                          </FormControl>
-                          <Button 
-                            type="button"
-                            variant="outline"
-                            onClick={() => validateARES(field.value)}
-                            disabled={isValidatingARES || field.value.length !== 8}
-                          >
-                            {isValidatingARES ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <>
-                                <Search className="h-4 w-4 mr-1" />
-                                ARES
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        {aresError && (
-                          <div className="flex items-center gap-1 text-sm text-destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            {aresError}
-                          </div>
-                        )}
-                        {aresValidated && (
-                          <div className="flex items-center gap-1 text-sm text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            IČO ověřeno v ARES
-                          </div>
-                        )}
-                        <FormDescription>
-                          Zadejte IČO a klikněte na ARES pro automatické doplnění údajů
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="company_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Název firmy / Jméno OSVČ *</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Vyplní se z ARES" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="dic"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>DIČ</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="CZ12345678" />
-                          </FormControl>
-                          <FormDescription>Volitelné</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Fakturační adresa
-                  </h3>
-
-                  <FormField
-                    control={form.control}
-                    name="billing_street"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Ulice a číslo popisné *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Příkladná 123" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="billing_city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Město *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Praha" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="billing_zip"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>PSČ *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="110 00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Hourly rate & Bank */}
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    Sazba a platební údaje
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="hourly_rate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hodinová sazba (Kč) *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="500" 
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Vaše hodinová sazba pro fakturaci
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="bank_account"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Číslo bankovního účtu *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="123456789/0100" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Ve formátu číslo účtu/kód banky
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Submit */}
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  size="lg"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Odesílám...
-                    </>
-                  ) : (
-                    'Dokončit onboarding'
+  const renderStep = () => {
+    switch (currentStep) {
+      case 0:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <User className="h-5 w-5 text-primary" />
+                O tobě
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Zkontroluj si své údaje z přihlášky a případně je uprav.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="full_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tvoje celé jméno *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="position"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pozice *</FormLabel>
+                    <FormControl>
+                      <Input {...field} readOnly className="bg-muted" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pracovní email *</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefon *</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 1:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Heart className="h-5 w-5 text-primary" />
+                Osobní údaje
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Pár osobních informací, ať se lépe poznáme.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="avatar_url"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col items-center">
+                    <FormLabel className="flex items-center gap-2">
+                      <Camera className="h-4 w-4" />
+                      Tvoje profilová fotka
+                    </FormLabel>
+                    <FormControl>
+                      <AvatarUpload
+                        value={field.value || null}
+                        onChange={field.onChange}
+                        name={form.watch('full_name')}
+                      />
+                    </FormControl>
+                    <FormDescription className="text-center">
+                      Nahraj svou fotku ve formátu 1:1 pro profil v CRM
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="birthday"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Datum narození *</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "d. MMMM yyyy", { locale: cs })
+                              ) : (
+                                <span>Vyber datum</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date > new Date()}
+                            initialFocus
+                            className="pointer-events-auto"
+                            captionLayout="dropdown-buttons"
+                            fromYear={1950}
+                            toYear={new Date().getFullYear()}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription>
+                        Ať ti můžeme popřát k narozeninám 🎂
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="personal_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Soukromý email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="jan@gmail.com" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Pro interní komunikaci (nepovinné)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 2:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Building className="h-5 w-5 text-primary" />
+                Fakturační údaje
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Zadej své IČO a my doplníme zbytek z ARES.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="ico"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>IČO *</FormLabel>
+                    <div className="flex gap-2">
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="12345678"
+                          maxLength={8}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            setAresValidated(false);
+                            setAresError(null);
+                          }}
+                        />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => validateARES(field.value)}
+                        disabled={isValidatingARES || field.value.length !== 8}
+                      >
+                        {isValidatingARES ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Search className="h-4 w-4 mr-1" />
+                            ARES
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    {aresError && (
+                      <div className="flex items-center gap-1 text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        {aresError}
+                      </div>
+                    )}
+                    {aresValidated && (
+                      <div className="flex items-center gap-1 text-sm text-green-600">
+                        <CheckCircle2 className="h-4 w-4" />
+                        IČO ověřeno v ARES
+                      </div>
+                    )}
+                    <FormDescription>
+                      Zadej IČO a klikni na ARES pro automatické doplnění údajů
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="company_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Název firmy / Jméno OSVČ *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Vyplní se z ARES" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="dic"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>DIČ</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="CZ12345678" />
+                      </FormControl>
+                      <FormDescription>Volitelné</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 3:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MapPin className="h-5 w-5 text-primary" />
+                Fakturační adresa a platba
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Kam posílat faktury a kam ti pošleme peníze.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="billing_street"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ulice a číslo popisné *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Příkladná 123" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="billing_city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Město *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Praha" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="billing_zip"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PSČ *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="110 00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Sazba a platební údaje
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="hourly_rate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tvoje hodinová sazba (Kč) *</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="500" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Sazba, za kterou budeš fakturovat
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="bank_account"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Číslo bankovního účtu *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123456789/0100" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Ve formátu číslo účtu/kód banky
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 4:
+        const values = form.getValues();
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                Souhrn
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Zkontroluj si všechny údaje a odešli formulář.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <SummarySection title="O tobě" icon={<User className="h-4 w-4" />}>
+                  <SummaryRow label="Jméno" value={values.full_name} />
+                  <SummaryRow label="Pozice" value={values.position} />
+                  <SummaryRow label="Email" value={values.email} />
+                  <SummaryRow label="Telefon" value={values.phone} />
+                </SummarySection>
+
+                <SummarySection title="Osobní údaje" icon={<Heart className="h-4 w-4" />}>
+                  <SummaryRow label="Datum narození" value={values.birthday ? format(values.birthday, "d. MMMM yyyy", { locale: cs }) : '—'} />
+                  <SummaryRow label="Soukromý email" value={values.personal_email || '—'} />
+                  <SummaryRow label="Profilová fotka" value={values.avatar_url ? '✅ Nahrána' : '—'} />
+                </SummarySection>
+
+                <SummarySection title="Fakturační údaje" icon={<Building className="h-4 w-4" />}>
+                  <SummaryRow label="IČO" value={values.ico} />
+                  <SummaryRow label="Firma" value={values.company_name} />
+                  <SummaryRow label="DIČ" value={values.dic || '—'} />
+                </SummarySection>
+
+                <SummarySection title="Adresa a platba" icon={<MapPin className="h-4 w-4" />}>
+                  <SummaryRow label="Adresa" value={`${values.billing_street}, ${values.billing_city} ${values.billing_zip}`} />
+                  <SummaryRow label="Hodinová sazba" value={`${values.hourly_rate} Kč`} />
+                  <SummaryRow label="Bankovní účet" value={values.bank_account} />
+                </SummarySection>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <img src={socialsLogo} alt="Socials" className="h-8" />
+            <span className="text-sm text-muted-foreground">
+              Krok {currentStep + 1} z {TOTAL_STEPS}
+            </span>
+          </div>
+          <Progress value={progressValue} className="h-2" />
+          <p className="text-xs text-muted-foreground text-center">{stepLabels[currentStep]}</p>
+        </div>
       </div>
+
+      {/* Form content */}
+      <div className="flex-1 flex items-start justify-center px-4 py-8">
+        <div className="w-full max-w-2xl">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div
+                key={currentStep}
+                className={cn(
+                  "animate-fade-in",
+                  stepDirection === 'backward' && "animate-fade-in"
+                )}
+              >
+                {renderStep()}
+              </div>
+
+              {/* Navigation */}
+              <div className="flex justify-between mt-6">
+                {currentStep > 0 ? (
+                  <Button type="button" variant="outline" onClick={goBack}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Zpět
+                  </Button>
+                ) : (
+                  <div />
+                )}
+
+                {currentStep < TOTAL_STEPS - 1 ? (
+                  <Button type="button" onClick={goNext}>
+                    Pokračovat
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Odesílám...
+                      </>
+                    ) : (
+                      'Odeslat formulář'
+                    )}
+                  </Button>
+                )}
+              </div>
+            </form>
+          </Form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummarySection({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="border rounded-lg p-3">
+      <h4 className="font-medium text-sm flex items-center gap-2 mb-2 text-muted-foreground">
+        {icon}
+        {title}
+      </h4>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
     </div>
   );
 }
