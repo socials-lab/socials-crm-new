@@ -23,8 +23,8 @@ export function SendInterviewInviteDialog({
   onSend 
 }: SendInterviewInviteDialogProps) {
   const { user } = useAuth();
-  const senderEmail = user?.email || '';
   const senderName = [user?.user_metadata?.first_name, user?.user_metadata?.last_name].filter(Boolean).join(' ') || 'Socials';
+  const senderEmail = user?.email || '';
 
   const defaultMessage = `Dobrý den ${applicant.full_name.split(' ')[0]},
 
@@ -37,7 +37,6 @@ Dejte prosím vědět, kdy se Vám hodí 15-30 minutový call.
 Děkujeme a těšíme se na Vás,
 ${senderName}`;
 
-  const [emailFrom, setEmailFrom] = useState(senderEmail);
   const [emailTo, setEmailTo] = useState(applicant.email);
   const [subject, setSubject] = useState(`Pozvánka na pohovor – ${applicant.position} | Socials`);
   const [message, setMessage] = useState(defaultMessage);
@@ -45,10 +44,7 @@ ${senderName}`;
 
   const handleSend = async () => {
     setIsSending(true);
-    
-    // Simulate sending email
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
     onSend();
     toast.success('Pozvánka na pohovor byla odeslána');
     onOpenChange(false);
@@ -67,12 +63,11 @@ ${senderName}`;
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="email-from">Odesílatel</Label>
+            <Label>Odesílatel</Label>
             <Input
-              id="email-from"
-              type="email"
-              value={emailFrom}
-              onChange={(e) => setEmailFrom(e.target.value)}
+              value={`${senderName} <${senderEmail}>`}
+              readOnly
+              className="bg-muted/50"
             />
           </div>
 

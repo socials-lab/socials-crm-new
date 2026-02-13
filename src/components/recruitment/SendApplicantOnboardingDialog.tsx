@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Mail, Copy, Check, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 
@@ -30,6 +31,9 @@ export function SendApplicantOnboardingDialog({
   onSend,
 }: SendApplicantOnboardingDialogProps) {
   const { sendOnboarding } = useApplicantsData();
+  const { user } = useAuth();
+  const senderName = [user?.user_metadata?.first_name, user?.user_metadata?.last_name].filter(Boolean).join(' ') || 'Socials';
+  const senderEmail = user?.email || '';
   const [copied, setCopied] = useState(false);
   
   const onboardingUrl = `${window.location.origin}/applicant-onboarding/${applicant.id}`;
@@ -47,7 +51,7 @@ Formulář obsahuje předvyplněné údaje z Vaší přihlášky. Prosím zkontr
 Těšíme se na spolupráci!
 
 S pozdravem,
-HR tým Socials.cz`;
+${senderName}`;
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(onboardingUrl);
@@ -86,6 +90,16 @@ HR tým Socials.cz`;
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Sender info */}
+          <div className="space-y-2">
+            <Label>Odesílatel</Label>
+            <Input
+              value={`${senderName} <${senderEmail}>`}
+              readOnly
+              className="bg-muted/50"
+            />
+          </div>
+
           {/* Recipient info */}
           <div className="bg-muted/50 p-3 rounded-lg space-y-1">
             <p className="font-medium">{applicant.full_name}</p>
