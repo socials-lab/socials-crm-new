@@ -39,7 +39,7 @@ const formSchema = z.object({
   birthday: z.date({ required_error: 'Datum narození je povinné' }),
   personal_email: z.string().email('Neplatný email').optional().or(z.literal('')),
   avatar_url: z.string().min(1, 'Profilová fotka je povinná'),
-  ico: z.string().min(8, 'IČO musí mít 8 číslic').max(8, 'IČO musí mít 8 číslic'),
+  ico: z.string().optional().or(z.literal('')),
   company_name: z.string().min(1, 'Název firmy je povinný'),
   dic: z.string().optional(),
   billing_street: z.string().min(1, 'Ulice je povinná'),
@@ -90,7 +90,7 @@ const stepFieldMap: Record<number, string[]> = {
   0: [],
   1: ['full_name', 'email', 'phone', 'position'],
   2: ['birthday', 'avatar_url'],
-  3: ['ico', 'company_name', 'billing_street', 'billing_city', 'billing_zip'],
+  3: ['company_name', 'billing_street', 'billing_city', 'billing_zip'],
   4: ['hourly_rate', 'bank_account'],
   5: [],
 };
@@ -107,6 +107,7 @@ export default function ApplicantOnboardingForm() {
   const [aresError, setAresError] = useState<string | null>(null);
   const [aresValidated, setAresValidated] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [noIco, setNoIco] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -551,65 +552,84 @@ export default function ApplicantOnboardingForm() {
                 <Building className="h-5 w-5 text-primary" />
                 Fakturační údaje
               </CardTitle>
-              <p className="text-sm text-muted-foreground">Zadej své IČO a my doplníme zbytek z ARES.</p>
+              <p className="text-sm text-muted-foreground">
+                {noIco ? 'Vyplň fakturační údaje ručně.' : 'Zadej své IČO a my doplníme zbytek z ARES.'}
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="ico"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>IČO *</FormLabel>
-                    <div className="flex gap-2">
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="12345678"
-                          maxLength={8}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            setAresValidated(false);
-                            setAresError(null);
-                          }}
-                        />
-                      </FormControl>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => validateARES(field.value)}
-                        disabled={isValidatingARES || field.value.length !== 8}
-                      >
-                        {isValidatingARES ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Search className="h-4 w-4 mr-1" />
-                            ARES
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    {aresError && (
-                      <div className="flex items-center gap-1 text-sm text-destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        {aresError}
+              {!noIco && (
+                <FormField
+                  control={form.control}
+                  name="ico"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>IČO</FormLabel>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="12345678"
+                            maxLength={8}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              setAresValidated(false);
+                              setAresError(null);
+                            }}
+                          />
+                        </FormControl>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => validateARES(field.value)}
+                          disabled={isValidatingARES || field.value.length !== 8}
+                        >
+                          {isValidatingARES ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Search className="h-4 w-4 mr-1" />
+                              ARES
+                            </>
+                          )}
+                        </Button>
                       </div>
-                    )}
-                    {aresValidated && (
-                      <div className="flex items-center gap-1 text-sm text-green-600">
-                        <CheckCircle2 className="h-4 w-4" />
-                        IČO ověřeno v ARES
-                      </div>
-                    )}
-                    <FormDescription>
-                      Zadej IČO a klikni na ARES pro automatické doplnění údajů
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      {aresError && (
+                        <div className="flex items-center gap-1 text-sm text-destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          {aresError}
+                        </div>
+                      )}
+                      {aresValidated && (
+                        <div className="flex items-center gap-1 text-sm text-green-600">
+                          <CheckCircle2 className="h-4 w-4" />
+                          IČO ověřeno v ARES
+                        </div>
+                      )}
+                      <FormDescription>
+                        Zadej IČO a klikni na ARES pro automatické doplnění údajů
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
-              {aresValidated && (
+              <label className="flex items-center gap-2 cursor-pointer text-sm">
+                <Checkbox
+                  checked={noIco}
+                  onCheckedChange={(checked) => {
+                    setNoIco(checked === true);
+                    if (checked) {
+                      setAresValidated(false);
+                      setAresError(null);
+                      form.setValue('ico', '');
+                    }
+                  }}
+                />
+                Nemám IČO (ještě nemám živnostenský list)
+              </label>
+
+              {(aresValidated || noIco) && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
@@ -617,34 +637,36 @@ export default function ApplicantOnboardingForm() {
                       name="company_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Název firmy / Jméno OSVČ *</FormLabel>
+                          <FormLabel>{noIco ? 'Celé jméno (pro smlouvu) *' : 'Název firmy / Jméno OSVČ *'}</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} placeholder={noIco ? 'Jan Novák' : ''} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="dic"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>DIČ</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="CZ12345678" />
-                          </FormControl>
-                          <FormDescription>Volitelné</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {!noIco && (
+                      <FormField
+                        control={form.control}
+                        name="dic"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>DIČ</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="CZ12345678" />
+                            </FormControl>
+                            <FormDescription>Volitelné</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
 
                   <div className="border-t pt-4">
                     <h4 className="font-medium mb-3 flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
-                      Fakturační adresa
+                      {noIco ? 'Trvalé bydliště' : 'Fakturační adresa'}
                     </h4>
                     <FormField
                       control={form.control}
