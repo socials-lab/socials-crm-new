@@ -436,7 +436,7 @@ export default function ApplicantOnboardingForm() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Pracovní email *</FormLabel>
+                      <FormLabel>Soukromý email *</FormLabel>
                       <FormControl>
                         <Input type="email" {...field} />
                       </FormControl>
