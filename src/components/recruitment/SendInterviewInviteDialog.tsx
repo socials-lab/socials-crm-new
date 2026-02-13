@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Send, Mail } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 import type { Applicant } from '@/types/applicant';
 
 interface SendInterviewInviteDialogProps {
@@ -21,6 +22,10 @@ export function SendInterviewInviteDialog({
   applicant,
   onSend 
 }: SendInterviewInviteDialogProps) {
+  const { user } = useAuth();
+  const senderEmail = user?.email || '';
+  const senderName = [user?.user_metadata?.first_name, user?.user_metadata?.last_name].filter(Boolean).join(' ') || 'Socials';
+
   const defaultMessage = `Dobrý den ${applicant.full_name.split(' ')[0]},
 
 děkujeme za Váš zájem o pozici ${applicant.position} v agentuře Socials.
@@ -30,8 +35,9 @@ Rádi bychom se s Vámi spojili na krátký telefonát nebo online schůzku, aby
 Dejte prosím vědět, kdy se Vám hodí 15-30 minutový call.
 
 Děkujeme a těšíme se na Vás,
-Tým Socials`;
+${senderName}`;
 
+  const [emailFrom, setEmailFrom] = useState(senderEmail);
   const [emailTo, setEmailTo] = useState(applicant.email);
   const [subject, setSubject] = useState(`Pozvánka na pohovor – ${applicant.position} | Socials`);
   const [message, setMessage] = useState(defaultMessage);
@@ -60,6 +66,16 @@ Tým Socials`;
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="email-from">Odesílatel</Label>
+            <Input
+              id="email-from"
+              type="email"
+              value={emailFrom}
+              onChange={(e) => setEmailFrom(e.target.value)}
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="email-to">Příjemce</Label>
             <Input
