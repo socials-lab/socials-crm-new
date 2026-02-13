@@ -150,40 +150,60 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
   const isFinished = ['won', 'lost', 'postponed'].includes(lead.stage);
   const history = getLeadHistory(lead.id);
-  const handleStageChange = (newStage: LeadStage) => {
-    updateLeadStage(lead.id, newStage);
-    toast.success('Stav leadu byl změněn');
+  const handleStageChange = async (newStage: LeadStage) => {
+    try {
+      await updateLeadStage(lead.id, newStage);
+      toast.success('Stav leadu byl změněn');
+    } catch (error) {
+      console.error('Failed to update lead stage:', error);
+      toast.error('Nepodařilo se změnit stav leadu');
+    }
   };
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!noteText.trim()) return;
-    addNote(lead.id, noteText.trim());
-    setNoteText('');
-    toast.success('Poznámka byla přidána');
+    try {
+      await addNote(lead.id, noteText.trim());
+      setNoteText('');
+      toast.success('Poznámka byla přidána');
+    } catch (error) {
+      console.error('Failed to add note:', error);
+      toast.error('Nepodařilo se přidat poznámku');
+    }
   };
 
-  const handleAddService = (service: LeadService) => {
+  const handleAddService = async (service: LeadService) => {
     const currentServices = lead.potential_services || [];
     const updatedServices = [...currentServices, service];
     const newEstimatedPrice = updatedServices.reduce((sum, s) => sum + s.price, 0);
-    
-    updateLead(lead.id, {
-      potential_services: updatedServices,
-      estimated_price: newEstimatedPrice,
-    });
-    toast.success('Služba byla přidána do nabídky');
+
+    try {
+      await updateLead(lead.id, {
+        potential_services: updatedServices,
+        estimated_price: newEstimatedPrice,
+      });
+      toast.success('Služba byla přidána do nabídky');
+    } catch (error) {
+      console.error('Failed to add service:', error);
+      toast.error('Nepodařilo se přidat službu');
+    }
   };
 
-  const handleRemoveService = (serviceId: string) => {
+  const handleRemoveService = async (serviceId: string) => {
     const currentServices = lead.potential_services || [];
     const updatedServices = currentServices.filter(s => s.id !== serviceId);
     const newEstimatedPrice = updatedServices.reduce((sum, s) => sum + s.price, 0);
-    
-    updateLead(lead.id, {
-      potential_services: updatedServices,
-      estimated_price: newEstimatedPrice,
-    });
-    toast.success('Služba byla odebrána z nabídky');
+
+    try {
+      await updateLead(lead.id, {
+        potential_services: updatedServices,
+        estimated_price: newEstimatedPrice,
+      });
+      toast.success('Služba byla odebrána z nabídky');
+    } catch (error) {
+      console.error('Failed to remove service:', error);
+      toast.error('Nepodařilo se odebrat službu');
+    }
   };
 
   // Handle convert button click - check warnings in sequence
@@ -459,11 +479,16 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <label className="text-xs text-muted-foreground">Odpovědná osoba</label>
-                    <Select 
-                      value={lead.owner_id} 
-                      onValueChange={(newOwnerId) => {
-                        updateLead(lead.id, { owner_id: newOwnerId });
-                        toast.success('Majitel leadu byl změněn');
+                    <Select
+                      value={lead.owner_id}
+                      onValueChange={async (newOwnerId) => {
+                        try {
+                          await updateLead(lead.id, { owner_id: newOwnerId });
+                          toast.success('Majitel leadu byl změněn');
+                        } catch (error) {
+                          console.error('Failed to update owner:', error);
+                          toast.error('Nepodařilo se změnit majitele');
+                        }
                       }}
                     >
                       <SelectTrigger className="mt-1 h-9">
@@ -680,12 +705,17 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                       <Button
                         variant="default"
                         size="sm"
-                        onClick={() => {
-                          updateLead(lead.id, {
-                            access_received_at: new Date().toISOString(),
-                            stage: 'access_received' as LeadStage
-                          });
-                          toast.success('🔑 Přístupy byly přijaty!');
+                        onClick={async () => {
+                          try {
+                            await updateLead(lead.id, {
+                              access_received_at: new Date().toISOString(),
+                              stage: 'access_received' as LeadStage
+                            });
+                            toast.success('🔑 Přístupy byly přijaty!');
+                          } catch (error) {
+                            console.error('Failed to update access received:', error);
+                            toast.error('Nepodařilo se uložit změnu');
+                          }
                         }}
                       >
                         ✓ Přijato
@@ -883,13 +913,25 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                       variant={lead.onboarding_form_sent_at ? "outline" : "default"}
                       size="sm"
                       onClick={() => setIsOnboardingFormOpen(true)}
-                      disabled={isFinished}
-                      title={isFinished ? 'Lead je uzavřen' : undefined}
+                      disabled={isFinished || !lead.potential_services?.length || !lead.offer_sent_at}
+                      title={
+                        isFinished ? 'Lead je uzavřen'
+                        : !lead.potential_services?.length ? 'Nejprve přidejte služby'
+                        : !lead.offer_sent_at ? 'Nejprve odešlete nabídku'
+                        : undefined
+                      }
                     >
                       {lead.onboarding_form_sent_at ? 'Znovu odeslat' : 'Odeslat'}
                     </Button>
                   )}
                 </div>
+                {!lead.onboarding_form_completed_at && !isFinished && (!lead.potential_services?.length || !lead.offer_sent_at) && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {!lead.potential_services?.length
+                      ? 'Nejprve přidejte služby do nabídky'
+                      : 'Nejprve odešlete nabídku klientovi'}
+                  </p>
+                )}
               </div>
 
               {/* Contract Creation */}
@@ -1193,12 +1235,17 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         contactEmail={lead.contact_email}
         companyName={lead.company_name}
         leadId={lead.id}
-        onSent={(platforms) => {
-          updateLead(lead.id, {
-            access_request_sent_at: new Date().toISOString(),
-            access_request_platforms: platforms,
-            stage: 'waiting_access' as LeadStage,
-          });
+        onSent={async (platforms) => {
+          try {
+            await updateLead(lead.id, {
+              access_request_sent_at: new Date().toISOString(),
+              access_request_platforms: platforms,
+              stage: 'waiting_access' as LeadStage,
+            });
+          } catch (error) {
+            console.error('Failed to update access request:', error);
+            toast.error('Nepodařilo se uložit změnu');
+          }
         }}
       />
 
@@ -1206,11 +1253,16 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         open={isOnboardingFormOpen}
         onOpenChange={setIsOnboardingFormOpen}
         lead={lead}
-        onSent={(formUrl) => {
-          updateLead(lead.id, {
-            onboarding_form_sent_at: new Date().toISOString(),
-            onboarding_form_url: formUrl,
-          });
+        onSent={async (formUrl) => {
+          try {
+            await updateLead(lead.id, {
+              onboarding_form_sent_at: new Date().toISOString(),
+              onboarding_form_url: formUrl,
+            });
+          } catch (error) {
+            console.error('Failed to update onboarding form:', error);
+            toast.error('Nepodařilo se uložit změnu');
+          }
         }}
       />
 
@@ -1218,12 +1270,17 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         open={isSendOfferOpen}
         onOpenChange={setIsSendOfferOpen}
         lead={lead}
-        onSent={(ownerId) => {
-          updateLead(lead.id, {
-            offer_sent_at: new Date().toISOString(),
-            offer_sent_by_id: ownerId,
-            stage: 'offer_sent' as LeadStage,
-          });
+        onSent={async (ownerId) => {
+          try {
+            await updateLead(lead.id, {
+              offer_sent_at: new Date().toISOString(),
+              offer_sent_by_id: ownerId,
+              stage: 'offer_sent' as LeadStage,
+            });
+          } catch (error) {
+            console.error('Failed to update offer sent:', error);
+            toast.error('Nepodařilo se uložit změnu');
+          }
         }}
       />
 
@@ -1231,13 +1288,18 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         open={isCreateOfferOpen}
         onOpenChange={setIsCreateOfferOpen}
         lead={lead}
-        onSuccess={(token, offerUrl) => {
+        onSuccess={async (token, offerUrl) => {
           setSharedOfferUrl(offerUrl);
-          updateLead(lead.id, {
-            offer_url: offerUrl,
-            offer_created_at: new Date().toISOString(),
-            stage: 'preparing_offer' as LeadStage,
-          });
+          try {
+            await updateLead(lead.id, {
+              offer_url: offerUrl,
+              offer_created_at: new Date().toISOString(),
+              stage: 'preparing_offer' as LeadStage,
+            });
+          } catch (error) {
+            console.error('Failed to update offer:', error);
+            toast.error('Nepodařilo se uložit změnu');
+          }
         }}
       />
 
@@ -1470,12 +1532,17 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
           <AlertDialogFooter>
             <AlertDialogCancel>Zrušit</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                updateLead(lead.id, { 
-                  contract_signed_at: new Date().toISOString()
-                });
-                toast.success('✅ Smlouva byla ručně označena jako podepsaná');
-                setIsManualSignConfirmOpen(false);
+              onClick={async () => {
+                try {
+                  await updateLead(lead.id, {
+                    contract_signed_at: new Date().toISOString()
+                  });
+                  toast.success('✅ Smlouva byla ručně označena jako podepsaná');
+                  setIsManualSignConfirmOpen(false);
+                } catch (error) {
+                  console.error('Failed to mark contract as signed:', error);
+                  toast.error('Nepodařilo se uložit změnu');
+                }
               }}
               className="bg-amber-600 hover:bg-amber-700"
             >

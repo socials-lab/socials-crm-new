@@ -146,8 +146,8 @@ export default function Leads() {
     setIsAddDialogOpen(true);
   };
 
-  const handleStageChange = (leadId: string, newStage: LeadStage) => {
-    updateLeadStage(leadId, newStage);
+  const handleStageChange = async (leadId: string, newStage: LeadStage): Promise<void> => {
+    await updateLeadStage(leadId, newStage);
   };
 
   const owners = useMemo(() => {

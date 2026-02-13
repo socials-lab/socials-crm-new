@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
+// @ts-ignore - no types available
+import { vokativ } from 'vokativ';
 import { 
   Briefcase, 
   CreditCard, 
@@ -237,7 +239,7 @@ function MyWorkContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-semibold">
-            👋 Ahoj, <span className="text-primary">{currentColleague.full_name.split(' ')[0]}</span>
+            👋 Ahoj, <span className="text-primary">{vokativ(currentColleague.full_name.split(' ')[0]).replace(/^./, (c: string) => c.toUpperCase())}</span>
           </h1>
           <p className="text-sm text-muted-foreground">{currentColleague.position}</p>
         </div>
@@ -254,15 +256,10 @@ function MyWorkContent() {
         {/* My Engagements - with start dates */}
         <Card>
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-primary" />
-                Moje zakázky
-              </CardTitle>
-              <Link to="/engagements">
-                <Button variant="ghost" size="sm" className="text-xs h-7">Zobrazit vše</Button>
-              </Link>
-            </div>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Briefcase className="h-4 w-4 text-primary" />
+              Moje zakázky
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {myWorkData.clientData.length === 0 ? (
@@ -544,7 +541,7 @@ function MyWorkContent() {
       <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
         <CardContent className="p-6">
           <a 
-            href="https://notion.so/socials-hub" 
+            href="https://www.notion.so/socials/Socials-HUB-f4d0ecabe54b488486a492cbb4700bbd?source=copy_link" 
             target="_blank" 
             rel="noopener noreferrer"
             className="flex items-center gap-4 group"

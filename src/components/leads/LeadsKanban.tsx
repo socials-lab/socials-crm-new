@@ -13,7 +13,7 @@ import { useLeadTransitions } from '@/hooks/useLeadTransitions';
 interface LeadsKanbanProps {
   leads: Lead[];
   onLeadClick: (lead: Lead) => void;
-  onStageChange: (leadId: string, newStage: LeadStage) => void;
+  onStageChange: (leadId: string, newStage: LeadStage) => Promise<void>;
 }
 
 const STAGE_CONFIG: Record<LeadStage, { title: string; shortTitle: string; color: string; bgColor: string }> = {
@@ -102,26 +102,31 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
     setDragOverStage(null);
   };
 
-  const handleDrop = (e: React.DragEvent, stage: LeadStage) => {
+  const handleDrop = async (e: React.DragEvent, stage: LeadStage) => {
     e.preventDefault();
     if (draggedLeadId) {
       const lead = leads.find(l => l.id === draggedLeadId);
       if (lead && lead.stage !== stage) {
         const fromStage = lead.stage;
-        
-        // 1. Update stage immediately
-        onStageChange(draggedLeadId, stage);
-        toast.success(`Lead přesunut do "${STAGE_CONFIG[stage].title}"`);
-        
-        // 2. Show confirmation dialog for analytics
-        setPendingTransition({
-          leadId: lead.id,
-          leadName: lead.company_name,
-          fromStage,
-          toStage: stage,
-          leadValue: lead.estimated_price || 0,
-        });
-        setShowTransitionDialog(true);
+
+        try {
+          // 1. Update stage and wait for it to complete
+          await onStageChange(draggedLeadId, stage);
+          toast.success(`Lead přesunut do "${STAGE_CONFIG[stage].title}"`);
+
+          // 2. Show confirmation dialog for analytics
+          setPendingTransition({
+            leadId: lead.id,
+            leadName: lead.company_name,
+            fromStage,
+            toStage: stage,
+            leadValue: lead.estimated_price || 0,
+          });
+          setShowTransitionDialog(true);
+        } catch (error) {
+          console.error('Failed to update lead stage:', error);
+          toast.error('Nepodařilo se změnit stav leadu');
+        }
       }
     }
     setDraggedLeadId(null);
