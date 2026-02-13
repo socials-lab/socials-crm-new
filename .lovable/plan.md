@@ -1,35 +1,24 @@
 
-## Intro screen a souhlas na konci
+## Uprava Thank You stranky - info o Socials emailu a dalsich krocich
 
-### 1. Pridani uvodni obrazovky (Intro screen) - novy krok 0
+### Co se zmeni
 
-Pred prvnim krokem formulare se zobrazi uvodni obrazovka s:
-- Logo Socials
-- Nadpis "Vitej v tymu Socials!"
-- Text vysvetlujici proc formular vyplnuji: "Abychom mohli pripravit smlouvu a vse potrebne pro start spoluprace, potrebujeme od tebe vyplnit kratky onboarding formular."
-- Prehled co bude formular obsahovat (4 body: osobni udaje, fakturacni udaje, adresa a platba, souhrn)
-- Odhadovany cas vyplneni (~3 minuty)
-- Tlacitko "Zacit vyplnovat"
+Na thank you obrazovce po odeslani onboardingu se upravi kroky "Co bude nasledovat" tak, aby reflektovaly realny proces:
 
-Tato obrazovka nebude mit progress bar v headeru - header se zobrazi az po kliknuti na "Zacit".
+**Nove kroky:**
 
-### 2. Checkbox souhlasu na poslednim kroku (Souhrn)
+1. **Zalozime ti Socials email** - Na tvuj osobni email (ten ktery jsi vyplnil/a) ti prijdou prihlasovaci udaje k novemu firemnimu emailu @socials.cz. Tam najdes dalsi instrukce.
 
-Na konci souhrnove stranky se prida:
-- Checkbox s textem: "Souhlasim s odeslenim udaju a pripravou smlouvy o spolupraci na zaklade vyplnenych udaju."
-- Tlacitko "Odeslat formular" bude disabled dokud checkbox neni zaskrtnuty
+2. **Pristup do nastroju** - Automaticky ti zalozime ucty ve Freelo (projektovy nastroj) a Slacku (komunikace). Pozvanka prijde na tvuj novy Socials email.
+
+3. **Smlouva k podpisu** - Na zaklade vyplnenych udaju pripravime smlouvu o spolupraci a posleme ti ji k podpisu.
+
+4. **Ozveme se s dalsim postupem** - Domluvime se na vsem potrebnem pro start spoluprace.
+
+Navic se prida informacni box s upozornenim: "Zkontroluj si osobni email vcetne slozky spam - prihlasovaci udaje ti prijdou behem 24 hodin."
 
 ### Technicke detaily
 
-**Soubor:** `src/pages/ApplicantOnboardingForm.tsx`
+**Soubor:** `src/pages/ApplicantOnboardingForm.tsx` (radky 288-312)
 
-**Zmeny:**
-- TOTAL_STEPS se zvysi z 5 na 6
-- stepLabels se rozsiri o "Uvod" na zacatek
-- stepIcons se rozsiri o vhodnou ikonu (napr. Sparkles nebo Rocket)
-- stepFieldMap se posune - puvodni kroky 0-4 budou 1-5
-- Novy stav `agreedToTerms` (boolean) pro checkbox
-- Novy `case 0` v renderStep() pro intro obrazovku
-- Na poslednim kroku (case 5, Souhrn) se prida Checkbox komponent
-- Tlacitko submit bude disabled pri `!agreedToTerms`
-- Intro screen bude mit vlastni layout bez progress baru (podminka `currentStep === 0`)
+Uprava obsahu `CardContent` v sekci `isSubmitted` - nahrazeni stavajicich 2 kroku za 4 nove kroky s popisem automatizace (Google Workspace, Slack, Freelo, CRM profil). Pridani Alert/info boxu o kontrole emailu.
