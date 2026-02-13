@@ -286,6 +286,13 @@ export default function ApplicantOnboardingForm() {
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-4 text-sm">
+              <p className="font-medium text-blue-800 dark:text-blue-300">📬 Zkontroluj si osobní email včetně složky spam</p>
+              <p className="text-blue-700 dark:text-blue-400 mt-1">
+                Přihlašovací údaje k novému Socials emailu ti přijdou na tvůj osobní email během 24 hodin.
+              </p>
+            </div>
+
             <div className="space-y-4">
               <h3 className="font-semibold text-center text-lg">Co bude následovat?</h3>
 
@@ -293,15 +300,35 @@ export default function ApplicantOnboardingForm() {
                 <div className="flex items-start gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
                   <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold shrink-0 text-sm">1</div>
                   <div>
-                    <p className="font-medium">📧 Pošleme ti smlouvu k podpisu</p>
+                    <p className="font-medium">📧 Založíme ti Socials email</p>
                     <p className="text-sm text-muted-foreground">
-                      V nejbližší době ti pošleme smlouvu o spolupráci k podpisu.
+                      Na tvůj osobní email ti přijdou přihlašovací údaje k novému firemnímu emailu @socials.cz. Tam najdeš další instrukce.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                   <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">2</div>
+                  <div>
+                    <p className="font-medium">🛠️ Přístup do nástrojů</p>
+                    <p className="text-sm text-muted-foreground">
+                      Automaticky ti založíme účty ve Freelo (projektový nástroj) a Slacku (komunikace). Pozvánka přijde na tvůj nový Socials email.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">3</div>
+                  <div>
+                    <p className="font-medium">📝 Smlouva k podpisu</p>
+                    <p className="text-sm text-muted-foreground">
+                      Na základě vyplněných údajů připravíme smlouvu o spolupráci a pošleme ti ji k podpisu.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">4</div>
                   <div>
                     <p className="font-medium">📞 Ozveme se s dalším postupem</p>
                     <p className="text-sm text-muted-foreground">
