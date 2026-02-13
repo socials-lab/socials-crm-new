@@ -717,12 +717,12 @@ export default function ApplicantOnboardingForm() {
                   name="hourly_rate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tvoje hodinová sazba (Kč) *</FormLabel>
+                      <FormLabel>Domluvená hodinová sazba na vícepráce (Kč) *</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="500" {...field} />
                       </FormControl>
                       <FormDescription>
-                        Sazba, za kterou budeš fakturovat
+                        Za klienty budeš mít fixní částku
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
