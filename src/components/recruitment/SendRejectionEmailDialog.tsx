@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Send, UserX } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 import type { Applicant } from '@/types/applicant';
 
 interface SendRejectionEmailDialogProps {
@@ -21,6 +22,10 @@ export function SendRejectionEmailDialog({
   applicant,
   onSend 
 }: SendRejectionEmailDialogProps) {
+  const { user } = useAuth();
+  const senderName = [user?.user_metadata?.first_name, user?.user_metadata?.last_name].filter(Boolean).join(' ') || 'Socials';
+  const senderEmail = user?.email || '';
+
   const defaultMessage = `Dobrý den ${applicant.full_name.split(' ')[0]},
 
 děkujeme za Váš zájem o pozici ${applicant.position} v agentuře Socials a čas, který jste věnoval/a přípravě své přihlášky.
@@ -30,7 +35,7 @@ Po pečlivém zvážení jsme se rozhodli pokračovat s jinými kandidáty, jeji
 Přejeme Vám mnoho úspěchů v dalším profesním směřování a věříme, že najdete pozici, která bude přesně pro Vás.
 
 S pozdravem,
-Tým Socials`;
+${senderName}`;
 
   const [emailTo, setEmailTo] = useState(applicant.email);
   const [subject, setSubject] = useState(`Vyjádření k Vaší přihlášce – ${applicant.position} | Socials`);
@@ -39,10 +44,7 @@ Tým Socials`;
 
   const handleSend = async () => {
     setIsSending(true);
-    
-    // Simulate sending email
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
     onSend();
     toast.success('Odmítací email byl odeslán');
     onOpenChange(false);
@@ -65,12 +67,11 @@ Tým Socials`;
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email-to">Příjemce</Label>
+            <Label>Odesílatel</Label>
             <Input
-              id="email-to"
-              type="email"
-              value={emailTo}
-              onChange={(e) => setEmailTo(e.target.value)}
+              value={`${senderName} <${senderEmail}>`}
+              readOnly
+              className="bg-muted/50"
             />
           </div>
 
