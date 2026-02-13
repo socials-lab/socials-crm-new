@@ -282,16 +282,10 @@ export default function ApplicantOnboardingForm() {
             </div>
             <CardTitle className="text-2xl">🎉 Děkujeme!</CardTitle>
             <p className="text-base text-muted-foreground mt-2">
-              Tvoje údaje byly úspěšně odeslány.
+              Tvoje údaje byly úspěšně odeslány. Teď je řada na nás!
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-4 text-sm">
-              <p className="font-medium text-blue-800 dark:text-blue-300">📬 Zkontroluj si email včetně složky spam</p>
-              <p className="text-blue-700 dark:text-blue-400 mt-1">
-                Smlouvu k digitálnímu podpisu ti pošleme na email do 24 hodin.
-              </p>
-            </div>
 
             <div className="space-y-4">
               <h3 className="font-semibold text-center text-lg">Co bude následovat?</h3>
