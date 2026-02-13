@@ -1,40 +1,35 @@
 
+## Intro screen a souhlas na konci
 
-## Testovaci flow pro Applicant Onboarding
+### 1. Pridani uvodni obrazovky (Intro screen) - novy krok 0
 
-### Soucasny stav
-Formular `/applicant-onboarding/:applicantId` aktualne rozpoznava pouze `mock-applicant-1` v hardcoded MOCK_APPLICANT_DATA. Neexistuje univerzalni testovaci identifikator jako `test-lead` u klientskeho onboardingu.
+Pred prvnim krokem formulare se zobrazi uvodni obrazovka s:
+- Logo Socials
+- Nadpis "Vitej v tymu Socials!"
+- Text vysvetlujici proc formular vyplnuji: "Abychom mohli pripravit smlouvu a vse potrebne pro start spoluprace, potrebujeme od tebe vyplnit kratky onboarding formular."
+- Prehled co bude formular obsahovat (4 body: osobni udaje, fakturacni udaje, adresa a platba, souhrn)
+- Odhadovany cas vyplneni (~3 minuty)
+- Tlacitko "Zacit vyplnovat"
 
-### Co se zmeni
+Tato obrazovka nebude mit progress bar v headeru - header se zobrazi az po kliknuti na "Zacit".
 
-**1. Pridani `test-applicant` identifikatoru** (`src/pages/ApplicantOnboardingForm.tsx`)
-- Pridani konstanty `TEST_APPLICANT` s realistickymi predvyplnenymi daty (jmeno, email, telefon, pozice)
-- Uprava logiky nacitani dat tak, aby `test-applicant` fungoval jako platny identifikator
-- Testovaci URL: `/applicant-onboarding/test-applicant`
+### 2. Checkbox souhlasu na poslednim kroku (Souhrn)
 
-**2. Uprava mock dat v `useApplicantsData.tsx`**
-- Pridani `test-applicant` do INITIAL_MOCK_APPLICANTS se stage `hired`, aby bylo mozne testovat odeslani onboardingu z detailu uchazeceP
-
-**3. Uprava `SendApplicantOnboardingDialog.tsx`**
-- URL pro onboarding se jiz generuje spravne z `applicant.id`, takze pro `test-applicant` bude automaticky smerovat na `/applicant-onboarding/test-applicant`
+Na konci souhrnove stranky se prida:
+- Checkbox s textem: "Souhlasim s odeslenim udaju a pripravou smlouvy o spolupraci na zaklade vyplnenych udaju."
+- Tlacitko "Odeslat formular" bude disabled dokud checkbox neni zaskrtnuty
 
 ### Technicke detaily
 
-**Soubory k uprave:**
-- `src/pages/ApplicantOnboardingForm.tsx` -- pridani TEST_APPLICANT konstanty a logiky pro jeji rozpoznani
-- `src/hooks/useApplicantsData.tsx` -- pridani test-applicant do mock dat
+**Soubor:** `src/pages/ApplicantOnboardingForm.tsx`
 
-**TEST_APPLICANT data:**
-```ts
-const TEST_APPLICANT = {
-  full_name: 'Tereza Testovací',
-  email: 'tereza@test.cz',
-  phone: '+420 600 123 456',
-  position: 'Social Media Specialist',
-};
-```
-
-**Testovaci postup:**
-1. Otevrit `/applicant-onboarding/test-applicant`
-2. Formular bude predvyplneny testovacimi daty
-3. Moznost projit vsemi kroky az po odeslani
+**Zmeny:**
+- TOTAL_STEPS se zvysi z 5 na 6
+- stepLabels se rozsiri o "Uvod" na zacatek
+- stepIcons se rozsiri o vhodnou ikonu (napr. Sparkles nebo Rocket)
+- stepFieldMap se posune - puvodni kroky 0-4 budou 1-5
+- Novy stav `agreedToTerms` (boolean) pro checkbox
+- Novy `case 0` v renderStep() pro intro obrazovku
+- Na poslednim kroku (case 5, Souhrn) se prida Checkbox komponent
+- Tlacitko submit bude disabled pri `!agreedToTerms`
+- Intro screen bude mit vlastni layout bez progress baru (podminka `currentStep === 0`)
