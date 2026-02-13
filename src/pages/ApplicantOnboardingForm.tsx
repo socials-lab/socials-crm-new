@@ -623,29 +623,31 @@ export default function ApplicantOnboardingForm() {
                       setAresValidated(false);
                       setAresError(null);
                       form.setValue('ico', '');
+                      form.setValue('company_name', form.getValues('full_name'));
+                      form.setValue('dic', '');
                     }
                   }}
                 />
-                Nemám IČO (ještě nemám živnostenský list)
+                Nemám IČO
               </label>
 
               {(aresValidated || noIco) && (
                 <div className="space-y-4 animate-fade-in">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="company_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{noIco ? 'Celé jméno (pro smlouvu) *' : 'Název firmy / Jméno OSVČ *'}</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder={noIco ? 'Jan Novák' : ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {!noIco && (
+                  {!noIco && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="company_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Název firmy / Jméno OSVČ *</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <FormField
                         control={form.control}
                         name="dic"
@@ -660,8 +662,8 @@ export default function ApplicantOnboardingForm() {
                           </FormItem>
                         )}
                       />
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <div className="border-t pt-4">
                     <h4 className="font-medium mb-3 flex items-center gap-2">
