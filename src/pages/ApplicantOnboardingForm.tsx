@@ -80,18 +80,18 @@ const stepLabels = [
   'O tobě',
   'Osobní údaje',
   'Fakturační údaje',
-  'Adresa a platba',
+  'Sazba a platba',
   'Souhrn',
 ];
 
-const stepIcons = [Sparkles, User, Heart, Building, MapPin, CheckCircle2];
+const stepIcons = [Sparkles, User, Heart, Building, CreditCard, CheckCircle2];
 
 const stepFieldMap: Record<number, string[]> = {
   0: [],
   1: ['full_name', 'email', 'phone', 'position'],
   2: ['birthday', 'avatar_url'],
-  3: ['ico', 'company_name'],
-  4: ['billing_street', 'billing_city', 'billing_zip', 'hourly_rate', 'bank_account'],
+  3: ['ico', 'company_name', 'billing_street', 'billing_city', 'billing_zip'],
+  4: ['hourly_rate', 'bank_account'],
   5: [],
 };
 
@@ -615,35 +615,87 @@ export default function ApplicantOnboardingForm() {
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="company_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Název firmy / Jméno OSVČ *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Vyplní se z ARES" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="dic"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>DIČ</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="CZ12345678" />
-                      </FormControl>
-                      <FormDescription>Volitelné</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {aresValidated && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="company_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Název firmy / Jméno OSVČ *</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dic"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>DIČ</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="CZ12345678" />
+                          </FormControl>
+                          <FormDescription>Volitelné</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Fakturační adresa
+                    </h4>
+                    <FormField
+                      control={form.control}
+                      name="billing_street"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ulice a číslo popisné *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Příkladná 123" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <FormField
+                        control={form.control}
+                        name="billing_city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Město *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Praha" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="billing_zip"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>PSČ *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="110 00" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         );
@@ -653,94 +705,45 @@ export default function ApplicantOnboardingForm() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <MapPin className="h-5 w-5 text-primary" />
-                Fakturační adresa a platba
+                <CreditCard className="h-5 w-5 text-primary" />
+                Sazba a platba
               </CardTitle>
-              <p className="text-sm text-muted-foreground">Kam posílat faktury a kam ti pošleme peníze.</p>
+              <p className="text-sm text-muted-foreground">Tvoje hodinová sazba a kam ti pošleme peníze.</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="billing_street"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ulice a číslo popisné *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Příkladná 123" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="billing_city"
+                  name="hourly_rate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Město *</FormLabel>
+                      <FormLabel>Tvoje hodinová sazba (Kč) *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Praha" {...field} />
+                        <Input type="number" placeholder="500" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        Sazba, za kterou budeš fakturovat
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
-                  name="billing_zip"
+                  name="bank_account"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>PSČ *</FormLabel>
+                      <FormLabel>Číslo bankovního účtu *</FormLabel>
                       <FormControl>
-                        <Input placeholder="110 00" {...field} />
+                        <Input placeholder="123456789/0100" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        Ve formátu číslo účtu/kód banky
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-3 flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  Sazba a platební údaje
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="hourly_rate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tvoje hodinová sazba (Kč) *</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="500" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Sazba, za kterou budeš fakturovat
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bank_account"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Číslo bankovního účtu *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="123456789/0100" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Ve formátu číslo účtu/kód banky
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -775,10 +778,10 @@ export default function ApplicantOnboardingForm() {
                   <SummaryRow label="IČO" value={values.ico} />
                   <SummaryRow label="Firma" value={values.company_name} />
                   <SummaryRow label="DIČ" value={values.dic || '—'} />
+                  <SummaryRow label="Adresa" value={`${values.billing_street}, ${values.billing_city} ${values.billing_zip}`} />
                 </SummarySection>
 
-                <SummarySection title="Adresa a platba" icon={<MapPin className="h-4 w-4" />}>
-                  <SummaryRow label="Adresa" value={`${values.billing_street}, ${values.billing_city} ${values.billing_zip}`} />
+                <SummarySection title="Sazba a platba" icon={<CreditCard className="h-4 w-4" />}>
                   <SummaryRow label="Hodinová sazba" value={`${values.hourly_rate} Kč`} />
                   <SummaryRow label="Bankovní účet" value={values.bank_account} />
                 </SummarySection>
