@@ -22,7 +22,8 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { CheckCircle2, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle, CalendarIcon, Heart, Camera, ArrowLeft, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle, CalendarIcon, Heart, Camera, ArrowLeft, ArrowRight, Sparkles, ClipboardList } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -73,8 +74,9 @@ interface ARESData {
   billing_zip: string;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 const stepLabels = [
+  'Úvod',
   'O tobě',
   'Osobní údaje',
   'Fakturační údaje',
@@ -82,14 +84,15 @@ const stepLabels = [
   'Souhrn',
 ];
 
-const stepIcons = [User, Heart, Building, MapPin, CheckCircle2];
+const stepIcons = [Sparkles, User, Heart, Building, MapPin, CheckCircle2];
 
 const stepFieldMap: Record<number, string[]> = {
-  0: ['full_name', 'email', 'phone', 'position'],
-  1: ['birthday'],
-  2: ['ico', 'company_name'],
-  3: ['billing_street', 'billing_city', 'billing_zip', 'hourly_rate', 'bank_account'],
-  4: [],
+  0: [],
+  1: ['full_name', 'email', 'phone', 'position'],
+  2: ['birthday'],
+  3: ['ico', 'company_name'],
+  4: ['billing_street', 'billing_city', 'billing_zip', 'hourly_rate', 'bank_account'],
+  5: [],
 };
 
 export default function ApplicantOnboardingForm() {
@@ -103,6 +106,7 @@ export default function ApplicantOnboardingForm() {
   const [isValidatingARES, setIsValidatingARES] = useState(false);
   const [aresError, setAresError] = useState<string | null>(null);
   const [aresValidated, setAresValidated] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -202,7 +206,7 @@ export default function ApplicantOnboardingForm() {
     setIsSubmitting(false);
   };
 
-  const progressValue = ((currentStep + 1) / TOTAL_STEPS) * 100;
+
 
   if (isLoading) {
     return (
@@ -323,6 +327,47 @@ export default function ApplicantOnboardingForm() {
     switch (currentStep) {
       case 0:
         return (
+          <Card className="text-center">
+            <CardHeader className="pb-2">
+              <div className="flex justify-center mb-2">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-8 w-8 text-primary" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl">Vítej v týmu Socials! 🎉</CardTitle>
+              <p className="text-muted-foreground mt-2">
+                Abychom mohli připravit smlouvu a vše potřebné pro start spolupráce, potřebujeme od tebe vyplnit krátký onboarding formulář.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-left space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Co tě čeká</h4>
+                <div className="space-y-2">
+                  {[
+                    { icon: User, label: 'Základní údaje', desc: 'Tvoje jméno, kontakt a pozice' },
+                    { icon: Building, label: 'Fakturační údaje', desc: 'IČO a údaje pro smlouvu' },
+                    { icon: MapPin, label: 'Adresa a platba', desc: 'Fakturační adresa a bankovní účet' },
+                    { icon: ClipboardList, label: 'Souhrn a odeslání', desc: 'Kontrola údajů a souhlas' },
+                  ].map(({ icon: Icon, label, desc }) => (
+                    <div key={label} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-sm">{label}</p>
+                        <p className="text-xs text-muted-foreground">{desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">⏱ Vyplnění zabere asi 3 minuty</p>
+            </CardContent>
+          </Card>
+        );
+
+      case 1:
+        return (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -390,7 +435,7 @@ export default function ApplicantOnboardingForm() {
           </Card>
         );
 
-      case 1:
+      case 2:
         return (
           <Card>
             <CardHeader>
@@ -493,7 +538,7 @@ export default function ApplicantOnboardingForm() {
           </Card>
         );
 
-      case 2:
+      case 3:
         return (
           <Card>
             <CardHeader>
@@ -592,7 +637,7 @@ export default function ApplicantOnboardingForm() {
           </Card>
         );
 
-      case 3:
+      case 4:
         return (
           <Card>
             <CardHeader>
@@ -690,7 +735,7 @@ export default function ApplicantOnboardingForm() {
           </Card>
         );
 
-      case 4:
+      case 5:
         const values = form.getValues();
         return (
           <Card>
@@ -728,6 +773,19 @@ export default function ApplicantOnboardingForm() {
                   <SummaryRow label="Bankovní účet" value={values.bank_account} />
                 </SummarySection>
               </div>
+
+              <div className="border-t pt-4 mt-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={agreedToTerms}
+                    onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm leading-relaxed">
+                    Souhlasím s odesláním údajů a přípravou smlouvy o spolupráci na základě vyplněných údajů.
+                  </span>
+                </label>
+              </div>
             </CardContent>
           </Card>
         );
@@ -739,19 +797,21 @@ export default function ApplicantOnboardingForm() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Sticky header */}
-      <div className="sticky top-0 z-10 bg-background border-b">
-        <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <img src={socialsLogo} alt="Socials" className="h-8" />
-            <span className="text-sm text-muted-foreground">
-              Krok {currentStep + 1} z {TOTAL_STEPS}
-            </span>
+      {/* Sticky header - hidden on intro */}
+      {currentStep > 0 && (
+        <div className="sticky top-0 z-10 bg-background border-b">
+          <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <img src={socialsLogo} alt="Socials" className="h-8" />
+              <span className="text-sm text-muted-foreground">
+                Krok {currentStep} z {TOTAL_STEPS - 1}
+              </span>
+            </div>
+            <Progress value={(currentStep / (TOTAL_STEPS - 1)) * 100} className="h-2" />
+            <p className="text-xs text-muted-foreground text-center">{stepLabels[currentStep]}</p>
           </div>
-          <Progress value={progressValue} className="h-2" />
-          <p className="text-xs text-muted-foreground text-center">{stepLabels[currentStep]}</p>
         </div>
-      </div>
+      )}
 
       {/* Form content */}
       <div className="flex-1 flex items-start justify-center px-4 py-8">
@@ -779,13 +839,18 @@ export default function ApplicantOnboardingForm() {
                   <div />
                 )}
 
-                {currentStep < TOTAL_STEPS - 1 ? (
+                {currentStep === 0 ? (
+                  <Button type="button" onClick={goNext} className="mx-auto" size="lg">
+                    Začít vyplňovat
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                ) : currentStep < TOTAL_STEPS - 1 ? (
                   <Button type="button" onClick={goNext}>
                     Pokračovat
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={isSubmitting}>
+                  <Button type="submit" disabled={isSubmitting || !agreedToTerms}>
                     {isSubmitting ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
