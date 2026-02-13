@@ -1,24 +1,23 @@
 
-## Uprava Thank You stranky - info o Socials emailu a dalsich krocich
+## Fakturační údaje - progressive disclosure po zadání IČO
 
-### Co se zmeni
+### Co se změní
 
-Na thank you obrazovce po odeslani onboardingu se upravi kroky "Co bude nasledovat" tak, aby reflektovaly realny proces:
+V kroku 3 (Fakturační údaje) se nejprve zobrazí **pouze pole IČO s tlačítkem ARES**. Ostatní pole (název firmy, DIČ) se zobrazí až po úspěšném ověření IČO v ARES. Navíc se do tohoto kroku přesunou i fakturační adresa pole (ulice, město, PSČ), protože ta se rovněž vyplňují z ARES a logicky patří k fakturačním údajům.
 
-**Nove kroky:**
+**Postup:**
+1. Po zadání IČO a kliknutí na ARES se údaje automaticky načtou
+2. Teprve po úspěšném načtení se odkryjí pole: název firmy, DIČ, ulice, město, PSČ
+3. Uživatel může údaje z ARES případně ručně upravit
+4. Krok 4 (Adresa a platba) se zredukuje jen na hodinovou sazbu a bankovní účet a přejmenuje se na "Sazba a platba"
 
-1. **Zalozime ti Socials email** - Na tvuj osobni email (ten ktery jsi vyplnil/a) ti prijdou prihlasovaci udaje k novemu firemnimu emailu @socials.cz. Tam najdes dalsi instrukce.
+### Technické detaily
 
-2. **Pristup do nastroju** - Automaticky ti zalozime ucty ve Freelo (projektovy nastroj) a Slacku (komunikace). Pozvanka prijde na tvuj novy Socials email.
+**Soubor:** `src/pages/ApplicantOnboardingForm.tsx`
 
-3. **Smlouva k podpisu** - Na zaklade vyplnenych udaju pripravime smlouvu o spolupraci a posleme ti ji k podpisu.
-
-4. **Ozveme se s dalsim postupem** - Domluvime se na vsem potrebnem pro start spoluprace.
-
-Navic se prida informacni box s upozornenim: "Zkontroluj si osobni email vcetne slozky spam - prihlasovaci udaje ti prijdou behem 24 hodin."
-
-### Technicke detaily
-
-**Soubor:** `src/pages/ApplicantOnboardingForm.tsx` (radky 288-312)
-
-Uprava obsahu `CardContent` v sekci `isSubmitted` - nahrazeni stavajicich 2 kroku za 4 nove kroky s popisem automatizace (Google Workspace, Slack, Freelo, CRM profil). Pridani Alert/info boxu o kontrole emailu.
+**Změny:**
+- **stepLabels**: krok 4 přejmenovat z "Adresa a platba" na "Sazba a platba"
+- **stepFieldMap**: přesunout `billing_street`, `billing_city`, `billing_zip` z kroku 4 do kroku 3
+- **Krok 3 (case 3)**: pole `company_name`, `dic`, `billing_street`, `billing_city`, `billing_zip` obalit podmínkou `{aresValidated && (...)}` -- zobrazí se až po ověření ARES
+- **Krok 4 (case 4)**: odebrat fakturační adresu, ponechat jen sekci "Sazba a platební údaje" (hodinová sazba + bankovní účet), upravit nadpis a ikonu
+- **stepFieldMap krok 3**: validace `company_name`, `billing_street` atd. zůstane -- uživatel neprojde dál bez vyplnění (a ty se vyplní z ARES)
