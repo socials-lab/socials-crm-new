@@ -45,6 +45,7 @@ interface CreativeBoostContextType {
   clientMonths: CreativeBoostClientMonth[];
   outputs: ClientMonthOutput[];
   settingsHistory: CreativeBoostSettingsChange[];
+  isLoading: boolean;
 
   // Output type operations
   addOutputType: (data: Omit<OutputType, 'id' | 'createdAt' | 'updatedAt'>) => Promise<OutputType>;

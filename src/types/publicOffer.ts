@@ -55,6 +55,7 @@ export interface PublicOffer {
   created_at: string;
   updated_at: string;
   estimated_start_date?: string;  // When collaboration can start
+  loom_url?: string;              // Loom video URL for embed
   // Contact person info (lead owner)
   owner_name?: string;       // Name of assigned colleague
   owner_email?: string;      // Email of assigned colleague

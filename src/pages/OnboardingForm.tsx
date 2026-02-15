@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, addMonths, startOfMonth } from 'date-fns';
+import { format, addMonths, startOfMonth, getDaysInMonth, getDate } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, Building2, MapPin, CheckCircle2, AlertTriangle, Search, Plus, X, PenLine, Users, CalendarIcon, FileText, Zap, MessageSquare } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Loader2, Building2, MapPin, CheckCircle2, AlertTriangle, Search, Plus, X, PenLine, Users, CalendarIcon, FileText, Zap, MessageSquare, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAresLookup } from '@/hooks/useAresLookup';
 import { cn } from '@/lib/utils';
 import socialsLogo from '@/assets/socials-logo.png';
@@ -165,6 +166,7 @@ export default function OnboardingForm() {
   const { leadId } = useParams<{ leadId: string }>();
   const { lookupCompany, isLoading: isAresLoading } = useAresLookup();
   
+  const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -172,6 +174,7 @@ export default function OnboardingForm() {
   const [icoChanged, setIcoChanged] = useState(false);
   const [originalIco, setOriginalIco] = useState<string>('');
   const [lead, setLead] = useState<OnboardingLead | null>(null);
+  const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
 
   // Owner info from lead data
   const ownerEmail = lead?.owner_email || 'info@socials.cz';
@@ -395,19 +398,33 @@ export default function OnboardingForm() {
     }
   };
 
-  // Calculate order totals
+  // Calculate order totals with prorated pricing
   const getOrderSummary = () => {
     const services = lead?.potential_services || [];
-    const monthlyServices = services.filter(s => s.billing_type === 'monthly');
+    const monthlyServicesRaw = services.filter(s => s.billing_type === 'monthly');
     const oneOffServices = services.filter(s => s.billing_type === 'one_off');
-    
-    const monthlyTotal = monthlyServices.reduce((sum, s) => sum + s.price, 0);
+
+    const monthlyTotal = monthlyServicesRaw.reduce((sum, s) => sum + s.price, 0);
     const oneOffTotal = oneOffServices.reduce((sum, s) => sum + s.price, 0);
-    
-    return { monthlyServices, oneOffServices, monthlyTotal, oneOffTotal };
+
+    const startDate = form.getValues('startDate');
+    const startDay = startDate ? getDate(startDate) : 1;
+    const isProrated = startDay > 1;
+    const daysInMonth = startDate ? getDaysInMonth(startDate) : 30;
+    const remainingDays = isProrated ? daysInMonth - startDay + 1 : daysInMonth;
+
+    const monthlyServices = monthlyServicesRaw.map(s => ({
+      ...s,
+      proratedPrice: isProrated ? Math.round((s.price / daysInMonth) * remainingDays) : s.price,
+    }));
+
+    const proratedMonthlyTotal = monthlyServices.reduce((sum, s) => sum + s.proratedPrice, 0);
+    const monthName = startDate ? format(startDate, 'LLLL', { locale: cs }) : '';
+
+    return { monthlyServices, oneOffServices, monthlyTotal, oneOffTotal, isProrated, remainingDays, daysInMonth, proratedMonthlyTotal, monthName };
   };
 
-  const { monthlyServices, oneOffServices, monthlyTotal, oneOffTotal } = getOrderSummary();
+  const { monthlyServices, oneOffServices, monthlyTotal, oneOffTotal, isProrated, remainingDays, daysInMonth, proratedMonthlyTotal, monthName } = getOrderSummary();
 
   const formatPrice = (price: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -416,6 +433,48 @@ export default function OnboardingForm() {
       maximumFractionDigits: 0,
     }).format(price) + ' ' + currency;
   };
+
+  // Wizard navigation
+  const TOTAL_STEPS = 6;
+  const stepLabels = [
+    'Firemní údaje',
+    'Fakturační adresa',
+    'Osoby pro podpis',
+    'Kontakty pro projekt',
+    'Datum zahájení',
+    'Souhrn a potvrzení',
+  ];
+
+  const stepFieldMap: Record<number, string[]> = {
+    0: ['ico', 'company_name', 'dic', 'website', 'industry'],
+    1: ['billing_street', 'billing_city', 'billing_zip', 'billing_country', 'billing_email'],
+    2: ['signatories'],
+    3: ['useSignatoriesForProject', 'projectContacts'],
+    4: ['startDate'],
+    5: ['orderConfirmed'],
+  };
+
+  const validateCurrentStep = useCallback(async () => {
+    const fields = stepFieldMap[currentStep] as (keyof OnboardingFormData)[];
+    const result = await form.trigger(fields);
+    return result;
+  }, [currentStep, form]);
+
+  const goNext = async () => {
+    const isValid = await validateCurrentStep();
+    if (!isValid) return;
+    setStepDirection('forward');
+    setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goBack = () => {
+    setStepDirection('backward');
+    setCurrentStep(prev => Math.max(prev - 1, 0));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const progressValue = ((currentStep + 1) / TOTAL_STEPS) * 100;
 
   if (isLoading) {
     return (
@@ -451,8 +510,46 @@ export default function OnboardingForm() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-lg w-full">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+        {/* CSS Confetti */}
+        <style>{`
+          @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+          }
+          .confetti-piece {
+            position: fixed;
+            top: -10px;
+            animation: confetti-fall linear forwards;
+            z-index: 50;
+          }
+        `}</style>
+        {Array.from({ length: 35 }).map((_, i) => {
+          const colors = ['#FF0000', '#FF6B35', '#FFD700', '#00C851', '#2196F3', '#9C27B0', '#FF4081', '#00BCD4'];
+          const color = colors[i % colors.length];
+          const left = Math.random() * 100;
+          const size = Math.random() * 8 + 5;
+          const duration = Math.random() * 2 + 2.5;
+          const delay = Math.random() * 1.5;
+          const shape = i % 3 === 0 ? '50%' : i % 3 === 1 ? '0' : '2px';
+          return (
+            <div
+              key={i}
+              className="confetti-piece"
+              style={{
+                left: `${left}%`,
+                width: `${size}px`,
+                height: `${size * (i % 2 === 0 ? 1 : 1.5)}px`,
+                backgroundColor: color,
+                borderRadius: shape,
+                animationDuration: `${duration}s`,
+                animationDelay: `${delay}s`,
+              }}
+            />
+          );
+        })}
+
+        <Card className="max-w-lg w-full relative z-10">
           <CardHeader className="text-center">
             <img src={socialsLogo} alt="Socials" className="h-10 mx-auto mb-4" />
             <div className="flex justify-center mb-4">
@@ -464,63 +561,60 @@ export default function OnboardingForm() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Co bude následovat */}
             <div className="space-y-4">
               <h3 className="font-semibold text-center text-lg">Co bude následovat?</h3>
-              
+
               <div className="space-y-3">
                 <div className="flex items-start gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
                   <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold shrink-0 text-sm">1</div>
                   <div>
                     <p className="font-medium">📧 Smlouva k podpisu</p>
                     <p className="text-sm text-muted-foreground">
-                      Do 24 hodin vám na e-mail dorazí smlouva ke kontrole a podpisu přes DigiSign.
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                      Do 24 hodin vám pošleme smlouvu k podpisu přes DigiSign.
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                   <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">2</div>
                   <div>
-                    <p className="font-medium">📞 Osobní kontakt</p>
+                    <p className="font-medium">📁 Projekt ve Freelu</p>
                     <p className="text-sm text-muted-foreground">
-                      Po podpisu smlouvy vás bude kontaktovat <strong>{ownerName}</strong>, 
-                      se kterým budete řešit celý projekt.
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                      Po podpisu vytvoříme projekt ve Freelu a přidáme vám tam přístup.
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                   <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">3</div>
                   <div>
-                    <p className="font-medium">🚀 Zahájení spolupráce</p>
+                    <p className="font-medium">📞 Onboarding telefonát</p>
                     <p className="text-sm text-muted-foreground">
-                      Společně naplánujeme první kroky a pustíme se do práce!
+                      Spojí se s vámi specialista, který vás bude mít na starosti a domluví onboarding telefonát.
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Dotazy? Obraťte se na <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-muted-foreground/20 text-muted-foreground flex items-center justify-center font-bold shrink-0 text-sm">4</div>
+                  <div>
+                    <p className="font-medium">🚀 Pustíme se do práce!</p>
+                    <p className="text-sm text-muted-foreground">
+                      Společně rozjedeme váš projekt naplno.
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-            
+
+            <div className="text-center py-4">
+              <p className="text-xl font-bold">🤝 Těšíme se na spolupráci!</p>
+            </div>
+
             <div className="text-center pt-4 border-t">
-              <p className="text-sm text-muted-foreground mb-2">
-                Máte dotazy? {ownerName} je tu pro vás.
+              <p className="text-sm text-muted-foreground">
+                Potřebujete pomoct? Obraťte se na {ownerName} | <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
               </p>
-              <a 
-                href={`mailto:${ownerEmail}`}
-                className="text-primary hover:underline"
-              >
-                {ownerEmail}
-              </a>
             </div>
           </CardContent>
         </Card>
@@ -529,53 +623,32 @@ export default function OnboardingForm() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <img src={socialsLogo} alt="Socials" className="h-12 mx-auto" />
-          <h1 className="text-2xl font-bold">Onboarding formulář</h1>
-          <p className="text-muted-foreground">
-            Zkontrolujte a doplňte vaše údaje pro zahájení spolupráce.
-          </p>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Sticky header with progress */}
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <img src={socialsLogo} alt="Socials" className="h-8" />
+            <span className="text-sm text-muted-foreground">
+              Krok {currentStep + 1} z {TOTAL_STEPS}
+            </span>
+          </div>
+          <Progress value={progressValue} className="h-2" />
+          <p className="text-xs text-muted-foreground text-center">{stepLabels[currentStep]}</p>
         </div>
+      </div>
 
-        {/* Process Steps */}
-        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-          <CardContent className="pt-6 pb-5">
-            <h3 className="text-center font-semibold mb-4">📋 Jak to bude probíhat?</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex flex-col items-center text-center p-3">
-                <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold mb-2">1</div>
-                <p className="font-medium">Vyplníte formulář</p>
-                <p className="text-sm text-muted-foreground">Zkontrolujte a doplňte údaje (2 min)</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Dotazy? <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
-                </p>
-              </div>
-              <div className="flex flex-col items-center text-center p-3">
-                <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold mb-2">2</div>
-                <p className="font-medium">Smlouva k podpisu</p>
-                <p className="text-sm text-muted-foreground">Do 24h vám dorazí smlouva přes DigiSign</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Dotazy? <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
-                </p>
-              </div>
-              <div className="flex flex-col items-center text-center p-3">
-                <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold mb-2">3</div>
-                <p className="font-medium">Osobní kontakt</p>
-                <p className="text-sm text-muted-foreground">{ownerName} vás bude kontaktovat</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Dotazy? <a href={`mailto:${ownerEmail}`} className="text-primary hover:underline">{ownerEmail}</a>
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Company Info */}
+      {/* Step content */}
+      <div className="flex-1 flex items-start justify-center px-4 py-8">
+        <div className="w-full max-w-2xl">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div
+                key={currentStep}
+                className="animate-in fade-in-0 slide-in-from-bottom-4 duration-300"
+              >
+                {/* Step 0: Company Info */}
+                {currentStep === 0 && (
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -695,8 +768,10 @@ export default function OnboardingForm() {
                 </div>
               </CardContent>
             </Card>
+                )}
 
-            {/* Billing Address */}
+                {/* Step 1: Billing Address */}
+                {currentStep === 1 && (
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -778,8 +853,10 @@ export default function OnboardingForm() {
                 />
               </CardContent>
             </Card>
+                )}
 
-            {/* Signatories - Persons who sign the contract */}
+                {/* Step 2: Signatories */}
+                {currentStep === 2 && (
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -888,8 +965,10 @@ export default function OnboardingForm() {
                 </Button>
               </CardContent>
             </Card>
+                )}
 
-            {/* Project Contacts - For Freelo */}
+                {/* Step 3: Project Contacts */}
+                {currentStep === 3 && (
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -1025,8 +1104,10 @@ export default function OnboardingForm() {
                 </div>
               </CardContent>
             </Card>
+                )}
 
-            {/* Start Date */}
+                {/* Step 4: Start Date */}
+                {currentStep === 4 && (
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -1079,8 +1160,10 @@ export default function OnboardingForm() {
                 />
               </CardContent>
             </Card>
+                )}
 
-            {/* Order Summary */}
+                {/* Step 5: Order Summary */}
+                {currentStep === 5 && (
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -1108,16 +1191,41 @@ export default function OnboardingForm() {
                                 )}
                               </div>
                             </div>
-                            <p className="font-medium text-right">
-                              {formatPrice(service.price, service.currency)}<span className="text-muted-foreground">/měs</span>
-                            </p>
+                            <div className="text-right">
+                              {isProrated ? (
+                                <>
+                                  <p className="text-sm text-muted-foreground line-through">{formatPrice(service.price, service.currency)}/měs</p>
+                                  <p className="font-medium">{formatPrice(service.proratedPrice, service.currency)} <span className="text-muted-foreground text-xs">za {monthName} ({remainingDays} z {daysInMonth} dnů)</span></p>
+                                </>
+                              ) : (
+                                <p className="font-medium">
+                                  {formatPrice(service.price, service.currency)}<span className="text-muted-foreground">/měs</span>
+                                </p>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
                       <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 border-t">
                         <p className="font-medium">Měsíční platba celkem</p>
-                        <p className="font-bold text-lg">{formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                        <div className="text-right">
+                          {isProrated ? (
+                            <>
+                              <p className="text-sm text-muted-foreground line-through">{formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                              <p className="font-bold text-lg">{formatPrice(proratedMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                            </>
+                          ) : (
+                            <p className="font-bold text-lg">{formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                          )}
+                        </div>
                       </div>
+                      {isProrated && (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border-t text-center">
+                          <p className="text-xs text-amber-700 dark:text-amber-400">
+                            První měsíc fakturujeme poměrně dle počtu dnů od zahájení spolupráce.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1206,33 +1314,60 @@ export default function OnboardingForm() {
 
               </CardContent>
             </Card>
+                )}
+              </div>
 
-            {/* Submit */}
-            <Button 
-              type="submit" 
-              className="w-full" 
-              size="lg"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Odesílám...
-                </>
-              ) : (
-                'Odeslat údaje'
-              )}
-            </Button>
-          </form>
-        </Form>
+              {/* Navigation buttons */}
+              <div className="flex justify-between pt-4">
+                {currentStep > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={goBack}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Zpět
+                  </Button>
+                ) : (
+                  <div />
+                )}
 
-        {/* Footer */}
-        <p className="text-center text-sm text-muted-foreground">
-          Potřebujete pomoct?{' '}
-          <a href="mailto:info@socials.cz" className="text-primary hover:underline">
-            Kontaktujte nás
-          </a>
-        </p>
+                {currentStep < TOTAL_STEPS - 1 ? (
+                  <Button
+                    type="button"
+                    onClick={goNext}
+                  >
+                    Pokračovat
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    size="lg"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Odesílám...
+                      </>
+                    ) : (
+                      'Odeslat údaje'
+                    )}
+                  </Button>
+                )}
+              </div>
+            </form>
+          </Form>
+
+          {/* Footer */}
+          <p className="text-center text-sm text-muted-foreground mt-8">
+            Potřebujete pomoct?{' '}
+            <a href="mailto:info@socials.cz" className="text-primary hover:underline">
+              Kontaktujte nás
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -59,6 +59,7 @@ import {
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useDigiSign } from '@/hooks/useDigiSign';
+import { useLeadTransitions } from '@/hooks/useLeadTransitions';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
@@ -66,9 +67,12 @@ import { RequestAccessDialog } from './RequestAccessDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
+import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
 import type { Lead, LeadStage, LeadService } from '@/types/crm';
+import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { VatBadge } from '@/components/shared/VatBadge';
 
 interface LeadDetailSheetProps {
   lead: Lead | null;
@@ -103,6 +107,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services } = useCRMData();
   const { createContract, isLoading: isCreatingContract } = useDigiSign();
+  const { confirmTransition, isConfirming } = useLeadTransitions();
   const [noteText, setNoteText] = useState('');
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -116,6 +121,8 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const [isContractConfirmOpen, setIsContractConfirmOpen] = useState(false);
   const [isManualSignConfirmOpen, setIsManualSignConfirmOpen] = useState(false);
+  const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
+  const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   const isProcessingWarning = useRef(false);
 
   // Use fresh lead data from context to reflect updates immediately
@@ -151,13 +158,43 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const isFinished = ['won', 'lost', 'postponed'].includes(lead.stage);
   const history = getLeadHistory(lead.id);
   const handleStageChange = async (newStage: LeadStage) => {
+    const fromStage = lead.stage;
     try {
       await updateLeadStage(lead.id, newStage);
       toast.success('Stav leadu byl změněn');
+
+      // Show confirmation dialog for funnel analytics
+      setPendingTransition({
+        leadId: lead.id,
+        leadName: lead.company_name,
+        fromStage,
+        toStage: newStage,
+        leadValue: lead.estimated_price || 0,
+      });
+      setShowTransitionDialog(true);
     } catch (error) {
       console.error('Failed to update lead stage:', error);
       toast.error('Nepodařilo se změnit stav leadu');
     }
+  };
+
+  const handleConfirmTransition = () => {
+    if (pendingTransition) {
+      confirmTransition({
+        leadId: pendingTransition.leadId,
+        fromStage: pendingTransition.fromStage,
+        toStage: pendingTransition.toStage,
+        transitionValue: pendingTransition.leadValue,
+      });
+      toast.success('Přechod byl potvrzen pro analytiku');
+    }
+    setShowTransitionDialog(false);
+    setPendingTransition(null);
+  };
+
+  const handleSkipTransition = () => {
+    setShowTransitionDialog(false);
+    setPendingTransition(null);
   };
 
   const handleAddNote = async () => {
@@ -340,12 +377,24 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                         <ExternalLink className="h-3 w-3" />
                         ARES
                       </a>
+                      <a
+                        href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${lead.ico}&firma=${encodeURIComponent(lead.company_name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Justice
+                      </a>
                     </div>
                   </div>
                   {lead.dic && (
                     <div>
                       <span className="text-muted-foreground text-xs">DIČ</span>
-                      <p className="font-medium">{lead.dic}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{lead.dic}</span>
+                        <VatBadge dic={lead.dic} />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1551,6 +1600,16 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirmation Dialog for Funnel Analytics */}
+      <ConfirmStageTransitionDialog
+        pendingTransition={pendingTransition}
+        open={showTransitionDialog}
+        onOpenChange={setShowTransitionDialog}
+        onConfirm={handleConfirmTransition}
+        onSkip={handleSkipTransition}
+        isConfirming={isConfirming}
+      />
     </>
   );
 }

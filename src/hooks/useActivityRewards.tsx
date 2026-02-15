@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
-export type ActivityCategory = 'marketing' | 'overhead';
+export type ActivityCategory = 'marketing' | 'overhead' | 'client_work';
 
 export interface ActivityReward {
   id: string;
@@ -18,14 +18,19 @@ export interface ActivityReward {
   hourly_rate: number | null;
   activity_date: string;
   created_at: string;
+  client_name?: string | null;
 }
 
 export const CATEGORY_LABELS: Record<ActivityCategory, string> = {
   marketing: 'Marketing',
   overhead: 'Režijní služby',
+  client_work: 'Klientská práce',
 };
 
-export function generateInvoiceItemName(category: ActivityCategory, description: string): string {
+export function generateInvoiceItemName(category: ActivityCategory, description: string, clientName?: string): string {
+  if (category === 'client_work' && clientName) {
+    return `${clientName} – ${description}`;
+  }
   return `${CATEGORY_LABELS[category]} – ${description}`;
 }
 
@@ -119,6 +124,7 @@ export function useActivityRewards(colleagueId: string | null) {
     return {
       marketing: monthRewards.filter(r => r.category === 'marketing'),
       overhead: monthRewards.filter(r => r.category === 'overhead'),
+      client_work: monthRewards.filter(r => r.category === 'client_work'),
     };
   }, [getRewardsByMonth]);
 
@@ -147,17 +153,24 @@ export function useActivityRewards(colleagueId: string | null) {
   }, [rewards, colleagueId]);
 
   const addReward = (reward: Omit<ActivityReward, 'id' | 'created_at' | 'invoice_item_name'> & { invoice_item_name?: string }) => {
-    const invoiceItemName = reward.invoice_item_name || generateInvoiceItemName(reward.category, reward.description);
+    const invoiceItemName = reward.invoice_item_name || generateInvoiceItemName(
+      reward.category,
+      reward.description,
+      reward.category === 'client_work' ? reward.client_name || undefined : undefined
+    );
     return addMutation.mutateAsync({ ...reward, invoice_item_name: invoiceItemName });
   };
 
   const updateReward = (rewardId: string, updates: Partial<Omit<ActivityReward, 'id' | 'created_at'>>) => {
-    if (updates.category || updates.description) {
+    if (updates.category || updates.description || updates.client_name !== undefined) {
       const existingReward = rewards.find(r => r.id === rewardId);
       if (existingReward) {
+        const category = updates.category || existingReward.category;
+        const clientName = updates.client_name !== undefined ? updates.client_name : existingReward.client_name;
         updates.invoice_item_name = generateInvoiceItemName(
-          updates.category || existingReward.category,
-          updates.description || existingReward.description
+          category,
+          updates.description || existingReward.description,
+          category === 'client_work' ? clientName || undefined : undefined
         );
       }
     }

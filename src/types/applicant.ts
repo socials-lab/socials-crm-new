@@ -11,12 +11,17 @@ export type ApplicantStage =
 
 export type ApplicantSource = 'website' | 'linkedin' | 'referral' | 'job_portal' | 'other';
 
+export type ApplicantNoteType = 'general' | 'email_sent' | 'email_received' | 'internal';
+
 export interface ApplicantNote {
   id: string;
   applicant_id: string;
   author_id: string;
   author_name: string;
   text: string;
+  note_type: ApplicantNoteType;
+  subject: string | null;
+  recipients: string[] | null;
   created_at: string;
 }
 
@@ -47,6 +52,11 @@ export interface Applicant {
   source: ApplicantSource;
   source_custom: string | null;
   
+  // Personal info (filled during onboarding)
+  birthday: string | null;
+  avatar_url: string | null;
+  personal_email: string | null;
+
   // Freelancer/Company info (filled during onboarding)
   ico: string | null;
   company_name: string | null;

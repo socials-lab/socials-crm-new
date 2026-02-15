@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -126,16 +127,10 @@ const PROCESS_STEPS = [
     number: 2,
     icon: FileSignature,
     title: 'Smlouva k podpisu',
-    description: 'Do 5 minut',
+    description: 'Do 24 hodin',
   },
   {
     number: 3,
-    icon: UserCheck,
-    title: 'Account manager',
-    description: 'Váš kontakt',
-  },
-  {
-    number: 4,
     icon: Phone,
     title: 'Onboarding a start',
     description: 'Jdeme na to',
@@ -159,7 +154,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow overflow-hidden">
         <CollapsibleTrigger className="w-full">
-          <div className="flex items-center justify-between p-5">
+          <div className="flex items-center justify-between p-6">
             <div className="flex items-center gap-4 text-left">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-2xl">
                 {getServiceEmoji(service.name)}
@@ -230,7 +225,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
         
         {hasDetails && (
           <CollapsibleContent>
-            <div className="px-5 pb-5 space-y-4">
+            <div className="px-6 pb-6 space-y-4">
               {/* What you get (deliverables) */}
               {(hasDeliverables || descriptionLines.length > 0) && (
                 <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900">
@@ -345,7 +340,7 @@ function ServiceStructureExplanation() {
 
 function NextStepsSection() {
   return (
-    <section className="mb-6">
+    <section className="mb-10">
       <p className="text-xs text-muted-foreground text-center mb-3">Jak to probíhá?</p>
       
       {/* Compact horizontal timeline */}
@@ -401,9 +396,9 @@ function PortfolioCard({ link }: { link: PortfolioLink }) {
 // Contact section - shows lead owner's contact info
 function ContactSection({ offer }: { offer: PublicOffer }) {
   if (!offer.owner_name && !offer.owner_email) return null;
-  
+
   return (
-    <section className="mb-6">
+    <section className="mb-10">
       <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-full bg-primary/10">
@@ -521,6 +516,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString(),
           estimated_start_date: data.estimated_start_date || undefined,
+          loom_url: data.loom_url || undefined,
           owner_name: data.owner_name || undefined,
           owner_email: data.owner_email || undefined,
           owner_phone: data.owner_phone || undefined,
@@ -610,7 +606,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <img src={socialsLogo} alt="Socials" className="h-8" />
           <Button asChild size="sm" className="hidden sm:inline-flex">
             <Link to={onboardingUrl}>
-              Zahájit spolupráci
+              Vyplnit onboarding formulář
               <ArrowRight className="h-4 w-4 ml-2" />
             </Link>
           </Button>
@@ -618,9 +614,9 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
       </header>
 
       {/* Content */}
-      <main className="max-w-3xl mx-auto px-4 py-6 md:py-8">
+      <main className="max-w-3xl mx-auto px-4 py-8 md:py-12">
         {/* Hero Section - Consultative approach */}
-        <section className="text-center mb-6">
+        <section className="text-center mb-10">
           <p className="text-muted-foreground mb-1 text-sm">
             Na základě poznání vaší firmy jsme připravili strategii
           </p>
@@ -667,39 +663,46 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* Validity warning */}
         {isExpired && (
-          <div className="mb-6 p-3 rounded-lg border border-destructive/50 bg-destructive/10 text-center">
+          <div className="mb-10 p-3 rounded-lg border border-destructive/50 bg-destructive/10 text-center">
             <p className="text-destructive font-medium text-sm">
               Platnost této nabídky vypršela
             </p>
           </div>
         )}
 
-        {/* Audit - What we found */}
+        {/* Audit - What we found & recommendations */}
         {offer.audit_summary && (
-          <section className="mb-6">
-            <div className="p-4 rounded-xl bg-muted/50 border">
-              <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                🔍 Co jsme zjistili
+          <section className="mb-10">
+            <div className="p-5 rounded-xl bg-muted/50 border">
+              <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                🔍 Co jsme zjistili & doporučení pro vás
               </h2>
               <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
                 {offer.audit_summary}
               </p>
-              
-              {/* Recommendation intro */}
-              {offer.recommendation_intro && (
-                <div className="mt-4 pt-3 border-t border-border/50">
-                  <p className="text-sm font-medium text-foreground">
-                    {offer.recommendation_intro}
-                  </p>
-                </div>
-              )}
             </div>
+
+            {/* Loom video embed */}
+            {offer.loom_url && (
+              <div className="mt-6 rounded-xl overflow-hidden border shadow-sm">
+                <AspectRatio ratio={16 / 9}>
+                  <iframe
+                    src={offer.loom_url}
+                    title="Video k nabídce"
+                    className="w-full h-full"
+                    frameBorder="0"
+                    allowFullScreen
+                    allow="autoplay; fullscreen"
+                  />
+                </AspectRatio>
+              </div>
+            )}
           </section>
         )}
 
         {/* Services - As recommendations */}
-        <section className="mb-6">
-          <h2 className="text-base font-semibold mb-3">
+        <section className="mb-10">
+          <h2 className="text-base font-semibold mb-4">
             🎯 Služby navržené pro{' '}
             <span className="text-primary">
               {offer.website 
@@ -720,16 +723,16 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             // If no service_type set, show all in one list
             if (coreServices.length === 0 && addonServices.length === 0) {
               return (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {offer.services.map((service, idx) => (
                     <ServiceCard key={service.id || idx} service={service} />
                   ))}
                 </div>
               );
             }
-            
+
             return (
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {/* Core services */}
                 {coreServices.length > 0 && (
                   <div>
@@ -737,14 +740,14 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                       <Badge className="bg-primary/20 text-primary border-primary/30">Core</Badge>
                       <span className="text-sm font-medium text-muted-foreground">Hlavní služby</span>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {coreServices.map((service, idx) => (
                         <ServiceCard key={service.id || idx} service={service} />
                       ))}
                     </div>
                   </div>
                 )}
-                
+
                 {/* Add-on services */}
                 {addonServices.length > 0 && (
                   <div>
@@ -752,17 +755,17 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                       <Badge variant="outline">Doplněk</Badge>
                       <span className="text-sm font-medium text-muted-foreground">Doplňkové služby ke Core produktům</span>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {addonServices.map((service, idx) => (
                         <ServiceCard key={service.id || idx} service={service} />
                       ))}
                     </div>
                   </div>
                 )}
-                
+
                 {/* Services without type (legacy) */}
                 {otherServices.length > 0 && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {otherServices.map((service, idx) => (
                       <ServiceCard key={service.id || idx} service={service} />
                     ))}
@@ -774,8 +777,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         </section>
 
         {/* Pricing Summary - Clean */}
-        <section className="mb-6">
-          <div className="p-4 rounded-xl border bg-card">
+        <section className="mb-10">
+          <div className="p-5 rounded-xl border bg-card">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="space-y-1">
                 {totalMonthly > 0 && (
@@ -792,13 +795,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   </p>
                 )}
               </div>
-              <Button 
-                asChild 
-                size="lg" 
-                className="bg-foreground hover:bg-foreground/90 text-background font-medium"
+              <Button
+                asChild
+                size="lg"
+                className="font-medium"
               >
                 <Link to={onboardingUrl}>
-                  Začít spolupráci
+                  Vyplnit onboarding formulář
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
               </Button>
@@ -812,7 +815,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* Notion Link */}
         {offer.notion_url && (
-          <section className="mb-6">
+          <section className="mb-10">
             <a
               href={offer.notion_url}
               target="_blank"
@@ -830,33 +833,33 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <ContactSection offer={offer} />
 
         {/* CTA Section - Confident tone */}
-        <section className="mb-8">
-          <div className="p-5 rounded-xl bg-muted/30 border text-center">
-            <h2 className="text-lg font-semibold mb-1">
+        <section className="mb-10">
+          <div className="p-6 rounded-xl bg-muted/30 border text-center">
+            <h2 className="text-lg font-semibold mb-2">
               🚀 Pusťte se do toho s námi
             </h2>
-            <p className="mb-4 text-muted-foreground text-sm max-w-sm mx-auto">
+            <p className="mb-5 text-muted-foreground text-sm max-w-sm mx-auto">
               Společně posuneme váš byznys na další úroveň. Stačí vyplnit krátký formulář a o zbytek se postaráme.
             </p>
-            <Button 
-              asChild 
-              size="lg" 
-              className="bg-foreground hover:bg-foreground/90 text-background font-medium px-8"
+            <Button
+              asChild
+              size="lg"
+              className="font-medium px-8"
             >
               <Link to={onboardingUrl}>
-                Začít spolupráci
+                Vyplnit onboarding formulář
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
             </Button>
-            <p className="mt-3 text-xs text-muted-foreground">
-              ✅ Smlouva do 5 minut
+            <p className="mt-4 text-xs text-muted-foreground">
+              ✅ Smlouva do 24 hodin
             </p>
           </div>
         </section>
 
         {/* Footer - Credibility badges */}
         <footer className="pt-6 border-t">
-          <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
               <span>Meta Business Partner</span>
               <span>•</span>
@@ -866,15 +869,44 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               <span>•</span>
               <span>30 mil. Kč/měsíc ve správě kampaní</span>
             </div>
-            <a 
-              href="https://socials.cz" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-            >
-              Více o nás
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+              <a
+                href="https://www.socials.cz/pripadove-studie"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Případové studie
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <a
+                href="https://partneri.shoptet.cz/profesionalove/socials-advertising/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Recenze našich klientů
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <a
+                href="https://www.socials.cz/o-nas"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Více o nás
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <a
+                href="https://www.socials.cz/socials-podcast"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                🎙️ Socials Podcast
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
             <img src={socialsLogo} alt="Socials" className="h-5 opacity-50" />
           </div>
         </footer>
@@ -889,9 +921,9 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               {totalMonthly > 0 ? '/měsíc' : 'celkem'}
             </p>
           </div>
-          <Button asChild className="flex-1 max-w-[160px] bg-foreground hover:bg-foreground/90 text-background">
+          <Button asChild className="flex-1 max-w-[200px]">
             <Link to={onboardingUrl}>
-              Začít spolupráci
+              Vyplnit formulář
               <ArrowRight className="h-4 w-4 ml-1" />
             </Link>
           </Button>

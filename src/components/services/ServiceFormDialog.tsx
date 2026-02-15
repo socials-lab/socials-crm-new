@@ -65,11 +65,17 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       setCurrency(service.currency);
       setBillingType(service.billing_type);
       setIsActive(service.is_active);
-      setTierPricing(service.tier_pricing || [
+      // Ensure tier_pricing is always a valid array
+      const defaultTierPricing: CoreServicePricing[] = [
         { tier: 'growth', price: null },
         { tier: 'pro', price: null },
         { tier: 'elite', price: null },
-      ]);
+      ];
+      setTierPricing(
+        Array.isArray(service.tier_pricing) && service.tier_pricing.length > 0
+          ? service.tier_pricing
+          : defaultTierPricing
+      );
       setDefaultDeliverables(service.default_deliverables || []);
     } else {
       setName('');
@@ -91,12 +97,31 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
     }
   }, [service, open]);
 
+  // Ensure tierPricing is always a valid array when service type changes to core
+  useEffect(() => {
+    if (serviceType === 'core' && (!Array.isArray(tierPricing) || tierPricing.length === 0)) {
+      setTierPricing([
+        { tier: 'growth', price: null },
+        { tier: 'pro', price: null },
+        { tier: 'elite', price: null },
+      ]);
+    }
+  }, [serviceType, tierPricing]);
+
   const handleTierPriceChange = (tier: 'growth' | 'pro' | 'elite', value: string) => {
-    setTierPricing(prev => prev.map(tp => 
-      tp.tier === tier 
-        ? { ...tp, price: value === '' ? null : Number(value) }
-        : tp
-    ));
+    setTierPricing(prev => {
+      // Ensure prev is an array
+      const current = Array.isArray(prev) ? prev : [
+        { tier: 'growth', price: null },
+        { tier: 'pro', price: null },
+        { tier: 'elite', price: null },
+      ];
+      return current.map(tp =>
+        tp.tier === tier
+          ? { ...tp, price: value === '' ? null : Number(value) }
+          : tp
+      );
+    });
   };
   
   const handleAddDeliverable = () => {
@@ -248,7 +273,8 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
               <Label>Ceník dle spendu klienta</Label>
               <div className="grid grid-cols-3 gap-2">
                 {serviceTierConfigs.map((config) => {
-                  const pricing = tierPricing.find(tp => tp.tier === config.tier);
+                  const safeTierPricing = Array.isArray(tierPricing) ? tierPricing : [];
+                  const pricing = safeTierPricing.find(tp => tp.tier === config.tier);
                   return (
                     <div key={config.tier} className="space-y-1">
                       <Label className="text-xs font-medium">{config.label}</Label>

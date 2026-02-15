@@ -7,7 +7,10 @@ export type NotificationType =
   | 'offer_sent'
   | 'colleague_birthday'
   | 'new_feedback_idea'
-  | 'client_approved_modification';
+  | 'client_approved_modification'
+  | 'modification_approved'
+  | 'modification_client_approved'
+  | 'modification_rejected';
 
 export interface Notification {
   id: string;
@@ -27,6 +30,10 @@ export interface Notification {
     colleague_name?: string;
     modification_request_id?: string;
     engagement_name?: string;
+    request_id?: string;
+    client_name?: string;
+    client_email?: string;
+    rejection_reason?: string;
   };
 }
 
@@ -79,5 +86,20 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, {
     icon: '✅',
     color: 'text-green-600',
     bgColor: 'bg-green-500/10'
+  },
+  modification_approved: {
+    icon: '👍',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-500/10'
+  },
+  modification_client_approved: {
+    icon: '🎉',
+    color: 'text-green-600',
+    bgColor: 'bg-green-500/10'
+  },
+  modification_rejected: {
+    icon: '❌',
+    color: 'text-red-600',
+    bgColor: 'bg-red-500/10'
   },
 };

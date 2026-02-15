@@ -134,6 +134,15 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   }, []);
 
   const handleCreate = async () => {
+    // Validate required fields
+    if (!lead.company_name?.trim()) {
+      toast.error('Chybí název firmy');
+      return;
+    }
+    if (!lead.contact_name?.trim()) {
+      toast.error('Chybí jméno kontaktní osoby');
+      return;
+    }
     if (editableServices.length === 0) {
       toast.error('Přidejte alespoň jednu službu do nabídky');
       return;
@@ -148,15 +157,15 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
       // Find lead owner for contact info
       const leadOwner = colleagues.find(c => c.id === lead.owner_id);
 
-      // Insert offer into Supabase
-      const { error } = await supabase
+      // Insert offer into Supabase with timeout
+      const insertPromise = supabase
         .from('public_offers')
         .insert({
           lead_id: lead.id,
           token,
-          company_name: lead.company_name,
+          company_name: lead.company_name.trim(),
           website: lead.website || null,
-          contact_name: lead.contact_name,
+          contact_name: lead.contact_name.trim(),
           audit_summary: auditSummary.trim() || null,
           recommendation_intro: null,
           custom_note: customNote.trim() || null,
@@ -175,6 +184,13 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           owner_phone: leadOwner?.phone || null,
           estimated_start_date: null, // Can be set later if needed
         });
+
+      // Add timeout to prevent hanging forever
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Požadavek vypršel. Zkuste to prosím znovu.')), 15000)
+      );
+
+      const { error } = await Promise.race([insertPromise, timeoutPromise]);
 
       if (error) {
         throw error;

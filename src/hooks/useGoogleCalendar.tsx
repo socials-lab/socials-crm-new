@@ -165,13 +165,13 @@ export function useGoogleCalendar() {
     }
   };
 
-  const sendEmail = async (to: string, subject: string, html: string) => {
+  const sendEmail = async (to: string, subject: string, html: string, bcc?: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
       const { data, error } = await invokeWithTimeout('gmail-send-email', {
-        body: { to, subject, html },
+        body: { to, subject, html, bcc },
       });
 
       if (error) throw error;

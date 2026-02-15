@@ -60,7 +60,12 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
   const hasSetupContent = data.setup_items && data.setup_items.some(s => s.items && s.items.length > 0);
   const hasManagementContent = data.management_items && data.management_items.some(s => s.items && s.items.length > 0);
   const hasBenefits = data.benefits && data.benefits.length > 0;
-  const hasTierPricing = !!data.tier_pricing;
+  // Check if tier_pricing is in the expected object format (not array format from form)
+  const hasTierPricing = data.tier_pricing &&
+    typeof data.tier_pricing === 'object' &&
+    !Array.isArray(data.tier_pricing) &&
+    data.tier_pricing.growth &&
+    typeof data.tier_pricing.growth.spend === 'string';
   const hasTierComparison = data.tier_comparison && data.tier_comparison.length > 0;
   const hasCreditPricing = data.credit_pricing && data.credit_pricing.outputTypes && data.credit_pricing.outputTypes.length > 0;
 
@@ -179,7 +184,7 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
       )}
 
       {/* Tier Pricing Cards for Core Services */}
-      {hasTierPricing && (
+      {hasTierPricing && data.tier_pricing && (
         <div className="space-y-2">
           <h4 className="text-sm font-semibold flex items-center gap-2">
             📦 Balíčky dle rozpočtu
@@ -194,9 +199,9 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_pricing!.growth.spend}</div>
+                <div className="text-[10px] text-muted-foreground">{data.tier_pricing.growth?.spend || 'do 50k'}</div>
                 <div className="text-lg font-bold text-chart-1">
-                  {data.tier_pricing!.growth.price.toLocaleString('cs-CZ')} Kč
+                  {(data.tier_pricing.growth?.price || 0).toLocaleString('cs-CZ')} Kč
                 </div>
               </CardContent>
             </Card>
@@ -208,9 +213,9 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_pricing!.pro.spend}</div>
+                <div className="text-[10px] text-muted-foreground">{data.tier_pricing.pro?.spend || '50k - 150k'}</div>
                 <div className="text-lg font-bold text-chart-2">
-                  {data.tier_pricing!.pro.price.toLocaleString('cs-CZ')} Kč
+                  {(data.tier_pricing.pro?.price || 0).toLocaleString('cs-CZ')} Kč
                 </div>
               </CardContent>
             </Card>
@@ -222,9 +227,9 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_pricing!.elite.spend}</div>
+                <div className="text-[10px] text-muted-foreground">{data.tier_pricing.elite?.spend || '150k+'}</div>
                 <div className="text-lg font-bold text-chart-4">
-                  {data.tier_pricing!.elite.price.toLocaleString('cs-CZ')} Kč
+                  {(data.tier_pricing.elite?.price || 0).toLocaleString('cs-CZ')} Kč
                 </div>
               </CardContent>
             </Card>

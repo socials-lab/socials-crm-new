@@ -1,7 +1,7 @@
 import { useState, useCallback, createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Lead, LeadStage, LeadNote, LeadChangeType, LeadHistoryEntry } from '@/types/crm';
+import type { Lead, LeadStage, LeadNote, LeadNoteType, LeadChangeType, LeadHistoryEntry } from '@/types/crm';
 
 // Field labels for history display
 const LEAD_FIELD_LABELS: Record<string, string> = {
@@ -60,7 +60,7 @@ interface LeadsDataContextType {
   updateLeadStage: (id: string, stage: LeadStage) => Promise<void>;
 
   // Notes
-  addNote: (leadId: string, text: string) => Promise<void>;
+  addNote: (leadId: string, text: string, noteType?: LeadNoteType, callDate?: string | null, subject?: string | null, recipients?: string[] | null) => Promise<void>;
 
   // Helpers
   getLeadById: (id: string) => Lead | undefined;
@@ -237,7 +237,14 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     await updateLeadMutation.mutateAsync({ id, data: { stage } });
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
-  const addNote = useCallback(async (leadId: string, text: string) => {
+  const addNote = useCallback(async (
+    leadId: string,
+    text: string,
+    noteType: LeadNoteType = 'general',
+    callDate: string | null = null,
+    subject: string | null = null,
+    recipients: string[] | null = null
+  ) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
 
@@ -260,6 +267,10 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       author_id: user.id,
       author_name: authorName,
       text,
+      note_type: noteType,
+      call_date: callDate,
+      subject,
+      recipients,
       created_at: now(),
     };
 
@@ -274,7 +285,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     });
 
     // Log note addition in history
-    await addHistoryEntry(leadId, 'note_added', null, null, null, `Přidána poznámka: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
+    const noteTypeLabel = noteType === 'call' ? 'hovor' : noteType === 'internal' ? 'interní poznámka' : noteType === 'email_sent' ? 'odeslaný e-mail' : noteType === 'email_received' ? 'přijatý e-mail' : 'poznámka';
+    await addHistoryEntry(leadId, 'note_added', null, null, null, `Přidán ${noteTypeLabel}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
   const getLeadById = useCallback((id: string) => leads.find(l => l.id === id), [leads]);

@@ -38,6 +38,8 @@ import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import PublicOfferPage from "./pages/PublicOfferPage";
 import PublicModificationPage from "./pages/PublicModificationPage";
+import ExtraWorkApproval from "./pages/ExtraWorkApproval";
+import PublicCreativeBoostPage from "./pages/PublicCreativeBoostPage";
 import Modifications from "./pages/Modifications";
 import Upsells from "./pages/Upsells";
 import Academy from "./pages/Academy";
@@ -76,7 +78,9 @@ const App = () => (
                           <Route path="/offer/:token" element={<PublicOfferPage />} />
                           <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
                           <Route path="/modification/:token" element={<PublicModificationPage />} />
-                          
+                          <Route path="/extra-work-approval/:token" element={<ExtraWorkApproval />} />
+                          <Route path="/creative-boost-share/:token" element={<PublicCreativeBoostPage />} />
+
                           {/* Protected routes */}
                           <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
                             <Route path="/" element={<Dashboard />} />

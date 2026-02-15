@@ -8,6 +8,15 @@ import type {
   ModificationProposedChanges,
 } from '@/types/crm';
 
+const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+  add_service: 'Přidání služby',
+  update_service_price: 'Změna ceny',
+  deactivate_service: 'Ukončení služby',
+  add_assignment: 'Přiřazení kolegy',
+  update_assignment: 'Změna odměny',
+  remove_assignment: 'Odebrání kolegy',
+};
+
 // Email sent record type
 export interface EmailSentRecord {
   id: string;
@@ -48,6 +57,7 @@ export interface StoredModificationRequest {
   client_name: string;
   client_brand_name: string | null;
   upsold_by_name: string | null;
+  upsold_by_email: string | null;
   // Email history (joined from separate table)
   emails_sent?: EmailSentRecord[];
 }
@@ -63,7 +73,7 @@ export function useModificationRequests() {
     isLoading: isLoadingPending,
     refetch: refresh,
   } = useQuery({
-    queryKey: ['modification_requests'],
+    queryKey: ['modification_requests', colleagues.length],
     queryFn: async () => {
       // Fetch requests
       const { data: requests, error } = await supabase
@@ -80,17 +90,35 @@ export function useModificationRequests() {
         .select('*')
         .in('modification_request_id', requestIds);
 
-      // Map emails to requests
-      return (requests || []).map(r => ({
-        ...r,
-        // Cast proposed_changes from Json to proper type
-        proposed_changes: r.proposed_changes as ModificationProposedChanges,
-        // Cast enums
-        request_type: r.request_type as ModificationRequestType,
-        status: r.status as StoredModificationRequest['status'],
-        upsell_commission_percent: r.upsell_commission_percent || 10,
-        emails_sent: (emails || []).filter(e => e.modification_request_id === r.id),
-      })) as StoredModificationRequest[];
+      // Map emails to requests and enrich with colleague info
+      return (requests || []).map(r => {
+        // Look up colleague info if upsold_by_id exists
+        let upsoldByName = r.upsold_by_name;
+        let upsoldByEmail: string | null = null;
+
+        if (r.upsold_by_id) {
+          const colleague = colleagues.find(c => c.id === r.upsold_by_id);
+          if (colleague) {
+            if (!upsoldByName) {
+              upsoldByName = colleague.full_name || null;
+            }
+            upsoldByEmail = colleague.email || null;
+          }
+        }
+
+        return {
+          ...r,
+          // Cast proposed_changes from Json to proper type
+          proposed_changes: r.proposed_changes as ModificationProposedChanges,
+          // Cast enums
+          request_type: r.request_type as ModificationRequestType,
+          status: r.status as StoredModificationRequest['status'],
+          upsell_commission_percent: r.upsell_commission_percent || 10,
+          upsold_by_name: upsoldByName,
+          upsold_by_email: upsoldByEmail,
+          emails_sent: (emails || []).filter(e => e.modification_request_id === r.id),
+        };
+      }) as StoredModificationRequest[];
     },
   });
 
@@ -162,6 +190,9 @@ export function useModificationRequests() {
     mutationFn: async (requestId: string) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Get request details first to know who to notify
+      const request = pendingRequests.find(r => r.id === requestId);
+
       const { data, error } = await supabase
         .rpc('approve_modification_request', {
           p_request_id: requestId,
@@ -169,10 +200,31 @@ export function useModificationRequests() {
         });
 
       if (error) throw error;
+
+      // Send notification to the requester
+      if (request?.requested_by && request.requested_by !== user.id) {
+        const typeLabel = REQUEST_TYPE_LABELS[request.request_type] || 'Změna';
+        const { error: notifError } = await supabase.from('notifications').insert({
+          user_id: request.requested_by,
+          type: 'modification_approved',
+          title: 'Návrh na změnu byl schválen',
+          message: `Váš návrh "${typeLabel}" pro ${request.client_brand_name || request.client_name} byl schválen. Čeká se na potvrzení klientem.`,
+          link: '/engagements',
+          metadata: {
+            request_id: requestId,
+            client_name: request.client_brand_name || request.client_name,
+            engagement_name: request.engagement_name,
+          },
+          read: false,
+        });
+        if (notifError) console.error('Failed to send approval notification:', notifError);
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['modification_requests'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       toast.success('Požadavek byl schválen');
     },
     onError: (error) => {
@@ -185,6 +237,9 @@ export function useModificationRequests() {
   const rejectMutation = useMutation({
     mutationFn: async (params: { requestId: string; reason: string }) => {
       if (!user) throw new Error('User not authenticated');
+
+      // Get request details first to know who to notify
+      const request = pendingRequests.find(r => r.id === params.requestId);
 
       const { data, error } = await supabase
         .from('modification_requests')
@@ -199,10 +254,32 @@ export function useModificationRequests() {
         .single();
 
       if (error) throw error;
+
+      // Send notification to the requester about rejection
+      if (request?.requested_by && request.requested_by !== user.id) {
+        const typeLabel = REQUEST_TYPE_LABELS[request.request_type] || 'Změna';
+        const { error: notifError } = await supabase.from('notifications').insert({
+          user_id: request.requested_by,
+          type: 'modification_rejected',
+          title: 'Návrh na změnu byl zamítnut',
+          message: `Váš návrh "${typeLabel}" pro ${request.client_brand_name || request.client_name} byl zamítnut. Důvod: ${params.reason}`,
+          link: '/engagements',
+          metadata: {
+            request_id: params.requestId,
+            client_name: request.client_brand_name || request.client_name,
+            engagement_name: request.engagement_name,
+            rejection_reason: params.reason,
+          },
+          read: false,
+        });
+        if (notifError) console.error('Failed to send rejection notification:', notifError);
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['modification_requests'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       toast.success('Požadavek byl zamítnut');
     },
     onError: (error) => {
@@ -423,6 +500,9 @@ export async function clientAcceptOffer(token: string, email: string): Promise<{
   error?: string;
   request?: StoredModificationRequest;
 }> {
+  // Get request details first to know who to notify
+  const requestBefore = await getModificationRequestByToken(token);
+
   const { data, error } = await supabase
     .rpc('client_accept_modification', {
       p_token: token,
@@ -440,6 +520,26 @@ export async function clientAcceptOffer(token: string, email: string): Promise<{
 
   // Fetch the updated request
   const request = await getModificationRequestByToken(token);
+
+  // Send notification to the requester about client approval
+  if (requestBefore?.requested_by) {
+    const typeLabel = REQUEST_TYPE_LABELS[requestBefore.request_type] || 'Změna';
+    const { error: notifError } = await supabase.from('notifications').insert({
+      user_id: requestBefore.requested_by,
+      type: 'modification_client_approved',
+      title: 'Klient potvrdil návrh na změnu',
+      message: `Klient ${requestBefore.client_brand_name || requestBefore.client_name} potvrdil váš návrh "${typeLabel}". Nyní můžete změnu aktivovat.`,
+      link: '/engagements',
+      metadata: {
+        request_id: requestBefore.id,
+        client_name: requestBefore.client_brand_name || requestBefore.client_name,
+        engagement_name: requestBefore.engagement_name,
+        client_email: email,
+      },
+      read: false,
+    });
+    if (notifError) console.error('Failed to send client approval notification:', notifError);
+  }
 
   return { success: true, request: request || undefined };
 }

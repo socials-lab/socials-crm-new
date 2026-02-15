@@ -375,38 +375,45 @@ export type InvoiceStatus = 'draft' | 'ready' | 'issued' | 'paid';
 export type LineItemSource = 'engagement' | 'manual' | 'creative_boost' | 'extra_work' | 'one_off';
 
 // Extra Work types - unified linear workflow
-export type ExtraWorkStatus = 'pending_approval' | 'in_progress' | 'ready_to_invoice' | 'invoiced';
+export type ExtraWorkStatus = 'pending_approval' | 'in_progress' | 'ready_to_invoice' | 'invoiced' | 'rejected';
 
 export interface ExtraWork {
   id: string;
   client_id: string;
   engagement_id: string;
   colleague_id: string;
-  
+
   name: string;
   description: string;
   amount: number;
   currency: string;
   hours_worked: number | null;
   hourly_rate: number | null;
-  
+
   work_date: string;
   billing_period: string;
-  
+
   // Unified status workflow
   status: ExtraWorkStatus;
   approval_date: string | null;
   approved_by: string | null;
-  
+
+  // Client approval fields
+  approval_token: string | null;
+  client_approval_email: string | null;
+  client_approved_at: string | null;
+  client_rejected_at: string | null;
+  client_rejection_reason: string | null;
+
   // Invoice tracking (set when status changes to 'invoiced')
   invoice_id: string | null;
   invoice_number: string | null;
   invoiced_at: string | null;
-  
+
   // Upsell tracking - who sold this extra work
   upsold_by_id: string | null;
   upsell_commission_percent: number | null;
-  
+
   notes: string;
   created_at: string;
   updated_at: string;
@@ -539,12 +546,26 @@ export interface LeadService {
   billing_type: 'monthly' | 'one_off';
 }
 
+export type LeadNoteType = 'general' | 'call' | 'internal' | 'email_sent' | 'email_received';
+
+export const LEAD_NOTE_TYPE_LABELS: Record<LeadNoteType, string> = {
+  general: 'Poznámka',
+  call: 'Záznam z hovoru',
+  internal: 'Interní poznámka',
+  email_sent: 'Odeslaný e-mail',
+  email_received: 'Přijatý e-mail',
+};
+
 export interface LeadNote {
   id: string;
   lead_id: string;
   author_id: string;
   author_name: string;
   text: string;
+  note_type: LeadNoteType;
+  call_date: string | null;
+  subject: string | null;
+  recipients: string[] | null;
   created_at: string;
 }
 

@@ -10,6 +10,7 @@ interface GmailSendRequest {
   to: string;
   subject: string;
   html: string;
+  bcc?: string;
 }
 
 serve(async (req) => {
@@ -45,7 +46,7 @@ serve(async (req) => {
     }
 
     userId = user.id;
-    const { to, subject, html }: GmailSendRequest = await req.json();
+    const { to, subject, html, bcc }: GmailSendRequest = await req.json();
     
     if (!to || !subject || !html) {
       return new Response(
@@ -161,16 +162,22 @@ serve(async (req) => {
     };
 
     // Create email message in RFC 2822 format
-    const emailMessage = [
+    const emailHeaders = [
       `From: ${fromEmail}`,
       `To: ${to}`,
+    ];
+    if (bcc) {
+      emailHeaders.push(`Bcc: ${bcc}`);
+    }
+    emailHeaders.push(
       `Subject: ${encodeSubject(subject)}`,
       `MIME-Version: 1.0`,
       `Content-Type: text/html; charset=utf-8`,
       `Content-Transfer-Encoding: base64`,
       ``,
-      btoa(String.fromCharCode(...new TextEncoder().encode(html))),
-    ].join('\r\n');
+      btoa(String.fromCharCode(...new TextEncoder().encode(html)))
+    );
+    const emailMessage = emailHeaders.join('\r\n');
 
     // Encode the entire message in base64url format (required by Gmail API)
     const encoder = new TextEncoder();

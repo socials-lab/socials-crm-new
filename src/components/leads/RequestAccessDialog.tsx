@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, AlertCircle } from 'lucide-react';
+import { Send, AlertCircle, Plus, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/sonner';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 
@@ -24,6 +25,25 @@ interface RequestAccessDialogProps {
   leadId: string;
   onSent?: (platforms: string[]) => void;
 }
+
+const DEFAULT_BCC = ['danny@socials.cz', 'dana.bauerova@socials.cz'];
+
+const DEFAULT_EMAIL_CONTENT = `Dobrý den,
+
+Na základě našeho telefonátu Vás prosíme o nasdílení přístupů do níže uvedených marketingových nástrojů. Uděláme audit a připravíme pro vás nabídku na případnou spolupráci.
+
+Google Analytics 4 - Přístup na úrovni celého účtu s oprávněním "Čtení" pošlete na e-mail analytics@socials.cz
+
+Facebook Business Manager - Přidejte nás jako partnery (ID našeho účtu: 1196977750459552) s nejnižší úrovní přístupů k těmto položkám: Reklamní účet, Katalog produktů, Meta Pixel (Datový set), FB stránka.
+
+Google Ads - Zašlete nám ID reklamního účtu. Zašleme žádost o přístup která dorazí na e-mail, na který máte Google Ads účet vedený.
+
+S-klik - Nasdílejte na e-mail mysocials@seznam.cz
+
+Pokud si nebudete vědět rady, zde naleznete návod. Případně klidně napište a pomůžeme :)
+
+Děkujeme a přejeme hezký den,
+Tým Socials`;
 
 export function RequestAccessDialog({
   open,
@@ -40,31 +60,41 @@ export function RequestAccessDialog({
     return `Žádost o nasdílení přístupů - ${companyName} / Socials`;
   };
 
-  const generateDefaultEmail = () => {
-    return `Dobrý den ${contactName},
-
-rádi bychom Vás požádali o nasdílení přístupů k reklamním účtům.
-
-Přístupy prosím nasdílejte na email: ads@socials.cz
-
-Pro Meta Ads: Přidejte nás jako partnera s přístupem k reklamnímu účtu.
-Pro Google Ads: Přidejte email jako uživatele s oprávněním "Správce".
-Pro S-klik: Přidejte email jako uživatele s rolí "Administrátor".
-
-Děkujeme za spolupráci.
-
-S pozdravem,
-Tým Socials`;
-  };
-
+  const [toEmails, setToEmails] = useState<string[]>(contactEmail ? [contactEmail] : []);
+  const [newToEmail, setNewToEmail] = useState('');
+  const [bccEmails, setBccEmails] = useState<string[]>(DEFAULT_BCC);
+  const [newBccEmail, setNewBccEmail] = useState('');
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
-  const [emailContent, setEmailContent] = useState(generateDefaultEmail());
-  const [recipientEmail, setRecipientEmail] = useState(contactEmail || '');
+  const [emailContent, setEmailContent] = useState(DEFAULT_EMAIL_CONTENT);
   const [isSending, setIsSending] = useState(false);
 
+  const addEmail = (
+    email: string,
+    list: string[],
+    setList: (v: string[]) => void,
+    setInput: (v: string) => void
+  ) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast.error('Neplatný email');
+      return;
+    }
+    if (list.includes(trimmed)) {
+      toast.error('Email už je v seznamu');
+      return;
+    }
+    setList([...list, trimmed]);
+    setInput('');
+  };
+
+  const removeEmail = (email: string, list: string[], setList: (v: string[]) => void) => {
+    setList(list.filter(e => e !== email));
+  };
+
   const handleSend = async () => {
-    if (!recipientEmail || !recipientEmail.trim()) {
-      toast.error('Zadejte email příjemce');
+    if (toEmails.length === 0) {
+      toast.error('Zadejte alespoň jednoho příjemce');
       return;
     }
 
@@ -110,16 +140,16 @@ Tým Socials`;
         </div>
       `;
 
-      const result = await sendEmail(recipientEmail.trim(), emailSubject, html);
+      // Send to all recipients (primary + BCC)
+      // Note: Gmail API sendEmail might need to be updated to support multiple recipients
+      // For now, we send to the first recipient and include others in the message
+      const allRecipients = toEmails.join(', ');
+      const result = await sendEmail(allRecipients, emailSubject, html, bccEmails.join(', '));
 
       if (result) {
-        onSent?.([]);
-
+        onSent?.(['Google Analytics 4', 'Facebook Business Manager', 'Google Ads', 'S-klik']);
         toast.success('Žádost o přístupy byla odeslána');
         onOpenChange(false);
-
-        // Reset state
-        setEmailContent(generateDefaultEmail());
       }
     } catch (error) {
       console.error('Failed to send email:', error);
@@ -130,21 +160,70 @@ Tým Socials`;
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
-      // Reset when opening
+      setToEmails(contactEmail ? [contactEmail] : []);
+      setNewToEmail('');
+      setBccEmails(DEFAULT_BCC);
+      setNewBccEmail('');
       setEmailSubject(getDefaultSubject());
-      setEmailContent(generateDefaultEmail());
-      setRecipientEmail(contactEmail || '');
+      setEmailContent(DEFAULT_EMAIL_CONTENT);
     }
     onOpenChange(newOpen);
   };
 
+  const EmailTagList = ({
+    emails,
+    onRemove,
+    newEmail,
+    onNewEmailChange,
+    onAdd,
+    placeholder,
+  }: {
+    emails: string[];
+    onRemove: (e: string) => void;
+    newEmail: string;
+    onNewEmailChange: (v: string) => void;
+    onAdd: () => void;
+    placeholder: string;
+  }) => (
+    <div className="space-y-2">
+      {emails.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {emails.map(email => (
+            <Badge key={email} variant="secondary" className="gap-1 pr-1 font-normal">
+              {email}
+              <button
+                type="button"
+                onClick={() => onRemove(email)}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Input
+          value={newEmail}
+          onChange={(e) => onNewEmailChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } }}
+          placeholder={placeholder}
+          className="text-sm"
+        />
+        <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={onAdd}>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>📧 Žádost o nasdílení přístupů</DialogTitle>
           <DialogDescription>
-            Upravte znění emailu před odesláním.
+            Upravte příjemce a znění emailu před odesláním.
           </DialogDescription>
         </DialogHeader>
 
@@ -170,27 +249,33 @@ Tým Socials`;
             </div>
           )}
 
-          {/* Recipient Info */}
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Příjemce (email)</Label>
-              <Input
-                type="email"
-                value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
-                placeholder="email@example.com"
-              />
-              <p className="text-xs text-muted-foreground">
-                Výchozí: {contactName} {contactEmail ? `(${contactEmail})` : '– email nevyplněn'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Společnost:</span>
-              <span className="font-medium">{companyName}</span>
-            </div>
+          {/* To */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Komu</Label>
+            <EmailTagList
+              emails={toEmails}
+              onRemove={(e) => removeEmail(e, toEmails, setToEmails)}
+              newEmail={newToEmail}
+              onNewEmailChange={setNewToEmail}
+              onAdd={() => addEmail(newToEmail, toEmails, setToEmails, setNewToEmail)}
+              placeholder="Přidat příjemce..."
+            />
           </div>
 
-          {/* Email Subject */}
+          {/* BCC */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Skrytá kopie (BCC)</Label>
+            <EmailTagList
+              emails={bccEmails}
+              onRemove={(e) => removeEmail(e, bccEmails, setBccEmails)}
+              newEmail={newBccEmail}
+              onNewEmailChange={setNewBccEmail}
+              onAdd={() => addEmail(newBccEmail, bccEmails, setBccEmails, setNewBccEmail)}
+              placeholder="Přidat BCC..."
+            />
+          </div>
+
+          {/* Subject */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Předmět emailu</Label>
             <Input
@@ -200,14 +285,14 @@ Tým Socials`;
             />
           </div>
 
-          {/* Email Content */}
+          {/* Content */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Obsah emailu</Label>
             <Textarea
               value={emailContent}
               onChange={(e) => setEmailContent(e.target.value)}
-              rows={10}
-              className="font-mono text-sm"
+              rows={18}
+              className="font-mono text-sm leading-relaxed"
               placeholder="Text emailu..."
             />
           </div>
@@ -219,7 +304,7 @@ Tým Socials`;
           </Button>
           <Button
             onClick={handleSend}
-            disabled={isSending || !recipientEmail.trim() || !hasGmailScope}
+            disabled={isSending || toEmails.length === 0 || !hasGmailScope}
           >
             {isSending ? (
               <>

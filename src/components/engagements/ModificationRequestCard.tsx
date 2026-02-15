@@ -374,13 +374,27 @@ export function ModificationRequestCard({
                 </div>
               )}
               
+              {/* Kdo navrhl upsell */}
+              {(request.upsold_by_name || request.upsold_by_id) && (
+                <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-md p-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                    <span className="font-medium text-violet-700 dark:text-violet-300">Kdo navrhl upsell:</span>
+                  </div>
+                  <div className="ml-6 mt-1 space-y-0.5">
+                    <p className="font-medium">{request.upsold_by_name || 'Neznámý'}</p>
+                    {request.upsold_by_email && (
+                      <p className="text-xs text-muted-foreground">{request.upsold_by_email}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Footer */}
               <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <User className="h-3 w-3" />
-                  <span>Navrhl: {request.upsold_by_name || 'Neznámý'}</span>
-                  <span>•</span>
-                  <span>{requestedAt}</span>
+                  <Clock className="h-3 w-3" />
+                  <span>Vytvořeno {requestedAt}</span>
                 </div>
                 
               {/* Status badge for reviewed requests */}

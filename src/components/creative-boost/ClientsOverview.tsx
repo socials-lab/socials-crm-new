@@ -13,8 +13,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, ChevronDown, ChevronUp, Palette, Zap, MoreVertical, Settings, ExternalLink, History, Image, Video } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Palette, Zap, MoreVertical, Settings, ExternalLink, History, Image, Video, Share2 } from 'lucide-react';
 import { SettingsHistoryDialog } from './SettingsHistoryDialog';
+import { ShareCreativeBoostDialog } from './ShareCreativeBoostDialog';
 import type { MonthStatus, ClientMonthOutput, OutputCategory } from '@/types/creativeBoost';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +71,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [settingsDialogClient, setSettingsDialogClient] = useState<string | null>(null);
   const [historyDialogClient, setHistoryDialogClient] = useState<string | null>(null);
+  const [shareDialogClient, setShareDialogClient] = useState<string | null>(null);
 
   // Auto-sync: Ensure Creative Boost records exist for all active engagements
   useEffect(() => {
@@ -330,6 +332,10 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-popover w-48">
+                      <DropdownMenuItem onClick={() => setShareDialogClient(summary.clientId)}>
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Sdílet s klientem
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSettingsDialogClient(summary.clientId)}>
                         <Settings className="h-4 w-4 mr-2" />
                         Nastavení
@@ -674,6 +680,24 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
         clientName={historyDialogClient ? (summaries.find(s => s.clientId === historyDialogClient)?.brandName ?? '') : ''}
         history={historyDialogClient ? getSettingsHistory(historyDialogClient, year, month) : []}
       />
+
+      {/* Share Creative Boost Dialog */}
+      {shareDialogClient && (() => {
+        const summary = summaries.find(s => s.clientId === shareDialogClient);
+        const monthData = clientMonths.find(cm => cm.clientId === shareDialogClient && cm.year === year && cm.month === month);
+        if (!summary || !monthData) return null;
+        return (
+          <ShareCreativeBoostDialog
+            open={!!shareDialogClient}
+            onOpenChange={(open) => !open && setShareDialogClient(null)}
+            clientMonthId={monthData.id}
+            clientName={summary.clientName}
+            brandName={summary.brandName}
+            year={year}
+            month={month}
+          />
+        );
+      })()}
     </div>
   );
 }

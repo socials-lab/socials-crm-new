@@ -2,7 +2,7 @@ import { createContext, useContext, ReactNode, useMemo, useCallback } from 'reac
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCRMData } from './useCRMData';
-import type { Applicant, ApplicantStage, ApplicantNote } from '@/types/applicant';
+import type { Applicant, ApplicantStage, ApplicantNote, ApplicantNoteType } from '@/types/applicant';
 import type { Colleague } from '@/types/crm';
 
 interface ApplicantsDataContextType {
@@ -13,11 +13,11 @@ interface ApplicantsDataContextType {
   updateApplicant: (id: string, updates: Partial<Applicant>) => Promise<void>;
   deleteApplicant: (id: string) => Promise<void>;
   updateApplicantStage: (id: string, stage: ApplicantStage) => Promise<void>;
-  addNote: (applicantId: string, text: string) => Promise<void>;
+  addNote: (applicantId: string, text: string, noteType?: ApplicantNoteType, subject?: string | null, recipients?: string[] | null) => Promise<void>;
   getApplicantById: (id: string) => Applicant | undefined;
   getApplicantsByStage: (stage: ApplicantStage) => Applicant[];
-  sendInterviewInvite: (applicantId: string) => Promise<void>;
-  sendRejection: (applicantId: string) => Promise<void>;
+  sendInterviewInvite: (applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => Promise<void>;
+  sendRejection: (applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => Promise<void>;
   sendOnboarding: (applicantId: string) => Promise<void>;
   completeOnboarding: (applicantId: string, data: OnboardingData) => Promise<Colleague>;
 }
@@ -54,6 +54,9 @@ const transformApplicant = (row: Record<string, unknown>): Applicant => ({
   notes: row.notes || [],
   source: row.source,
   source_custom: row.source_custom,
+  birthday: row.birthday,
+  avatar_url: row.avatar_url,
+  personal_email: row.personal_email,
   ico: row.ico,
   company_name: row.company_name,
   dic: row.dic,
@@ -158,7 +161,19 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
   });
 
   const addNoteMutation = useMutation({
-    mutationFn: async ({ applicantId, text }: { applicantId: string; text: string }) => {
+    mutationFn: async ({
+      applicantId,
+      text,
+      noteType = 'general',
+      subject = null,
+      recipients = null,
+    }: {
+      applicantId: string;
+      text: string;
+      noteType?: ApplicantNoteType;
+      subject?: string | null;
+      recipients?: string[] | null;
+    }) => {
       // Fetch current applicant to get existing notes
       const { data: applicantData, error: fetchError } = await supabase
         .from('applicants')
@@ -181,6 +196,9 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
         author_id: user.id,
         author_name: userName,
         text,
+        note_type: noteType,
+        subject,
+        recipients,
         created_at: new Date().toISOString(),
       };
 
@@ -269,11 +287,21 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     await updateApplicantMutation.mutateAsync({ id, updates: { stage } });
   }, [updateApplicantMutation]);
 
-  const addNote = useCallback(async (applicantId: string, text: string): Promise<void> => {
-    await addNoteMutation.mutateAsync({ applicantId, text });
+  const addNote = useCallback(async (
+    applicantId: string,
+    text: string,
+    noteType: ApplicantNoteType = 'general',
+    subject: string | null = null,
+    recipients: string[] | null = null
+  ): Promise<void> => {
+    await addNoteMutation.mutateAsync({ applicantId, text, noteType, subject, recipients });
   }, [addNoteMutation]);
 
-  const sendInterviewInvite = useCallback(async (applicantId: string): Promise<void> => {
+  const sendInterviewInvite = useCallback(async (
+    applicantId: string,
+    emailData?: { subject: string; message: string; recipients: string[] }
+  ): Promise<void> => {
+    // Update applicant status
     await updateApplicantMutation.mutateAsync({
       id: applicantId,
       updates: {
@@ -281,9 +309,24 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
         stage: 'invited_interview',
       },
     });
-  }, [updateApplicantMutation]);
 
-  const sendRejection = useCallback(async (applicantId: string): Promise<void> => {
+    // If email data provided, add note with email content
+    if (emailData) {
+      await addNoteMutation.mutateAsync({
+        applicantId,
+        text: emailData.message,
+        noteType: 'email_sent',
+        subject: emailData.subject,
+        recipients: emailData.recipients,
+      });
+    }
+  }, [updateApplicantMutation, addNoteMutation]);
+
+  const sendRejection = useCallback(async (
+    applicantId: string,
+    emailData?: { subject: string; message: string; recipients: string[] }
+  ): Promise<void> => {
+    // Update applicant status
     await updateApplicantMutation.mutateAsync({
       id: applicantId,
       updates: {
@@ -291,7 +334,18 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
         stage: 'rejected',
       },
     });
-  }, [updateApplicantMutation]);
+
+    // If email data provided, add note with email content
+    if (emailData) {
+      await addNoteMutation.mutateAsync({
+        applicantId,
+        text: emailData.message,
+        noteType: 'email_sent',
+        subject: emailData.subject,
+        recipients: emailData.recipients,
+      });
+    }
+  }, [updateApplicantMutation, addNoteMutation]);
 
   const sendOnboarding = useCallback(async (applicantId: string): Promise<void> => {
     await updateApplicantMutation.mutateAsync({

@@ -36,15 +36,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { InlineEditText, InlineEditNumber } from './InlineEditCell';
 import { BillingPeriodDialog } from './BillingPeriodDialog';
+import { SendApprovalDialog } from './SendApprovalDialog';
 import { statusConfig } from './ExtraWorkStatusBadge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
 import type { ExtraWork, ExtraWorkStatus } from '@/types/crm';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { 
-  MoreVertical, 
-  Eye, 
+import {
+  MoreVertical,
+  Eye,
   Search,
   Clock,
   Loader2,
@@ -52,6 +53,8 @@ import {
   Receipt,
   Trash2,
   TrendingUp,
+  XCircle,
+  Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -87,7 +90,7 @@ export function ExtraWorkTable({
   searchQuery: searchQueryProp,
   onSearchChange,
 }: ExtraWorkTableProps) {
-  const { clients, colleagues, getClientById, getEngagementById, getColleagueById, approveExtraWork, completeExtraWork } = useCRMData();
+  const { clients, colleagues, getClientById, getEngagementById, getColleagueById, approveExtraWork, completeExtraWork, issuedInvoices } = useCRMData();
   const { toast } = useToast();
   // Use controlled search if prop provided, otherwise use internal state
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
@@ -96,6 +99,22 @@ export function ExtraWorkTable({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [billingPeriodDialogOpen, setBillingPeriodDialogOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ id: string; work: ExtraWork } | null>(null);
+  const [sendApprovalWork, setSendApprovalWork] = useState<ExtraWork | null>(null);
+
+  // Helper to open invoice in Fakturoid
+  const handleOpenInvoice = (invoiceId: string | null) => {
+    if (!invoiceId) return;
+    const invoice = issuedInvoices.find(inv => inv.id === invoiceId);
+    if (invoice?.fakturoid_url) {
+      window.open(invoice.fakturoid_url, '_blank');
+    } else {
+      toast({
+        title: 'Faktura není k dispozici',
+        description: 'Odkaz na fakturu ve Fakturoid nebyl nalezen.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Get available months from billing periods
   const availableMonths = useMemo(() => {
@@ -230,11 +249,12 @@ export function ExtraWorkTable({
 
   // Status icon component
   const StatusIcon = ({ status }: { status: ExtraWorkStatus }) => {
-    const icons = {
+    const icons: Record<ExtraWorkStatus, typeof Clock> = {
       pending_approval: Clock,
       in_progress: Loader2,
       ready_to_invoice: FileText,
       invoiced: Receipt,
+      rejected: XCircle,
     };
     const Icon = icons[status];
     return <Icon className="h-3.5 w-3.5" />;
@@ -567,6 +587,9 @@ export function ExtraWorkTable({
                           <SelectItem value="invoiced" disabled className="text-xs">
                             Vyfakturováno
                           </SelectItem>
+                          <SelectItem value="rejected" className="text-xs text-red-600">
+                            Zamítnuto
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>
@@ -580,8 +603,14 @@ export function ExtraWorkTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {work.status === 'pending_approval' && (
+                            <DropdownMenuItem onClick={() => setSendApprovalWork(work)}>
+                              <Send className="h-4 w-4 mr-2" />
+                              Odeslat ke schválení
+                            </DropdownMenuItem>
+                          )}
                           {work.status === 'invoiced' && work.invoice_number && (
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenInvoice(work.invoice_id)}>
                               <Eye className="h-4 w-4 mr-2" />
                               Faktura #{work.invoice_number}
                             </DropdownMenuItem>
@@ -641,6 +670,18 @@ export function ExtraWorkTable({
           workDate={pendingStatusChange.work.work_date}
           currentBillingPeriod={pendingStatusChange.work.billing_period}
           onConfirm={handleBillingPeriodConfirm}
+        />
+      )}
+
+      {/* Send Approval Dialog */}
+      {sendApprovalWork && (
+        <SendApprovalDialog
+          open={!!sendApprovalWork}
+          onOpenChange={(open) => {
+            if (!open) setSendApprovalWork(null);
+          }}
+          extraWork={sendApprovalWork}
+          onUpdate={onUpdate}
         />
       )}
     </div>

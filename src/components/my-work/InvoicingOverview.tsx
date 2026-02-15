@@ -22,7 +22,7 @@ import { CATEGORY_LABELS } from '@/hooks/useActivityRewards';
 // Invoice line item structure
 export interface InvoiceLineItem {
   id: string;
-  category: 'client' | 'creative_boost' | 'commission' | 'marketing' | 'overhead';
+  category: 'client' | 'creative_boost' | 'commission' | 'marketing' | 'overhead' | 'client_work';
   invoiceName: string;
   amount: number;
   note?: string; // e.g. "od 15." for prorated
@@ -52,6 +52,8 @@ interface ExtraWorkForInvoice {
   clientName: string;
   name: string;
   amount: number;
+  hours?: number | null;
+  hourlyRate?: number | null;
 }
 
 interface InvoicingOverviewProps {
@@ -63,7 +65,7 @@ interface InvoicingOverviewProps {
   // Internal work data
   internalRewards: ActivityReward[];
   getRewardsByMonth: (year: number, month: number) => ActivityReward[];
-  getRewardsByCategory: (year: number, month: number) => { marketing: ActivityReward[]; overhead: ActivityReward[] };
+  getRewardsByCategory: (year: number, month: number) => { marketing: ActivityReward[]; overhead: ActivityReward[]; client_work: ActivityReward[] };
   // Actions
   onAddInternalWork: () => void;
   onEditReward?: (reward: ActivityReward) => void;
@@ -90,6 +92,7 @@ function InvoiceLineItemRow({
       case 'commission': return CheckCircle;
       case 'marketing': return Megaphone;
       case 'overhead': return Building2;
+      case 'client_work': return Briefcase;
       default: return FileText;
     }
   };
@@ -235,6 +238,17 @@ export function InvoicingOverview({
       });
     });
 
+    // Client work (manual client-specific items)
+    categorized.client_work.forEach((r) => {
+      items.push({
+        id: r.id,
+        category: 'client_work',
+        invoiceName: `Přímá služba – ${r.invoice_item_name}`,
+        amount: r.amount,
+        isEditable: true,
+      });
+    });
+
     return items;
   }, [clientRewards, creativeBoostItems, commissionItems, extraWorkItems, getRewardsByCategory, selectedYear, selectedMonth, isCurrentMonth]);
 
@@ -246,6 +260,7 @@ export function InvoicingOverview({
       commission: invoiceLineItems.filter(i => i.category === 'commission'),
       marketing: invoiceLineItems.filter(i => i.category === 'marketing'),
       overhead: invoiceLineItems.filter(i => i.category === 'overhead'),
+      client_work: invoiceLineItems.filter(i => i.category === 'client_work'),
     };
   }, [invoiceLineItems]);
 
@@ -256,7 +271,7 @@ export function InvoicingOverview({
   }, [groupedItems]);
 
   const internalTotal = useMemo(() => {
-    return [...groupedItems.marketing, ...groupedItems.overhead]
+    return [...groupedItems.marketing, ...groupedItems.overhead, ...groupedItems.client_work]
       .reduce((sum, i) => sum + i.amount, 0);
   }, [groupedItems]);
 
@@ -272,7 +287,7 @@ export function InvoicingOverview({
   };
 
   const hasClientWork = groupedItems.client.length > 0 || groupedItems.creativeBoost.length > 0 || groupedItems.commission.length > 0;
-  const hasInternalWork = groupedItems.marketing.length > 0 || groupedItems.overhead.length > 0;
+  const hasInternalWork = groupedItems.marketing.length > 0 || groupedItems.overhead.length > 0 || groupedItems.client_work.length > 0;
 
   // Helper to find reward by ID for editing
   const getRewardById = (id: string): ActivityReward | undefined => {
@@ -401,10 +416,28 @@ export function InvoicingOverview({
                         {CATEGORY_LABELS.overhead}
                       </div>
                       {groupedItems.overhead.map((item) => (
-                        <InvoiceLineItemRow 
-                          key={item.id} 
-                          item={item} 
-                          onCopy={handleCopy} 
+                        <InvoiceLineItemRow
+                          key={item.id}
+                          item={item}
+                          onCopy={handleCopy}
+                          onEdit={() => handleEditReward(item.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Client Work (manual) */}
+                  {groupedItems.client_work.length > 0 && (
+                    <div className="pl-2 border-l-2 border-primary/20">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 px-2">
+                        <Briefcase className="h-3 w-3" />
+                        {CATEGORY_LABELS.client_work}
+                      </div>
+                      {groupedItems.client_work.map((item) => (
+                        <InvoiceLineItemRow
+                          key={item.id}
+                          item={item}
+                          onCopy={handleCopy}
                           onEdit={() => handleEditReward(item.id)}
                         />
                       ))}

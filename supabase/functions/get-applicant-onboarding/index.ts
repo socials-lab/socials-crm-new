@@ -28,7 +28,7 @@ serve(async (req) => {
 
     const { data: applicant, error } = await supabaseAdmin
       .from("applicants")
-      .select("id, full_name, email, phone, position, onboarding_completed_at, onboarding_sent_at, ico, company_name, dic, billing_street, billing_city, billing_zip, hourly_rate, bank_account")
+      .select("id, full_name, email, phone, position, onboarding_completed_at, onboarding_sent_at, birthday, avatar_url, personal_email, ico, company_name, dic, billing_street, billing_city, billing_zip, hourly_rate, bank_account")
       .eq("id", applicantId)
       .single();
 
