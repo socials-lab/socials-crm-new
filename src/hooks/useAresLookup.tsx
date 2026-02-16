@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -19,16 +18,30 @@ export function useAresLookup() {
     setError(null);
 
     try {
-      const { data, error } = await withTimeout(
-        supabase.functions.invoke('ares-lookup', {
-          body: { ico },
+      // Use direct fetch to avoid Supabase auth issues
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await withTimeout(
+        fetch(`${supabaseUrl}/functions/v1/ares-lookup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ ico }),
         }),
-        15000
+        20000
       );
 
-      if (error) throw error;
-      return data;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
     } catch (err) {
+      console.error('ARES lookup error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Chyba při vyhledávání';
       setError(errorMessage);
       return null;

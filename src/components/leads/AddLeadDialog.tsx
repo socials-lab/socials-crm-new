@@ -251,7 +251,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
     }
   }, [lead, form]);
 
-  const handleSubmit = (data: LeadFormData) => {
+  const handleSubmit = async (data: LeadFormData) => {
     const leadData = {
       company_name: data.company_name,
       ico: data.ico,
@@ -298,14 +298,19 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       court_file_number: data.court_file_number || lead?.court_file_number || null,
     };
 
-    if (lead) {
-      updateLead(lead.id, leadData);
-      toast.success('Lead byl upraven');
-    } else {
-      addLead(leadData);
-      toast.success('Lead byl vytvořen');
+    try {
+      if (lead) {
+        await updateLead(lead.id, leadData);
+        toast.success('Lead byl upraven');
+      } else {
+        await addLead(leadData);
+        toast.success('Lead byl vytvořen');
+      }
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error saving lead:', error);
+      toast.error('Nepodařilo se uložit lead');
     }
-    onOpenChange(false);
   };
 
   return (

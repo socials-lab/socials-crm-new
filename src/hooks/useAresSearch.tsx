@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface CompanySearchResult {
   ico: string;
@@ -66,19 +65,31 @@ export function useAresSearch() {
     }
 
     try {
-      const { data, error: invokeError } = await withTimeout(
-        supabase.functions.invoke('ares-search', {
-          body: { query: query.trim() },
+      // Use direct fetch to avoid Supabase auth issues
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const fetchResponse = await withTimeout(
+        fetch(`${supabaseUrl}/functions/v1/ares-search`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ query: query.trim() }),
         }),
-        15000
+        20000
       );
 
       // Stale request - ignore
       if (requestId !== requestIdRef.current) return [];
 
-      if (invokeError) throw invokeError;
+      if (!fetchResponse.ok) {
+        const errorData = await fetchResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${fetchResponse.status}`);
+      }
 
-      const response = data as SearchResponse;
+      const response = await fetchResponse.json() as SearchResponse;
 
       if (response.error) {
         throw new Error(response.error);
@@ -102,6 +113,7 @@ export function useAresSearch() {
     } catch (err) {
       // Stale request - ignore
       if (requestId !== requestIdRef.current) return [];
+      console.error('ARES search error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Chyba při vyhledávání';
       setError(errorMessage);
       setResults([]);
