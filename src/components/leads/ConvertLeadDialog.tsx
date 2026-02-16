@@ -112,7 +112,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         engagement_name: lead.potential_services?.[0]?.name
           ? `${lead.potential_services[0].name} - ${lead.company_name}`
           : `${lead.company_name}`,
-        start_date: lead.contract_signed_at ? new Date(lead.contract_signed_at).toISOString().split('T')[0] : '',
+        start_date: lead.contract_signed_at
+          ? new Date(lead.contract_signed_at).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0], // Fallback to today
         end_date: '',
         notice_period_months: 3,
         engagement_notes: lead.summary,
@@ -143,6 +145,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   };
 
   const executeConversion = async (data: ConvertFormData) => {
+    console.log('executeConversion called', { lead: lead?.id, data });
     if (!lead) return;
 
     // Validate contact_name exists (Fix #2)
@@ -152,6 +155,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
     }
 
     setIsConverting(true);
+    console.log('Starting conversion, setIsConverting(true)');
 
     try {
       // Derive engagement type and fees from services
@@ -360,8 +364,17 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   };
 
   const handleSubmit = async (data: ConvertFormData) => {
+    console.log('handleSubmit called with data:', data);
     if (!lead) return;
     await executeConversion(data);
+  };
+
+  const handleInvalidSubmit = (errors: Record<string, unknown>) => {
+    console.log('handleInvalidSubmit called with errors:', errors);
+    const errorMessages = Object.entries(errors)
+      .map(([field, error]) => `${field}: ${(error as { message?: string })?.message || 'Invalid'}`)
+      .join(', ');
+    toast.error(`Formulář obsahuje chyby: ${errorMessages}`);
   };
 
   if (!lead) return null;
@@ -450,7 +463,13 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form
+            onSubmit={(e) => {
+              console.log('Form onSubmit triggered');
+              form.handleSubmit(handleSubmit, handleInvalidSubmit)(e);
+            }}
+            className="space-y-6"
+          >
             {/* Section 1: Verification - READ ONLY */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm border-b pb-2">Ověření údajů ze smlouvy</h4>
@@ -914,7 +933,31 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isConverting}>
                 Zrušit
               </Button>
-              <Button type="submit" disabled={isConverting || !hasServices}>
+              <Button
+                type="button"
+                disabled={isConverting || !hasServices}
+                onClick={async () => {
+                  console.log('Convert button clicked - manual submit');
+                  if (!hasServices) {
+                    toast.error('Přidejte alespoň jednu službu k leadu před převodem');
+                    return;
+                  }
+                  // Manually trigger form validation and submission
+                  const isValid = await form.trigger();
+                  console.log('Form validation result:', isValid, form.formState.errors);
+                  if (isValid) {
+                    const data = form.getValues();
+                    console.log('Submitting with data:', data);
+                    await handleSubmit(data);
+                  } else {
+                    const errors = form.formState.errors;
+                    const errorMessages = Object.entries(errors)
+                      .map(([field, error]) => `${field}: ${(error as { message?: string })?.message || 'Neplatné'}`)
+                      .join(', ');
+                    toast.error(`Formulář obsahuje chyby: ${errorMessages}`);
+                  }
+                }}
+              >
                 {isConverting ? 'Převádím...' : !hasServices ? 'Přidejte služby' : 'Převést na zakázku'}
               </Button>
             </div>

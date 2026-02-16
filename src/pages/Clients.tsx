@@ -394,13 +394,23 @@ export default function Clients() {
         toast.success('Klient byl upraven');
       } else {
         await addClient(data);
-        toast.success('Klient byl vytvořen');
+        // Note: success toast is shown by the mutation's onSuccess
       }
       setIsFormOpen(false);
       setEditingClient(null);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving client:', error);
-      const message = error instanceof Error ? error.message : 'Neznámá chyba';
+      let message = 'Neznámá chyba';
+      if (error instanceof Error) {
+        message = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        const err = error as { message?: string; code?: string; details?: string };
+        if (err.code === '23505' || err.message?.includes('duplicate') || err.message?.includes('unique')) {
+          message = 'Klient s tímto IČO již existuje';
+        } else {
+          message = err.message || err.details || JSON.stringify(error);
+        }
+      }
       toast.error(`Chyba při ukládání klienta: ${message}`);
     }
   };

@@ -1,5 +1,5 @@
 import { useForm } from 'react-hook-form';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import {
 import { AlertTriangle } from 'lucide-react';
 import type { Client, ClientStatus, LeadSource } from '@/types/crm';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 import { getAvailableClientStatuses, CLIENT_STATUS_LABELS } from '@/lib/statusTransitions';
 import { validateIcoChecksum, optionalEmail, czechIco, czechDic } from '@/lib/validation';
 
@@ -111,6 +112,7 @@ interface ClientFormProps {
 
 export function ClientForm({ client, hasActiveEngagements = false, isSuperAdmin = false, onSubmit, onCancel }: ClientFormProps) {
   const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get available status options based on current status and user role
   const currentStatus = client?.status || 'lead';
@@ -441,11 +443,41 @@ export function ClientForm({ client, hasActiveEngagements = false, isSuperAdmin 
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={() => { form.reset(); onCancel(); }}>
+          <Button type="button" variant="outline" onClick={() => { form.reset(); onCancel(); }} disabled={isSubmitting}>
             Zrušit
           </Button>
-          <Button type="submit">
-            {client ? 'Uložit změny' : 'Vytvořit klienta'}
+          <Button
+            type="button"
+            disabled={isSubmitting}
+            onClick={async () => {
+              const isValid = await form.trigger();
+              if (isValid) {
+                setIsSubmitting(true);
+                try {
+                  await onSubmit({
+                    ...form.getValues(),
+                    dic: form.getValues().dic || null,
+                    billing_email: form.getValues().billing_email || null,
+                    billing_street: form.getValues().billing_street || null,
+                    billing_city: form.getValues().billing_city || null,
+                    billing_zip: form.getValues().billing_zip || null,
+                    billing_country: form.getValues().billing_country || null,
+                    end_date: client?.end_date || null,
+                    created_by: client?.created_by || user?.id || '',
+                  });
+                } finally {
+                  setIsSubmitting(false);
+                }
+              } else {
+                const errors = form.formState.errors;
+                const errorMessages = Object.entries(errors)
+                  .map(([field, error]) => `${field}: ${(error as { message?: string })?.message || 'Neplatné'}`)
+                  .join(', ');
+                toast.error(`Formulář obsahuje chyby: ${errorMessages}`);
+              }
+            }}
+          >
+            {isSubmitting ? 'Ukládám...' : client ? 'Uložit změny' : 'Vytvořit klienta'}
           </Button>
         </div>
       </form>

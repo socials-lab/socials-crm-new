@@ -463,9 +463,13 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Klient byl vytvořen');
     },
-    onError: (error) => {
+    onError: (error: { code?: string; message?: string }) => {
       console.error('Failed to create client:', error);
-      toast.error('Nepodařilo se vytvořit klienta');
+      if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        toast.error('Klient s tímto IČO již existuje');
+      } else {
+        toast.error(`Nepodařilo se vytvořit klienta: ${error.message || 'Neznámá chyba'}`);
+      }
     },
   });
 
