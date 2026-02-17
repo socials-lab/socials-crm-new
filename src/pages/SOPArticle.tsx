@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Edit, Trash2, MessageSquarePlus, User, Link2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -27,6 +28,7 @@ export default function SOPArticle() {
   const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
   const [suggestOpen, setSuggestOpen] = useState(false);
 
   const handleCopyLink = () => {
@@ -151,15 +153,25 @@ export default function SOPArticle() {
       <AddSOPArticleDialog open={editOpen} onOpenChange={setEditOpen} editArticle={article} />
       <SuggestSOPUpdateDialog open={suggestOpen} onOpenChange={setSuggestOpen} articleTitle={article.title} onSubmit={(reason) => suggestUpdate(article.id, reason)} />
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialog open={deleteOpen} onOpenChange={(open) => { setDeleteOpen(open); if (!open) setDeleteConfirm(''); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Smazat článek?</AlertDialogTitle>
-            <AlertDialogDescription>Tato akce je nevratná.</AlertDialogDescription>
+            <AlertDialogTitle>Smazat SOP?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tato akce je nevratná. Pro potvrzení napište <strong>SMAZAT</strong>.
+            </AlertDialogDescription>
           </AlertDialogHeader>
+          <Input
+            value={deleteConfirm}
+            onChange={e => setDeleteConfirm(e.target.value)}
+            placeholder="Napište SMAZAT"
+            className="mt-2"
+          />
           <AlertDialogFooter>
             <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Smazat</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteConfirm !== 'SMAZAT'} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Smazat
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
