@@ -8,6 +8,7 @@ interface SOPArticleCardProps {
   onClick: () => void;
   highlightQuery?: string;
   categoryName?: string;
+  pendingSuggestionCount?: number;
 }
 
 function highlightText(text: string, query: string) {
@@ -20,7 +21,7 @@ function highlightText(text: string, query: string) {
   );
 }
 
-export function SOPArticleCard({ article, onClick, highlightQuery, categoryName }: SOPArticleCardProps) {
+export function SOPArticleCard({ article, onClick, highlightQuery, categoryName, pendingSuggestionCount }: SOPArticleCardProps) {
   return (
     <Card className="cursor-pointer hover:shadow-sm transition-shadow border-border" onClick={onClick}>
       <CardContent className="p-4">
@@ -33,6 +34,9 @@ export function SOPArticleCard({ article, onClick, highlightQuery, categoryName 
               </h3>
               {categoryName && (
                 <Badge variant="outline" className="text-[10px] shrink-0">{categoryName}</Badge>
+              )}
+              {(pendingSuggestionCount ?? 0) > 0 && (
+                <Badge variant="destructive" className="text-[10px] shrink-0">{pendingSuggestionCount}</Badge>
               )}
             </div>
             {article.search_text && (

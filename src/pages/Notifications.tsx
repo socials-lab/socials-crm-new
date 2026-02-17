@@ -39,6 +39,7 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   extra_work_ready_to_invoice: 'Vícepráce k fakturaci',
   creative_boost_activated: 'Creative Boost aktivován',
   creative_boost_deadline: 'Creative Boost deadline',
+  sop_update_suggested: 'Návrh na úpravu SOP',
 };
 
 // Group notifications by date
