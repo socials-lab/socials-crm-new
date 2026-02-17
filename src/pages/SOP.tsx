@@ -51,7 +51,6 @@ export default function SOP() {
     return map;
   }, [suggestions]);
 
-  // Group search results by category
   const groupedResults = useMemo(() => {
     if (!isFiltering) return {};
     const groups: Record<string, typeof searchResults> = {};
@@ -75,38 +74,39 @@ export default function SOP() {
   }, [articles]);
 
   return (
-    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <PageHeader title="📖 SOP Databáze" description="Postupy a návody pro tým" />
-        {isSuperAdmin && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setCategoryDialogOpen(true)}>
-              <FolderPlus className="h-4 w-4 mr-1" /> Kategorie
-            </Button>
-            <Button size="sm" onClick={() => setArticleDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Vytvořit nové SOP
-            </Button>
-          </div>
-        )}
+    <div className="flex flex-col h-full animate-fade-in">
+      {/* Fixed header + search area */}
+      <div className="shrink-0 p-4 md:p-6 pb-0 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <PageHeader title="📖 SOP Databáze" description="Postupy a návody pro tým" />
+          {isSuperAdmin && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setCategoryDialogOpen(true)}>
+                <FolderPlus className="h-4 w-4 mr-1" /> Kategorie
+              </Button>
+              <Button size="sm" onClick={() => setArticleDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Vytvořit nové SOP
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <SOPSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          allTags={[]}
+          selectedTags={[]}
+          onToggleTag={() => {}}
+        />
       </div>
 
-      {/* Search */}
-      <SOPSearch
-        value={searchQuery}
-        onChange={setSearchQuery}
-        allTags={[]}
-        selectedTags={[]}
-        onToggleTag={() => {}}
-      />
-
+      {/* Content area */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 md:p-6 pt-6">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}
         </div>
       ) : isFiltering ? (
-        /* Grouped search results */
-        <div className="space-y-5">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 pt-6 space-y-5">
           <p className="text-sm text-muted-foreground">
             {searchResults.length} {searchResults.length === 1 ? 'výsledek' : searchResults.length < 5 ? 'výsledky' : 'výsledků'}
             {searchQuery.trim() && <> pro „{searchQuery}"</>}
@@ -135,163 +135,158 @@ export default function SOP() {
             ))
           )}
         </div>
-      ) : (
-        /* Two-panel layout */
-        <div className="flex flex-col md:flex-row md:items-start gap-6">
-          {/* Mobile: horizontal category chips */}
-          {isMobile ? (
-            <div className="space-y-4">
-              <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex gap-2 pb-1">
-                  <Badge
-                    variant={selectedCategoryId === null ? 'default' : 'outline'}
-                    className="cursor-pointer shrink-0 select-none"
-                    onClick={() => setSelectedCategoryId(null)}
-                  >
-                    Vše
-                  </Badge>
-                  {categories.map(cat => (
-                    <Badge
-                      key={cat.id}
-                      variant={selectedCategoryId === cat.id ? 'default' : 'outline'}
-                      className="cursor-pointer shrink-0 select-none"
-                      onClick={() => setSelectedCategoryId(cat.id)}
-                    >
-                      {cat.title} ({categoryArticleCount[cat.id] || 0})
-                    </Badge>
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
+      ) : isMobile ? (
+        <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-4">
+          <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex gap-2 pb-1">
+              <Badge
+                variant={selectedCategoryId === null ? 'default' : 'outline'}
+                className="cursor-pointer shrink-0 select-none"
+                onClick={() => setSelectedCategoryId(null)}
+              >
+                Vše
+              </Badge>
+              {categories.map(cat => (
+                <Badge
+                  key={cat.id}
+                  variant={selectedCategoryId === cat.id ? 'default' : 'outline'}
+                  className="cursor-pointer shrink-0 select-none"
+                  onClick={() => setSelectedCategoryId(cat.id)}
+                >
+                  {cat.title} ({categoryArticleCount[cat.id] || 0})
+                </Badge>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
 
-              {/* Articles for selected category or all */}
-              <div className="grid gap-2">
-                {selectedCategoryId === null ? (
-                  allArticlesByViews.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné SOP</p>
-                  ) : (
-                    allArticlesByViews.map(article => (
-                      <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} categoryName={categoryNameMap[article.category_id]} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
-                    ))
-                  )
+          <div className="grid gap-2">
+            {selectedCategoryId === null ? (
+              allArticlesByViews.length === 0 ? (
+                <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné SOP</p>
+              ) : (
+                allArticlesByViews.map(article => (
+                  <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} categoryName={categoryNameMap[article.category_id]} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
+                ))
+              )
+            ) : (
+              <div className="space-y-2">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedCategoryId(null)}>
+                  <ArrowLeft className="h-4 w-4 mr-1" /> Všechny kategorie
+                </Button>
+                {categoryArticles.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné SOP</p>
                 ) : (
-                  <div className="space-y-2">
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedCategoryId(null)}>
-                      <ArrowLeft className="h-4 w-4 mr-1" /> Všechny kategorie
-                    </Button>
-                    {categoryArticles.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné SOP</p>
-                    ) : (
-                      categoryArticles.map(article => (
-                        <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
-                      ))
-                    )}
-                  </div>
+                  categoryArticles.map(article => (
+                    <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
+                  ))
                 )}
               </div>
-            </div>
-          ) : (
-            /* Desktop: sidebar + main */
-            <>
-              <div className="w-[250px] shrink-0 sticky top-0 self-start space-y-1 max-h-[calc(100vh-6rem)] overflow-y-auto">
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Desktop: two independent scroll columns */
+        <div className="flex-1 flex min-h-0 gap-6 px-6 pt-6">
+          {/* Left sidebar - independent scroll */}
+          <div className="w-[250px] shrink-0 overflow-y-auto pb-6 space-y-1">
+            <button
+              onClick={() => setSelectedCategoryId(null)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors ${
+                selectedCategoryId === null ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted text-foreground'
+              }`}
+            >
+              <span className="flex-1">Všechny kategorie</span>
+              <span className="text-xs text-muted-foreground shrink-0">{articles.filter(a => a.is_published).length}</span>
+            </button>
+            {categories.map(cat => (
+              <SOPCategoryCard
+                key={cat.id}
+                category={cat}
+                articleCount={categoryArticleCount[cat.id] || 0}
+                onClick={() => setSelectedCategoryId(cat.id)}
+                compact
+                isActive={selectedCategoryId === cat.id}
+              />
+            ))}
+            {isSuperAdmin && draftArticles.length > 0 && (
+              <>
+                <div className="border-t border-border my-2" />
                 <button
-                  onClick={() => setSelectedCategoryId(null)}
+                  onClick={() => setSelectedCategoryId('__drafts__')}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors ${
-                    selectedCategoryId === null ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted text-foreground'
+                    selectedCategoryId === '__drafts__' ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted text-foreground'
                   }`}
                 >
-                  <span className="flex-1">Všechny kategorie</span>
-                  <span className="text-xs text-muted-foreground shrink-0">{articles.filter(a => a.is_published).length}</span>
+                  <FilePenLine className="h-4 w-4 shrink-0" />
+                  <span className="flex-1">Drafty</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{draftArticles.length}</span>
                 </button>
-                {categories.map(cat => (
-                  <SOPCategoryCard
-                    key={cat.id}
-                    category={cat}
-                    articleCount={categoryArticleCount[cat.id] || 0}
-                    onClick={() => setSelectedCategoryId(cat.id)}
-                    compact
-                    isActive={selectedCategoryId === cat.id}
-                  />
-                ))}
-                {isSuperAdmin && draftArticles.length > 0 && (
-                  <>
-                    <div className="border-t border-border my-2" />
-                    <button
-                      onClick={() => setSelectedCategoryId('__drafts__')}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors ${
-                        selectedCategoryId === '__drafts__' ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted text-foreground'
-                      }`}
-                    >
-                      <FilePenLine className="h-4 w-4 shrink-0" />
-                      <span className="flex-1">Drafty</span>
-                      <span className="text-xs text-muted-foreground shrink-0">{draftArticles.length}</span>
-                    </button>
-                  </>
-                )}
-              </div>
+              </>
+            )}
+          </div>
 
-              <div className="flex-1 min-w-0">
-                {selectedCategoryId === null ? (
-                  <div className="space-y-4">
-                    <h2 className="text-lg font-semibold">Všechny SOP</h2>
-                    {allArticlesByViews.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné SOP</p>
-                    ) : (
-                      <div className="grid gap-2">
-                        {allArticlesByViews.map(article => (
-                          <SOPArticleCard
-                            key={article.id}
-                            article={article}
-                            onClick={() => navigate(`/sop/${article.id}`)}
-                            categoryName={categoryNameMap[article.category_id]}
-                            pendingSuggestionCount={pendingSuggestionCounts[article.id]}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : selectedCategoryId === '__drafts__' ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedCategoryId(null)} className="mr-1">
-                        <ArrowLeft className="h-4 w-4 mr-1" /> Zpět
-                      </Button>
-                      <h2 className="text-lg font-semibold">Drafty</h2>
-                      <span className="text-sm text-muted-foreground">({draftArticles.length} SOP)</span>
-                    </div>
-                    {draftArticles.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-12">Žádné rozpracované SOP</p>
-                    ) : (
-                      <div className="grid gap-2">
-                        {draftArticles.map(article => (
-                          <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} categoryName={categoryNameMap[article.category_id]} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
+          {/* Right content - independent scroll */}
+          <div className="flex-1 min-w-0 overflow-y-auto pb-6">
+            {selectedCategoryId === null ? (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold">Všechny SOP</h2>
+                {allArticlesByViews.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné SOP</p>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedCategoryId(null)} className="mr-1">
-                        <ArrowLeft className="h-4 w-4 mr-1" /> Zpět
-                      </Button>
-                      <h2 className="text-lg font-semibold">{categoryNameMap[selectedCategoryId]}</h2>
-                      <span className="text-sm text-muted-foreground">({categoryArticles.length} SOP)</span>
-                    </div>
-                    {categoryArticles.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné SOP</p>
-                    ) : (
-                      <div className="grid gap-2">
-                        {categoryArticles.map(article => (
-                          <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
-                        ))}
-                      </div>
-                    )}
+                  <div className="grid gap-2">
+                    {allArticlesByViews.map(article => (
+                      <SOPArticleCard
+                        key={article.id}
+                        article={article}
+                        onClick={() => navigate(`/sop/${article.id}`)}
+                        categoryName={categoryNameMap[article.category_id]}
+                        pendingSuggestionCount={pendingSuggestionCounts[article.id]}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
-            </>
-          )}
+            ) : selectedCategoryId === '__drafts__' ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedCategoryId(null)} className="mr-1">
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Zpět
+                  </Button>
+                  <h2 className="text-lg font-semibold">Drafty</h2>
+                  <span className="text-sm text-muted-foreground">({draftArticles.length} SOP)</span>
+                </div>
+                {draftArticles.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-12">Žádné rozpracované SOP</p>
+                ) : (
+                  <div className="grid gap-2">
+                    {draftArticles.map(article => (
+                      <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} categoryName={categoryNameMap[article.category_id]} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedCategoryId(null)} className="mr-1">
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Zpět
+                  </Button>
+                  <h2 className="text-lg font-semibold">{categoryNameMap[selectedCategoryId]}</h2>
+                  <span className="text-sm text-muted-foreground">({categoryArticles.length} SOP)</span>
+                </div>
+                {categoryArticles.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné SOP</p>
+                ) : (
+                  <div className="grid gap-2">
+                    {categoryArticles.map(article => (
+                      <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
