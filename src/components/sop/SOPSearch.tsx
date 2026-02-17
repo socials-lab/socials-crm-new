@@ -34,6 +34,23 @@ export function SOPSearch({ value, onChange, allTags, selectedTags, onToggleTag 
           </Button>
         )}
       </div>
+      {allTags.length > 0 && (
+        <ScrollArea className="w-full whitespace-nowrap">
+          <div className="flex gap-1.5 pb-1">
+            {allTags.map(tag => (
+              <Badge
+                key={tag}
+                variant={selectedTags.includes(tag) ? 'default' : 'outline'}
+                className="cursor-pointer shrink-0 select-none text-xs"
+                onClick={() => onToggleTag(tag)}
+              >
+                {tag}
+              </Badge>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+      )}
     </div>
   );
 }
