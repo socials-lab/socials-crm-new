@@ -33,8 +33,8 @@ function ResizableImageView({ node, updateAttributes, selected }: NodeViewProps)
   }, [updateAttributes]);
 
   return (
-    <NodeViewWrapper className="relative inline-block my-3" data-drag-handle>
-      <div className={`relative inline-block group ${selected ? 'ring-2 ring-primary ring-offset-2 rounded-lg' : ''}`}>
+    <NodeViewWrapper className="relative my-3" data-drag-handle>
+      <div className={`relative inline-block group ${selected ? 'ring-2 ring-primary ring-offset-2 rounded-lg' : ''}`} style={{ lineHeight: 0 }}>
         <img
           ref={imgRef}
           src={src}
@@ -102,8 +102,10 @@ export const ResizableImage = Node.create({
   renderHTML({ HTMLAttributes }) {
     const attrs = { ...HTMLAttributes };
     if (attrs.width) {
-      attrs.style = `width: ${attrs.width}px`;
+      attrs.style = `width: ${attrs.width}px; height: auto; display: block;`;
       delete attrs.width;
+    } else {
+      attrs.style = 'height: auto; display: block;';
     }
     return ['img', mergeAttributes(attrs)];
   },
