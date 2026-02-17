@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 import {
   Form,
   FormControl,
@@ -41,7 +43,7 @@ interface AssignmentFormProps {
   engagementEndDate?: string | null;
   colleagues: Colleague[];
   existingAssignments: EngagementAssignment[];
-  onSubmit: (data: Omit<EngagementAssignment, 'id' | 'created_at' | 'updated_at'>) => void;
+  onSubmit: (data: Omit<EngagementAssignment, 'id' | 'created_at' | 'updated_at'>) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -93,6 +95,7 @@ export function AssignmentForm({
     },
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const costModel = form.watch('cost_model');
 
   // Filter out already assigned colleagues
@@ -103,25 +106,44 @@ export function AssignmentForm({
     c => c.status === 'active' && !assignedColleagueIds.includes(c.id)
   );
 
-  const handleSubmit = (data: AssignmentFormData) => {
-    onSubmit({
-      engagement_id: engagementId,
-      engagement_service_id: engagementServiceId || null,
-      colleague_id: data.colleague_id,
-      role_on_engagement: data.role_on_engagement,
-      cost_model: data.cost_model,
-      hourly_cost: data.cost_model === 'hourly' ? data.hourly_cost : null,
-      monthly_cost: data.cost_model === 'fixed_monthly' ? data.monthly_cost : null,
-      percentage_of_revenue: data.cost_model === 'percentage' ? data.percentage_of_revenue : null,
-      start_date: data.start_date,
-      end_date: null,
-      notes: data.notes,
-    });
+  const handleManualSubmit = async () => {
+    console.log('handleManualSubmit called');
+    const isValid = await form.trigger();
+    console.log('Form validation result:', isValid, form.formState.errors);
+    if (!isValid) {
+      const errors = form.formState.errors;
+      const errorMessages = Object.entries(errors)
+        .map(([field, error]) => `${field}: ${(error as { message?: string })?.message || 'Neplatné'}`)
+        .join(', ');
+      toast.error(`Formulář obsahuje chyby: ${errorMessages}`);
+      return;
+    }
+
+    const data = form.getValues();
+    console.log('Form data:', data);
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        engagement_id: engagementId,
+        engagement_service_id: engagementServiceId || null,
+        colleague_id: data.colleague_id,
+        role_on_engagement: data.role_on_engagement,
+        cost_model: data.cost_model,
+        hourly_cost: data.cost_model === 'hourly' ? data.hourly_cost : null,
+        monthly_cost: data.cost_model === 'fixed_monthly' ? data.monthly_cost : null,
+        percentage_of_revenue: data.cost_model === 'percentage' ? data.percentage_of_revenue : null,
+        start_date: data.start_date,
+        end_date: null,
+        notes: data.notes,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form className="space-y-4">
         <FormField
           control={form.control}
           name="colleague_id"
@@ -280,11 +302,18 @@ export function AssignmentForm({
         />
 
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Zrušit
           </Button>
-          <Button type="submit" disabled={availableColleagues.length === 0}>
-            Přiřadit
+          <Button
+            type="button"
+            disabled={availableColleagues.length === 0 || isSubmitting}
+            onClick={() => {
+              console.log('Button clicked! availableColleagues:', availableColleagues.length, 'isSubmitting:', isSubmitting);
+              handleManualSubmit();
+            }}
+          >
+            {isSubmitting ? 'Přiřazuji...' : 'Přiřadit'}
           </Button>
         </div>
       </form>

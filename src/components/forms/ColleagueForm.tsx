@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { Colleague } from '@/types/crm';
 import { 
   SERVICE_SLOT_LABELS, 
@@ -78,7 +79,7 @@ type ColleagueFormData = z.infer<typeof colleagueSchema>;
 
 interface ColleagueFormProps {
   colleague?: Colleague;
-  onSubmit: (data: ColleagueFormData & { profile_id: string | null }) => void;
+  onSubmit: (data: ColleagueFormData & { profile_id: string | null }) => void | Promise<void>;
   onCancel: () => void;
   showInviteOption?: boolean;
 }
@@ -89,6 +90,7 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
     ? getCapacitySlots(colleague.capacity_slots)
     : DEFAULT_CAPACITY_SLOTS;
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidatingARES, setIsValidatingARES] = useState(false);
   const [aresError, setAresError] = useState<string | null>(null);
   const [aresValidated, setAresValidated] = useState(false);
@@ -161,16 +163,32 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
 
   const inviteToCrm = form.watch('invite_to_crm');
 
-  const handleSubmit = (data: ColleagueFormData) => {
-    onSubmit({
-      ...data,
-      profile_id: colleague?.profile_id || null,
-    });
+  const handleManualSubmit = async () => {
+    const isValid = await form.trigger();
+    if (!isValid) {
+      const errors = form.formState.errors;
+      const errorMessages = Object.entries(errors)
+        .map(([field, error]) => `${field}: ${(error as { message?: string })?.message || 'Neplatné'}`)
+        .join(', ');
+      toast.error(`Formulář obsahuje chyby: ${errorMessages}`);
+      return;
+    }
+
+    const data = form.getValues();
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        ...data,
+        profile_id: colleague?.profile_id || null,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
@@ -664,11 +682,11 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
         )}
 
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Zrušit
           </Button>
-          <Button type="submit">
-            {colleague ? 'Uložit změny' : 'Vytvořit kolegu'}
+          <Button type="button" onClick={handleManualSubmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Ukládám...' : colleague ? 'Uložit změny' : 'Vytvořit kolegu'}
           </Button>
         </div>
       </form>

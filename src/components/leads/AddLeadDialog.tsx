@@ -33,7 +33,7 @@ import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
 import type { Lead, LeadSource } from '@/types/crm';
 import type { CompanySearchResult } from '@/hooks/useAresSearch';
 import { toast } from '@/components/ui/sonner';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Loader2, Search } from 'lucide-react';
 
 const leadSchema = z.object({
@@ -102,6 +102,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   const isContractCreated = !!lead?.contract_created_at;
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleAresLookup = async () => {
     const ico = form.getValues('ico');
@@ -251,7 +252,18 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
     }
   }, [lead, form]);
 
-  const handleSubmit = async (data: LeadFormData) => {
+  const handleManualSubmit = async () => {
+    const isValid = await form.trigger();
+    if (!isValid) {
+      const errors = form.formState.errors;
+      const errorMessages = Object.entries(errors)
+        .map(([field, error]) => `${field}: ${(error as { message?: string })?.message || 'Neplatné'}`)
+        .join(', ');
+      toast.error(`Formulář obsahuje chyby: ${errorMessages}`);
+      return;
+    }
+
+    const data = form.getValues();
     const leadData = {
       company_name: data.company_name,
       ico: data.ico,
@@ -298,6 +310,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       court_file_number: data.court_file_number || lead?.court_file_number || null,
     };
 
+    setIsSubmitting(true);
     try {
       if (lead) {
         await updateLead(lead.id, leadData);
@@ -310,6 +323,8 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
     } catch (error) {
       console.error('Error saving lead:', error);
       toast.error('Nepodařilo se uložit lead');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -321,7 +336,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form className="space-y-6">
             {isContractCreated && (
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
                 <p className="text-sm text-amber-700 dark:text-amber-400">
@@ -717,11 +732,11 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
 
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Zrušit
               </Button>
-              <Button type="submit">
-                {lead ? 'Uložit změny' : 'Vytvořit lead'}
+              <Button type="button" onClick={handleManualSubmit} disabled={isSubmitting}>
+                {isSubmitting ? 'Ukládám...' : lead ? 'Uložit změny' : 'Vytvořit lead'}
               </Button>
             </div>
           </form>

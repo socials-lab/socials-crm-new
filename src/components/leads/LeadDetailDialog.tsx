@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
-import { Loader2, ShieldCheck, ShieldAlert, ShieldX } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Loader2, ShieldCheck, ShieldAlert, ShieldX, FileSignature, CheckCircle2, X } from 'lucide-react';
 import {
   Building2,
   Globe,
   User,
+  Users,
   Mail,
   Phone,
   ExternalLink,
@@ -17,6 +18,7 @@ import {
   Plus,
   Send,
   Scale,
+  Trash2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -52,6 +54,7 @@ import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadTransitions } from '@/hooks/useLeadTransitions';
 import { useAresLookup } from '@/hooks/useAresLookup';
+import { useDigiSign } from '@/hooks/useDigiSign';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
@@ -115,6 +118,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const { colleagues, services } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
   const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
+  const { createContract, isLoading: isCreatingContract } = useDigiSign();
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
@@ -125,6 +129,8 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [sharedOfferUrl, setSharedOfferUrl] = useState<string | null>(null);
   const [showContractWarning, setShowContractWarning] = useState(false);
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
+  const [isContractConfirmOpen, setIsContractConfirmOpen] = useState(false);
+  const [isManualSignConfirmOpen, setIsManualSignConfirmOpen] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   // Inline note form state
@@ -137,6 +143,28 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const isProcessingWarning = useRef(false);
 
   const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
+
+  // Contract readiness validation
+  const contractReadiness = useMemo(() => {
+    const leadServices = lead?.potential_services || [];
+    const signatories = lead?.onboarding_signatories || [];
+    const monthlyFee = leadServices
+      .filter((s: LeadService) => s.billing_type === 'monthly')
+      .reduce((sum: number, s: LeadService) => sum + (s.price || 0), 0);
+
+    const allSignatoriesHavePhone = signatories.length > 0 && signatories.every((s: { phone?: string }) => s.phone && s.phone.trim() !== '');
+    const allSignatoriesHaveEmail = signatories.length > 0 && signatories.every((s: { email?: string }) => s.email && s.email.trim() !== '');
+
+    return {
+      hasServices: leadServices.length > 0,
+      hasMonthlyFee: monthlyFee > 0,
+      hasSignatories: signatories.length > 0,
+      allSignatoriesHavePhone,
+      allSignatoriesHaveEmail,
+      monthlyFee,
+      isReady: leadServices.length > 0 && monthlyFee > 0 && signatories.length > 0 && allSignatoriesHavePhone && allSignatoriesHaveEmail,
+    };
+  }, [lead?.potential_services, lead?.onboarding_signatories]);
 
   // VAT reliability check
   const { data: vatData, isLoading: isLoadingVat } = useVatReliability(lead?.dic);
@@ -426,6 +454,85 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Contract Creation Confirmation Dialog */}
+      <AlertDialog open={isContractConfirmOpen} onOpenChange={setIsContractConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <FileSignature className="h-5 w-5" />
+              Vytvořit smlouvu v DigiSign
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Smlouva bude vytvořena s následujícími parametry:
+              <br /><br />
+              <strong>Měsíční poplatek:</strong> {contractReadiness.monthlyFee.toLocaleString('cs-CZ')} Kč
+              <br />
+              <strong>Služby:</strong> {lead.potential_services?.length || 0}
+              <br />
+              <strong>Podpisující osoby:</strong> {lead.onboarding_signatories?.length || 0}
+              <br /><br />
+              Po vytvoření smlouvy bude automaticky odeslán e-mail k podpisu všem podpisujícím osobám.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                const result = await createContract(lead.id);
+                // Hook already shows toast.error on failure, toast.success on success
+                if (result) {
+                  setIsContractConfirmOpen(false);
+                }
+              }}
+              disabled={isCreatingContract}
+            >
+              {isCreatingContract ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Vytvářím...
+                </>
+              ) : (
+                'Vytvořit smlouvu'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Manual Sign Confirmation Dialog */}
+      <AlertDialog open={isManualSignConfirmOpen} onOpenChange={setIsManualSignConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              Ručně potvrdit podpis smlouvy
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tímto potvrdíte, že smlouva byla podepsána mimo systém DigiSign (např. fyzicky na papíře).
+              <br /><br />
+              Opravdu chcete označit smlouvu jako podepsanou?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                try {
+                  await updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
+                  toast.success('Smlouva byla označena jako podepsaná');
+                  setIsManualSignConfirmOpen(false);
+                } catch (error) {
+                  console.error('Failed to mark contract as signed:', error);
+                  toast.error('Nepodařilo se uložit změny');
+                }
+              }}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Ano, potvrdit podpis
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
           {/* Header */}
@@ -514,6 +621,8 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                     onCreateOffer={() => setIsCreateOfferOpen(true)}
                     onSendOffer={() => setIsSendOfferOpen(true)}
                     onSendOnboarding={() => setIsOnboardingFormOpen(true)}
+                    onCreateContract={() => setIsContractConfirmOpen(true)}
+                    isCreatingContract={isCreatingContract}
                     onMarkContractSent={async () => {
                       try {
                         await updateLead(lead.id, { contract_sent_at: new Date().toISOString() });
@@ -736,6 +845,117 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+
+                {/* Collapsible: Signatories (for contract) */}
+                {lead.onboarding_form_completed_at && (
+                  <Collapsible defaultOpen={!lead.contract_url}>
+                    <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
+                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Podpisující osoby</span>
+                      <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-1">
+                        {lead.onboarding_signatories?.length || 0}
+                      </Badge>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pl-6 pt-3">
+                      <div className="space-y-3">
+                        {(lead.onboarding_signatories || []).map((signatory: { name: string; position?: string; email: string; phone?: string }, index: number) => (
+                          <div key={index} className="p-3 rounded-lg border bg-card space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                                <InlineEditField
+                                  value={signatory.name}
+                                  onSave={async (v) => {
+                                    const updated = [...(lead.onboarding_signatories || [])];
+                                    updated[index] = { ...updated[index], name: v };
+                                    await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
+                                  }}
+                                  placeholder="Jméno"
+                                  displayClassName="font-medium text-sm"
+                                />
+                                <span className="text-muted-foreground text-xs">–</span>
+                                <InlineEditField
+                                  value={signatory.position}
+                                  onSave={async (v) => {
+                                    const updated = [...(lead.onboarding_signatories || [])];
+                                    updated[index] = { ...updated[index], position: v };
+                                    await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
+                                  }}
+                                  placeholder="Pozice"
+                                  emptyText="Zadat pozici"
+                                  displayClassName="text-xs"
+                                />
+                              </div>
+                              {(lead.onboarding_signatories?.length || 0) > 1 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                  onClick={async () => {
+                                    const updated = [...(lead.onboarding_signatories || [])];
+                                    updated.splice(index, 1);
+                                    await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
+                                    toast.success('Podpisující osoba byla odebrána');
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div className="flex items-center gap-1.5">
+                                <Mail className="h-3 w-3 text-muted-foreground" />
+                                <InlineEditField
+                                  value={signatory.email}
+                                  onSave={async (v) => {
+                                    const updated = [...(lead.onboarding_signatories || [])];
+                                    updated[index] = { ...updated[index], email: v };
+                                    await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
+                                  }}
+                                  placeholder="E-mail"
+                                  emptyText="Zadat e-mail"
+                                  displayClassName="text-xs"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Phone className="h-3 w-3 text-muted-foreground" />
+                                <InlineEditField
+                                  value={signatory.phone}
+                                  onSave={async (v) => {
+                                    const updated = [...(lead.onboarding_signatories || [])];
+                                    updated[index] = { ...updated[index], phone: v };
+                                    await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
+                                  }}
+                                  placeholder="Telefon"
+                                  emptyText="Zadat telefon"
+                                  displayClassName="text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={async () => {
+                            const updated = [...(lead.onboarding_signatories || []), {
+                              name: '',
+                              position: '',
+                              email: '',
+                              phone: '',
+                            }];
+                            await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Přidat podpisující osobu
+                        </Button>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
 
                 {/* Collapsible: Sales info */}
                 <Collapsible defaultOpen={isNewLead}>

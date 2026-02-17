@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -68,7 +68,7 @@ interface EngagementFormProps {
   contacts: ClientContact[];
   defaultClientId?: string;
   isSuperAdmin?: boolean;
-  onSubmit: (data: EngagementFormData) => void;
+  onSubmit: (data: EngagementFormData) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -81,6 +81,8 @@ export function EngagementForm({
   onSubmit,
   onCancel
 }: EngagementFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Get available status options based on current status and user role
   const currentStatus: EngagementStatus = engagement?.status || 'planned';
   const availableStatuses = getAvailableEngagementStatuses(currentStatus, isSuperAdmin);
@@ -136,7 +138,19 @@ export function EngagementForm({
   }, [selectedClientId, initialClientId, resetContactIfInvalid, form.getValues]);
 
   // Handle form submission with notice period check
-  const handleFormSubmit = (data: EngagementFormData) => {
+  const handleManualSubmit = async () => {
+    const isValid = await form.trigger();
+    if (!isValid) {
+      const errors = form.formState.errors;
+      const errorMessages = Object.entries(errors)
+        .map(([field, error]) => `${field}: ${(error as { message?: string })?.message || 'Neplatné'}`)
+        .join(', ');
+      toast.error(`Formulář obsahuje chyby: ${errorMessages}`);
+      return;
+    }
+
+    const data = form.getValues();
+
     // Check notice period if changing to completed/cancelled
     if (engagement && (data.status === 'completed' || data.status === 'cancelled') && engagement.status !== data.status) {
       const terminationCheck = canTerminateEngagement(engagement, data.status, isSuperAdmin);
@@ -145,12 +159,18 @@ export function EngagementForm({
         return;
       }
     }
-    onSubmit(data);
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit(data);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+      <form className="space-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -424,11 +444,11 @@ export function EngagementForm({
         />
 
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Zrušit
           </Button>
-          <Button type="submit">
-            {engagement ? 'Uložit změny' : 'Vytvořit zakázku'}
+          <Button type="button" onClick={handleManualSubmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Ukládám...' : engagement ? 'Uložit změny' : 'Vytvořit zakázku'}
           </Button>
         </div>
       </form>

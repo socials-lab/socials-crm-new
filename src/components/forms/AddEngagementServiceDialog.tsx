@@ -57,7 +57,7 @@ interface AddEngagementServiceDialogProps {
   onOpenChange: (open: boolean) => void;
   engagementId: string;
   services: Service[];
-  onSubmit: (data: Omit<EngagementService, 'id' | 'created_at' | 'updated_at'>) => void;
+  onSubmit: (data: Omit<EngagementService, 'id' | 'created_at' | 'updated_at'>) => void | Promise<void>;
 }
 
 export function AddEngagementServiceDialog({
@@ -69,6 +69,7 @@ export function AddEngagementServiceDialog({
 }: AddEngagementServiceDialogProps) {
   const { colleagues } = useCRMData();
   const [upsoldById, setUpsoldById] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const activeColleagues = colleagues.filter(c => c.status === 'active');
 
@@ -145,9 +146,23 @@ export function AddEngagementServiceDialog({
     }
   };
 
-  const handleSubmit = (data: EngagementServiceFormData) => {
+  const handleManualSubmit = async () => {
+    const isValid = await form.trigger();
+    if (!isValid) {
+      const errors = form.formState.errors;
+      const errorMessages = Object.entries(errors)
+        .map(([field, error]) => `${field}: ${(error as { message?: string })?.message || 'Neplatné'}`)
+        .join(', ');
+      toast.error(`Formulář obsahuje chyby: ${errorMessages}`);
+      return;
+    }
+
+    const data = form.getValues();
     const selectedService = services.find(s => s.id === data.service_id);
-    if (!selectedService) return;
+    if (!selectedService) {
+      toast.error('Vyberte službu');
+      return;
+    }
 
     // Validate Creative Boost has at least 1 credit
     if (data.service_id === CREATIVE_BOOST_SERVICE_ID) {
@@ -163,33 +178,38 @@ export function AddEngagementServiceDialog({
 
     const isOneOff = selectedService.billing_type === 'one_off';
     const isCore = selectedService.service_type === 'core';
-    
-    onSubmit({
-      engagement_id: engagementId,
-      service_id: data.service_id,
-      name: data.name,
-      price: data.price,
-      billing_type: selectedService.billing_type,
-      currency: data.currency,
-      is_active: true,
-      notes: data.notes,
-      // Core service tier selection
-      selected_tier: isCore ? (data.selected_tier as ServiceTier || null) : null,
-      creative_boost_min_credits: data.creative_boost_min_credits,
-      creative_boost_max_credits: data.creative_boost_max_credits,
-      creative_boost_price_per_credit: data.creative_boost_price_per_credit,
-      // One-off invoicing tracking
-      invoicing_status: isOneOff ? 'pending' : 'not_applicable',
-      invoiced_at: null,
-      invoiced_in_period: null,
-      invoice_id: null,
-      // Upsell tracking
-      upsold_by_id: upsoldById,
-      upsell_commission_percent: upsoldById ? 10 : null,
-    });
-    form.reset();
-    setUpsoldById(null);
-    onOpenChange(false);
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        engagement_id: engagementId,
+        service_id: data.service_id,
+        name: data.name,
+        price: data.price,
+        billing_type: selectedService.billing_type,
+        currency: data.currency,
+        is_active: true,
+        notes: data.notes,
+        // Core service tier selection
+        selected_tier: isCore ? (data.selected_tier as ServiceTier || null) : null,
+        creative_boost_min_credits: data.creative_boost_min_credits,
+        creative_boost_max_credits: data.creative_boost_max_credits,
+        creative_boost_price_per_credit: data.creative_boost_price_per_credit,
+        // One-off invoicing tracking
+        invoicing_status: isOneOff ? 'pending' : 'not_applicable',
+        invoiced_at: null,
+        invoiced_in_period: null,
+        invoice_id: null,
+        // Upsell tracking
+        upsold_by_id: upsoldById,
+        upsell_commission_percent: upsoldById ? 10 : null,
+      });
+      form.reset();
+      setUpsoldById(null);
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const watchedPrice = form.watch('price');
@@ -201,7 +221,7 @@ export function AddEngagementServiceDialog({
           <DialogTitle>Přidat službu k zakázce</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form className="space-y-4">
             <FormField
               control={form.control}
               name="service_id"
@@ -445,11 +465,11 @@ export function AddEngagementServiceDialog({
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Zrušit
               </Button>
-              <Button type="submit">
-                Přidat službu
+              <Button type="button" onClick={handleManualSubmit} disabled={isSubmitting}>
+                {isSubmitting ? 'Přidávám...' : 'Přidat službu'}
               </Button>
             </div>
           </form>

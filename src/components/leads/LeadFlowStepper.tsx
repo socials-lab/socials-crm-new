@@ -11,6 +11,7 @@ import {
   ExternalLink,
   X,
   Check,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,10 +41,12 @@ interface LeadFlowStepperProps {
   onCreateOffer: () => void;
   onSendOffer: () => void;
   onSendOnboarding: () => void;
+  onCreateContract: () => void;
   onMarkContractSent: () => void;
   onMarkContractSigned: () => void;
   onConvert: () => void;
   onRemoveService?: (index: number) => void;
+  isCreatingContract?: boolean;
 }
 
 const formatDate = (date: string) => {
@@ -103,10 +106,12 @@ export function LeadFlowStepper({
   onCreateOffer,
   onSendOffer,
   onSendOnboarding,
+  onCreateContract,
   onMarkContractSent,
   onMarkContractSigned,
   onConvert,
   onRemoveService,
+  isCreatingContract,
 }: LeadFlowStepperProps) {
   const servicesCount = lead.potential_services?.length || 0;
   const hasOffer = !!lead.offer_url;
@@ -235,8 +240,14 @@ export function LeadFlowStepper({
           ? 'Odeslána, čeká na podpis'
           : lead.contract_url
             ? 'Vytvořena'
-            : undefined,
-      action: lead.contract_url && !lead.contract_sent_at ? {
+            : lead.onboarding_form_completed_at
+              ? 'Připraveno k vytvoření'
+              : 'Čeká na onboarding',
+      action: !lead.contract_url && lead.onboarding_form_completed_at && servicesCount > 0 ? {
+        label: isCreatingContract ? 'Vytvářím...' : 'Vytvořit smlouvu',
+        onClick: onCreateContract,
+        variant: 'default',
+      } : lead.contract_url && !lead.contract_sent_at ? {
         label: 'Označit jako odeslanou',
         onClick: onMarkContractSent,
         variant: 'outline',
@@ -245,6 +256,17 @@ export function LeadFlowStepper({
         onClick: onMarkContractSigned,
         variant: 'default',
       } : undefined,
+      customContent: lead.contract_url ? (
+        <a
+          href={lead.contract_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+        >
+          <ExternalLink className="h-3 w-3" />
+          Zobrazit v DigiSign
+        </a>
+      ) : undefined,
     },
     {
       id: 'converted',
