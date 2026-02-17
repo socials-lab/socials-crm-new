@@ -39,7 +39,6 @@ import Notifications from "./pages/Notifications";
 import Feedback from "./pages/Feedback";
 import Academy from "./pages/Academy";
 import SOP from "./pages/SOP";
-import SOPArticle from "./pages/SOPArticle";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import PublicOfferPage from "./pages/PublicOfferPage";
@@ -104,7 +103,7 @@ const App = () => (
                               <Route path="/feedback" element={<Feedback />} />
                               <Route path="/academy" element={<Academy />} />
                               <Route path="/sop" element={<SOP />} />
-                              <Route path="/sop/:articleId" element={<SOPArticle />} />
+                              <Route path="/sop/:articleId" element={<SOP />} />
                             </Route>
                             <Route path="*" element={<NotFound />} />
                           </Routes>
