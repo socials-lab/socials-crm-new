@@ -44,13 +44,6 @@ export function SOPArticleCard({ article, onClick, highlightQuery, categoryName,
                 {highlightQuery ? highlightText(article.search_text.substring(0, 150), highlightQuery) : article.search_text.substring(0, 150)}
               </p>
             )}
-            {article.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {article.tags.map(tag => (
-                  <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </CardContent>

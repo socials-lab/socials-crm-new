@@ -126,11 +126,6 @@ export default function SOPArticle() {
               <strong className="text-foreground">{ownerName || 'Nepřiřazeno'}</strong>
             )}
           </div>
-          {article.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {article.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-            </div>
-          )}
         </div>
       </div>
 

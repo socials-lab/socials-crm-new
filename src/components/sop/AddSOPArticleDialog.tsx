@@ -28,7 +28,7 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [tags, setTags] = useState('');
+  
   const [ownerId, setOwnerId] = useState('');
   const [attachments, setAttachments] = useState<SOPAttachment[]>([]);
   const [saving, setSaving] = useState(false);
@@ -45,14 +45,12 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
       setTitle(editArticle.title);
       setContent(editArticle.content);
       setCategoryId(editArticle.category_id);
-      setTags(editArticle.tags.join(', '));
       setOwnerId(editArticle.owner_id || '');
       setAttachments((editArticle.attachments as SOPAttachment[]) || []);
     } else {
       setTitle('');
       setContent('');
       setCategoryId(defaultCategoryId || '');
-      setTags('');
       setOwnerId('');
       setAttachments([]);
     }
@@ -100,12 +98,11 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
   const handleSave = async () => {
     if (!title.trim() || !categoryId) return;
     setSaving(true);
-    const tagArray = tags.split(',').map(t => t.trim()).filter(Boolean);
     const ownerValue = ownerId || null;
     if (editArticle) {
-      await updateArticle(editArticle.id, { title, content, category_id: categoryId, tags: tagArray, owner_id: ownerValue, attachments: attachments as any });
+      await updateArticle(editArticle.id, { title, content, category_id: categoryId, tags: [], owner_id: ownerValue, attachments: attachments as any });
     } else {
-      await addArticle({ title, content, category_id: categoryId, tags: tagArray, owner_id: ownerValue, attachments: attachments as any });
+      await addArticle({ title, content, category_id: categoryId, tags: [], owner_id: ownerValue, attachments: attachments as any });
     }
     // Clear draft from localStorage
     const draftKey = editArticle ? `sop-draft-edit-${editArticle.id}` : 'sop-draft-new-article';
@@ -194,12 +191,7 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Tagy (oddělené čárkou)</Label>
-              <Input value={tags} onChange={e => setTags(e.target.value)} placeholder="onboarding, klient, smlouva..." />
-            </div>
-            <div className="space-y-2">
+          <div className="space-y-2">
               <Label>Zodpovědná osoba</Label>
               <Select value={ownerId || undefined} onValueChange={setOwnerId}>
                 <SelectTrigger><SelectValue placeholder="Vyberte vlastníka SOP" /></SelectTrigger>
@@ -209,7 +201,6 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
                   ))}
                 </SelectContent>
               </Select>
-            </div>
           </div>
 
           <div className="space-y-2">
