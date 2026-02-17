@@ -3,9 +3,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { SOPEditor } from './SOPEditor';
-import { useSOPData, type SOPArticle, type SOPCategory } from '@/hooks/useSOPData';
+import { useSOPData, type SOPArticle } from '@/hooks/useSOPData';
+import { Plus } from 'lucide-react';
+
+const ICON_OPTIONS = [
+  'BookOpen', 'Briefcase', 'BarChart3', 'Settings', 'Palette',
+  'FileText', 'Target', 'Users', 'Zap', 'Star', 'Heart', 'Globe',
+];
 
 interface AddSOPArticleDialogProps {
   open: boolean;
@@ -15,12 +21,19 @@ interface AddSOPArticleDialogProps {
 }
 
 export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCategoryId }: AddSOPArticleDialogProps) {
-  const { categories, addArticle, updateArticle } = useSOPData();
+  const { categories, addArticle, updateArticle, addCategory } = useSOPData();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [tags, setTags] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Inline new category state
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCatTitle, setNewCatTitle] = useState('');
+  const [newCatDescription, setNewCatDescription] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('BookOpen');
+  const [creatingCat, setCreatingCat] = useState(false);
 
   useEffect(() => {
     if (editArticle) {
@@ -34,7 +47,46 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
       setCategoryId(defaultCategoryId || '');
       setTags('');
     }
+    setShowNewCategory(false);
+    setNewCatTitle('');
+    setNewCatDescription('');
+    setNewCatIcon('BookOpen');
   }, [editArticle, defaultCategoryId, open]);
+
+  const handleCategoryChange = (value: string) => {
+    if (value === '__new__') {
+      setShowNewCategory(true);
+      setCategoryId('');
+    } else {
+      setCategoryId(value);
+      setShowNewCategory(false);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCatTitle.trim()) return;
+    setCreatingCat(true);
+    const newId = await addCategory({
+      title: newCatTitle.trim(),
+      description: newCatDescription.trim(),
+      icon: newCatIcon,
+    });
+    setCreatingCat(false);
+    if (newId) {
+      setCategoryId(newId);
+      setShowNewCategory(false);
+      setNewCatTitle('');
+      setNewCatDescription('');
+      setNewCatIcon('BookOpen');
+    }
+  };
+
+  const handleCancelNewCategory = () => {
+    setShowNewCategory(false);
+    setNewCatTitle('');
+    setNewCatDescription('');
+    setNewCatIcon('BookOpen');
+  };
 
   const handleSave = async () => {
     if (!title.trim() || !categoryId) return;
@@ -64,14 +116,68 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
             </div>
             <div className="space-y-2">
               <Label>Kategorie *</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
+              <Select value={categoryId || undefined} onValueChange={handleCategoryChange}>
                 <SelectTrigger><SelectValue placeholder="Vyberte kategorii" /></SelectTrigger>
                 <SelectContent>
                   {categories.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
                   ))}
+                  <SelectSeparator />
+                  <SelectItem value="__new__">
+                    <span className="flex items-center gap-1.5 text-primary font-medium">
+                      <Plus className="h-3.5 w-3.5" />
+                      Vytvořit novou kategorii
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
+
+              {showNewCategory && (
+                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3 mt-2">
+                  <p className="text-sm font-medium text-foreground">Nová kategorie</p>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Název *</Label>
+                    <Input
+                      value={newCatTitle}
+                      onChange={e => setNewCatTitle(e.target.value)}
+                      placeholder="Název kategorie..."
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Popis</Label>
+                    <Input
+                      value={newCatDescription}
+                      onChange={e => setNewCatDescription(e.target.value)}
+                      placeholder="Krátký popis..."
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Ikona</Label>
+                    <Select value={newCatIcon} onValueChange={setNewCatIcon}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {ICON_OPTIONS.map(icon => (
+                          <SelectItem key={icon} value={icon}>{icon}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleCreateCategory}
+                      disabled={creatingCat || !newCatTitle.trim()}
+                    >
+                      {creatingCat ? 'Vytvářím...' : 'Vytvořit'}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleCancelNewCategory}>
+                      Zrušit
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

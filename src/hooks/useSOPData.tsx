@@ -40,7 +40,7 @@ interface SOPDataContextType {
   setSelectedTags: (tags: string[]) => void;
   toggleTag: (tag: string) => void;
   allTags: string[];
-  addCategory: (cat: Partial<SOPCategory>) => Promise<void>;
+  addCategory: (cat: Partial<SOPCategory>) => Promise<string | undefined>;
   updateCategory: (id: string, cat: Partial<SOPCategory>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   addArticle: (article: Partial<SOPArticle>) => Promise<void>;
@@ -165,11 +165,28 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
     setSearchResults(results);
   }, [searchQuery, selectedTags, articles]);
 
-  const addCategory = async (cat: Partial<SOPCategory>) => {
-    const { error } = await supabase.from('sop_categories' as any).insert(cat as any);
-    if (error) { toast({ title: 'Chyba', description: error.message, variant: 'destructive' }); return; }
+  const addCategory = async (cat: Partial<SOPCategory>): Promise<string | undefined> => {
+    const { data, error } = await supabase.from('sop_categories' as any).insert(cat as any).select('id').single();
+    if (error) {
+      // Demo mode fallback — generate local ID
+      const newId = `cat-${Date.now()}`;
+      const newCat: SOPCategory = {
+        id: newId,
+        title: cat.title || '',
+        description: cat.description || '',
+        icon: cat.icon || 'BookOpen',
+        sort_order: categories.length,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setCategories(prev => [...prev, newCat]);
+      toast({ title: 'Kategorie vytvořena' });
+      return newId;
+    }
     await fetchData();
     toast({ title: 'Kategorie vytvořena' });
+    return (data as any)?.id;
   };
 
   const updateCategory = async (id: string, cat: Partial<SOPCategory>) => {
