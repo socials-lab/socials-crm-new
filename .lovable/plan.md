@@ -1,31 +1,77 @@
 
-# Inline tvorba kategorie pri vytvareni SOP
+# Navrhy na upravu SOP + Owner kazdeho SOP
 
 ## Co se zmeni
 
-V dialogu "Novy SOP clanek" (`AddSOPArticleDialog.tsx`) pridame moznost vytvorit novou kategorii primo z vyberoveho pole kategorii, bez nutnosti zavirat dialog a otvirat separatni formular.
+Kazde SOP bude mit **ownera** (zodpovednou osobu z CRM uzivatelu). Kdokoliv z tymu bude moci navrhnout upravu SOP, pokud ho povazuje za neaktualni. Notifikace o navrhu prijde adminovi a ownerovi daneho SOP.
 
-## Jak to bude fungovat
+## Datove zmeny
 
-1. Ve `Select` dropdownu pro kategorii se na konci seznamu objevi polozka **"+ Vytvorit novou kategorii"**
-2. Po kliknuti se pod Select zobrazi inline formular s polemi:
-   - Nazev kategorie (povinny)
-   - Popis (volitelny)
-   - Ikona (select z existujicich ikon)
-3. Tlacitka "Vytvorit" a "Zrusit" vedle sebe
-4. Po vytvoreni se nova kategorie automaticky vybere a inline formular se skryje
+### 1. Rozsireni tabulky `sop_articles` -- pridani `owner_id`
+- Novy sloupec `owner_id UUID REFERENCES profiles(id)` (nullable, pro zpetnou kompatibilitu)
+- Owner je CRM uzivatel zodpovedny za udrzovani SOP
 
-## Technicke zmeny
+### 2. Nova tabulka `sop_update_suggestions`
+| Sloupec | Typ | Popis |
+|---------|-----|-------|
+| id | UUID PK | |
+| article_id | UUID FK -> sop_articles | Ktere SOP se tyka |
+| suggested_by | UUID FK -> profiles(id) | Kdo navrhl |
+| reason | TEXT | Duvod proc SOP neni aktualni |
+| status | TEXT | 'pending' / 'accepted' / 'dismissed' |
+| resolved_by | UUID | Kdo navrh vyresil |
+| resolved_at | TIMESTAMPTZ | Kdy |
+| created_at | TIMESTAMPTZ | |
 
-### `src/components/sop/AddSOPArticleDialog.tsx`
-- Pridat stav `showNewCategory` (boolean), `newCatTitle`, `newCatDescription`, `newCatIcon`
-- Do Select pridat specialni polozku `__new__` s textem "+ Vytvorit novou kategorii"
-- Pri vyberu `__new__` nastavit `showNewCategory = true` a `categoryId = ''`
-- Pod Select zobrazit podminene inline formular (Input nazev, Input popis, Select ikona, Button Vytvorit / Zrusit)
-- Funkce `handleCreateCategory`: zavola `addCategory`, po uspesnem vytvoreni nastavi `categoryId` na nove ID a skryje inline formular
-- Pouzit existujici `addCategory` z `useSOPData` hooku
+RLS: CRM uzivatele mohou cist a vkladat, admini mohou menit status.
 
-### `src/hooks/useSOPData.tsx`
-- Upravit `addCategory` aby vracela ID nove vytvorene kategorie (nyni vraci `void`)
-- Zmena navratove hodnoty na `Promise<string | undefined>` (vraci ID)
-- U demo rezimu vygenerovat nahodne ID a pridat kategorii do localniho stavu
+## Frontend zmeny
+
+### 3. `SOPArticle` interface + `useSOPData` hook
+- Pridat `owner_id` do `SOPArticle` interface a demo dat
+- Pridat metody `suggestUpdate(articleId, reason)` a `resolveSuggestion(id, status)`
+- Pridat stav `suggestions` s nacitanim ze Supabase / demo fallback
+
+### 4. `AddSOPArticleDialog` -- pole pro ownera
+- Novy Select "Zodpovedna osoba" s vyberem z kolegu (kteri maji `profile_id`)
+- Pri editaci predvyplneny soucasny owner
+- Data kolegu z `useCRMData` hooku
+
+### 5. `SOPArticle` stranka -- tlacitko "Navrhnout upravu"
+- Novy button "Navrhnout upravu" (ikona `MessageSquarePlus`) viditelny pro vsechny uzivatele
+- Klik otevre dialog `SuggestSOPUpdateDialog`:
+  - Textarea pro duvod ("Co je neaktualni nebo chybi?")
+  - Tlacitko "Odeslat navrh"
+- Po odeslani: ulozeni do `sop_update_suggestions` + notifikace adminovi a ownerovi
+- Na strance zobrazit badge "X navrhu na upravu" pokud existuji pending navrhy (viditelne pro ownera a adminy)
+
+### 6. Info o ownerovi na strance SOP
+- Pod nadpisem clanku zobrazit "Zodpovedny: Jmeno" s avatarem
+- Klikatelne pro admin -> moznost zmenit ownera
+
+### 7. Notifikace
+- Novy typ `sop_update_suggested` v `NotificationType`
+- Novy entity type `sop` v `EntityType`
+- Pri vytvoreni navrhu zavolat `createNotification` pro:
+  - Ownera SOP (pokud ma `profile_id`)
+  - Vsechny adminy (pres `notifyAdmins`)
+- Link v notifikaci smeruje na `/sop/{articleId}`
+
+### 8. Prehled navrhu pro adminy
+- Na hlavni SOP strance pridat indikator (cerveny badge) u clanku ktere maji pending navrhy
+- Na `SOPArticle` strance sekce "Navrhy na upravu" (viditelna pro ownera + adminy) s moznosti:
+  - Prijmout navrh (status -> accepted)
+  - Zamitnout navrh (status -> dismissed)
+
+## Soubory k uprave
+
+| Soubor | Zmena |
+|--------|-------|
+| `src/hooks/useSOPData.tsx` | Pridat owner_id, suggestions CRUD, demo data |
+| `src/types/notifications.ts` | Pridat `sop_update_suggested`, entity type `sop` |
+| `src/components/sop/AddSOPArticleDialog.tsx` | Pridat Select pro ownera |
+| `src/components/sop/SuggestSOPUpdateDialog.tsx` | **Novy** -- dialog pro navrh upravy |
+| `src/components/sop/SOPUpdateSuggestions.tsx` | **Novy** -- seznam navrhu pro adminy/ownera |
+| `src/pages/SOPArticle.tsx` | Tlacitko navrhnout upravu, zobrazeni ownera, sekce navrhu |
+| `src/components/sop/SOPArticleCard.tsx` | Badge s poctem pending navrhu |
+| SQL migrace | `sop_articles.owner_id` + tabulka `sop_update_suggestions` |
