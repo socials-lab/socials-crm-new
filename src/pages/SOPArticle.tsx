@@ -11,6 +11,7 @@ import { SOPUpdateSuggestions } from '@/components/sop/SOPUpdateSuggestions';
 import { SOPAttachmentUpload } from '@/components/sop/SOPAttachmentUpload';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Edit, Trash2, MessageSquarePlus, User, Link2 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -19,7 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 export default function SOPArticle() {
   const { articleId } = useParams();
   const navigate = useNavigate();
-  const { articles, categories, suggestions, deleteArticle, suggestUpdate, resolveSuggestion, incrementViewCount } = useSOPData();
+  const { articles, categories, suggestions, deleteArticle, suggestUpdate, resolveSuggestion, incrementViewCount, updateArticle } = useSOPData();
   const { colleagues } = useCRMData();
   const { isSuperAdmin } = useUserRole();
   const { user } = useAuth();
@@ -95,12 +96,36 @@ export default function SOPArticle() {
           )}
         </div>
         <div className="flex items-center gap-4 mt-2 flex-wrap">
-          {ownerName && (
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <User className="h-3.5 w-3.5" />
-              <span>Zodpovědný: <strong className="text-foreground">{ownerName}</strong></span>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <User className="h-3.5 w-3.5" />
+            <span>Zodpovědný:</span>
+            {isSuperAdmin ? (
+              <Select
+                value={article.owner_id || 'none'}
+                onValueChange={(val) => {
+                  const newOwnerId = val === 'none' ? null : val;
+                  updateArticle(article.id, { owner_id: newOwnerId });
+                  toast({ title: 'Zodpovědná osoba změněna' });
+                }}
+              >
+                <SelectTrigger className="h-7 w-auto min-w-[160px] text-sm font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nepřiřazeno</SelectItem>
+                  {colleagues.filter(c => c.status === 'active').map(c => (
+                    <SelectItem key={c.profile_id || c.id} value={c.profile_id || c.id}>{c.full_name}</SelectItem>
+                  ))}
+                  {/* Demo profiles fallback */}
+                  {colleagues.length === 0 && Object.entries(demoProfileNames).map(([id, name]) => (
+                    <SelectItem key={id} value={id}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <strong className="text-foreground">{ownerName || 'Nepřiřazeno'}</strong>
+            )}
+          </div>
           {article.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {article.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
