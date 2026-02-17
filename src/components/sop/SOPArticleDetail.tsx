@@ -12,7 +12,8 @@ import { SOPAttachmentUpload } from '@/components/sop/SOPAttachmentUpload';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Edit, Trash2, MessageSquarePlus, User, Link2, Globe, Check } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ArrowLeft, Edit, Trash2, MessageSquarePlus, User, Link2, Globe, Check, MoreVertical } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -104,28 +105,36 @@ export function SOPArticleDetail({ articleId, inline, onBack }: SOPArticleDetail
         <Button variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Zpět
         </Button>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handleSharePublic}>
-            {publicLinkCopied ? <Check className="h-4 w-4 mr-1" /> : <Globe className="h-4 w-4 mr-1" />}
-            {publicLinkCopied ? 'Zkopírováno!' : 'Sdílet veřejně'}
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleCopyLink}>
-            <Link2 className="h-4 w-4 mr-1" /> Kopírovat odkaz
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setSuggestOpen(true)}>
-            <MessageSquarePlus className="h-4 w-4 mr-1" /> Navrhnout úpravu
-          </Button>
-          {isSuperAdmin && (
-            <>
-              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                <Edit className="h-4 w-4 mr-1" /> Upravit
-              </Button>
-              <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="h-4 w-4 mr-1" /> Smazat
-              </Button>
-            </>
-          )}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-9 w-9">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleSharePublic}>
+              {publicLinkCopied ? <Check className="h-4 w-4 mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
+              {publicLinkCopied ? 'Zkopírováno!' : 'Sdílet veřejně'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCopyLink}>
+              <Link2 className="h-4 w-4 mr-2" /> Kopírovat odkaz
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSuggestOpen(true)}>
+              <MessageSquarePlus className="h-4 w-4 mr-2" /> Navrhnout úpravu
+            </DropdownMenuItem>
+            {isSuperAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                  <Edit className="h-4 w-4 mr-2" /> Upravit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDeleteOpen(true)} className="text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" /> Smazat
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div>
