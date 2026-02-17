@@ -64,13 +64,17 @@ export function SOPUpdateSuggestions({ suggestions, onResolve }: SOPUpdateSugges
             <div className="space-y-2 mt-2">
               {resolved.map(s => (
                 <Card key={s.id} className="opacity-60">
-                  <CardContent className="p-3">
+                  <CardContent className="p-3 space-y-1">
                     <div className="flex items-center gap-2">
                       <Badge variant={s.status === 'accepted' ? 'default' : 'secondary'} className="text-[10px]">
                         {s.status === 'accepted' ? 'Přijato' : 'Zamítnuto'}
                       </Badge>
                       <span className="text-xs">{s.reason.substring(0, 80)}{s.reason.length > 80 ? '...' : ''}</span>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Navrhl/a: {s.suggested_by_name || 'Neznámý uživatel'} · {s.created_at ? format(new Date(s.created_at), 'd. M. yyyy', { locale: cs }) : ''}
+                      {s.resolved_at && <> · Vyřešeno: {format(new Date(s.resolved_at), 'd. M. yyyy', { locale: cs })}</>}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
