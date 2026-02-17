@@ -284,7 +284,7 @@ export default function SOP() {
         /* Desktop: master-detail layout */
         <div className="flex-1 flex min-h-0 gap-6 px-6 pt-6">
           {/* Left sidebar - categories */}
-          <div className="w-[250px] shrink-0 overflow-y-auto pb-6 space-y-1">
+          <div className="w-[250px] shrink-0 sticky top-0 self-start max-h-[calc(100vh-10rem)] overflow-y-auto pb-6 space-y-1">
             <button
               onClick={() => { setSelectedCategoryId(null); if (isViewingArticle) navigate('/sop'); }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors ${
