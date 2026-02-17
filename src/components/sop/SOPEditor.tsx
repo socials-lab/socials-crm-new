@@ -1,7 +1,7 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
+import { ResizableImage } from './ResizableImage';
 import Placeholder from '@tiptap/extension-placeholder';
 import { LoomEmbed, parseLoomUrl } from './LoomEmbed';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
       Link.configure({ openOnClick: false }),
-      Image.configure({ inline: false, allowBase64: true }),
+      ResizableImage,
       Placeholder.configure({ placeholder }),
       LoomEmbed,
     ],
@@ -74,7 +74,7 @@ export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...
     const reader = new FileReader();
     reader.onload = (e) => {
       const src = e.target?.result as string;
-      if (src) editor.chain().focus().setImage({ src }).run();
+      if (src) (editor.chain().focus() as any).setImage({ src }).run();
     };
     reader.readAsDataURL(file);
   };
@@ -100,7 +100,7 @@ export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...
 
   const insertImageFromUrl = () => {
     if (imageUrl) {
-      editor.chain().focus().setImage({ src: imageUrl }).run();
+      (editor.chain().focus() as any).setImage({ src: imageUrl }).run();
       setImageUrl('');
       setImageDialogOpen(false);
     }
