@@ -1,77 +1,26 @@
 
-# Navrhy na upravu SOP + Owner kazdeho SOP
 
-## Co se zmeni
+## Fix: Sticky sidebar + rename "články" to "SOP"
 
-Kazde SOP bude mit **ownera** (zodpovednou osobu z CRM uzivatelu). Kdokoliv z tymu bude moci navrhnout upravu SOP, pokud ho povazuje za neaktualni. Notifikace o navrhu prijde adminovi a ownerovi daneho SOP.
+### Changes
 
-## Datove zmeny
+**`src/pages/SOP.tsx`**:
+1. Make the left category sidebar truly fixed during scroll using `position: sticky; top: 1.5rem` with a fixed height and its own `overflow-y-auto`, while the right article column scrolls naturally with the page.
+2. Replace all occurrences of "články"/"článek"/"článků" with "SOP" throughout the page (headings, empty states, counts).
+3. Rename "Všechny články" to "Všechny SOP".
 
-### 1. Rozsireni tabulky `sop_articles` -- pridani `owner_id`
-- Novy sloupec `owner_id UUID REFERENCES profiles(id)` (nullable, pro zpetnou kompatibilitu)
-- Owner je CRM uzivatel zodpovedny za udrzovani SOP
+**`src/components/sop/SOPCategoryCard.tsx`**:
+- Update the article count label from "článek/články/článků" to "SOP".
 
-### 2. Nova tabulka `sop_update_suggestions`
-| Sloupec | Typ | Popis |
-|---------|-----|-------|
-| id | UUID PK | |
-| article_id | UUID FK -> sop_articles | Ktere SOP se tyka |
-| suggested_by | UUID FK -> profiles(id) | Kdo navrhl |
-| reason | TEXT | Duvod proc SOP neni aktualni |
-| status | TEXT | 'pending' / 'accepted' / 'dismissed' |
-| resolved_by | UUID | Kdo navrh vyresil |
-| resolved_at | TIMESTAMPTZ | Kdy |
-| created_at | TIMESTAMPTZ | |
+**`src/components/sop/SOPArticleCard.tsx`**:
+- No text changes needed (no "články" references here).
 
-RLS: CRM uzivatele mohou cist a vkladat, admini mohou menit status.
+### Technical details
 
-## Frontend zmeny
+The current sidebar has `sticky top-0 self-start` but the parent flex container and page wrapper likely prevent it from working. The fix:
+- Ensure the flex container has no `overflow: hidden` and uses `items-start` alignment.
+- Set sidebar to `sticky top-6` with `max-h-[calc(100vh-6rem)] overflow-y-auto`.
+- The right column remains `flex-1 min-w-0` and scrolls naturally.
 
-### 3. `SOPArticle` interface + `useSOPData` hook
-- Pridat `owner_id` do `SOPArticle` interface a demo dat
-- Pridat metody `suggestUpdate(articleId, reason)` a `resolveSuggestion(id, status)`
-- Pridat stav `suggestions` s nacitanim ze Supabase / demo fallback
+All Czech text "článek/články/článků" will be replaced with just "SOP" (e.g., "19 SOP" instead of "19 článků").
 
-### 4. `AddSOPArticleDialog` -- pole pro ownera
-- Novy Select "Zodpovedna osoba" s vyberem z kolegu (kteri maji `profile_id`)
-- Pri editaci predvyplneny soucasny owner
-- Data kolegu z `useCRMData` hooku
-
-### 5. `SOPArticle` stranka -- tlacitko "Navrhnout upravu"
-- Novy button "Navrhnout upravu" (ikona `MessageSquarePlus`) viditelny pro vsechny uzivatele
-- Klik otevre dialog `SuggestSOPUpdateDialog`:
-  - Textarea pro duvod ("Co je neaktualni nebo chybi?")
-  - Tlacitko "Odeslat navrh"
-- Po odeslani: ulozeni do `sop_update_suggestions` + notifikace adminovi a ownerovi
-- Na strance zobrazit badge "X navrhu na upravu" pokud existuji pending navrhy (viditelne pro ownera a adminy)
-
-### 6. Info o ownerovi na strance SOP
-- Pod nadpisem clanku zobrazit "Zodpovedny: Jmeno" s avatarem
-- Klikatelne pro admin -> moznost zmenit ownera
-
-### 7. Notifikace
-- Novy typ `sop_update_suggested` v `NotificationType`
-- Novy entity type `sop` v `EntityType`
-- Pri vytvoreni navrhu zavolat `createNotification` pro:
-  - Ownera SOP (pokud ma `profile_id`)
-  - Vsechny adminy (pres `notifyAdmins`)
-- Link v notifikaci smeruje na `/sop/{articleId}`
-
-### 8. Prehled navrhu pro adminy
-- Na hlavni SOP strance pridat indikator (cerveny badge) u clanku ktere maji pending navrhy
-- Na `SOPArticle` strance sekce "Navrhy na upravu" (viditelna pro ownera + adminy) s moznosti:
-  - Prijmout navrh (status -> accepted)
-  - Zamitnout navrh (status -> dismissed)
-
-## Soubory k uprave
-
-| Soubor | Zmena |
-|--------|-------|
-| `src/hooks/useSOPData.tsx` | Pridat owner_id, suggestions CRUD, demo data |
-| `src/types/notifications.ts` | Pridat `sop_update_suggested`, entity type `sop` |
-| `src/components/sop/AddSOPArticleDialog.tsx` | Pridat Select pro ownera |
-| `src/components/sop/SuggestSOPUpdateDialog.tsx` | **Novy** -- dialog pro navrh upravy |
-| `src/components/sop/SOPUpdateSuggestions.tsx` | **Novy** -- seznam navrhu pro adminy/ownera |
-| `src/pages/SOPArticle.tsx` | Tlacitko navrhnout upravu, zobrazeni ownera, sekce navrhu |
-| `src/components/sop/SOPArticleCard.tsx` | Badge s poctem pending navrhu |
-| SQL migrace | `sop_articles.owner_id` + tabulka `sop_update_suggestions` |
