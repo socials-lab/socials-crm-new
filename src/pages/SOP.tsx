@@ -193,7 +193,7 @@ export default function SOP() {
           ) : (
             /* Desktop: sidebar + main */
             <>
-              <div className="w-[250px] shrink-0 sticky top-6 space-y-1 max-h-[calc(100vh-6rem)] overflow-y-auto">
+              <div className="w-[250px] shrink-0 sticky top-0 self-start space-y-1 max-h-[calc(100vh-6rem)] overflow-y-auto">
                 <button
                   onClick={() => setSelectedCategoryId(null)}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors ${
