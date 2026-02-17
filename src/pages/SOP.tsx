@@ -10,7 +10,7 @@ import { useSOPData } from '@/hooks/useSOPData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { Plus, FolderPlus } from 'lucide-react';
+import { Plus, FolderPlus, ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -173,12 +173,19 @@ export default function SOP() {
                       ))}
                     </div>
                   )
-                ) : categoryArticles.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné články</p>
                 ) : (
-                  categoryArticles.map(article => (
-                    <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
-                  ))
+                  <div className="space-y-2">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedCategoryId(null)}>
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Všechny kategorie
+                    </Button>
+                    {categoryArticles.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné články</p>
+                    ) : (
+                      categoryArticles.map(article => (
+                        <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
+                      ))
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -225,6 +232,9 @@ export default function SOP() {
                 ) : (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedCategoryId(null)} className="mr-1">
+                        <ArrowLeft className="h-4 w-4 mr-1" /> Zpět
+                      </Button>
                       <h2 className="text-lg font-semibold">{categoryNameMap[selectedCategoryId]}</h2>
                       <span className="text-sm text-muted-foreground">({categoryArticles.length} {categoryArticles.length === 1 ? 'článek' : categoryArticles.length < 5 ? 'články' : 'článků'})</span>
                     </div>
