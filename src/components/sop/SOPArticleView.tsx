@@ -3,19 +3,18 @@ interface SOPArticleViewProps {
 }
 
 export function SOPArticleView({ content }: SOPArticleViewProps) {
-  // 1. Transform loom embed divs into styled iframes (handle any extra attributes on the div)
+  // 1. Transform loom embed divs into styled iframes
   let processedContent = content.replace(
-    /<div[^>]*data-loom-embed[^>]*>.*?<iframe[^>]*src="([^"]+)"[^>]*>.*?<\/iframe>.*?<\/div>/gi,
+    /<div[^>]*data-loom-embed[^>]*>[\s\S]*?<iframe[^>]*src="([^"]+)"[^>]*>[\s\S]*?<\/iframe>[\s\S]*?<\/div>/gi,
     '<div class="aspect-video rounded-lg overflow-hidden border border-border my-4"><iframe src="$1" frameborder="0" allowfullscreen style="width:100%;height:100%"></iframe></div>'
   );
 
-  // 2. Also handle bare loom iframes that might not be wrapped
+  // 2. Also handle bare loom iframes not yet wrapped
   processedContent = processedContent.replace(
     /<iframe[^>]*src="(https:\/\/www\.loom\.com\/embed\/[^"]+)"[^>]*><\/iframe>/gi,
     (match) => {
-      // Skip if already inside a styled container
-      if (match.includes('aspect-video')) return match;
-      return match; // already handled above
+      if (match.includes('aspect-video') || match.includes('style="width:100%')) return match;
+      return `<div class="aspect-video rounded-lg overflow-hidden border border-border my-4"><iframe src="$1" frameborder="0" allowfullscreen style="width:100%;height:100%"></iframe></div>`;
     }
   );
 
