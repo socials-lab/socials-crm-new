@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { SOPAttachmentUpload, type SOPAttachment } from './SOPAttachmentUpload';
 import { useSOPData, type SOPArticle } from '@/hooks/useSOPData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const ICON_OPTIONS = [
   'BookOpen', 'Briefcase', 'BarChart3', 'Settings', 'Palette',
@@ -22,16 +23,50 @@ interface AddSOPArticleDialogProps {
   defaultCategoryId?: string;
 }
 
+interface DraftData {
+  title: string;
+  content: string;
+  categoryId: string;
+  ownerId: string;
+  attachments: SOPAttachment[];
+  savedAt: number;
+}
+
+function getDraftKey(editArticle?: SOPArticle | null): string {
+  return editArticle ? `sop-full-draft-edit-${editArticle.id}` : 'sop-full-draft-new';
+}
+
+function saveDraft(key: string, data: DraftData) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+}
+
+function loadDraft(key: string): DraftData | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw) as DraftData;
+  } catch {}
+  return null;
+}
+
+function clearDraft(key: string) {
+  try { localStorage.removeItem(key); } catch {}
+  // Also clear the old editor-only draft keys
+  try {
+    const editorKey = key.replace('sop-full-draft-', 'sop-draft-');
+    localStorage.removeItem(editorKey);
+  } catch {}
+}
+
 export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCategoryId }: AddSOPArticleDialogProps) {
   const { categories, addArticle, updateArticle, addCategory } = useSOPData();
   const { colleagues } = useCRMData();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  
   const [ownerId, setOwnerId] = useState('');
   const [attachments, setAttachments] = useState<SOPAttachment[]>([]);
   const [saving, setSaving] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
 
   // Inline new category state
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -40,7 +75,80 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
   const [newCatIcon, setNewCatIcon] = useState('BookOpen');
   const [creatingCat, setCreatingCat] = useState(false);
 
+  const draftKey = getDraftKey(editArticle);
+  const initializedRef = useRef(false);
+
+  // On open: restore draft or load from editArticle
   useEffect(() => {
+    if (!open) {
+      initializedRef.current = false;
+      return;
+    }
+    
+    const draft = loadDraft(draftKey);
+    
+    if (draft && draft.title) {
+      // Restore draft
+      setTitle(draft.title);
+      setContent(draft.content);
+      setCategoryId(draft.categoryId);
+      setOwnerId(draft.ownerId);
+      setAttachments(draft.attachments || []);
+      setHasDraft(true);
+    } else if (editArticle) {
+      setTitle(editArticle.title);
+      setContent(editArticle.content);
+      setCategoryId(editArticle.category_id);
+      setOwnerId(editArticle.owner_id || '');
+      setAttachments((editArticle.attachments as SOPAttachment[]) || []);
+      setHasDraft(false);
+    } else {
+      setTitle('');
+      setContent('');
+      setCategoryId(defaultCategoryId || '');
+      setOwnerId('');
+      setAttachments([]);
+      setHasDraft(false);
+    }
+    setShowNewCategory(false);
+    setNewCatTitle('');
+    setNewCatDescription('');
+    setNewCatIcon('BookOpen');
+    initializedRef.current = true;
+  }, [editArticle, defaultCategoryId, open, draftKey]);
+
+  // Auto-save draft on every field change
+  const saveDraftDebounced = useCallback(() => {
+    if (!initializedRef.current) return;
+    saveDraft(draftKey, {
+      title,
+      content,
+      categoryId,
+      ownerId,
+      attachments,
+      savedAt: Date.now(),
+    });
+  }, [draftKey, title, content, categoryId, ownerId, attachments]);
+
+  useEffect(() => {
+    if (!open || !initializedRef.current) return;
+    const timer = setTimeout(saveDraftDebounced, 500);
+    return () => clearTimeout(timer);
+  }, [saveDraftDebounced, open]);
+
+  // Save draft on page unload
+  useEffect(() => {
+    if (!open || !initializedRef.current) return;
+    const handleBeforeUnload = () => {
+      saveDraft(draftKey, { title, content, categoryId, ownerId, attachments, savedAt: Date.now() });
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [open, draftKey, title, content, categoryId, ownerId, attachments]);
+
+  const handleDiscardDraft = () => {
+    clearDraft(draftKey);
+    setHasDraft(false);
     if (editArticle) {
       setTitle(editArticle.title);
       setContent(editArticle.content);
@@ -54,11 +162,7 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
       setOwnerId('');
       setAttachments([]);
     }
-    setShowNewCategory(false);
-    setNewCatTitle('');
-    setNewCatDescription('');
-    setNewCatIcon('BookOpen');
-  }, [editArticle, defaultCategoryId, open]);
+  };
 
   const handleCategoryChange = (value: string) => {
     if (value === '__new__') {
@@ -104,9 +208,9 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
     } else {
       await addArticle({ title, content, category_id: categoryId, tags: [], owner_id: ownerValue, attachments: attachments as any });
     }
-    // Clear draft from localStorage
-    const draftKey = editArticle ? `sop-draft-edit-${editArticle.id}` : 'sop-draft-new-article';
-    try { localStorage.removeItem(draftKey); } catch {}
+    // Clear all drafts
+    clearDraft(draftKey);
+    setHasDraft(false);
     setSaving(false);
     onOpenChange(false);
   };
@@ -115,8 +219,18 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editArticle ? 'Upravit článek' : 'Nový SOP článek'}</DialogTitle>
+          <DialogTitle>{editArticle ? 'Upravit SOP' : 'Nové SOP'}</DialogTitle>
         </DialogHeader>
+
+        {hasDraft && (
+          <div className="flex items-center gap-2 p-2 rounded-md bg-muted border border-border">
+            <Badge variant="secondary" className="text-xs">Obnovený draft</Badge>
+            <span className="text-xs text-muted-foreground flex-1">Rozpracovaný obsah byl automaticky obnoven.</span>
+            <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={handleDiscardDraft}>
+              Zahodit draft
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
