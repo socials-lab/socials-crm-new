@@ -28,10 +28,13 @@ export function SOPArticleCard({ article, onClick, highlightQuery, categoryName,
         <div className="flex items-start gap-3">
           <FileText className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h3 className="font-medium text-sm">
                 {highlightQuery ? highlightText(article.title, highlightQuery) : article.title}
               </h3>
+              {!article.is_published && (
+                <Badge variant="secondary" className="text-[10px] shrink-0">Draft</Badge>
+              )}
               {categoryName && (
                 <Badge variant="outline" className="text-[10px] shrink-0">{categoryName}</Badge>
               )}
