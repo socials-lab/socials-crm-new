@@ -9,6 +9,7 @@ import { AddSOPArticleDialog } from '@/components/sop/AddSOPArticleDialog';
 import { SuggestSOPUpdateDialog } from '@/components/sop/SuggestSOPUpdateDialog';
 import { SOPUpdateSuggestions } from '@/components/sop/SOPUpdateSuggestions';
 import { SOPAttachmentUpload } from '@/components/sop/SOPAttachmentUpload';
+import { SOPChangeLog } from '@/components/sop/SOPChangeLog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -190,6 +191,8 @@ export function SOPArticleDetail({ articleId, inline, onBack }: SOPArticleDetail
           readOnly
         />
       )}
+
+      <SOPChangeLog article={article} />
 
       {canManageSuggestions && articleSuggestions.length > 0 && (
         <SOPUpdateSuggestions suggestions={articleSuggestions} onResolve={resolveSuggestion} />
