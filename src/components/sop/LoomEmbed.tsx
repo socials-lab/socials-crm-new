@@ -32,7 +32,8 @@ export const LoomEmbed = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['div', mergeAttributes(HTMLAttributes, { 'data-loom-embed': '' }), ['iframe', { src: HTMLAttributes.src, frameborder: '0', allowfullscreen: 'true', class: 'w-full h-full' }]];
+    const { src, ...rest } = HTMLAttributes;
+    return ['div', mergeAttributes(rest, { 'data-loom-embed': '' }), ['iframe', { src, frameborder: '0', allowfullscreen: 'true', class: 'w-full h-full' }]];
   },
 
   addNodeView() {
