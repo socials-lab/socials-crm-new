@@ -1,26 +1,20 @@
 
 
-## Fix: Sticky sidebar + rename "články" to "SOP"
+## Fix: Levý sloupec (sidebar) fixní při scrollu
 
-### Changes
+### Problem
+Sidebar ma `sticky top-6`, ale nefunguje, protoze parent kontejner (`flex`) nema dostatecnou vysku nebo sidebar se scrolluje s celou strankou.
 
-**`src/pages/SOP.tsx`**:
-1. Make the left category sidebar truly fixed during scroll using `position: sticky; top: 1.5rem` with a fixed height and its own `overflow-y-auto`, while the right article column scrolls naturally with the page.
-2. Replace all occurrences of "články"/"článek"/"článků" with "SOP" throughout the page (headings, empty states, counts).
-3. Rename "Všechny články" to "Všechny SOP".
+### Reseni
+V `src/pages/SOP.tsx` na desktopovem layoutu:
 
-**`src/components/sop/SOPCategoryCard.tsx`**:
-- Update the article count label from "článek/články/článků" to "SOP".
+1. Zmenit parent flex kontejner tak, aby mel `items-start` (uz ma `md:items-start` - OK)
+2. Na sidebar divu zmenit `sticky top-6` na `sticky top-20` (aby respektoval header/navbar) a pridat `self-start`
+3. Zajistit, ze hlavni obsahovy sloupec (`flex-1`) nema omezeni, ktere by branilo sticky efektu
 
-**`src/components/sop/SOPArticleCard.tsx`**:
-- No text changes needed (no "články" references here).
+### Technicke zmeny
 
-### Technical details
-
-The current sidebar has `sticky top-0 self-start` but the parent flex container and page wrapper likely prevent it from working. The fix:
-- Ensure the flex container has no `overflow: hidden` and uses `items-start` alignment.
-- Set sidebar to `sticky top-6` with `max-h-[calc(100vh-6rem)] overflow-y-auto`.
-- The right column remains `flex-1 min-w-0` and scrolls naturally.
-
-All Czech text "článek/články/článků" will be replaced with just "SOP" (e.g., "19 SOP" instead of "19 článků").
+**`src/pages/SOP.tsx`** (radek ~155):
+- Sidebar div: zmenit `sticky top-6` na `sticky top-20 self-start` pro spravne ukotveni pod headerem
+- Overit, ze parent flex kontejner nema `overflow-hidden` nebo jiny blokujici styl
 
