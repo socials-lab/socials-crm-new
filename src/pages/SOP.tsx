@@ -66,6 +66,10 @@ export default function SOP() {
     ? articles.filter(a => a.category_id === selectedCategoryId && a.is_published)
     : [];
 
+  const allArticlesByViews = useMemo(() => {
+    return [...articles].filter(a => a.is_published).sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+  }, [articles]);
+
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       {/* Header */}
@@ -159,19 +163,12 @@ export default function SOP() {
               {/* Articles for selected category or all */}
               <div className="grid gap-2">
                 {selectedCategoryId === null ? (
-                  categories.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné kategorie</p>
+                  allArticlesByViews.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné články</p>
                   ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                      {categories.map(cat => (
-                        <SOPCategoryCard
-                          key={cat.id}
-                          category={cat}
-                          articleCount={categoryArticleCount[cat.id] || 0}
-                          onClick={() => setSelectedCategoryId(cat.id)}
-                        />
-                      ))}
-                    </div>
+                    allArticlesByViews.map(article => (
+                      <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} categoryName={categoryNameMap[article.category_id]} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
+                    ))
                   )
                 ) : (
                   <div className="space-y-2">
@@ -216,17 +213,22 @@ export default function SOP() {
 
               <div className="flex-1 min-w-0">
                 {selectedCategoryId === null ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {categories.map(cat => (
-                      <SOPCategoryCard
-                        key={cat.id}
-                        category={cat}
-                        articleCount={categoryArticleCount[cat.id] || 0}
-                        onClick={() => setSelectedCategoryId(cat.id)}
-                      />
-                    ))}
-                    {categories.length === 0 && (
-                      <p className="text-muted-foreground col-span-full text-center py-12">Zatím nejsou vytvořeny žádné kategorie</p>
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-semibold">Všechny články</h2>
+                    {allArticlesByViews.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné články</p>
+                    ) : (
+                      <div className="grid gap-2">
+                        {allArticlesByViews.map(article => (
+                          <SOPArticleCard
+                            key={article.id}
+                            article={article}
+                            onClick={() => navigate(`/sop/${article.id}`)}
+                            categoryName={categoryNameMap[article.category_id]}
+                            pendingSuggestionCount={pendingSuggestionCounts[article.id]}
+                          />
+                        ))}
+                      </div>
                     )}
                   </div>
                 ) : (
