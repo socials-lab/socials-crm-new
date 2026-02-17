@@ -14,6 +14,7 @@ import { ApplicantsDataProvider } from "@/hooks/useApplicantsData";
 import { MeetingsDataProvider } from "@/hooks/useMeetingsData";
 import { FeedbackProvider } from "@/hooks/useFeedbackData";
 import { AcademyDataProvider } from "@/hooks/useAcademyData";
+import { SOPDataProvider } from "@/hooks/useSOPData";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Contacts from "./pages/Contacts";
@@ -37,6 +38,8 @@ import OnboardingForm from "./pages/OnboardingForm";
 import Notifications from "./pages/Notifications";
 import Feedback from "./pages/Feedback";
 import Academy from "./pages/Academy";
+import SOP from "./pages/SOP";
+import SOPArticle from "./pages/SOPArticle";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import PublicOfferPage from "./pages/PublicOfferPage";
@@ -57,6 +60,7 @@ const App = () => (
                 <MeetingsDataProvider>
                   <FeedbackProvider>
                     <AcademyDataProvider>
+                      <SOPDataProvider>
                       <TooltipProvider>
                         <Toaster />
                         <Sonner />
@@ -97,11 +101,14 @@ const App = () => (
                               <Route path="/notifications" element={<Notifications />} />
                               <Route path="/feedback" element={<Feedback />} />
                               <Route path="/academy" element={<Academy />} />
+                              <Route path="/sop" element={<SOP />} />
+                              <Route path="/sop/:articleId" element={<SOPArticle />} />
                             </Route>
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </BrowserRouter>
                       </TooltipProvider>
+                      </SOPDataProvider>
                     </AcademyDataProvider>
                   </FeedbackProvider>
                 </MeetingsDataProvider>
