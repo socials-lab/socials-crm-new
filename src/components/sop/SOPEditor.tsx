@@ -1,4 +1,5 @@
 import { useEditor, EditorContent } from '@tiptap/react';
+import { useEffect, useCallback } from 'react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import { ResizableImage } from './ResizableImage';
@@ -16,9 +17,10 @@ interface SOPEditorProps {
   content: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  storageKey?: string;
 }
 
-export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...' }: SOPEditorProps) {
+export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...', storageKey }: SOPEditorProps) {
   const [loomDialogOpen, setLoomDialogOpen] = useState(false);
   const [loomUrl, setLoomUrl] = useState('');
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -26,6 +28,27 @@ export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const cacheKey = storageKey ? `sop-draft-${storageKey}` : null;
+
+  // Restore draft from localStorage on mount
+  const initialContent = (() => {
+    if (cacheKey) {
+      try {
+        const draft = localStorage.getItem(cacheKey);
+        if (draft) return draft;
+      } catch {}
+    }
+    return content;
+  })();
+
+  const handleUpdate = useCallback(({ editor: e }: any) => {
+    const html = e.getHTML();
+    onChange(html);
+    if (cacheKey) {
+      try { localStorage.setItem(cacheKey, html); } catch {}
+    }
+  }, [onChange, cacheKey]);
 
   const editor = useEditor({
     extensions: [
@@ -35,8 +58,8 @@ export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...
       Placeholder.configure({ placeholder }),
       LoomEmbed,
     ],
-    content,
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    content: initialContent,
+    onUpdate: handleUpdate,
     editorProps: {
       attributes: {
         class: 'prose prose-sm max-w-none min-h-[300px] p-4 focus:outline-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-3 [&_img]:border [&_img]:border-border',
