@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { SOPEditor } from './SOPEditor';
 import { useSOPData, type SOPArticle } from '@/hooks/useSOPData';
+import { useCRMData } from '@/hooks/useCRMData';
 import { Plus } from 'lucide-react';
 
 const ICON_OPTIONS = [
@@ -22,10 +23,12 @@ interface AddSOPArticleDialogProps {
 
 export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCategoryId }: AddSOPArticleDialogProps) {
   const { categories, addArticle, updateArticle, addCategory } = useSOPData();
+  const { colleagues } = useCRMData();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [tags, setTags] = useState('');
+  const [ownerId, setOwnerId] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Inline new category state
@@ -41,11 +44,13 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
       setContent(editArticle.content);
       setCategoryId(editArticle.category_id);
       setTags(editArticle.tags.join(', '));
+      setOwnerId(editArticle.owner_id || '');
     } else {
       setTitle('');
       setContent('');
       setCategoryId(defaultCategoryId || '');
       setTags('');
+      setOwnerId('');
     }
     setShowNewCategory(false);
     setNewCatTitle('');
@@ -92,10 +97,11 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
     if (!title.trim() || !categoryId) return;
     setSaving(true);
     const tagArray = tags.split(',').map(t => t.trim()).filter(Boolean);
+    const ownerValue = ownerId || null;
     if (editArticle) {
-      await updateArticle(editArticle.id, { title, content, category_id: categoryId, tags: tagArray });
+      await updateArticle(editArticle.id, { title, content, category_id: categoryId, tags: tagArray, owner_id: ownerValue });
     } else {
-      await addArticle({ title, content, category_id: categoryId, tags: tagArray });
+      await addArticle({ title, content, category_id: categoryId, tags: tagArray, owner_id: ownerValue });
     }
     setSaving(false);
     onOpenChange(false);
@@ -181,9 +187,22 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Tagy (oddělené čárkou)</Label>
-            <Input value={tags} onChange={e => setTags(e.target.value)} placeholder="onboarding, klient, smlouva..." />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Tagy (oddělené čárkou)</Label>
+              <Input value={tags} onChange={e => setTags(e.target.value)} placeholder="onboarding, klient, smlouva..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Zodpovědná osoba</Label>
+              <Select value={ownerId || undefined} onValueChange={setOwnerId}>
+                <SelectTrigger><SelectValue placeholder="Vyberte vlastníka SOP" /></SelectTrigger>
+                <SelectContent>
+                  {colleagues.filter(c => c.profile_id).map(c => (
+                    <SelectItem key={c.profile_id!} value={c.profile_id!}>{c.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">

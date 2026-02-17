@@ -20,7 +20,7 @@ export default function SOP() {
   const isMobile = useIsMobile();
   const {
     categories, articles, isLoading, searchQuery, setSearchQuery,
-    searchResults, selectedTags, toggleTag, allTags, setSelectedTags,
+    searchResults, selectedTags, toggleTag, allTags, setSelectedTags, suggestions,
   } = useSOPData();
   const { isSuperAdmin } = useUserRole();
   const [articleDialogOpen, setArticleDialogOpen] = useState(false);
@@ -42,6 +42,14 @@ export default function SOP() {
     categories.forEach(c => { map[c.id] = c.title; });
     return map;
   }, [categories]);
+
+  const pendingSuggestionCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    suggestions.filter(s => s.status === 'pending').forEach(s => {
+      map[s.article_id] = (map[s.article_id] || 0) + 1;
+    });
+    return map;
+  }, [suggestions]);
 
   // Group search results by category
   const groupedResults = useMemo(() => {
@@ -111,6 +119,7 @@ export default function SOP() {
                       onClick={() => navigate(`/sop/${article.id}`)}
                       highlightQuery={searchQuery}
                       categoryName={categoryNameMap[article.category_id]}
+                      pendingSuggestionCount={pendingSuggestionCounts[article.id]}
                     />
                   ))}
                 </div>
@@ -168,7 +177,7 @@ export default function SOP() {
                   <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné články</p>
                 ) : (
                   categoryArticles.map(article => (
-                    <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} />
+                    <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
                   ))
                 )}
               </div>
@@ -224,7 +233,7 @@ export default function SOP() {
                     ) : (
                       <div className="grid gap-2">
                         {categoryArticles.map(article => (
-                          <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} />
+                          <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
                         ))}
                       </div>
                     )}

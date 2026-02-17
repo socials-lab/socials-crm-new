@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback,
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { createNotification, notifyAdmins } from '@/services/notificationService';
 
 export interface SOPCategory {
   id: string;
@@ -23,15 +24,29 @@ export interface SOPArticle {
   tags: string[];
   sort_order: number;
   is_published: boolean;
+  owner_id: string | null;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;
   updated_at: string;
 }
 
+export interface SOPSuggestion {
+  id: string;
+  article_id: string;
+  suggested_by: string;
+  suggested_by_name?: string;
+  reason: string;
+  status: 'pending' | 'accepted' | 'dismissed';
+  resolved_by?: string;
+  resolved_at?: string;
+  created_at: string;
+}
+
 interface SOPDataContextType {
   categories: SOPCategory[];
   articles: SOPArticle[];
+  suggestions: SOPSuggestion[];
   isLoading: boolean;
   searchResults: SOPArticle[];
   searchQuery: string;
@@ -46,6 +61,8 @@ interface SOPDataContextType {
   addArticle: (article: Partial<SOPArticle>) => Promise<void>;
   updateArticle: (id: string, article: Partial<SOPArticle>) => Promise<void>;
   deleteArticle: (id: string) => Promise<void>;
+  suggestUpdate: (articleId: string, reason: string) => Promise<void>;
+  resolveSuggestion: (id: string, status: 'accepted' | 'dismissed') => Promise<void>;
   refreshData: () => Promise<void>;
 }
 
@@ -72,37 +89,25 @@ const demoCategories: SOPCategory[] = [
 ];
 
 const demoArticles: SOPArticle[] = [
-  // Onboarding klienta
-  { id: 'art-1', category_id: 'cat-1', title: 'Jak nastavit nového klienta v CRM', content: '<h1>Nastavení nového klienta</h1><p>Po podpisu smlouvy je potřeba klienta správně zavést do systému.</p><h2>Kroky</h2><ol><li>Přejděte do sekce <strong>Klienti</strong></li><li>Vyplňte IČO — systém doplní údaje z ARES</li><li>Přidejte kontaktní osobu</li><li>Vytvořte zakázku a přiřaďte služby</li></ol>', search_text: 'Nastavení nového klienta Po podpisu smlouvy je potřeba klienta správně zavést do systému.', tags: ['onboarding', 'klient', 'CRM'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  { id: 'art-2', category_id: 'cat-1', title: 'První brief s klientem', content: '<h1>První brief</h1><p>Postup pro vedení prvního briefu s novým klientem.</p>', search_text: 'První brief s klientem Postup pro vedení prvního briefu s novým klientem.', tags: ['onboarding', 'brief', 'meeting'], sort_order: 1, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // Performance marketing
-  { id: 'art-3', category_id: 'cat-2', title: 'Spuštění Google Ads kampaně', content: '<h1>Spuštění Google Ads</h1><p>Jak připravit a spustit novou kampaň.</p>', search_text: 'Spuštění Google Ads kampaně Jak připravit a spustit novou kampaň pro klienta.', tags: ['google-ads', 'PPC', 'kampaně'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  { id: 'art-4', category_id: 'cat-2', title: 'Meta Ads setup a best practices', content: '<h1>Meta Ads Setup</h1><p>Nastavení Facebook a Instagram reklam.</p>', search_text: 'Meta Ads setup a best practices Nastavení Facebook a Instagram reklam.', tags: ['meta-ads', 'PPC', 'facebook'], sort_order: 1, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // Interní procesy
-  { id: 'art-5', category_id: 'cat-3', title: 'Jak správně vyplnit vícepráce', content: '<h1>Vyplnění víceprací</h1><p>Vícepráce musí být schválena klientem před zahájením.</p>', search_text: 'Vyplnění víceprací Vícepráce musí být schválena klientem před zahájením.', tags: ['vícepráce', 'fakturace', 'proces'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  { id: 'art-6', category_id: 'cat-3', title: 'Žádost o dovolenou', content: '<h1>Dovolená</h1><p>Jak si správně zažádat o dovolenou.</p>', search_text: 'Žádost o dovolenou Jak si správně zažádat o dovolenou v systému.', tags: ['HR', 'dovolená', 'proces'], sort_order: 1, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // Social media management
-  { id: 'art-7', category_id: 'cat-4', title: 'Tvorba content plánu', content: '<h1>Content plán</h1><p>Postup pro tvorbu měsíčního content plánu.</p>', search_text: 'Tvorba content plánu Postup pro tvorbu měsíčního content plánu.', tags: ['content', 'social-media', 'plánování'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  { id: 'art-8', category_id: 'cat-4', title: 'Schvalovací proces příspěvků', content: '<h1>Schvalování</h1><p>Jak probíhá schvalování příspěvků klientem.</p>', search_text: 'Schvalovací proces příspěvků Jak probíhá schvalování příspěvků klientem.', tags: ['content', 'schvalování', 'klient'], sort_order: 1, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // Fakturace a finance
-  { id: 'art-9', category_id: 'cat-5', title: 'Vystavení faktury v systému', content: '<h1>Fakturace</h1><p>Jak vystavit fakturu klientovi.</p>', search_text: 'Vystavení faktury v systému Jak vystavit fakturu klientovi.', tags: ['fakturace', 'finance', 'proces'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // Prodej a leady
-  { id: 'art-10', category_id: 'cat-6', title: 'Kvalifikace nového leadu', content: '<h1>Kvalifikace leadu</h1><p>Jak správně kvalifikovat nový lead.</p>', search_text: 'Kvalifikace nového leadu Jak správně kvalifikovat nový lead v CRM.', tags: ['lead', 'prodej', 'kvalifikace'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  { id: 'art-11', category_id: 'cat-6', title: 'Příprava nabídky pro klienta', content: '<h1>Nabídka</h1><p>Jak připravit profesionální nabídku.</p>', search_text: 'Příprava nabídky pro klienta Jak připravit profesionální nabídku.', tags: ['nabídka', 'prodej', 'klient'], sort_order: 1, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // Klientský servis
-  { id: 'art-12', category_id: 'cat-7', title: 'Řešení reklamace klienta', content: '<h1>Reklamace</h1><p>Postup při řešení reklamace.</p>', search_text: 'Řešení reklamace klienta Postup při řešení reklamace od klienta.', tags: ['reklamace', 'servis', 'escalace'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // Nástroje a technologie
-  { id: 'art-13', category_id: 'cat-8', title: 'Nastavení Google Analytics 4', content: '<h1>GA4</h1><p>Jak nastavit Google Analytics 4 pro klienta.</p>', search_text: 'Nastavení Google Analytics 4 Jak nastavit GA4 pro klienta.', tags: ['analytics', 'GA4', 'nástroje'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  { id: 'art-14', category_id: 'cat-8', title: 'Google Tag Manager – základní setup', content: '<h1>GTM Setup</h1><p>Základní nastavení GTM pro tracking.</p>', search_text: 'Google Tag Manager základní setup Nastavení GTM pro tracking.', tags: ['GTM', 'tracking', 'nástroje'], sort_order: 1, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // HR a tým
-  { id: 'art-15', category_id: 'cat-9', title: 'Onboarding nového kolegy', content: '<h1>Onboarding kolegy</h1><p>Checklist pro první dny nového kolegy.</p>', search_text: 'Onboarding nového kolegy Checklist pro první dny nového kolegy.', tags: ['HR', 'onboarding', 'tým'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // Brand a design
-  { id: 'art-16', category_id: 'cat-10', title: 'Práce s brand manuálem klienta', content: '<h1>Brand manuál</h1><p>Jak pracovat s brand manuálem.</p>', search_text: 'Práce s brand manuálem klienta Jak pracovat s brand manuálem.', tags: ['brand', 'design', 'guidelines'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // Reporty a analytika
-  { id: 'art-17', category_id: 'cat-11', title: 'Příprava měsíčního reportu', content: '<h1>Měsíční report</h1><p>Jak připravit měsíční report pro klienta.</p>', search_text: 'Příprava měsíčního reportu Jak připravit měsíční report pro klienta.', tags: ['report', 'analytika', 'KPI'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  // SEO a obsah
-  { id: 'art-18', category_id: 'cat-12', title: 'Keyword research postup', content: '<h1>Keyword Research</h1><p>Jak provést keyword research pro klienta.</p>', search_text: 'Keyword research postup Jak provést keyword research pro klienta.', tags: ['SEO', 'keyword', 'obsah'], sort_order: 0, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
-  { id: 'art-19', category_id: 'cat-12', title: 'Obsahový audit webu', content: '<h1>Obsahový audit</h1><p>Postup pro provedení obsahového auditu.</p>', search_text: 'Obsahový audit webu Postup pro provedení obsahového auditu.', tags: ['SEO', 'audit', 'obsah'], sort_order: 1, is_published: true, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-1', category_id: 'cat-1', title: 'Jak nastavit nového klienta v CRM', content: '<h1>Nastavení nového klienta</h1><p>Po podpisu smlouvy je potřeba klienta správně zavést do systému.</p>', search_text: 'Nastavení nového klienta', tags: ['onboarding', 'klient', 'CRM'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-2', category_id: 'cat-1', title: 'První brief s klientem', content: '<h1>První brief</h1><p>Postup pro vedení prvního briefu.</p>', search_text: 'První brief s klientem', tags: ['onboarding', 'brief', 'meeting'], sort_order: 1, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-3', category_id: 'cat-2', title: 'Spuštění Google Ads kampaně', content: '<h1>Spuštění Google Ads</h1><p>Jak připravit a spustit novou kampaň.</p>', search_text: 'Spuštění Google Ads kampaně', tags: ['google-ads', 'PPC', 'kampaně'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-4', category_id: 'cat-2', title: 'Meta Ads setup a best practices', content: '<h1>Meta Ads Setup</h1><p>Nastavení Facebook a Instagram reklam.</p>', search_text: 'Meta Ads setup', tags: ['meta-ads', 'PPC', 'facebook'], sort_order: 1, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-5', category_id: 'cat-3', title: 'Jak správně vyplnit vícepráce', content: '<h1>Vyplnění víceprací</h1><p>Vícepráce musí být schválena.</p>', search_text: 'Vyplnění víceprací', tags: ['vícepráce', 'fakturace', 'proces'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-6', category_id: 'cat-3', title: 'Žádost o dovolenou', content: '<h1>Dovolená</h1><p>Jak si zažádat o dovolenou.</p>', search_text: 'Žádost o dovolenou', tags: ['HR', 'dovolená', 'proces'], sort_order: 1, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-7', category_id: 'cat-4', title: 'Tvorba content plánu', content: '<h1>Content plán</h1><p>Postup pro tvorbu content plánu.</p>', search_text: 'Tvorba content plánu', tags: ['content', 'social-media', 'plánování'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-8', category_id: 'cat-4', title: 'Schvalovací proces příspěvků', content: '<h1>Schvalování</h1><p>Jak probíhá schvalování.</p>', search_text: 'Schvalovací proces příspěvků', tags: ['content', 'schvalování', 'klient'], sort_order: 1, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-9', category_id: 'cat-5', title: 'Vystavení faktury v systému', content: '<h1>Fakturace</h1><p>Jak vystavit fakturu.</p>', search_text: 'Vystavení faktury v systému', tags: ['fakturace', 'finance', 'proces'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-10', category_id: 'cat-6', title: 'Kvalifikace nového leadu', content: '<h1>Kvalifikace leadu</h1><p>Jak kvalifikovat lead.</p>', search_text: 'Kvalifikace nového leadu', tags: ['lead', 'prodej', 'kvalifikace'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-11', category_id: 'cat-6', title: 'Příprava nabídky pro klienta', content: '<h1>Nabídka</h1><p>Jak připravit nabídku.</p>', search_text: 'Příprava nabídky', tags: ['nabídka', 'prodej', 'klient'], sort_order: 1, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-12', category_id: 'cat-7', title: 'Řešení reklamace klienta', content: '<h1>Reklamace</h1><p>Postup při reklamaci.</p>', search_text: 'Řešení reklamace', tags: ['reklamace', 'servis', 'escalace'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-13', category_id: 'cat-8', title: 'Nastavení Google Analytics 4', content: '<h1>GA4</h1><p>Jak nastavit GA4.</p>', search_text: 'Nastavení Google Analytics 4', tags: ['analytics', 'GA4', 'nástroje'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-14', category_id: 'cat-8', title: 'Google Tag Manager – základní setup', content: '<h1>GTM Setup</h1><p>Základní nastavení GTM.</p>', search_text: 'Google Tag Manager', tags: ['GTM', 'tracking', 'nástroje'], sort_order: 1, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-15', category_id: 'cat-9', title: 'Onboarding nového kolegy', content: '<h1>Onboarding kolegy</h1><p>Checklist pro nového kolegu.</p>', search_text: 'Onboarding nového kolegy', tags: ['HR', 'onboarding', 'tým'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-16', category_id: 'cat-10', title: 'Práce s brand manuálem klienta', content: '<h1>Brand manuál</h1><p>Jak pracovat s brand manuálem.</p>', search_text: 'Brand manuál', tags: ['brand', 'design', 'guidelines'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-17', category_id: 'cat-11', title: 'Příprava měsíčního reportu', content: '<h1>Report</h1><p>Jak připravit report.</p>', search_text: 'Měsíční report', tags: ['report', 'analytika', 'KPI'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-18', category_id: 'cat-12', title: 'Keyword research postup', content: '<h1>Keyword Research</h1><p>Jak provést keyword research.</p>', search_text: 'Keyword research', tags: ['SEO', 'keyword', 'obsah'], sort_order: 0, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
+  { id: 'art-19', category_id: 'cat-12', title: 'Obsahový audit webu', content: '<h1>Obsahový audit</h1><p>Postup pro audit.</p>', search_text: 'Obsahový audit', tags: ['SEO', 'audit', 'obsah'], sort_order: 1, is_published: true, owner_id: null, created_by: null, updated_by: null, created_at: '', updated_at: '' },
 ];
 
 export function SOPDataProvider({ children }: { children: ReactNode }) {
@@ -110,6 +115,7 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [categories, setCategories] = useState<SOPCategory[]>([]);
   const [articles, setArticles] = useState<SOPArticle[]>([]);
+  const [suggestions, setSuggestions] = useState<SOPSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SOPArticle[]>([]);
@@ -128,16 +134,27 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [catRes, artRes] = await Promise.all([
+      const [catRes, artRes, sugRes] = await Promise.all([
         supabase.from('sop_categories' as any).select('*').eq('is_active', true).order('sort_order'),
         supabase.from('sop_articles' as any).select('*').order('sort_order'),
+        supabase.from('sop_update_suggestions' as any).select('*, profiles:suggested_by(first_name, last_name)').order('created_at', { ascending: false }),
       ]);
       setCategories((catRes.data && catRes.data.length > 0) ? catRes.data as any : demoCategories);
       setArticles((artRes.data && artRes.data.length > 0) ? artRes.data as any : demoArticles);
+      
+      if (sugRes.data && sugRes.data.length > 0) {
+        setSuggestions((sugRes.data as any[]).map((s: any) => ({
+          ...s,
+          suggested_by_name: s.profiles ? `${s.profiles.first_name || ''} ${s.profiles.last_name || ''}`.trim() : undefined,
+        })));
+      } else {
+        setSuggestions([]);
+      }
     } catch (e) {
       console.error('Error fetching SOP data, using demo:', e);
       setCategories(demoCategories);
       setArticles(demoArticles);
+      setSuggestions([]);
     } finally {
       setIsLoading(false);
     }
@@ -168,17 +185,10 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
   const addCategory = async (cat: Partial<SOPCategory>): Promise<string | undefined> => {
     const { data, error } = await supabase.from('sop_categories' as any).insert(cat as any).select('id').single();
     if (error) {
-      // Demo mode fallback — generate local ID
       const newId = `cat-${Date.now()}`;
       const newCat: SOPCategory = {
-        id: newId,
-        title: cat.title || '',
-        description: cat.description || '',
-        icon: cat.icon || 'BookOpen',
-        sort_order: categories.length,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        id: newId, title: cat.title || '', description: cat.description || '', icon: cat.icon || 'BookOpen',
+        sort_order: categories.length, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       };
       setCategories(prev => [...prev, newCat]);
       toast({ title: 'Kategorie vytvořena' });
@@ -205,10 +215,7 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
   const addArticle = async (article: Partial<SOPArticle>) => {
     const searchText = stripHtml(article.content || '');
     const { error } = await supabase.from('sop_articles' as any).insert({
-      ...article,
-      search_text: searchText,
-      created_by: user?.id,
-      updated_by: user?.id,
+      ...article, search_text: searchText, created_by: user?.id, updated_by: user?.id,
     } as any);
     if (error) { toast({ title: 'Chyba', description: error.message, variant: 'destructive' }); return; }
     await fetchData();
@@ -217,9 +224,7 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
 
   const updateArticle = async (id: string, article: Partial<SOPArticle>) => {
     const updates: any = { ...article, updated_by: user?.id };
-    if (article.content !== undefined) {
-      updates.search_text = stripHtml(article.content);
-    }
+    if (article.content !== undefined) updates.search_text = stripHtml(article.content);
     const { error } = await supabase.from('sop_articles' as any).update(updates).eq('id', id);
     if (error) { toast({ title: 'Chyba', description: error.message, variant: 'destructive' }); return; }
     await fetchData();
@@ -232,12 +237,74 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Článek smazán' });
   };
 
+  const suggestUpdate = async (articleId: string, reason: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('sop_update_suggestions' as any).insert({
+      article_id: articleId,
+      suggested_by: user.id,
+      reason,
+    } as any);
+
+    if (error) {
+      // Demo fallback
+      const newSuggestion: SOPSuggestion = {
+        id: `sug-${Date.now()}`, article_id: articleId, suggested_by: user.id,
+        suggested_by_name: user.email || 'Aktuální uživatel', reason, status: 'pending',
+        created_at: new Date().toISOString(),
+      };
+      setSuggestions(prev => [newSuggestion, ...prev]);
+    } else {
+      await fetchData();
+    }
+
+    // Send notifications to owner + admins
+    const article = articles.find(a => a.id === articleId);
+    if (article) {
+      if (article.owner_id) {
+        createNotification({
+          recipientUserId: article.owner_id,
+          type: 'sop_update_suggested',
+          title: 'Návrh na úpravu SOP',
+          message: `Někdo navrhl úpravu článku "${article.title}": ${reason.substring(0, 100)}`,
+          entityType: 'sop',
+          entityId: articleId,
+          link: `/sop/${articleId}`,
+        });
+      }
+      notifyAdmins({
+        type: 'sop_update_suggested',
+        title: 'Návrh na úpravu SOP',
+        message: `Návrh na úpravu článku "${article.title}": ${reason.substring(0, 100)}`,
+        entityType: 'sop',
+        entityId: articleId,
+        link: `/sop/${articleId}`,
+      });
+    }
+
+    toast({ title: 'Návrh odeslán', description: 'Správce bude informován.' });
+  };
+
+  const resolveSuggestion = async (id: string, status: 'accepted' | 'dismissed') => {
+    const { error } = await supabase.from('sop_update_suggestions' as any).update({
+      status, resolved_by: user?.id, resolved_at: new Date().toISOString(),
+    } as any).eq('id', id);
+
+    if (error) {
+      // Demo fallback
+      setSuggestions(prev => prev.map(s => s.id === id ? { ...s, status, resolved_by: user?.id, resolved_at: new Date().toISOString() } : s));
+    } else {
+      await fetchData();
+    }
+    toast({ title: status === 'accepted' ? 'Návrh přijat' : 'Návrh zamítnut' });
+  };
+
   return (
     <SOPDataContext.Provider value={{
-      categories, articles, isLoading, searchResults, searchQuery, setSearchQuery,
+      categories, articles, suggestions, isLoading, searchResults, searchQuery, setSearchQuery,
       selectedTags, setSelectedTags, toggleTag, allTags,
       addCategory, updateCategory, deleteCategory,
       addArticle, updateArticle, deleteArticle,
+      suggestUpdate, resolveSuggestion,
       refreshData: fetchData,
     }}>
       {children}

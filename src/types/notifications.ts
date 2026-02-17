@@ -17,9 +17,10 @@ export type NotificationType =
   | 'extra_work_approved'
   | 'extra_work_ready_to_invoice'
   | 'creative_boost_activated'
-  | 'creative_boost_deadline';
+  | 'creative_boost_deadline'
+  | 'sop_update_suggested';
 
-export type EntityType = 'lead' | 'engagement' | 'extra_work' | 'creative_boost' | 'modification' | 'colleague' | 'feedback';
+export type EntityType = 'lead' | 'engagement' | 'extra_work' | 'creative_boost' | 'modification' | 'colleague' | 'feedback' | 'sop';
 
 export interface Notification {
   id: string;
@@ -175,6 +176,12 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, {
     bgColor: 'bg-amber-500/10',
     entityType: 'creative_boost'
   },
+  sop_update_suggested: {
+    icon: '📝',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-500/10',
+    entityType: 'sop'
+  },
 };
 
 // Filter categories for the notifications page
@@ -184,6 +191,7 @@ export const NOTIFICATION_FILTERS = [
   { key: 'engagements', label: 'Zakázky', entityTypes: ['engagement', 'modification'] },
   { key: 'extra_work', label: 'Vícepráce', entityTypes: ['extra_work'] },
   { key: 'creative_boost', label: 'Creative Boost', entityTypes: ['creative_boost'] },
+  { key: 'sop', label: 'SOP', entityTypes: ['sop'] },
 ] as const;
 
 export type NotificationFilterKey = typeof NOTIFICATION_FILTERS[number]['key'];
