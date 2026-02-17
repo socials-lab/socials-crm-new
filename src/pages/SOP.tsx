@@ -133,7 +133,7 @@ export default function SOP() {
         </div>
       ) : (
         /* Two-panel layout */
-        <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex flex-col md:flex-row md:items-start gap-6">
           {/* Mobile: horizontal category chips */}
           {isMobile ? (
             <div className="space-y-4">
@@ -164,7 +164,7 @@ export default function SOP() {
               <div className="grid gap-2">
                 {selectedCategoryId === null ? (
                   allArticlesByViews.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné články</p>
+                    <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné SOP</p>
                   ) : (
                     allArticlesByViews.map(article => (
                       <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} categoryName={categoryNameMap[article.category_id]} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
@@ -176,7 +176,7 @@ export default function SOP() {
                       <ArrowLeft className="h-4 w-4 mr-1" /> Všechny kategorie
                     </Button>
                     {categoryArticles.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné články</p>
+                      <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné SOP</p>
                     ) : (
                       categoryArticles.map(article => (
                         <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} pendingSuggestionCount={pendingSuggestionCounts[article.id]} />
@@ -189,7 +189,7 @@ export default function SOP() {
           ) : (
             /* Desktop: sidebar + main */
             <>
-              <div className="w-[250px] shrink-0 sticky top-0 self-start space-y-1 max-h-[calc(100vh-8rem)] overflow-y-auto">
+              <div className="w-[250px] shrink-0 sticky top-6 space-y-1 max-h-[calc(100vh-6rem)] overflow-y-auto">
                 <button
                   onClick={() => setSelectedCategoryId(null)}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors ${
@@ -197,7 +197,7 @@ export default function SOP() {
                   }`}
                 >
                   <span className="flex-1">Všechny kategorie</span>
-                  <span className="text-xs text-muted-foreground">{articles.filter(a => a.is_published).length}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{articles.filter(a => a.is_published).length}</span>
                 </button>
                 {categories.map(cat => (
                   <SOPCategoryCard
@@ -214,9 +214,9 @@ export default function SOP() {
               <div className="flex-1 min-w-0">
                 {selectedCategoryId === null ? (
                   <div className="space-y-4">
-                    <h2 className="text-lg font-semibold">Všechny články</h2>
+                    <h2 className="text-lg font-semibold">Všechny SOP</h2>
                     {allArticlesByViews.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné články</p>
+                      <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné SOP</p>
                     ) : (
                       <div className="grid gap-2">
                         {allArticlesByViews.map(article => (
@@ -238,10 +238,10 @@ export default function SOP() {
                         <ArrowLeft className="h-4 w-4 mr-1" /> Zpět
                       </Button>
                       <h2 className="text-lg font-semibold">{categoryNameMap[selectedCategoryId]}</h2>
-                      <span className="text-sm text-muted-foreground">({categoryArticles.length} {categoryArticles.length === 1 ? 'článek' : categoryArticles.length < 5 ? 'články' : 'článků'})</span>
+                      <span className="text-sm text-muted-foreground">({categoryArticles.length} SOP)</span>
                     </div>
                     {categoryArticles.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné články</p>
+                      <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné SOP</p>
                     ) : (
                       <div className="grid gap-2">
                         {categoryArticles.map(article => (

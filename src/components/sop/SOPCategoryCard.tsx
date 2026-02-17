@@ -52,7 +52,7 @@ export function SOPCategoryCard({ category, articleCount, onClick, compact, isAc
         {category.description && (
           <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{category.description}</p>
         )}
-        <p className="text-xs text-muted-foreground">{articleCount} {articleCount === 1 ? 'článek' : articleCount < 5 ? 'články' : 'článků'}</p>
+        <p className="text-xs text-muted-foreground">{articleCount} SOP</p>
       </CardContent>
     </Card>
   );
