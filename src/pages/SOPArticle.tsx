@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useSOPData } from '@/hooks/useSOPData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -18,7 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 export default function SOPArticle() {
   const { articleId } = useParams();
   const navigate = useNavigate();
-  const { articles, categories, suggestions, deleteArticle, suggestUpdate, resolveSuggestion } = useSOPData();
+  const { articles, categories, suggestions, deleteArticle, suggestUpdate, resolveSuggestion, incrementViewCount } = useSOPData();
   const { colleagues } = useCRMData();
   const { isSuperAdmin } = useUserRole();
   const { user } = useAuth();
@@ -33,6 +34,10 @@ export default function SOPArticle() {
     toast({ title: 'Odkaz zkopírován do schránky' });
   };
   const article = articles.find(a => a.id === articleId);
+
+  useEffect(() => {
+    if (articleId) incrementViewCount(articleId);
+  }, [articleId]); // eslint-disable-line react-hooks/exhaustive-deps
   const category = article ? categories.find(c => c.id === article.category_id) : null;
   const ownerColleague = article?.owner_id ? colleagues.find(c => c.profile_id === article.owner_id) : null;
   const articleSuggestions = article ? suggestions.filter(s => s.article_id === article.id) : [];
