@@ -20,14 +20,14 @@ export default function SOP() {
   const isMobile = useIsMobile();
   const {
     categories, articles, isLoading, searchQuery, setSearchQuery,
-    searchResults, selectedTags, toggleTag, allTags, setSelectedTags, suggestions,
+    searchResults, suggestions,
   } = useSOPData();
   const { isSuperAdmin } = useUserRole();
   const [articleDialogOpen, setArticleDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
+  const isFiltering = searchQuery.trim().length > 0;
 
   const categoryArticleCount = useMemo(() => {
     const map: Record<string, number> = {};
@@ -87,13 +87,13 @@ export default function SOP() {
         )}
       </div>
 
-      {/* Search + Tags */}
+      {/* Search */}
       <SOPSearch
         value={searchQuery}
         onChange={setSearchQuery}
-        allTags={allTags}
-        selectedTags={selectedTags}
-        onToggleTag={toggleTag}
+        allTags={[]}
+        selectedTags={[]}
+        onToggleTag={() => {}}
       />
 
       {isLoading ? (
