@@ -41,7 +41,7 @@ export default function SOP() {
               <FolderPlus className="h-4 w-4 mr-1" /> Kategorie
             </Button>
             <Button size="sm" onClick={() => setArticleDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Nový článek
+              <Plus className="h-4 w-4 mr-1" /> Vytvořit nové SOP
             </Button>
           </div>
         )}
