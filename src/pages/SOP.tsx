@@ -74,7 +74,7 @@ export default function SOP() {
   }, [articles]);
 
   return (
-    <div className="flex flex-col h-full animate-fade-in">
+    <div className="flex flex-col h-[calc(100vh-3rem)] md:h-[calc(100vh-3rem)] animate-fade-in overflow-hidden">
       {/* Fixed header + search area */}
       <div className="shrink-0 p-4 md:p-6 pb-0 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
