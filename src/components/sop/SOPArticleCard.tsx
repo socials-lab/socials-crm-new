@@ -7,6 +7,7 @@ interface SOPArticleCardProps {
   article: SOPArticle;
   onClick: () => void;
   highlightQuery?: string;
+  categoryName?: string;
 }
 
 function highlightText(text: string, query: string) {
@@ -19,16 +20,21 @@ function highlightText(text: string, query: string) {
   );
 }
 
-export function SOPArticleCard({ article, onClick, highlightQuery }: SOPArticleCardProps) {
+export function SOPArticleCard({ article, onClick, highlightQuery, categoryName }: SOPArticleCardProps) {
   return (
     <Card className="cursor-pointer hover:shadow-sm transition-shadow border-border" onClick={onClick}>
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <FileText className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-sm mb-1">
-              {highlightQuery ? highlightText(article.title, highlightQuery) : article.title}
-            </h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-medium text-sm">
+                {highlightQuery ? highlightText(article.title, highlightQuery) : article.title}
+              </h3>
+              {categoryName && (
+                <Badge variant="outline" className="text-[10px] shrink-0">{categoryName}</Badge>
+              )}
+            </div>
             {article.search_text && (
               <p className="text-xs text-muted-foreground line-clamp-2">
                 {highlightQuery ? highlightText(article.search_text.substring(0, 150), highlightQuery) : article.search_text.substring(0, 150)}
