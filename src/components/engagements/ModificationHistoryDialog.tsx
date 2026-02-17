@@ -95,7 +95,7 @@ function HistoryEntry({ entry }: { entry: AppliedModificationHistory }) {
           <div>
             <Badge variant="outline">{typeLabel}</Badge>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {format(new Date(entry.applied_at), 'd. MMMM yyyy v H:mm', { locale: cs })}
+              {format(new Date(entry.applied_at), "d. MMMM yyyy 'v' H:mm", { locale: cs })}
             </p>
           </div>
         </div>
@@ -143,7 +143,7 @@ function HistoryEntry({ entry }: { entry: AppliedModificationHistory }) {
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-3 w-3" />
-              <span>{format(new Date(entry.client_approved_at), 'd. M. yyyy v H:mm', { locale: cs })}</span>
+              <span>{format(new Date(entry.client_approved_at), "d. M. yyyy 'v' H:mm", { locale: cs })}</span>
             </div>
           </div>
         </div>

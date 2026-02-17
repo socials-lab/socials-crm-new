@@ -229,6 +229,20 @@ export function useGoogleCalendar() {
         return [];
       }
 
+      // Check if token was revoked - update connection status
+      if (data?.tokenRevoked) {
+        console.log('Google token was revoked, updating connection status');
+        setIsConnected(false);
+        setHasGmailScope(false);
+        toast.error('Google přístup vypršel. Prosím znovu propojte svůj účet.', {
+          action: {
+            label: 'Propojit',
+            onClick: () => connectGoogleCalendar(),
+          },
+        });
+        return [];
+      }
+
       if (data?.error) {
         console.error('Calendar fetch error:', data.error);
         toast.error('Chyba z Google Calendar: ' + data.error);
@@ -242,7 +256,7 @@ export function useGoogleCalendar() {
       toast.error('Nepodařilo se načíst kalendář');
       return [];
     }
-  }, []);
+  }, [connectGoogleCalendar]);
 
   return {
     connectGoogleCalendar,

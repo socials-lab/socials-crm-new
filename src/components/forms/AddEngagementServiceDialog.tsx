@@ -180,33 +180,45 @@ export function AddEngagementServiceDialog({
     const isCore = selectedService.service_type === 'core';
 
     setIsSubmitting(true);
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: operace trvala příliš dlouho')), 30000)
+    );
+
     try {
-      await onSubmit({
-        engagement_id: engagementId,
-        service_id: data.service_id,
-        name: data.name,
-        price: data.price,
-        billing_type: selectedService.billing_type,
-        currency: data.currency,
-        is_active: true,
-        notes: data.notes,
-        // Core service tier selection
-        selected_tier: isCore ? (data.selected_tier as ServiceTier || null) : null,
-        creative_boost_min_credits: data.creative_boost_min_credits,
-        creative_boost_max_credits: data.creative_boost_max_credits,
-        creative_boost_price_per_credit: data.creative_boost_price_per_credit,
-        // One-off invoicing tracking
-        invoicing_status: isOneOff ? 'pending' : 'not_applicable',
-        invoiced_at: null,
-        invoiced_in_period: null,
-        invoice_id: null,
-        // Upsell tracking
-        upsold_by_id: upsoldById,
-        upsell_commission_percent: upsoldById ? 10 : null,
-      });
+      await Promise.race([
+        onSubmit({
+          engagement_id: engagementId,
+          service_id: data.service_id,
+          name: data.name,
+          price: data.price,
+          billing_type: selectedService.billing_type,
+          currency: data.currency,
+          is_active: true,
+          notes: data.notes,
+          // Core service tier selection
+          selected_tier: isCore ? (data.selected_tier as ServiceTier || null) : null,
+          creative_boost_min_credits: data.creative_boost_min_credits,
+          creative_boost_max_credits: data.creative_boost_max_credits,
+          creative_boost_price_per_credit: data.creative_boost_price_per_credit,
+          // One-off invoicing tracking
+          invoicing_status: isOneOff ? 'pending' : 'not_applicable',
+          invoiced_at: null,
+          invoiced_in_period: null,
+          invoice_id: null,
+          // Upsell tracking
+          upsold_by_id: upsoldById,
+          upsell_commission_percent: upsoldById ? 10 : null,
+        }),
+        timeoutPromise
+      ]);
       form.reset();
       setUpsoldById(null);
       onOpenChange(false);
+    } catch (error) {
+      console.error('Error adding service:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Neznámá chyba';
+      toast.error(`Chyba: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }

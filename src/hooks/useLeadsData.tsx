@@ -1,6 +1,7 @@
 import { useState, useCallback, createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { withTimeout } from '@/utils/asyncUtils';
 import type { Lead, LeadStage, LeadNote, LeadNoteType, LeadChangeType, LeadHistoryEntry } from '@/types/crm';
 
 // Field labels for history display
@@ -152,8 +153,12 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         converted_to_engagement_id: null,
         converted_at: null,
       };
+      console.log('Adding lead:', insertData);
       const { data: result, error } = await supabase.from('leads').insert(insertData).select().single();
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error adding lead:', error);
+        throw new Error(error.message || 'Chyba při vytváření leadu');
+      }
       const newLead = {
         ...result,
         notes: Array.isArray(result.notes) ? result.notes : [],
@@ -161,13 +166,18 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         access_request_platforms: Array.isArray(result.access_request_platforms) ? result.access_request_platforms : [],
       };
 
-      // Log creation in history
-      await addHistoryEntry(newLead.id, 'created', null, null, null, newLead.company_name);
+      // Log creation in history (don't await - fire and forget to not block)
+      addHistoryEntry(newLead.id, 'created', null, null, null, newLead.company_name).catch(e =>
+        console.error('Failed to log history:', e)
+      );
 
       return newLead;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+    onError: (error) => {
+      console.error('addLeadMutation error:', error);
     },
   });
 
@@ -191,7 +201,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   });
 
   const addLead = useCallback(async (data: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'notes' | 'converted_to_client_id' | 'converted_to_engagement_id' | 'converted_at'>): Promise<Lead> => {
-    return addLeadMutation.mutateAsync(data);
+    return withTimeout(addLeadMutation.mutateAsync(data), 30000);
   }, [addLeadMutation]);
 
   const updateLead = useCallback(async (id: string, data: Partial<Lead>) => {
@@ -217,11 +227,11 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     // Wait for history entries to be logged (non-blocking)
     Promise.all(historyPromises).then(() => {}).catch(e => console.error('History logging error:', e));
 
-    await updateLeadMutation.mutateAsync({ id, data });
+    await withTimeout(updateLeadMutation.mutateAsync({ id, data }), 30000);
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
   const deleteLead = useCallback(async (id: string) => {
-    await deleteLeadMutation.mutateAsync(id);
+    await withTimeout(deleteLeadMutation.mutateAsync(id), 30000);
   }, [deleteLeadMutation]);
 
   const updateLeadStage = useCallback(async (id: string, stage: LeadStage) => {
@@ -234,7 +244,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     // Log stage change
     await addHistoryEntry(id, 'stage_change', 'stage', LEAD_FIELD_LABELS.stage || 'Stav', oldStageLabel, newStageLabel);
 
-    await updateLeadMutation.mutateAsync({ id, data: { stage } });
+    await withTimeout(updateLeadMutation.mutateAsync({ id, data: { stage } }), 30000);
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
   const addNote = useCallback(async (
@@ -279,10 +289,10 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     const updatedNotes = [...currentNotes, newNote];
 
     // Update lead with new notes array
-    await updateLeadMutation.mutateAsync({
+    await withTimeout(updateLeadMutation.mutateAsync({
       id: leadId,
       data: { notes: updatedNotes }
-    });
+    }), 30000);
 
     // Log note addition in history
     const noteTypeLabel = noteType === 'call' ? 'hovor' : noteType === 'internal' ? 'interní poznámka' : noteType === 'email_sent' ? 'odeslaný e-mail' : noteType === 'email_received' ? 'přijatý e-mail' : 'poznámka';
@@ -304,7 +314,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     // Log conversion in history
     await addHistoryEntry(leadId, 'converted', null, null, null, `Převedeno na klienta a zakázku`);
 
-    await updateLeadMutation.mutateAsync({
+    await withTimeout(updateLeadMutation.mutateAsync({
       id: leadId,
       data: {
         stage: 'won' as LeadStage,
@@ -312,7 +322,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         converted_to_engagement_id: engagementId,
         converted_at: now(),
       },
-    });
+    }), 30000);
   }, [updateLeadMutation, addHistoryEntry]);
 
   return (

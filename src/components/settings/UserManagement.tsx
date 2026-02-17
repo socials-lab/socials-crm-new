@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil, User, Clock, CheckCircle2 } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil, User, Clock, CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
 import { TierBadge } from '@/components/shared/TierBadge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { AddCRMUserDialog } from './AddCRMUserDialog';
@@ -51,6 +51,7 @@ export function UserManagement() {
   const [userRoles, setUserRoles] = useState<UserRoleData[]>([]);
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editNameDialogOpen, setEditNameDialogOpen] = useState(false);
@@ -78,15 +79,22 @@ export function UserManagement() {
     can_see_financials?: boolean;
   } | null>(null);
 
-  const fetchUserRoles = async () => {
+  const fetchUserRoles = useCallback(async () => {
     setLoading(true);
-    try {
+    setLoadError(null);
+
+    // Create timeout promise
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: načítání trvá příliš dlouho')), 15000)
+    );
+
+    const fetchData = async () => {
       // Fetch user roles
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('*')
         .eq('is_active', true);
-      
+
       if (rolesError) {
         throw rolesError;
       }
@@ -106,10 +114,9 @@ export function UserManagement() {
       const activeUserIdSet = new Set(activeUserIds);
       const pending = (allProfiles || []).filter(p => !activeUserIdSet.has(p.id));
       setPendingUsers(pending);
-      
+
       if (!rolesData || rolesData.length === 0) {
         setUserRoles([]);
-        setLoading(false);
         return;
       }
 
@@ -118,7 +125,7 @@ export function UserManagement() {
         .from('profiles')
         .select('id, email, full_name')
         .in('id', activeUserIds);
-      
+
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
       }
@@ -128,7 +135,7 @@ export function UserManagement() {
         .from('colleagues')
         .select('id, full_name, position, profile_id')
         .in('profile_id', activeUserIds);
-      
+
       if (colleaguesError) {
         console.error('Error fetching colleagues:', colleaguesError);
       }
@@ -143,15 +150,21 @@ export function UserManagement() {
         profile: profilesMap.get(role.user_id) || null,
         colleague: colleaguesMap.get(role.user_id) || null,
       }));
-      
+
       setUserRoles(enrichedData);
+    };
+
+    try {
+      await Promise.race([fetchData(), timeout]);
     } catch (err) {
       console.error('Error fetching user roles:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Nepodařilo se načíst uživatele';
+      setLoadError(errorMessage);
       toast.error('Chyba při načítání uživatelů');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUserRoles();
@@ -208,6 +221,19 @@ export function UserManagement() {
 
   if (loading) {
     return <div className="flex items-center justify-center py-8"><p className="text-muted-foreground">Načítání...</p></div>;
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 space-y-4">
+        <XCircle className="h-10 w-10 text-destructive/50" />
+        <p className="text-muted-foreground text-center">{loadError}</p>
+        <Button variant="outline" onClick={fetchUserRoles}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Zkusit znovu
+        </Button>
+      </div>
+    );
   }
 
   return (

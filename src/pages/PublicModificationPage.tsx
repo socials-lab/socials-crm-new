@@ -434,7 +434,7 @@ export default function PublicModificationPage() {
                 <div className="mt-2 flex items-center gap-2 text-sm text-emerald-600">
                   <CheckCircle2 className="h-4 w-4" />
                   <span>
-                    Potvrzeno: {format(new Date(request.client_approved_at), 'd. MMMM yyyy v HH:mm', { locale: cs })}
+                    Potvrzeno: {format(new Date(request.client_approved_at), "d. MMMM yyyy 'v' HH:mm", { locale: cs })}
                   </span>
                 </div>
               )}

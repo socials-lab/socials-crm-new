@@ -12,16 +12,22 @@ interface FetchEventsRequest {
   max_results?: number; // defaults to 100
 }
 
+interface RefreshResult {
+  accessToken: string | null;
+  shouldClearTokens: boolean;
+  error?: string;
+}
+
 async function refreshAccessToken(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
   refreshToken: string
-): Promise<string | null> {
+): Promise<RefreshResult> {
   const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
   const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-    return null;
+    return { accessToken: null, shouldClearTokens: false, error: "OAuth not configured" };
   }
 
   const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -38,8 +44,31 @@ async function refreshAccessToken(
   });
 
   if (!response.ok) {
-    console.error("Token refresh failed:", await response.text());
-    return null;
+    const errorText = await response.text();
+    console.error("Token refresh failed:", errorText);
+
+    // Check if the refresh token is invalid/revoked
+    // Google returns "invalid_grant" when token is revoked or expired
+    try {
+      const errorData = JSON.parse(errorText);
+      if (errorData.error === "invalid_grant") {
+        console.log("Refresh token is invalid/revoked, clearing tokens for user:", userId);
+        // Clear the invalid tokens so user knows to reconnect
+        await supabaseAdmin
+          .from("calendar_tokens")
+          .delete()
+          .eq("user_id", userId);
+        return {
+          accessToken: null,
+          shouldClearTokens: true,
+          error: "Google přístup byl odvolán. Prosím znovu propojte svůj účet."
+        };
+      }
+    } catch {
+      // Couldn't parse error, continue with generic handling
+    }
+
+    return { accessToken: null, shouldClearTokens: false, error: "Token refresh failed" };
   }
 
   const tokenData = await response.json();
@@ -55,7 +84,7 @@ async function refreshAccessToken(
     })
     .eq("user_id", userId);
 
-  return tokenData.access_token;
+  return { accessToken: tokenData.access_token, shouldClearTokens: false };
 }
 
 serve(async (req) => {
@@ -122,14 +151,18 @@ serve(async (req) => {
     const tokenExpiry = new Date(tokens.expires_at);
 
     if (tokenExpiry < new Date(Date.now() + 60000)) { // Refresh if expires in < 1 minute
-      const newToken = await refreshAccessToken(supabaseAdmin, user.id, tokens.refresh_token);
-      if (!newToken) {
+      const refreshResult = await refreshAccessToken(supabaseAdmin, user.id, tokens.refresh_token);
+      if (!refreshResult.accessToken) {
         return new Response(
-          JSON.stringify({ error: "Nepodařilo se obnovit přístupový token", events: [] }),
+          JSON.stringify({
+            error: refreshResult.error || "Nepodařilo se obnovit přístupový token",
+            events: [],
+            tokenRevoked: refreshResult.shouldClearTokens, // Signal to frontend to update state
+          }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      accessToken = newToken;
+      accessToken = refreshResult.accessToken;
     }
 
     // Fetch events from Google Calendar
@@ -152,11 +185,11 @@ serve(async (req) => {
 
       // If 401, token might be invalid - try refresh once more
       if (response.status === 401) {
-        const newToken = await refreshAccessToken(supabaseAdmin, user.id, tokens.refresh_token);
-        if (newToken) {
+        const refreshResult = await refreshAccessToken(supabaseAdmin, user.id, tokens.refresh_token);
+        if (refreshResult.accessToken) {
           const retryResponse = await fetch(calendarUrl.toString(), {
             headers: {
-              "Authorization": `Bearer ${newToken}`,
+              "Authorization": `Bearer ${refreshResult.accessToken}`,
             },
           });
 
@@ -167,6 +200,16 @@ serve(async (req) => {
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
+        } else if (refreshResult.shouldClearTokens) {
+          // Token was revoked, return specific error
+          return new Response(
+            JSON.stringify({
+              error: refreshResult.error || "Google přístup byl odvolán",
+              events: [],
+              tokenRevoked: true,
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
       }
 

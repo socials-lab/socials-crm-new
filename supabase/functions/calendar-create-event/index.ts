@@ -10,6 +10,77 @@ interface CalendarEventRequest {
   meeting_id: string;
 }
 
+interface RefreshResult {
+  accessToken: string | null;
+  shouldClearTokens: boolean;
+  error?: string;
+}
+
+async function refreshAccessToken(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  refreshToken: string
+): Promise<RefreshResult> {
+  const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
+  const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
+
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    return { accessToken: null, shouldClearTokens: false, error: "OAuth not configured" };
+  }
+
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Token refresh failed:", errorText);
+
+    try {
+      const errorData = JSON.parse(errorText);
+      if (errorData.error === "invalid_grant") {
+        console.log("Refresh token is invalid/revoked, clearing tokens for user:", userId);
+        await supabaseAdmin
+          .from("calendar_tokens")
+          .delete()
+          .eq("user_id", userId);
+        return {
+          accessToken: null,
+          shouldClearTokens: true,
+          error: "Google přístup byl odvolán. Prosím znovu propojte svůj účet."
+        };
+      }
+    } catch {
+      // Couldn't parse error
+    }
+
+    return { accessToken: null, shouldClearTokens: false, error: "Token refresh failed" };
+  }
+
+  const tokenData = await response.json();
+  const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+
+  await supabaseAdmin
+    .from("calendar_tokens")
+    .update({
+      access_token: tokenData.access_token,
+      expires_at: expiresAt.toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+
+  return { accessToken: tokenData.access_token, shouldClearTokens: false };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -83,15 +154,30 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
-    if (tokensError || !tokens || new Date(tokens.expires_at) < new Date()) {
+    if (tokensError || !tokens) {
       return new Response(
-        JSON.stringify({ error: "Google Calendar není propojeno nebo token vypršel" }),
+        JSON.stringify({ error: "Google Calendar není propojeno" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Refresh token if needed (simplified - should call refresh-token function)
-    const accessToken = tokens.access_token;
+    // Refresh token if expired or about to expire
+    let accessToken = tokens.access_token;
+    const tokenExpiry = new Date(tokens.expires_at);
+
+    if (tokenExpiry < new Date(Date.now() + 60000)) { // Refresh if expires in < 1 minute
+      const refreshResult = await refreshAccessToken(supabaseAdmin, user.id, tokens.refresh_token);
+      if (!refreshResult.accessToken) {
+        return new Response(
+          JSON.stringify({
+            error: refreshResult.error || "Nepodařilo se obnovit přístupový token",
+            tokenRevoked: refreshResult.shouldClearTokens,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      accessToken = refreshResult.accessToken;
+    }
 
     // Get participant emails
     const attendees: string[] = [];

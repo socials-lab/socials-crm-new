@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -67,59 +68,83 @@ export function useModificationRequests() {
   const { engagements, clients, colleagues } = useCRMData();
   const queryClient = useQueryClient();
 
-  // Fetch all modification requests
+  // Track which specific request is being processed (to avoid all cards showing loading)
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Fetch all modification requests with timeout protection
   const {
     data: pendingRequests = [],
     isLoading: isLoadingPending,
+    error: loadingError,
     refetch: refresh,
   } = useQuery({
-    queryKey: ['modification_requests', colleagues.length],
+    queryKey: ['modification_requests'],
     queryFn: async () => {
-      // Fetch requests
-      const { data: requests, error } = await supabase
-        .from('modification_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Create a timeout promise
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout: načítání trvá příliš dlouho')), 15000)
+      );
 
-      if (error) throw error;
+      const fetchData = async () => {
+        // Fetch requests
+        const { data: requests, error } = await supabase
+          .from('modification_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      // Fetch emails for all requests
-      const requestIds = requests?.map(r => r.id) || [];
-      const { data: emails } = await supabase
-        .from('modification_request_emails')
-        .select('*')
-        .in('modification_request_id', requestIds);
+        if (error) throw error;
 
-      // Map emails to requests and enrich with colleague info
-      return (requests || []).map(r => {
-        // Look up colleague info if upsold_by_id exists
-        let upsoldByName = r.upsold_by_name;
-        let upsoldByEmail: string | null = null;
+        // Fetch emails for all requests
+        const requestIds = requests?.map(r => r.id) || [];
+        let emails: { modification_request_id: string; id: string; sent_at: string; sent_to: string; sent_by_id: string | null; sent_by_name: string }[] = [];
 
-        if (r.upsold_by_id) {
-          const colleague = colleagues.find(c => c.id === r.upsold_by_id);
-          if (colleague) {
-            if (!upsoldByName) {
-              upsoldByName = colleague.full_name || null;
-            }
-            upsoldByEmail = colleague.email || null;
-          }
+        if (requestIds.length > 0) {
+          const { data: emailsData } = await supabase
+            .from('modification_request_emails')
+            .select('*')
+            .in('modification_request_id', requestIds);
+          emails = emailsData || [];
         }
 
-        return {
-          ...r,
-          // Cast proposed_changes from Json to proper type
-          proposed_changes: r.proposed_changes as ModificationProposedChanges,
-          // Cast enums
-          request_type: r.request_type as ModificationRequestType,
-          status: r.status as StoredModificationRequest['status'],
-          upsell_commission_percent: r.upsell_commission_percent || 10,
-          upsold_by_name: upsoldByName,
-          upsold_by_email: upsoldByEmail,
-          emails_sent: (emails || []).filter(e => e.modification_request_id === r.id),
-        };
-      }) as StoredModificationRequest[];
+        // Map emails to requests and enrich with colleague info
+        return (requests || []).map(r => {
+          // Look up colleague info if upsold_by_id exists
+          let upsoldByName = r.upsold_by_name;
+          let upsoldByEmail: string | null = null;
+
+          if (r.upsold_by_id && colleagues.length > 0) {
+            const colleague = colleagues.find(c => c.id === r.upsold_by_id);
+            if (colleague) {
+              if (!upsoldByName) {
+                upsoldByName = colleague.full_name || null;
+              }
+              upsoldByEmail = colleague.email || null;
+            }
+          }
+
+          return {
+            ...r,
+            // Cast proposed_changes from Json to proper type
+            proposed_changes: r.proposed_changes as ModificationProposedChanges,
+            // Cast enums
+            request_type: r.request_type as ModificationRequestType,
+            status: r.status as StoredModificationRequest['status'],
+            upsell_commission_percent: r.upsell_commission_percent || 10,
+            upsold_by_name: upsoldByName,
+            upsold_by_email: upsoldByEmail,
+            emails_sent: emails.filter(e => e.modification_request_id === r.id),
+          };
+        }) as StoredModificationRequest[];
+      };
+
+      return Promise.race([fetchData(), timeout]);
     },
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    retry: 2, // Retry twice on failure
+    retryDelay: 1000, // Wait 1 second between retries
   });
 
   // Create mutation
@@ -421,15 +446,30 @@ export function useModificationRequests() {
   };
 
   const approveRequest = async (requestId: string) => {
-    return approveMutation.mutateAsync(requestId);
+    setApprovingId(requestId);
+    try {
+      return await approveMutation.mutateAsync(requestId);
+    } finally {
+      setApprovingId(null);
+    }
   };
 
   const rejectRequest = async (params: { requestId: string; reason: string }) => {
-    return rejectMutation.mutateAsync(params);
+    setRejectingId(params.requestId);
+    try {
+      return await rejectMutation.mutateAsync(params);
+    } finally {
+      setRejectingId(null);
+    }
   };
 
   const applyRequest = async (requestId: string) => {
-    return applyMutation.mutateAsync(requestId);
+    setApplyingId(requestId);
+    try {
+      return await applyMutation.mutateAsync(requestId);
+    } finally {
+      setApplyingId(null);
+    }
   };
 
   const updateRequest = async (requestId: string, updates: {
@@ -442,7 +482,12 @@ export function useModificationRequests() {
   };
 
   const deleteRequest = async (requestId: string) => {
-    return deleteMutation.mutateAsync(requestId);
+    setDeletingId(requestId);
+    try {
+      return await deleteMutation.mutateAsync(requestId);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const recordEmailSent = async (
@@ -457,18 +502,19 @@ export function useModificationRequests() {
   return {
     pendingRequests,
     isLoadingPending,
+    loadingError,
     createRequest,
     isCreating: createMutation.isPending,
     approveRequest,
-    isApproving: approveMutation.isPending,
+    approvingId, // Specific ID being approved
     rejectRequest,
-    isRejecting: rejectMutation.isPending,
+    rejectingId, // Specific ID being rejected
     applyRequest,
-    isApplying: applyMutation.isPending,
+    applyingId, // Specific ID being applied
     updateRequest,
     isUpdating: updateMutation.isPending,
     deleteRequest,
-    isDeleting: deleteMutation.isPending,
+    deletingId, // Specific ID being deleted
     recordEmailSent,
     refresh,
   };
@@ -522,23 +568,31 @@ export async function clientAcceptOffer(token: string, email: string): Promise<{
   const request = await getModificationRequestByToken(token);
 
   // Send notification to the requester about client approval
+  // Note: This may fail on public pages due to RLS - that's expected and handled silently
+  // The notification will be created when an admin views the "client approved" requests
   if (requestBefore?.requested_by) {
-    const typeLabel = REQUEST_TYPE_LABELS[requestBefore.request_type] || 'Změna';
-    const { error: notifError } = await supabase.from('notifications').insert({
-      user_id: requestBefore.requested_by,
-      type: 'modification_client_approved',
-      title: 'Klient potvrdil návrh na změnu',
-      message: `Klient ${requestBefore.client_brand_name || requestBefore.client_name} potvrdil váš návrh "${typeLabel}". Nyní můžete změnu aktivovat.`,
-      link: '/engagements',
-      metadata: {
-        request_id: requestBefore.id,
-        client_name: requestBefore.client_brand_name || requestBefore.client_name,
-        engagement_name: requestBefore.engagement_name,
-        client_email: email,
-      },
-      read: false,
-    });
-    if (notifError) console.error('Failed to send client approval notification:', notifError);
+    try {
+      const typeLabel = REQUEST_TYPE_LABELS[requestBefore.request_type] || 'Změna';
+      // Fire and forget - don't await, don't block the flow
+      supabase.from('notifications').insert({
+        user_id: requestBefore.requested_by,
+        type: 'modification_client_approved',
+        title: 'Klient potvrdil návrh na změnu',
+        message: `Klient ${requestBefore.client_brand_name || requestBefore.client_name} potvrdil váš návrh "${typeLabel}". Nyní můžete změnu aktivovat.`,
+        link: '/engagements',
+        metadata: {
+          request_id: requestBefore.id,
+          client_name: requestBefore.client_brand_name || requestBefore.client_name,
+          engagement_name: requestBefore.engagement_name,
+          client_email: email,
+        },
+        read: false,
+      }).then(() => {
+        // Notification sent successfully (may not happen on public pages)
+      });
+    } catch {
+      // Silently ignore notification errors - this is expected on public pages
+    }
   }
 
   return { success: true, request: request || undefined };

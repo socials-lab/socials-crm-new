@@ -311,18 +311,25 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
     };
 
     setIsSubmitting(true);
+
+    // Add timeout to prevent infinite hanging
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: operace trvala příliš dlouho')), 30000)
+    );
+
     try {
       if (lead) {
-        await updateLead(lead.id, leadData);
+        await Promise.race([updateLead(lead.id, leadData), timeoutPromise]);
         toast.success('Lead byl upraven');
       } else {
-        await addLead(leadData);
+        await Promise.race([addLead(leadData), timeoutPromise]);
         toast.success('Lead byl vytvořen');
       }
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving lead:', error);
-      toast.error('Nepodařilo se uložit lead');
+      const errorMessage = error instanceof Error ? error.message : 'Neznámá chyba';
+      toast.error(`Nepodařilo se uložit lead: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }

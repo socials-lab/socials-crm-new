@@ -37,19 +37,32 @@ export function generateInvoiceItemName(category: ActivityCategory, description:
 export function useActivityRewards(colleagueId: string | null) {
   const queryClient = useQueryClient();
 
-  const { data: rewards = [] } = useQuery({
+  const { data: rewards = [], isLoading, error, refetch } = useQuery({
     queryKey: ['activity_rewards', colleagueId],
     queryFn: async () => {
       if (!colleagueId) return [];
-      const { data, error } = await supabase
-        .from('activity_rewards')
-        .select('*')
-        .eq('colleague_id', colleagueId)
-        .order('activity_date', { ascending: false });
-      if (error) throw error;
-      return (data || []) as ActivityReward[];
+
+      // Add timeout protection
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout: načítání trvá příliš dlouho')), 15000)
+      );
+
+      const fetchData = async () => {
+        const { data, error } = await supabase
+          .from('activity_rewards')
+          .select('*')
+          .eq('colleague_id', colleagueId)
+          .order('activity_date', { ascending: false });
+        if (error) throw error;
+        return (data || []) as ActivityReward[];
+      };
+
+      return Promise.race([fetchData(), timeout]);
     },
     enabled: !!colleagueId,
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const addMutation = useMutation({
@@ -187,6 +200,9 @@ export function useActivityRewards(colleagueId: string | null) {
 
   return {
     rewards,
+    isLoading,
+    error,
+    refetch,
     currentMonthTotal,
     getRewardsByMonth,
     getRewardsByCategory,

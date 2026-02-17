@@ -94,30 +94,62 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
   }, []);
 
   const handleSubmit = async () => {
-    if (!engagementId || !colleagueId || !name || !workDate || !selectedEngagement) return;
+    // Validation with feedback
+    if (!engagementId) {
+      toast({ title: 'Chyba', description: 'Vyberte zakázku', variant: 'destructive' });
+      return;
+    }
+    if (!colleagueId) {
+      toast({ title: 'Chyba', description: 'Vyberte kolegu', variant: 'destructive' });
+      return;
+    }
+    if (!name.trim()) {
+      toast({ title: 'Chyba', description: 'Zadejte název vícepráce', variant: 'destructive' });
+      return;
+    }
+    if (!workDate) {
+      toast({ title: 'Chyba', description: 'Vyberte datum práce', variant: 'destructive' });
+      return;
+    }
+    if (!hoursWorked || !hourlyRate) {
+      toast({ title: 'Chyba', description: 'Zadejte hodiny a hodinovou sazbu', variant: 'destructive' });
+      return;
+    }
+    if (!selectedEngagement) {
+      toast({ title: 'Chyba', description: 'Zakázka nebyla nalezena', variant: 'destructive' });
+      return;
+    }
     if (isSubmitting) return;
 
     setIsSubmitting(true);
 
+    // Timeout protection
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: operace trvala příliš dlouho')), 30000)
+    );
+
     try {
       const effectiveBillingPeriod = billingPeriod || format(workDate, 'yyyy-MM');
 
-      await onAdd({
-        client_id: selectedEngagement.client_id,
-        engagement_id: engagementId,
-        colleague_id: colleagueId,
-        name,
-        description,
-        amount: calculatedAmount,
-        currency: 'CZK',
-        hours_worked: hoursWorked ? parseFloat(hoursWorked) : null,
-        hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-        work_date: format(workDate, 'yyyy-MM-dd'),
-        billing_period: effectiveBillingPeriod,
-        notes,
-        upsold_by_id: upsoldById,
-        upsell_commission_percent: upsoldById ? 10 : null,
-      });
+      await Promise.race([
+        onAdd({
+          client_id: selectedEngagement.client_id,
+          engagement_id: engagementId,
+          colleague_id: colleagueId,
+          name,
+          description,
+          amount: calculatedAmount,
+          currency: 'CZK',
+          hours_worked: hoursWorked ? parseFloat(hoursWorked) : null,
+          hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+          work_date: format(workDate, 'yyyy-MM-dd'),
+          billing_period: effectiveBillingPeriod,
+          notes,
+          upsold_by_id: upsoldById,
+          upsell_commission_percent: upsoldById ? 10 : null,
+        }),
+        timeoutPromise,
+      ]);
 
       toast({
         title: 'Vícepráce přidána',
@@ -136,6 +168,10 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd }: AddExtraWorkDi
       setNotes('');
       setUpsoldById(null);
       onOpenChange(false);
+    } catch (error) {
+      console.error('Error adding extra work:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Nepodařilo se přidat vícepráci';
+      toast({ title: 'Chyba', description: errorMessage, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }

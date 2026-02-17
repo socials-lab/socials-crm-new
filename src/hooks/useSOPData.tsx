@@ -1,0 +1,342 @@
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { createNotification, notifyAdmins } from '@/services/notificationService';
+
+export interface SOPCategory {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SOPArticle {
+  id: string;
+  category_id: string;
+  title: string;
+  content: string;
+  search_text: string;
+  tags: string[];
+  sort_order: number;
+  is_published: boolean;
+  owner_id: string | null;
+  attachments: Array<{ name: string; path: string; size: number; type: string }>;
+  view_count: number;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SOPSuggestion {
+  id: string;
+  article_id: string;
+  suggested_by: string;
+  suggested_by_name?: string;
+  reason: string;
+  status: 'pending' | 'accepted' | 'dismissed';
+  resolved_by?: string;
+  resolved_at?: string;
+  created_at: string;
+}
+
+interface SOPDataContextType {
+  categories: SOPCategory[];
+  articles: SOPArticle[];
+  suggestions: SOPSuggestion[];
+  isLoading: boolean;
+  searchResults: SOPArticle[];
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  selectedTags: string[];
+  setSelectedTags: (tags: string[]) => void;
+  toggleTag: (tag: string) => void;
+  allTags: string[];
+  addCategory: (cat: Partial<SOPCategory>) => Promise<string | undefined>;
+  updateCategory: (id: string, cat: Partial<SOPCategory>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  addArticle: (article: Partial<SOPArticle>) => Promise<void>;
+  updateArticle: (id: string, article: Partial<SOPArticle>) => Promise<void>;
+  deleteArticle: (id: string) => Promise<void>;
+  suggestUpdate: (articleId: string, reason: string) => Promise<void>;
+  resolveSuggestion: (id: string, status: 'accepted' | 'dismissed') => Promise<void>;
+  incrementViewCount: (articleId: string) => Promise<void>;
+  refreshData: () => Promise<void>;
+}
+
+const SOPDataContext = createContext<SOPDataContextType | undefined>(undefined);
+
+function stripHtml(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.body.textContent || '';
+}
+
+export function SOPDataProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [categories, setCategories] = useState<SOPCategory[]>([]);
+  const [articles, setArticles] = useState<SOPArticle[]>([]);
+  const [suggestions, setSuggestions] = useState<SOPSuggestion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SOPArticle[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    articles.forEach(a => a.tags.forEach(t => tagSet.add(t)));
+    return Array.from(tagSet).sort();
+  }, [articles]);
+
+  const toggleTag = useCallback((tag: string) => {
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [catRes, artRes, sugRes] = await Promise.all([
+        supabase.from('sop_categories').select('*').eq('is_active', true).order('sort_order'),
+        supabase.from('sop_articles').select('*').order('sort_order'),
+        supabase.from('sop_update_suggestions').select('*, profiles:suggested_by(full_name)').order('created_at', { ascending: false }),
+      ]);
+
+      if (catRes.error) {
+        console.error('Error fetching SOP categories:', catRes.error);
+        toast({ title: 'Chyba', description: 'Nepodařilo se načíst kategorie SOP', variant: 'destructive' });
+      } else {
+        setCategories(catRes.data || []);
+      }
+
+      if (artRes.error) {
+        console.error('Error fetching SOP articles:', artRes.error);
+        toast({ title: 'Chyba', description: 'Nepodařilo se načíst články SOP', variant: 'destructive' });
+      } else {
+        setArticles(artRes.data || []);
+      }
+
+      if (sugRes.error) {
+        console.error('Error fetching SOP suggestions:', sugRes.error);
+      } else {
+        setSuggestions((sugRes.data || []).map((s: any) => ({
+          ...s,
+          suggested_by_name: s.profiles?.full_name || undefined,
+        })));
+      }
+    } catch (e) {
+      console.error('Error fetching SOP data:', e);
+      toast({ title: 'Chyba', description: 'Nepodařilo se načíst SOP data', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { if (user) fetchData(); }, [user, fetchData]);
+
+  // Search + tag filtering
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const hasQuery = q.length > 0;
+    const hasTags = selectedTags.length > 0;
+
+    if (!hasQuery && !hasTags) {
+      setSearchResults([]);
+      return;
+    }
+
+    const results = articles.filter(a => {
+      if (!a.is_published) return false;
+      const matchesTag = !hasTags || selectedTags.some(t => a.tags.some(at => at.toLowerCase() === t.toLowerCase()));
+      const matchesQuery = !hasQuery || a.title.toLowerCase().includes(q) || (a.search_text || '').toLowerCase().includes(q) || a.tags.some(t => t.toLowerCase().includes(q));
+      return matchesTag && matchesQuery;
+    });
+    setSearchResults(results);
+  }, [searchQuery, selectedTags, articles]);
+
+  const addCategory = async (cat: Partial<SOPCategory>): Promise<string | undefined> => {
+    const { data, error } = await supabase.from('sop_categories').insert({
+      title: cat.title || '',
+      description: cat.description || '',
+      icon: cat.icon || 'BookOpen',
+      sort_order: categories.length,
+      is_active: true,
+    }).select('id').single();
+
+    if (error) {
+      console.error('Error creating category:', error);
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      return undefined;
+    }
+
+    await fetchData();
+    toast({ title: 'Kategorie vytvořena' });
+    return data?.id;
+  };
+
+  const updateCategory = async (id: string, cat: Partial<SOPCategory>) => {
+    const { error } = await supabase.from('sop_categories').update(cat).eq('id', id);
+    if (error) {
+      console.error('Error updating category:', error);
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await fetchData();
+    toast({ title: 'Kategorie aktualizována' });
+  };
+
+  const deleteCategory = async (id: string) => {
+    const { error } = await supabase.from('sop_categories').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting category:', error);
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await fetchData();
+    toast({ title: 'Kategorie smazána' });
+  };
+
+  const addArticle = async (article: Partial<SOPArticle>) => {
+    const searchText = stripHtml(article.content || '');
+    const { error } = await supabase.from('sop_articles').insert({
+      category_id: article.category_id,
+      title: article.title || '',
+      content: article.content || '',
+      search_text: searchText,
+      tags: article.tags || [],
+      sort_order: article.sort_order || 0,
+      is_published: article.is_published ?? false,
+      owner_id: article.owner_id || user?.id,
+      attachments: article.attachments || [],
+      created_by: user?.id,
+      updated_by: user?.id,
+    });
+
+    if (error) {
+      console.error('Error creating article:', error);
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await fetchData();
+    toast({ title: 'Článek vytvořen' });
+  };
+
+  const updateArticle = async (id: string, article: Partial<SOPArticle>) => {
+    const updates: any = { ...article, updated_by: user?.id };
+    if (article.content !== undefined) {
+      updates.search_text = stripHtml(article.content);
+    }
+
+    const { error } = await supabase.from('sop_articles').update(updates).eq('id', id);
+    if (error) {
+      console.error('Error updating article:', error);
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await fetchData();
+    toast({ title: 'Článek uložen' });
+  };
+
+  const deleteArticle = async (id: string) => {
+    const { error } = await supabase.from('sop_articles').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting article:', error);
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await fetchData();
+    toast({ title: 'Článek smazán' });
+  };
+
+  const suggestUpdate = async (articleId: string, reason: string) => {
+    if (!user) return;
+
+    const { error } = await supabase.from('sop_update_suggestions').insert({
+      article_id: articleId,
+      suggested_by: user.id,
+      reason,
+      status: 'pending',
+    });
+
+    if (error) {
+      console.error('Error creating suggestion:', error);
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    await fetchData();
+
+    // Send notifications to owner + admins
+    const article = articles.find(a => a.id === articleId);
+    if (article) {
+      if (article.owner_id) {
+        createNotification({
+          recipientUserId: article.owner_id,
+          type: 'sop_update_suggested',
+          title: 'Návrh na úpravu SOP',
+          message: `Někdo navrhl úpravu článku "${article.title}": ${reason.substring(0, 100)}`,
+          entityType: 'sop',
+          entityId: articleId,
+          link: `/sop/${articleId}`,
+        });
+      }
+      notifyAdmins({
+        type: 'sop_update_suggested',
+        title: 'Návrh na úpravu SOP',
+        message: `Návrh na úpravu článku "${article.title}": ${reason.substring(0, 100)}`,
+        entityType: 'sop',
+        entityId: articleId,
+        link: `/sop/${articleId}`,
+      });
+    }
+
+    toast({ title: 'Návrh odeslán', description: 'Správce bude informován.' });
+  };
+
+  const resolveSuggestion = async (id: string, status: 'accepted' | 'dismissed') => {
+    const { error } = await supabase.from('sop_update_suggestions').update({
+      status,
+      resolved_by: user?.id,
+      resolved_at: new Date().toISOString(),
+    }).eq('id', id);
+
+    if (error) {
+      console.error('Error resolving suggestion:', error);
+      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    await fetchData();
+    toast({ title: status === 'accepted' ? 'Návrh přijat' : 'Návrh zamítnut' });
+  };
+
+  const incrementViewCount = async (articleId: string) => {
+    // Increment in DB using the RPC function
+    await supabase.rpc('increment_sop_view_count', { article_id: articleId });
+    // Also update local state for immediate feedback
+    setArticles(prev => prev.map(a => a.id === articleId ? { ...a, view_count: (a.view_count || 0) + 1 } : a));
+  };
+
+  return (
+    <SOPDataContext.Provider value={{
+      categories, articles, suggestions, isLoading, searchResults, searchQuery, setSearchQuery,
+      selectedTags, setSelectedTags, toggleTag, allTags,
+      addCategory, updateCategory, deleteCategory,
+      addArticle, updateArticle, deleteArticle,
+      suggestUpdate, resolveSuggestion, incrementViewCount,
+      refreshData: fetchData,
+    }}>
+      {children}
+    </SOPDataContext.Provider>
+  );
+}
+
+export function useSOPData() {
+  const context = useContext(SOPDataContext);
+  if (!context) throw new Error('useSOPData must be used within SOPDataProvider');
+  return context;
+}

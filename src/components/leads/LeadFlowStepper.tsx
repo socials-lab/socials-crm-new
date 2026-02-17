@@ -215,14 +215,16 @@ export function LeadFlowStepper({
       id: 'onboarding-sent',
       label: 'Onboarding formulář',
       icon: <ClipboardList className="h-3.5 w-3.5" />,
-      isComplete: !!lead.onboarding_form_sent_at,
-      completedAt: lead.onboarding_form_sent_at,
+      // Complete if form was sent OR completed (form can be completed via direct link)
+      isComplete: !!lead.onboarding_form_sent_at || !!lead.onboarding_form_completed_at,
+      completedAt: lead.onboarding_form_completed_at || lead.onboarding_form_sent_at,
       detail: lead.onboarding_form_completed_at
         ? `Vyplněn ${formatDate(lead.onboarding_form_completed_at)}`
         : lead.onboarding_form_sent_at
           ? 'Čeká na vyplnění'
           : undefined,
-      action: !lead.onboarding_form_sent_at ? {
+      // Don't show "send" action if form was already completed
+      action: !lead.onboarding_form_sent_at && !lead.onboarding_form_completed_at ? {
         label: 'Odeslat formulář',
         onClick: onSendOnboarding,
         variant: 'outline',

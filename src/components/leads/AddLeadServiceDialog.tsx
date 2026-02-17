@@ -33,7 +33,7 @@ export function AddLeadServiceDialog({
 }: AddLeadServiceDialogProps) {
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [selectedTier, setSelectedTier] = useState<ServiceTier | null>(null);
-  const [price, setPrice] = useState(0);
+  const [priceInput, setPriceInput] = useState('0');
   const [currency, setCurrency] = useState('CZK');
   const [billingType, setBillingType] = useState<'monthly' | 'one_off'>('monthly');
 
@@ -48,10 +48,10 @@ export function AddLeadServiceDialog({
       if (service.service_type === 'core') {
         setSelectedTier('growth');
         const growthPricing = service.tier_pricing?.find(p => p.tier === 'growth');
-        setPrice(growthPricing?.price ?? 0);
+        setPriceInput(String(growthPricing?.price ?? 0));
       } else {
         setSelectedTier(null);
-        setPrice(service.base_price);
+        setPriceInput(String(service.base_price));
       }
     }
   };
@@ -61,30 +61,30 @@ export function AddLeadServiceDialog({
     if (selectedService?.tier_pricing) {
       const tierPricing = selectedService.tier_pricing.find(p => p.tier === tier);
       if (tierPricing?.price !== null && tierPricing?.price !== undefined) {
-        setPrice(tierPricing.price);
+        setPriceInput(String(tierPricing.price));
       } else {
-        setPrice(0);
+        setPriceInput('');
       }
     }
   };
 
   const handleSubmit = () => {
     if (!selectedService) return;
-    
+
     onSubmit({
       id: `lead-svc-${Date.now()}`,
       service_id: selectedServiceId,
       name: selectedService.name,
       selected_tier: isCoreService ? selectedTier : null,
-      price,
+      price: Number(priceInput) || 0,
       currency,
       billing_type: billingType,
     });
-    
+
     // Reset form
     setSelectedServiceId('');
     setSelectedTier(null);
-    setPrice(0);
+    setPriceInput('0');
     setCurrency('CZK');
     setBillingType('monthly');
     onOpenChange(false);
@@ -149,11 +149,11 @@ export function AddLeadServiceDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Cena</Label>
-              <Input 
-                type="number" 
-                min={0} 
-                value={price}
-                onChange={(e) => setPrice(Number(e.target.value))}
+              <Input
+                type="number"
+                min={0}
+                value={priceInput}
+                onChange={(e) => setPriceInput(e.target.value)}
               />
             </div>
             <div className="space-y-2">

@@ -112,6 +112,28 @@ serve(async (req) => {
       if (!refreshResponse.ok) {
         const errorText = await refreshResponse.text();
         console.error("Token refresh error:", errorText);
+
+        // Check if refresh token is revoked/invalid
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.error === "invalid_grant") {
+            // Clear invalid tokens so user knows to reconnect
+            await supabaseAdmin
+              .from("calendar_tokens")
+              .delete()
+              .eq("user_id", user.id);
+            return new Response(
+              JSON.stringify({
+                error: "Google přístup byl odvolán. Prosím znovu propojte svůj účet.",
+                tokenRevoked: true,
+              }),
+              { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } catch {
+          // Couldn't parse error, continue with generic handling
+        }
+
         return new Response(
           JSON.stringify({ error: `Chyba při obnovení tokenu: ${errorText}` }),
           { status: refreshResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -166,9 +188,15 @@ serve(async (req) => {
       `From: ${fromEmail}`,
       `To: ${to}`,
     ];
+
+    // Process BCC - ensure each email is trimmed and properly formatted
     if (bcc) {
-      emailHeaders.push(`Bcc: ${bcc}`);
+      const bccList = bcc.split(',').map(e => e.trim()).filter(e => e.length > 0);
+      if (bccList.length > 0) {
+        emailHeaders.push(`Bcc: ${bccList.join(', ')}`);
+      }
     }
+
     emailHeaders.push(
       `Subject: ${encodeSubject(subject)}`,
       `MIME-Version: 1.0`,
@@ -178,6 +206,8 @@ serve(async (req) => {
       btoa(String.fromCharCode(...new TextEncoder().encode(html)))
     );
     const emailMessage = emailHeaders.join('\r\n');
+
+    console.log('Sending email to:', to, 'BCC:', bcc);
 
     // Encode the entire message in base64url format (required by Gmail API)
     const encoder = new TextEncoder();
@@ -211,7 +241,7 @@ serve(async (req) => {
       await supabaseAdmin.from('integration_log').insert({
         service: 'gmail',
         action: 'send_email',
-        request_payload: { to, subject },
+        request_payload: { to, subject, bcc: bcc || null },
         response_status: gmailResponse.status,
         response_payload: { error: errorText },
         is_success: false,
@@ -233,7 +263,7 @@ serve(async (req) => {
     await supabaseAdmin.from('integration_log').insert({
       service: 'gmail',
       action: 'send_email',
-      request_payload: { to, subject },
+      request_payload: { to, subject, bcc: bcc || null },
       response_status: gmailResponse.status,
       response_payload: gmailResult,
       is_success: true,

@@ -107,9 +107,7 @@ export function AssignmentForm({
   );
 
   const handleManualSubmit = async () => {
-    console.log('handleManualSubmit called');
     const isValid = await form.trigger();
-    console.log('Form validation result:', isValid, form.formState.errors);
     if (!isValid) {
       const errors = form.formState.errors;
       const errorMessages = Object.entries(errors)
@@ -120,22 +118,33 @@ export function AssignmentForm({
     }
 
     const data = form.getValues();
-    console.log('Form data:', data);
     setIsSubmitting(true);
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: operace trvala příliš dlouho')), 30000)
+    );
+
     try {
-      await onSubmit({
-        engagement_id: engagementId,
-        engagement_service_id: engagementServiceId || null,
-        colleague_id: data.colleague_id,
-        role_on_engagement: data.role_on_engagement,
-        cost_model: data.cost_model,
-        hourly_cost: data.cost_model === 'hourly' ? data.hourly_cost : null,
-        monthly_cost: data.cost_model === 'fixed_monthly' ? data.monthly_cost : null,
-        percentage_of_revenue: data.cost_model === 'percentage' ? data.percentage_of_revenue : null,
-        start_date: data.start_date,
-        end_date: null,
-        notes: data.notes,
-      });
+      await Promise.race([
+        onSubmit({
+          engagement_id: engagementId,
+          engagement_service_id: engagementServiceId || null,
+          colleague_id: data.colleague_id,
+          role_on_engagement: data.role_on_engagement,
+          cost_model: data.cost_model,
+          hourly_cost: data.cost_model === 'hourly' ? data.hourly_cost : null,
+          monthly_cost: data.cost_model === 'fixed_monthly' ? data.monthly_cost : null,
+          percentage_of_revenue: data.cost_model === 'percentage' ? data.percentage_of_revenue : null,
+          start_date: data.start_date,
+          end_date: null,
+          notes: data.notes,
+        }),
+        timeoutPromise
+      ]);
+    } catch (error) {
+      console.error('Error submitting assignment:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Neznámá chyba';
+      toast.error(`Chyba: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -308,10 +317,7 @@ export function AssignmentForm({
           <Button
             type="button"
             disabled={availableColleagues.length === 0 || isSubmitting}
-            onClick={() => {
-              console.log('Button clicked! availableColleagues:', availableColleagues.length, 'isSubmitting:', isSubmitting);
-              handleManualSubmit();
-            }}
+            onClick={handleManualSubmit}
           >
             {isSubmitting ? 'Přiřazuji...' : 'Přiřadit'}
           </Button>

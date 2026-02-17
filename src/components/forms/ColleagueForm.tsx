@@ -176,11 +176,23 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
 
     const data = form.getValues();
     setIsSubmitting(true);
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: operace trvala příliš dlouho')), 30000)
+    );
+
     try {
-      await onSubmit({
-        ...data,
-        profile_id: colleague?.profile_id || null,
-      });
+      await Promise.race([
+        onSubmit({
+          ...data,
+          profile_id: colleague?.profile_id || null,
+        }),
+        timeoutPromise
+      ]);
+    } catch (error) {
+      console.error('Error submitting colleague:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Neznámá chyba';
+      toast.error(`Chyba: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }

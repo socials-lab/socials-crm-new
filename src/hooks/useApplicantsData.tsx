@@ -2,6 +2,7 @@ import { createContext, useContext, ReactNode, useMemo, useCallback } from 'reac
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCRMData } from './useCRMData';
+import { withTimeout } from '@/utils/asyncUtils';
 import type { Applicant, ApplicantStage, ApplicantNote, ApplicantNoteType } from '@/types/applicant';
 import type { Colleague } from '@/types/crm';
 
@@ -35,6 +36,9 @@ export interface OnboardingData {
   billing_city: string;
   billing_zip: string;
   bank_account: string;
+  // Additional fields from applicant onboarding
+  birthday?: string | null;
+  personal_email?: string | null;
 }
 
 const ApplicantsDataContext = createContext<ApplicantsDataContextType | undefined>(undefined);
@@ -91,71 +95,86 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Mutations
+  // Mutations - all wrapped with timeout protection
   const addApplicantMutation = useMutation({
     mutationFn: async (data: Omit<Applicant, 'id' | 'created_at' | 'updated_at' | 'notes'>) => {
-      const { data: result, error } = await supabase
-        .from('applicants')
-        .insert({
-          full_name: data.full_name,
-          email: data.email,
-          phone: data.phone,
-          position: data.position,
-          cover_letter: data.cover_letter,
-          cv_url: data.cv_url,
-          video_url: data.video_url,
-          stage: data.stage,
-          owner_id: data.owner_id,
-          notes: [],
-          source: data.source,
-          source_custom: data.source_custom,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      return transformApplicant(result);
+      return withTimeout(
+        (async () => {
+          const { data: result, error } = await supabase
+            .from('applicants')
+            .insert({
+              full_name: data.full_name,
+              email: data.email,
+              phone: data.phone,
+              position: data.position,
+              cover_letter: data.cover_letter,
+              cv_url: data.cv_url,
+              video_url: data.video_url,
+              stage: data.stage,
+              owner_id: data.owner_id,
+              notes: [],
+              source: data.source,
+              source_custom: data.source_custom,
+            })
+            .select()
+            .single();
+          if (error) throw error;
+          return transformApplicant(result);
+        })(),
+        30000
+      );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['applicants'] }),
   });
 
   const updateApplicantMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Applicant> }) => {
-      const updateData: Record<string, unknown> = {};
-      if (updates.full_name !== undefined) updateData.full_name = updates.full_name;
-      if (updates.email !== undefined) updateData.email = updates.email;
-      if (updates.phone !== undefined) updateData.phone = updates.phone;
-      if (updates.position !== undefined) updateData.position = updates.position;
-      if (updates.cover_letter !== undefined) updateData.cover_letter = updates.cover_letter;
-      if (updates.cv_url !== undefined) updateData.cv_url = updates.cv_url;
-      if (updates.video_url !== undefined) updateData.video_url = updates.video_url;
-      if (updates.stage !== undefined) updateData.stage = updates.stage;
-      if (updates.owner_id !== undefined) updateData.owner_id = updates.owner_id;
-      if (updates.source !== undefined) updateData.source = updates.source;
-      if (updates.source_custom !== undefined) updateData.source_custom = updates.source_custom;
-      if (updates.ico !== undefined) updateData.ico = updates.ico;
-      if (updates.company_name !== undefined) updateData.company_name = updates.company_name;
-      if (updates.dic !== undefined) updateData.dic = updates.dic;
-      if (updates.hourly_rate !== undefined) updateData.hourly_rate = updates.hourly_rate;
-      if (updates.billing_street !== undefined) updateData.billing_street = updates.billing_street;
-      if (updates.billing_city !== undefined) updateData.billing_city = updates.billing_city;
-      if (updates.billing_zip !== undefined) updateData.billing_zip = updates.billing_zip;
-      if (updates.bank_account !== undefined) updateData.bank_account = updates.bank_account;
-      if (updates.interview_invite_sent_at !== undefined) updateData.interview_invite_sent_at = updates.interview_invite_sent_at;
-      if (updates.rejection_sent_at !== undefined) updateData.rejection_sent_at = updates.rejection_sent_at;
-      if (updates.onboarding_sent_at !== undefined) updateData.onboarding_sent_at = updates.onboarding_sent_at;
-      if (updates.onboarding_completed_at !== undefined) updateData.onboarding_completed_at = updates.onboarding_completed_at;
-      if (updates.converted_to_colleague_id !== undefined) updateData.converted_to_colleague_id = updates.converted_to_colleague_id;
+      return withTimeout(
+        (async () => {
+          const updateData: Record<string, unknown> = {};
+          if (updates.full_name !== undefined) updateData.full_name = updates.full_name;
+          if (updates.email !== undefined) updateData.email = updates.email;
+          if (updates.phone !== undefined) updateData.phone = updates.phone;
+          if (updates.position !== undefined) updateData.position = updates.position;
+          if (updates.cover_letter !== undefined) updateData.cover_letter = updates.cover_letter;
+          if (updates.cv_url !== undefined) updateData.cv_url = updates.cv_url;
+          if (updates.video_url !== undefined) updateData.video_url = updates.video_url;
+          if (updates.stage !== undefined) updateData.stage = updates.stage;
+          if (updates.owner_id !== undefined) updateData.owner_id = updates.owner_id;
+          if (updates.source !== undefined) updateData.source = updates.source;
+          if (updates.source_custom !== undefined) updateData.source_custom = updates.source_custom;
+          if (updates.ico !== undefined) updateData.ico = updates.ico;
+          if (updates.company_name !== undefined) updateData.company_name = updates.company_name;
+          if (updates.dic !== undefined) updateData.dic = updates.dic;
+          if (updates.hourly_rate !== undefined) updateData.hourly_rate = updates.hourly_rate;
+          if (updates.billing_street !== undefined) updateData.billing_street = updates.billing_street;
+          if (updates.billing_city !== undefined) updateData.billing_city = updates.billing_city;
+          if (updates.billing_zip !== undefined) updateData.billing_zip = updates.billing_zip;
+          if (updates.bank_account !== undefined) updateData.bank_account = updates.bank_account;
+          if (updates.interview_invite_sent_at !== undefined) updateData.interview_invite_sent_at = updates.interview_invite_sent_at;
+          if (updates.rejection_sent_at !== undefined) updateData.rejection_sent_at = updates.rejection_sent_at;
+          if (updates.onboarding_sent_at !== undefined) updateData.onboarding_sent_at = updates.onboarding_sent_at;
+          if (updates.onboarding_completed_at !== undefined) updateData.onboarding_completed_at = updates.onboarding_completed_at;
+          if (updates.converted_to_colleague_id !== undefined) updateData.converted_to_colleague_id = updates.converted_to_colleague_id;
 
-      const { error } = await supabase.from('applicants').update(updateData).eq('id', id);
-      if (error) throw error;
+          const { error } = await supabase.from('applicants').update(updateData).eq('id', id);
+          if (error) throw error;
+        })(),
+        30000
+      );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['applicants'] }),
   });
 
   const deleteApplicantMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('applicants').delete().eq('id', id);
-      if (error) throw error;
+      return withTimeout(
+        (async () => {
+          const { error } = await supabase.from('applicants').delete().eq('id', id);
+          if (error) throw error;
+        })(),
+        30000
+      );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['applicants'] }),
   });
@@ -174,80 +193,99 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
       subject?: string | null;
       recipients?: string[] | null;
     }) => {
-      // Fetch current applicant to get existing notes
-      const { data: applicantData, error: fetchError } = await supabase
-        .from('applicants')
-        .select('notes')
-        .eq('id', applicantId)
-        .single();
-      if (fetchError) throw fetchError;
-      if (!applicantData) throw new Error('Applicant not found');
+      return withTimeout(
+        (async () => {
+          // Fetch current applicant to get existing notes
+          const { data: applicantData, error: fetchError } = await supabase
+            .from('applicants')
+            .select('notes')
+            .eq('id', applicantId)
+            .single();
+          if (fetchError) throw fetchError;
+          if (!applicantData) throw new Error('Applicant not found');
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated for note creation');
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) throw new Error('User not authenticated for note creation');
 
-      const currentUser = colleagues.find(c => c.profile_id === user.id);
-      const userName = currentUser?.full_name || user.email || 'Unknown';
+          const currentUser = colleagues.find(c => c.profile_id === user.id);
+          const userName = currentUser?.full_name || user.email || 'Unknown';
 
-      const currentNotes = applicantData.notes || [];
-      const newNote: ApplicantNote = {
-        id: crypto.randomUUID(),
-        applicant_id: applicantId,
-        author_id: user.id,
-        author_name: userName,
-        text,
-        note_type: noteType,
-        subject,
-        recipients,
-        created_at: new Date().toISOString(),
-      };
+          const currentNotes = applicantData.notes || [];
+          const newNote: ApplicantNote = {
+            id: crypto.randomUUID(),
+            applicant_id: applicantId,
+            author_id: user.id,
+            author_name: userName,
+            text,
+            note_type: noteType,
+            subject,
+            recipients,
+            created_at: new Date().toISOString(),
+          };
 
-      const { error } = await supabase
-        .from('applicants')
-        .update({ notes: [...currentNotes, newNote] })
-        .eq('id', applicantId);
-      if (error) throw error;
+          const { error } = await supabase
+            .from('applicants')
+            .update({ notes: [...currentNotes, newNote] })
+            .eq('id', applicantId);
+          if (error) throw error;
+        })(),
+        30000
+      );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['applicants'] }),
   });
 
   const completeOnboardingMutation = useMutation({
     mutationFn: async ({ applicantId, data }: { applicantId: string; data: OnboardingData }) => {
-      // Create colleague first
-      const newColleague = await addColleague({
-        full_name: data.full_name,
-        email: data.email,
-        phone: data.phone,
-        position: data.position,
-        seniority: 'mid',
-        status: 'active',
-        is_freelancer: true,
-        internal_hourly_cost: data.hourly_rate,
-        capacity_hours_per_month: null,
-        monthly_fixed_cost: null,
-        notes: `IČO: ${data.ico}\nFirma: ${data.company_name}${data.dic ? `\nDIČ: ${data.dic}` : ''}\nAdresa: ${data.billing_street}, ${data.billing_zip} ${data.billing_city}\nÚčet: ${data.bank_account}`,
-        profile_id: null,
-        birthday: null,
-      });
+      return withTimeout(
+        (async () => {
+          // Create colleague with all fields from onboarding
+          const newColleague = await addColleague({
+            full_name: data.full_name,
+            email: data.email,
+            phone: data.phone,
+            position: data.position,
+            seniority: 'mid',
+            status: 'active',
+            is_freelancer: true,
+            internal_hourly_cost: data.hourly_rate,
+            capacity_hours_per_month: null,
+            monthly_fixed_cost: null,
+            notes: '',
+            profile_id: null,
+            // Pass all billing and personal fields properly
+            birthday: data.birthday || null,
+            personal_email: data.personal_email || null,
+            ico: data.ico || null,
+            dic: data.dic || null,
+            company_name: data.company_name || null,
+            billing_street: data.billing_street || null,
+            billing_city: data.billing_city || null,
+            billing_zip: data.billing_zip || null,
+            bank_account: data.bank_account || null,
+          });
 
-      // Update applicant with onboarding completion and colleague link
-      await updateApplicantMutation.mutateAsync({
-        id: applicantId,
-        updates: {
-          onboarding_completed_at: new Date().toISOString(),
-          converted_to_colleague_id: newColleague.id,
-          ico: data.ico,
-          company_name: data.company_name,
-          dic: data.dic || null,
-          hourly_rate: data.hourly_rate,
-          billing_street: data.billing_street,
-          billing_city: data.billing_city,
-          billing_zip: data.billing_zip,
-          bank_account: data.bank_account,
-        },
-      });
+          // Update applicant with onboarding completion and colleague link
+          await updateApplicantMutation.mutateAsync({
+            id: applicantId,
+            updates: {
+              onboarding_completed_at: new Date().toISOString(),
+              converted_to_colleague_id: newColleague.id,
+              ico: data.ico,
+              company_name: data.company_name,
+              dic: data.dic || null,
+              hourly_rate: data.hourly_rate,
+              billing_street: data.billing_street,
+              billing_city: data.billing_city,
+              billing_zip: data.billing_zip,
+              bank_account: data.bank_account,
+            },
+          });
 
-      return newColleague;
+          return newColleague;
+        })(),
+        60000 // 60 seconds for onboarding since it does multiple operations
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applicants'] });
@@ -352,6 +390,7 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
       id: applicantId,
       updates: {
         onboarding_sent_at: new Date().toISOString(),
+        stage: 'offer_sent',
       },
     });
   }, [updateApplicantMutation]);

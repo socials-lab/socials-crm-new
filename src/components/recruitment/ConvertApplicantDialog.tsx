@@ -127,7 +127,7 @@ export function ConvertApplicantDialog({
     setIsSubmitting(true);
 
     try {
-      const colleague = completeOnboarding(applicant.id, {
+      const colleague = await completeOnboarding(applicant.id, {
         full_name: applicant.full_name,
         email: applicant.email,
         phone: applicant.phone || '',
@@ -140,6 +140,9 @@ export function ConvertApplicantDialog({
         billing_city: data.billing_city,
         billing_zip: data.billing_zip,
         bank_account: data.bank_account,
+        // Pass additional personal data from applicant
+        birthday: applicant.birthday || null,
+        personal_email: applicant.personal_email || null,
       });
 
       toast.success(`${applicant.full_name} byl přidán do kolegů`);

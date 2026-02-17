@@ -112,7 +112,7 @@ function AppliedHistoryCard({ entry }: { entry: AppliedModificationHistory }) {
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  <span>{format(new Date(entry.client_approved_at), 'd. M. yyyy v H:mm', { locale: cs })}</span>
+                  <span>{format(new Date(entry.client_approved_at), "d. M. yyyy 'v' H:mm", { locale: cs })}</span>
                 </div>
               </div>
             </div>
@@ -147,19 +147,20 @@ export default function Modifications() {
   const [emailRequest, setEmailRequest] = useState<StoredModificationRequest | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   
-  const { 
-    pendingRequests, 
-    isLoadingPending, 
-    approveRequest, 
+  const {
+    pendingRequests,
+    isLoadingPending,
+    loadingError,
+    approveRequest,
     rejectRequest,
     applyRequest,
     updateRequest,
     deleteRequest,
-    isApproving,
-    isRejecting,
-    isApplying,
+    approvingId,
+    rejectingId,
+    applyingId,
     isUpdating,
-    isDeleting,
+    deletingId,
     refresh
   } = useModificationRequests();
   const { addEngagementService, updateEngagementService } = useCRMData();
@@ -297,11 +298,33 @@ export default function Modifications() {
     return '';
   };
 
+  if (loadingError) {
+    return (
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        <PageHeader
+          title="Návrhy změn"
+          description="Přidání nových služeb, změny cen, deaktivace služeb a další úpravy zakázek"
+        />
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <XCircle className="h-12 w-12 text-destructive/50 mb-4" />
+            <p className="text-muted-foreground text-center mb-4">
+              Nepodařilo se načíst data: {loadingError instanceof Error ? loadingError.message : 'Neznámá chyba'}
+            </p>
+            <Button variant="outline" onClick={() => refresh()}>
+              Zkusit znovu
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoadingPending) {
     return (
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        <PageHeader 
-          title="Návrhy změn" 
+        <PageHeader
+          title="Návrhy změn"
           description="Přidání nových služeb, změny cen, deaktivace služeb a další úpravy zakázek"
         />
         <div className="flex items-center justify-center py-12">
@@ -423,9 +446,9 @@ export default function Modifications() {
                   onReject={handleReject}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
-                  isApproving={isApproving}
-                  isRejecting={isRejecting}
-                  isDeleting={isDeleting}
+                  isApproving={approvingId === request.id}
+                  isRejecting={rejectingId === request.id}
+                  isDeleting={deletingId === request.id}
                 />
               ))}
             </div>
@@ -451,7 +474,7 @@ export default function Modifications() {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onSendEmail={handleSendEmail}
-                  isDeleting={isDeleting}
+                  isDeleting={deletingId === request.id}
                 />
               ))}
             </div>
@@ -475,7 +498,7 @@ export default function Modifications() {
                   key={request.id}
                   request={request}
                   onApply={handleApply}
-                  isApplying={isApplying}
+                  isApplying={applyingId === request.id}
                 />
               ))}
             </div>
@@ -557,7 +580,7 @@ export default function Modifications() {
                   key={request.id}
                   request={request}
                   onDelete={handleDelete}
-                  isDeleting={isDeleting}
+                  isDeleting={deletingId === request.id}
                 />
               ))}
             </div>

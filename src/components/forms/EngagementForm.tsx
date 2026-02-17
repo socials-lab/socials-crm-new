@@ -161,8 +161,17 @@ export function EngagementForm({
     }
 
     setIsSubmitting(true);
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: operace trvala příliš dlouho')), 30000)
+    );
+
     try {
-      await onSubmit(data);
+      await Promise.race([onSubmit(data), timeoutPromise]);
+    } catch (error) {
+      console.error('Error submitting engagement:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Neznámá chyba';
+      toast.error(`Chyba: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }

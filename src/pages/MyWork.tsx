@@ -71,6 +71,9 @@ function MyWorkContent() {
   // Activity rewards hook
   const {
     rewards: activityRewards,
+    isLoading: isLoadingRewards,
+    error: rewardsError,
+    refetch: refetchRewards,
     currentMonthTotal: activityCurrentMonthTotal,
     getRewardsByMonth,
     getRewardsByCategory,
@@ -431,7 +434,20 @@ function MyWorkContent() {
               Manuálně přidané položky (marketing, interní práce, práce na klientovi) – pro fakturaci
             </p>
 
-            {internalWorkThisMonth.length === 0 ? (
+            {isLoadingRewards ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">Načítání položek...</p>
+              </div>
+            ) : rewardsError ? (
+              <div className="text-center py-4 space-y-2">
+                <p className="text-sm text-destructive">
+                  {rewardsError instanceof Error ? rewardsError.message : 'Nepodařilo se načíst položky'}
+                </p>
+                <Button variant="outline" size="sm" onClick={() => refetchRewards()}>
+                  Zkusit znovu
+                </Button>
+              </div>
+            ) : internalWorkThisMonth.length === 0 ? (
               <div className="text-center py-4">
                 <p className="text-sm text-muted-foreground">Žádné manuální položky tento měsíc</p>
                 <Button

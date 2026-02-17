@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getErrorMessage, isPrimaryContactConstraintError, isEngagementReferenceError } from '@/lib/errorUtils';
+import { withTimeout } from '@/utils/asyncUtils';
 import type { 
   Client, 
   ClientContact,
@@ -556,10 +557,44 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
           throw new Error('Kontakt nebyl nalezen - možná byl smazán jiným uživatelem.');
         }
       }
+
+      // Sync contact info to the original lead if this is the primary contact
+      // This ensures lead origin section shows current contact info
+      if (data.name || data.email || data.phone) {
+        // Get the contact to check if it's primary and get client_id
+        const { data: contact } = await supabase
+          .from('client_contacts')
+          .select('client_id, is_primary, name, email, phone')
+          .eq('id', id)
+          .single();
+
+        if (contact?.is_primary) {
+          // Find the lead that was converted to this client
+          const { data: lead } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('converted_to_client_id', contact.client_id)
+            .single();
+
+          if (lead) {
+            // Update the lead's contact info to match
+            const leadUpdate: Record<string, string | null> = {};
+            if (data.name !== undefined) leadUpdate.contact_name = data.name || contact.name;
+            if (data.email !== undefined) leadUpdate.contact_email = data.email || contact.email;
+            if (data.phone !== undefined) leadUpdate.contact_phone = data.phone || contact.phone;
+
+            if (Object.keys(leadUpdate).length > 0) {
+              await supabase.from('leads').update(leadUpdate).eq('id', lead.id);
+            }
+          }
+        }
+      }
     },
     onSuccess: () => {
       // Explicitly invalidate cache (realtime may have latency or be disabled)
       queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
+      // Also invalidate leads cache since we sync primary contact info to leads
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success('Kontakt byl uložen');
     },
     onError: (error) => {
@@ -1522,34 +1557,34 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     invoiceLineItems,
     isLoading,
 
-    // Client operations
-    addClient: (data) => addClientMutation.mutateAsync(data),
-    updateClient: (id, data) => updateClientMutation.mutateAsync({ id, data }),
-    softDeleteClient: (id) => softDeleteClientMutation.mutateAsync(id),
+    // Client operations - all wrapped with 30s timeout
+    addClient: (data) => withTimeout(addClientMutation.mutateAsync(data), 30000),
+    updateClient: (id, data) => withTimeout(updateClientMutation.mutateAsync({ id, data }), 30000),
+    softDeleteClient: (id) => withTimeout(softDeleteClientMutation.mutateAsync(id), 30000),
 
     // Contact operations
-    addContact: (data) => addContactMutation.mutateAsync(data),
-    updateContact: (id, data) => updateContactMutation.mutateAsync({ id, data }),
-    deleteContact: (id) => deleteContactMutation.mutateAsync(id),
-    setContactAsPrimary: (contactId) => setContactAsPrimaryMutation.mutateAsync(contactId),
+    addContact: (data) => withTimeout(addContactMutation.mutateAsync(data), 30000),
+    updateContact: (id, data) => withTimeout(updateContactMutation.mutateAsync({ id, data }), 30000),
+    deleteContact: (id) => withTimeout(deleteContactMutation.mutateAsync(id), 30000),
+    setContactAsPrimary: (contactId) => withTimeout(setContactAsPrimaryMutation.mutateAsync(contactId), 30000),
     canDeleteContact,
     getContactsByClientId,
     getPrimaryContact,
     getDecisionMaker,
 
     // Engagement operations
-    addEngagement: (data) => addEngagementMutation.mutateAsync(data),
-    updateEngagement: (id, data) => updateEngagementMutation.mutateAsync({ id, data }),
-    deleteEngagement: (id) => deleteEngagementMutation.mutateAsync(id),
+    addEngagement: (data) => withTimeout(addEngagementMutation.mutateAsync(data), 30000),
+    updateEngagement: (id, data) => withTimeout(updateEngagementMutation.mutateAsync({ id, data }), 30000),
+    deleteEngagement: (id) => withTimeout(deleteEngagementMutation.mutateAsync(id), 30000),
 
     // Engagement Service operations
-    addEngagementService: (data) => addEngagementServiceMutation.mutateAsync(data),
-    updateEngagementService: (id, data) => updateEngagementServiceMutation.mutateAsync({ id, data }),
-    deleteEngagementService: (id) => deleteEngagementServiceMutation.mutateAsync(id),
+    addEngagementService: (data) => withTimeout(addEngagementServiceMutation.mutateAsync(data), 30000),
+    updateEngagementService: (id, data) => withTimeout(updateEngagementServiceMutation.mutateAsync({ id, data }), 30000),
+    deleteEngagementService: (id) => withTimeout(deleteEngagementServiceMutation.mutateAsync(id), 30000),
     getEngagementServicesByEngagementId,
     getUnbilledOneOffServices,
     markEngagementServiceAsInvoiced: async (id, invoiceId, invoicePeriod) => {
-      await updateEngagementServiceMutation.mutateAsync({
+      await withTimeout(updateEngagementServiceMutation.mutateAsync({
         id,
         data: {
           invoicing_status: 'invoiced',
@@ -1557,30 +1592,30 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
           invoiced_in_period: invoicePeriod,
           invoice_id: invoiceId,
         },
-      });
+      }), 30000);
     },
 
     // Colleague operations
-    addColleague: (data) => addColleagueMutation.mutateAsync(data),
-    updateColleague: (id, data) => updateColleagueMutation.mutateAsync({ id, data }),
-    deleteColleague: (id) => deleteColleagueMutation.mutateAsync(id),
+    addColleague: (data) => withTimeout(addColleagueMutation.mutateAsync(data), 30000),
+    updateColleague: (id, data) => withTimeout(updateColleagueMutation.mutateAsync({ id, data }), 30000),
+    deleteColleague: (id) => withTimeout(deleteColleagueMutation.mutateAsync(id), 30000),
 
     // Assignment operations
-    addAssignment: (data) => addAssignmentMutation.mutateAsync(data),
-    updateAssignment: (id, data) => updateAssignmentMutation.mutateAsync({ id, data }),
-    removeAssignment: (id) => removeAssignmentMutation.mutateAsync(id),
+    addAssignment: (data) => withTimeout(addAssignmentMutation.mutateAsync(data), 30000),
+    updateAssignment: (id, data) => withTimeout(updateAssignmentMutation.mutateAsync({ id, data }), 30000),
+    removeAssignment: (id) => withTimeout(removeAssignmentMutation.mutateAsync(id), 30000),
     getAssignmentsByServiceId,
 
     // Extra Work operations
-    addExtraWork: (data) => addExtraWorkMutation.mutateAsync(data),
-    updateExtraWork: (id, data) => updateExtraWorkMutation.mutateAsync({ id, data }),
-    deleteExtraWork: (id) => deleteExtraWorkMutation.mutateAsync(id),
+    addExtraWork: (data) => withTimeout(addExtraWorkMutation.mutateAsync(data), 30000),
+    updateExtraWork: (id, data) => withTimeout(updateExtraWorkMutation.mutateAsync({ id, data }), 30000),
+    deleteExtraWork: (id) => withTimeout(deleteExtraWorkMutation.mutateAsync(id), 30000),
     getExtraWorksReadyToInvoice,
     getExtraWorksByEngagementId,
-    approveExtraWork,
-    completeExtraWork,
+    approveExtraWork: async (id) => withTimeout(approveExtraWorkMutation.mutateAsync(id), 30000),
+    completeExtraWork: async (id) => withTimeout(completeExtraWorkMutation.mutateAsync(id), 30000),
     markExtraWorkAsInvoiced: async (id, invoiceId, invoiceNumber) => {
-      await updateExtraWorkMutation.mutateAsync({
+      await withTimeout(updateExtraWorkMutation.mutateAsync({
         id,
         data: {
           status: 'invoiced',
@@ -1588,22 +1623,22 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
           invoice_number: invoiceNumber,
           invoiced_at: new Date().toISOString(),
         },
-      });
+      }), 30000);
     },
 
     // Service operations
-    addService: (data) => addServiceMutation.mutateAsync(data),
-    updateService: (id, data) => updateServiceMutation.mutateAsync({ id, data }),
-    deleteService: (id) => deleteServiceMutation.mutateAsync(id),
+    addService: (data) => withTimeout(addServiceMutation.mutateAsync(data), 30000),
+    updateService: (id, data) => withTimeout(updateServiceMutation.mutateAsync({ id, data }), 30000),
+    deleteService: (id) => withTimeout(deleteServiceMutation.mutateAsync(id), 30000),
     toggleServiceActive: async (id) => {
       const service = services.find(s => s.id === id);
       if (service) {
-        await updateServiceMutation.mutateAsync({ id, data: { is_active: !service.is_active } });
+        await withTimeout(updateServiceMutation.mutateAsync({ id, data: { is_active: !service.is_active } }), 30000);
       }
     },
 
     // Issued Invoice operations
-    addIssuedInvoice: (data) => addIssuedInvoiceMutation.mutateAsync(data),
+    addIssuedInvoice: (data) => withTimeout(addIssuedInvoiceMutation.mutateAsync(data), 30000),
     getIssuedInvoicesByYear,
     getInvoicesByEngagementId,
     getNextInvoiceNumber,

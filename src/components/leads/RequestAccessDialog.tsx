@@ -28,6 +28,56 @@ interface RequestAccessDialogProps {
 
 const DEFAULT_BCC = ['danny@socials.cz', 'dana.bauerova@socials.cz'];
 
+// EmailTagList component - defined outside to prevent re-creation on each render
+function EmailTagList({
+  emails,
+  onRemove,
+  newEmail,
+  onNewEmailChange,
+  onAdd,
+  placeholder,
+}: {
+  emails: string[];
+  onRemove: (e: string) => void;
+  newEmail: string;
+  onNewEmailChange: (v: string) => void;
+  onAdd: () => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {emails.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {emails.map(email => (
+            <Badge key={email} variant="secondary" className="gap-1 pr-1 font-normal">
+              {email}
+              <button
+                type="button"
+                onClick={() => onRemove(email)}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Input
+          value={newEmail}
+          onChange={(e) => onNewEmailChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } }}
+          placeholder={placeholder}
+          className="text-sm"
+        />
+        <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={onAdd}>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 const DEFAULT_EMAIL_CONTENT = `Dobrý den,
 
 Na základě našeho telefonátu Vás prosíme o nasdílení přístupů do níže uvedených marketingových nástrojů. Uděláme audit a připravíme pro vás nabídku na případnou spolupráci.
@@ -169,53 +219,6 @@ export function RequestAccessDialog({
     }
     onOpenChange(newOpen);
   };
-
-  const EmailTagList = ({
-    emails,
-    onRemove,
-    newEmail,
-    onNewEmailChange,
-    onAdd,
-    placeholder,
-  }: {
-    emails: string[];
-    onRemove: (e: string) => void;
-    newEmail: string;
-    onNewEmailChange: (v: string) => void;
-    onAdd: () => void;
-    placeholder: string;
-  }) => (
-    <div className="space-y-2">
-      {emails.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {emails.map(email => (
-            <Badge key={email} variant="secondary" className="gap-1 pr-1 font-normal">
-              {email}
-              <button
-                type="button"
-                onClick={() => onRemove(email)}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
-      <div className="flex gap-2">
-        <Input
-          value={newEmail}
-          onChange={(e) => onNewEmailChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } }}
-          placeholder={placeholder}
-          className="text-sm"
-        />
-        <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={onAdd}>
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

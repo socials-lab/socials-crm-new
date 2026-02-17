@@ -13,6 +13,7 @@ import { CreativeBoostProvider } from "@/hooks/useCreativeBoostData";
 import { ApplicantsDataProvider } from "@/hooks/useApplicantsData";
 import { MeetingsDataProvider } from "@/hooks/useMeetingsData";
 import { FeedbackProvider } from "@/hooks/useFeedbackData";
+import { SOPDataProvider } from "@/hooks/useSOPData";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Contacts from "./pages/Contacts";
@@ -43,6 +44,8 @@ import PublicCreativeBoostPage from "./pages/PublicCreativeBoostPage";
 import Modifications from "./pages/Modifications";
 import Upsells from "./pages/Upsells";
 import Academy from "./pages/Academy";
+import SOP from "./pages/SOP";
+import PublicSOPPage from "./pages/PublicSOPPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +56,10 @@ const queryClient = new QueryClient({
       refetchOnReconnect: true, // Do refetch when network reconnects
       retry: 2, // Retry failed requests twice
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
+    },
+    mutations: {
+      retry: 1, // Retry failed mutations once
+      retryDelay: 1000, // Wait 1 second before retry
     },
   },
 });
@@ -67,6 +74,7 @@ const App = () => (
               <ApplicantsDataProvider>
                 <MeetingsDataProvider>
                   <FeedbackProvider>
+                    <SOPDataProvider>
                     <TooltipProvider>
                       <BrowserRouter>
                         <Routes>
@@ -80,6 +88,7 @@ const App = () => (
                           <Route path="/modification/:token" element={<PublicModificationPage />} />
                           <Route path="/extra-work-approval/:token" element={<ExtraWorkApproval />} />
                           <Route path="/creative-boost-share/:token" element={<PublicCreativeBoostPage />} />
+                          <Route path="/sop-share/:token" element={<PublicSOPPage />} />
 
                           {/* Protected routes */}
                           <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
@@ -104,12 +113,15 @@ const App = () => (
                             <Route path="/notifications" element={<Notifications />} />
                             <Route path="/feedback" element={<Feedback />} />
                             <Route path="/academy" element={<Academy />} />
+                            <Route path="/sop" element={<SOP />} />
+                            <Route path="/sop/:articleId" element={<SOP />} />
                           </Route>
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </BrowserRouter>
                       <Sonner />
                     </TooltipProvider>
+                    </SOPDataProvider>
                   </FeedbackProvider>
                 </MeetingsDataProvider>
               </ApplicantsDataProvider>
