@@ -34,28 +34,6 @@ export function SOPSearch({ value, onChange, allTags, selectedTags, onToggleTag 
           </Button>
         )}
       </div>
-      {allTags.length > 0 && (
-        <ScrollArea className="w-full whitespace-nowrap">
-          <div className="flex gap-1.5 pb-1">
-            {allTags.map(tag => (
-              <Badge
-                key={tag}
-                variant={selectedTags.includes(tag) ? 'default' : 'outline'}
-                className="cursor-pointer text-xs shrink-0 select-none"
-                onClick={() => onToggleTag(tag)}
-              >
-                {tag}
-              </Badge>
-            ))}
-            {selectedTags.length > 0 && (
-              <Button variant="ghost" size="sm" className="h-5 text-xs px-2 text-muted-foreground" onClick={() => selectedTags.forEach(t => onToggleTag(t))}>
-                Zrušit filtry
-              </Button>
-            )}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
-      )}
     </div>
   );
 }
