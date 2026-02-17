@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useSOPData } from '@/hooks/useSOPData';
+import { useSOPData, demoProfileNames } from '@/hooks/useSOPData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
@@ -40,6 +40,7 @@ export default function SOPArticle() {
   }, [articleId]); // eslint-disable-line react-hooks/exhaustive-deps
   const category = article ? categories.find(c => c.id === article.category_id) : null;
   const ownerColleague = article?.owner_id ? colleagues.find(c => c.profile_id === article.owner_id) : null;
+  const ownerName = ownerColleague?.full_name || (article?.owner_id ? demoProfileNames[article.owner_id] : null);
   const articleSuggestions = article ? suggestions.filter(s => s.article_id === article.id) : [];
   const pendingCount = articleSuggestions.filter(s => s.status === 'pending').length;
   const isOwner = article?.owner_id === user?.id;
@@ -94,10 +95,10 @@ export default function SOPArticle() {
           )}
         </div>
         <div className="flex items-center gap-4 mt-2 flex-wrap">
-          {ownerColleague && (
+          {ownerName && (
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <User className="h-3.5 w-3.5" />
-              <span>Zodpovědný: <strong className="text-foreground">{ownerColleague.full_name}</strong></span>
+              <span>Zodpovědný: <strong className="text-foreground">{ownerName}</strong></span>
             </div>
           )}
           {article.tags.length > 0 && (
