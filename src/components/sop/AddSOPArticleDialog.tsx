@@ -107,6 +107,9 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
     } else {
       await addArticle({ title, content, category_id: categoryId, tags: tagArray, owner_id: ownerValue, attachments: attachments as any });
     }
+    // Clear draft from localStorage
+    const draftKey = editArticle ? `sop-draft-edit-${editArticle.id}` : 'sop-draft-new-article';
+    try { localStorage.removeItem(draftKey); } catch {}
     setSaving(false);
     onOpenChange(false);
   };
@@ -211,7 +214,7 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
 
           <div className="space-y-2">
             <Label>Obsah</Label>
-            <SOPEditor content={content} onChange={setContent} />
+            <SOPEditor content={content} onChange={setContent} storageKey={editArticle ? `edit-${editArticle.id}` : 'new-article'} />
           </div>
 
           <SOPAttachmentUpload
