@@ -152,6 +152,16 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   }, []);
 
+  // Apply locally persisted article edits on top of demo data
+  const applyLocalEdits = (baseArticles: SOPArticle[]): SOPArticle[] => {
+    try {
+      const stored = localStorage.getItem('sop-local-article-edits');
+      if (!stored) return baseArticles;
+      const edits: Record<string, Partial<SOPArticle>> = JSON.parse(stored);
+      return baseArticles.map(a => edits[a.id] ? { ...a, ...edits[a.id] } : a);
+    } catch { return baseArticles; }
+  };
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -161,7 +171,8 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
         supabase.from('sop_update_suggestions' as any).select('*, profiles:suggested_by(first_name, last_name)').order('created_at', { ascending: false }),
       ]);
       setCategories((catRes.data && catRes.data.length > 0) ? catRes.data as any : demoCategories);
-      setArticles((artRes.data && artRes.data.length > 0) ? artRes.data as any : demoArticles);
+      const useDemo = !(artRes.data && artRes.data.length > 0);
+      setArticles(useDemo ? applyLocalEdits(demoArticles) : artRes.data as any);
       
       if (sugRes.data && sugRes.data.length > 0) {
         setSuggestions((sugRes.data as any[]).map((s: any) => ({
@@ -174,7 +185,7 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.error('Error fetching SOP data, using demo:', e);
       setCategories(demoCategories);
-      setArticles(demoArticles);
+      setArticles(applyLocalEdits(demoArticles));
       setSuggestions(demoSuggestions);
     } finally {
       setIsLoading(false);
@@ -248,8 +259,15 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
     if (article.content !== undefined) updates.search_text = stripHtml(article.content);
     const { error } = await supabase.from('sop_articles' as any).update(updates).eq('id', id);
     if (error) {
-      // Fallback: update in local state for demo articles
-      setArticles(prev => prev.map(a => a.id === id ? { ...a, ...article, updated_at: new Date().toISOString() } : a));
+      // Fallback: update in local state for demo articles and persist
+      const updatedFields = { ...article, updated_at: new Date().toISOString() };
+      setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updatedFields } : a));
+      try {
+        const stored = localStorage.getItem('sop-local-article-edits');
+        const edits: Record<string, Partial<SOPArticle>> = stored ? JSON.parse(stored) : {};
+        edits[id] = { ...(edits[id] || {}), ...updatedFields };
+        localStorage.setItem('sop-local-article-edits', JSON.stringify(edits));
+      } catch {}
       toast({ title: 'Změny uloženy' });
       return;
     }
