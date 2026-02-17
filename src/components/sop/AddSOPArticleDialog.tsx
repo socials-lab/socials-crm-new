@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { SOPEditor } from './SOPEditor';
+import { SOPAttachmentUpload, type SOPAttachment } from './SOPAttachmentUpload';
 import { useSOPData, type SOPArticle } from '@/hooks/useSOPData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { Plus } from 'lucide-react';
@@ -29,6 +30,7 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
   const [categoryId, setCategoryId] = useState('');
   const [tags, setTags] = useState('');
   const [ownerId, setOwnerId] = useState('');
+  const [attachments, setAttachments] = useState<SOPAttachment[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Inline new category state
@@ -45,12 +47,14 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
       setCategoryId(editArticle.category_id);
       setTags(editArticle.tags.join(', '));
       setOwnerId(editArticle.owner_id || '');
+      setAttachments((editArticle.attachments as SOPAttachment[]) || []);
     } else {
       setTitle('');
       setContent('');
       setCategoryId(defaultCategoryId || '');
       setTags('');
       setOwnerId('');
+      setAttachments([]);
     }
     setShowNewCategory(false);
     setNewCatTitle('');
@@ -99,9 +103,9 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
     const tagArray = tags.split(',').map(t => t.trim()).filter(Boolean);
     const ownerValue = ownerId || null;
     if (editArticle) {
-      await updateArticle(editArticle.id, { title, content, category_id: categoryId, tags: tagArray, owner_id: ownerValue });
+      await updateArticle(editArticle.id, { title, content, category_id: categoryId, tags: tagArray, owner_id: ownerValue, attachments: attachments as any });
     } else {
-      await addArticle({ title, content, category_id: categoryId, tags: tagArray, owner_id: ownerValue });
+      await addArticle({ title, content, category_id: categoryId, tags: tagArray, owner_id: ownerValue, attachments: attachments as any });
     }
     setSaving(false);
     onOpenChange(false);
@@ -209,6 +213,12 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
             <Label>Obsah</Label>
             <SOPEditor content={content} onChange={setContent} />
           </div>
+
+          <SOPAttachmentUpload
+            articleId={editArticle?.id || `new-${Date.now()}`}
+            attachments={attachments}
+            onChange={setAttachments}
+          />
         </div>
 
         <DialogFooter>

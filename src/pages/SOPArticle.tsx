@@ -7,6 +7,7 @@ import { SOPArticleView } from '@/components/sop/SOPArticleView';
 import { AddSOPArticleDialog } from '@/components/sop/AddSOPArticleDialog';
 import { SuggestSOPUpdateDialog } from '@/components/sop/SuggestSOPUpdateDialog';
 import { SOPUpdateSuggestions } from '@/components/sop/SOPUpdateSuggestions';
+import { SOPAttachmentUpload } from '@/components/sop/SOPAttachmentUpload';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Edit, Trash2, MessageSquarePlus, User } from 'lucide-react';
@@ -95,6 +96,16 @@ export default function SOPArticle() {
       <div className="bg-card border border-border rounded-lg p-6">
         <SOPArticleView content={article.content} />
       </div>
+
+      {/* Attachments */}
+      {(article.attachments?.length ?? 0) > 0 && (
+        <SOPAttachmentUpload
+          articleId={article.id}
+          attachments={article.attachments || []}
+          onChange={() => {}}
+          readOnly
+        />
+      )}
 
       {/* Suggestions section for owner + admins */}
       {canManageSuggestions && articleSuggestions.length > 0 && (
