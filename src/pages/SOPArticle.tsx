@@ -10,8 +10,9 @@ import { SOPUpdateSuggestions } from '@/components/sop/SOPUpdateSuggestions';
 import { SOPAttachmentUpload } from '@/components/sop/SOPAttachmentUpload';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Edit, Trash2, MessageSquarePlus, User } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MessageSquarePlus, User, Link2 } from 'lucide-react';
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function SOPArticle() {
@@ -21,10 +22,16 @@ export default function SOPArticle() {
   const { colleagues } = useCRMData();
   const { isSuperAdmin } = useUserRole();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
 
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/sop/${articleId}`;
+    navigator.clipboard.writeText(url);
+    toast({ title: 'Odkaz zkopírován do schránky' });
+  };
   const article = articles.find(a => a.id === articleId);
   const category = article ? categories.find(c => c.id === article.category_id) : null;
   const ownerColleague = article?.owner_id ? colleagues.find(c => c.profile_id === article.owner_id) : null;
@@ -54,6 +61,9 @@ export default function SOPArticle() {
           <ArrowLeft className="h-4 w-4 mr-1" /> Zpět
         </Button>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleCopyLink}>
+            <Link2 className="h-4 w-4 mr-1" /> Kopírovat odkaz
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setSuggestOpen(true)}>
             <MessageSquarePlus className="h-4 w-4 mr-1" /> Navrhnout úpravu
           </Button>
