@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { SOPSearch } from '@/components/sop/SOPSearch';
@@ -8,31 +8,59 @@ import { AddSOPArticleDialog } from '@/components/sop/AddSOPArticleDialog';
 import { AddSOPCategoryDialog } from '@/components/sop/AddSOPCategoryDialog';
 import { useSOPData } from '@/hooks/useSOPData';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Plus, FolderPlus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 export default function SOP() {
   const navigate = useNavigate();
-  const { categories, articles, isLoading, searchQuery, setSearchQuery, searchResults } = useSOPData();
+  const isMobile = useIsMobile();
+  const {
+    categories, articles, isLoading, searchQuery, setSearchQuery,
+    searchResults, selectedTags, toggleTag, allTags, setSelectedTags,
+  } = useSOPData();
   const { isSuperAdmin } = useUserRole();
   const [articleDialogOpen, setArticleDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  const isSearching = searchQuery.trim().length > 0;
+  const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
 
-  const handleCategoryClick = (categoryId: string) => {
-    setSelectedCategoryId(categoryId);
-  };
+  const categoryArticleCount = useMemo(() => {
+    const map: Record<string, number> = {};
+    categories.forEach(c => {
+      map[c.id] = articles.filter(a => a.category_id === c.id && a.is_published).length;
+    });
+    return map;
+  }, [categories, articles]);
 
-  const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+  const categoryNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach(c => { map[c.id] = c.title; });
+    return map;
+  }, [categories]);
+
+  // Group search results by category
+  const groupedResults = useMemo(() => {
+    if (!isFiltering) return {};
+    const groups: Record<string, typeof searchResults> = {};
+    searchResults.forEach(a => {
+      if (!groups[a.category_id]) groups[a.category_id] = [];
+      groups[a.category_id].push(a);
+    });
+    return groups;
+  }, [searchResults, isFiltering]);
+
   const categoryArticles = selectedCategoryId
     ? articles.filter(a => a.category_id === selectedCategoryId && a.is_published)
     : [];
 
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageHeader title="📖 SOP Databáze" description="Postupy a návody pro tým" />
         {isSuperAdmin && (
@@ -47,60 +75,163 @@ export default function SOP() {
         )}
       </div>
 
-      <SOPSearch value={searchQuery} onChange={setSearchQuery} />
+      {/* Search + Tags */}
+      <SOPSearch
+        value={searchQuery}
+        onChange={setSearchQuery}
+        allTags={allTags}
+        selectedTags={selectedTags}
+        onToggleTag={toggleTag}
+      />
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}
         </div>
-      ) : isSearching ? (
-        <div className="space-y-3">
+      ) : isFiltering ? (
+        /* Grouped search results */
+        <div className="space-y-5">
           <p className="text-sm text-muted-foreground">
-            {searchResults.length} {searchResults.length === 1 ? 'výsledek' : searchResults.length < 5 ? 'výsledky' : 'výsledků'} pro „{searchQuery}"
+            {searchResults.length} {searchResults.length === 1 ? 'výsledek' : searchResults.length < 5 ? 'výsledky' : 'výsledků'}
+            {searchQuery.trim() && <> pro „{searchQuery}"</>}
           </p>
           {searchResults.length === 0 ? (
             <p className="text-muted-foreground text-center py-12">Žádné výsledky</p>
           ) : (
-            <div className="grid gap-2">
-              {searchResults.map(article => (
-                <SOPArticleCard
-                  key={article.id}
-                  article={article}
-                  onClick={() => navigate(`/sop/${article.id}`)}
-                  highlightQuery={searchQuery}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      ) : selectedCategoryId ? (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setSelectedCategoryId(null)}>← Zpět</Button>
-            <h2 className="text-lg font-semibold">{selectedCategory?.title}</h2>
-          </div>
-          {categoryArticles.length === 0 ? (
-            <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné články</p>
-          ) : (
-            <div className="grid gap-2">
-              {categoryArticles.map(article => (
-                <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} />
-              ))}
-            </div>
+            Object.entries(groupedResults).map(([catId, arts]) => (
+              <div key={catId} className="space-y-2">
+                <h3 className="text-sm font-semibold text-muted-foreground">
+                  {categoryNameMap[catId] || 'Bez kategorie'} ({arts.length})
+                </h3>
+                <div className="grid gap-2">
+                  {arts.map(article => (
+                    <SOPArticleCard
+                      key={article.id}
+                      article={article}
+                      onClick={() => navigate(`/sop/${article.id}`)}
+                      highlightQuery={searchQuery}
+                      categoryName={categoryNameMap[article.category_id]}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.map(cat => (
-            <SOPCategoryCard
-              key={cat.id}
-              category={cat}
-              articleCount={articles.filter(a => a.category_id === cat.id && a.is_published).length}
-              onClick={() => handleCategoryClick(cat.id)}
-            />
-          ))}
-          {categories.length === 0 && (
-            <p className="text-muted-foreground col-span-full text-center py-12">Zatím nejsou vytvořeny žádné kategorie</p>
+        /* Two-panel layout */
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Mobile: horizontal category chips */}
+          {isMobile ? (
+            <div className="space-y-4">
+              <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex gap-2 pb-1">
+                  <Badge
+                    variant={selectedCategoryId === null ? 'default' : 'outline'}
+                    className="cursor-pointer shrink-0 select-none"
+                    onClick={() => setSelectedCategoryId(null)}
+                  >
+                    Vše
+                  </Badge>
+                  {categories.map(cat => (
+                    <Badge
+                      key={cat.id}
+                      variant={selectedCategoryId === cat.id ? 'default' : 'outline'}
+                      className="cursor-pointer shrink-0 select-none"
+                      onClick={() => setSelectedCategoryId(cat.id)}
+                    >
+                      {cat.title} ({categoryArticleCount[cat.id] || 0})
+                    </Badge>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+
+              {/* Articles for selected category or all */}
+              <div className="grid gap-2">
+                {selectedCategoryId === null ? (
+                  categories.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-12">Zatím nejsou vytvořeny žádné kategorie</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4">
+                      {categories.map(cat => (
+                        <SOPCategoryCard
+                          key={cat.id}
+                          category={cat}
+                          articleCount={categoryArticleCount[cat.id] || 0}
+                          onClick={() => setSelectedCategoryId(cat.id)}
+                        />
+                      ))}
+                    </div>
+                  )
+                ) : categoryArticles.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné články</p>
+                ) : (
+                  categoryArticles.map(article => (
+                    <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} />
+                  ))
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Desktop: sidebar + main */
+            <>
+              <div className="w-[250px] shrink-0 space-y-1">
+                <button
+                  onClick={() => setSelectedCategoryId(null)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors ${
+                    selectedCategoryId === null ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted text-foreground'
+                  }`}
+                >
+                  <span className="flex-1">Všechny kategorie</span>
+                  <span className="text-xs text-muted-foreground">{articles.filter(a => a.is_published).length}</span>
+                </button>
+                {categories.map(cat => (
+                  <SOPCategoryCard
+                    key={cat.id}
+                    category={cat}
+                    articleCount={categoryArticleCount[cat.id] || 0}
+                    onClick={() => setSelectedCategoryId(cat.id)}
+                    compact
+                    isActive={selectedCategoryId === cat.id}
+                  />
+                ))}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                {selectedCategoryId === null ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {categories.map(cat => (
+                      <SOPCategoryCard
+                        key={cat.id}
+                        category={cat}
+                        articleCount={categoryArticleCount[cat.id] || 0}
+                        onClick={() => setSelectedCategoryId(cat.id)}
+                      />
+                    ))}
+                    {categories.length === 0 && (
+                      <p className="text-muted-foreground col-span-full text-center py-12">Zatím nejsou vytvořeny žádné kategorie</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold">{categoryNameMap[selectedCategoryId]}</h2>
+                      <span className="text-sm text-muted-foreground">({categoryArticles.length} {categoryArticles.length === 1 ? 'článek' : categoryArticles.length < 5 ? 'články' : 'článků'})</span>
+                    </div>
+                    {categoryArticles.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-12">V této kategorii zatím nejsou žádné články</p>
+                    ) : (
+                      <div className="grid gap-2">
+                        {categoryArticles.map(article => (
+                          <SOPArticleCard key={article.id} article={article} onClick={() => navigate(`/sop/${article.id}`)} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}

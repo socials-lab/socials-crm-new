@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, Briefcase, BarChart3, Users, Settings, Zap, FileText, Target, Palette } from 'lucide-react';
-import type { SOPCategory, SOPArticle } from '@/hooks/useSOPData';
+import { cn } from '@/lib/utils';
+import type { SOPCategory } from '@/hooks/useSOPData';
 
 const iconMap: Record<string, React.ElementType> = {
   BookOpen, Briefcase, BarChart3, Users, Settings, Zap, FileText, Target, Palette,
@@ -10,10 +11,30 @@ interface SOPCategoryCardProps {
   category: SOPCategory;
   articleCount: number;
   onClick: () => void;
+  compact?: boolean;
+  isActive?: boolean;
 }
 
-export function SOPCategoryCard({ category, articleCount, onClick }: SOPCategoryCardProps) {
+export function SOPCategoryCard({ category, articleCount, onClick, compact, isActive }: SOPCategoryCardProps) {
   const Icon = iconMap[category.icon] || BookOpen;
+
+  if (compact) {
+    return (
+      <button
+        onClick={onClick}
+        className={cn(
+          "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors",
+          isActive
+            ? "bg-primary/10 text-primary font-medium"
+            : "hover:bg-muted text-foreground"
+        )}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="flex-1 truncate">{category.title}</span>
+        <span className="text-xs text-muted-foreground shrink-0">{articleCount}</span>
+      </button>
+    );
+  }
 
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow border-border" onClick={onClick}>
