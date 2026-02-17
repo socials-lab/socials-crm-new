@@ -1,122 +1,89 @@
 
+# Rozsirenni SOP -- 12 kategorii, 50 SOP, lepsi navigace
 
-# SOP Databaze -- Znalostni baze Socials
+## Co se zmeni
 
-## Co to bude
+Aktualne mame 3 kategorie a 3 clanky. Rozsireni zahrnuje:
 
-Nová sekce "SOP" v CRM, kde kolegové najdou veškeré postupy a návody. Každý SOP článek bude obsahovat bohatý formátovaný text (nadpisy, odrážky, tabulky, zvýrazněný kód) a embedovaná Loom videa. Fulltextové vyhledávání umožní rychle najít odpověď na jakoukoliv otázku.
+1. **12 kategorii** pokryvajicich vsechny oblasti Socials
+2. **15+ demo clanku** rozlozenych mezi kategorie (realisticke pro demo)
+3. **Vylepsenni UI pro skalovatelnost** -- aby to fungovalo i s 50+ SOP
 
-## Uživatelský pohled
+## Novych 12 kategorii
 
-1. **Hlavní stránka SOP** -- seznam kategorií (např. "Onboarding klienta", "Fakturace", "Performance marketing") s kartami SOP článků
-2. **Fulltextové vyhledávání** -- search bar nahoře, který prohledává titulky i obsah článků a okamžitě filtruje výsledky; zvýrazněné nalezené fráze
-3. **Detail SOP článku** -- celá stránka s formátovaným textem a embedovanými Loom videi přímo v obsahu
-4. **Editace** (admini / uživatelé s oprávněním) -- rich text editor (Tiptap) s toolbarem pro formátování a tlačítkem pro vložení Loom URL, které se automaticky embedne jako iframe
-5. **Navigace** -- nová položka "📖 SOP" v sidebaru v sekci "Tým & interní"
+| # | Kategorie | Ikona | Priklad clanku |
+|---|-----------|-------|----------------|
+| 1 | Onboarding klienta | Briefcase | Nastaveni klienta v CRM, Prvni brief |
+| 2 | Performance marketing | BarChart3 | Spusteni Google Ads, Meta Ads setup |
+| 3 | Interni procesy | Settings | Viceprace, Dovolena, Reporting |
+| 4 | Social media management | Palette | Tvorba content planu, Schvalovani |
+| 5 | Fakturace a finance | FileText | Vystaveni faktury, Upominky |
+| 6 | Prodej a leady | Target | Kvalifikace leadu, Nabidky |
+| 7 | Klientsky servis | Users | Reklamace, Escalace |
+| 8 | Nastroje a technologie | Zap | Google Analytics, GTM |
+| 9 | HR a tym | Users | Onboarding kolegy, 1-on-1 |
+| 10 | Brand a design | Palette | Brand manualy, Sablony |
+| 11 | Reporty a analytika | BarChart3 | Mesicni reporty, KPI |
+| 12 | SEO a obsah | BookOpen | Keyword research, Audit |
 
-## Architektura
+## Vylepsenni zobrazeni pro skalovatelnost
 
-### Databáze (Supabase)
+### A) Collapsible sidebar s kategoriemi (leva strana)
+Misto grid karet zavedeme **dvoupanelovy layout**:
+- **Levy panel**: seznam kategorii jako kompaktni menu (vzdy viditelny, na mobilu skryvatelny)
+- **Pravy panel**: seznam clanku vybrane kategorie
 
-Dvě nové tabulky:
+### B) Pocitadlo a kompaktni karty kategorii
+- Kategorie zobrazeny jako kompaktni radky s ikonou, nazvem a poctem clanku
+- Aktivni kategorie zvyraznena
+- Na mobilu se prepina mezi kategoriemi a clanky
 
-**sop_categories**
-- `id` (UUID, PK)
-- `title` (TEXT) -- např. "Onboarding klienta"
-- `description` (TEXT)
-- `icon` (TEXT) -- název Lucide ikony
-- `sort_order` (INTEGER)
-- `is_active` (BOOLEAN)
-- `created_at`, `updated_at`
+### C) Vyhledavani s kategorizovanymi vysledky
+- Vysledky hledani seskupeny podle kategorii
+- U kazdeho vysledku zobrazen nazev kategorie jako badge
+- Snippet textu s zvyraznenou hledanou frazi
 
-**sop_articles**
-- `id` (UUID, PK)
-- `category_id` (UUID, FK -> sop_categories)
-- `title` (TEXT) -- pro vyhledávání
-- `content` (TEXT) -- HTML z Tiptap editoru (obsahuje i Loom embedy)
-- `search_text` (TEXT) -- plaintext verze pro fulltext search (stripnutý HTML)
-- `tags` (TEXT[]) -- štítky pro filtrování
-- `sort_order` (INTEGER)
-- `is_published` (BOOLEAN)
-- `created_by`, `updated_by` (UUID)
-- `created_at`, `updated_at`
+### D) Tagy jako filtry
+- Pod search barem rada tag-badges ze vsech clanku
+- Klik na tag = filtr podle tagu (kombinovatelne s textem)
 
-RLS: všichni CRM uživatelé mohou číst, admini (nebo uživatelé s novým oprávněním `can_edit_sop`) mohou vytvářet/editovat/mazat.
+## Technicke zmeny
 
-Fulltextový index na `search_text` a `title` pomocí PostgreSQL `tsvector` pro rychlé vyhledávání.
+### `src/hooks/useSOPData.tsx`
+- Rozsireni `demoCategories` na 12 polozek
+- Rozsireni `demoArticles` na 15+ polozek s realnym obsahem
+- Pridani category name do search results
 
-### Rich Text Editor
+### `src/pages/SOP.tsx`
+- Novy dvoupanelovy layout: levy sloupec s kategoriemi (sidebar styl), pravy s clanky
+- Pridani tag-filtru pod search bar
+- Seskupene vysledky hledani podle kategorii
+- Responzivni: na mobilu kategorie jako horizontalni scrollovatelne chipy nahoze
 
-Knihovna **Tiptap** (open-source, postavená na ProseMirror):
-- Rozšíření: StarterKit (nadpisy, bold, italic, odrážky, čísla), Link, Image, Placeholder
-- Vlastní rozšíření **LoomEmbed** -- uživatel vloží Loom URL, editor ji převede na responzivní iframe
-- Toolbar s tlačítky: H1, H2, Bold, Italic, Bullet list, Numbered list, Link, Loom video
+### `src/components/sop/SOPCategoryCard.tsx`
+- Pridani kompaktni varianty (prop `compact`) pro sidebar zobrazeni -- radek s ikonou, nazvem, poctem
 
-### Nové soubory
+### `src/components/sop/SOPArticleCard.tsx`
+- Pridani category badge k vysledkum hledani
+- Zobrazeni tagu vzdy (ne jen pri hledani)
 
-```text
-src/pages/SOP.tsx                          -- hlavní stránka s vyhledáváním a kategoriemi
-src/pages/SOPArticle.tsx                   -- detail článku
-src/components/sop/SOPSearch.tsx           -- search bar s live výsledky
-src/components/sop/SOPCategoryCard.tsx     -- karta kategorie
-src/components/sop/SOPArticleCard.tsx      -- karta článku v seznamu
-src/components/sop/SOPEditor.tsx           -- Tiptap editor wrapper
-src/components/sop/SOPArticleView.tsx      -- read-only zobrazení článku
-src/components/sop/AddSOPArticleDialog.tsx -- dialog pro vytvoření/editaci
-src/components/sop/LoomEmbed.tsx           -- Tiptap node extension pro Loom
-src/hooks/useSOPData.tsx                   -- hook pro CRUD + vyhledávání
-```
+### `src/components/sop/SOPSearch.tsx`
+- Pridani tag-badges filtru pod search input
+- Klik na tag ho prida/odebere z filtru
 
-### Úpravy existujících souborů
+## Jak to bude vypadat
 
-- `src/App.tsx` -- přidání route `/sop` a `/sop/:articleId`
-- `src/components/layout/AppSidebar.tsx` -- přidání "📖 SOP" do sekce "Tým & interní"
-- `src/constants/permissions.ts` -- přidání `sop` do ALL_PAGES a PAGE_GROUPS
+**Desktop**:
+- Search bar + tag filtry nahore (pres celou sirku)
+- Pod tim dva sloupce: levy (250px) s kategoriemi jako lista, pravy s clanky
+- Klik na kategorii = okamzite zobrazeni clanku vpravo
 
-### Nové NPM balíčky
+**Mobil**:
+- Search bar nahore
+- Horizontalni scrollovatelne category chipy
+- Pod tim seznam clanku vybrane kategorie
+- "Vsechny kategorie" jako default zobrazeni s gridu karet
 
-- `@tiptap/react` -- React integrace
-- `@tiptap/starter-kit` -- základní rozšíření (headings, bold, italic, lists)
-- `@tiptap/extension-link` -- klikatelné odkazy
-- `@tiptap/extension-placeholder` -- placeholder text
-- `@tiptap/pm` -- ProseMirror dependencies
-
-## Technické detaily
-
-### Fulltextové vyhledávání
-
-```sql
--- Databázová funkce pro fulltext search
-CREATE FUNCTION search_sop_articles(search_query TEXT)
-RETURNS SETOF sop_articles AS $$
-  SELECT * FROM sop_articles
-  WHERE is_published = true
-    AND (
-      to_tsvector('czech', title || ' ' || search_text)
-      @@ plainto_tsquery('czech', search_query)
-      OR title ILIKE '%' || search_query || '%'
-      OR search_text ILIKE '%' || search_query || '%'
-    )
-  ORDER BY
-    ts_rank(to_tsvector('czech', title || ' ' || search_text),
-            plainto_tsquery('czech', search_query)) DESC;
-$$ LANGUAGE sql STABLE;
-```
-
-### Loom Embed
-
-Tiptap custom node, který přijme URL ve formátu `https://www.loom.com/share/XXXXX` a vykreslí:
-
-```html
-<div class="aspect-video rounded-lg overflow-hidden my-4">
-  <iframe src="https://www.loom.com/embed/XXXXX"
-          frameborder="0" allowfullscreen
-          class="w-full h-full">
-  </iframe>
-</div>
-```
-
-### Uložení obsahu
-
-Při uložení článku se z HTML obsahu stripnou tagy a výsledný plaintext se uloží do `search_text` pro fulltext. Tím se zajistí, že vyhledávání funguje i pro text uvnitř formátování.
-
+**Hledani**:
+- Vysledky seskupene: "Onboarding klienta (2 vysledky)" > clanky, "Interni procesy (1 vysledek)" > clanky
+- Kazdy vysledek ma zvyrazneny snippet a category badge
