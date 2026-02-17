@@ -68,6 +68,7 @@ const navGroups: NavGroup[] = [
       { title: '🎓 Nábor', url: '/recruitment', page: 'recruitment' },
       { title: '💡 Feedback Zone', url: '/feedback', page: 'feedback' },
       { title: '📚 Akademie', url: '/academy', page: 'academy' },
+      { title: '📖 SOP', url: '/sop', page: 'sop' },
     ],
   },
   {
