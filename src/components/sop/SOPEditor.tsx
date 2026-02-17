@@ -42,6 +42,19 @@ export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...
         class: 'prose prose-sm max-w-none min-h-[300px] p-4 focus:outline-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-3 [&_img]:border [&_img]:border-border',
       },
       handlePaste(view, event) {
+        // Check for Loom URL in pasted text
+        const text = event.clipboardData?.getData('text/plain')?.trim();
+        if (text) {
+          const embedUrl = parseLoomUrl(text);
+          if (embedUrl) {
+            event.preventDefault();
+            view.dispatch(view.state.tr.replaceSelectionWith(
+              view.state.schema.nodes.loomEmbed.create({ src: embedUrl })
+            ));
+            return true;
+          }
+        }
+        // Check for pasted images
         const items = event.clipboardData?.items;
         if (!items) return false;
         for (const item of Array.from(items)) {
