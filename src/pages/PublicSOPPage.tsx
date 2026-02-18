@@ -15,7 +15,7 @@ export interface SharedSOPData {
   content: string;
   categoryName: string;
   tags: string[];
-  attachments: Array<{ name: string; path: string; size: number; type: string }>;
+  attachments: Array<{ name: string; path: string; size: number; type: string; signedUrl?: string }>;
   sharedAt: string;
   updatedAt: string;
 }

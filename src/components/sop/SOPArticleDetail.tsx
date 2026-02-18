@@ -8,13 +8,13 @@ import { SOPArticleView } from '@/components/sop/SOPArticleView';
 import { AddSOPArticleDialog } from '@/components/sop/AddSOPArticleDialog';
 import { SuggestSOPUpdateDialog } from '@/components/sop/SuggestSOPUpdateDialog';
 import { SOPUpdateSuggestions } from '@/components/sop/SOPUpdateSuggestions';
-import { SOPAttachmentUpload } from '@/components/sop/SOPAttachmentUpload';
+import { SOPAttachmentUpload, getAttachmentSignedUrl } from '@/components/sop/SOPAttachmentUpload';
 import { SOPChangeLog } from '@/components/sop/SOPChangeLog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, Edit, Trash2, MessageSquarePlus, User, Link2, Globe, Check, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MessageSquarePlus, User, Link2, Globe, Check, MoreVertical, Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -64,8 +64,17 @@ export function SOPArticleDetail({ articleId, inline, onBack }: SOPArticleDetail
     toast({ title: 'Odkaz zkopírován do schránky' });
   };
 
-  const handleSharePublic = () => {
+  const handleSharePublic = async () => {
     if (!article) return;
+
+    // Generate signed URLs for attachments (valid for 7 days)
+    const attachmentsWithUrls = await Promise.all(
+      (article.attachments || []).map(async (att) => {
+        const signedUrl = await getAttachmentSignedUrl(att.path, 604800); // 7 days
+        return { ...att, signedUrl: signedUrl || undefined };
+      })
+    );
+
     const token = `sop-${article.id}-${Date.now().toString(36)}`;
     const shareData: SharedSOPData = {
       id: article.id,
@@ -73,7 +82,7 @@ export function SOPArticleDetail({ articleId, inline, onBack }: SOPArticleDetail
       content: article.content,
       categoryName: category?.title || 'SOP',
       tags: article.tags,
-      attachments: article.attachments || [],
+      attachments: attachmentsWithUrls,
       sharedAt: new Date().toISOString(),
       updatedAt: article.updated_at,
     };
@@ -142,10 +151,26 @@ export function SOPArticleDetail({ articleId, inline, onBack }: SOPArticleDetail
         {category && <p className="text-sm text-muted-foreground mb-1">{category.title}</p>}
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl font-bold">{article.title}</h1>
+          {!article.is_published && (
+            <Badge variant="secondary" className="text-xs">Draft</Badge>
+          )}
           {pendingCount > 0 && canManageSuggestions && (
             <Badge variant="destructive" className="text-xs">{pendingCount} {pendingCount === 1 ? 'návrh' : 'návrhy'}</Badge>
           )}
         </div>
+        {!article.is_published && isSuperAdmin && (
+          <Button
+            size="sm"
+            className="mt-2"
+            onClick={async () => {
+              await updateArticle(article.id, { is_published: true });
+              toast({ title: 'Článek publikován', description: 'Článek je nyní viditelný pro všechny členy týmu.' });
+            }}
+          >
+            <Send className="h-4 w-4 mr-1.5" />
+            Publikovat
+          </Button>
+        )}
         <div className="flex items-center gap-4 mt-2 flex-wrap">
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <User className="h-3.5 w-3.5" />

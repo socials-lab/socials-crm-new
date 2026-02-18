@@ -202,27 +202,35 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
 
   const addArticle = async (article: Partial<SOPArticle>) => {
     const searchText = stripHtml(article.content || '');
-    const { error } = await supabase.from('sop_articles').insert({
-      category_id: article.category_id,
-      title: article.title || '',
-      content: article.content || '',
-      search_text: searchText,
-      tags: article.tags || [],
-      sort_order: article.sort_order || 0,
-      is_published: article.is_published ?? false,
-      owner_id: article.owner_id || user?.id,
-      attachments: article.attachments || [],
-      created_by: user?.id,
-      updated_by: user?.id,
-    });
 
-    if (error) {
-      console.error('Error creating article:', error);
-      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
-      return;
+    try {
+      const { error } = await supabase.from('sop_articles').insert({
+        category_id: article.category_id,
+        title: article.title || '',
+        content: article.content || '',
+        search_text: searchText,
+        tags: article.tags || [],
+        sort_order: article.sort_order || 0,
+        is_published: article.is_published ?? false,
+        owner_id: article.owner_id || user?.id,
+        attachments: article.attachments || [],
+        created_by: user?.id,
+        updated_by: user?.id,
+      });
+
+      if (error) {
+        console.error('Error creating article:', error);
+        toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+        throw new Error(error.message);
+      }
+
+      // Don't wait for fetchData - do it in background
+      fetchData().catch(console.error);
+      toast({ title: 'Článek vytvořen' });
+    } catch (err) {
+      console.error('Exception creating article:', err);
+      throw err;
     }
-    await fetchData();
-    toast({ title: 'Článek vytvořen' });
   };
 
   const updateArticle = async (id: string, article: Partial<SOPArticle>) => {
@@ -231,14 +239,21 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
       updates.search_text = stripHtml(article.content);
     }
 
-    const { error } = await supabase.from('sop_articles').update(updates).eq('id', id);
-    if (error) {
-      console.error('Error updating article:', error);
-      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
-      return;
+    try {
+      const { error } = await supabase.from('sop_articles').update(updates).eq('id', id);
+      if (error) {
+        console.error('Error updating article:', error);
+        toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+        throw new Error(error.message);
+      }
+
+      // Don't wait for fetchData - do it in background
+      fetchData().catch(console.error);
+      toast({ title: 'Článek uložen' });
+    } catch (err) {
+      console.error('Exception updating article:', err);
+      throw err;
     }
-    await fetchData();
-    toast({ title: 'Článek uložen' });
   };
 
   const deleteArticle = async (id: string) => {

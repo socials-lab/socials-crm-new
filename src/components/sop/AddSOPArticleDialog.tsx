@@ -8,8 +8,10 @@ import { SOPEditor } from './SOPEditor';
 import { SOPAttachmentUpload, type SOPAttachment } from './SOPAttachmentUpload';
 import { useSOPData, type SOPArticle } from '@/hooks/useSOPData';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 
 const ICON_OPTIONS = [
   'BookOpen', 'Briefcase', 'BarChart3', 'Settings', 'Palette',
@@ -29,6 +31,7 @@ interface DraftData {
   categoryId: string;
   ownerId: string;
   attachments: SOPAttachment[];
+  isPublished: boolean;
   savedAt: number;
 }
 
@@ -60,11 +63,13 @@ function clearDraft(key: string) {
 export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCategoryId }: AddSOPArticleDialogProps) {
   const { categories, addArticle, updateArticle, addCategory } = useSOPData();
   const { colleagues } = useCRMData();
+  const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [ownerId, setOwnerId] = useState('');
   const [attachments, setAttachments] = useState<SOPAttachment[]>([]);
+  const [isPublished, setIsPublished] = useState(true); // Default to published
   const [saving, setSaving] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
 
@@ -94,6 +99,7 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
       setCategoryId(draft.categoryId);
       setOwnerId(draft.ownerId);
       setAttachments(draft.attachments || []);
+      setIsPublished(draft.isPublished ?? true); // Default to published
       setHasDraft(true);
     } else if (editArticle) {
       setTitle(editArticle.title);
@@ -101,6 +107,7 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
       setCategoryId(editArticle.category_id);
       setOwnerId(editArticle.owner_id || '');
       setAttachments((editArticle.attachments as SOPAttachment[]) || []);
+      setIsPublished(editArticle.is_published);
       setHasDraft(false);
     } else {
       setTitle('');
@@ -108,6 +115,7 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
       setCategoryId(defaultCategoryId || '');
       setOwnerId('');
       setAttachments([]);
+      setIsPublished(true); // Default new articles to published
       setHasDraft(false);
     }
     setShowNewCategory(false);
@@ -126,9 +134,10 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
       categoryId,
       ownerId,
       attachments,
+      isPublished,
       savedAt: Date.now(),
     });
-  }, [draftKey, title, content, categoryId, ownerId, attachments]);
+  }, [draftKey, title, content, categoryId, ownerId, attachments, isPublished]);
 
   useEffect(() => {
     if (!open || !initializedRef.current) return;
@@ -140,11 +149,11 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
   useEffect(() => {
     if (!open || !initializedRef.current) return;
     const handleBeforeUnload = () => {
-      saveDraft(draftKey, { title, content, categoryId, ownerId, attachments, savedAt: Date.now() });
+      saveDraft(draftKey, { title, content, categoryId, ownerId, attachments, isPublished, savedAt: Date.now() });
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [open, draftKey, title, content, categoryId, ownerId, attachments]);
+  }, [open, draftKey, title, content, categoryId, ownerId, attachments, isPublished]);
 
   const handleDiscardDraft = () => {
     clearDraft(draftKey);
@@ -155,12 +164,14 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
       setCategoryId(editArticle.category_id);
       setOwnerId(editArticle.owner_id || '');
       setAttachments((editArticle.attachments as SOPAttachment[]) || []);
+      setIsPublished(editArticle.is_published);
     } else {
       setTitle('');
       setContent('');
       setCategoryId(defaultCategoryId || '');
       setOwnerId('');
       setAttachments([]);
+      setIsPublished(true);
     }
   };
 
@@ -202,17 +213,39 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
   const handleSave = async () => {
     if (!title.trim() || !categoryId) return;
     setSaving(true);
-    const ownerValue = ownerId || null;
-    if (editArticle) {
-      await updateArticle(editArticle.id, { title, content, category_id: categoryId, tags: [], owner_id: ownerValue, attachments: attachments as any });
-    } else {
-      await addArticle({ title, content, category_id: categoryId, tags: [], owner_id: ownerValue, attachments: attachments as any });
+
+    // Timeout to prevent infinite loading - max 15 seconds
+    const timeoutId = setTimeout(() => {
+      setSaving(false);
+      toast({
+        title: 'Ukládání trvá příliš dlouho',
+        description: 'Zkuste to prosím znovu.',
+        variant: 'destructive',
+      });
+    }, 15000);
+
+    try {
+      const ownerValue = ownerId || null;
+      if (editArticle) {
+        await updateArticle(editArticle.id, { title, content, category_id: categoryId, tags: [], owner_id: ownerValue, attachments: attachments as any, is_published: isPublished });
+      } else {
+        await addArticle({ title, content, category_id: categoryId, tags: [], owner_id: ownerValue, attachments: attachments as any, is_published: isPublished });
+      }
+      // Clear all drafts
+      clearDraft(draftKey);
+      setHasDraft(false);
+      onOpenChange(false);
+    } catch (err) {
+      console.error('Error saving SOP:', err);
+      toast({
+        title: 'Chyba při ukládání',
+        description: 'Nepodařilo se uložit článek. Zkuste to znovu.',
+        variant: 'destructive',
+      });
+    } finally {
+      clearTimeout(timeoutId);
+      setSaving(false);
     }
-    // Clear all drafts
-    clearDraft(draftKey);
-    setHasDraft(false);
-    setSaving(false);
-    onOpenChange(false);
   };
 
   return (
@@ -327,6 +360,20 @@ export function AddSOPArticleDialog({ open, onOpenChange, editArticle, defaultCa
             attachments={attachments}
             onChange={setAttachments}
           />
+
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+            <div className="space-y-0.5">
+              <Label htmlFor="publish-toggle" className="cursor-pointer">Publikovat</Label>
+              <p className="text-xs text-muted-foreground">
+                {isPublished ? 'Článek bude viditelný pro všechny členy týmu' : 'Článek zůstane jako draft (viditelný jen pro adminy)'}
+              </p>
+            </div>
+            <Switch
+              id="publish-toggle"
+              checked={isPublished}
+              onCheckedChange={setIsPublished}
+            />
+          </div>
         </div>
 
         <DialogFooter>
