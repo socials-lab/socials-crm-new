@@ -1,0 +1,182 @@
+name: PR Preview Environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [feature/supabase-implementation]
+
+concurrency:
+  group: preview-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+  # Each PR gets a unique port: 10000 + PR number
+  CONTAINER_PORT: ${{ format('{0}', github.event.pull_request.number + 10000) }}
+  PREVIEW_DOMAIN: pr-${{ github.event.pull_request.number }}.preview.citrus.bitterlemon.co
+  VPS_HOST: root@195.201.147.39
+  SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get Supabase preview branch credentials
+        id: supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          # Get the preview branch for this PR's git branch
+          BRANCH_NAME="${{ github.head_ref }}"
+          
+          # List branches and find the one matching our PR branch
+          BRANCHES=$(curl -s -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/branches")
+          
+          # Find branch matching our git branch
+          BRANCH_INFO=$(echo "$BRANCHES" | jq -r ".[] | select(.git_branch == \"${BRANCH_NAME}\")")
+          
+          if [ -z "$BRANCH_INFO" ]; then
+            echo "No Supabase branch found for ${BRANCH_NAME}, using production credentials"
+            echo "supabase_url=${{ secrets.VITE_SUPABASE_URL }}" >> "$GITHUB_OUTPUT"
+            echo "supabase_anon_key=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> "$GITHUB_OUTPUT"
+          else
+            # The branch has its own project ref — construct the URL
+            BRANCH_PROJECT_REF=$(echo "$BRANCH_INFO" | jq -r '.project_ref // .id')
+            DB_HOST=$(echo "$BRANCH_INFO" | jq -r '.db_host // empty')
+            
+            # Get the API settings for the branch
+            BRANCH_API=$(curl -s -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+              "https://api.supabase.com/v1/projects/${BRANCH_PROJECT_REF}/api-keys")
+            
+            PREVIEW_URL="https://${BRANCH_PROJECT_REF}.supabase.co"
+            ANON_KEY=$(echo "$BRANCH_API" | jq -r '.[] | select(.name == "anon") | .api_key')
+            
+            echo "supabase_url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
+            echo "supabase_anon_key=${ANON_KEY}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg VITE_SUPABASE_URL=${{ steps.supabase.outputs.supabase_url }} \
+            --build-arg VITE_SUPABASE_ANON_KEY=${{ steps.supabase.outputs.supabase_anon_key }} \
+            -t socials-preview:pr-${{ env.PR_NUMBER }} \
+            .
+
+      - name: Save and transfer image to VPS
+        run: |
+          docker save socials-preview:pr-${{ env.PR_NUMBER }} -o /tmp/preview-image.tar
+          
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 195.201.147.39 >> ~/.ssh/known_hosts 2>/dev/null
+          
+          scp /tmp/preview-image.tar ${{ env.VPS_HOST }}:/tmp/socials-preview-pr-${{ env.PR_NUMBER }}.tar
+          scp scripts/deploy-preview.sh ${{ env.VPS_HOST }}:/tmp/deploy-preview.sh
+
+      - name: Deploy on VPS
+        run: |
+          ssh ${{ env.VPS_HOST }} "chmod +x /tmp/deploy-preview.sh && /tmp/deploy-preview.sh ${{ env.PR_NUMBER }} ${{ env.CONTAINER_PORT }} /tmp/socials-preview-pr-${{ env.PR_NUMBER }}.tar"
+
+      - name: Update Citrus bug previewUrl
+        continue-on-error: true
+        env:
+          CITRUS_API_URL: ${{ secrets.CITRUS_API_URL }}
+          CITRUS_API_KEY: ${{ secrets.CITRUS_API_KEY }}
+        run: |
+          # Extract bug ID from PR title or branch name (format: BUG-123 or #123)
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BRANCH="${{ github.head_ref }}"
+          BUG_ID=$(echo "${PR_TITLE} ${PR_BRANCH}" | grep -oP '(?:BUG-|#)(\d+)' | head -1 | grep -oP '\d+')
+          
+          if [ -n "$BUG_ID" ] && [ -n "$CITRUS_API_URL" ]; then
+            curl -s -X PATCH "${CITRUS_API_URL}/api/bugs/${BUG_ID}" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${CITRUS_API_KEY}" \
+              -d "{\"previewUrl\": \"https://${{ env.PREVIEW_DOMAIN }}\"}"
+            echo "Updated Citrus bug #${BUG_ID} with preview URL"
+          else
+            echo "No bug ID found in PR title/branch or CITRUS_API_URL not set, skipping"
+          fi
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `🚀 **Preview deployed!**\n\n` +
+              `**URL:** https://${{ env.PREVIEW_DOMAIN }}\n` +
+              `**Supabase:** Preview branch credentials applied\n\n` +
+              `_Updates on every push. Cleaned up when PR closes._`;
+            
+            // Update existing comment or create new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ env.PR_NUMBER }},
+            });
+            const existing = comments.find(c => c.body.includes('Preview deployed!'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: ${{ env.PR_NUMBER }},
+                body,
+              });
+            }
+
+  cleanup:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cleanup preview on VPS
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 195.201.147.39 >> ~/.ssh/known_hosts 2>/dev/null
+          
+          scp scripts/cleanup-preview.sh ${{ env.VPS_HOST }}:/tmp/cleanup-preview.sh
+          ssh ${{ env.VPS_HOST }} "chmod +x /tmp/cleanup-preview.sh && /tmp/cleanup-preview.sh ${{ env.PR_NUMBER }}"
+
+      - name: Clear Citrus bug previewUrl
+        continue-on-error: true
+        env:
+          CITRUS_API_URL: ${{ secrets.CITRUS_API_URL }}
+          CITRUS_API_KEY: ${{ secrets.CITRUS_API_KEY }}
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BRANCH="${{ github.head_ref }}"
+          BUG_ID=$(echo "${PR_TITLE} ${PR_BRANCH}" | grep -oP '(?:BUG-|#)(\d+)' | head -1 | grep -oP '\d+')
+          
+          if [ -n "$BUG_ID" ] && [ -n "$CITRUS_API_URL" ]; then
+            curl -s -X PATCH "${CITRUS_API_URL}/api/bugs/${BUG_ID}" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${CITRUS_API_KEY}" \
+              -d '{"previewUrl": null}'
+            echo "Cleared preview URL on Citrus bug #${BUG_ID}"
+          fi
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ env.PR_NUMBER }},
+              body: '🧹 Preview environment cleaned up.',
+            });
