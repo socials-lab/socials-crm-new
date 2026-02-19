@@ -1,15 +1,13 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+COPY package.json package-lock.json* pnpm-lock.yaml* ./
+RUN corepack enable && pnpm install --frozen-lockfile 2>/dev/null || npm ci
 COPY . .
-ARG VITE_SUPABASE_URL
-ARG VITE_SUPABASE_ANON_KEY
-ARG VITE_GOOGLE_CLIENT_ID
-ARG VITE_SENTRY_DSN
 RUN npm run build
 
-FROM caddy:2-alpine
-COPY --from=builder /app/dist /srv
-COPY Caddyfile /etc/caddy/Caddyfile
-EXPOSE 80
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+# SPA routing: serve index.html for all routes
+RUN echo 'server { listen 3000; root /usr/share/nginx/html; location / { try_files $uri $uri/ /index.html; } }' > /etc/nginx/conf.d/default.conf
+EXPOSE 3000
+CMD ["nginx", "-g", "daemon off;"]
