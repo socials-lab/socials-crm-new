@@ -78,7 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const branch = new URL(supabaseUrl).hostname.split('.')[0];
     const redirectTo = encodeURIComponent(window.location.origin + '/auth/callback');
-    window.location.href = `https://crm.socials.cz/auth-proxy/login?branch=${branch}&redirect_to=${redirectTo}`;
+    const anonKey = encodeURIComponent(import.meta.env.VITE_SUPABASE_ANON_KEY);
+    window.location.href = `https://crm.socials.cz/auth-proxy/login?branch=${branch}&redirect_to=${redirectTo}&anon_key=${anonKey}`;
     return { error: null };
   };
 
