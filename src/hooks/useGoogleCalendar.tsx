@@ -91,8 +91,8 @@ export function useGoogleCalendar() {
     setError(null);
     
     try {
-      const redirectUri = `${window.location.origin}/auth/callback`;
-      
+      const redirectUri = 'https://crm.socials.cz/auth-proxy/calendar-callback';
+
       const { data, error } = await supabase.functions.invoke('calendar-oauth-callback', {
         body: { code, redirect_uri: redirectUri },
       });
@@ -127,13 +127,14 @@ export function useGoogleCalendar() {
       return;
     }
     
-    const redirectUri = `${window.location.origin}/auth/callback`;
+    const redirectUri = 'https://crm.socials.cz/auth-proxy/calendar-callback';
+    const state = btoa(window.location.origin);
     const scope = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send';
     const responseType = 'code';
     const accessType = 'offline';
     const prompt = 'consent';
 
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=${responseType}&scope=${encodeURIComponent(scope)}&access_type=${accessType}&prompt=${prompt}`;
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=${responseType}&scope=${encodeURIComponent(scope)}&access_type=${accessType}&prompt=${prompt}&state=${encodeURIComponent(state)}`;
     
     window.location.href = authUrl;
   };
