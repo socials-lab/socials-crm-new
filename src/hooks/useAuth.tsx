@@ -75,18 +75,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const authProxyOrigin = import.meta.env.VITE_AUTH_PROXY_ORIGIN;
-    const redirectTo = authProxyOrigin
-      ? `${authProxyOrigin}/callback?origin=${window.location.host}`
-      : `${window.location.origin}/auth/callback`;
-
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo,
+        redirectTo: `${window.location.origin}/auth/callback`,
+        skipBrowserRedirect: true,
       },
     });
-    return { error: error as Error | null };
+    if (error || !data?.url) return { error: error as Error | null };
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const branch = new URL(supabaseUrl).hostname.split('.')[0];
+    window.location.href = `https://crm.socials.cz/auth-proxy/init?branch=${branch}&redirect=${encodeURIComponent(data.url)}`;
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {

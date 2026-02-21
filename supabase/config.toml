@@ -8,5 +8,11 @@ additional_redirect_urls = ["http://localhost:8080/auth/callback"]
 subject = "You have been invited to Socials CRM"
 content_path = "./supabase/templates/invite.html"
 
+[auth.external.google]
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+redirect_uri = "https://crm.socials.cz/auth-proxy/callback"
+
 [functions.invite-user]
 verify_jwt = false

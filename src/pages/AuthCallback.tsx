@@ -68,7 +68,7 @@ export default function AuthCallback() {
           sessionStorage.removeItem('oauth_type');
           
           // Exchange code for tokens via Edge Function
-          const redirectUri = `${window.location.origin}/auth/callback`;
+          const redirectUri = 'https://crm.socials.cz/auth-proxy/calendar-callback';
           const { data, error } = await supabase.functions.invoke('calendar-oauth-callback', {
             body: { code, redirect_uri: redirectUri },
           });
