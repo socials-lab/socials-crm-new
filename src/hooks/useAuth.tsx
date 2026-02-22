@@ -1,6 +1,7 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, useRef, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import * as Sentry from '@sentry/react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const isExplicitSignOut = useRef(false);
 
   useEffect(() => {
     // Get initial session
@@ -60,6 +62,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .update({ last_login: new Date().toISOString() })
             .eq('user_id', session.user.id);
         }
+
+        // Handle unexpected session loss (e.g. refresh token revoked by race condition)
+        if (event === 'SIGNED_OUT' && !isExplicitSignOut.current) {
+          // Don't redirect if already on auth pages
+          if (!window.location.pathname.startsWith('/auth')) {
+            toast.error('Session expired. Please sign in again.');
+            window.location.href = '/auth';
+          }
+        }
+        isExplicitSignOut.current = false;
       }
     );
 
@@ -100,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    isExplicitSignOut.current = true;
     await supabase.auth.signOut();
     Sentry.setUser(null);
   };
