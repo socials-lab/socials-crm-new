@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Lead } from '@/types/crm';
 
 interface SendOnboardingFormDialogProps {
@@ -30,6 +31,7 @@ export function SendOnboardingFormDialog({
 }: SendOnboardingFormDialogProps) {
   const [isSending, setIsSending] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const { fillTemplate } = useEmailTemplates();
   
   // Generate unique form URL for this lead
   const formUrl = `https://crm.socials.cz/onboarding/${lead.id}`;
@@ -42,30 +44,18 @@ export function SendOnboardingFormDialog({
       .replace(/\/$/, '');
   };
 
-  const getDefaultSubject = () => {
+  const getDefaults = () => {
     const domain = lead.website ? cleanWebsite(lead.website) : lead.company_name;
-    return `Onboarding formulář - ${domain} / Socials`;
+    return fillTemplate('send_onboarding_form', {
+      contact_name: lead.contact_name,
+      company: lead.company_name,
+      domain,
+      url: formUrl,
+    });
   };
 
-  const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
-  const [emailContent, setEmailContent] = useState(() => generateDefaultEmail());
-
-  function generateDefaultEmail() {
-    return `Dobrý den ${lead.contact_name},
-
-děkujeme za Váš zájem o spolupráci s agenturou Socials.
-
-Pro zahájení spolupráce prosím vyplňte náš onboarding formulář, kde doplníte potřebné údaje pro nastavení služeb a fakturaci.
-
-Formulář je předvyplněný údaji, které již o Vás máme. Prosím zkontrolujte je a případně upravte nebo doplňte.
-
-👉 Odkaz na formulář: ${formUrl}
-
-Po vyplnění formuláře Vás budeme kontaktovat s dalšími kroky.
-
-Děkujeme,
-Tým Socials`;
-  }
+  const [emailSubject, setEmailSubject] = useState(() => getDefaults().subject);
+  const [emailContent, setEmailContent] = useState(() => getDefaults().body);
 
   const handleCopyLink = async () => {
     try {
@@ -103,12 +93,14 @@ Tým Socials`;
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
-      setEmailSubject(getDefaultSubject());
-      setEmailContent(generateDefaultEmail());
+      const defaults = getDefaults();
+      setEmailSubject(defaults.subject);
+      setEmailContent(defaults.body);
       setIsCopied(false);
     }
     onOpenChange(newOpen);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

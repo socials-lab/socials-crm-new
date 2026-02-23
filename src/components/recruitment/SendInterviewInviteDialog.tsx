@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Send, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Applicant } from '@/types/applicant';
 
 interface SendInterviewInviteDialogProps {
@@ -23,22 +24,18 @@ export function SendInterviewInviteDialog({
   onSend 
 }: SendInterviewInviteDialogProps) {
   const { user } = useAuth();
+  const { fillTemplate } = useEmailTemplates();
   const senderName = [user?.user_metadata?.first_name, user?.user_metadata?.last_name].filter(Boolean).join(' ') || 'Socials';
   const senderEmail = user?.email || '';
 
-  const defaultMessage = `Dobrý den ${applicant.full_name.split(' ')[0]},
-
-děkujeme za Váš zájem o pozici ${applicant.position} v agentuře Socials.
-
-Rádi bychom se s Vámi spojili na krátký telefonát nebo online schůzku, abychom Vás lépe poznali a probrali detaily případné spolupráce.
-
-Dejte prosím vědět, kdy se Vám hodí 15-30 minutový call.
-
-Děkujeme a těšíme se na Vás,
-${senderName}`;
+  const { subject: defaultSubject, body: defaultMessage } = fillTemplate('interview_invite', {
+    name: applicant.full_name.split(' ')[0],
+    position: applicant.position,
+    sender: senderName,
+  });
 
   const [emailTo, setEmailTo] = useState(applicant.email);
-  const [subject, setSubject] = useState(`Pozvánka na pohovor – ${applicant.position} | Socials`);
+  const [subject, setSubject] = useState(defaultSubject);
   const [message, setMessage] = useState(defaultMessage);
   const [isSending, setIsSending] = useState(false);
 

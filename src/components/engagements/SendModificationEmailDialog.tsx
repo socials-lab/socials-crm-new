@@ -24,6 +24,7 @@ import {
 import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import { recordEmailSent, type StoredModificationRequest } from '@/data/modificationRequestsMockData';
 import type {
   AddServiceProposedChanges,
@@ -58,6 +59,7 @@ export function SendModificationEmailDialog({
 }: SendModificationEmailDialogProps) {
   const { colleagues, clients, clientContacts } = useCRMData();
   const { user } = useAuth();
+  const { fillTemplate } = useEmailTemplates();
   
   const [recipientEmail, setRecipientEmail] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
@@ -131,12 +133,14 @@ export function SendModificationEmailDialog({
   // Initialize form when dialog opens
   useEffect(() => {
     if (open) {
-      // Set default email
       setRecipientEmail(findDefaultEmail());
       
-      // Set default subject
       const subjectPrefix = REQUEST_TYPE_SUBJECTS[request.request_type] || 'Návrh změny';
-      setEmailSubject(`${subjectPrefix} – ${clientName} / Socials`);
+      const { subject } = fillTemplate('send_modification', {
+        type: subjectPrefix,
+        client: clientName,
+      });
+      setEmailSubject(subject);
     }
   }, [open, request]);
 
@@ -155,26 +159,22 @@ export function SendModificationEmailDialog({
       ? format(new Date(request.upgrade_offer_valid_until), 'd. MMMM yyyy', { locale: cs })
       : '14 dní';
 
-    setEmailContent(`${greeting}
+    const { body } = fillTemplate('send_modification', {
+      greeting,
+      client: clientName,
+      type: REQUEST_TYPE_SUBJECTS[request.request_type] || 'Návrh změny',
+      change_type: changeTypeLabel,
+      change_details: changeDetails,
+      effective_from: effectiveFrom,
+      upgrade_link: upgradeLink,
+      valid_until: validUntil,
+      sender_name: currentUserColleague.full_name,
+      sender_position: currentUserColleague.position,
+      sender_email: currentUserColleague.email,
+      sender_phone: currentUserColleague.phone || '',
+    });
 
-rádi bychom Vás informovali o navrhované změně ve spolupráci:
-
-${changeTypeLabel}
-${changeDetails}
-
-Platnost od: ${effectiveFrom}
-
-Pro potvrzení této změny prosím klikněte na následující odkaz:
-${upgradeLink}
-
-Odkaz je platný do: ${validUntil}
-
-V případě dotazů nás neváhejte kontaktovat.
-
-S pozdravem,
-${currentUserColleague.full_name}
-${currentUserColleague.position}
-${currentUserColleague.email}${currentUserColleague.phone ? `\n${currentUserColleague.phone}` : ''}`);
+    setEmailContent(body);
   }, [currentUserColleague, open, request, upgradeLink]);
 
   const handleSend = async () => {

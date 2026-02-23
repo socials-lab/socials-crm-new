@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Lead, Colleague } from '@/types/crm';
 
 interface SendOfferDialogProps {
@@ -37,6 +38,7 @@ export function SendOfferDialog({
   onSent,
 }: SendOfferDialogProps) {
   const { colleagues } = useCRMData();
+  const { fillTemplate } = useEmailTemplates();
   const [selectedOwnerId, setSelectedOwnerId] = useState(lead.owner_id);
   const cleanWebsite = (website: string | null) => {
     if (!website) return '';
@@ -48,7 +50,7 @@ export function SendOfferDialog({
 
   const getDefaultSubject = () => {
     const domain = lead.website ? cleanWebsite(lead.website) : lead.company_name;
-    return `Nabídka spolupráce - ${domain} / Socials`;
+    return fillTemplate('send_offer', { domain, company: lead.company_name, contact_name: lead.contact_name }).subject;
   };
 
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
@@ -79,25 +81,22 @@ export function SendOfferDialog({
       ? `Celková cena: ${totalPrice.toLocaleString()} ${lead.currency}${lead.offer_type === 'retainer' ? '/měs' : ''}`
       : 'Cena bude stanovena na základě detailní nabídky.';
 
-    setEmailContent(`Dobrý den ${lead.contact_name},
+    const domain = lead.website ? cleanWebsite(lead.website) : lead.company_name;
 
-děkuji za náš nedávný rozhovor ohledně spolupráce se společností ${lead.company_name}.
+    const { body } = fillTemplate('send_offer', {
+      contact_name: lead.contact_name,
+      company: lead.company_name,
+      domain,
+      services_list: servicesText,
+      price_summary: priceText,
+      offer_url_line: lead.offer_url ? `Detailní nabídku naleznete zde: ${lead.offer_url}` : '',
+      sender_name: selectedOwner.full_name,
+      sender_position: selectedOwner.position,
+      sender_email: selectedOwner.email,
+      sender_phone: selectedOwner.phone || '',
+    });
 
-Na základě našeho jednání jsem pro Vás připravil/a nabídku:
-
-${servicesText}
-
-${priceText}
-
-${lead.offer_url ? `Detailní nabídku naleznete zde: ${lead.offer_url}` : ''}
-
-Budu rád/a, když se mi ozvete s případnými dotazy.
-
-S pozdravem,
-${selectedOwner.full_name}
-${selectedOwner.position}
-${selectedOwner.email}
-${selectedOwner.phone || ''}`);
+    setEmailContent(body);
   }, [selectedOwner, lead]);
 
   const handleSend = async () => {
