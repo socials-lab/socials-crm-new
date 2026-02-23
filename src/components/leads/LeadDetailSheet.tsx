@@ -899,6 +899,76 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                     </Button>
                   )}
                 </div>
+
+                {/* Onboarding Form Data - shown when completed */}
+                {lead.onboarding_form_completed_at && (
+                  <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+                    {/* Billing info */}
+                    {(lead.billing_street || lead.billing_city || lead.billing_email) && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                          <MapPin className="h-3 w-3" />
+                          Fakturační údaje z formuláře
+                        </p>
+                        <div className="text-sm space-y-1 pl-4">
+                          {lead.billing_street && <p>{lead.billing_street}</p>}
+                          {(lead.billing_zip || lead.billing_city) && (
+                            <p>{[lead.billing_zip, lead.billing_city].filter(Boolean).join(' ')}</p>
+                          )}
+                          {lead.billing_country && (
+                            <p className="text-xs text-muted-foreground">{lead.billing_country}</p>
+                          )}
+                          {lead.billing_email && (
+                            <div className="flex items-center gap-1.5 pt-1">
+                              <Mail className="h-3 w-3 text-muted-foreground" />
+                              <a 
+                                href={`mailto:${lead.billing_email}`}
+                                className="text-xs text-primary hover:underline"
+                              >
+                                {lead.billing_email}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contact person from form */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                        <User className="h-3 w-3" />
+                        Kontaktní osoba
+                      </p>
+                      <div className="text-sm space-y-0.5 pl-4">
+                        <p className="font-medium">{lead.contact_name}</p>
+                        {lead.contact_position && (
+                          <p className="text-xs text-muted-foreground">{lead.contact_position}</p>
+                        )}
+                        {lead.contact_email && (
+                          <a href={`mailto:${lead.contact_email}`} className="text-xs text-primary hover:underline block">
+                            {lead.contact_email}
+                          </a>
+                        )}
+                        {lead.contact_phone && (
+                          <a href={`tel:${lead.contact_phone}`} className="text-xs text-muted-foreground hover:underline block">
+                            {lead.contact_phone}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Client message */}
+                    {lead.client_message && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                          <MessageSquare className="h-3 w-3" />
+                          Zpráva od klienta
+                        </p>
+                        <p className="text-xs italic pl-4 text-muted-foreground">"{lead.client_message}"</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Contract Creation */}
