@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Mail, Copy, Check, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 
@@ -32,26 +33,19 @@ export function SendApplicantOnboardingDialog({
 }: SendApplicantOnboardingDialogProps) {
   const { sendOnboarding } = useApplicantsData();
   const { user } = useAuth();
+  const { fillTemplate } = useEmailTemplates();
   const senderName = [user?.user_metadata?.first_name, user?.user_metadata?.last_name].filter(Boolean).join(' ') || 'Socials';
   const senderEmail = user?.email || '';
   const [copied, setCopied] = useState(false);
   
   const onboardingUrl = `${window.location.origin}/applicant-onboarding/${applicant.id}`;
   
-  const emailSubject = `Onboarding - ${applicant.position} | Socials.cz`;
-  const emailBody = `Dobrý den ${applicant.full_name.split(' ')[0]},
-
-gratulujeme k přijetí na pozici ${applicant.position}!
-
-Pro dokončení nástupu prosím vyplňte onboarding formulář:
-${onboardingUrl}
-
-Formulář obsahuje předvyplněné údaje z Vaší přihlášky. Prosím zkontrolujte je a doplňte zbývající informace potřebné pro pracovní smlouvu.
-
-Těšíme se na spolupráci!
-
-S pozdravem,
-${senderName}`;
+  const { subject: emailSubject, body: emailBody } = fillTemplate('applicant_onboarding', {
+    name: applicant.full_name.split(' ')[0],
+    position: applicant.position,
+    url: onboardingUrl,
+    sender: senderName,
+  });
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(onboardingUrl);

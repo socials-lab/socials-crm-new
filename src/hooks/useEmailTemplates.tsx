@@ -72,6 +72,14 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
     description: 'Odmítací email pro uchazeče',
     available_variables: ['name', 'position', 'sender'],
   },
+  applicant_onboarding: {
+    template_key: 'applicant_onboarding',
+    name: 'Onboarding kandidáta',
+    subject_template: 'Onboarding - {position} | Socials.cz',
+    body_template: 'Dobrý den {name},\n\ngratulujeme k přijetí na pozici {position}!\n\nPro dokončení nástupu prosím vyplňte onboarding formulář:\n{url}\n\nFormulář obsahuje předvyplněné údaje z Vaší přihlášky. Prosím zkontrolujte je a doplňte zbývající informace potřebné pro pracovní smlouvu.\n\nTěšíme se na spolupráci!\n\nS pozdravem,\n{sender}',
+    description: 'Onboarding formulář pro přijatého kandidáta',
+    available_variables: ['name', 'position', 'url', 'sender'],
+  },
 };
 
 export function useEmailTemplates() {
