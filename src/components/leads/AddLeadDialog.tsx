@@ -427,9 +427,17 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Obor</FormLabel>
-                      <FormControl>
-                        <Input placeholder="E-commerce" {...field} value={field.value || ''} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={isContractCreated}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Vyberte obor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Ecommerce">Ecommerce</SelectItem>
+                          <SelectItem value="LeadGen">LeadGen</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
