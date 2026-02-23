@@ -784,10 +784,20 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             <h2 className="text-lg font-semibold mb-2">
               🚀 Pusťte se do toho s námi
             </h2>
-            <p className="mb-3 text-muted-foreground text-sm max-w-sm mx-auto">
+            <p className="mb-5 text-muted-foreground text-sm max-w-sm mx-auto">
               Společně posuneme váš byznys na další úroveň.
             </p>
-            <p className="text-xs text-muted-foreground">
+            <Button 
+              asChild 
+              size="lg" 
+              className="font-medium px-8"
+            >
+              <Link to={onboardingUrl}>
+                Vyplnit onboarding formulář
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Link>
+            </Button>
+            <p className="mt-4 text-xs text-muted-foreground">
               ✅ Smlouva do 24 hodin
             </p>
           </div>
