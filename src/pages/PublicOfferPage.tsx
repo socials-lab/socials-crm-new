@@ -751,8 +751,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 </div>
               </>
             )}
-            <p className="text-xs text-muted-foreground text-center">Ceny jsou uvedeny bez DPH</p>
-            <p className="text-xs text-muted-foreground text-center mt-1">Měsíční položky fakturujeme v prvním měsíci poměrně ode dne zahájení služby.</p>
+            <p className="text-xs text-muted-foreground text-right">Ceny jsou uvedeny bez DPH</p>
+            <p className="text-xs text-muted-foreground text-right mt-1">Měsíční položky fakturujeme v prvním měsíci poměrně ode dne zahájení služby.</p>
           </div>
         </section>
 
