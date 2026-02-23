@@ -40,7 +40,7 @@ const leadSchema = z.object({
   company_name: z.string().min(1, 'Název firmy je povinný'),
   ico: z.string().min(1, 'IČO je povinné'),
   dic: z.string().optional().nullable(),
-  website: z.string().url('Zadejte platnou URL').or(z.literal('')).optional().nullable(),
+  website: z.string().refine((val) => val === '' || /^(https?:\/\/)?[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(val), { message: 'Zadejte platnou URL' }).or(z.literal('')).optional().nullable(),
   industry: z.string().optional().nullable(),
   billing_street: z.string().optional().nullable(),
   billing_city: z.string().optional().nullable(),
@@ -61,7 +61,7 @@ const leadSchema = z.object({
   estimated_price: z.coerce.number().min(0, 'Cena musí být kladná'),
   currency: z.string().default('CZK'),
   probability_percent: z.coerce.number().min(0).max(100),
-  offer_url: z.string().url('Zadejte platnou URL').or(z.literal('')).optional().nullable(),
+  offer_url: z.string().refine((val) => val === '' || /^(https?:\/\/)?[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(val), { message: 'Zadejte platnou URL' }).or(z.literal('')).optional().nullable(),
   // Court registration info from ARES (hidden fields)
   court_name: z.string().optional().nullable(),
   court_file_number: z.string().optional().nullable(),
