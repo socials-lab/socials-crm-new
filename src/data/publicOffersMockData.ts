@@ -121,6 +121,7 @@ const TEST_OFFER: PublicOffer = {
   viewed_at: null,
   view_count: 0,
   estimated_start_date: 'Do 5 pracovních dnů od podpisu smlouvy',
+  monthly_discount_percent: 10,
   loom_url: 'https://www.loom.com/embed/example123',
   // Contact person info
   owner_name: 'Jan Novák',

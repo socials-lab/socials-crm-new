@@ -56,6 +56,7 @@ export interface PublicOffer {
   updated_at: string;
   estimated_start_date?: string;  // When collaboration can start
   loom_url?: string;              // Loom video URL for embed
+  monthly_discount_percent?: number; // % discount on total monthly price (0-100)
   // Contact person info (lead owner)
   owner_name?: string;       // Name of assigned colleague
   owner_email?: string;      // Email of assigned colleague

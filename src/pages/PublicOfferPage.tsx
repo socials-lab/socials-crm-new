@@ -729,17 +729,44 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* Pricing Summary */}
         <section className="mb-10">
           <div className="p-5 rounded-xl border bg-card space-y-3">
-            {totalMonthly > 0 && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Měsíční cena</span>
-                <div className="text-right">
-                  <span className="text-2xl font-bold text-foreground">
-                    {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
-                  </span>
-                  <span className="text-sm text-muted-foreground ml-1">/měsíc</span>
+            {totalMonthly > 0 && (() => {
+              const discountPercent = offer.monthly_discount_percent || 0;
+              const discountedMonthly = discountPercent > 0 
+                ? Math.round(totalMonthly * (1 - discountPercent / 100)) 
+                : totalMonthly;
+              const discountAmount = totalMonthly - discountedMonthly;
+              
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Měsíční cena</span>
+                    <div className="text-right">
+                      {discountPercent > 0 ? (
+                        <>
+                          <span className="text-base text-muted-foreground line-through mr-2">
+                            {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
+                          </span>
+                          <span className="text-2xl font-bold text-foreground">
+                            {discountedMonthly.toLocaleString('cs-CZ')} {offer.currency}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-2xl font-bold text-foreground">
+                          {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
+                        </span>
+                      )}
+                      <span className="text-sm text-muted-foreground ml-1">/měsíc</span>
+                    </div>
+                  </div>
+                  {discountPercent > 0 && (
+                    <div className="flex items-center justify-between text-sm text-green-600">
+                      <span>Sleva {discountPercent}%</span>
+                      <span className="font-medium">-{discountAmount.toLocaleString('cs-CZ')} {offer.currency}/měs</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
             {totalOneOff > 0 && (
               <>
                 {totalMonthly > 0 && <div className="border-t" />}
