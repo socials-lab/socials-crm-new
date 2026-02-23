@@ -1,46 +1,28 @@
 
+## Procentuální sleva na měsíční platbu
 
-## Oprava: Nezavisle scrollovatelne sloupce na SOP strance
+Přidání možnosti zadat % slevu na celkový měsíční souhrn (ne na jednotlivé služby, ale na celkovou měsíční částku). Sleva se nastaví v CreateOfferDialog a zobrazí se v cenové rekapitulaci na veřejné nabídce.
 
-### Problem
-Cela stranka (header, search, sidebar, clanky) je v jednom scrollovatelnem kontejneru (`<main>`). `sticky` na sidebaru nefunguje spolehlive, protoze vse scrolluje dohromady.
+### Co se změní
 
-### Reseni
-Zmenit layout SOP stranky tak, aby:
-1. **Header + Search bar** byly fixni navrchu (nescroluji)
-2. **Levy sloupec** (kategorie) mel vlastni nezavisly scroll
-3. **Pravy sloupec** (clanky) mel vlastni nezavisly scroll
+**1. Typ `PublicOffer`** (`src/types/publicOffer.ts`)
+- Nové volitelné pole `monthly_discount_percent?: number` (0-100)
 
-Toho dosahneme tak, ze SOP stranka zabere celou vysku `<main>` kontejneru a dva sloupce budou mit kazdy svuj `overflow-y-auto`.
+**2. CreateOfferDialog** (`src/components/leads/CreateOfferDialog.tsx`)
+- Nový state `monthlyDiscountPercent` (výchozí 0)
+- V sekci "Price Summary" přidat input pro zadání % slevy na měsíční částku
+- Zobrazit přepočítanou cenu po slevě (původní cena, sleva v CZK, finální cena)
+- Hodnota se uloží do vytvořeného `PublicOffer` objektu
 
-### Technicke zmeny
+**3. Veřejná nabídka** (`src/pages/PublicOfferPage.tsx`)
+- V sekci "Pricing Summary" (řádek ~730):
+  - Pokud `monthly_discount_percent > 0`, zobrazit původní měsíční cenu přeškrtnutou
+  - Pod ní řádek se slevou (např. "Sleva 10%: -X CZK")
+  - Finální měsíční cena po slevě zvýrazněná
 
-**`src/pages/SOP.tsx`**:
+### Technické detaily
 
-1. Hlavni wrapper zmenit z `space-y-6` na flex-col s `h-full` aby zabral celou vysku
-2. Header a Search budou v `shrink-0` kontejneru (nezmensi se, nescroluji)
-3. Desktop dva-sloupcovy layout bude `flex-1 min-h-0` (zabere zbytek vysky)
-   - Levy sloupec: `overflow-y-auto` s fixni sirkou, vlastni scroll
-   - Pravy sloupec: `flex-1 overflow-y-auto`, vlastni scroll
-4. Odebrat `sticky` z leveho sloupce (neni potreba, protoze bude mit vlastni scroll)
-
-**`src/components/layout/AppLayout.tsx`**:
-- Overit ze `<main>` ma spravne `overflow-hidden` misto `overflow-auto`, aby scroll byl rizen uvnitr SOP stranky (ne na urovni main). Pripadne SOP stranka pouzije `h-full` aby vyplnila main.
-
-### Vysledna struktura (desktop)
-
-```text
-+--------------------------------------------------+
-| Header + Search (fixni, nescroluji)               |
-+--------------------------------------------------+
-| Kategorie (scroll) | Vsechny SOP (scroll)         |
-| - Vsechny          | - Clanek 1                   |
-| - Onboarding       | - Clanek 2                   |
-| - Marketing        | - Clanek 3                   |
-| - ...              | - ...                        |
-|                     | - Clanek N                   |
-+--------------------------------------------------+
-```
-
-Mobilni layout zustane beze zmeny (horizontalni chipy + jeden sloupec).
-
+- Sleva se aplikuje pouze na součet měsíčních služeb, jednorázové položky zůstávají beze změny
+- Výpočet: `discountedMonthly = totalMonthly * (1 - monthlyDiscountPercent / 100)`
+- V CreateOfferDialog se pole zobrazí jako `<Input type="number" min={0} max={100} />` vedle měsíčního souhrnu
+- `total_price` v uložené nabídce bude obsahovat cenu PO slevě
