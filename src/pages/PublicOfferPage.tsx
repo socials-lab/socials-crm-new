@@ -726,36 +726,32 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           })()}
         </section>
 
-        {/* Pricing Summary - Clean */}
+        {/* Pricing Summary */}
         <section className="mb-10">
-          <div className="p-5 rounded-xl border bg-card">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="space-y-1">
-                {totalMonthly > 0 && (
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-foreground">
-                      {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
-                    </span>
-                    <span className="text-sm text-muted-foreground">/měsíc</span>
-                  </div>
-                )}
-                {totalOneOff > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    + jednorázově {totalOneOff.toLocaleString('cs-CZ')} {offer.currency}
-                  </p>
-                )}
+          <div className="p-5 rounded-xl border bg-card space-y-3">
+            {totalMonthly > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Měsíční cena</span>
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-foreground">
+                    {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
+                  </span>
+                  <span className="text-sm text-muted-foreground ml-1">/měsíc</span>
+                </div>
               </div>
-              <Button 
-                asChild 
-                size="lg" 
-                className="font-medium"
-              >
-                <Link to={onboardingUrl}>
-                  Vyplnit onboarding formulář
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Link>
-              </Button>
-            </div>
+            )}
+            {totalOneOff > 0 && (
+              <>
+                {totalMonthly > 0 && <div className="border-t" />}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Jednorázově</span>
+                  <span className="text-lg font-semibold text-foreground">
+                    {totalOneOff.toLocaleString('cs-CZ')} {offer.currency}
+                  </span>
+                </div>
+              </>
+            )}
+            <p className="text-xs text-muted-foreground text-right">Ceny jsou uvedeny bez DPH</p>
           </div>
         </section>
 
@@ -788,20 +784,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             <h2 className="text-lg font-semibold mb-2">
               🚀 Pusťte se do toho s námi
             </h2>
-            <p className="mb-5 text-muted-foreground text-sm max-w-sm mx-auto">
-              Společně posuneme váš byznys na další úroveň. Stačí vyplnit krátký formulář a o zbytek se postaráme.
+            <p className="mb-3 text-muted-foreground text-sm max-w-sm mx-auto">
+              Společně posuneme váš byznys na další úroveň.
             </p>
-            <Button 
-              asChild 
-              size="lg" 
-              className="font-medium px-8"
-            >
-              <Link to={onboardingUrl}>
-                Vyplnit onboarding formulář
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
-            <p className="mt-4 text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               ✅ Smlouva do 24 hodin
             </p>
           </div>
