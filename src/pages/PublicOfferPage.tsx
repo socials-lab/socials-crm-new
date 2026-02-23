@@ -310,13 +310,12 @@ function ServiceStructureExplanation() {
           <Badge className="bg-primary/20 text-primary border-primary/30 shrink-0 mt-0.5">Core</Badge>
           <div>
             <p className="font-medium">Hlavní služby</p>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              Základní pilíře vaší online strategie. Core služby jsou rozděleny do úrovní{' '}
-              <span className="font-medium text-emerald-600">GROWTH</span>,{' '}
-              <span className="font-medium text-primary">PRO</span> a{' '}
-              <span className="font-medium text-amber-600">ELITE</span>{' '}
-              podle rozsahu správy a výše spravovaného rozpočtu.
-            </p>
+             <p className="text-muted-foreground text-xs leading-relaxed">
+               Odvíjí se dle rozpočtu a očekávané náročnosti. Rozděleny do úrovní{' '}
+               <span className="font-medium text-emerald-600">GROWTH</span>,{' '}
+               <span className="font-medium text-primary">PRO</span> a{' '}
+               <span className="font-medium text-amber-600">ELITE</span>.
+             </p>
           </div>
         </div>
         
