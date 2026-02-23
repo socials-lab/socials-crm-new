@@ -1,28 +1,62 @@
 
-## Procentuální sleva na měsíční platbu
+## Správa emailových šablon v Nastavení
 
-Přidání možnosti zadat % slevu na celkový měsíční souhrn (ne na jednotlivé služby, ale na celkovou měsíční částku). Sleva se nastaví v CreateOfferDialog a zobrazí se v cenové rekapitulaci na veřejné nabídce.
+Centralizovaná správa všech emailových šablon používaných v CRM. Šablony se ukládají do Supabase a jednotlivé dialogy je načítají jako výchozí obsah.
 
-### Co se změní
+### Identifikované emailové šablony (7)
 
-**1. Typ `PublicOffer`** (`src/types/publicOffer.ts`)
-- Nové volitelné pole `monthly_discount_percent?: number` (0-100)
+| Šablona | Použití | Proměnné |
+|---------|---------|----------|
+| Nabídka spolupráce | SendOfferDialog | `{company}`, `{domain}` |
+| Onboarding formulář | SendOnboardingFormDialog | `{contact_name}`, `{company}`, `{url}` |
+| Žádost o přístupy | RequestAccessDialog | `{company}` |
+| Schválení vícepráce | SendApprovalDialog | `{work_name}`, `{amount}`, `{url}` |
+| Návrh změny zakázky | SendModificationEmailDialog | `{client}`, `{type}` |
+| Pozvánka na pohovor | SendInterviewInviteDialog | `{name}`, `{position}`, `{sender}` |
+| Odmítnutí kandidáta | SendRejectionEmailDialog | `{name}`, `{position}`, `{sender}` |
 
-**2. CreateOfferDialog** (`src/components/leads/CreateOfferDialog.tsx`)
-- Nový state `monthlyDiscountPercent` (výchozí 0)
-- V sekci "Price Summary" přidat input pro zadání % slevy na měsíční částku
-- Zobrazit přepočítanou cenu po slevě (původní cena, sleva v CZK, finální cena)
-- Hodnota se uloží do vytvořeného `PublicOffer` objektu
+### Co se vytvoří
 
-**3. Veřejná nabídka** (`src/pages/PublicOfferPage.tsx`)
-- V sekci "Pricing Summary" (řádek ~730):
-  - Pokud `monthly_discount_percent > 0`, zobrazit původní měsíční cenu přeškrtnutou
-  - Pod ní řádek se slevou (např. "Sleva 10%: -X CZK")
-  - Finální měsíční cena po slevě zvýrazněná
+**1. Databáze** - nová tabulka `email_templates`
+- `id` (uuid, PK)
+- `template_key` (text, unique) - identifikátor šablony (např. `send_offer`, `interview_invite`)
+- `name` (text) - lidsky čitelný název
+- `subject_template` (text) - šablona předmětu s placeholdery `{variable}`
+- `body_template` (text) - šablona těla emailu s placeholdery
+- `description` (text) - popis, kde se šablona používá
+- `available_variables` (text[]) - seznam dostupných proměnných
+- `updated_at`, `updated_by` (uuid)
+- RLS: CRM users can read, admins can update
+
+**2. Komponenta `EmailTemplatesManager`** (`src/components/settings/EmailTemplatesManager.tsx`)
+- Seznam všech šablon jako karty/accordion
+- Kliknutím na šablonu se otevře editor s:
+  - Editovatelným předmětem
+  - Editovatelným tělem (textarea)
+  - Seznamem dostupných proměnných (kliknutím se vloží do textu)
+  - Tlačítko "Uložit" a "Obnovit výchozí"
+- Zobrazí se na stránce Nastavení jako nová sekce přes celou šířku
+
+**3. Hook `useEmailTemplates`** (`src/hooks/useEmailTemplates.tsx`)
+- Načítá šablony z Supabase
+- Funkce `getTemplate(key)` vrací šablonu
+- Funkce `fillTemplate(key, variables)` nahradí placeholdery hodnotami
+- Funkce `updateTemplate(key, subject, body)` uloží změny
+- Fallback na hardcoded výchozí hodnoty pokud šablona v DB neexistí
+
+**4. Úprava Settings stránky**
+- Přidání nové sekce "Emailové šablony" pod stávající karty
+- Zabere celou šířku (lg:col-span-2)
+
+**5. Úprava emailových dialogů**
+- Každý dialog začne používat `useEmailTemplates` hook
+- Místo hardcoded textů zavolá `fillTemplate('template_key', { variable: value })`
+- Uživatel stále může text upravit v dialogu před odesláním
 
 ### Technické detaily
 
-- Sleva se aplikuje pouze na součet měsíčních služeb, jednorázové položky zůstávají beze změny
-- Výpočet: `discountedMonthly = totalMonthly * (1 - monthlyDiscountPercent / 100)`
-- V CreateOfferDialog se pole zobrazí jako `<Input type="number" min={0} max={100} />` vedle měsíčního souhrnu
-- `total_price` v uložené nabídce bude obsahovat cenu PO slevě
+- Výchozí šablony se seednou migrací (INSERT s ON CONFLICT DO NOTHING)
+- Proměnné v šablonách používají formát `{variable_name}`
+- `fillTemplate` provede jednoduché string.replace pro každou proměnnou
+- Šablony se cachují přes React Query, invalidace po uložení
+- Seed data obsahují aktuální hardcoded texty ze všech dialogů
