@@ -89,5 +89,13 @@ INSERT INTO public.email_templates (template_key, name, subject_template, body_t
   E'Dobrý den {name},\n\nděkujeme za Váš zájem o pozici {position} v agentuře Socials a čas, který jste věnoval/a přípravě své přihlášky.\n\nPo pečlivém zvážení jsme se rozhodli pokračovat s jinými kandidáty, jejichž profil lépe odpovídá našim aktuálním potřebám.\n\nPřejeme Vám mnoho úspěchů v dalším profesním směřování a věříme, že najdete pozici, která bude přesně pro Vás.\n\nS pozdravem,\n{sender}',
   'Odmítací email pro uchazeče',
   ARRAY['name', 'position', 'sender']
+),
+(
+  'applicant_onboarding',
+  'Onboarding kandidáta',
+  'Onboarding - {position} | Socials.cz',
+  E'Dobrý den {name},\n\ngratulujeme k přijetí na pozici {position}!\n\nPro dokončení nástupu prosím vyplňte onboarding formulář:\n{url}\n\nFormulář obsahuje předvyplněné údaje z Vaší přihlášky. Prosím zkontrolujte je a doplňte zbývající informace potřebné pro pracovní smlouvu.\n\nTěšíme se na spolupráci!\n\nS pozdravem,\n{sender}',
+  'Onboarding formulář pro přijatého kandidáta',
+  ARRAY['name', 'position', 'url', 'sender']
 )
 ON CONFLICT (template_key) DO NOTHING;
