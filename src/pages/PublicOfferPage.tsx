@@ -203,10 +203,10 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <span className="font-bold text-xl">
+                <span className="font-semibold text-sm text-muted-foreground">
                   {service.price.toLocaleString('cs-CZ')} {service.currency}
                 </span>
-                <span className="text-sm text-muted-foreground ml-1">
+                <span className="text-xs text-muted-foreground/70 ml-1">
                   {service.billing_type === 'monthly' ? '/měs' : ''}
                 </span>
               </div>
