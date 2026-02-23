@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { User, Building, Bell, Shield } from 'lucide-react';
 import { EmailTemplatesManager } from '@/components/settings/EmailTemplatesManager';
+import { EmailSignatureEditor } from '@/components/settings/EmailSignatureEditor';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -16,17 +17,7 @@ export default function Settings() {
   
   const canSeeSettings = isSuperAdmin || role === 'admin' || role === 'management';
 
-  if (!canSeeSettings) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold">Přístup odepřen</h2>
-          <p className="text-muted-foreground">Nemáte oprávnění k zobrazení nastavení.</p>
-        </div>
-      </div>
-    );
-  }
-
+  // All CRM users can edit their signature, but only admins see full settings
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       <PageHeader 
@@ -36,7 +27,12 @@ export default function Settings() {
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Profile Settings */}
+        {/* Email Signature - visible to all users */}
+        <EmailSignatureEditor />
+
+        {canSeeSettings ? (
+          <>
+            {/* Profile Settings */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -146,6 +142,8 @@ export default function Settings() {
 
         {/* Email Templates - Full Width */}
         <EmailTemplatesManager />
+          </>
+        ) : null}
       </div>
     </div>
   );
