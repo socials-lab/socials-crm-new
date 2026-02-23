@@ -98,7 +98,6 @@ export default function Auth() {
             <Lock className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="text-2xl font-bold">Socials CRM</CardTitle>
-          <span className="inline-block mt-2 px-3 py-1 text-xs font-semibold text-white bg-indigo-600 rounded-full">🚀 Preview Branch</span>
           <CardDescription>Přihlaste se do svého účtu</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
