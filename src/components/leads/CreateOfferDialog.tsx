@@ -53,6 +53,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const [portfolioLinks, setPortfolioLinks] = useState<PortfolioLink[]>(
     DEFAULT_PORTFOLIO_OPTIONS.map((p, idx) => ({ ...p, id: `portfolio-${idx}` }))
   );
+  const [monthlyDiscountPercent, setMonthlyDiscountPercent] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -111,8 +112,12 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     const totalOriginal = editableServices.reduce((sum, s) => sum + (s.original_price || s.price), 0);
     const totalFinal = editableServices.reduce((sum, s) => sum + s.price, 0);
     const totalDiscount = totalOriginal - totalFinal;
-    return { monthly, oneOff, totalOriginal, totalFinal, totalDiscount };
-  }, [editableServices]);
+    const monthlyAfterDiscount = monthlyDiscountPercent > 0 
+      ? Math.round(monthly * (1 - monthlyDiscountPercent / 100)) 
+      : monthly;
+    const monthlyDiscountAmount = monthly - monthlyAfterDiscount;
+    return { monthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount };
+  }, [editableServices, monthlyDiscountPercent]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
     setEditableServices(prev => 
@@ -154,7 +159,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         notion_url: notionUrl.trim() || null,
         services: editableServices,
         portfolio_links: portfolioLinks,
-        total_price: totals.totalFinal,
+        total_price: totals.monthlyAfterDiscount + totals.oneOff,
+        monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
         currency: lead.currency,
         offer_type: lead.offer_type as 'retainer' | 'one_off',
         valid_until: validUntil || null,
@@ -200,6 +206,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     setCreatedOfferUrl(null);
     setCopied(false);
     setEditableServices([]);
+    setMonthlyDiscountPercent(0);
     onOpenChange(false);
   };
 
@@ -292,9 +299,42 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                       <div className="flex items-center justify-between text-sm mb-1">
                         <span className="text-muted-foreground">Měsíčně:</span>
                         <span className="font-medium">
-                          {totals.monthly.toLocaleString('cs-CZ')} {lead.currency}/měs
+                          {monthlyDiscountPercent > 0 ? (
+                            <>
+                              <span className="line-through text-muted-foreground mr-2">
+                                {totals.monthly.toLocaleString('cs-CZ')}
+                              </span>
+                              {totals.monthlyAfterDiscount.toLocaleString('cs-CZ')} {lead.currency}/měs
+                            </>
+                          ) : (
+                            <>{totals.monthly.toLocaleString('cs-CZ')} {lead.currency}/měs</>
+                          )}
                         </span>
                       </div>
+                      {/* Monthly discount input */}
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="text-muted-foreground">Sleva na měsíční:</span>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={monthlyDiscountPercent || ''}
+                            onChange={(e) => setMonthlyDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                            placeholder="0"
+                            className="w-16 h-7 text-sm text-right"
+                          />
+                          <span className="text-muted-foreground">%</span>
+                        </div>
+                      </div>
+                      {monthlyDiscountPercent > 0 && (
+                        <div className="flex items-center justify-between text-sm text-green-600 mb-1">
+                          <span>Sleva {monthlyDiscountPercent}%:</span>
+                          <span className="font-medium">
+                            -{totals.monthlyDiscountAmount.toLocaleString('cs-CZ')} {lead.currency}/měs
+                          </span>
+                        </div>
+                      )}
                       {totals.oneOff > 0 && (
                         <div className="flex items-center justify-between text-sm mb-1">
                           <span className="text-muted-foreground">Jednorázově:</span>
@@ -305,7 +345,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                       )}
                       {totals.totalDiscount > 0 && (
                         <div className="flex items-center justify-between text-sm text-green-600">
-                          <span>Celková sleva:</span>
+                          <span>Celková sleva na služby:</span>
                           <span className="font-medium">
                             -{totals.totalDiscount.toLocaleString('cs-CZ')} {lead.currency}
                           </span>
