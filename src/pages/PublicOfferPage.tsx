@@ -307,7 +307,7 @@ function ServiceStructureExplanation() {
       <div className="space-y-3 text-sm">
         {/* Core služby */}
         <div className="flex items-start gap-3">
-          <Badge className="bg-primary/20 text-primary border-primary/30 shrink-0 mt-0.5">Core</Badge>
+          <Badge className="bg-primary/20 text-primary border-primary/30 shrink-0 mt-0.5 w-[70px] justify-center">Core</Badge>
           <div>
             <p className="font-medium">Hlavní služby</p>
              <p className="text-muted-foreground text-xs leading-relaxed">
@@ -322,7 +322,7 @@ function ServiceStructureExplanation() {
         
         {/* Add-on služby */}
         <div className="flex items-start gap-3">
-          <Badge variant="outline" className="shrink-0 mt-0.5">Doplněk</Badge>
+          <Badge variant="outline" className="shrink-0 mt-0.5 w-[70px] justify-center">Doplněk</Badge>
           <div>
             <p className="font-medium">Doplňkové služby</p>
             <p className="text-muted-foreground text-xs leading-relaxed">
