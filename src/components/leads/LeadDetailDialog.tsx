@@ -239,7 +239,8 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
       );
 
       const noteTypeLabel = noteType === 'call' ? 'Hovor' : noteType === 'internal' ? 'Interní poznámka' : noteType === 'email_sent' ? 'E-mail' : noteType === 'email_received' ? 'E-mail' : 'Poznámka';
-      toast.success(`${noteTypeLabel} byl přidán`);
+      const isFeminine = noteType === 'internal' || noteType === 'general';
+      toast.success(`${noteTypeLabel} ${isFeminine ? 'byla přidána' : 'byl přidán'}`);
       setNoteText('');
       setNoteType('general');
       setCallDate('');
