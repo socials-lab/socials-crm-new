@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { ExtraWork } from '@/types/crm';
 import { Copy, Mail, CheckCircle2, Eye, EyeOff, ClipboardCheck } from 'lucide-react';
 
@@ -55,6 +56,7 @@ interface SendApprovalDialogProps {
 export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: SendApprovalDialogProps) {
   const { getClientById, clientContacts, colleagues, engagements } = useCRMData();
   const { toast } = useToast();
+  const { fillTemplate } = useEmailTemplates();
   const [email, setEmail] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -81,22 +83,22 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     if (open) {
       const approvalUrl = getApprovalUrl();
 
-      setEmailSubject(`Schválení vícepráce: ${extraWork.name}`);
-
       const hoursLine = extraWork.hours_worked && extraWork.hourly_rate
-        ? `\nRozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
+        ? `Rozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
         : '';
 
-      setEmailBody(
-        `Dobrý den,\n\nrádi bychom Vás požádali o schválení následující vícepráce:\n\nNázev: ${extraWork.name}` +
-        (extraWork.description ? `\nPopis: ${extraWork.description}` : '') +
-        hoursLine +
-        `\nCelková částka: ${formatCurrency(extraWork.amount)}` +
-        (engagement ? `\nZakázka: ${engagement.name}` : '') +
-        (colleague ? `\nZpracoval/a: ${colleague.full_name}` : '') +
-        `\n\nPro schválení nebo zamítnutí klikněte na odkaz níže:\n${approvalUrl}` +
-        `\n\nDěkujeme za spolupráci.\n\nS pozdravem,\nSocials`
-      );
+      const { subject, body } = fillTemplate('send_approval', {
+        work_name: extraWork.name,
+        work_description: extraWork.description ? `Popis: ${extraWork.description}` : '',
+        hours_line: hoursLine,
+        amount: formatCurrency(extraWork.amount),
+        engagement_line: engagement ? `Zakázka: ${engagement.name}` : '',
+        colleague_line: colleague ? `Zpracoval/a: ${colleague.full_name}` : '',
+        url: approvalUrl,
+      });
+
+      setEmailSubject(subject);
+      setEmailBody(body);
     }
   }, [open, extraWork.id]);
 

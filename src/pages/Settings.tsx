@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { User, Building, Bell, Shield } from 'lucide-react';
+import { EmailTemplatesManager } from '@/components/settings/EmailTemplatesManager';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -142,6 +143,9 @@ export default function Settings() {
             <Button>Aktualizovat heslo</Button>
           </CardContent>
         </Card>
+
+        {/* Email Templates - Full Width */}
+        <EmailTemplatesManager />
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Send, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Applicant } from '@/types/applicant';
 
 interface SendRejectionEmailDialogProps {
@@ -23,22 +24,18 @@ export function SendRejectionEmailDialog({
   onSend 
 }: SendRejectionEmailDialogProps) {
   const { user } = useAuth();
+  const { fillTemplate } = useEmailTemplates();
   const senderName = [user?.user_metadata?.first_name, user?.user_metadata?.last_name].filter(Boolean).join(' ') || 'Socials';
   const senderEmail = user?.email || '';
 
-  const defaultMessage = `Dobrý den ${applicant.full_name.split(' ')[0]},
-
-děkujeme za Váš zájem o pozici ${applicant.position} v agentuře Socials a čas, který jste věnoval/a přípravě své přihlášky.
-
-Po pečlivém zvážení jsme se rozhodli pokračovat s jinými kandidáty, jejichž profil lépe odpovídá našim aktuálním potřebám.
-
-Přejeme Vám mnoho úspěchů v dalším profesním směřování a věříme, že najdete pozici, která bude přesně pro Vás.
-
-S pozdravem,
-${senderName}`;
+  const { subject: defaultSubject, body: defaultMessage } = fillTemplate('rejection_email', {
+    name: applicant.full_name.split(' ')[0],
+    position: applicant.position,
+    sender: senderName,
+  });
 
   const [emailTo, setEmailTo] = useState(applicant.email);
-  const [subject, setSubject] = useState(`Vyjádření k Vaší přihlášce – ${applicant.position} | Socials`);
+  const [subject, setSubject] = useState(defaultSubject);
   const [message, setMessage] = useState(defaultMessage);
   const [isSending, setIsSending] = useState(false);
 

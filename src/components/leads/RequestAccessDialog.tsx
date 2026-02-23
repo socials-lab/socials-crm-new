@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 interface RequestAccessDialogProps {
   open: boolean;
@@ -27,23 +28,6 @@ interface RequestAccessDialogProps {
 
 const DEFAULT_BCC = ['danny@socials.cz', 'dana.bauerova@socials.cz'];
 
-const DEFAULT_EMAIL_CONTENT = `Dobrý den,
-
-Na základě našeho telefonátu Vás prosíme o nasdílení přístupů do níže uvedených marketingových nástrojů. Uděláme audit a připravíme pro vás nabídku na případnou spolupráci.
-
-Google Analytics 4 - Přístup na úrovni celého účtu s oprávněním "Čtení" pošlete na e-mail analytics@socials.cz
-
-Facebook Business Manager - Přidejte nás jako partnery (ID našeho účtu: 1196977750459552) s nejnižší úrovní přístupů k těmto položkám: Reklamní účet, Katalog produktů, Meta Pixel (Datový set), FB stránka.
-
-Google Ads - Zašlete nám ID reklamního účtu. Zašleme žádost o přístup která dorazí na e-mail, na který máte Google Ads účet vedený.
-
-S-klik - Nasdílejte na e-mail mysocials@seznam.cz
-
-Pokud si nebudete vědět rady, zde naleznete návod. Případně klidně napište a pomůžeme :)
-
-Děkujeme a přejeme hezký den,
-Tým Socials`;
-
 export function RequestAccessDialog({
   open,
   onOpenChange,
@@ -53,16 +37,18 @@ export function RequestAccessDialog({
   leadId,
   onSent,
 }: RequestAccessDialogProps) {
-  const getDefaultSubject = () => {
-    return `Žádost o nasdílení přístupů - ${companyName} / Socials`;
+  const { fillTemplate } = useEmailTemplates();
+  
+  const getDefaults = () => {
+    return fillTemplate('request_access', { company: companyName });
   };
 
   const [toEmails, setToEmails] = useState<string[]>(contactEmail ? [contactEmail] : []);
   const [newToEmail, setNewToEmail] = useState('');
   const [bccEmails, setBccEmails] = useState<string[]>(DEFAULT_BCC);
   const [newBccEmail, setNewBccEmail] = useState('');
-  const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
-  const [emailContent, setEmailContent] = useState(DEFAULT_EMAIL_CONTENT);
+  const [emailSubject, setEmailSubject] = useState(() => getDefaults().subject);
+  const [emailContent, setEmailContent] = useState(() => getDefaults().body);
   const [isSending, setIsSending] = useState(false);
 
   const addEmail = (
@@ -123,8 +109,9 @@ export function RequestAccessDialog({
       setNewToEmail('');
       setBccEmails(DEFAULT_BCC);
       setNewBccEmail('');
-      setEmailSubject(getDefaultSubject());
-      setEmailContent(DEFAULT_EMAIL_CONTENT);
+      const defaults = getDefaults();
+      setEmailSubject(defaults.subject);
+      setEmailContent(defaults.body);
     }
     onOpenChange(newOpen);
   };
