@@ -118,6 +118,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
+  const [showOnboardingData, setShowOnboardingData] = useState(false);
   const isProcessingWarning = useRef(false);
 
   // Use fresh lead data from context to reflect updates immediately
@@ -898,10 +899,21 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                       {lead.onboarding_form_sent_at ? 'Znovu odeslat' : 'Odeslat'}
                     </Button>
                   )}
+                  {lead.onboarding_form_completed_at && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowOnboardingData(!showOnboardingData)}
+                      className="gap-1"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      {showOnboardingData ? 'Skrýt údaje' : 'Zobrazit údaje'}
+                    </Button>
+                  )}
                 </div>
 
-                {/* Onboarding Form Data - shown when completed */}
-                {lead.onboarding_form_completed_at && (
+                {/* Onboarding Form Data - toggled by button */}
+                {lead.onboarding_form_completed_at && showOnboardingData && (
                   <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
                     {/* Billing info */}
                     {(lead.billing_street || lead.billing_city || lead.billing_email) && (
