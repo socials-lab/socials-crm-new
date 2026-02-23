@@ -46,6 +46,8 @@ export function useUpsellApprovals() {
   } = useCRMData();
 
   // Fetch all approvals from Supabase
+  // staleTime: 0 ensures data is always refetched on mount (SPA navigation),
+  // preventing stale approval statuses from being shown
   const { data: approvals = [] } = useQuery({
     queryKey: ['upsell_approvals'],
     queryFn: async () => {
@@ -55,6 +57,7 @@ export function useUpsellApprovals() {
       if (error) throw error;
       return (data || []) as UpsellApproval[];
     },
+    staleTime: 0,
   });
 
   // Create a map for fast lookups

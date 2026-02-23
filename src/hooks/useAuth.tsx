@@ -1,6 +1,7 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, useRef, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import * as Sentry from '@sentry/react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const isExplicitSignOut = useRef(false);
 
   useEffect(() => {
     // Get initial session
@@ -60,6 +62,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .update({ last_login: new Date().toISOString() })
             .eq('user_id', session.user.id);
         }
+
+        // Handle unexpected session loss (e.g. refresh token revoked by race condition)
+        if (event === 'SIGNED_OUT' && !isExplicitSignOut.current) {
+          // Don't redirect if already on auth pages
+          if (!window.location.pathname.startsWith('/auth')) {
+            toast.error('Session expired. Please sign in again.');
+            window.location.href = '/auth';
+          }
+        }
+        isExplicitSignOut.current = false;
       }
     );
 
@@ -75,18 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        skipBrowserRedirect: true,
-      },
-    });
-    if (error || !data?.url) return { error: error as Error | null };
-
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const branch = new URL(supabaseUrl).hostname.split('.')[0];
-    window.location.href = `https://crm.socials.cz/auth-proxy/init?branch=${branch}&redirect=${encodeURIComponent(data.url)}`;
+    const redirectTo = encodeURIComponent(window.location.origin + '/auth/callback');
+    const anonKey = encodeURIComponent(import.meta.env.VITE_SUPABASE_ANON_KEY);
+    window.location.href = `https://crm.socials.cz/auth-proxy/login?branch=${branch}&redirect_to=${redirectTo}&anon_key=${anonKey}`;
     return { error: null };
   };
 
@@ -107,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    isExplicitSignOut.current = true;
     await supabase.auth.signOut();
     Sentry.setUser(null);
   };
