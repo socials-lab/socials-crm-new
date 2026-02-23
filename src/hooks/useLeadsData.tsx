@@ -253,6 +253,121 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         transformedLeads.push(demoSocialsLead);
       }
 
+      // Demo lead with completed onboarding form
+      const demoOnboardingLead: any = {
+        id: '20000000-0000-0000-0000-000000000003',
+        company_name: 'FreshBake s.r.o.',
+        ico: '12345678',
+        dic: 'CZ12345678',
+        website: 'https://www.freshbake.cz',
+        industry: 'Potravinářství / E-commerce',
+        contact_name: 'Tereza Nováková',
+        contact_position: 'Marketing Manager',
+        contact_email: 'tereza@freshbake.cz',
+        contact_phone: '+420 602 123 456',
+        stage: 'offer_sent',
+        source: 'referral',
+        source_custom: null,
+        client_message: 'Potřebujeme pomoct s kampaněmi na sociálních sítích. Máme e-shop a chceme zvýšit povědomí o značce.',
+        ad_spend_monthly: 80000,
+        summary: 'E-shop s pečivem a cukrářskými výrobky. Chtějí správu IG + FB + TikTok a kreativní výstupy. Plánují expanzi na slovenský trh.',
+        potential_service: '',
+        potential_services: [
+          {
+            id: 'ls-onb-1',
+            service_id: '',
+            name: 'Socials Boost',
+            selected_tier: 'elite',
+            price: 45000,
+            currency: 'CZK',
+            billing_type: 'monthly',
+          },
+          {
+            id: 'ls-onb-2',
+            service_id: '',
+            name: 'Creative Boost',
+            selected_tier: 'pro',
+            price: 25000,
+            currency: 'CZK',
+            billing_type: 'monthly',
+          },
+          {
+            id: 'ls-onb-3',
+            service_id: '',
+            name: 'TikTok Management',
+            selected_tier: null,
+            price: 18000,
+            currency: 'CZK',
+            billing_type: 'monthly',
+          },
+        ],
+        offer_type: 'retainer',
+        estimated_price: 88000,
+        currency: 'CZK',
+        probability_percent: 75,
+        offer_url: 'https://notion.so/socials/nabidka-freshbake-demo',
+        offer_created_at: '2025-01-15T10:00:00Z',
+        offer_sent_at: '2025-01-16T09:30:00Z',
+        offer_sent_by_id: null,
+        owner_id: null,
+        access_request_sent_at: '2025-01-10T08:00:00Z',
+        access_request_platforms: ['Facebook Business Manager', 'Instagram', 'TikTok Business', 'Google Analytics 4'],
+        access_received_at: '2025-01-12T11:00:00Z',
+        // Onboarding form - COMPLETED
+        onboarding_form_sent_at: '2025-01-17T08:00:00Z',
+        onboarding_form_completed_at: '2025-01-18T16:45:00Z',
+        onboarding_form_url: null,
+        // Billing data from onboarding form
+        billing_street: 'Pekařská 742/8',
+        billing_city: 'Brno',
+        billing_zip: '602 00',
+        billing_country: 'Česká republika',
+        billing_email: 'ucetni@freshbake.cz',
+        // Contract - not yet
+        contract_url: null,
+        contract_created_at: null,
+        contract_sent_at: null,
+        contract_signed_at: null,
+        // Not converted
+        converted_to_client_id: null,
+        converted_to_engagement_id: null,
+        converted_at: null,
+        notes: [
+          {
+            id: 'note-onb-1',
+            lead_id: '20000000-0000-0000-0000-000000000003',
+            author_id: '',
+            author_name: 'System',
+            text: 'Klientka vyplnila onboarding formulář. Všechny údaje jsou kompletní.',
+            note_type: 'general',
+            call_date: null,
+            subject: null,
+            recipients: null,
+            created_at: '2025-01-18T16:45:00Z',
+          },
+          {
+            id: 'note-onb-2',
+            lead_id: '20000000-0000-0000-0000-000000000003',
+            author_id: '',
+            author_name: 'System',
+            text: 'Dobrý den Terezo,\n\nposílám Vám nabídku na spolupráci v oblasti správy sociálních sítí.\n\nS pozdravem,\nTým Socials',
+            note_type: 'email_sent',
+            call_date: null,
+            subject: 'Nabídka spolupráce - FreshBake / Socials',
+            recipients: ['tereza@freshbake.cz'],
+            created_at: '2025-01-16T09:30:00Z',
+          },
+        ],
+        created_at: '2025-01-08T09:00:00Z',
+        updated_at: '2025-01-18T16:45:00Z',
+        created_by: null,
+        updated_by: null,
+      };
+
+      if (!transformedLeads.find((l: any) => l.id === demoOnboardingLead.id)) {
+        transformedLeads.push(demoOnboardingLead);
+      }
+
       return transformedLeads;
     },
   });
