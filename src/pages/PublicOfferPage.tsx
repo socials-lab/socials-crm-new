@@ -311,10 +311,11 @@ function ServiceStructureExplanation() {
           <div>
             <p className="font-medium">Hlavní služby</p>
              <p className="text-muted-foreground text-xs leading-relaxed">
-               Odvíjí se dle rozpočtu a očekávané náročnosti. Rozděleny do úrovní{' '}
+               Základní pilíře vaší online strategie. Core služby jsou rozděleny do úrovní{' '}
                <span className="font-medium text-emerald-600">GROWTH</span>,{' '}
                <span className="font-medium text-primary">PRO</span> a{' '}
-               <span className="font-medium text-amber-600">ELITE</span>.
+               <span className="font-medium text-amber-600">ELITE</span>{' '}
+               podle rozsahu správy, výše spravovaného rozpočtu a očekávané náročnosti.
              </p>
           </div>
         </div>
