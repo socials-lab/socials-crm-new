@@ -568,7 +568,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* Hero Section - Consultative approach */}
         <section className="text-center mb-10">
           <p className="text-muted-foreground mb-1 text-sm">
-            Na základě poznání vaší firmy jsme připravili strategii
+            Na základě poznání vaší firmy jsme připravili strategii a nabídku
           </p>
           <h1 className="text-xl md:text-3xl font-bold mb-1">
             Návrh spolupráce pro{' '}
