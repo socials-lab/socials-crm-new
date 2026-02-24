@@ -250,7 +250,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       invoice_id: null, invoice_number: null, invoiced_at: null,
       internal_hourly_rate: 700,
       approval_token: null, client_approval_email: null, client_approved_at: null, client_rejected_at: null, client_rejection_reason: null,
-      upsold_by_id: null, upsell_commission_percent: null,
+      upsold_by_id: colleagues[1]?.id || null, upsell_commission_percent: 10,
       notes: '', created_at: '2026-02-20T10:00:00Z', updated_at: '2026-02-20T10:00:00Z',
     },
     {
@@ -292,7 +292,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       invoice_id: null, invoice_number: null, invoiced_at: null,
       internal_hourly_rate: 750,
       approval_token: 'mock-token-2', client_approval_email: 'klient@test.cz', client_approved_at: '2026-02-16T11:00:00Z', client_rejected_at: null, client_rejection_reason: null,
-      upsold_by_id: null, upsell_commission_percent: null,
+      upsold_by_id: colleagues[2]?.id || colleagues[0]?.id || null, upsell_commission_percent: 10,
       notes: '', created_at: '2026-02-15T08:00:00Z', updated_at: '2026-02-16T11:00:00Z',
     },
   ];
