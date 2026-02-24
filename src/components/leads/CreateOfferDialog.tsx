@@ -72,10 +72,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
       const initialServices: PublicOfferService[] = lead.potential_services.map(ls => {
         const serviceDetails = services.find(s => s.id === ls.service_id);
         
-        // Get deliverables from service defaults or use intelligent fallbacks
-        const deliverables = serviceDetails?.default_deliverables?.length 
-          ? serviceDetails.default_deliverables 
-          : mergeWithDefaults(ls.name, null, null, null, null).deliverables;
 
         // Resolve price: use lead price, but if it looks wrong, fall back to SERVICE_DETAILS
         let resolvedPrice = ls.price;
@@ -93,6 +89,10 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         // Get description from SERVICE_DETAILS tagline as fallback
         const description = serviceDetails?.description || constantDetail?.tagline || '';
 
+        // Get merged defaults (deliverables, frequency, turnaround, requirements, detailed_sections)
+        const merged = mergeWithDefaults(ls.name, 
+          serviceDetails?.default_deliverables, null, null, null, null);
+
         return {
           id: ls.id,
           service_id: ls.service_id,
@@ -106,11 +106,12 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           currency: ls.currency,
           billing_type: ls.billing_type,
           service_type: serviceDetails?.service_type,
-          deliverables,
-          frequency: '',
-          turnaround: '',
-          requirements: [],
+          deliverables: merged.deliverables,
+          frequency: merged.frequency,
+          turnaround: merged.turnaround,
+          requirements: merged.requirements,
           start_timeline: '',
+          detailed_sections: merged.detailed_sections,
         };
       });
       setEditableServices(initialServices);

@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronUp, X, Plus, Trash2, Package, Clock, Zap, ClipboardList } from 'lucide-react';
-import type { PublicOfferService } from '@/types/publicOffer';
+import { ChevronDown, ChevronUp, X, Plus, Trash2, Package, Clock, Zap, ClipboardList, FileText } from 'lucide-react';
+import type { PublicOfferService, ServiceDetailSection } from '@/types/publicOffer';
 
 interface EditableOfferServiceCardProps {
   service: PublicOfferService;
@@ -86,6 +86,43 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
   const handleRemoveRequirement = (index: number) => {
     const newRequirements = (service.requirements || []).filter((_, i) => i !== index);
     onUpdate({ ...service, requirements: newRequirements });
+  };
+
+  // ─── Detailed Sections handlers ───
+  const handleSectionFieldChange = (sIdx: number, field: 'emoji' | 'title', value: string) => {
+    const sections = [...(service.detailed_sections || [])];
+    sections[sIdx] = { ...sections[sIdx], [field]: value };
+    onUpdate({ ...service, detailed_sections: sections });
+  };
+
+  const handleSectionItemChange = (sIdx: number, iIdx: number, value: string) => {
+    const sections = [...(service.detailed_sections || [])];
+    const items = [...sections[sIdx].items];
+    items[iIdx] = value;
+    sections[sIdx] = { ...sections[sIdx], items };
+    onUpdate({ ...service, detailed_sections: sections });
+  };
+
+  const handleAddSectionItem = (sIdx: number) => {
+    const sections = [...(service.detailed_sections || [])];
+    sections[sIdx] = { ...sections[sIdx], items: [...sections[sIdx].items, ''] };
+    onUpdate({ ...service, detailed_sections: sections });
+  };
+
+  const handleRemoveSectionItem = (sIdx: number, iIdx: number) => {
+    const sections = [...(service.detailed_sections || [])];
+    sections[sIdx] = { ...sections[sIdx], items: sections[sIdx].items.filter((_, i) => i !== iIdx) };
+    onUpdate({ ...service, detailed_sections: sections });
+  };
+
+  const handleRemoveSection = (sIdx: number) => {
+    const sections = (service.detailed_sections || []).filter((_, i) => i !== sIdx);
+    onUpdate({ ...service, detailed_sections: sections });
+  };
+
+  const handleAddSection = () => {
+    const sections = [...(service.detailed_sections || []), { emoji: '📋', title: '', items: [''] }];
+    onUpdate({ ...service, detailed_sections: sections });
   };
 
   return (
@@ -296,6 +333,88 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
                 className="text-sm"
               />
             </div>
+
+            {/* Detailed Sections (expandable structured info) */}
+            <Collapsible>
+              <CollapsibleTrigger className="w-full">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span>📋 Podrobný rozpis služby ({(service.detailed_sections || []).length} sekcí)</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-4 mt-3">
+                  {(service.detailed_sections || []).map((section, sIdx) => (
+                    <div key={sIdx} className="p-3 border rounded-lg space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={section.emoji}
+                          onChange={(e) => handleSectionFieldChange(sIdx, 'emoji', e.target.value)}
+                          className="h-8 w-14 text-center text-sm"
+                          placeholder="📋"
+                        />
+                        <Input
+                          value={section.title}
+                          onChange={(e) => handleSectionFieldChange(sIdx, 'title', e.target.value)}
+                          className="h-8 text-sm flex-1 font-medium"
+                          placeholder="Název sekce"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveSection(sIdx)}
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="space-y-1.5 ml-2">
+                        {section.items.map((item, iIdx) => (
+                          <div key={iIdx} className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs shrink-0">•</span>
+                            <Input
+                              value={item}
+                              onChange={(e) => handleSectionItemChange(sIdx, iIdx, e.target.value)}
+                              className="h-7 text-xs flex-1"
+                              placeholder="Položka..."
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveSectionItem(sIdx, iIdx)}
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleAddSectionItem(sIdx)}
+                          className="h-6 text-xs text-muted-foreground"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Přidat položku
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddSection}
+                    className="h-7 text-xs"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Přidat sekci
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
