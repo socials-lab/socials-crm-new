@@ -340,6 +340,26 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
+    {
+      id: 'srv-12',
+      code: 'TIKTOK_ADS',
+      name: 'Správa TikTok Ads',
+      service_type: 'addon',
+      category: 'performance',
+      base_price: 0,
+      currency: 'CZK',
+      description: 'Správa TikTok Ads – nový zdroj zákazníků z nejrychleji rostoucí platformy',
+      is_active: true,
+      tier_pricing: null,
+      external_url: null,
+      default_deliverables: [
+        'Kompletní správa TikTok Ads od nastavení po optimalizaci',
+        'Testování kreativ, publik a bidding strategií',
+        'Měsíční reporting s vyhodnocením výkonu',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
   ];
 
   const { data: services = [], isLoading: servicesLoading } = useQuery({

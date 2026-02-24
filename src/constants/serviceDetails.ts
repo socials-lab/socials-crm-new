@@ -455,6 +455,59 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
     ],
     tierComparison: [],
   },
+
+  TIKTOK_ADS: {
+    code: 'TIKTOK_ADS',
+    tagline: 'Správa TikTok Ads – nový zdroj zákazníků z nejrychleji rostoucí platformy',
+    platforms: ['TikTok Ads'],
+    targetAudience: 'E-shopy a značky, které chtějí zasáhnout mladší publikum a škálovat výkon mimo klasické kanály',
+    benefits: [
+      'Nový zdroj zákazníků z jedné z nejrychleji rostoucích platforem – TikTok vám pomůže zasáhnout publikum, na které se přes klasické kanály často nedostanete.',
+      'Výkonnostní pohled, ne jen branding – kampaně stavíme na datech, konverzích a reálném byznysovém dopadu.',
+      'Kompletní správa TikTok Ads – od technického nastavení po průběžnou optimalizaci, testování a škálování úspěšných kampaní.',
+    ],
+    setup: [
+      {
+        title: 'Úvodní nastavení TikTok Ads',
+        items: [
+          'Vytvoření a nastavení TikTok Business Center a reklamního účtu.',
+          'Implementace TikTok Pixel a Events API pro přesné měření konverzí.',
+          'Propojení produktového katalogu pro dynamické reklamy (pokud je relevantní).',
+          'Nastavení publik – vlastní, lookalike a zájmové segmenty.',
+          'Struktura kampaní – akvizice, remarketing, testovací kampaně.',
+        ],
+      },
+    ],
+    management: [
+      {
+        title: 'Správa kampaní a optimalizace',
+        items: [
+          'Denní kontrola a průběžná optimalizace kampaní pro maximální výkon.',
+          'Testování kreativ – různé formáty, hooky a CTA pro zjištění, co nejlépe konvertuje.',
+          'Správa nabídek a rozpočtů – optimalizace CPA/ROAS dle cílů.',
+          'Škálování úspěšných kampaní a kreativ.',
+          'A/B testování publik, umístění a bidding strategií.',
+        ],
+      },
+      {
+        title: 'Kreativní strategie pro TikTok',
+        items: [
+          'Doporučení formátů a stylů videí, které fungují na TikToku (UGC, native, hook-based).',
+          'Zadání a briefy pro tvorbu kreativ (ve spolupráci s Creative Boost nebo vlastním týmem klienta).',
+          'Iterativní testování konceptů – hooky, messaging, vizuální styl.',
+        ],
+      },
+      {
+        title: 'Měření a reporting',
+        items: [
+          'Sledování klíčových metrik (CPA, ROAS, CTR, konverzní poměr, frekvence).',
+          'Online dashboard s výsledky kampaní dostupný 24/7.',
+          'Měsíční report s vyhodnocením výkonu a plánem na další období.',
+        ],
+      },
+    ],
+    tierComparison: [],
+  },
 };
 
 // Helper function to get service detail by code
