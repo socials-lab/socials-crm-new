@@ -132,6 +132,7 @@ const TEST_OFFER: PublicOffer = {
   view_count: 0,
   estimated_start_date: 'Do 5 pracovních dnů od podpisu smlouvy',
   monthly_discount_percent: 10,
+  discount_scope: 'core_only',
   // Contact person info
   owner_name: 'Daniel Bauer',
   owner_email: 'daniel@socials.cz',

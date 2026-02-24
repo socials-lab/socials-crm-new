@@ -56,6 +56,7 @@ export interface PublicOffer {
   updated_at: string;
   estimated_start_date?: string;
   monthly_discount_percent?: number;
+  discount_scope?: 'core_only' | 'all_services';
   // Contact person info (lead owner)
   owner_name?: string;       // Name of assigned colleague
   owner_email?: string;      // Email of assigned colleague

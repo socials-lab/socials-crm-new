@@ -735,12 +735,15 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <div className="p-5 rounded-xl border bg-card space-y-3">
             {totalMonthly > 0 && (() => {
               const discountPercent = offer.monthly_discount_percent || 0;
-              // Discount applies only to core monthly services
-              const coreAfterDiscount = discountPercent > 0 
-                ? Math.round(coreMonthly * (1 - discountPercent / 100)) 
-                : coreMonthly;
-              const discountAmount = coreMonthly - coreAfterDiscount;
-              const totalAfterDiscount = coreAfterDiscount + addonMonthly;
+              const scope = offer.discount_scope || 'core_only';
+              const discountBase = scope === 'all_services' ? totalMonthly : coreMonthly;
+              const discountedBase = discountPercent > 0 
+                ? Math.round(discountBase * (1 - discountPercent / 100)) 
+                : discountBase;
+              const discountAmount = discountBase - discountedBase;
+              const totalAfterDiscount = scope === 'all_services' 
+                ? discountedBase 
+                : discountedBase + addonMonthly;
               
               return (
                 <div className="space-y-2">
@@ -766,7 +769,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   </div>
                   {discountPercent > 0 && (
                     <div className="flex items-center justify-between text-sm text-green-600">
-                      <span>Sleva {discountPercent}% při odběru všech služeb</span>
+                      <span>Sleva {discountPercent}% {scope === 'all_services' ? 'na všechny služby' : 'na core služby'} při odběru všech služeb</span>
                       <span className="font-medium">-{discountAmount.toLocaleString('cs-CZ')} {offer.currency}/měs</span>
                     </div>
                   )}
