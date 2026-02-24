@@ -737,6 +737,64 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       },
     ],
   },
+  // ─── AI SEO ───
+  'ai seo': {
+    deliverables: [
+      'Analýza, jak AI váš web chápe a využívá',
+      'Návrhy úprav struktury stránek a obsahu pro srozumitelnost AI nástrojům',
+      'Identifikace chybějících témat a budování tematické autority webu',
+      'Příprava webu na zobrazování produktů a služeb v AI odpovědích',
+      'Průběžné konzultace s SEO / AI specialistou',
+    ],
+    frequency: 'Průběžná měsíční spolupráce, cca 10 hodin / měsíc',
+    turnaround: 'Zahájení do 5 pracovních dnů od úvodní analýzy',
+    requirements: [
+      'Přístup k webu / CMS',
+      'Přístup do Google Search Console',
+      'Přístup do Google Analytics',
+    ],
+    detailed_sections: [
+      {
+        emoji: '🤖',
+        title: 'Proč AI SEO',
+        items: [
+          'Stále více lidí používá AI jako vyhledávač – ChatGPT, Google AI Overview, Perplexity.',
+          'Tyto nástroje odpovídají na dotazy, doporučují značky a nabízejí produkty z e-shopů.',
+          'Cílem je, aby se vaše produkty a služby zobrazovaly v AI odpovědích a oslovovaly nové zákazníky.',
+        ],
+      },
+      {
+        emoji: '🔍',
+        title: 'Co v rámci služby řešíme',
+        items: [
+          'Analyzujeme, jak AI váš web chápe a využívá.',
+          'Navrhujeme úpravy struktury stránek a obsahu.',
+          'Identifikujeme chybějící témata a příležitosti.',
+          'Pomáháme budovat tematickou autoritu webu.',
+          'Průběžně konzultujeme další kroky.',
+        ],
+      },
+      {
+        emoji: '🚀',
+        title: 'Zahájení spolupráce',
+        items: [
+          'Náš kolega si nejprve projde váš web – posoudí, zda je služba pro vás vhodná.',
+          'Pokud služba dává smysl: upřesníme reálný rozsah hodin, doladíme přístupy a domluvíme plán práce.',
+          'Následně se pustíme do realizace.',
+          'Spolupráci doporučujeme minimálně na 6 měsíců pro postupnou implementaci a vyhodnocení dopadu.',
+        ],
+      },
+      {
+        emoji: '💰',
+        title: 'Rozsah a cena',
+        items: [
+          'Odhadovaný rozsah: 10 hodin práce měsíčně.',
+          'Práce je fakturována dle reálně odpracovaných hodin.',
+          'Hodinová sazba: 1 800 Kč / hod.',
+        ],
+      },
+    ],
+  },
 };
 
 // Generic fallback for services that don't match any keyword
