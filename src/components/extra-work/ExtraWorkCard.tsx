@@ -129,11 +129,6 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                       Zamítnuto
                     </Badge>
                   )}
-                  {work.upsold_by_id && (
-                    <Badge variant="outline" className="text-primary border-primary/30">
-                      Upsell
-                    </Badge>
-                  )}
                 </div>
                 <p className="text-sm flex items-center gap-2">
                   <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -238,11 +233,11 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
             )}
 
             {/* Footer */}
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
                 <span>{createdAt}</span>
                 <span>•</span>
-                <span>Období: {work.billing_period}</span>
+                <span>{work.billing_period}</span>
               </div>
 
               <div className="flex items-center gap-2">
