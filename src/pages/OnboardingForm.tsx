@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,38 +15,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Building2, MapPin, CheckCircle2, AlertTriangle, Search, Plus, X, PenLine, Users, CalendarIcon, FileText, Zap, MessageSquare, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Loader2, Building2, MapPin, CheckCircle2, AlertTriangle, Plus, X, PenLine, Users, CalendarIcon, FileText, Zap, MessageSquare, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { cn } from '@/lib/utils';
 import socialsLogo from '@/assets/socials-logo.png';
 import { LeadService } from '@/types/crm';
 
-// Mock ARES lookup - will be replaced with Edge Function
-const mockAresLookup = async (ico: string): Promise<{
-  company_name: string;
-  dic: string;
-  street: string;
-  city: string;
-  zip: string;
-  country: string;
-} | null> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Mock data based on IČO
-  if (ico.length === 8 && /^\d+$/.test(ico)) {
-    return {
-      company_name: `Společnost ${ico.slice(0, 4)} s.r.o.`,
-      dic: `CZ${ico}`,
-      street: 'Václavské náměstí 1',
-      city: 'Praha',
-      zip: '11000',
-      country: 'Česká republika'
-    };
-  }
-  return null;
-};
+type CompanyCountry = 'CZ' | 'SK' | 'other';
 
 const signatorySchema = z.object({
   name: z.string().min(1, 'Jméno je povinné'),
@@ -64,7 +40,7 @@ const projectContactSchema = z.object({
 const onboardingSchema = z.object({
   // Company
   company_name: z.string().min(1, 'Název společnosti je povinný'),
-  ico: z.string().length(8, 'IČO musí mít 8 číslic').regex(/^\d+$/, 'IČO musí obsahovat pouze číslice'),
+  ico: z.string().optional().or(z.literal('')),
   dic: z.string().optional(),
   website: z.string().optional(),
   industry: z.string().optional(),
@@ -140,12 +116,19 @@ export default function OnboardingForm() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAresLoading, setIsAresLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [leadNotFound, setLeadNotFound] = useState(false);
   const [icoChanged, setIcoChanged] = useState(false);
   const [originalIco, setOriginalIco] = useState<string>('');
   const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
+  const [companyCountry, setCompanyCountry] = useState<CompanyCountry>('CZ');
+  const [aresQuery, setAresQuery] = useState('');
+  const [aresResults, setAresResults] = useState<Array<{ ico: string; name: string; city: string | null }>>([]);
+  const [isSearchingAres, setIsSearchingAres] = useState(false);
+  const [showAresResults, setShowAresResults] = useState(false);
+  const [aresValidated, setAresValidated] = useState(false);
+  const [aresError, setAresError] = useState<string | null>(null);
+  const aresSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Get lead from database or use test lead for development
   const dbLead = leadId ? getLeadById(leadId) : undefined;
@@ -240,28 +223,69 @@ export default function OnboardingForm() {
     }
   }, [watchedIco, originalIco]);
 
-  const handleAresLookup = async () => {
-    const ico = form.getValues('ico');
-    if (!ico || ico.length !== 8) {
+  // Real ARES lookup by IČO
+  const validateAresIco = async (ico: string) => {
+    if (ico.length !== 8) return;
+    try {
+      const response = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
+      if (!response.ok) throw new Error('Subjekt nebyl nalezen v ARES');
+      const data = await response.json();
+      form.setValue('company_name', data.obchodniJmeno || '', { shouldValidate: true });
+      form.setValue('dic', data.dic || '', { shouldValidate: true });
+      form.setValue('billing_street', data.sidlo?.textovaAdresa?.split(',')[0] || '', { shouldValidate: true });
+      form.setValue('billing_city', data.sidlo?.nazevObce || '', { shouldValidate: true });
+      form.setValue('billing_zip', data.sidlo?.psc?.toString() || '', { shouldValidate: true });
+      form.setValue('billing_country', 'Česká republika', { shouldValidate: true });
+      form.setValue('ico', ico, { shouldValidate: true });
+      setAresValidated(true);
+      setAresError(null);
+    } catch (error) {
+      setAresError(error instanceof Error ? error.message : 'Chyba při validaci IČO');
+      setAresValidated(false);
+    }
+  };
+
+  // ARES name search
+  const searchARES = useCallback(async (query: string) => {
+    if (query.length < 3) {
+      setAresResults([]);
+      setShowAresResults(false);
       return;
     }
-    
-    setIsAresLoading(true);
+    setIsSearchingAres(true);
     try {
-      const data = await mockAresLookup(ico);
-      if (data) {
-        form.setValue('company_name', data.company_name);
-        form.setValue('dic', data.dic);
-        form.setValue('billing_street', data.street);
-        form.setValue('billing_city', data.city);
-        form.setValue('billing_zip', data.zip);
-        form.setValue('billing_country', data.country);
-      }
-    } catch (error) {
-      console.error('ARES lookup failed:', error);
+      const res = await fetch('https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ obchodniJmeno: query, start: 0, pocet: 8 }),
+      });
+      if (!res.ok) throw new Error('ARES search failed');
+      const data = await res.json();
+      const items = (data.ekonomickeSubjekty || []).map((s: any) => ({
+        ico: s.ico,
+        name: s.obchodniJmeno || s.nazev || '',
+        city: s.sidlo?.nazevObce || null,
+      }));
+      setAresResults(items);
+      setShowAresResults(items.length > 0);
+    } catch {
+      setAresResults([]);
     } finally {
-      setIsAresLoading(false);
+      setIsSearchingAres(false);
     }
+  }, []);
+
+  const handleAresQueryChange = (value: string) => {
+    setAresQuery(value);
+    setAresValidated(false);
+    if (aresSearchTimeout.current) clearTimeout(aresSearchTimeout.current);
+    aresSearchTimeout.current = setTimeout(() => searchARES(value), 400);
+  };
+
+  const handleSelectAresResult = async (result: { ico: string; name: string }) => {
+    setShowAresResults(false);
+    setAresQuery(result.name);
+    await validateAresIco(result.ico);
   };
 
   const onSubmit = async (data: OnboardingFormData) => {
@@ -716,86 +740,187 @@ export default function OnboardingForm() {
                         🏢 Firemní údaje
                       </CardTitle>
                       <CardDescription>
-                        Údaje jsme získali z vašeho webu. Pokud nesedí, prosím upravte je.
+                        Vyberte zemi a doplňte údaje o společnosti.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField
-                          control={form.control}
-                          name="ico"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>IČO *</FormLabel>
-                              <div className="flex gap-2">
-                                <FormControl>
-                                  <Input placeholder="12345678" maxLength={8} {...field} />
-                                </FormControl>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={handleAresLookup}
-                                  disabled={isAresLoading || field.value.length !== 8}
-                                  title="Načíst z ARES"
-                                >
-                                  {isAresLoading ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Search className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="dic"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>DIČ</FormLabel>
-                              <FormControl>
-                                <Input placeholder="CZ12345678" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                      {/* Country selector */}
+                      <div>
+                        <FormLabel>Země registrace</FormLabel>
+                        <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit mt-1.5">
+                          {([
+                            { value: 'CZ' as CompanyCountry, label: '🇨🇿 Česko' },
+                            { value: 'SK' as CompanyCountry, label: '🇸🇰 Slovensko' },
+                            { value: 'other' as CompanyCountry, label: '🌍 Jiná' },
+                          ]).map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={cn(
+                                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                                companyCountry === option.value
+                                  ? "bg-background shadow-sm text-foreground"
+                                  : "text-muted-foreground hover:text-foreground"
+                              )}
+                              onClick={() => {
+                                setCompanyCountry(option.value);
+                                setAresValidated(false);
+                                setAresError(null);
+                                setAresQuery('');
+                                setAresResults([]);
+                                setShowAresResults(false);
+                                if (option.value === 'CZ') {
+                                  form.setValue('billing_country', 'Česká republika', { shouldValidate: true });
+                                } else if (option.value === 'SK') {
+                                  form.setValue('billing_country', 'Slovenská republika', { shouldValidate: true });
+                                } else {
+                                  form.setValue('billing_country', '', { shouldValidate: true });
+                                }
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
-                      {icoChanged && (
-                        <Alert variant="default" className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
-                          <AlertTriangle className="h-4 w-4 text-amber-500" />
-                          <AlertDescription className="text-amber-700 dark:text-amber-400">
-                            IČO se liší od původního záznamu ({originalIco}).{' '}
-                            <Button
-                              type="button"
-                              variant="link"
-                              className="p-0 h-auto text-amber-700 dark:text-amber-400 underline"
-                              onClick={handleAresLookup}
-                            >
-                              Načíst údaje z ARES pro nové IČO?
-                            </Button>
-                          </AlertDescription>
-                        </Alert>
+                      {/* CZ: ARES name search */}
+                      {companyCountry === 'CZ' && (
+                        <div className="relative">
+                          <FormLabel>Vyhledat firmu v ARES</FormLabel>
+                          <div className="mt-1.5 relative">
+                            <Input
+                              value={aresQuery}
+                              onChange={(e) => handleAresQueryChange(e.target.value)}
+                              onFocus={() => aresResults.length > 0 && setShowAresResults(true)}
+                              onBlur={() => setTimeout(() => setShowAresResults(false), 200)}
+                              placeholder="Začněte psát název firmy nebo jméno OSVČ..."
+                            />
+                            {isSearchingAres && (
+                              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                            )}
+                          </div>
+
+                          {aresError && (
+                            <div className="flex items-center gap-1 text-sm text-destructive mt-1">
+                              <AlertTriangle className="h-4 w-4" />
+                              {aresError}
+                            </div>
+                          )}
+                          {aresValidated && (
+                            <div className="flex items-center gap-1 text-sm text-green-600 mt-1">
+                              <CheckCircle2 className="h-4 w-4" />
+                              Údaje načteny z ARES (IČO: {form.getValues('ico')})
+                            </div>
+                          )}
+                          {!aresValidated && !aresError && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Zadejte alespoň 3 znaky pro vyhledání v ARES
+                            </p>
+                          )}
+
+                          {showAresResults && aresResults.length > 0 && (
+                            <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                              {aresResults.map((r) => (
+                                <button
+                                  key={r.ico}
+                                  type="button"
+                                  className="w-full text-left px-3 py-2.5 hover:bg-accent transition-colors border-b last:border-b-0 flex items-center justify-between gap-2"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => handleSelectAresResult(r)}
+                                >
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-sm truncate">{r.name}</p>
+                                    {r.city && <p className="text-xs text-muted-foreground">{r.city}</p>}
+                                  </div>
+                                  <span className="text-xs font-mono text-muted-foreground shrink-0">IČO {r.ico}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       )}
 
-                      <FormField
-                        control={form.control}
-                        name="company_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Název společnosti *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Vaše společnost s.r.o." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {/* SK / Other: Manual entry */}
+                      {companyCountry !== 'CZ' && (
+                        <div className="space-y-4">
+                          <FormField
+                            control={form.control}
+                            name="company_name"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Název společnosti *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder={companyCountry === 'SK' ? 'Vaša spoločnosť s.r.o.' : 'Company name'} {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <FormField
+                              control={form.control}
+                              name="ico"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>IČO</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder={companyCountry === 'SK' ? '12345678' : 'Company ID'} {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="dic"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{companyCountry === 'SK' ? 'DIČ / IČ DPH' : 'VAT ID'}</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder={companyCountry === 'SK' ? 'SK1234567890' : 'VAT number'} {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CZ: Show filled fields after ARES */}
+                      {companyCountry === 'CZ' && aresValidated && (
+                        <div className="space-y-4 animate-in fade-in-0 duration-300">
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <FormField
+                              control={form.control}
+                              name="company_name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Název společnosti *</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="dic"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>DIČ</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="CZ12345678" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       <div className="grid gap-4 md:grid-cols-2">
                         <FormField
