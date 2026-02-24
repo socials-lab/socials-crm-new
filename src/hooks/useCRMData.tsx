@@ -9,6 +9,7 @@ import type {
   Colleague, 
   EngagementAssignment,
   ExtraWork,
+  ExtraWorkStatus,
   Service,
   IssuedInvoice,
 } from '@/types/crm';
@@ -212,7 +213,12 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       const { data, error } = await (supabase as any).from('colleagues').select('*').order('full_name');
       if (error) throw error;
-      return (data || []).map(transformColleague);
+      const transformed = (data || []).map(transformColleague);
+      // Ensure colleagues have internal_hourly_cost for billing double-check demo
+      return transformed.map((c: any) => ({
+        ...c,
+        internal_hourly_cost: c.internal_hourly_cost || 700,
+      }));
     },
   });
 
@@ -225,13 +231,82 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  const MOCK_EXTRA_WORKS: ExtraWork[] = [
+    {
+      id: 'ew-mock-1',
+      client_id: 'c0000000-0000-0000-0000-000000000001',
+      engagement_id: 'e0000000-0000-0000-0000-000000000001',
+      colleague_id: colleagues[0]?.id || '',
+      name: 'Redesign bannerů pro jarní kampaň',
+      description: 'Nové kreativy pro jarní kampaň na sociálních sítích',
+      amount: 9000,
+      currency: 'CZK',
+      hours_worked: 5,
+      hourly_rate: 1800,
+      work_date: '2026-02-20',
+      billing_period: '2026-02',
+      status: 'pending_approval' as ExtraWorkStatus,
+      approval_date: null, approved_by: null,
+      invoice_id: null, invoice_number: null, invoiced_at: null,
+      approval_token: null, client_approval_email: null, client_approved_at: null, client_rejected_at: null, client_rejection_reason: null,
+      upsold_by_id: null, upsell_commission_percent: null,
+      notes: '', created_at: '2026-02-20T10:00:00Z', updated_at: '2026-02-20T10:00:00Z',
+    },
+    {
+      id: 'ew-mock-2',
+      client_id: 'c0000000-0000-0000-0000-000000000001',
+      engagement_id: 'e0000000-0000-0000-0000-000000000001',
+      colleague_id: colleagues[1]?.id || colleagues[0]?.id || '',
+      name: 'Analýza konkurence PPC',
+      description: 'Detailní analýza konkurenčních PPC kampaní',
+      amount: 6600,
+      currency: 'CZK',
+      hours_worked: 3,
+      hourly_rate: 2200,
+      work_date: '2026-02-18',
+      billing_period: '2026-02',
+      status: 'in_progress' as ExtraWorkStatus,
+      approval_date: null, approved_by: null,
+      invoice_id: null, invoice_number: null, invoiced_at: null,
+      approval_token: 'mock-token-1', client_approval_email: 'klient@test.cz', client_approved_at: '2026-02-19T14:30:00Z', client_rejected_at: null, client_rejection_reason: null,
+      upsold_by_id: null, upsell_commission_percent: null,
+      notes: '', created_at: '2026-02-18T09:00:00Z', updated_at: '2026-02-19T14:30:00Z',
+    },
+    {
+      id: 'ew-mock-3',
+      client_id: 'c0000000-0000-0000-0000-000000000001',
+      engagement_id: 'e0000000-0000-0000-0000-000000000001',
+      colleague_id: colleagues[2]?.id || colleagues[0]?.id || '',
+      name: 'Úprava landing page – nízká marže',
+      description: 'A/B test varianty LP – sazba kolegy blízká klientské',
+      amount: 4800,
+      currency: 'CZK',
+      hours_worked: 8,
+      hourly_rate: 600,
+      work_date: '2026-02-15',
+      billing_period: '2026-02',
+      status: 'ready_to_invoice' as ExtraWorkStatus,
+      approval_date: null, approved_by: null,
+      invoice_id: null, invoice_number: null, invoiced_at: null,
+      approval_token: 'mock-token-2', client_approval_email: 'klient@test.cz', client_approved_at: '2026-02-16T11:00:00Z', client_rejected_at: null, client_rejection_reason: null,
+      upsold_by_id: null, upsell_commission_percent: null,
+      notes: '', created_at: '2026-02-15T08:00:00Z', updated_at: '2026-02-16T11:00:00Z',
+    },
+  ];
+
   const { data: extraWorks = [], isLoading: extraWorksLoading } = useQuery({
-    queryKey: ['extra_works'],
+    queryKey: ['extra_works', colleagues],
     queryFn: async () => {
       const { data, error } = await (supabase as any).from('extra_works').select('*').order('work_date', { ascending: false });
       if (error) throw error;
-      return data || [];
+      const dbData = data || [];
+      // Merge mock data if no real extra works exist
+      if (dbData.length === 0 && colleagues.length > 0) {
+        return MOCK_EXTRA_WORKS;
+      }
+      return dbData;
     },
+    enabled: colleagues.length > 0,
   });
 
   // Mock services - will be merged with Supabase data
