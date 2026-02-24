@@ -275,6 +275,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         // Copy document links from lead
         offer_url: lead.offer_url || null,
         contract_url: lead.contract_url || null,
+        pinned_notes: null,
       });
 
       // 4. Create Assignments for team members

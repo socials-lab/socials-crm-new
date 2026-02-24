@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isSameMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock, StickyNote } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -165,6 +166,10 @@ function EngagementsContent() {
   // History dialog state
   const [historyEngagement, setHistoryEngagement] = useState<Engagement | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Pinned notes inline editing
+  const [editingPinnedNotesId, setEditingPinnedNotesId] = useState<string | null>(null);
+  const [tempPinnedNotes, setTempPinnedNotes] = useState<string>('');
 
   // Handle highlight from URL
   useEffect(() => {
@@ -442,6 +447,13 @@ function EngagementsContent() {
                         {client?.brand_name}
                       </button>
                     </p>
+                    {/* Připnutá poznámka v zabaleném stavu */}
+                    {engagement.pinned_notes && !isExpanded && (
+                      <p className="text-xs text-yellow-700 dark:text-yellow-400 truncate mt-0.5 flex items-center gap-1">
+                        <StickyNote className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{engagement.pinned_notes}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -524,6 +536,75 @@ function EngagementsContent() {
 
               {isExpanded && (
                 <CardContent className="border-t bg-muted/30 pt-4">
+                  {/* Připnutá poznámka */}
+                  <div className="mb-6 p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-sm flex items-center gap-2 text-yellow-800 dark:text-yellow-400">
+                        <StickyNote className="h-4 w-4" />
+                        Připnutá poznámka
+                      </h4>
+                      {editingPinnedNotesId !== engagement.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingPinnedNotesId(engagement.id);
+                            setTempPinnedNotes(engagement.pinned_notes || '');
+                          }}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          Upravit
+                        </Button>
+                      )}
+                    </div>
+                    {editingPinnedNotesId === engagement.id ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={tempPinnedNotes}
+                          onChange={(e) => setTempPinnedNotes(e.target.value)}
+                          placeholder="Přidejte poznámku..."
+                          className="min-h-[80px] bg-background"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingPinnedNotesId(null);
+                              setTempPinnedNotes('');
+                            }}
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Zrušit
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateEngagement(engagement.id, { pinned_notes: tempPinnedNotes });
+                              setEditingPinnedNotesId(null);
+                              setTempPinnedNotes('');
+                              toast.success('Poznámka uložena');
+                            }}
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            Uložit
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-yellow-900 dark:text-yellow-100 whitespace-pre-wrap">
+                        {engagement.pinned_notes || <span className="italic text-yellow-700 dark:text-yellow-500">Žádná poznámka</span>}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <div className="space-y-3">
                       <h4 className="font-medium text-sm flex items-center gap-2">
