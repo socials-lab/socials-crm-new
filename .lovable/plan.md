@@ -1,62 +1,53 @@
 
-## Správa emailových šablon v Nastavení
 
-Centralizovaná správa všech emailových šablon používaných v CRM. Šablony se ukládají do Supabase a jednotlivé dialogy je načítají jako výchozí obsah.
+# Pridani kompletni sluzby PPC Boost
 
-### Identifikované emailové šablony (7)
+## Co se zmeni
 
-| Šablona | Použití | Proměnné |
-|---------|---------|----------|
-| Nabídka spolupráce | SendOfferDialog | `{company}`, `{domain}` |
-| Onboarding formulář | SendOnboardingFormDialog | `{contact_name}`, `{company}`, `{url}` |
-| Žádost o přístupy | RequestAccessDialog | `{company}` |
-| Schválení vícepráce | SendApprovalDialog | `{work_name}`, `{amount}`, `{url}` |
-| Návrh změny zakázky | SendModificationEmailDialog | `{client}`, `{type}` |
-| Pozvánka na pohovor | SendInterviewInviteDialog | `{name}`, `{position}`, `{sender}` |
-| Odmítnutí kandidáta | SendRejectionEmailDialog | `{name}`, `{position}`, `{sender}` |
+Sluzba PPC Boost uz existuje v systemu, ale s velmi strucnymi daty. Aktualizujeme ji na plny rozsah informaci, ktere jsi poskytl -- vcetne detailnich rozpisu, benefitu, tier porovnani a cen. Vsechno se bude propisovat do nabidek stejne jako u Socials Boost.
 
-### Co se vytvoří
+## Kroky implementace
 
-**1. Databáze** - nová tabulka `email_templates`
-- `id` (uuid, PK)
-- `template_key` (text, unique) - identifikátor šablony (např. `send_offer`, `interview_invite`)
-- `name` (text) - lidsky čitelný název
-- `subject_template` (text) - šablona předmětu s placeholdery `{variable}`
-- `body_template` (text) - šablona těla emailu s placeholdery
-- `description` (text) - popis, kde se šablona používá
-- `available_variables` (text[]) - seznam dostupných proměnných
-- `updated_at`, `updated_by` (uuid)
-- RLS: CRM users can read, admins can update
+### 1. Aktualizace `src/constants/serviceDetails.ts` -- PPC_BOOST
 
-**2. Komponenta `EmailTemplatesManager`** (`src/components/settings/EmailTemplatesManager.tsx`)
-- Seznam všech šablon jako karty/accordion
-- Kliknutím na šablonu se otevře editor s:
-  - Editovatelným předmětem
-  - Editovatelným tělem (textarea)
-  - Seznamem dostupných proměnných (kliknutím se vloží do textu)
-  - Tlačítko "Uložit" a "Obnovit výchozí"
-- Zobrazí se na stránce Nastavení jako nová sekce přes celou šířku
+Prepsat stavajici strucny zaznam `PPC_BOOST` na kompletni verzi:
 
-**3. Hook `useEmailTemplates`** (`src/hooks/useEmailTemplates.tsx`)
-- Načítá šablony z Supabase
-- Funkce `getTemplate(key)` vrací šablonu
-- Funkce `fillTemplate(key, variables)` nahradí placeholdery hodnotami
-- Funkce `updateTemplate(key, subject, body)` uloží změny
-- Fallback na hardcoded výchozí hodnoty pokud šablona v DB neexistí
+- **tagline**: "Sprava Google Ads a S-kliku -- vice zakazek a vyssi zisk"
+- **platforms**: Google Ads, Sklik (Seznam.cz)
+- **targetAudience**: E-shopy a firmy, ktere chteji vice zakazek z Google a Seznamu
+- **benefits**: 4 body z "Co ziskate" (vice zakazek, silnejsi nabidka, mene starosti, partner)
+- **setup**: 3 sekce:
+  - Nastaveni Google Ads a S-kliku (7 polozek)
+  - Kontrola analytickeho mereni (2 polozky)
+  - Tvorba dashboardu v Looker Studio (4 polozky)
+- **management**: 3 sekce:
+  - Sprava Google Ads (8 polozek -- Shopping, DSA, PMax, Search, Display, Remarketing, Feed, Konverze)
+  - Sprava S-kliku (5 polozek)
+  - Reporting a komunikace (3 polozky)
+- **tierComparison**: Kompletni tabulka z uzivatelskeho vstupu (zakladni setup, denni kontrola, optimalizace 1-2x/2-3x/3-4x tydne, tvorba reklam, kreativy, Mergado, strategie, Freelo, Looker Studio, mesicni reporting)
+- **tierPricing**: Zachovat stavajici ceny (growth: 24 900, pro: 34 900, elite: individualni)
 
-**4. Úprava Settings stránky**
-- Přidání nové sekce "Emailové šablony" pod stávající karty
-- Zabere celou šířku (lg:col-span-2)
+### 2. Aktualizace `src/constants/serviceDefaults.ts` -- 'ppc boost'
 
-**5. Úprava emailových dialogů**
-- Každý dialog začne používat `useEmailTemplates` hook
-- Místo hardcoded textů zavolá `fillTemplate('template_key', { variable: value })`
-- Uživatel stále může text upravit v dialogu před odesláním
+Prepsat stavajici strucny zaznam na kompletni verzi s:
 
-### Technické detaily
+- **deliverables**: Aktualizovat na 4 hlavni body z "Co ziskate" + klicove deliverables
+- **detailed_sections**: Pridat 5 sekci:
+  - Nastaveni Google Ads a S-kliku
+  - Kontrola analytickeho mereni
+  - Tvorba dashboardu v Looker Studio
+  - Sprava Google Ads (vcetne Shopping, DSA, PMax, Search, Display, Remarketing, Feed, Konverze)
+  - Sprava S-kliku
+  - Reporting a komunikace
+- **frequency** a **turnaround**: Zachovat
+- **requirements**: Aktualizovat (pristupy do Google Ads, Sklik, Merchant Center, GA, produktovy feed)
 
-- Výchozí šablony se seednou migrací (INSERT s ON CONFLICT DO NOTHING)
-- Proměnné v šablonách používají formát `{variable_name}`
-- `fillTemplate` provede jednoduché string.replace pro každou proměnnou
-- Šablony se cachují přes React Query, invalidace po uložení
-- Seed data obsahují aktuální hardcoded texty ze všech dialogů
+### 3. Test nabidka s PPC Boost
+
+Pridat do `publicOffersMockData.ts` novou testovaci nabidku na `/offer/test-ppc-boost` s PPC Boost jako core sluzbou, vcetne vsech deliverables, detailed_sections, requirements a tier selection. Umozni overeni, ze se vsechno spravne zobrazuje na verejne nabidce.
+
+## Technicke detaily
+
+- Zadne nove soubory, zadne nove zavislosti
+- Zmeny ve 3 souborech: `serviceDetails.ts`, `serviceDefaults.ts`, `publicOffersMockData.ts`
+- Data se budou propisovat do nabidek pres existujici mechanismus `mergeWithDefaults()` a `getServiceDetail()`
