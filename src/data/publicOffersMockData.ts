@@ -44,6 +44,53 @@ const TEST_OFFER: PublicOffer = {
         'Přístup do Google Analytics (pro propojení s Looker Studio)',
       ],
       start_timeline: 'Do 5 pracovních dnů od podpisu smlouvy',
+      detailed_sections: [
+        {
+          emoji: '📐',
+          title: 'Nastavení Meta Business Suite',
+          items: [
+            'Meta Pixel: Kontrola a nastavení pro přesné měření klíčových událostí na webu, případně implementace Conversion API (CAPI).',
+            'Katalog produktů: Kontrola propojení a konfigurace katalogu produktů pro dynamické reklamy (DPA).',
+            'Reklamní účet: Ověření správnosti nastavení reklamního účtu, včetně platebních údajů a propojení s dalšími nástroji.',
+            'Meta Business Suite: Detailní kontrola propojení všech nástrojů (reklamní účet, pixel, katalog, stránky) v rámci Business Suite.',
+          ],
+        },
+        {
+          emoji: '🏗️',
+          title: 'Struktura kampaní',
+          items: [
+            'Vytvoření základní struktury kampaní zaměřených na akvizici nových zákazníků a remarketing.',
+            'Tvorba poutavých textů přizpůsobených cílové skupině a obchodním cílům.',
+          ],
+        },
+        {
+          emoji: '📊',
+          title: 'Kontrola analytického měření',
+          items: [
+            'Kontrola a optimalizace měření klíčových událostí (nákupy, přidání do košíku, registrace) prostřednictvím modulů ve Shoptetu, Upgates nebo Shopify.',
+          ],
+        },
+        {
+          emoji: '📈',
+          title: 'Tvorba dashboardu výsledků v Looker Studio',
+          items: [
+            'Reportovací šablona: Vytvoření přehledné šablony pro sledování výkonu kampaní.',
+            'Propojení dat: Napojení Looker Studio na Google Ads, Meta Ads a Google Analytics.',
+            'Vizualizace metrik: Přehledné zobrazení klíčových metrik (CPC, CTR, ROAS, konverze) pro snadné vyhodnocení kampaní.',
+            'Automatizace dat: Nastavení automatické aktualizace a sdílení reportů pro přístup 24/7.',
+          ],
+        },
+        {
+          emoji: '🎯',
+          title: 'Vylepšení nabídky',
+          items: [
+            'Návrh produktových balíčků (bundles) – kombinace produktů, které zvýší hodnotu objednávky a motivují zákazníky ke koupi.',
+            'Doporučení slevových a akčních nabídek – strategické slevy, dárky k nákupu nebo limitované akce.',
+            'Zvýraznění unikátní hodnoty nabídky – jasně komunikujeme, proč si zákazník má vybrat právě vás.',
+            'Kontrola webu – identifikujeme bariéry v nákupním procesu a doporučíme úpravy pro vyšší míru dokončení nákupů.',
+          ],
+        },
+      ],
     },
     {
       id: 'svc-2',

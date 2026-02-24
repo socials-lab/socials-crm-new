@@ -28,6 +28,14 @@ export interface PublicOfferService {
   turnaround?: string;            // Delivery time (e.g., "within 14 days")
   requirements?: string[];        // What we need from client
   start_timeline?: string;        // When we can start
+  detailed_sections?: ServiceDetailSection[];  // Expandable structured detail sections
+}
+
+// Structured detail section for "Více informací" expandable
+export interface ServiceDetailSection {
+  emoji: string;
+  title: string;
+  items: string[];
 }
 
 // Public offer for clients
