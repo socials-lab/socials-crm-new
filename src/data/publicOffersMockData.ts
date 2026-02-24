@@ -461,6 +461,107 @@ const TEST_OFFER: PublicOffer = {
   owner_phone: '+420 123 456 789',
 };
 
+const TEST_VIDEO_BOOST_OFFER: PublicOffer = {
+  id: 'test-video-boost-id',
+  lead_id: 'test-lead-vb',
+  token: 'test-video-boost',
+  company_name: 'Video Test s.r.o.',
+  website: 'https://www.videotest.cz',
+  contact_name: 'Eva Nová',
+  audit_summary: null,
+  recommendation_intro: 'Na základě vaší poptávky doporučujeme službu Video Boost pro tvorbu výkonnostních videí do vašich reklam.',
+  custom_note: null,
+  loom_url: null,
+  services: [
+    {
+      id: 'vb-service-1',
+      service_id: 'srv-10',
+      name: 'Video Boost',
+      description: 'Výkonnostní videa pro Meta Ads / TikTok Ads – videa, která prodávají',
+      offer_description: null,
+      selected_tier: null,
+      price: 4900,
+      currency: 'CZK',
+      billing_type: 'one_off',
+      service_type: 'addon',
+      deliverables: [
+        'Videa, která prodávají – jasná nabídka, benefit a silné CTA',
+        'Rychlá produkce bez zbytečného natáčení (vaše záběry + AI voiceover, titulky, b-rolly)',
+        'Více variant z jednoho zadání – 3 různé hooky pro A/B testování',
+        'Formát 9:16, délka 15–30 sekund, připravené přímo do reklam',
+        '1 kolo revizí v ceně každého videa',
+      ],
+      frequency: 'Průběžně dle objednávek',
+      turnaround: 'Standardní dodání do 5 pracovních dnů',
+      requirements: [
+        'Záběry produktu/služby',
+        'Cíle a účel videa',
+        'Produkty/služby k propagaci',
+      ],
+      detailed_sections: [
+        {
+          emoji: '🎯',
+          title: 'Jak služba probíhá – Účel videa a nabídka',
+          items: [
+            'Ujasníme, co se má komunikovat – sleva, akce, dárek, novinka, hlavní benefit produktu/služby.',
+            'Definujeme účel videa – akvizice nových zákazníků, remarketing, podpora konkrétní kampaně.',
+            'Domluvíme, které konkrétní produkty/služby budou ve videu.',
+            'Na základě toho připravíme krátký creative brief, ze kterého vychází scénář.',
+          ],
+        },
+        {
+          emoji: '📝',
+          title: 'Scénář a voiceover (3 hooky na koncept)',
+          items: [
+            'Kreativní úhel videa – jak produkt/službu odprezentovat co nejatraktivněji.',
+            'Voiceover script: HOOK (3 varianty), MAIN část, CTA.',
+            'Text schvalujete vy jako klient – teprve potom jdeme do střihu.',
+          ],
+        },
+        {
+          emoji: '🎬',
+          title: 'Střih videa a AI prvky',
+          items: [
+            'Využijeme vaše záběry, doplníme AI voiceover a AI titulky.',
+            'U varianty AI b-roll také rozšířené AI scény a b-rolly.',
+            'Výstup: formát 9:16, délka 15–30 sekund, připravené do reklam.',
+          ],
+        },
+        {
+          emoji: '✅',
+          title: 'Revize a finální export',
+          items: [
+            '1 kolo revizí v ceně. Další revize: 1 700 Kč / hod.',
+            'Finální video ve formátech pro Meta Ads a TikTok Ads.',
+          ],
+        },
+        {
+          emoji: '📦',
+          title: 'Varianty služby a ceny (bez DPH)',
+          items: [
+            '🎥 Standard: 4 900 Kč / video. Balíček 3 videí: 13 230 Kč (sleva 10 %).',
+            '🎥 AI b-roll: 6 900 Kč / video. Balíček 3 videí: 18 630 Kč (sleva 10 %).',
+          ],
+        },
+      ],
+    },
+  ],
+  portfolio_links: [],
+  total_price: 4900,
+  currency: 'CZK',
+  offer_type: 'one_off',
+  valid_until: '2025-12-31',
+  is_active: true,
+  viewed_at: null,
+  view_count: 0,
+  created_by: null,
+  created_at: '2025-01-15T10:00:00Z',
+  updated_at: '2025-01-15T10:00:00Z',
+  owner_name: 'Daniel Bauer',
+  owner_email: 'daniel@socials.cz',
+  owner_phone: '+420 123 456 789',
+};
+
 function getStoredOffers(): PublicOffer[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -490,6 +591,9 @@ export function getPublicOfferByToken(token: string): PublicOffer | undefined {
   }
   if (token === 'test-ppc-boost') {
     return TEST_PPC_BOOST_OFFER;
+  }
+  if (token === 'test-video-boost') {
+    return TEST_VIDEO_BOOST_OFFER;
   }
   
   const offers = getStoredOffers();

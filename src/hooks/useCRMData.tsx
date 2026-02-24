@@ -379,6 +379,26 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
+    {
+      id: 'srv-10',
+      code: 'VIDEO_BOOST',
+      name: 'Video Boost',
+      service_type: 'addon',
+      category: 'creative',
+      base_price: 4900,
+      currency: 'CZK',
+      description: 'Výkonnostní videa pro Meta Ads / TikTok Ads – videa, která prodávají',
+      is_active: true,
+      tier_pricing: null,
+      external_url: null,
+      default_deliverables: [
+        'Videa, která prodávají – jasná nabídka, benefit a silné CTA',
+        'Rychlá produkce bez zbytečného natáčení (vaše záběry + AI voiceover, titulky, b-rolly)',
+        'Více variant z jednoho zadání – 3 různé hooky pro A/B testování',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
   ];
 
   const { data: services = [], isLoading: servicesLoading } = useQuery({

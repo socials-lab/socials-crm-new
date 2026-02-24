@@ -389,6 +389,70 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
     },
   },
 
+  VIDEO_BOOST: {
+    code: 'VIDEO_BOOST',
+    tagline: 'Výkonnostní videa pro Meta Ads / TikTok Ads',
+    platforms: ['Meta Ads (Reels, Stories)', 'TikTok Ads (Shorts)'],
+    targetAudience: 'Firmy a e-shopy, které chtějí výkonnostní videa pro reklamy na sociálních sítích',
+    benefits: [
+      'Videa, která prodávají – zaměřujeme se na jasnou nabídku, benefit a silné CTA.',
+      'Rychlá produkce bez zbytečného natáčení – pracujeme primárně s vašimi záběry a doplňujeme AI voiceoverem, titulky a AI b-rolly.',
+      'Více variant z jednoho zadání – ke každému videu připravíme 3 různé hooky pro A/B testování.',
+    ],
+    setup: [
+      {
+        title: 'Účel videa a nabídka',
+        items: [
+          'Co se má komunikovat – sleva, akce, dárek, novinka, hlavní benefit produktu/služby.',
+          'Účel videa – akvizice nových zákazníků, remarketing, podpora konkrétní kampaně / landing page.',
+          'Produkty – domluvíme, které konkrétní produkty/služby budou ve videu.',
+          'Na základě toho připravíme krátký creative brief, ze kterého vychází scénář.',
+        ],
+      },
+    ],
+    management: [
+      {
+        title: 'Scénář a voiceover (3 hooky na koncept)',
+        items: [
+          'Kreativní úhel videa – jak produkt/službu odprezentovat, aby byl pro cílovou skupinu co nejatraktivnější.',
+          'Voiceover script – kompletní text k videu: HOOK (3 varianty), MAIN část (vysvětlení benefitu/nabídky), CTA (jasná výzva k akci).',
+          'Text následně schvalujete vy jako klient – teprve potom jdeme do střihu.',
+        ],
+      },
+      {
+        title: 'Střih videa a AI prvky',
+        items: [
+          'Využijeme záběry, které dodáte (produkty, použití, sklad, tým, UGC…).',
+          'Doplníme AI voiceover – přirozeně působící hlas podle schváleného textu.',
+          'Přidáme AI titulky – dynamické, dobře čitelné i bez zvuku.',
+          'U rozšířené varianty také AI b-rolly a AI scény, které doplní prostředí a kontext.',
+          'Výstupem je video ve formátu 9:16, délka 15–30 sekund, připravené rovnou do reklam.',
+        ],
+      },
+      {
+        title: 'Revize a finální export',
+        items: [
+          'V ceně každého videa je 1 kolo revizí (úprava textů, drobné změny střihu, záběrů, barev).',
+          'Každé další kolo revizí účtujeme dle času – 1 700 Kč / hod.',
+          'Finální video dodáváme ve formátech vhodných pro Meta Ads a TikTok Ads.',
+        ],
+      },
+    ],
+    tierComparison: [
+      { feature: '1 koncept videa', growth: true, pro: true, elite: false },
+      { feature: '3 různé hooky (3 finální videa)', growth: true, pro: true, elite: false },
+      { feature: 'AI voiceover + AI titulky', growth: true, pro: true, elite: false },
+      { feature: 'AI b-rolly a AI scény', growth: false, pro: true, elite: false },
+      { feature: 'Cena za 1 video', growth: '4 900 Kč', pro: '6 900 Kč', elite: '' },
+      { feature: 'Balíček 3 videí (sleva 10 %)', growth: '13 230 Kč', pro: '18 630 Kč', elite: '' },
+    ],
+    tierPricing: {
+      growth: { price: 4900, spend: 'Standard' },
+      pro: { price: 6900, spend: 'AI b-roll' },
+      elite: { price: null, spend: '' },
+    },
+  },
+
   SKLIK: {
     code: 'SKLIK',
     tagline: 'Reklama na Seznam.cz pro český trh',
