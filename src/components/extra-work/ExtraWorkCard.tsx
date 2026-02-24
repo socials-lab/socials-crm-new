@@ -170,13 +170,19 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
               {colleague && work.hours_worked && (work.internal_hourly_rate || colleague.internal_hourly_cost) ? (() => {
                   const internalRate = work.internal_hourly_rate ?? colleague.internal_hourly_cost!;
                   const colleagueCost = work.hours_worked! * internalRate;
-                  const margin = work.amount - colleagueCost;
+                  const upsellCommission = work.upsold_by_id
+                    ? Math.round(work.amount * (work.upsell_commission_percent || 10) / 100)
+                    : 0;
+                  const margin = work.amount - colleagueCost - upsellCommission;
                   const marginPercent = work.amount > 0 ? Math.round((margin / work.amount) * 100) : 0;
                   const marginColor = marginPercent >= 40
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : marginPercent >= 20
                       ? 'text-amber-600 dark:text-amber-400'
                       : 'text-red-600 dark:text-red-400';
+                  const upsoldByColleague = work.upsold_by_id
+                    ? colleagues.find(c => c.id === work.upsold_by_id)
+                    : null;
                   return (
                     <>
                       <p>
@@ -184,6 +190,17 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                         {work.hours_worked}h × {internalRate.toLocaleString('cs-CZ')} {work.currency || 'CZK'} ={' '}
                         <span className="font-medium">{formatCurrency(colleagueCost)}</span>
                       </p>
+                      {upsellCommission > 0 && (
+                        <p>
+                          <span className="text-muted-foreground">
+                            Upsell provize ({work.upsell_commission_percent || 10}%):
+                          </span>{' '}
+                          <span className="font-medium">{formatCurrency(upsellCommission)}</span>
+                          {upsoldByColleague && (
+                            <span className="text-muted-foreground"> ({upsoldByColleague.full_name})</span>
+                          )}
+                        </p>
+                      )}
                       <p>
                         <span className="text-muted-foreground">Marže:</span>{' '}
                         <span className={`font-semibold ${marginColor}`}>

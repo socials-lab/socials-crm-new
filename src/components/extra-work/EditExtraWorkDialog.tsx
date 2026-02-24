@@ -168,27 +168,63 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
             <p className="text-xs text-muted-foreground">Lze upravit pro tuto vícepráci</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label className="text-muted-foreground text-xs">💰 Částka klient</Label>
-              <div className="px-3 py-2 bg-muted/50 rounded-md text-sm font-semibold">
-                {formatCurrency(calculatedAmount)}
+          {(() => {
+            const hours = parseFloat(hoursWorked) || 0;
+            const intRate = parseFloat(internalHourlyRate) || 0;
+            const colleagueCost = intRate > 0 && hours > 0 ? Math.round(hours * intRate) : 0;
+            const hasUpsell = !!extraWork.upsold_by_id;
+            const upsellCommission = hasUpsell && calculatedAmount > 0
+              ? Math.round(calculatedAmount * (extraWork.upsell_commission_percent || 10) / 100)
+              : 0;
+            const margin = calculatedAmount - colleagueCost - upsellCommission;
+            const marginPercent = calculatedAmount > 0 ? Math.round((margin / calculatedAmount) * 100) : 0;
+            const marginColor = marginPercent >= 40
+              ? 'text-emerald-600 dark:text-emerald-400'
+              : marginPercent >= 20
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-red-600 dark:text-red-400';
+            const showMargin = colleagueCost > 0;
+            const upsoldByColleague = extraWork.upsold_by_id
+              ? colleagues.filter(c => c.status === 'active').find(c => c.id === extraWork.upsold_by_id)
+              : null;
+            return (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label className="text-muted-foreground text-xs">💰 Částka klient</Label>
+                    <div className="px-3 py-2 bg-muted/50 rounded-md text-sm font-semibold">
+                      {formatCurrency(calculatedAmount)}
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-muted-foreground text-xs">🧑‍💻 Odměna kolega</Label>
+                    <div className="px-3 py-2 bg-muted/50 rounded-md text-sm font-semibold">
+                      {colleagueCost > 0 ? formatCurrency(colleagueCost) : '—'}
+                    </div>
+                  </div>
+                </div>
+                {upsellCommission > 0 && (
+                  <div className="grid gap-2">
+                    <Label className="text-muted-foreground text-xs">
+                      📈 Upsell provize ({extraWork.upsell_commission_percent || 10}%)
+                      {upsoldByColleague && ` — ${upsoldByColleague.full_name}`}
+                    </Label>
+                    <div className="px-3 py-2 bg-muted/50 rounded-md text-sm font-semibold">
+                      {formatCurrency(upsellCommission)}
+                    </div>
+                  </div>
+                )}
+                {showMargin && (
+                  <div className="grid gap-2">
+                    <Label className="text-muted-foreground text-xs">📊 Marže</Label>
+                    <div className={`px-3 py-2 bg-muted/50 rounded-md text-sm font-semibold ${marginColor}`}>
+                      {formatCurrency(margin)} ({marginPercent}%)
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="grid gap-2">
-              <Label className="text-muted-foreground text-xs">🧑‍💻 Odměna kolega</Label>
-              <div className="px-3 py-2 bg-muted/50 rounded-md text-sm font-semibold">
-                {(() => {
-                  const hours = parseFloat(hoursWorked) || 0;
-                  const rate = parseFloat(internalHourlyRate) || 0;
-                  if (rate > 0 && hours > 0) {
-                    return formatCurrency(Math.round(hours * rate));
-                  }
-                  return '—';
-                })()}
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           <div className="grid gap-2">
             <Label>Poznámky</Label>
