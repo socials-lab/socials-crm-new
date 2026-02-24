@@ -1,73 +1,74 @@
 
 
-# Aktualizace sluzby Creative Boost na zaklade kompletnich informaci
+# Pridani sluzby Video Boost
 
 ## Co se zmeni
 
-Creative Boost ma aktualne v systemu velmi strucne popisy (jak v `serviceDetails.ts`, tak chybi dedicatedny zaznam v `serviceDefaults.ts`). Aktualizujeme obe mista na plny rozsah informaci vcetne:
-- Noveho tagline a benefitu zamereneho na vykonnostni kreativu
-- Kompletniho ceniku kreditu (bannery + videa) vcetne novych polozek (AI foto, Standard vs AI b-roll videa)
-- Detailnich sekci pro nabidky (co dodame, pravidla kreditu, express rezim, revize, autorska prava)
-- Aktualizovanych output typů v mock datech
+Pridame novou addon sluzbu "Video Boost" do vsech 3 klicovych souboru, aby se zobrazovala na strance /services, spravne se propisovala do nabidek a byla dostupna jako mock service v CRM.
+
+Video Boost je samostatna sluzba (ne kreditova) s 2 variantami: Standard (4 900 Kc / video) a AI b-roll (6 900 Kc / video), oboji s moznosti balicku 3 videi se slevou 10 %.
 
 ## Zmeny v souborech
 
-### 1. `src/constants/serviceDetails.ts` -- CREATIVE_BOOST
+### 1. `src/constants/serviceDetails.ts` -- pridat VIDEO_BOOST
 
-Prepsat existujici strucny zaznam (radky 340-379):
+Novy zaznam `VIDEO_BOOST` (pred SKLIK):
 
-- **tagline**: "Priprava reklamnich kreativ -- system, jak vas produkt prodat pomoci strategicke vykonnostni kreativy"
-- **platforms**: Meta Ads kreativy, PPC bannery, Vykonnostni videa (Reels/Stories/Shorts), AI foto
-- **targetAudience**: Klienti s vykonnostnimi kampanemi, kteri potrebuji pravidelnou tvorbu banneru a videi
-- **benefits**: 4 body z "Co ziskate" (hledame spravne uhly komunikace, navrhujeme prodejni texty, tvorime vykonnostni bannery a videa, pripravujeme vice konceptu a hooku)
-- **setup**: 1 sekce -- nastaveni spoluprace (definice balicku, brief sablona, komunikacni kanaly)
-- **management**: 2 sekce:
-  - Tvorba vykonnostnich banneru (4 body -- produkty/uhly, texty, vizualy, revize)
-  - Kratka vertikalni videa (5 bodu -- koncept, script, voiceover, 3 finalni videa, revize)
-- **creditPricing**: Zachovat stavajici (basePrice 400, expressMultiplier 1.5, rewards 80/80)
+- **tagline**: "Vykonnostni videa pro Meta Ads / TikTok Ads"
+- **platforms**: Meta Ads (Reels, Stories), TikTok Ads (Shorts)
+- **targetAudience**: Firmy a e-shopy, ktere chteji vykonnostni videa pro reklamy na socialnich sitich
+- **benefits**: 3 body (videa ktera prodavaji, rychla produkce bez nataceni, vice variant z jednoho zadani)
+- **setup**: 1 sekce -- Ucel videa a nabidka (4 body: co se komunikuje, ucel videa, produkty, creative brief)
+- **management**: 3 sekce:
+  - Scenar a voiceover (3 hooky na koncept) -- kreativni uhel, voiceover script (HOOK 3x, MAIN, CTA), schvalovani
+  - Strih videa a AI prvky -- zabery, AI voiceover, AI titulky, AI b-rolly, format 9:16 / 15-30s
+  - Revize a finalni export -- 1 kolo v cene, dalsi 1 700 Kc/hod, formaty pro Meta a TikTok
+- **tierComparison**: Tabulka porovnani Standard vs AI b-roll (1 koncept, 3 hooky, AI voiceover+titulky, AI b-rolly, cena za 1 video, balicek 3 videi)
+- **tierPricing**: growth (Standard) 4 900 Kc, pro (AI b-roll) 6 900 Kc, elite null (neni pouzito -- sluzba nema tiery v klasickem smyslu)
 
-### 2. `src/constants/serviceDefaults.ts` -- pridat 'creative boost'
+Poznamka: Video Boost nema klasicke GROWTH/PRO/ELITE tiery jako jine sluzby. Misto toho ma 2 varianty (Standard a AI b-roll). tierPricing pouzijeme pro zobrazeni cen variant, tierComparison pro porovnani obsahu.
 
-Pridat novy zaznam `'creative boost'` (pred stavajici `'creative'` fallback), aby se spravne matchoval:
+### 2. `src/constants/serviceDefaults.ts` -- pridat 'video boost'
 
-- **deliverables**: 6 hlavnich bodu:
-  - Hledame spravne uhly komunikace
-  - Navrhujeme jasne prodejni texty
-  - Tvorime vykonnostni bannery a videa
-  - Pripravujeme vice konceptu a hooku pro testovani
-  - Flexibilni kreditovy system (1 kredit = 400 Kc)
-  - Standardni dodani do 72h, express do 48h za +50% kreditu
-- **frequency**: Prubezna tvorba dle objednavek, mesicni saldo kreditu
-- **turnaround**: Standardni dodani do 72 hodin, express do 48 hodin
-- **requirements**: Cile a produkty, vstupni materialy (fotky, videa), brandbook, pristup k Freelo
-- **detailed_sections**: 6 sekci:
-  1. Jak funguje system kreditu (4 body -- 1 kredit = 400 Kc, kreditova hodnota, domluveny ramec, fakturace reality)
-  2. Hodnota jednotlivych vystupu -- Bannery (9 polozek vcetne AI foto za 2 kredity, ramecek 1kr, Meta 2 rozmery 4kr, preklady, PPC 1kr/rozmer, upravy 1kr, homepage 2kr, revize 1kr)
-  3. Hodnota jednotlivych vystupu -- Videa (Vykonnostni video Standard 12kr = 1 koncept/3 videa, Vykonnostni video AI b-roll 17kr = 1 koncept/3 videa, dalsi hook +2kr, uprava 2kr, preklad 2kr, revize 1kr)
-  4. Expresni dodani (standardne 72h, express 48h za +50% kreditu, priklady)
-  5. Pravidla vyuziti kreditu (kreditni hodnota, domluveny ramec, neprenosnost, zadavani 5 PD pred koncem mesice, revize, rychlost, autorska prava)
-  6. Co konkretne Creative Boost doda (tvorba banneru 4 body, kratka videa 5 bodu)
+Novy zaznam `'video boost'` s:
 
-### 3. `src/data/creativeBoostMockData.ts` -- aktualizace output types
+- **deliverables**: 3 hlavni body + dodaci podrobnosti
+  - Videa, ktera prodavaji -- jasna nabidka, benefit a silne CTA
+  - Rychla produkce bez zbytecneho nataceni (vase zabery + AI voiceover, titulky, b-rolly)
+  - Vice variant z jednoho zadani -- 3 ruzne hooky pro A/B testovani
+  - Format 9:16, delka 15-30 sekund, pripravene primo do reklam
+  - 1 kolo revizi v cene kazdeho videa
+- **frequency**: Prubezne dle objednavek
+- **turnaround**: Standardni dodani do 5 pracovnich dnu
+- **requirements**: Zabery produktu/sluzby, cile a ucel videa, produkty/sluzby k propagaci
+- **detailed_sections**: 5 sekci:
+  1. Jak sluzba probiha -- Ucel videa a nabidka (4 body)
+  2. Scenar a voiceover (3 hooky na koncept) -- kreativni uhel, script, schvaleni
+  3. Strih videa a AI prvky -- zabery, voiceover, titulky, b-rolly, format
+  4. Revize a finalni export -- 1 kolo zdarma, dalsi 1 700 Kc/hod, formaty
+  5. Varianty sluzby a ceny -- Standard (4 900 / 13 230 za 3), AI b-roll (6 900 / 18 630 za 3)
 
-Aktualizovat existujici output types aby odpovidaly novemu ceniku:
-- Pridat `ai_product_photo` (AI produktova fotka, 2 kredity)
-- Zmenit `video_s` na `video_standard` (Vykonnostni video Standard, 12 kreditu -- 1 koncept / 3 videa)
-- Zmenit `video_m` a `video_l` na `video_ai_broll` (Vykonnostni video AI b-roll, 17 kreditu)
-- Pridat `banner_revision` typ (Revize banneru, 1 kredit)
-- Pridat `video_revision` typ (Revize videi, 1 kredit)
-- Odstranit zastarale typy ktere uz neodpovidaji ceniku
-- Aktualizovat `clientMonthOutputs` aby pouzivaly nove IDs
+### 3. `src/hooks/useCRMData.tsx` -- pridat mock service
+
+Pridat `VIDEO_BOOST` do pole `MOCK_SERVICES`:
+- **id**: 'srv-10'
+- **code**: 'VIDEO_BOOST'
+- **name**: 'Video Boost'
+- **service_type**: 'addon'
+- **category**: 'creative'
+- **base_price**: 4900 (cena za 1 video Standard)
+- **tier_pricing**: null (neni tier-based)
+- **default_deliverables**: 3 body z benefitu
 
 ### 4. `src/data/publicOffersMockData.ts` -- test nabidka
 
-Pridat/aktualizovat testovaci nabidku s Creative Boost jako addon sluzbou, aby se daly overit vsechny detailed_sections v nabidce.
+Pridat novou testovaci nabidku `/offer/test-video-boost` s Video Boost jako addon sluzbou, vcetne vsech deliverables a detailed_sections pro overeni zobrazeni.
 
 ## Technicke detaily
 
-- Zmeny ve 4 souborech: `serviceDetails.ts`, `serviceDefaults.ts`, `creativeBoostMockData.ts`, `publicOffersMockData.ts`
+- Zmeny ve 4 souborech
 - Zadne nove zavislosti
-- Kreditovy system zachovan (basePrice 400, express x1.5)
-- Nove video typy: Standard (12kr) a AI b-roll (17kr), kazdy = 1 koncept + 3 hooky = 3 finalni videa
-- Nova polozka: AI produktova fotka (2kr)
-- Revize banneru i videi: 1 kredit/revize (prvni kolo zdarma -- to je jen info text, ne kreditova polozka)
+- Video Boost je addon sluzba (ne core s tiery), pouziva jednoduchy cenik s 2 variantami
+- tierComparison se pouzije pro porovnani Standard vs AI b-roll variant v detailu sluzby
+- Revize za 1 700 Kc/hod (ne kreditove)
+
