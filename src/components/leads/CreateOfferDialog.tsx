@@ -49,7 +49,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const { services, colleagues } = useCRMData();
   const [auditSummary, setAuditSummary] = useState('');
   const [customNote, setCustomNote] = useState('');
-  const [notionUrl, setNotionUrl] = useState('');
+  const [loomUrl, setLoomUrl] = useState('');
   const [validUntil, setValidUntil] = useState('');
   const [portfolioLinks, setPortfolioLinks] = useState<PortfolioLink[]>(
     DEFAULT_PORTFOLIO_OPTIONS.map((p, idx) => ({ ...p, id: `portfolio-${idx}` }))
@@ -177,7 +177,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         audit_summary: auditSummary.trim() || null,
         recommendation_intro: null,
         custom_note: customNote.trim() || null,
-        notion_url: notionUrl.trim() || null,
+        loom_url: loomUrl.trim() || null,
         services: editableServices,
         portfolio_links: portfolioLinks,
         total_price: totals.monthlyAfterDiscount + totals.oneOff,
@@ -222,7 +222,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const handleClose = () => {
     setAuditSummary('');
     setCustomNote('');
-    setNotionUrl('');
+    setLoomUrl('');
     setValidUntil('');
     setCreatedOfferUrl(null);
     setCopied(false);
@@ -409,18 +409,18 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                   />
                 </div>
 
-                {/* Notion URL */}
+                {/* Loom video */}
                 <div className="space-y-2">
-                  <Label htmlFor="notion">📄 Link na detailní nabídku v Notion (volitelné)</Label>
+                  <Label htmlFor="loom">🎥 Loom video k nabídce / auditu (volitelné)</Label>
                   <Input
-                    id="notion"
+                    id="loom"
                     type="url"
-                    value={notionUrl}
-                    onChange={(e) => setNotionUrl(e.target.value)}
-                    placeholder="https://notion.so/..."
+                    value={loomUrl}
+                    onChange={(e) => setLoomUrl(e.target.value)}
+                    placeholder="https://www.loom.com/share/..."
                   />
                   <p className="text-xs text-muted-foreground">
-                    Pokud máte podrobnější vysvětlení nabídky v Notion
+                    Odkaz na Loom video, kde klientovi popisujete nabídku nebo výsledky auditu
                   </p>
                 </div>
 
