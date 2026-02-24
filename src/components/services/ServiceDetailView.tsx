@@ -19,10 +19,16 @@ interface TierFeature {
   elite: string | boolean;
 }
 
+interface TierPriceEntry {
+  price: number | null;
+  spend: string;
+  originalPrice?: number;
+}
+
 interface TierPrices {
-  growth: { price: number; spend: string };
-  pro: { price: number; spend: string };
-  elite: { price: number; spend: string };
+  growth: TierPriceEntry;
+  pro: TierPriceEntry;
+  elite: TierPriceEntry;
 }
 
 interface CreditPricing {
@@ -192,47 +198,9 @@ export function ServiceDetailView({ data, onCreditPricingUpdate }: ServiceDetail
           
           {/* Tier Cards */}
           <div className="grid grid-cols-3 gap-2 mb-3">
-            <Card className="bg-chart-1/5 border-chart-1/20">
-              <CardHeader className="p-3 pb-1">
-                <CardTitle className="text-xs font-bold flex items-center gap-1">
-                  🚀 GROWTH
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_prices!.growth.spend}</div>
-                <div className="text-lg font-bold text-chart-1">
-                  {data.tier_prices!.growth.price.toLocaleString('cs-CZ')} Kč
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-chart-2/5 border-chart-2/20">
-              <CardHeader className="p-3 pb-1">
-                <CardTitle className="text-xs font-bold flex items-center gap-1">
-                  💪 PRO
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_prices!.pro.spend}</div>
-                <div className="text-lg font-bold text-chart-2">
-                  {data.tier_prices!.pro.price.toLocaleString('cs-CZ')} Kč
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-chart-4/5 border-chart-4/20">
-              <CardHeader className="p-3 pb-1">
-                <CardTitle className="text-xs font-bold flex items-center gap-1">
-                  🏆 ELITE
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_prices!.elite.spend}</div>
-                <div className="text-lg font-bold text-chart-4">
-                  {data.tier_prices!.elite.price.toLocaleString('cs-CZ')} Kč
-                </div>
-              </CardContent>
-            </Card>
+            {renderTierCard('🚀', 'GROWTH', data.tier_prices!.growth, 'chart-1')}
+            {renderTierCard('💪', 'PRO', data.tier_prices!.pro, 'chart-2')}
+            {renderTierCard('🏆', 'ELITE', data.tier_prices!.elite, 'chart-4')}
           </div>
 
           {/* Feature Comparison Table */}
@@ -275,6 +243,37 @@ export function ServiceDetailView({ data, onCreditPricingUpdate }: ServiceDetail
         />
       )}
     </div>
+  );
+}
+
+function renderTierCard(emoji: string, label: string, tier: TierPriceEntry, colorClass: string) {
+  return (
+    <Card className={`bg-${colorClass}/5 border-${colorClass}/20`}>
+      <CardHeader className="p-3 pb-1">
+        <CardTitle className="text-xs font-bold flex items-center gap-1">
+          {emoji} {label}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
+        <div className="text-[10px] text-muted-foreground">{tier.spend}</div>
+        {tier.price !== null ? (
+          <div>
+            {tier.originalPrice && (
+              <div className="text-xs text-muted-foreground line-through">
+                {tier.originalPrice.toLocaleString('cs-CZ')} Kč
+              </div>
+            )}
+            <div className={`text-lg font-bold text-${colorClass}`}>
+              {tier.price.toLocaleString('cs-CZ')} Kč
+            </div>
+          </div>
+        ) : (
+          <div className={`text-sm font-bold text-${colorClass}`}>
+            Individuální kalkulace
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
