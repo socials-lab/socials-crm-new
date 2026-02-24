@@ -236,6 +236,7 @@ export interface Engagement {
   freelo_url: string | null;
   platforms: string[];
   notes: string;
+  pinned_notes: string | null;
   // Document links from lead conversion
   offer_url: string | null;
   contract_url: string | null;
