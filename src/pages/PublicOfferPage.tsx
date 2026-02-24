@@ -539,9 +539,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   }
 
   const isExpired = offer.valid_until && new Date(offer.valid_until) < new Date();
-  const totalMonthly = offer.services
-    .filter(s => s.billing_type === 'monthly')
+  const coreMonthly = offer.services
+    .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
     .reduce((sum, s) => sum + s.price, 0);
+  const addonMonthly = offer.services
+    .filter(s => s.billing_type === 'monthly' && s.service_type !== 'core')
+    .reduce((sum, s) => sum + s.price, 0);
+  const totalMonthly = coreMonthly + addonMonthly;
   const totalOneOff = offer.services
     .filter(s => s.billing_type === 'one_off')
     .reduce((sum, s) => sum + s.price, 0);
@@ -731,10 +735,12 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <div className="p-5 rounded-xl border bg-card space-y-3">
             {totalMonthly > 0 && (() => {
               const discountPercent = offer.monthly_discount_percent || 0;
-              const discountedMonthly = discountPercent > 0 
-                ? Math.round(totalMonthly * (1 - discountPercent / 100)) 
-                : totalMonthly;
-              const discountAmount = totalMonthly - discountedMonthly;
+              // Discount applies only to core monthly services
+              const coreAfterDiscount = discountPercent > 0 
+                ? Math.round(coreMonthly * (1 - discountPercent / 100)) 
+                : coreMonthly;
+              const discountAmount = coreMonthly - coreAfterDiscount;
+              const totalAfterDiscount = coreAfterDiscount + addonMonthly;
               
               return (
                 <div className="space-y-2">
@@ -747,7 +753,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                             {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                           </span>
                           <span className="text-2xl font-bold text-foreground">
-                            {discountedMonthly.toLocaleString('cs-CZ')} {offer.currency}
+                            {totalAfterDiscount.toLocaleString('cs-CZ')} {offer.currency}
                           </span>
                         </>
                       ) : (
@@ -760,7 +766,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   </div>
                   {discountPercent > 0 && (
                     <div className="flex items-center justify-between text-sm text-green-600">
-                      <span>Sleva {discountPercent}%</span>
+                      <span>Sleva {discountPercent}% při odběru všech služeb</span>
                       <span className="font-medium">-{discountAmount.toLocaleString('cs-CZ')} {offer.currency}/měs</span>
                     </div>
                   )}
