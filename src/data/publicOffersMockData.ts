@@ -4,6 +4,144 @@ const STORAGE_KEY = 'public_offers_mock';
 
 // Testovací nabídka - vždy dostupná na /offer/test-nabidka-123
 // Testovací nabídka jen s addon službami (bez core) - /offer/test-addon-only
+// Testovací nabídka s PPC Boost - /offer/test-ppc-boost
+const TEST_PPC_BOOST_OFFER: PublicOffer = {
+  id: 'test-ppc-boost-id',
+  token: 'test-ppc-boost',
+  lead_id: 'test-lead-ppc',
+  company_name: 'TechShop Online s.r.o.',
+  website: 'https://www.techshop-online.cz',
+  contact_name: 'Martin Dvořák',
+  services: [
+    {
+      id: 'svc-ppc-1',
+      service_id: 'service-ppc',
+      name: 'PPC Boost',
+      description: 'Správa Google Ads a S-kliku – více zakázek a vyšší zisk',
+      offer_description: 'Kompletní správa reklam na Google a Seznamu zaměřená na získávání zákazníků, kteří nakupují. Zahrnuje Shopping, PMax, Search, Display i remarketing kampaně na obou platformách.',
+      price: 24900,
+      currency: 'CZK',
+      billing_type: 'monthly',
+      selected_tier: 'growth',
+      service_type: 'core',
+      deliverables: [
+        'Kompletní nastavení a správa Google Ads i Sklik – od struktury účtů po průběžnou optimalizaci',
+        'Nastavení přesného měření výkonu reklam (konverze, nákupy, přidání do košíku)',
+        'Google Shopping, DSA, PMax, Search, Display a remarketing kampaně na Google',
+        'Kampaně ve vyhledávání, obsahové síti a remarketing na S-kliku',
+        'Optimalizace produktového feedu přes Mergado',
+        'Denní kontrola a pravidelná optimalizace kampaní pro co nejlepší využití rozpočtu',
+        'Strategické vylepšování atraktivity vaší nabídky – akce, balíčky, kontrola nákupního procesu',
+        'Tvorba dashboardu v Looker Studio s propojením Google Ads, Sklik a Google Analytics',
+        'Měsíční report s vyhodnocením výkonu a plánem na další období',
+      ],
+      frequency: 'Průběžná správa, denní kontrola, měsíční reporting',
+      turnaround: 'Nasazení do 5 pracovních dnů od startu',
+      requirements: [
+        'Přístupy do Google Ads účtu',
+        'Přístupy do Sklik účtu',
+        'Přístup do Google Merchant Center',
+        'Přístup do Google Analytics',
+        'Správně nastavený produktový feed',
+      ],
+      start_timeline: 'Do 5 pracovních dnů od podpisu smlouvy',
+      detailed_sections: [
+        {
+          emoji: '📈',
+          title: 'Nastavení Google Ads a S-kliku',
+          items: [
+            'Reklamní účet: Kontrola a optimalizace nastavení reklamních účtů, včetně platebních údajů.',
+            'Google Merchant Center: Kontrola propojení účtu a synchronizace produktového feedu.',
+            'Produktový feed: Analýza a úprava feedu prostřednictvím nástroje Mergado.',
+            'Struktura kampaní: Návrh a vytvoření struktury kampaní (vyhledávací, display, shopping, remarketing).',
+            'Sledování konverzí: Nastavení sledování konverzí prostřednictvím modulů v Shoptetu.',
+            'Propojení nástrojů: Synchronizace s Google Analytics a dalšími relevantními nástroji.',
+            'Cílení: Optimalizace cílení podle lokality, demografie a zájmů.',
+          ],
+        },
+        {
+          emoji: '💹',
+          title: 'Kontrola nastavení analytického měření',
+          items: [
+            'Účet a sledování: Kontrola a optimalizace měření klíčových událostí (nákupy, přidání do košíku, registrace).',
+            'Propojení s nástroji: Integrace GA4 s Google Ads, Looker Studio a dalšími systémy.',
+          ],
+        },
+        {
+          emoji: '📊',
+          title: 'Tvorba dashboardu výsledků v Looker Studio',
+          items: [
+            'Reportovací šablona: Vytvoření přehledné šablony pro sledování výkonu kampaní.',
+            'Propojení dat: Napojení Looker Studio na Google Ads, Meta Ads a Google Analytics.',
+            'Vizualizace metrik: Přehledné zobrazení klíčových metrik (CPC, CTR, ROAS, konverze).',
+            'Automatizace dat: Nastavení automatické aktualizace a sdílení reportů pro přístup 24/7.',
+          ],
+        },
+        {
+          emoji: '💻',
+          title: 'Správa Google Ads',
+          items: [
+            'Google Shopping kampaně: Propagujeme vaše produkty pomocí Shopping kampaní.',
+            'DSA kampaně: Dynamické reklamy cílí na relevantní vyhledávací dotazy.',
+            'Performance Max kampaně: Kampaně kombinující různé reklamní formáty napříč Google ekosystémem.',
+            'Kampaně ve vyhledávání: Spravujeme kampaně zaměřené na konkrétní klíčová slova.',
+            'Display kampaně: Vizuální reklamy v obsahové síti budující povědomí o značce.',
+            'Remarketing: Znovu oslovujeme návštěvníky vašeho e-shopu.',
+            'Úprava produktového feedu: Optimalizace feedu přes Mergado.',
+            'Sledování konverzí: Průběžná kontrola měření konverzí.',
+          ],
+        },
+        {
+          emoji: '🌐',
+          title: 'Správa S-kliku',
+          items: [
+            'Kampaně ve vyhledávání: Optimalizujeme kampaně zaměřené na relevantní klíčová slova.',
+            'Obsahová síť: Vizuální kampaně budující povědomí o značce a podporující remarketing.',
+            'Remarketing: Oslovujeme uživatele, kteří již navštívili váš e-shop.',
+            'Správa klíčových slov: Přizpůsobujeme klíčová slova českému publiku.',
+            'Optimalizace kampaní: Průběžně sledujeme výkon a testujeme nové strategie.',
+          ],
+        },
+        {
+          emoji: '💬',
+          title: 'Reporting a komunikace',
+          items: [
+            'Video / textový report: Měsíční souhrn fungování kampaní.',
+            'Looker Studio report: Nepřetržitý přístup (24/7) k přehlednému reportu.',
+            'Pravidelné konzultace: Strategické hovory k vývoji kampaní.',
+          ],
+        },
+      ],
+    },
+  ],
+  portfolio_links: [
+    {
+      id: 'portfolio-ppc-1',
+      title: 'Case Study: E-shop Elektronika',
+      url: 'https://www.canva.com/design/example-ppc',
+      type: 'case_study',
+    },
+  ],
+  audit_summary: null,
+  recommendation_intro: 'Na základě analýzy doporučujeme PPC Boost balíček pro kompletní pokrytí Google Ads i Sklik kampaní, které přivedou zákazníky aktivně hledající vaše produkty.',
+  custom_note: null,
+  loom_url: null,
+  currency: 'CZK',
+  total_price: 24900,
+  offer_type: 'retainer',
+  valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  created_by: 'system',
+  is_active: true,
+  viewed_at: null,
+  view_count: 0,
+  estimated_start_date: 'Do 5 pracovních dnů od podpisu smlouvy',
+  owner_name: 'Daniel Bauer',
+  owner_email: 'daniel@socials.cz',
+  owner_phone: '+420 123 456 789',
+};
+
 const TEST_ADDON_ONLY_OFFER: PublicOffer = {
   id: 'test-addon-offer-id',
   token: 'test-addon-only',
@@ -278,6 +416,9 @@ export function getPublicOfferByToken(token: string): PublicOffer | undefined {
   }
   if (token === 'test-addon-only') {
     return TEST_ADDON_ONLY_OFFER;
+  }
+  if (token === 'test-ppc-boost') {
+    return TEST_PPC_BOOST_OFFER;
   }
   
   const offers = getStoredOffers();
