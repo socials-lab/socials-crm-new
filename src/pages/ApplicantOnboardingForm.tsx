@@ -168,11 +168,11 @@ export default function ApplicantOnboardingForm() {
         billing_city: data.sidlo?.nazevObce || '',
         billing_zip: data.sidlo?.psc?.toString() || '',
       };
-      form.setValue('company_name', aresData.company_name);
-      if (aresData.dic) form.setValue('dic', aresData.dic);
-      if (aresData.billing_street) form.setValue('billing_street', aresData.billing_street);
-      if (aresData.billing_city) form.setValue('billing_city', aresData.billing_city);
-      if (aresData.billing_zip) form.setValue('billing_zip', aresData.billing_zip);
+      form.setValue('company_name', aresData.company_name, { shouldValidate: true });
+      if (aresData.dic) form.setValue('dic', aresData.dic, { shouldValidate: true });
+      if (aresData.billing_street) form.setValue('billing_street', aresData.billing_street, { shouldValidate: true });
+      if (aresData.billing_city) form.setValue('billing_city', aresData.billing_city, { shouldValidate: true });
+      if (aresData.billing_zip) form.setValue('billing_zip', aresData.billing_zip, { shouldValidate: true });
       setAresValidated(true);
       toast.success(`Údaje načteny z ARES: ${aresData.company_name}`);
     } catch (error) {
@@ -225,7 +225,7 @@ export default function ApplicantOnboardingForm() {
   const handleSelectAresResult = async (result: { ico: string; name: string }) => {
     setShowResults(false);
     setAresQuery(result.name);
-    form.setValue('ico', result.ico);
+    form.setValue('ico', result.ico, { shouldValidate: true });
     await validateARES(result.ico);
   };
 
