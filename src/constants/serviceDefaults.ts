@@ -12,7 +12,81 @@ interface ServiceDefaultConfig {
 
 // Keyword-based defaults - matched by service name
 const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
-  // Performance Marketing - Meta
+  // ─── Socials Boost (Meta Ads) ───
+  'socials boost': {
+    deliverables: [
+      'Kompletní nastavení Meta Business Suite – Pixel/CAPI, katalog produktů, reklamní účet',
+      'Vytvoření struktury kampaní zaměřených na akvizici nových zákazníků a remarketing',
+      'Tvorba poutavých textů přizpůsobených cílové skupině a obchodním cílům',
+      'Kontrola a optimalizace analytického měření (nákupy, přidání do košíku, registrace)',
+      'Tvorba dashboardu výsledků v Looker Studio s automatickou aktualizací dat 24/7',
+      'Strategické vylepšování atraktivity nabídky – produktové balíčky, slevové akce, kontrola webu',
+      'Denní kontrola a pravidelná optimalizace kampaní pro maximální efektivitu rozpočtu',
+      'Škálování úspěšných kampaní pro maximalizaci přínosu',
+      'Spolupráce s grafiky – zadávání reklamních kreativ a vizuálů',
+      'Měsíční reporting (video / text / telefonát dle domluvy)',
+    ],
+    frequency: 'Průběžná správa, denní kontrola, měsíční reporting',
+    turnaround: 'Nasazení do 5 pracovních dnů od startu',
+    requirements: [
+      'Přístupy do Meta Business Suite / Business Manager',
+      'Přístup do reklamního účtu a stránek',
+      'Podklady ke značce (loga, fonty, brandbook)',
+      'Přístup do Google Analytics (pro propojení s Looker Studio)',
+    ],
+  },
+
+  // ─── PPC Boost (Google Ads + Sklik) ───
+  'ppc boost': {
+    deliverables: [
+      'Kompletní nastavení Google Ads i Sklik – struktura účtů, konverzní měření, Merchant Center',
+      'Search kampaně s relevantními klíčovými slovy na Google i Seznamu',
+      'Shopping/PMax kampaně s optimalizovaným produktovým feedem',
+      'Remarketing kampaně pro opětovné oslovení návštěvníků',
+      'Tvorba dashboardu v Looker Studio s propojením Google Ads, Sklik a Google Analytics',
+      'Pravidelná optimalizace klíčových slov, bidding strategie a CPC',
+      'A/B testování reklam pro zlepšení CTR a konverzního poměru',
+      'Synergická správa obou platforem pro maximální efektivitu',
+      'Měsíční reporting s přehledem výkonu a strategickými doporučeními',
+    ],
+    frequency: 'Průběžná správa, denní kontrola, měsíční reporting',
+    turnaround: 'Nasazení do 5 pracovních dnů od startu',
+    requirements: [
+      'Přístupy do Google Ads účtu',
+      'Přístupy do Sklik účtu',
+      'Přístup do Google Merchant Center',
+      'Přístup do Google Analytics',
+      'Správně nastavený produktový feed',
+    ],
+  },
+
+  // ─── Performance Boost (Meta + Google + Sklik) ───
+  'performance boost': {
+    deliverables: [
+      'Kompletní správa Meta Ads – Pixel/CAPI, kampaně, remarketing, kreativy',
+      'Kompletní správa Google Ads – Search, Shopping/PMax, remarketing',
+      'Kompletní správa Sklik – kampaně, produktový feed, konverze',
+      'Jednotný dashboard v Looker Studio pro všechny platformy',
+      'Cross-platform optimalizace rozpočtu – alokace spendu tam, kde přináší nejlepší výsledky',
+      'Koordinovaná strategie napříč Meta, Google a Seznam pro maximální dosah',
+      'Strategické vylepšování atraktivity nabídky a kontrola webu',
+      'Denní kontrola a průběžná optimalizace všech platforem',
+      'Spolupráce s grafiky na reklamních kreativách',
+      'Měsíční reporting s analýzou výkonu napříč všemi kanály',
+      'Zvýhodněná cena oproti samostatným balíčkům Socials Boost + PPC Boost',
+    ],
+    frequency: 'Průběžná správa, denní kontrola, měsíční reporting',
+    turnaround: 'Nasazení do 5 pracovních dnů od startu',
+    requirements: [
+      'Přístupy do Meta Business Suite / Business Manager',
+      'Přístupy do Google Ads a Google Merchant Center',
+      'Přístupy do Sklik účtu',
+      'Přístup do Google Analytics',
+      'Podklady ke značce (loga, fonty, brandbook)',
+    ],
+  },
+
+  // ─── Fallback keyword matches ───
   'meta': {
     deliverables: [
       'Správa reklamních kampaní na Meta platformách (Facebook & Instagram)',
@@ -29,8 +103,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Podklady ke značce (loga, fonty, brandbook)',
     ],
   },
-  
-  // Performance Marketing - Google
+
   'google': {
     deliverables: [
       'Správa kampaní v Google Ads (Search, Display, Performance Max)',
@@ -47,8 +120,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Správně nastavené konverzní sledování',
     ],
   },
-  
-  // Performance Marketing - Sklik
+
   'sklik': {
     deliverables: [
       'Správa kampaní na Skliku',
@@ -62,8 +134,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Přístup do Google Analytics nebo jiného měřicího nástroje',
     ],
   },
-  
-  // Creative services
+
   'creative': {
     deliverables: [
       'Kreativní koncepty pro reklamní kampaně',
@@ -78,8 +149,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Reference a inspirace (volitelné)',
     ],
   },
-  
-  // Social media management
+
   'social': {
     deliverables: [
       'Správa sociálních sítí dle zvoleného balíčku',
@@ -95,8 +165,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Schvalovací proces pro obsah',
     ],
   },
-  
-  // Analytics
+
   'analytics': {
     deliverables: [
       'Nastavení nebo audit měřicího systému',
@@ -112,8 +181,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Seznam klíčových konverzí k měření',
     ],
   },
-  
-  // Consulting
+
   'consult': {
     deliverables: [
       'Strategické konzultace a poradenství',
@@ -127,8 +195,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Definované cíle a KPIs',
     ],
   },
-  
-  // Audit
+
   'audit': {
     deliverables: [
       'Hloubková analýza reklamních účtů',
@@ -167,9 +234,9 @@ const GENERIC_DEFAULTS: ServiceDefaultConfig = {
 export function getServiceDefaults(serviceName: string): ServiceDefaultConfig {
   const nameLower = serviceName.toLowerCase();
   
-  // Check each keyword set
+  // First try exact match on full name (for specific bundles like "Socials Boost")
   for (const [keyword, config] of Object.entries(SERVICE_DEFAULTS)) {
-    if (nameLower.includes(keyword)) {
+    if (nameLower === keyword || nameLower.includes(keyword)) {
       return config;
     }
   }
