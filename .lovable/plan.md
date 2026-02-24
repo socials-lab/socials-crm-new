@@ -1,76 +1,90 @@
 
 
-# Individualni interni sazba na vicepracich
+# Zahrnout upsell provizi do kalkulace marze viceprace
 
 ## Problem
 
-Kazdy kolega ma v profilu jednu `internal_hourly_cost` (vychozi 700 Kc). Ale v praxi muze stejny kolega delat ruzne typy praci za ruzne interni sazby -- napr. nastaveni analytiky za 750 Kc/h, ale Google Ads za 600 Kc/h. Aktualne neni mozne toto rozlisit.
+Aktualne se marze pocita jako `castka klient - (hodiny x interni sazba kolegy)`. Pokud ale nekdo vicepraci prodal (upsell), naklady zahrnuji i provizi (typicky 10% z castky klientovi). Ta se dnes v kalkulaci marze nezohlednuje.
+
+## Priklad
+
+- Klient plati: 9 000 Kc (5h x 1 800 Kc)
+- Odmena kolegy: 3 500 Kc (5h x 700 Kc)
+- Upsell provize: 900 Kc (10% z 9 000 Kc)
+- **Aktualni marze**: 5 500 Kc (61%) -- nezapocitava provizi
+- **Spravna marze**: 4 600 Kc (51%) -- se zapocitanim provize
 
 ## Reseni
 
-Pridat pole `internal_hourly_rate` primo do zaznamu viceprace. Hodnota se predvyplni z profilu kolegy pri vytvoreni, ale da se rucne upravit pro kazdou vicepraci zvlast.
+Ve vsech mistech kde se pocita marze viceprace, pridat radek s upsell provizi (pokud existuje `upsold_by_id`) a odecist ji od marze.
 
-## Co se zmeni
+## Zmeny
 
-### 1. Databaze -- novy sloupec v `extra_works`
+### 1. ExtraWorkCard -- billing double-check (radky 170-195)
 
-Pridani sloupce `internal_hourly_rate` (numeric, nullable) do tabulky `extra_works`. Pokud je NULL, pouzije se fallback na `colleague.internal_hourly_cost`.
+Aktualni kalkulace:
+```
+margin = work.amount - colleagueCost
+```
 
-### 2. TypeScript typ `ExtraWork`
+Nova kalkulace:
+```
+upsellCommission = work.upsold_by_id ? work.amount * (work.upsell_commission_percent || 10) / 100 : 0
+margin = work.amount - colleagueCost - upsellCommission
+```
 
-Pridani `internal_hourly_rate: number | null` do interface `ExtraWork` v `src/types/crm.ts`.
+Pridat novy radek mezi "Odmena kolegy" a "Marze":
+```
+Upsell provize (10%):  900 Kc  [jmeno kolegy kdo prodal]
+```
 
-### 3. AddExtraWorkDialog
+Radek se zobrazi pouze pokud `work.upsold_by_id` neni null. Jmeno kolegy se dohledat z existujiciho pole `colleagues`.
 
-- Pridani pole "Interni sazba kolegy (Kc/h)" -- predvyplni se z `colleague.internal_hourly_cost` pri vyberu kolegy
-- Pole je editovatelne, takze se da nastavit jina castka pro specificky typ prace
-- Ulozi se do `internal_hourly_rate` pri vytvoreni
+### 2. AddExtraWorkDialog -- summary sekce
 
-### 4. EditExtraWorkDialog
+Aktualizovat vypocet "Odmena kolega" summary, aby pod nim zobrazil i upsell provizi pokud je nastavena, a celkovou marzi.
 
-- Pridani stejneho pole "Interni sazba kolegy"
-- Predvyplni se z existujici hodnoty zaznamu, nebo z kolegy jako fallback
-- Odmena kolegy a marze se pocitaji z teto sazby misto globalni
+### 3. EditExtraWorkDialog -- summary sekce
 
-### 5. ExtraWorkCard -- billing double-check
-
-- Pouzije `work.internal_hourly_rate` misto `colleague.internal_hourly_cost` (s fallbackem na kolegu pokud neni nastaveno)
-- Zadna zmena v logice barevneho kodovani marze
-
-### 6. Mock data
-
-- Aktualizovat mock extra works v `useCRMData.tsx` -- pridat `internal_hourly_rate` s ruznymi hodnotami pro demonstraci
+Stejna zmena jako v AddExtraWorkDialog -- pridat radek upsell provize do summary.
 
 ## Technicke detaily
-
-### Databazova migrace
-
-```sql
-ALTER TABLE extra_works
-  ADD COLUMN IF NOT EXISTS internal_hourly_rate numeric;
-```
 
 ### Zmeny v souborech
 
 | Soubor | Zmena |
 |---|---|
-| `src/types/crm.ts` | Pridat `internal_hourly_rate: number \| null` |
-| `src/components/extra-work/AddExtraWorkDialog.tsx` | Nove pole + predvyplneni ze sazby kolegy |
-| `src/components/extra-work/EditExtraWorkDialog.tsx` | Nove pole + predvyplneni |
-| `src/components/extra-work/ExtraWorkCard.tsx` | Pouzit `work.internal_hourly_rate \|\| colleague.internal_hourly_cost` |
-| `src/hooks/useCRMData.tsx` | Mock data -- pridat `internal_hourly_rate` |
-
-### Logika predvyplneni
-
-Pri vyberu kolegy v Add/Edit dialogu:
-1. Nastav klientskou sazbu (`hourly_rate`) podle `getRateForPosition()` -- beze zmeny
-2. Nastav interni sazbu (`internal_hourly_rate`) z `colleague.internal_hourly_cost`
-3. Uzivatel muze obe sazby rucne zmenit
+| `src/components/extra-work/ExtraWorkCard.tsx` | Pridat upsell provizi do billing double-check, upravit marzi |
+| `src/components/extra-work/AddExtraWorkDialog.tsx` | Pridat upsell provizi do summary sekce |
+| `src/components/extra-work/EditExtraWorkDialog.tsx` | Pridat upsell provizi do summary sekce |
 
 ### Logika v ExtraWorkCard
 
+```typescript
+const internalRate = work.internal_hourly_rate ?? colleague.internal_hourly_cost!;
+const colleagueCost = work.hours_worked! * internalRate;
+const upsellCommission = work.upsold_by_id
+  ? Math.round(work.amount * (work.upsell_commission_percent || 10) / 100)
+  : 0;
+const totalCost = colleagueCost + upsellCommission;
+const margin = work.amount - totalCost;
+const marginPercent = work.amount > 0 ? Math.round((margin / work.amount) * 100) : 0;
 ```
-const internalRate = work.internal_hourly_rate ?? colleague?.internal_hourly_cost;
-const colleagueCost = (work.hours_worked ?? 0) * (internalRate ?? 0);
+
+### Zobrazeni v karte
+
+```text
+Odmena kolegy:       5h x 700 = 3 500 Kc
+Upsell provize (10%):          900 Kc  (Jan Novak)
+Marze:                       4 600 Kc (51%)
 ```
+
+Radek "Upsell provize" se zobrazi pouze pokud `work.upsold_by_id` neni null. Jmeno kolegy ktery prodal se najde v poli `colleagues` podle `work.upsold_by_id`.
+
+### Zadne dalsi zmeny
+
+- Zadne nove soubory
+- Zadne zmeny v databazi
+- Zadne nove zavislosti
+- Barevne kodovani marze zustava stejne (40%+ zelena, 20-40% oranzova, pod 20% cervena)
 
