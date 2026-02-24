@@ -3,6 +3,72 @@ import type { PublicOffer } from '@/types/publicOffer';
 const STORAGE_KEY = 'public_offers_mock';
 
 // Testovací nabídka - vždy dostupná na /offer/test-nabidka-123
+// Testovací nabídka jen s addon službami (bez core) - /offer/test-addon-only
+const TEST_ADDON_ONLY_OFFER: PublicOffer = {
+  id: 'test-addon-offer-id',
+  token: 'test-addon-only',
+  lead_id: 'test-lead-addon',
+  company_name: 'Startup Kreativa s.r.o.',
+  website: 'https://www.startup-kreativa.cz',
+  contact_name: 'Petra Svobodová',
+  services: [
+    {
+      id: 'svc-addon-1',
+      service_id: 'service-cb',
+      name: 'Creative Boost',
+      description: 'Kreditový systém pro tvorbu reklamních kreativ',
+      offer_description: 'Flexibilní tvorba reklamních kreativ na kreditovém systému – bannery, videa i AI fotografie. Platíte jen za to, co skutečně potřebujete.',
+      price: 8000,
+      currency: 'CZK',
+      billing_type: 'monthly',
+      selected_tier: null,
+      service_type: 'addon',
+      deliverables: [
+        '20 kreditů měsíčně pro tvorbu reklamních materiálů',
+        'Statické bannery pro sociální sítě a web',
+        'Krátká reklamní videa a animace',
+        'AI generované produktové fotografie',
+        'Zadání přes Freelo nebo Slack',
+        'Standardní dodání do 3 pracovních dnů',
+        'První revize zdarma u každého výstupu',
+      ],
+      frequency: 'Průběžně dle potřeby v rámci měsíčního balíčku',
+      turnaround: 'Standardní 3 dny, express 24 hodin',
+      requirements: [
+        'Brandbook a vizuální identita',
+        'Loga v potřebných formátech (PNG, SVG)',
+      ],
+      start_timeline: 'Ihned po zahájení spolupráce',
+    },
+  ],
+  portfolio_links: [
+    {
+      id: 'portfolio-addon-1',
+      title: 'Ukázky kreativ pro e-shopy',
+      url: 'https://www.canva.com/design/example-addon',
+      type: 'presentation',
+    },
+  ],
+  audit_summary: null,
+  recommendation_intro: 'Doporučujeme Creative Boost balíček pro pravidelnou tvorbu kvalitních vizuálů pro vaše marketingové kanály.',
+  custom_note: null,
+  loom_url: null,
+  currency: 'CZK',
+  total_price: 8000,
+  offer_type: 'retainer',
+  valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  created_by: 'system',
+  is_active: true,
+  viewed_at: null,
+  view_count: 0,
+  estimated_start_date: 'Ihned po podpisu smlouvy',
+  owner_name: 'Daniel Bauer',
+  owner_email: 'daniel@socials.cz',
+  owner_phone: '+420 123 456 789',
+};
+
 const TEST_OFFER: PublicOffer = {
   id: 'test-offer-id',
   token: 'test-nabidka-123',
@@ -206,9 +272,12 @@ export function addPublicOffer(offer: PublicOffer): void {
 }
 
 export function getPublicOfferByToken(token: string): PublicOffer | undefined {
-  // Testovací token - vždy vrátit testovací nabídku
+  // Testovací tokeny - vždy vrátit testovací nabídku
   if (token === 'test-nabidka-123') {
     return TEST_OFFER;
+  }
+  if (token === 'test-addon-only') {
+    return TEST_ADDON_ONLY_OFFER;
   }
   
   const offers = getStoredOffers();
