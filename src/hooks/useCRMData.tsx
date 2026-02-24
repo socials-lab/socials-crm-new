@@ -399,6 +399,28 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
+    {
+      id: 'srv-11',
+      code: 'HEUREKA_ZBOZI',
+      name: 'Správa Heuréky a Zboží.cz',
+      service_type: 'addon',
+      category: 'performance',
+      base_price: 0,
+      currency: 'CZK',
+      description: 'Správa Heuréky a Zboží.cz – optimalizace feedu, bidding a maximální ziskovost',
+      is_active: true,
+      tier_pricing: null,
+      external_url: null,
+      default_deliverables: [
+        'Import a validace XML feedu, přemapování kategorií a doplnění EAN kódů',
+        'Optimalizace názvů produktů a správné párování položek',
+        'Řízení CPC biddingu pro maximální ziskovost',
+        'Podpora recenzí a programu Ověřeno zákazníky',
+        'Pravidelný reporting a analýza výkonu (PNO, ROI, CTR, konverze)',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
   ];
 
   const { data: services = [], isLoading: servicesLoading } = useQuery({
