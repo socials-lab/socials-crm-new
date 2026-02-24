@@ -1,91 +1,34 @@
 
 
-# Oprava propisu viceprace do vykazu kolegy
+## Uprava stavu "K fakturaci" na kartach viceprace
 
-## Nalezene problemy
+### Co se zmeni
 
-Po kontrole kodu jsem nasel **2 problemy** v tom, jak se viceprace propisuje do osobniho vykazu kolegy na strance "Muj prehled" (MyWork):
+1. **Zobrazeni fakturaciho obdobi na karte ve stavu "ready_to_invoice"**
+   - Na karte ve stavu "K fakturaci" se pod badge zobrazi informace o fakturacnim obdobi (napr. "Obdobi: unor 2026")
+   - Billing period je ulozen ve formatu `YYYY-MM`, preformatuje se na lidsky citelny cesky nazev mesice
 
-### Problem 1: Odmena kolegy za vicepraci pouziva spatnou sazbu
+2. **Tlacitko "Vystavit fakturu" na karte ve stavu "ready_to_invoice"**
+   - Prida se tlacitko "Vystavit fakturu" do footer sekce karty pro stav `ready_to_invoice`
+   - Kliknuti otevre `CreateInvoiceFromEngagementDialog` (existujici komponenta) predvyplneny daty z dane viceprace
+   - Pokud toto neni vhodne (viceprace nemaji vazbu na engagement services stejnym zpusobem), vytvorime jednodussi dialog specificky pro viceprace
 
-V `src/pages/MyWork.tsx` (radky 183-188) funkce `getColleagueExtraWorkAmount` pouziva `currentColleague.internal_hourly_cost` — tedy globalni sazbu z profilu kolegy. Ale nedavno jsme pridali `internal_hourly_rate` primo na kazdy zaznam viceprace, aby se dala nastavit jina sazba pro ruzne typy praci.
+3. **BillingPeriodDialog integrace do ExtraWorkCard**
+   - Tlacitko "K fakturaci" na karte (stav `in_progress` / `client_approved`) uz pouziva `BillingPeriodDialog` stejne jako v tabulkovem pohledu
+   - Uzivatel vybere fakturacni obdobi pred presmerem do stavu "K fakturaci"
 
-```
-// Aktualne (spatne):
-currentColleague.internal_hourly_cost * ew.hours_worked
+### Technicke detaily
 
-// Spravne:
-(ew.internal_hourly_rate ?? currentColleague.internal_hourly_cost) * ew.hours_worked
-```
+**Soubor: `src/components/extra-work/ExtraWorkCard.tsx`**
 
-Stejna chyba je na radku 227, kde se predava `hourlyRate` do fakturacniho prehledu — opet se pouziva globalni sazba misto te z viceprace.
+- Import `BillingPeriodDialog` a `format` z date-fns
+- Pridat state `billingPeriodDialogOpen` 
+- Upravit `handleMoveToInvoice` aby otevrel `BillingPeriodDialog` misto primeho update
+- V `onConfirm` BillingPeriodDialogu zavolat `onUpdate(work.id, { status: 'ready_to_invoice', billing_period: selectedPeriod })`
+- U stavu `ready_to_invoice` zobrazit naformatovane fakturacni obdobi (prevod `YYYY-MM` na cesky nazev mesice)
+- Pridat tlacitko "Vystavit fakturu" (ikona Receipt) pro stav `ready_to_invoice`, ktere zavola novy callback `onCreateInvoice`
 
-### Problem 2: Upsell provize — tok je funkcni, ale neni videt bez schvaleni
+**Soubor: `src/pages/ExtraWork.tsx`**
 
-Upsell provize pro kolegu ktery prodal (upsold_by_id) se do vykazu propisuje spravne pres `getApprovedCommissionsForColleague` z `useUpsellApprovals`. Tento tok funguje:
-
-1. Viceprace ma `upsold_by_id` a `upsell_commission_percent`
-2. Admin schvali provizi na strance Upselly
-3. Provize se objevi v osobnim vykazu kolegy ktery prodal
-
-Toto je **OK** — zadna zmena neni potreba.
-
-## Zmeny
-
-### 1. MyWork.tsx — `getColleagueExtraWorkAmount` (radky 183-188)
-
-Pouzit `ew.internal_hourly_rate` s fallbackem na `currentColleague.internal_hourly_cost`:
-
-```typescript
-const getColleagueExtraWorkAmount = (ew: typeof extraWorks[0]) => {
-  const rate = ew.internal_hourly_rate ?? currentColleague?.internal_hourly_cost;
-  if (rate && ew.hours_worked) {
-    return rate * ew.hours_worked;
-  }
-  return ew.amount;
-};
-```
-
-### 2. MyWork.tsx — `extraWorksForInvoice` (radky 219-229)
-
-Predat spravnou hodinovou sazbu do fakturacniho prehledu:
-
-```typescript
-const extraWorksForInvoice = myExtraWorks.map((ew) => {
-  const client = clients.find(c => c.id === ew.client_id);
-  const colleagueAmount = getColleagueExtraWorkAmount(ew);
-  const rate = ew.internal_hourly_rate ?? currentColleague?.internal_hourly_cost;
-  return {
-    clientName: client?.brand_name || client?.name || 'Neznamy klient',
-    name: ew.name,
-    amount: colleagueAmount,
-    hours: ew.hours_worked,
-    hourlyRate: rate,
-  };
-});
-```
-
-### 3. MyWork.tsx — zobrazeni sazby v sekci "Vice prace" (radky 382-384)
-
-Stejna oprava v Badge, ktery ukazuje "Xh x Y Kc":
-
-```typescript
-{ew.hours_worked && (ew.internal_hourly_rate || currentColleague?.internal_hourly_cost) && (
-  <Badge variant="secondary" className="text-xs shrink-0">
-    {ew.hours_worked}h x {ew.internal_hourly_rate ?? currentColleague?.internal_hourly_cost} Kc
-  </Badge>
-)}
-```
-
-## Soubory ke zmene
-
-| Soubor | Zmena |
-|---|---|
-| `src/pages/MyWork.tsx` | 3 mista — pouzit `ew.internal_hourly_rate` misto globalni sazby |
-
-## Co neni potreba menit
-
-- **Upsell provize** — tok funguje spravne (schvalene provize se propisuji do vykazu kolegy ktery prodal)
-- **InvoicingOverview.tsx** — bere data z props, takze staci opravit zdroj v MyWork.tsx
-- **Zadne zmeny v databazi ani typech**
+- Pridat handler pro vytvoreni faktury z viceprace a propojit s kartou
 
