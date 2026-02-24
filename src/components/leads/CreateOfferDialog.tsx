@@ -20,6 +20,7 @@ import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/pub
 import { addPublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
+import { getServiceDetail } from '@/constants/serviceDetails';
 
 interface CreateOfferDialogProps {
   open: boolean;
@@ -74,22 +75,36 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         const deliverables = serviceDetails?.default_deliverables?.length 
           ? serviceDetails.default_deliverables 
           : mergeWithDefaults(ls.name, null, null, null, null).deliverables;
-        
+
+        // Resolve price: use lead price, but if it looks wrong, fall back to SERVICE_DETAILS
+        let resolvedPrice = ls.price;
+        let resolvedOriginalPrice = ls.price;
+        const constantDetail = serviceDetails ? getServiceDetail(serviceDetails.code) : undefined;
+        if (constantDetail?.tierPricing && ls.selected_tier) {
+          const tierKey = ls.selected_tier as keyof typeof constantDetail.tierPricing;
+          const constantTierPrice = constantDetail.tierPricing[tierKey];
+          if (constantTierPrice?.price !== null && constantTierPrice?.price !== undefined) {
+            resolvedPrice = constantTierPrice.price;
+            resolvedOriginalPrice = constantTierPrice.originalPrice ?? constantTierPrice.price;
+          }
+        }
+
+        // Get description from SERVICE_DETAILS tagline as fallback
+        const description = serviceDetails?.description || constantDetail?.tagline || '';
+
         return {
           id: ls.id,
           service_id: ls.service_id,
           name: ls.name,
-          description: serviceDetails?.description || '',
+          description,
           offer_description: null,
           selected_tier: ls.selected_tier,
-          price: ls.price,
-          original_price: ls.price,
+          price: resolvedPrice,
+          original_price: resolvedOriginalPrice,
           discount_reason: '',
           currency: ls.currency,
           billing_type: ls.billing_type,
-          // Pass service_type from service definition
           service_type: serviceDetails?.service_type,
-          // Pre-fill with deliverables from DB or intelligent fallbacks
           deliverables,
           frequency: '',
           turnaround: '',
