@@ -181,8 +181,9 @@ function MyWorkContent() {
   
   // Calculate colleague earnings from extra work using their hourly rate × hours
   const getColleagueExtraWorkAmount = (ew: typeof extraWorks[0]) => {
-    if (currentColleague?.internal_hourly_cost && ew.hours_worked) {
-      return currentColleague.internal_hourly_cost * ew.hours_worked;
+    const rate = ew.internal_hourly_rate ?? currentColleague?.internal_hourly_cost;
+    if (rate && ew.hours_worked) {
+      return rate * ew.hours_worked;
     }
     return ew.amount; // fallback to client amount if no hourly rate or hours
   };
@@ -224,7 +225,7 @@ function MyWorkContent() {
       name: ew.name,
       amount: colleagueAmount,
       hours: ew.hours_worked,
-      hourlyRate: currentColleague?.internal_hourly_cost,
+      hourlyRate: ew.internal_hourly_rate ?? currentColleague?.internal_hourly_cost,
     };
   });
 
@@ -379,9 +380,9 @@ function MyWorkContent() {
                     <div key={ew.id} className="flex items-center justify-between py-1">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <span className="text-sm truncate">{client?.brand_name || client?.name} – {ew.name}</span>
-                        {ew.hours_worked && currentColleague?.internal_hourly_cost && (
+                        {ew.hours_worked && (ew.internal_hourly_rate || currentColleague?.internal_hourly_cost) && (
                           <Badge variant="secondary" className="text-xs shrink-0">
-                            {ew.hours_worked}h × {currentColleague.internal_hourly_cost} Kč
+                            {ew.hours_worked}h × {ew.internal_hourly_rate ?? currentColleague?.internal_hourly_cost} Kč
                           </Badge>
                         )}
                       </div>
