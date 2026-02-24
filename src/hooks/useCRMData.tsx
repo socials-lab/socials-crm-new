@@ -307,7 +307,30 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (dbData.length === 0 && colleagues.length > 0) {
         return MOCK_EXTRA_WORKS;
       }
-      return dbData;
+      // Enrich DB data with defaults for fields that may not exist in DB yet
+      // + demo upsell data on first record so the feature is visible
+      const activeColleagues = colleagues.filter(c => c.status === 'active');
+      return dbData.map((ew: any, index: number) => {
+        const enriched = {
+          ...ew,
+          internal_hourly_rate: ew.internal_hourly_rate ?? null,
+          upsold_by_id: ew.upsold_by_id ?? null,
+          upsell_commission_percent: ew.upsell_commission_percent ?? null,
+        };
+        // Set demo upsell on first record if no records have upsell data
+        if (index === 0 && !dbData.some((d: any) => d.upsold_by_id)) {
+          const seller = activeColleagues.find(c => c.id !== ew.colleague_id) || activeColleagues[0];
+          if (seller) {
+            enriched.upsold_by_id = seller.id;
+            enriched.upsell_commission_percent = 10;
+          }
+          if (!enriched.internal_hourly_rate) {
+            const col = activeColleagues.find(c => c.id === ew.colleague_id);
+            enriched.internal_hourly_rate = col?.internal_hourly_cost || 700;
+          }
+        }
+        return enriched;
+      });
     },
     enabled: colleagues.length > 0,
   });
