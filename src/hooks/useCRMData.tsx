@@ -234,27 +234,152 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Creative Boost mock service - will be merged with Supabase data
-  const CREATIVE_BOOST_SERVICE: Service = {
-    id: 'srv-3',
-    code: 'CREATIVE_BOOST',
-    name: 'Creative Boost',
-    service_type: 'addon',
-    category: 'creative',
-    base_price: 400, // base price per credit
-    currency: 'CZK',
-    description: 'Kreditový systém pro tvorbu kreativ (bannery, videa, AI foto). Základní cena: 400 Kč/kredit. Cena za kredit se upravuje na úrovni zakázky.',
-    is_active: true,
-    tier_pricing: null,
-    external_url: null,
-    default_deliverables: [
-      'Kreativní výstupy dle kreditového systému',
-      'Bannery, videa, AI foto dle potřeby',
-      'Express dodání za příplatek 50%',
-    ],
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+  // Mock services - will be merged with Supabase data
+  const MOCK_SERVICES: Service[] = [
+    {
+      id: 'srv-3',
+      code: 'CREATIVE_BOOST',
+      name: 'Creative Boost',
+      service_type: 'addon',
+      category: 'creative',
+      base_price: 400,
+      currency: 'CZK',
+      description: 'Kreditový systém pro tvorbu reklamních kreativ',
+      is_active: true,
+      tier_pricing: null,
+      external_url: null,
+      default_deliverables: [
+        'Kreativní výstupy dle kreditového systému',
+        'Bannery, videa, AI foto dle potřeby',
+        'Express dodání za příplatek 50%',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'srv-4',
+      code: 'PPC_BOOST',
+      name: 'PPC Boost',
+      service_type: 'core',
+      category: 'performance',
+      base_price: 24900,
+      currency: 'CZK',
+      description: 'Správa Google Ads a S-kliku – více zakázek a vyšší zisk',
+      is_active: true,
+      tier_pricing: [{ tier: 'growth', price: 24900 }, { tier: 'pro', price: 34900 }, { tier: 'elite', price: null }],
+      external_url: null,
+      default_deliverables: [
+        'Více zakázek a vyšší zisk z Google a Seznamu',
+        'Kompletní správa Google Ads a Sklik',
+        'Úprava XML feedů přes Mergado',
+        'Měsíční reporting a Looker Studio dashboard',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'srv-5',
+      code: 'PERFORMANCE_BOOST',
+      name: 'Performance Boost',
+      service_type: 'core',
+      category: 'performance',
+      base_price: 43900,
+      currency: 'CZK',
+      description: 'Kombinace Meta Ads + Google Ads + Sklik pro maximální dosah',
+      is_active: true,
+      tier_pricing: [{ tier: 'growth', price: 43900, original_price: 54800 }, { tier: 'pro', price: 59900, original_price: 74800 }, { tier: 'elite', price: null }],
+      external_url: null,
+      default_deliverables: [
+        'Kompletní pokrytí všech hlavních reklamních platforem',
+        'Zvýhodněná cena oproti samostatným balíčkům',
+        'Jednotná strategie napříč platformami',
+        'Cross-platform optimalizace rozpočtu',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'srv-6',
+      code: 'GOOGLE_ADS',
+      name: 'Google Ads',
+      service_type: 'core',
+      category: 'performance',
+      base_price: 15000,
+      currency: 'CZK',
+      description: 'Vyhledávací a nákupní reklamy pro e-shopy a služby',
+      is_active: true,
+      tier_pricing: [{ tier: 'growth', price: 15000 }, { tier: 'pro', price: 25000 }, { tier: 'elite', price: null }],
+      external_url: null,
+      default_deliverables: [
+        'Search, Shopping a PMax kampaně',
+        'Remarketing a display reklamy',
+        'Optimalizace feedu a konverzního měření',
+        'Měsíční reporting',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'srv-7',
+      code: 'SKLIK',
+      name: 'Sklik',
+      service_type: 'core',
+      category: 'performance',
+      base_price: 10000,
+      currency: 'CZK',
+      description: 'Reklama na Seznam.cz pro český trh',
+      is_active: true,
+      tier_pricing: [{ tier: 'growth', price: 10000 }, { tier: 'pro', price: 15000 }, { tier: 'elite', price: null }],
+      external_url: null,
+      default_deliverables: [
+        'Search a Shopping kampaně na Seznamu',
+        'Optimalizace klíčových slov pro český trh',
+        'Remarketing na obsahové síti',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'srv-8',
+      code: 'ANALYTICS',
+      name: 'Analytics',
+      service_type: 'addon',
+      category: 'analytics',
+      base_price: 5000,
+      currency: 'CZK',
+      description: 'Měření a analýza výkonu vašeho webu a kampaní',
+      is_active: true,
+      tier_pricing: null,
+      external_url: null,
+      default_deliverables: [
+        'Přesné měření konverzí a atribuce',
+        'Přehledné dashboardy s klíčovými metrikami',
+        'Datově podložená rozhodnutí',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'srv-9',
+      code: 'CONSULTING',
+      name: 'Consulting',
+      service_type: 'addon',
+      category: 'consulting',
+      base_price: 3000,
+      currency: 'CZK',
+      description: 'Strategické poradenství pro váš online marketing',
+      is_active: true,
+      tier_pricing: null,
+      external_url: null,
+      default_deliverables: [
+        'Nezávislý pohled na marketingovou strategii',
+        'Doporučení pro optimalizaci rozpočtu a kanálů',
+        'Pomoc s výběrem dodavatelů a nástrojů',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ];
 
   const { data: services = [], isLoading: servicesLoading } = useQuery({
     queryKey: ['services'],
@@ -263,13 +388,12 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       const dbServices = (data || []).map(transformService);
       
-      // Add Creative Boost if not already in DB
-      const hasCreativeBoost = dbServices.some((s: Service) => 
-        s.code === 'CREATIVE_BOOST' || s.name.toLowerCase().includes('creative boost')
-      );
+      // Add all mock services that are not already in DB
+      const dbCodes = new Set(dbServices.map((s: Service) => s.code));
+      const missingMocks = MOCK_SERVICES.filter(mock => !dbCodes.has(mock.code));
       
-      if (!hasCreativeBoost) {
-        return [...dbServices, CREATIVE_BOOST_SERVICE].sort((a, b) => a.name.localeCompare(b.name));
+      if (missingMocks.length > 0) {
+        return [...dbServices, ...missingMocks].sort((a, b) => a.name.localeCompare(b.name));
       }
       
       return dbServices;
