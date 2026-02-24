@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { BillingPeriodDialog } from './BillingPeriodDialog';
 import {
   Building2,
   Calendar,
@@ -55,6 +56,7 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
   const { getClientById, colleagues, engagements } = useCRMData();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [billingPeriodDialogOpen, setBillingPeriodDialogOpen] = useState(false);
 
   const client = getClientById(work.client_id);
   const colleague = colleagues.find(c => c.id === work.colleague_id);
@@ -84,8 +86,24 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
   };
 
   const handleMoveToInvoice = () => {
-    onUpdate?.(work.id, { status: 'ready_to_invoice' });
+    setBillingPeriodDialogOpen(true);
   };
+
+  const handleBillingPeriodConfirm = (billingPeriod: string) => {
+    onUpdate?.(work.id, { status: 'ready_to_invoice', billing_period: billingPeriod });
+  };
+
+  const handleMarkInvoiced = () => {
+    onUpdate?.(work.id, { status: 'invoiced', invoiced_at: new Date().toISOString() });
+    toast.success('Vícepráce označena jako vyfakturovaná');
+  };
+
+  const formattedBillingPeriod = useMemo(() => {
+    if (!work.billing_period) return null;
+    const [year, month] = work.billing_period.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return format(date, 'LLLL yyyy', { locale: cs });
+  }, [work.billing_period]);
 
   const createdAt = formatDistanceToNow(new Date(work.created_at), { addSuffix: true, locale: cs });
 
@@ -112,10 +130,17 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                     </Badge>
                   )}
                   {work.status === 'ready_to_invoice' && (
-                    <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                      <FileText className="h-3 w-3 mr-1" />
-                      K fakturaci
-                    </Badge>
+                    <>
+                      <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                        <FileText className="h-3 w-3 mr-1" />
+                        K fakturaci
+                      </Badge>
+                      {formattedBillingPeriod && (
+                        <span className="text-xs text-muted-foreground">
+                          {formattedBillingPeriod}
+                        </span>
+                      )}
+                    </>
                   )}
                   {work.status === 'invoiced' && (
                     <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -294,11 +319,19 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                   </>
                 )}
 
-                {/* Client approved: Move to invoice */}
-                {work.status === 'in_progress' && onUpdate && (
+                {/* Client approved / in_progress: Move to invoice */}
+                {(work.status === 'in_progress' || work.status === 'client_approved') && onUpdate && (
                   <Button size="sm" className="h-8" onClick={handleMoveToInvoice}>
                     <FileText className="h-3.5 w-3.5 mr-1" />
                     K fakturaci
+                  </Button>
+                )}
+
+                {/* Ready to invoice: Mark as invoiced */}
+                {work.status === 'ready_to_invoice' && onUpdate && (
+                  <Button size="sm" className="h-8" onClick={handleMarkInvoiced}>
+                    <Receipt className="h-3.5 w-3.5 mr-1" />
+                    Vystavit fakturu
                   </Button>
                 )}
 
@@ -329,6 +362,15 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BillingPeriodDialog
+        open={billingPeriodDialogOpen}
+        onOpenChange={setBillingPeriodDialogOpen}
+        workName={work.name}
+        workDate={work.work_date}
+        currentBillingPeriod={work.billing_period}
+        onConfirm={handleBillingPeriodConfirm}
+      />
     </>
   );
 }
