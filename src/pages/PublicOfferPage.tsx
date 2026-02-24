@@ -813,21 +813,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <NextStepsSection />
 
 
-        {/* Notion Link */}
-        {offer.notion_url && (
-          <section className="mb-10">
-            <a
-              href={offer.notion_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-            >
-              <FileText className="h-4 w-4" />
-              Detailní nabídka
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </section>
-        )}
+
 
         {/* Contact Section */}
         <ContactSection offer={offer} />

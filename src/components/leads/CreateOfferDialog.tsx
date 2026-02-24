@@ -55,7 +55,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const { colleagueId } = useUserRole();
   const [auditSummary, setAuditSummary] = useState('');
   const [customNote, setCustomNote] = useState('');
-  const [notionUrl, setNotionUrl] = useState('');
   const [validUntil, setValidUntil] = useState('');
   const [portfolioLinks, setPortfolioLinks] = useState<PortfolioLink[]>(
     DEFAULT_PORTFOLIO_OPTIONS.map((p, idx) => ({ ...p, id: `portfolio-${idx}` }))
@@ -169,7 +168,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           audit_summary: auditSummary.trim() || null,
           recommendation_intro: null,
           custom_note: customNote.trim() || null,
-          notion_url: notionUrl.trim() || null,
+          notion_url: null,
           // Cast to unknown to satisfy Supabase's JSONB column type (typed arrays -> Json)
           services: editableServices as unknown as Record<string, unknown>[],
           portfolio_links: portfolioLinks as unknown as Record<string, unknown>[],
@@ -219,7 +218,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const handleClose = () => {
     setAuditSummary('');
     setCustomNote('');
-    setNotionUrl('');
     setValidUntil('');
     setCreatedOfferUrl(null);
     setCopied(false);
@@ -359,21 +357,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                     placeholder="Těšíme se na spolupráci! V případě dotazů se neváhejte obrátit..."
                     rows={3}
                   />
-                </div>
-
-                {/* Notion URL */}
-                <div className="space-y-2">
-                  <Label htmlFor="notion">Link na detailní nabídku v Notion (volitelné)</Label>
-                  <Input
-                    id="notion"
-                    type="url"
-                    value={notionUrl}
-                    onChange={(e) => setNotionUrl(e.target.value)}
-                    placeholder="https://notion.so/..."
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Pokud máte podrobnější vysvětlení nabídky v Notion
-                  </p>
                 </div>
 
                 {/* Valid until */}
