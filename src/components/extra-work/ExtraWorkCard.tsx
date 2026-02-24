@@ -157,7 +157,7 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
               <div className="space-y-1 text-sm">
                 {work.hours_worked && work.hourly_rate ? (
                   <p>
-                    <span className="text-muted-foreground">Práce:</span>{' '}
+                    <span className="text-muted-foreground">Fakturace klientovi:</span>{' '}
                     {work.hours_worked}h × {work.hourly_rate.toLocaleString('cs-CZ')} {work.currency || 'CZK'} ={' '}
                     <span className="font-medium">{formatCurrency(work.amount)}</span>
                   </p>
@@ -167,6 +167,31 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                     <span className="font-medium">{formatCurrency(work.amount)}</span>
                   </p>
                 )}
+                {colleague && work.hours_worked && colleague.internal_hourly_cost ? (() => {
+                  const colleagueCost = work.hours_worked! * colleague.internal_hourly_cost;
+                  const margin = work.amount - colleagueCost;
+                  const marginPercent = work.amount > 0 ? Math.round((margin / work.amount) * 100) : 0;
+                  const marginColor = marginPercent >= 40
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : marginPercent >= 20
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-red-600 dark:text-red-400';
+                  return (
+                    <>
+                      <p>
+                        <span className="text-muted-foreground">Odměna kolegy:</span>{' '}
+                        {work.hours_worked}h × {colleague.internal_hourly_cost.toLocaleString('cs-CZ')} {work.currency || 'CZK'} ={' '}
+                        <span className="font-medium">{formatCurrency(colleagueCost)}</span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Marže:</span>{' '}
+                        <span className={`font-semibold ${marginColor}`}>
+                          {formatCurrency(margin)} ({marginPercent}%)
+                        </span>
+                      </p>
+                    </>
+                  );
+                })() : null}
                 {colleague && (
                   <p>
                     <span className="text-muted-foreground">Kolega:</span> {colleague.full_name}
