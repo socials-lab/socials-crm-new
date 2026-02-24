@@ -543,6 +543,72 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
     ],
     detailed_sections: [],
   },
+
+  // ─── Správa Heuréky a Zboží.cz ───
+  'heureka': {
+    deliverables: [
+      'Import a validace XML feedu do Mergada, přemapování kategorií a doplnění EAN kódů',
+      'Optimalizace názvů produktů a správné párování položek na Heureka/Zboží.cz',
+      'Řízení CPC biddingu pro maximální ziskovost (segmentace, automatizace, manuální úpravy)',
+      'Podpora recenzí a programu Ověřeno zákazníky pro vyšší důvěryhodnost',
+      'Pravidelný reporting a analýza výkonu (PNO, ROI, CTR, konverze)',
+    ],
+    frequency: 'Průběžná správa a měsíční optimalizace',
+    turnaround: 'Úvodní nastavení do 5 pracovních dnů',
+    requirements: [
+      'Přístup k e-shopu a XML feed produktů',
+      'Přístup do Mergada (nebo vytvoření účtu)',
+      'Přístup do administrace Heureka a Zboží.cz',
+      'Informace o maržích produktů pro nastavení biddingu',
+    ],
+    detailed_sections: [
+      {
+        emoji: '⚙️',
+        title: 'Úvodní nastavení',
+        items: [
+          'Import XML feedu do Mergada – kontrola a validace dat.',
+          'Úpravy v Mergadu – přemapování kategorií, úprava názvů, doplnění chybějících EAN kódů a parametrů.',
+          'Testování výstupu – ověření správného zpracování feedu v Heureka/Zboží.cz.',
+        ],
+      },
+      {
+        emoji: '🔧',
+        title: 'Optimalizace XML feedu',
+        items: [
+          'Validace feedu – ověřit správnost kategorií, názvů, obrázků, cen a dostupnosti.',
+          'Optimalizace názvů produktů – použití klíčových slov a přesného pojmenování pro správné spárování.',
+          'Správné párování produktů – ruční úpravy u nespárovaných položek.',
+          'EAN kódy a parametry – důležité pro spárování a lepší viditelnost ve filtrech.',
+        ],
+      },
+      {
+        emoji: '💰',
+        title: 'Bidding – řízení CPC pro maximální ziskovost',
+        items: [
+          'Segmentace produktů – prioritizovat výkonné produkty s vysokou marží.',
+          'Automatizovaný bidding – možné použití nástrojů (Bidding Fox, Beed) pro udržení PNO pod kontrolou.',
+          'Manuální úprava CPC – zvýšení CPC pro klíčové produkty, omezení u těch se slabou návratností.',
+          'Pravidelné vyhodnocení PNO/ROI – zamezit plýtvání rozpočtu na neefektivní produkty.',
+        ],
+      },
+      {
+        emoji: '⭐',
+        title: 'Recenze a důvěryhodnost',
+        items: [
+          'Podpora „Ověřeno zákazníky" – aktivně sbírat recenze, odpovídat na negativní.',
+          'Hodnocení produktů – více recenzí = vyšší konverze.',
+        ],
+      },
+      {
+        emoji: '📊',
+        title: 'Analýza a reporting',
+        items: [
+          'Sledování výkonu kampaní (PNO, ROI, CTR, konverze) – optimalizace na základě reálných dat.',
+          'Pravidelný reporting – vyhodnocení výsledků a iterativní zlepšování strategií.',
+        ],
+      },
+    ],
+  },
 };
 
 // Generic fallback for services that don't match any keyword
@@ -582,6 +648,7 @@ export function getServiceDefaults(serviceName: string): ServiceDefaultConfig {
  * Merge service defaults with any custom values from the service definition
  * Custom values take precedence over defaults
  */
+
 export function mergeWithDefaults(
   serviceName: string,
   customDeliverables?: string[] | null,
