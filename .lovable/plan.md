@@ -1,46 +1,76 @@
 
 
-# Billing Double-Check v detailu viceprace
+# Individualni interni sazba na vicepracich
 
-## Co chybi
+## Problem
 
-Karta viceprace (`ExtraWorkCard`) aktualne zobrazuje pouze klientskou castku (hodiny x sazba). Chybi:
-- Kolik si fakturuje kolega (interni sazba x hodiny)
-- Marze (rozdil klient vs. kolega)
-- Vizualni upozorneni pokud je marze nizka nebo zaporna
-
-Dialog pro upravu (`EditExtraWorkDialog`) uz obe castky ukazuje, ale v prehledu karet tato informace chybi.
+Kazdy kolega ma v profilu jednu `internal_hourly_cost` (vychozi 700 Kc). Ale v praxi muze stejny kolega delat ruzne typy praci za ruzne interni sazby -- napr. nastaveni analytiky za 750 Kc/h, ale Google Ads za 600 Kc/h. Aktualne neni mozne toto rozlisit.
 
 ## Reseni
 
-Pridat do `ExtraWorkCard` billing summary sekci, ktera zobrazi:
+Pridat pole `internal_hourly_rate` primo do zaznamu viceprace. Hodnota se predvyplni z profilu kolegy pri vytvoreni, ale da se rucne upravit pro kazdou vicepraci zvlast.
 
-```text
-+--------------------------------------------------+
-| Fakturace klientovi:  5h x 1 800 = 9 000 Kc     |
-| Odmena kolegy:        5h x   700 = 3 500 Kc     |
-| Marze:                             5 500 Kc (61%)|
-+--------------------------------------------------+
-```
+## Co se zmeni
 
-- Zelena barva marze pri 40%+
-- Zluta/oranzova pri 20-40%
-- Cervena pri pod 20% nebo zaporne
+### 1. Databaze -- novy sloupec v `extra_works`
+
+Pridani sloupce `internal_hourly_rate` (numeric, nullable) do tabulky `extra_works`. Pokud je NULL, pouzije se fallback na `colleague.internal_hourly_cost`.
+
+### 2. TypeScript typ `ExtraWork`
+
+Pridani `internal_hourly_rate: number | null` do interface `ExtraWork` v `src/types/crm.ts`.
+
+### 3. AddExtraWorkDialog
+
+- Pridani pole "Interni sazba kolegy (Kc/h)" -- predvyplni se z `colleague.internal_hourly_cost` pri vyberu kolegy
+- Pole je editovatelne, takze se da nastavit jina castka pro specificky typ prace
+- Ulozi se do `internal_hourly_rate` pri vytvoreni
+
+### 4. EditExtraWorkDialog
+
+- Pridani stejneho pole "Interni sazba kolegy"
+- Predvyplni se z existujici hodnoty zaznamu, nebo z kolegy jako fallback
+- Odmena kolegy a marze se pocitaji z teto sazby misto globalni
+
+### 5. ExtraWorkCard -- billing double-check
+
+- Pouzije `work.internal_hourly_rate` misto `colleague.internal_hourly_cost` (s fallbackem na kolegu pokud neni nastaveno)
+- Zadna zmena v logice barevneho kodovani marze
+
+### 6. Mock data
+
+- Aktualizovat mock extra works v `useCRMData.tsx` -- pridat `internal_hourly_rate` s ruznymi hodnotami pro demonstraci
 
 ## Technicke detaily
 
-### Zmeny v `src/components/extra-work/ExtraWorkCard.tsx`
+### Databazova migrace
 
-1. Rozsirime stavajici `bg-muted/50` sekci (radky 156-178) o dalsi radky:
-   - **Odmena kolegy**: `colleague.internal_hourly_cost * work.hours_worked`
-   - **Marze**: `work.amount - (colleague.internal_hourly_cost * work.hours_worked)` s procentualnim vyjadrenim
-2. Barevne kodovani marze pomoci podminenych trid
-3. Data jsou jiz dostupna -- `colleague` objekt s `internal_hourly_cost` a `work.hours_worked` / `work.amount` jsou uz v komponente
+```sql
+ALTER TABLE extra_works
+  ADD COLUMN IF NOT EXISTS internal_hourly_rate numeric;
+```
 
-### Zadne dalsi zmeny
+### Zmeny v souborech
 
-- Zadne nove soubory
-- Zadne zmeny v databazi
-- Zadne nove zavislosti
-- Pouze uprava jednoho souboru `ExtraWorkCard.tsx`
+| Soubor | Zmena |
+|---|---|
+| `src/types/crm.ts` | Pridat `internal_hourly_rate: number \| null` |
+| `src/components/extra-work/AddExtraWorkDialog.tsx` | Nove pole + predvyplneni ze sazby kolegy |
+| `src/components/extra-work/EditExtraWorkDialog.tsx` | Nove pole + predvyplneni |
+| `src/components/extra-work/ExtraWorkCard.tsx` | Pouzit `work.internal_hourly_rate \|\| colleague.internal_hourly_cost` |
+| `src/hooks/useCRMData.tsx` | Mock data -- pridat `internal_hourly_rate` |
+
+### Logika predvyplneni
+
+Pri vyberu kolegy v Add/Edit dialogu:
+1. Nastav klientskou sazbu (`hourly_rate`) podle `getRateForPosition()` -- beze zmeny
+2. Nastav interni sazbu (`internal_hourly_rate`) z `colleague.internal_hourly_cost`
+3. Uzivatel muze obe sazby rucne zmenit
+
+### Logika v ExtraWorkCard
+
+```
+const internalRate = work.internal_hourly_rate ?? colleague?.internal_hourly_cost;
+const colleagueCost = (work.hours_worked ?? 0) * (internalRate ?? 0);
+```
 
