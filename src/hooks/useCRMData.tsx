@@ -250,7 +250,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       invoice_id: null, invoice_number: null, invoiced_at: null,
       internal_hourly_rate: 700,
       approval_token: null, client_approval_email: null, client_approved_at: null, client_rejected_at: null, client_rejection_reason: null,
-      upsold_by_id: colleagues[1]?.id || null, upsell_commission_percent: 10,
+      upsold_by_id: colleagues[1]?.id || colleagues[0]?.id || null, upsell_commission_percent: 10,
       notes: '', created_at: '2026-02-20T10:00:00Z', updated_at: '2026-02-20T10:00:00Z',
     },
     {
