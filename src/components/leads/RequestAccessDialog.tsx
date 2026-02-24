@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
+import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 
 interface RequestAccessDialogProps {
   open: boolean;
@@ -45,6 +46,7 @@ export function RequestAccessDialog({
 
   const [toEmails, setToEmails] = useState<string[]>(contactEmail ? [contactEmail] : []);
   const [newToEmail, setNewToEmail] = useState('');
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [bccEmails, setBccEmails] = useState<string[]>(DEFAULT_BCC);
   const [newBccEmail, setNewBccEmail] = useState('');
   const [emailSubject, setEmailSubject] = useState(() => getDefaults().subject);
@@ -107,6 +109,7 @@ export function RequestAccessDialog({
     if (newOpen) {
       setToEmails(contactEmail ? [contactEmail] : []);
       setNewToEmail('');
+      setCcEmails([]);
       setBccEmails(DEFAULT_BCC);
       setNewBccEmail('');
       const defaults = getDefaults();
@@ -187,18 +190,14 @@ export function RequestAccessDialog({
             />
           </div>
 
-          {/* BCC */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Skrytá kopie (BCC)</Label>
-            <EmailTagList
-              emails={bccEmails}
-              onRemove={(e) => removeEmail(e, bccEmails, setBccEmails)}
-              newEmail={newBccEmail}
-              onNewEmailChange={setNewBccEmail}
-              onAdd={() => addEmail(newBccEmail, bccEmails, setBccEmails, setNewBccEmail)}
-              placeholder="Přidat BCC..."
-            />
-          </div>
+          {/* CC / BCC */}
+          <EmailCcBccFields
+            cc={ccEmails}
+            onCcChange={setCcEmails}
+            bcc={bccEmails}
+            onBccChange={setBccEmails}
+            defaultExpanded={true}
+          />
 
           {/* Subject */}
           <div className="space-y-2">

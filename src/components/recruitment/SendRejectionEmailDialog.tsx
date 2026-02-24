@@ -8,6 +8,7 @@ import { Send, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
+import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 import type { Applicant } from '@/types/applicant';
 
 interface SendRejectionEmailDialogProps {
@@ -38,6 +39,8 @@ export function SendRejectionEmailDialog({
   const [subject, setSubject] = useState(defaultSubject);
   const [message, setMessage] = useState(defaultMessage);
   const [isSending, setIsSending] = useState(false);
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
 
   const handleSend = async () => {
     setIsSending(true);
@@ -71,6 +74,9 @@ export function SendRejectionEmailDialog({
               className="bg-muted/50"
             />
           </div>
+
+          {/* CC / BCC */}
+          <EmailCcBccFields cc={cc} onCcChange={setCc} bcc={bcc} onBccChange={setBcc} />
 
           <div className="space-y-2">
             <Label htmlFor="subject">Předmět</Label>

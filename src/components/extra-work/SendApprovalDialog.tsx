@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { ExtraWork } from '@/types/crm';
 import { Copy, Mail, CheckCircle2, Eye, EyeOff, ClipboardCheck } from 'lucide-react';
+import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 
 // localStorage helper for approval tokens
 const APPROVAL_STORAGE_KEY = 'extra_work_approvals';
@@ -62,6 +63,8 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const [showPreview, setShowPreview] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
 
   const client = useMemo(() => getClientById(extraWork.client_id), [extraWork.client_id, getClientById]);
   const colleague = useMemo(() => colleagues.find(c => c.id === extraWork.colleague_id), [extraWork.colleague_id, colleagues]);
@@ -183,6 +186,9 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
               placeholder="klient@firma.cz"
             />
           </div>
+
+          {/* CC / BCC */}
+          <EmailCcBccFields cc={cc} onCcChange={setCc} bcc={bcc} onBccChange={setBcc} />
 
           {/* Subject */}
           <div className="grid gap-2">

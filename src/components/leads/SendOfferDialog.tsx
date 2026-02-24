@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
+import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 import type { Lead, Colleague } from '@/types/crm';
 
 interface SendOfferDialogProps {
@@ -56,6 +57,8 @@ export function SendOfferDialog({
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
   const [emailContent, setEmailContent] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
 
   const selectedOwner = colleagues.find(c => c.id === selectedOwnerId);
   const activeColleagues = colleagues.filter(c => c.status === 'active');
@@ -210,6 +213,9 @@ export function SendOfferDialog({
               </a>
             )}
           </div>
+
+          {/* CC / BCC */}
+          <EmailCcBccFields cc={cc} onCcChange={setCc} bcc={bcc} onBccChange={setBcc} />
 
           {/* Email Subject */}
           <div className="space-y-2">

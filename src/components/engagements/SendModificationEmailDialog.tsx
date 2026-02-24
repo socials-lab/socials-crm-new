@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
+import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 import { recordEmailSent, type StoredModificationRequest } from '@/data/modificationRequestsMockData';
 import type {
   AddServiceProposedChanges,
@@ -65,6 +66,8 @@ export function SendModificationEmailDialog({
   const [emailSubject, setEmailSubject] = useState('');
   const [emailContent, setEmailContent] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
 
   // Get sender from logged-in user's colleague record
   const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
@@ -256,6 +259,9 @@ export function SendModificationEmailDialog({
               placeholder="email@spolecnost.cz"
             />
           </div>
+
+          {/* CC / BCC */}
+          <EmailCcBccFields cc={cc} onCcChange={setCc} bcc={bcc} onBccChange={setBcc} />
 
           {/* Sender Info Card - Current user */}
           {currentUserColleague && (

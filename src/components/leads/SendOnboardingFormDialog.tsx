@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
+import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 import type { Lead } from '@/types/crm';
 
 interface SendOnboardingFormDialogProps {
@@ -56,6 +57,8 @@ export function SendOnboardingFormDialog({
 
   const [emailSubject, setEmailSubject] = useState(() => getDefaults().subject);
   const [emailContent, setEmailContent] = useState(() => getDefaults().body);
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
 
   const handleCopyLink = async () => {
     try {
@@ -191,6 +194,9 @@ export function SendOnboardingFormDialog({
               )}
             </div>
           </div>
+
+          {/* CC / BCC */}
+          <EmailCcBccFields cc={cc} onCcChange={setCc} bcc={bcc} onBccChange={setBcc} />
 
           {/* Email Subject */}
           <div className="space-y-2">

@@ -15,6 +15,7 @@ import { Mail, Copy, Check, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
+import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 
@@ -37,6 +38,8 @@ export function SendApplicantOnboardingDialog({
   const senderName = [user?.user_metadata?.first_name, user?.user_metadata?.last_name].filter(Boolean).join(' ') || 'Socials';
   const senderEmail = user?.email || '';
   const [copied, setCopied] = useState(false);
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
   
   const onboardingUrl = `${window.location.origin}/applicant-onboarding/${applicant.id}`;
   
@@ -123,6 +126,9 @@ export function SendApplicantOnboardingDialog({
               </Button>
             </div>
           </div>
+
+          {/* CC / BCC */}
+          <EmailCcBccFields cc={cc} onCcChange={setCc} bcc={bcc} onBccChange={setBcc} />
 
           {/* Email preview */}
           <div className="space-y-2">
