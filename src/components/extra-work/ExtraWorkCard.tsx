@@ -327,13 +327,6 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                   </Button>
                 )}
 
-                {/* Ready to invoice: Mark as invoiced */}
-                {work.status === 'ready_to_invoice' && onUpdate && (
-                  <Button size="sm" className="h-8" onClick={handleMarkInvoiced}>
-                    <Receipt className="h-3.5 w-3.5 mr-1" />
-                    Vystavit fakturu
-                  </Button>
-                )}
 
                 {/* Rejected: Delete */}
                 {work.status === 'rejected' && onDelete && (
