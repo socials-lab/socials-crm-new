@@ -100,16 +100,64 @@ function KanbanCard({
           <span>{colleague?.full_name || '—'}</span>
         </div>
 
-        {/* Amount & Hours */}
-        <div className="flex items-center justify-between">
-          <span className="font-semibold text-sm">{formatCurrency(work.amount)}</span>
-          {work.hours_worked && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              <span>{work.hours_worked}h</span>
+        {/* Financial details */}
+        {(() => {
+          const hours = work.hours_worked || 0;
+          const rate = work.hourly_rate || 0;
+          const clientAmount = work.amount || Math.round(hours * rate);
+          const intRate = work.internal_hourly_rate || colleague?.internal_hourly_cost || 0;
+          const colleagueCost = intRate > 0 && hours > 0 ? Math.round(hours * intRate) : 0;
+          const upsellCommission = work.upsold_by_id && clientAmount > 0
+            ? Math.round(clientAmount * (work.upsell_commission_percent || 10) / 100)
+            : 0;
+          const margin = clientAmount - colleagueCost - upsellCommission;
+          const marginPct = clientAmount > 0 ? Math.round((margin / clientAmount) * 100) : 0;
+          const marginColor = marginPct >= 40
+            ? 'text-emerald-600 dark:text-emerald-400'
+            : marginPct >= 20
+              ? 'text-amber-600 dark:text-amber-400'
+              : 'text-red-600 dark:text-red-400';
+
+          return (
+            <div className="bg-muted/50 rounded-md p-2.5 space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">💰 Klient</span>
+                <span className="font-semibold">{formatCurrency(clientAmount)}</span>
+              </div>
+              {hours > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    <Clock className="h-3 w-3 inline mr-1" />
+                    {hours}h × {formatCurrency(rate)}
+                  </span>
+                </div>
+              )}
+              {colleagueCost > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">🧑‍💻 Odměna ({formatCurrency(intRate)}/h)</span>
+                  <span className="font-medium">{formatCurrency(colleagueCost)}</span>
+                </div>
+              )}
+              {upsellCommission > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    📈 Provize ({work.upsell_commission_percent || 10}%)
+                    {upsoldBy && ` — ${upsoldBy.full_name}`}
+                  </span>
+                  <span className="font-medium">{formatCurrency(upsellCommission)}</span>
+                </div>
+              )}
+              {colleagueCost > 0 && (
+                <div className="flex justify-between border-t pt-1 mt-1">
+                  <span className="text-muted-foreground">📊 Marže</span>
+                  <span className={cn('font-semibold', marginColor)}>
+                    {formatCurrency(margin)} ({marginPct}%)
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Date & Status */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
