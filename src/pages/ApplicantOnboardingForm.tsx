@@ -107,10 +107,11 @@ export default function ApplicantOnboardingForm() {
   const [aresError, setAresError] = useState<string | null>(null);
   const [aresValidated, setAresValidated] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [noIco, setNoIco] = useState(false);
-  const [aresQuery, setAresQuery] = useState('');
-  const [aresResults, setAresResults] = useState<Array<{ ico: string; name: string; city: string | null }>>([]);
-  const [isSearching, setIsSearching] = useState(false);
+   const [noIco, setNoIco] = useState(false);
+   const [billingCountry, setBillingCountry] = useState<'CZ' | 'SK'>('CZ');
+   const [aresQuery, setAresQuery] = useState('');
+   const [aresResults, setAresResults] = useState<Array<{ ico: string; name: string; city: string | null }>>([]);
+   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const aresSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -604,11 +605,47 @@ export default function ApplicantOnboardingForm() {
                 Fakturační údaje
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {noIco ? 'Vyplň fakturační údaje ručně.' : 'Zadej své IČO a my doplníme zbytek z ARES.'}
+                {noIco ? 'Vyplň fakturační údaje ručně.' : billingCountry === 'CZ' ? 'Vyhledej svou firmu/OSVČ v ARES.' : 'Vyplň své IČO a fakturační údaje ručně.'}
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!noIco && (
+              {/* Country toggle */}
+              <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+                <button
+                  type="button"
+                  className={cn(
+                    "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                    billingCountry === 'CZ' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => {
+                    setBillingCountry('CZ');
+                    setAresValidated(false);
+                    setAresError(null);
+                  }}
+                >
+                  🇨🇿 Česko
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                    billingCountry === 'SK' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => {
+                    setBillingCountry('SK');
+                    setAresValidated(false);
+                    setAresError(null);
+                    setAresQuery('');
+                    setAresResults([]);
+                    setShowResults(false);
+                  }}
+                >
+                  🇸🇰 Slovensko
+                </button>
+              </div>
+
+              {/* CZ: ARES search */}
+              {!noIco && billingCountry === 'CZ' && (
                 <div className="relative">
                   <FormLabel>Vyhledat firmu / OSVČ</FormLabel>
                   <div className="mt-1.5 relative">
@@ -665,6 +702,55 @@ export default function ApplicantOnboardingForm() {
                 </div>
               )}
 
+              {/* SK: Manual IČO input */}
+              {!noIco && billingCountry === 'SK' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="ico"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>IČO</FormLabel>
+                          <FormControl>
+                            <Input placeholder="12345678" {...field} />
+                          </FormControl>
+                          <FormDescription>Slovenské IČO</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dic"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>DIČ / IČ DPH</FormLabel>
+                          <FormControl>
+                            <Input placeholder="SK1234567890" {...field} />
+                          </FormControl>
+                          <FormDescription>Volitelné</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="company_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Názov firmy / Meno SZČO *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Názov firmy s.r.o." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+
               <label className="flex items-center gap-2 cursor-pointer text-sm">
                 <Checkbox
                   checked={noIco}
@@ -682,9 +768,9 @@ export default function ApplicantOnboardingForm() {
                 Nemám IČO
               </label>
 
-              {(aresValidated || noIco) && (
+              {(aresValidated || noIco || billingCountry === 'SK') && (
                 <div className="space-y-4 animate-fade-in">
-                  {!noIco && (
+                  {!noIco && billingCountry === 'CZ' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
