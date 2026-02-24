@@ -74,6 +74,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
   const [hoursWorked, setHoursWorked] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
   const [notes, setNotes] = useState('');
+  const [internalHourlyRate, setInternalHourlyRate] = useState('');
   const [upsoldById, setUpsoldById] = useState<string | null>(null);
 
   const calculatedAmount = useMemo(() => {
@@ -122,6 +123,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
       currency: 'CZK',
       hours_worked: hoursWorked ? parseFloat(hoursWorked) : null,
       hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+      internal_hourly_rate: internalHourlyRate ? parseFloat(internalHourlyRate) : null,
       work_date: format(today, 'yyyy-MM-dd'),
       billing_period: format(today, 'yyyy-MM'),
       notes,
@@ -137,6 +139,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
       invoice_id: null,
       invoice_number: null,
       invoiced_at: null,
+      internal_hourly_rate: internalHourlyRate ? parseFloat(internalHourlyRate) : null,
       approval_token: null,
       client_approval_email: null,
       client_approved_at: null,
@@ -161,6 +164,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
     setDescription('');
     setHoursWorked('');
     setHourlyRate('');
+    setInternalHourlyRate('');
     setNotes('');
     setUpsoldById(null);
     onOpenChange(false);
@@ -229,6 +233,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
               if (col) {
                 const rate = getRateForPosition(col.position);
                 if (rate !== null) setHourlyRate(String(rate));
+                if (col.internal_hourly_cost) setInternalHourlyRate(String(col.internal_hourly_cost));
               }
             }}>
               <SelectTrigger>
@@ -308,6 +313,18 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
             </div>
           </div>
 
+          <div className="grid gap-2">
+            <Label htmlFor="internalRate">Interní sazba kolegy (Kč/h)</Label>
+            <Input
+              id="internalRate"
+              type="number"
+              value={internalHourlyRate}
+              onChange={(e) => setInternalHourlyRate(e.target.value)}
+              placeholder="700"
+            />
+            <p className="text-xs text-muted-foreground">Předvyplněno z profilu kolegy, lze upravit pro tuto vícepráci</p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label className="text-muted-foreground text-xs">💰 Částka klient</Label>
@@ -319,10 +336,10 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
               <Label className="text-muted-foreground text-xs">🧑‍💻 Odměna kolega</Label>
               <div className="px-3 py-2 bg-muted/50 rounded-md text-sm font-semibold">
                 {(() => {
-                  const col = activeColleagues.find(c => c.id === colleagueId);
                   const hours = parseFloat(hoursWorked) || 0;
-                  if (col?.internal_hourly_cost && hours > 0) {
-                    return formatCurrency(Math.round(hours * col.internal_hourly_cost));
+                  const rate = parseFloat(internalHourlyRate) || 0;
+                  if (rate > 0 && hours > 0) {
+                    return formatCurrency(Math.round(hours * rate));
                   }
                   return '—';
                 })()}

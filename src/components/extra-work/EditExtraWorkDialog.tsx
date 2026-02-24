@@ -50,6 +50,7 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
   const [description, setDescription] = useState(extraWork.description);
   const [hoursWorked, setHoursWorked] = useState(extraWork.hours_worked?.toString() || '');
   const [hourlyRate, setHourlyRate] = useState(extraWork.hourly_rate?.toString() || '');
+  const [internalHourlyRate, setInternalHourlyRate] = useState(extraWork.internal_hourly_rate?.toString() || '');
   const [notes, setNotes] = useState(extraWork.notes);
 
   useEffect(() => {
@@ -59,6 +60,10 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
       setDescription(extraWork.description);
       setHoursWorked(extraWork.hours_worked?.toString() || '');
       setHourlyRate(extraWork.hourly_rate?.toString() || '');
+      setInternalHourlyRate(extraWork.internal_hourly_rate?.toString() || (() => {
+        const col = colleagues.filter(c => c.status === 'active').find(c => c.id === extraWork.colleague_id);
+        return col?.internal_hourly_cost?.toString() || '';
+      })());
       setNotes(extraWork.notes);
     }
   }, [open, extraWork]);
@@ -86,6 +91,7 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
       description,
       hours_worked: hoursWorked ? parseFloat(hoursWorked) : null,
       hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+      internal_hourly_rate: internalHourlyRate ? parseFloat(internalHourlyRate) : null,
       amount: calculatedAmount,
       notes,
     });
@@ -119,6 +125,7 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
               if (col) {
                 const rate = getRateForPosition(col.position);
                 if (rate !== null) setHourlyRate(String(rate));
+                if (col.internal_hourly_cost) setInternalHourlyRate(String(col.internal_hourly_cost));
               }
             }}>
               <SelectTrigger>
@@ -155,6 +162,12 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
             </div>
           </div>
 
+          <div className="grid gap-2">
+            <Label>Interní sazba kolegy (Kč/h)</Label>
+            <Input type="number" value={internalHourlyRate} onChange={(e) => setInternalHourlyRate(e.target.value)} placeholder="700" />
+            <p className="text-xs text-muted-foreground">Lze upravit pro tuto vícepráci</p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label className="text-muted-foreground text-xs">💰 Částka klient</Label>
@@ -166,10 +179,10 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
               <Label className="text-muted-foreground text-xs">🧑‍💻 Odměna kolega</Label>
               <div className="px-3 py-2 bg-muted/50 rounded-md text-sm font-semibold">
                 {(() => {
-                  const col = activeColleagues.find(c => c.id === colleagueId);
                   const hours = parseFloat(hoursWorked) || 0;
-                  if (col?.internal_hourly_cost && hours > 0) {
-                    return formatCurrency(Math.round(hours * col.internal_hourly_cost));
+                  const rate = parseFloat(internalHourlyRate) || 0;
+                  if (rate > 0 && hours > 0) {
+                    return formatCurrency(Math.round(hours * rate));
                   }
                   return '—';
                 })()}

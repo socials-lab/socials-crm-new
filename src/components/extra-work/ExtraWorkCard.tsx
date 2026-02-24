@@ -167,8 +167,9 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                     <span className="font-medium">{formatCurrency(work.amount)}</span>
                   </p>
                 )}
-                {colleague && work.hours_worked && colleague.internal_hourly_cost ? (() => {
-                  const colleagueCost = work.hours_worked! * colleague.internal_hourly_cost;
+              {colleague && work.hours_worked && (work.internal_hourly_rate || colleague.internal_hourly_cost) ? (() => {
+                  const internalRate = work.internal_hourly_rate ?? colleague.internal_hourly_cost!;
+                  const colleagueCost = work.hours_worked! * internalRate;
                   const margin = work.amount - colleagueCost;
                   const marginPercent = work.amount > 0 ? Math.round((margin / work.amount) * 100) : 0;
                   const marginColor = marginPercent >= 40
@@ -180,7 +181,7 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                     <>
                       <p>
                         <span className="text-muted-foreground">Odměna kolegy:</span>{' '}
-                        {work.hours_worked}h × {colleague.internal_hourly_cost.toLocaleString('cs-CZ')} {work.currency || 'CZK'} ={' '}
+                        {work.hours_worked}h × {internalRate.toLocaleString('cs-CZ')} {work.currency || 'CZK'} ={' '}
                         <span className="font-medium">{formatCurrency(colleagueCost)}</span>
                       </p>
                       <p>
