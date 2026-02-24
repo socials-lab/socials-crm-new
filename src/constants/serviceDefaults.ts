@@ -292,21 +292,6 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
     detailed_sections: [],
   },
 
-  'sklik': {
-    deliverables: [
-      'Správa kampaní na Skliku',
-      'Optimalizace klíčových slov a CPC',
-      'Měsíční reporting',
-    ],
-    frequency: 'Průběžná správa, měsíční reporting',
-    turnaround: 'Nasazení do 5 pracovních dnů od startu',
-    requirements: [
-      'Přístupy do Sklik účtu',
-      'Přístup do Google Analytics nebo jiného měřicího nástroje',
-    ],
-    detailed_sections: [],
-  },
-
   'creative boost': {
     deliverables: [
       'Hledáme správné úhly komunikace (problém → řešení, emoce, racionalita, USP)',
@@ -496,37 +481,6 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
     detailed_sections: [],
   },
 
-  'analytics': {
-    deliverables: [
-      'Nastavení nebo audit měřicího systému',
-      'Konfigurace konverzních událostí',
-      'Dashboardy s klíčovými KPIs',
-      'Pravidelné analytické reporty',
-    ],
-    frequency: 'Měsíční reporting',
-    turnaround: 'Prvotní nastavení do 10 pracovních dnů',
-    requirements: [
-      'Přístupy do Google Analytics / GA4',
-      'Přístup do Google Tag Manageru',
-      'Seznam klíčových konverzí k měření',
-    ],
-    detailed_sections: [],
-  },
-
-  'consult': {
-    deliverables: [
-      'Strategické konzultace a poradenství',
-      'Analýza a doporučení',
-      'Akční plán s prioritami',
-    ],
-    frequency: 'Dle dohody',
-    turnaround: 'Flexibilní dle rozsahu',
-    requirements: [
-      'Podklady k současnému stavu',
-      'Definované cíle a KPIs',
-    ],
-    detailed_sections: [],
-  },
 
   'audit': {
     deliverables: [
