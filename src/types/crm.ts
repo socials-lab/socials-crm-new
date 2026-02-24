@@ -397,6 +397,9 @@ export interface ExtraWork {
   client_rejected_at: string | null;
   client_rejection_reason: string | null;
   
+  // Individual internal hourly rate for this extra work (overrides colleague default)
+  internal_hourly_rate: number | null;
+  
   // Upsell tracking - who sold this extra work
   upsold_by_id: string | null;
   upsell_commission_percent: number | null;
