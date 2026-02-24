@@ -699,8 +699,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </span>
           </h2>
           
-          {/* Service structure explanation */}
-          <ServiceStructureExplanation />
+          {/* Service structure explanation - only show when there are both core and addon services */}
+          {offer.services.some(s => s.service_type === 'core') && offer.services.some(s => s.service_type === 'addon') && (
+            <ServiceStructureExplanation />
+          )}
           
           {/* Group services by type */}
           {(() => {
@@ -708,8 +710,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             const addonServices = offer.services.filter(s => s.service_type === 'addon');
             const otherServices = offer.services.filter(s => !s.service_type);
             
-            // If no service_type set, show all in one list
-            if (coreServices.length === 0 && addonServices.length === 0) {
+            // If no core services, show all in a flat list without Core/Doplněk labels
+            if (coreServices.length === 0) {
               return (
                 <div className="space-y-4">
                   {offer.services.map((service, idx) => (
