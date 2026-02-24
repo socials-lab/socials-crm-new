@@ -1,60 +1,43 @@
 
 
-# Pridani addon sluzby "Sprava Heureky a Zbozi.cz"
+# Aktualizace cen addon služeb
 
-## Co se zmeni
+## Přehled změn
 
-Pridame novou addon sluzbu `HEUREKA_ZBOZI` do 3 souboru podle existujiciho patternu (stejne jako Video Boost, Analytics, Consulting).
+| Služba | Aktuální cena | Nová cena |
+|--------|--------------|-----------|
+| Creative Boost | 400 Kč/kredit | beze změny (kreditový systém) |
+| Video Boost | 4 900 Kč | beze změny |
+| TikTok Ads | 0 Kč | 15 000 Kč / měs. |
+| Heureka a Zboží.cz | 0 Kč | 5 600 Kč / měs. |
+| Glami | 0 Kč | 3 200 Kč / měs. |
+| Favi | 0 Kč | 3 200 Kč / měs. |
+| AI SEO | 18 000 Kč (1 800 Kč/hod) | 16 000 Kč (1 600 Kč/hod) |
+| Analytické měření | neexistuje | NOVÁ služba -- 1 900 Kč/hod |
 
-## Zmeny v souborech
+## Změny v souborech
 
-### 1. `src/constants/serviceDetails.ts` -- pridat HEUREKA_ZBOZI
+### 1. `src/hooks/useCRMData.tsx` -- aktualizace base_price
 
-Novy zaznam s:
+- **TIKTOK_ADS** (srv-12): `base_price: 0` -> `base_price: 15000`
+- **HEUREKA_ZBOZI** (srv-11): `base_price: 0` -> `base_price: 5600`
+- **GLAMI** (srv-13): `base_price: 0` -> `base_price: 3200`
+- **FAVI** (srv-14): `base_price: 0` -> `base_price: 3200`
+- **AI_SEO** (srv-15): `base_price: 18000` -> `base_price: 16000`
+- **Nová služba** `ANALYTICS_MEASUREMENT` (srv-16): addon/performance, base_price: 1900, popis "Nastavení a kontrola měření pomocí GTM, GA4, Meta Pixelu, konverzí"
 
-- **tagline**: "Sprava Heureky a Zbozi.cz -- optimalizace feedu, bidding a maximalni ziskovost"
-- **platforms**: Heureka, Zbozi.cz, Mergado
-- **targetAudience**: E-shopy, ktere chteji maximalizovat vykon na srovnavacich zbozi
-- **benefits**: 5 bodu (import a validace feedu, optimalizace nazvu a sparovani, bidding pro max. ziskovost, podpora recenzi a duveryhodnosti, pravidelny reporting a analyza)
-- **setup**: 1 sekce -- Uvodni nastaveni (import XML feedu do Mergada, premapovani kategorii, doplneni EAN, testovani vystupu)
-- **management**: 4 sekce:
-  - Optimalizace XML feedu (validace, nazvy, sparovani, EAN kody)
-  - Bidding -- rizeni CPC (segmentace, automatizovany bidding, manualni CPC, vyhodnoceni PNO/ROI)
-  - Recenze a duveryhodnost (Overeno zakazniky, hodnoceni produktu)
-  - Analyza a reporting (sledovani vykonu, pravidelny reporting)
-- **tierComparison**: prazdne pole (nema tiery)
-- **tierPricing**: zadne (addon sluzba bez tieru)
+### 2. `src/constants/serviceDetails.ts` -- AI SEO hodinová sazba
 
-### 2. `src/constants/serviceDefaults.ts` -- pridat 'heureka'
+- Změnit "1 800 Kč / hod." na "1 600 Kč / hod." v sekci rozsahu a ceny
+- Přidat nový záznam `ANALYTICS_MEASUREMENT` s tagline, platformami (GTM, GA4, Meta Pixel), benefity, setup a management sekcemi
 
-Novy zaznam `'heureka'` s:
+### 3. `src/constants/serviceDefaults.ts` -- nová služba
 
-- **deliverables**: 5 hlavnich bodu
-- **frequency**: Prubezna sprava a mesicni optimalizace
-- **turnaround**: Uvodni nastaveni do 5 pracovnich dnu
-- **requirements**: Pristup k e-shopu, XML feed, pristup do Mergada, pristup do Heureka/Zbozi.cz adminu
-- **detailed_sections**: 5 sekci:
-  1. Uvodni nastaveni (import, premapovani, testovani)
-  2. Optimalizace XML feedu (validace, nazvy, sparovani, EAN)
-  3. Bidding -- rizeni CPC (segmentace, automatizace, manualni upravy, PNO/ROI)
-  4. Recenze a duveryhodnost (Overeno zakazniky, hodnoceni)
-  5. Analyza a reporting (sledovani vykonu, pravidelny reporting)
+- Přidat záznam `'analytics_measurement'` s deliverables, frekvencí, turnaround, požadavky a detailed sections
 
-### 3. `src/hooks/useCRMData.tsx` -- pridat mock service
+## Technické detaily
 
-Pridat `HEUREKA_ZBOZI` do pole `MOCK_SERVICES`:
-- **id**: `srv-11`
-- **code**: `HEUREKA_ZBOZI`
-- **name**: `Správa Heuréky a Zboží.cz`
-- **service_type**: `addon`
-- **category**: `performance`
-- **base_price**: null (individualni)
-- **tier_pricing**: null
-- **default_deliverables**: 5 bodu z benefitu
+- Změny ve 3 souborech
+- Žádné nové závislosti
+- Analytické měření je hodinová služba (jako AI SEO), bez kreditového systému a bez tierů
 
-## Technicke detaily
-
-- Zmeny ve 3 souborech: `serviceDetails.ts`, `serviceDefaults.ts`, `useCRMData.tsx`
-- Zadne nove zavislosti
-- Addon sluzba bez tieru a bez kreditoveho systemu
-- Nasleduje identicky pattern jako Video Boost, Analytics, Consulting
