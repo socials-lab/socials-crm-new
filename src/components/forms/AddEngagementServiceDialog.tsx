@@ -41,6 +41,7 @@ import { cn } from '@/lib/utils';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { Service, EngagementService, ServiceTier } from '@/types/crm';
 import { serviceTierConfigs } from '@/constants/services';
+import { getServiceDetail } from '@/constants/serviceDetails';
 
 const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
 
@@ -374,9 +375,12 @@ export function AddEngagementServiceDialog({
                         </FormControl>
                         <SelectContent>
                           {serviceTierConfigs.map((config) => {
-                            const tierPricing = selectedService?.tier_pricing?.find(p => p.tier === config.tier);
-                            const priceLabel = tierPricing?.price 
-                              ? `${tierPricing.price.toLocaleString('cs-CZ')} Kč`
+                            const dbTierPricing = selectedService?.tier_pricing?.find(p => p.tier === config.tier);
+                            const constantDetail = selectedService ? getServiceDetail(selectedService.code) : undefined;
+                            const constantTierPrice = constantDetail?.tierPricing?.[config.tier as keyof typeof constantDetail.tierPricing];
+                            const resolvedPrice = dbTierPricing?.price ?? constantTierPrice?.price ?? null;
+                            const priceLabel = resolvedPrice !== null
+                              ? `${resolvedPrice.toLocaleString('cs-CZ')} Kč`
                               : 'Individuální kalkulace';
                             const spendLabel = config.max_spend 
                               ? `do ${(config.max_spend/1000).toFixed(0)}K Kč`
@@ -385,7 +389,7 @@ export function AddEngagementServiceDialog({
                               <SelectItem key={config.tier} value={config.tier}>
                                 <span className="font-medium">{config.label}</span>
                                 <span className="text-muted-foreground ml-2">({spendLabel})</span>
-                                <span className="text-primary ml-2">— {priceLabel}</span>
+                                <span className={`ml-2 ${resolvedPrice !== null ? 'text-primary' : 'text-amber-600'}`}>— {priceLabel}</span>
                               </SelectItem>
                             );
                           })}

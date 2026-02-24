@@ -17,6 +17,7 @@ import {
 import { Label } from '@/components/ui/label';
 import type { Service, LeadService, ServiceTier } from '@/types/crm';
 import { SERVICE_TIER_CONFIGS } from '@/constants/services';
+import { getServiceDetail } from '@/constants/serviceDetails';
 
 interface AddLeadServiceDialogProps {
   open: boolean;
@@ -43,28 +44,31 @@ export function AddLeadServiceDialog({
   const handleServiceChange = (serviceId: string) => {
     setSelectedServiceId(serviceId);
     const service = services.find(s => s.id === serviceId);
-    if (service) {
-      setCurrency(service.currency);
-      if (service.service_type === 'core') {
-        setSelectedTier('growth');
-        const growthPricing = service.tier_pricing?.find(p => p.tier === 'growth');
-        setPrice(growthPricing?.price ?? 0);
-      } else {
-        setSelectedTier(null);
-        setPrice(service.base_price);
+      if (service) {
+        setCurrency(service.currency);
+        if (service.service_type === 'core') {
+          setSelectedTier('growth');
+          const growthPricing = service.tier_pricing?.find(p => p.tier === 'growth');
+          const constantDetail = getServiceDetail(service.code);
+          const constantGrowthPrice = constantDetail?.tierPricing?.growth?.price;
+          setPrice(growthPricing?.price ?? constantGrowthPrice ?? 0);
+        } else {
+          setSelectedTier(null);
+          setPrice(service.base_price);
+        }
       }
-    }
   };
 
   const handleTierChange = (tier: ServiceTier) => {
     setSelectedTier(tier);
-    if (selectedService?.tier_pricing) {
-      const tierPricing = selectedService.tier_pricing.find(p => p.tier === tier);
-      if (tierPricing?.price !== null && tierPricing?.price !== undefined) {
-        setPrice(tierPricing.price);
-      } else {
-        setPrice(0);
-      }
+    const dbPricing = selectedService?.tier_pricing?.find(p => p.tier === tier);
+    const constantDetail = selectedService ? getServiceDetail(selectedService.code) : undefined;
+    const constantPrice = constantDetail?.tierPricing?.[tier as keyof typeof constantDetail.tierPricing]?.price;
+    const resolvedPrice = dbPricing?.price ?? constantPrice ?? null;
+    if (resolvedPrice !== null) {
+      setPrice(resolvedPrice);
+    } else {
+      setPrice(0);
     }
   };
 
@@ -126,9 +130,15 @@ export function AddLeadServiceDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {SERVICE_TIER_CONFIGS.map((config) => {
-                    const tierPricing = selectedService?.tier_pricing?.find(p => p.tier === config.tier);
-                    const priceLabel = tierPricing?.price 
-                      ? `${tierPricing.price.toLocaleString('cs-CZ')} Kč`
+                    // Try DB tier_pricing first, then fall back to SERVICE_DETAILS constants
+                    const dbTierPricing = selectedService?.tier_pricing?.find(p => p.tier === config.tier);
+                    const constantDetail = selectedService ? getServiceDetail(selectedService.code) : undefined;
+                    const constantTierPrice = constantDetail?.tierPricing?.[config.tier as keyof typeof constantDetail.tierPricing];
+                    
+                    const resolvedPrice = dbTierPricing?.price ?? constantTierPrice?.price ?? null;
+                    
+                    const priceLabel = resolvedPrice !== null
+                      ? `${resolvedPrice.toLocaleString('cs-CZ')} Kč`
                       : 'Individuální kalkulace';
                     const spendLabel = config.max_spend 
                       ? `do ${(config.max_spend/1000).toFixed(0)}K Kč`
@@ -137,7 +147,7 @@ export function AddLeadServiceDialog({
                       <SelectItem key={config.tier} value={config.tier}>
                         <span className="font-medium">{config.label}</span>
                         <span className="text-muted-foreground ml-2">({spendLabel})</span>
-                        <span className="text-primary ml-2">— {priceLabel}</span>
+                        <span className={`ml-2 ${resolvedPrice !== null ? 'text-primary' : 'text-amber-600'}`}>— {priceLabel}</span>
                       </SelectItem>
                     );
                   })}
