@@ -12,7 +12,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import type { ExtraWork, ExtraWorkStatus } from '@/types/crm';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Clock, User, Receipt, Loader2, FileText, TrendingUp } from 'lucide-react';
+import { Clock, User, Receipt, Loader2, FileText, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { statusConfig } from './ExtraWorkStatusBadge';
 import { useToast } from '@/hooks/use-toast';
@@ -172,6 +172,7 @@ function KanbanCard({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="pending_approval">Čeká</SelectItem>
+              <SelectItem value="client_approved">Schváleno</SelectItem>
               <SelectItem value="in_progress">V procesu</SelectItem>
               <SelectItem value="ready_to_invoice">K fakturaci</SelectItem>
               <SelectItem value="invoiced" disabled>Vyfakturováno</SelectItem>
@@ -242,6 +243,7 @@ function KanbanColumn({
 export function ExtraWorkKanban({ extraWorks, onUpdate }: ExtraWorkKanbanProps) {
   const columns = useMemo(() => {
     const pendingApproval = extraWorks.filter(w => w.status === 'pending_approval');
+    const clientApproved = extraWorks.filter(w => w.status === 'client_approved');
     const inProgress = extraWorks.filter(w => w.status === 'in_progress');
     const readyToInvoice = extraWorks.filter(w => w.status === 'ready_to_invoice');
     const invoiced = extraWorks.filter(w => w.status === 'invoiced');
@@ -250,6 +252,10 @@ export function ExtraWorkKanban({ extraWorks, onUpdate }: ExtraWorkKanbanProps) 
       pendingApproval: {
         items: pendingApproval,
         total: pendingApproval.reduce((sum, w) => sum + w.amount, 0),
+      },
+      clientApproved: {
+        items: clientApproved,
+        total: clientApproved.reduce((sum, w) => sum + w.amount, 0),
       },
       inProgress: {
         items: inProgress,
@@ -275,6 +281,14 @@ export function ExtraWorkKanban({ extraWorks, onUpdate }: ExtraWorkKanbanProps) 
         colorClass="bg-amber-500/10 border-amber-500 text-amber-700"
         onUpdate={onUpdate}
         targetStatus="pending_approval"
+      />
+      <KanbanColumn
+        title="Schváleno klientem"
+        items={columns.clientApproved.items}
+        total={columns.clientApproved.total}
+        colorClass="bg-teal-500/10 border-teal-500 text-teal-700"
+        onUpdate={onUpdate}
+        targetStatus="client_approved"
       />
       <KanbanColumn
         title="V procesu"

@@ -362,7 +362,7 @@ export type InvoiceStatus = 'draft' | 'ready' | 'issued' | 'paid';
 export type LineItemSource = 'engagement' | 'manual' | 'creative_boost' | 'extra_work' | 'one_off';
 
 // Extra Work types - unified linear workflow
-export type ExtraWorkStatus = 'pending_approval' | 'in_progress' | 'ready_to_invoice' | 'invoiced' | 'rejected';
+export type ExtraWorkStatus = 'pending_approval' | 'client_approved' | 'in_progress' | 'ready_to_invoice' | 'invoiced' | 'rejected';
 
 export interface ExtraWork {
   id: string;

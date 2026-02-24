@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import type { ExtraWorkStatus } from '@/types/crm';
-import { Clock, Loader2, FileText, Receipt, XCircle } from 'lucide-react';
+import { Clock, Loader2, FileText, Receipt, XCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ExtraWorkStatusBadgeProps {
@@ -17,6 +17,11 @@ export const statusConfig: Record<ExtraWorkStatus, {
     label: 'Čeká na schválení',
     icon: Clock,
     className: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  },
+  client_approved: {
+    label: 'Schváleno klientem',
+    icon: CheckCircle2,
+    className: 'bg-teal-500/10 text-teal-600 border-teal-500/20',
   },
   in_progress: {
     label: 'V procesu',
