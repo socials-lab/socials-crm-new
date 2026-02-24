@@ -339,32 +339,43 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
 
   CREATIVE_BOOST: {
     code: 'CREATIVE_BOOST',
-    tagline: 'Kreditový systém pro tvorbu reklamních kreativ',
-    platforms: ['Bannery', 'Videa', 'AI foto'],
-    targetAudience: 'Klienti, kteří potřebují pravidelnou tvorbu reklamních kreativ',
+    tagline: 'Příprava reklamních kreativ – systém, jak váš produkt prodat pomocí strategické výkonnostní kreativy',
+    platforms: ['Meta Ads kreativy', 'PPC bannery', 'Výkonnostní videa (Reels/Stories/Shorts)', 'AI foto'],
+    targetAudience: 'Klienti s výkonnostními kampaněmi, kteří potřebují pravidelnou tvorbu bannerů a videí',
     benefits: [
-      'Flexibilní kreditový systém – platíte jen za to, co skutečně potřebujete.',
-      'Rychlé dodání – standardní nebo express delivery do 24 hodin.',
-      'Profesionální kvalita – bannery, videa i AI generované fotografie.',
-      'Transparentní ceník – jasně víte, kolik kredity stojí.',
+      'Hledáme správné úhly komunikace (problém → řešení, emoce, racionalita, USP).',
+      'Navrhujeme jasné prodejní texty, které umí vysvětlit hodnotu v pár vteřinách.',
+      'Tvoříme výkonnostní bannery a videa tak, aby dávala smysl z pohledu algoritmu.',
+      'Připravujeme více konceptů a hooků, které se dají reálně testovat a škálovat.',
     ],
     setup: [
       {
         title: 'Nastavení spolupráce',
         items: [
-          'Definice měsíčního balíčku kreditů dle potřeb.',
+          'Definice měsíčního balíčku kreditů (orientační nebo maximální počet) dle potřeb a plánované práce.',
+          'Nastavení brief šablony pro zadávání kreativ.',
           'Nastavení komunikačních kanálů (Freelo, Slack).',
-          'Brief šablona pro zadávání kreativ.',
         ],
       },
     ],
     management: [
       {
-        title: 'Průběžná tvorba',
+        title: 'Tvorba výkonnostních bannerů pro Meta Ads a PPC',
         items: [
-          'Zadání kreativy přes Freelo nebo Slack.',
-          'Dodání v dohodnutém termínu.',
-          'Revize dle potřeby (první revize zdarma).',
+          'Pomůžeme vám vybrat produkty, úhly komunikace a messaging, které dávají výkonově smysl.',
+          'Připravíme prodejní texty – headline, benefity, USP, výzvy k akci.',
+          'Vytvoříme vizuály odpovídající značce, ale primárně zaměřené na výkon.',
+          'Součástí je 1 kolo revizí, kde doladíme texty, barvy a detaily podle vašich připomínek.',
+        ],
+      },
+      {
+        title: 'Krátká vertikální videa (Reels / Stories / Shorts)',
+        items: [
+          'Navrhneme koncept a strukturu videa (hook → problém → řešení → CTA).',
+          'Připravíme script pro voiceover a textové přelepky.',
+          'Zajistíme AI nebo reálný voiceover, titulky, střih a b-rolly podle zvolené varianty (Standard / AI b-roll).',
+          'Dodáme 3 finální videa z jednoho konceptu (3 různé hooky pro A/B testování).',
+          'Každý video pack obsahuje 1 kolo revizí, další revize jsou možné za 1 kredit / revize.',
         ],
       },
     ],

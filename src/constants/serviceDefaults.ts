@@ -307,6 +307,96 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
     detailed_sections: [],
   },
 
+  'creative boost': {
+    deliverables: [
+      'Hledáme správné úhly komunikace (problém → řešení, emoce, racionalita, USP)',
+      'Navrhujeme jasné prodejní texty, které umí vysvětlit hodnotu v pár vteřinách',
+      'Tvoříme výkonnostní bannery a videa tak, aby dávala smysl z pohledu algoritmu',
+      'Připravujeme více konceptů a hooků, které se dají reálně testovat a škálovat',
+      'Flexibilní kreditový systém (1 kredit = 400 Kč bez DPH)',
+      'Standardní dodání do 72 hodin, express do 48 hodin za +50 % kreditů',
+    ],
+    frequency: 'Průběžná tvorba dle objednávek, měsíční saldo kreditů',
+    turnaround: 'Standardní dodání do 72 hodin, express do 48 hodin',
+    requirements: [
+      'Cíle kampaní a produkty k propagaci',
+      'Vstupní materiály (fotky, videa, produktové podklady)',
+      'Brandbook a vizuální identita (loga, fonty)',
+      'Přístup do Freelo pro zadávání požadavků',
+    ],
+    detailed_sections: [
+      {
+        emoji: '💳',
+        title: 'Jak funguje systém kreditů',
+        items: [
+          '1 kredit = 400 Kč (bez DPH). Každý typ výstupu (bannery, videa, úpravy, překlady) má předem danou kreditovou hodnotu.',
+          'Na začátku měsíce se domluvíme na orientačním nebo maximálním počtu kreditů, podle plánované práce.',
+          'Na konci měsíce vám vyfakturujeme reálně vyčerpané kredity. Pokud se např. domluvíme na 40–60 kreditech a skutečně využijete 47, fakturujeme 47 kreditů.',
+          'Kredity fungují jako flexibilní rozpočet na kreativní výstupy, který se přizpůsobuje tomu, co v daný moment nejvíce pomáhá výkonu kampaní.',
+        ],
+      },
+      {
+        emoji: '🖼️',
+        title: 'Hodnota jednotlivých výstupů – Bannery',
+        items: [
+          'Rámeček pro katalogové Meta Ads kampaně: 1 kredit',
+          'Meta Ads bannery ve 2 rozměrech (1080×1080 a 1080×1920): 4 kredity / pack',
+          'Překlad Meta Ads bannerů do jiného jazyka: 1 kredit',
+          'Set PPC bannerů (6–10 rozměrů): 1 kredit / rozměr',
+          'Překlad PPC banneru (1 rozměr): 0,5 kreditu',
+          'Vytvoření produktové fotky přes AI: 2 kredity',
+          'Úprava již vytvořených Meta Ads bannerů (jiný text, přelepka, výměna fotky) ve 2 rozměrech: 1 kredit',
+          'Příprava bannerů na homepage webu nebo do newsletteru (z již vytvořené kreativy): 2 kredity',
+          'Revize bannerů: Každý pack obsahuje 1 revizní kolo zdarma. Každé další revizní kolo: 1 kredit / revize.',
+        ],
+      },
+      {
+        emoji: '🎥',
+        title: 'Hodnota jednotlivých výstupů – Videa',
+        items: [
+          'Každá objednávka videa = 1 koncept + 3 různé hooky = 3 finální videa připravená do kampaní.',
+          'Výkonnostní video – Standard (záběry klienta + AI hooky, bez rozsáhlých AI b-rollů): 12 kreditů / pack (1 koncept / 3 videa)',
+          'Výkonnostní video – AI b-roll (záběry klienta + rozšířené AI scény a b-rolly): 17 kreditů / pack (1 koncept / 3 videa)',
+          'Další alternativní hook navíc (nad základní 3 – tj. +1 nové video): 2 kredity',
+          'Menší úprava videa (úprava textů, vystřižení nebo vložení záběru): 2 kredity',
+          'Překlad videa (titulky / voiceover): 2 kredity',
+          'Revize videí: Každý video pack obsahuje 1 revizní kolo zdarma. Každé další revizní kolo: 1 kredit / revize.',
+        ],
+      },
+      {
+        emoji: '⚡',
+        title: 'Expresní dodání (48 h)',
+        items: [
+          'Standardně dodáváme bannery i videa do 72 hodin od zadání (3 pracovní dny).',
+          'Za expresní dodání do 48 hodin účtujeme +50 % kreditů navíc.',
+          'Příklad: pack bannerů za 4 kredity → expresně za 6 kreditů. Video Standard za 12 kreditů → expresně za 18 kreditů.',
+          'Expresní režim vždy předem odsouhlasíme, abyste měli plnou kontrolu nad rozpočtem.',
+        ],
+      },
+      {
+        emoji: '📋',
+        title: 'Pravidla využití kreditů – shrnutí',
+        items: [
+          'Kreditní hodnota: Každý kredit má pevnou hodnotu 400 Kč bez DPH. U každého typu výstupu předem víte, kolik kreditů stojí.',
+          'Domluvený rámec, fakturace reality: Na začátku měsíce se domluvíme na orientačním nebo maximálním počtu kreditů. Na konci měsíce fakturujeme skutečně vyčerpané kredity.',
+          'Nepřenosnost kreditů: Kredity jsou vázané na daný měsíc a nepřevádějí se do dalšího období.',
+          'Zadávání požadavků: Ideálně průběžně; nejpozději 5 pracovních dnů před koncem měsíce.',
+          'Revize: Každý dodaný výstup (pack bannerů / video pack) obsahuje 1 revizní kolo zdarma. Další revizní kola: 1 kredit / revize.',
+          'Rychlost zpracování: Standard do 72 hodin, express do 48 hodin za +50 % kreditů.',
+          'Autorská práva: Klient může všechny dodané výstupy volně využívat, nesmí je bez souhlasu upravovat. Autorská práva zůstávají agentuře dle zákona č. 121/2000 Sb.',
+        ],
+      },
+      {
+        emoji: '🎨',
+        title: 'Co konkrétně Creative Boost dodá',
+        items: [
+          'Tvorba výkonnostních bannerů: Výběr produktů a úhlů komunikace, prodejní texty (headline, benefity, USP, CTA), vizuály zaměřené na výkon, 1 kolo revizí.',
+          'Krátká vertikální videa (Reels / Stories / Shorts): Koncept a struktura videa (hook → problém → řešení → CTA), script pro voiceover a textové přelepky, AI/reálný voiceover a titulky, 3 finální videa z jednoho konceptu, 1 kolo revizí v ceně.',
+        ],
+      },
+    ],
+  },
+
   'creative': {
     deliverables: [
       'Kreativní koncepty pro reklamní kampaně',
