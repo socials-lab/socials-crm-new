@@ -138,10 +138,12 @@ const PROCESS_STEPS = [
 
 function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferService; showTypeLabel?: boolean }) {
   const [isOpen, setIsOpen] = useState(false); // Default closed
+  const [showDetailedSections, setShowDetailedSections] = useState(false);
 
   // Use deliverables if available, otherwise parse offer_description
   const hasDeliverables = service.deliverables && service.deliverables.length > 0;
   const hasRequirements = service.requirements && service.requirements.length > 0;
+  const hasDetailedSections = service.detailed_sections && service.detailed_sections.length > 0;
   const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline;
 
   // Parse offer description into bullet points if no deliverables
@@ -288,6 +290,38 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                     ))}
                   </ul>
                 </div>
+              )}
+
+              {/* Detailed sections - secondary expandable */}
+              {hasDetailedSections && (
+                <Collapsible open={showDetailedSections} onOpenChange={setShowDetailedSections}>
+                  <CollapsibleTrigger className="w-full">
+                    <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-dashed border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5 transition-colors text-sm text-muted-foreground hover:text-primary cursor-pointer">
+                      <span>{showDetailedSections ? 'Skrýt podrobnosti' : '📋 Zobrazit podrobný rozpis služby'}</span>
+                      <ChevronDown className={cn('h-4 w-4 transition-transform', showDetailedSections && 'rotate-180')} />
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="mt-4 p-4 rounded-lg bg-muted/30 border border-border space-y-5">
+                      {service.detailed_sections!.map((section, sIdx) => (
+                        <div key={sIdx}>
+                          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                            <span>{section.emoji}</span>
+                            <span>{section.title}</span>
+                          </h4>
+                          <ul className="space-y-1.5 ml-6">
+                            {section.items.map((item, iIdx) => (
+                              <li key={iIdx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                <span className="shrink-0 mt-1.5 w-1 h-1 rounded-full bg-muted-foreground/50" />
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
             </div>
           </CollapsibleContent>
