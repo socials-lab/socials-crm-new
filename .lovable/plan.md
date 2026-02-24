@@ -1,53 +1,43 @@
 
 
-# Pridani kompletni sluzby PPC Boost
+# Pridani vsech sluzeb jako mock data do vypisu
 
 ## Co se zmeni
 
-Sluzba PPC Boost uz existuje v systemu, ale s velmi strucnymi daty. Aktualizujeme ji na plny rozsah informaci, ktere jsi poskytl -- vcetne detailnich rozpisu, benefitu, tier porovnani a cen. Vsechno se bude propisovat do nabidek stejne jako u Socials Boost.
+Aktualne se v DB nachazi pouze `SOCIALS_BOOST` a v kodu se pridava mock `CREATIVE_BOOST`. Ostatni sluzby (`PPC_BOOST`, `PERFORMANCE_BOOST`, `GOOGLE_ADS`, `SKLIK`, `ANALYTICS`, `CONSULTING`) maji definovane detaily v `serviceDetails.ts`, ale nezobrazuji se na strance `/services`, protoze neexistuji jako `Service` objekty.
 
-## Kroky implementace
+Pridame vsechny chybejici sluzby jako mock data do `useCRMData.tsx`, aby se zobrazovaly ve vypisu.
 
-### 1. Aktualizace `src/constants/serviceDetails.ts` -- PPC_BOOST
+## Kroky
 
-Prepsat stavajici strucny zaznam `PPC_BOOST` na kompletni verzi:
+### 1. Pridat mock Service objekty do `src/hooks/useCRMData.tsx`
 
-- **tagline**: "Sprava Google Ads a S-kliku -- vice zakazek a vyssi zisk"
-- **platforms**: Google Ads, Sklik (Seznam.cz)
-- **targetAudience**: E-shopy a firmy, ktere chteji vice zakazek z Google a Seznamu
-- **benefits**: 4 body z "Co ziskate" (vice zakazek, silnejsi nabidka, mene starosti, partner)
-- **setup**: 3 sekce:
-  - Nastaveni Google Ads a S-kliku (7 polozek)
-  - Kontrola analytickeho mereni (2 polozky)
-  - Tvorba dashboardu v Looker Studio (4 polozky)
-- **management**: 3 sekce:
-  - Sprava Google Ads (8 polozek -- Shopping, DSA, PMax, Search, Display, Remarketing, Feed, Konverze)
-  - Sprava S-kliku (5 polozek)
-  - Reporting a komunikace (3 polozky)
-- **tierComparison**: Kompletni tabulka z uzivatelskeho vstupu (zakladni setup, denni kontrola, optimalizace 1-2x/2-3x/3-4x tydne, tvorba reklam, kreativy, Mergado, strategie, Freelo, Looker Studio, mesicni reporting)
-- **tierPricing**: Zachovat stavajici ceny (growth: 24 900, pro: 34 900, elite: individualni)
+Vedle existujiciho `CREATIVE_BOOST_SERVICE` pridame dalsich 5 mock sluzeb:
 
-### 2. Aktualizace `src/constants/serviceDefaults.ts` -- 'ppc boost'
+| Kod | Nazev | Typ | Kategorie | Cena |
+|-----|-------|-----|-----------|------|
+| PPC_BOOST | PPC Boost | core | performance | 24 900 (tier) |
+| PERFORMANCE_BOOST | Performance Boost | core | performance | 43 900 (tier) |
+| GOOGLE_ADS | Google Ads | core | performance | 15 000 (tier) |
+| SKLIK | Sklik | core | performance | 10 000 (tier) |
+| ANALYTICS | Analytics | addon | analytics | 5 000 |
+| CONSULTING | Consulting | addon | consulting | 3 000 |
 
-Prepsat stavajici strucny zaznam na kompletni verzi s:
+Kazda sluzba bude mit:
+- Unikatni `id` (napr. `srv-4` az `srv-9`)
+- `tier_pricing` pro core sluzby (z `serviceDetails.ts` tierPricing)
+- `description` z tagline v serviceDetails
+- `default_deliverables` z benefits
+- `is_active: true`
 
-- **deliverables**: Aktualizovat na 4 hlavni body z "Co ziskate" + klicove deliverables
-- **detailed_sections**: Pridat 5 sekci:
-  - Nastaveni Google Ads a S-kliku
-  - Kontrola analytickeho mereni
-  - Tvorba dashboardu v Looker Studio
-  - Sprava Google Ads (vcetne Shopping, DSA, PMax, Search, Display, Remarketing, Feed, Konverze)
-  - Sprava S-kliku
-  - Reporting a komunikace
-- **frequency** a **turnaround**: Zachovat
-- **requirements**: Aktualizovat (pristupy do Google Ads, Sklik, Merchant Center, GA, produktovy feed)
+### 2. Upravit query logiku v `useCRMData.tsx`
 
-### 3. Test nabidka s PPC Boost
-
-Pridat do `publicOffersMockData.ts` novou testovaci nabidku na `/offer/test-ppc-boost` s PPC Boost jako core sluzbou, vcetne vsech deliverables, detailed_sections, requirements a tier selection. Umozni overeni, ze se vsechno spravne zobrazuje na verejne nabidce.
+Rozsirit existujici logiku, ktera pridava `CREATIVE_BOOST` pokud neni v DB, aby pridavala vsechny mock sluzby, ktere jeste nejsou v DB. Kontrola bude podle `code`, stejne jako ted u Creative Boost.
 
 ## Technicke detaily
 
-- Zadne nove soubory, zadne nove zavislosti
-- Zmeny ve 3 souborech: `serviceDetails.ts`, `serviceDefaults.ts`, `publicOffersMockData.ts`
-- Data se budou propisovat do nabidek pres existujici mechanismus `mergeWithDefaults()` a `getServiceDetail()`
+- Zmena pouze v 1 souboru: `src/hooks/useCRMData.tsx`
+- Zadne nove zavislosti
+- Existujici pattern (CREATIVE_BOOST mock) se rozsiri na vsechny sluzby
+- Sluzby se budou radit abecedne (existujici `.sort()`)
+
