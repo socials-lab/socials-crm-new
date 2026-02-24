@@ -397,6 +397,72 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
     ],
   },
 
+  'video boost': {
+    deliverables: [
+      'Videa, která prodávají – jasná nabídka, benefit a silné CTA',
+      'Rychlá produkce bez zbytečného natáčení (vaše záběry + AI voiceover, titulky, b-rolly)',
+      'Více variant z jednoho zadání – 3 různé hooky pro A/B testování',
+      'Formát 9:16, délka 15–30 sekund, připravené přímo do reklam',
+      '1 kolo revizí v ceně každého videa',
+    ],
+    frequency: 'Průběžně dle objednávek',
+    turnaround: 'Standardní dodání do 5 pracovních dnů',
+    requirements: [
+      'Záběry produktu/služby (produkty, použití, sklad, tým, UGC…)',
+      'Cíle a účel videa (akvizice, remarketing, podpora kampaně)',
+      'Produkty/služby k propagaci',
+    ],
+    detailed_sections: [
+      {
+        emoji: '🎯',
+        title: 'Jak služba probíhá – Účel videa a nabídka',
+        items: [
+          'Ujasníme, co se má komunikovat – sleva, akce, dárek, novinka, hlavní benefit produktu/služby.',
+          'Definujeme účel videa – akvizice nových zákazníků, remarketing, podpora konkrétní kampaně / landing page.',
+          'Domluvíme, které konkrétní produkty/služby budou ve videu.',
+          'Na základě toho připravíme krátký creative brief, ze kterého vychází scénář.',
+        ],
+      },
+      {
+        emoji: '📝',
+        title: 'Scénář a voiceover (3 hooky na koncept)',
+        items: [
+          'Kreativní úhel videa – jak produkt/službu odprezentovat, aby byl pro cílovou skupinu co nejatraktivnější.',
+          'Voiceover script – kompletní text k videu: HOOK (3 varianty začátků), MAIN část (vysvětlení benefitu/nabídky), CTA (jasná výzva k akci).',
+          'Text následně schvalujete vy jako klient – teprve potom jdeme do střihu.',
+        ],
+      },
+      {
+        emoji: '🎬',
+        title: 'Střih videa a AI prvky',
+        items: [
+          'Využijeme záběry, které dodáte (produkty, použití, sklad, tým, UGC…).',
+          'Doplníme AI voiceover – přirozeně působící hlas podle schváleného textu.',
+          'Přidáme AI titulky – dynamické, dobře čitelné i bez zvuku.',
+          'U rozšířené varianty (AI b-roll) také AI b-rolly a AI scény, které doplní prostředí a kontext.',
+          'Výstupem je video ve formátu 9:16, délka 15–30 sekund, připravené rovnou do reklam.',
+        ],
+      },
+      {
+        emoji: '✅',
+        title: 'Revize a finální export',
+        items: [
+          'V ceně každého videa je 1 kolo revizí (úprava textů, drobné změny střihu, záběrů, barev).',
+          'Každé další kolo revizí: 1 700 Kč / hod.',
+          'Finální video dodáváme ve formátech vhodných pro Meta Ads a TikTok Ads.',
+        ],
+      },
+      {
+        emoji: '📦',
+        title: 'Varianty služby a ceny (bez DPH)',
+        items: [
+          '🎥 Varianta 1: Výkonnostní video – Standard (záběry klienta + AI hooky, bez AI b-rollů): 1 koncept, 3 hooky, AI voiceover + titulky. Cena: 4 900 Kč / video. Balíček 3 videí (sleva 10 %): 13 230 Kč (4 410 Kč / video).',
+          '🎥 Varianta 2: Výkonnostní video – AI b-roll (záběry klienta + rozšířené AI scény): 1 koncept, 3 hooky, AI voiceover + titulky, rozšířené AI b-rolly a scény. Cena: 6 900 Kč / video. Balíček 3 videí (sleva 10 %): 18 630 Kč (6 210 Kč / video).',
+        ],
+      },
+    ],
+  },
+
   'creative': {
     deliverables: [
       'Kreativní koncepty pro reklamní kampaně',
