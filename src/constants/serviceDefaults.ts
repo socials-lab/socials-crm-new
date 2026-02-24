@@ -790,7 +790,67 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
         items: [
           'Odhadovaný rozsah: 10 hodin práce měsíčně.',
           'Práce je fakturována dle reálně odpracovaných hodin.',
-          'Hodinová sazba: 1 800 Kč / hod.',
+          'Hodinová sazba: 1 600 Kč / hod.',
+        ],
+      },
+    ],
+  },
+
+  // ─── Analytické měření ───
+  'analytické měření': {
+    deliverables: [
+      'Nastavení a kontrola Google Tag Manageru (GTM)',
+      'Konfigurace GA4 – události, konverze, propojení s reklamními platformami',
+      'Implementace Meta Pixelu a/nebo Conversion API (CAPI)',
+      'Nastavení konverzního měření pro Google Ads, Sklik a další platformy',
+      'Testování a ověření správnosti všech měřicích bodů',
+      'Průběžná kontrola a údržba měření při změnách na webu',
+    ],
+    frequency: 'Dle potřeby, účtováno hodinově jako vícepráce',
+    turnaround: 'Zahájení do 3 pracovních dnů od obdržení přístupů',
+    requirements: [
+      'Přístup do Google Tag Manageru',
+      'Přístup do Google Analytics 4',
+      'Přístup do Meta Business Suite (pro Pixel/CAPI)',
+      'Přístup do administrace webu / CMS',
+    ],
+    detailed_sections: [
+      {
+        emoji: '📊',
+        title: 'Co služba zahrnuje',
+        items: [
+          'Nastavení a kontrola měření pomocí Google Tag Manageru, GA4, Meta Pixelu, konverzí apod.',
+          'Účtováno dle reálného rozsahu jako vícepráce (hodinová sazba: 1 900 Kč / hod.).',
+        ],
+      },
+      {
+        emoji: '🔧',
+        title: 'Úvodní analýza a nastavení',
+        items: [
+          'Audit stávajícího měření – identifikace chyb a chybějících událostí.',
+          'Nastavení nebo oprava Google Tag Manageru.',
+          'Konfigurace GA4 – události, konverze, propojení s reklamními platformami.',
+          'Implementace Meta Pixelu a/nebo Conversion API.',
+          'Nastavení konverzního měření pro Google Ads, Sklik a další platformy.',
+          'Testování a ověření správnosti všech měřicích bodů.',
+        ],
+      },
+      {
+        emoji: '🔄',
+        title: 'Průběžná kontrola a údržba',
+        items: [
+          'Pravidelná kontrola správnosti měření a konverzních dat.',
+          'Úpravy měření při změnách na webu nebo v reklamních účtech.',
+          'Přidávání nových událostí a konverzí dle potřeby.',
+          'Řešení nesrovnalostí mezi daty v analytice a reklamních platformách.',
+        ],
+      },
+      {
+        emoji: '💰',
+        title: 'Rozsah a cena',
+        items: [
+          'Hodinová sazba: 1 900 Kč / hod.',
+          'Účtováno dle reálného rozsahu jako vícepráce.',
         ],
       },
     ],

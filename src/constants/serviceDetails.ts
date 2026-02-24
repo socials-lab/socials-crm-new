@@ -659,7 +659,52 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
         items: [
           'Odhadovaný rozsah: 10 hodin práce měsíčně.',
           'Práce je fakturována dle reálně odpracovaných hodin.',
-          'Hodinová sazba: 1 800 Kč / hod.',
+          'Hodinová sazba: 1 600 Kč / hod.',
+        ],
+      },
+    ],
+    tierComparison: [],
+  },
+
+  ANALYTICS_MEASUREMENT: {
+    code: 'ANALYTICS_MEASUREMENT',
+    tagline: 'Nastavení a kontrola měření pomocí Google Tag Manageru, GA4, Meta Pixelu, konverzí apod.',
+    platforms: ['Google Tag Manager', 'Google Analytics 4', 'Meta Pixel', 'Conversion API'],
+    targetAudience: 'E-shopy a firmy, které potřebují přesné měření výkonu reklamních kampaní',
+    benefits: [
+      'Přesné měření konverzí – víte, co vám reklamy skutečně přinášejí.',
+      'Správné nastavení GTM, GA4 a pixelů – základ pro optimalizaci kampaní.',
+      'Odhalení chyb v měření – zabráníte ztrátám z nesprávných dat.',
+      'Podpora všech hlavních reklamních platforem – Meta, Google, Sklik a další.',
+    ],
+    setup: [
+      {
+        title: 'Úvodní analýza a nastavení',
+        items: [
+          'Audit stávajícího měření – identifikace chyb a chybějících událostí.',
+          'Nastavení nebo oprava Google Tag Manageru.',
+          'Konfigurace GA4 – události, konverze, propojení s reklamními platformami.',
+          'Implementace Meta Pixelu a/nebo Conversion API.',
+          'Nastavení konverzního měření pro Google Ads, Sklik a další platformy.',
+          'Testování a ověření správnosti všech měřicích bodů.',
+        ],
+      },
+    ],
+    management: [
+      {
+        title: 'Průběžná kontrola a údržba',
+        items: [
+          'Pravidelná kontrola správnosti měření a konverzních dat.',
+          'Úpravy měření při změnách na webu nebo v reklamních účtech.',
+          'Přidávání nových událostí a konverzí dle potřeby.',
+          'Řešení nesrovnalostí mezi daty v analytice a reklamních platformách.',
+        ],
+      },
+      {
+        title: 'Rozsah a cena',
+        items: [
+          'Hodinová sazba: 1 900 Kč / hod.',
+          'Účtováno dle reálného rozsahu jako vícepráce.',
         ],
       },
     ],
