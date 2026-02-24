@@ -16,13 +16,13 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
   'socials boost': {
     deliverables: [
       'Kompletní nastavení Meta Business Suite – Pixel/CAPI, katalog produktů, reklamní účet',
-      'Vytvoření struktury kampaní zaměřených na akvizici nových zákazníků a remarketing',
-      'Tvorba poutavých textů přizpůsobených cílové skupině a obchodním cílům',
+      'Vytvoření struktury kampaní zaměřených na akvizici nových zákazníků a remarketing e-shopu',
+      'Tvorba poutavých textů přizpůsobených cílové skupině a produktům e-shopu',
       'Kontrola a optimalizace analytického měření (nákupy, přidání do košíku, registrace)',
       'Tvorba dashboardu výsledků v Looker Studio s automatickou aktualizací dat 24/7',
-      'Strategické vylepšování atraktivity nabídky – produktové balíčky, slevové akce, kontrola webu',
+      'Strategické vylepšování atraktivity nabídky – produktové balíčky, slevové akce, kontrola e-shopu',
       'Denní kontrola a pravidelná optimalizace kampaní pro maximální efektivitu rozpočtu',
-      'Škálování úspěšných kampaní pro maximalizaci přínosu',
+      'Škálování úspěšných kampaní pro maximalizaci tržeb',
       'Spolupráce s grafiky – zadávání reklamních kreativ a vizuálů',
       'Měsíční reporting (video / text / telefonát dle domluvy)',
     ],
