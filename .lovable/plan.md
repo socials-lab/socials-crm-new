@@ -1,43 +1,46 @@
 
 
-# Aktualizace cen addon služeb
+# Billing Double-Check v detailu viceprace
 
-## Přehled změn
+## Co chybi
 
-| Služba | Aktuální cena | Nová cena |
-|--------|--------------|-----------|
-| Creative Boost | 400 Kč/kredit | beze změny (kreditový systém) |
-| Video Boost | 4 900 Kč | beze změny |
-| TikTok Ads | 0 Kč | 15 000 Kč / měs. |
-| Heureka a Zboží.cz | 0 Kč | 5 600 Kč / měs. |
-| Glami | 0 Kč | 3 200 Kč / měs. |
-| Favi | 0 Kč | 3 200 Kč / měs. |
-| AI SEO | 18 000 Kč (1 800 Kč/hod) | 16 000 Kč (1 600 Kč/hod) |
-| Analytické měření | neexistuje | NOVÁ služba -- 1 900 Kč/hod |
+Karta viceprace (`ExtraWorkCard`) aktualne zobrazuje pouze klientskou castku (hodiny x sazba). Chybi:
+- Kolik si fakturuje kolega (interni sazba x hodiny)
+- Marze (rozdil klient vs. kolega)
+- Vizualni upozorneni pokud je marze nizka nebo zaporna
 
-## Změny v souborech
+Dialog pro upravu (`EditExtraWorkDialog`) uz obe castky ukazuje, ale v prehledu karet tato informace chybi.
 
-### 1. `src/hooks/useCRMData.tsx` -- aktualizace base_price
+## Reseni
 
-- **TIKTOK_ADS** (srv-12): `base_price: 0` -> `base_price: 15000`
-- **HEUREKA_ZBOZI** (srv-11): `base_price: 0` -> `base_price: 5600`
-- **GLAMI** (srv-13): `base_price: 0` -> `base_price: 3200`
-- **FAVI** (srv-14): `base_price: 0` -> `base_price: 3200`
-- **AI_SEO** (srv-15): `base_price: 18000` -> `base_price: 16000`
-- **Nová služba** `ANALYTICS_MEASUREMENT` (srv-16): addon/performance, base_price: 1900, popis "Nastavení a kontrola měření pomocí GTM, GA4, Meta Pixelu, konverzí"
+Pridat do `ExtraWorkCard` billing summary sekci, ktera zobrazi:
 
-### 2. `src/constants/serviceDetails.ts` -- AI SEO hodinová sazba
+```text
++--------------------------------------------------+
+| Fakturace klientovi:  5h x 1 800 = 9 000 Kc     |
+| Odmena kolegy:        5h x   700 = 3 500 Kc     |
+| Marze:                             5 500 Kc (61%)|
++--------------------------------------------------+
+```
 
-- Změnit "1 800 Kč / hod." na "1 600 Kč / hod." v sekci rozsahu a ceny
-- Přidat nový záznam `ANALYTICS_MEASUREMENT` s tagline, platformami (GTM, GA4, Meta Pixel), benefity, setup a management sekcemi
+- Zelena barva marze pri 40%+
+- Zluta/oranzova pri 20-40%
+- Cervena pri pod 20% nebo zaporne
 
-### 3. `src/constants/serviceDefaults.ts` -- nová služba
+## Technicke detaily
 
-- Přidat záznam `'analytics_measurement'` s deliverables, frekvencí, turnaround, požadavky a detailed sections
+### Zmeny v `src/components/extra-work/ExtraWorkCard.tsx`
 
-## Technické detaily
+1. Rozsirime stavajici `bg-muted/50` sekci (radky 156-178) o dalsi radky:
+   - **Odmena kolegy**: `colleague.internal_hourly_cost * work.hours_worked`
+   - **Marze**: `work.amount - (colleague.internal_hourly_cost * work.hours_worked)` s procentualnim vyjadrenim
+2. Barevne kodovani marze pomoci podminenych trid
+3. Data jsou jiz dostupna -- `colleague` objekt s `internal_hourly_cost` a `work.hours_worked` / `work.amount` jsou uz v komponente
 
-- Změny ve 3 souborech
-- Žádné nové závislosti
-- Analytické měření je hodinová služba (jako AI SEO), bez kreditového systému a bez tierů
+### Zadne dalsi zmeny
+
+- Zadne nove soubory
+- Zadne zmeny v databazi
+- Zadne nove zavislosti
+- Pouze uprava jednoho souboru `ExtraWorkCard.tsx`
 
