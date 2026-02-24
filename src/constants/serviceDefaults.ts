@@ -1,13 +1,16 @@
 /**
- * Default deliverables and requirements for services
+ * Default deliverables, requirements, and detailed sections for services
  * Used as fallback when service doesn't have custom defaults in database
  */
+
+import type { ServiceDetailSection } from '@/types/publicOffer';
 
 interface ServiceDefaultConfig {
   deliverables: string[];
   frequency: string;
   turnaround: string;
   requirements: string[];
+  detailed_sections: ServiceDetailSection[];
 }
 
 // Keyword-based defaults - matched by service name
@@ -35,6 +38,60 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Podklady ke značce (loga, fonty, brandbook)',
       'Přístup do Google Analytics (pro propojení s Looker Studio)',
     ],
+    detailed_sections: [
+      {
+        emoji: '📐',
+        title: 'Úvodní nastavení projektu',
+        items: [
+          'Nastavení Meta Business Suite: Kontrola a nastavení Meta Pixel pro přesné měření klíčových událostí na webu, případně implementace Conversion API (CAPI).',
+          'Katalog produktů: Kontrola propojení a konfigurace katalogu produktů pro dynamické reklamy (DPA).',
+          'Reklamní účet: Ověření správnosti nastavení reklamního účtu, včetně platebních údajů a propojení s dalšími nástroji.',
+          'Meta Business Suite: Detailní kontrola propojení všech nástrojů (reklamní účet, pixel, katalog, stránky) v rámci Business Suite.',
+          'Struktura kampaní: Vytvoření základní struktury kampaní zaměřených na akvizici nových zákazníků a remarketing.',
+          'Textace reklam: Tvorba poutavých textů přizpůsobených cílové skupině a obchodním cílům.',
+        ],
+      },
+      {
+        emoji: '📊',
+        title: 'Kontrola analytického měření',
+        items: [
+          'Kontrola a optimalizace měření klíčových událostí (nákupy, přidání do košíku, registrace) prostřednictvím modulů ve Shoptetu, Upgates nebo Shopify.',
+        ],
+      },
+      {
+        emoji: '📈',
+        title: 'Tvorba dashboardu výsledků v Looker Studio',
+        items: [
+          'Reportovací šablona: Vytvoření přehledné šablony pro sledování výkonu kampaní.',
+          'Propojení dat: Napojení Looker Studio na Google Ads, Meta Ads a Google Analytics.',
+          'Vizualizace metrik: Přehledné zobrazení klíčových metrik (CPC, CTR, ROAS, konverze) pro snadné vyhodnocení kampaní.',
+          'Automatizace dat: Nastavení automatické aktualizace a sdílení reportů pro přístup 24/7.',
+        ],
+      },
+      {
+        emoji: '🎯',
+        title: 'Vylepšení nabídky',
+        items: [
+          'Návrh produktových balíčků (bundles) – kombinace produktů, které zvýší hodnotu objednávky a motivují zákazníky ke koupi.',
+          'Doporučení slevových a akčních nabídek – strategické slevy, dárky k nákupu nebo limitované akce, které podpoří rychlejší rozhodnutí zákazníků.',
+          'Zvýraznění unikátní hodnoty nabídky – jasně komunikujeme, proč si zákazník má vybrat právě vás (doprava zdarma, garance spokojenosti, prémiová kvalita apod.).',
+          'Kontrola webu – identifikujeme bariéry v nákupním procesu (např. složitý checkout, nejasné informace) a doporučíme úpravy pro vyšší míru dokončení nákupů.',
+        ],
+      },
+      {
+        emoji: '🔄',
+        title: 'Průběžná správa',
+        items: [
+          'Denní kontrola výkonu kampaní a rozpočtů – zajištění optimálního využití reklamního spendu.',
+          'Průběžná optimalizace cílení, bidding strategie a kreativ na základě aktuálních dat.',
+          'Škálování úspěšných kampaní – navyšování rozpočtu u kampaní s nejlepším výkonem.',
+          'Testování nových formátů a přístupů (A/B testy, nové audience segmenty).',
+          'Pravidelná aktualizace produktového katalogu a dynamických reklam.',
+          'Koordinace se členy týmu při tvorbě nových reklamních materiálů.',
+          'Měsíční reporting s vyhodnocením klíčových metrik a plánem na další období.',
+        ],
+      },
+    ],
   },
 
   // ─── PPC Boost (Google Ads + Sklik) ───
@@ -58,6 +115,41 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Přístup do Google Merchant Center',
       'Přístup do Google Analytics',
       'Správně nastavený produktový feed',
+    ],
+    detailed_sections: [
+      {
+        emoji: '📐',
+        title: 'Úvodní nastavení projektu',
+        items: [
+          'Google Ads: Nastavení struktury účtu, konverzního měření a propojení s Merchant Center.',
+          'Sklik: Nastavení účtu, konverzí a propojení s produktovým feedem.',
+          'Produktový feed: Kontrola a optimalizace feedu pro Shopping kampaně na obou platformách.',
+          'Konverzní měření: Ověření správného sledování nákupů, přidání do košíku a dalších klíčových událostí.',
+          'Struktura kampaní: Vytvoření Search, Shopping/PMax a remarketing kampaní.',
+        ],
+      },
+      {
+        emoji: '📊',
+        title: 'Tvorba dashboardu v Looker Studio',
+        items: [
+          'Propojení dat z Google Ads, Sklik a Google Analytics do jednoho přehledného dashboardu.',
+          'Vizualizace klíčových metrik: CPC, CTR, ROAS, konverze, náklady na konverzi.',
+          'Porovnání výkonu Google Ads vs. Sklik pro optimální alokaci rozpočtu.',
+          'Automatizace dat a sdílení reportů pro přístup 24/7.',
+        ],
+      },
+      {
+        emoji: '🔄',
+        title: 'Průběžná správa',
+        items: [
+          'Denní kontrola výkonu kampaní na obou platformách.',
+          'Optimalizace klíčových slov – přidávání relevantních, vylučování neefektivních.',
+          'Průběžné úpravy bidding strategie pro maximalizaci ROAS.',
+          'A/B testování reklamních textů a rozšíření reklam.',
+          'Škálování úspěšných kampaní a přerozdělovánú rozpočtu.',
+          'Měsíční reporting s analýzou výkonu a strategickými doporučeními.',
+        ],
+      },
     ],
   },
 
@@ -85,6 +177,50 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Přístup do Google Analytics',
       'Podklady ke značce (loga, fonty, brandbook)',
     ],
+    detailed_sections: [
+      {
+        emoji: '📐',
+        title: 'Úvodní nastavení projektu',
+        items: [
+          'Meta: Nastavení Pixel/CAPI, propojení katalogu produktů, nastavení Business Suite.',
+          'Google Ads: Nastavení účtu, Merchant Center, konverzního měření.',
+          'Sklik: Nastavení účtu, produktového feedu a konverzí.',
+          'Struktura kampaní: Vytvoření kampaní na všech platformách (akvizice, remarketing, Shopping).',
+          'Textace a kreativy: Tvorba reklamních textů optimalizovaných pro každou platformu.',
+        ],
+      },
+      {
+        emoji: '📊',
+        title: 'Jednotný dashboard a analytika',
+        items: [
+          'Vytvoření dashboardu v Looker Studio propojujícího data ze všech platforem.',
+          'Cross-platform porovnání výkonu pro optimální rozhodování o rozpočtu.',
+          'Kontrola analytického měření na webu (GA4, konverzní události).',
+          'Automatizace reportů pro přístup 24/7.',
+        ],
+      },
+      {
+        emoji: '🎯',
+        title: 'Vylepšení nabídky a webu',
+        items: [
+          'Návrh produktových balíčků a akčních nabídek pro zvýšení hodnoty objednávky.',
+          'Kontrola nákupního procesu – identifikace bariér a doporučení úprav.',
+          'Zvýraznění unikátní hodnoty vaší značky v reklamních materiálech.',
+        ],
+      },
+      {
+        emoji: '🔄',
+        title: 'Průběžná správa',
+        items: [
+          'Denní kontrola výkonu kampaní na Meta, Google a Sklik.',
+          'Cross-platform optimalizace – přesouvání rozpočtu na nejefektivnější kanály.',
+          'Průběžná optimalizace cílení, bidding strategie a kreativ.',
+          'Koordinovaná strategie napříč platformami pro maximální synergie.',
+          'Škálování úspěšných kampaní a testování nových přístupů.',
+          'Měsíční reporting s komplexní analýzou výkonu všech kanálů.',
+        ],
+      },
+    ],
   },
 
   // ─── Fallback keyword matches ───
@@ -103,6 +239,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Přístup do reklamního účtu',
       'Podklady ke značce (loga, fonty, brandbook)',
     ],
+    detailed_sections: [],
   },
 
   'google': {
@@ -120,6 +257,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Přístup do Google Analytics',
       'Správně nastavené konverzní sledování',
     ],
+    detailed_sections: [],
   },
 
   'sklik': {
@@ -134,6 +272,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Přístupy do Sklik účtu',
       'Přístup do Google Analytics nebo jiného měřicího nástroje',
     ],
+    detailed_sections: [],
   },
 
   'creative': {
@@ -149,6 +288,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Loga v potřebných formátech',
       'Reference a inspirace (volitelné)',
     ],
+    detailed_sections: [],
   },
 
   'social': {
@@ -165,6 +305,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Foto/video materiály nebo možnost focení',
       'Schvalovací proces pro obsah',
     ],
+    detailed_sections: [],
   },
 
   'analytics': {
@@ -181,6 +322,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Přístup do Google Tag Manageru',
       'Seznam klíčových konverzí k měření',
     ],
+    detailed_sections: [],
   },
 
   'consult': {
@@ -195,6 +337,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Podklady k současnému stavu',
       'Definované cíle a KPIs',
     ],
+    detailed_sections: [],
   },
 
   'audit': {
@@ -210,6 +353,7 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
       'Přístupy do všech analyzovaných účtů',
       'Historická data min. za 3 měsíce',
     ],
+    detailed_sections: [],
   },
 };
 
@@ -226,6 +370,7 @@ const GENERIC_DEFAULTS: ServiceDefaultConfig = {
     'Potřebné přístupy a podklady',
     'Kontaktní osoba pro komunikaci',
   ],
+  detailed_sections: [],
 };
 
 /**
@@ -255,6 +400,7 @@ export function mergeWithDefaults(
   customFrequency?: string | null,
   customTurnaround?: string | null,
   customRequirements?: string[] | null,
+  customDetailedSections?: ServiceDetailSection[] | null,
 ): ServiceDefaultConfig {
   const defaults = getServiceDefaults(serviceName);
   
@@ -263,5 +409,6 @@ export function mergeWithDefaults(
     frequency: customFrequency?.trim() || defaults.frequency,
     turnaround: customTurnaround?.trim() || defaults.turnaround,
     requirements: customRequirements?.length ? customRequirements : defaults.requirements,
+    detailed_sections: customDetailedSections?.length ? customDetailedSections : defaults.detailed_sections,
   };
 }
