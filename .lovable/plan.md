@@ -1,90 +1,91 @@
 
 
-# Zahrnout upsell provizi do kalkulace marze viceprace
+# Oprava propisu viceprace do vykazu kolegy
 
-## Problem
+## Nalezene problemy
 
-Aktualne se marze pocita jako `castka klient - (hodiny x interni sazba kolegy)`. Pokud ale nekdo vicepraci prodal (upsell), naklady zahrnuji i provizi (typicky 10% z castky klientovi). Ta se dnes v kalkulaci marze nezohlednuje.
+Po kontrole kodu jsem nasel **2 problemy** v tom, jak se viceprace propisuje do osobniho vykazu kolegy na strance "Muj prehled" (MyWork):
 
-## Priklad
+### Problem 1: Odmena kolegy za vicepraci pouziva spatnou sazbu
 
-- Klient plati: 9 000 Kc (5h x 1 800 Kc)
-- Odmena kolegy: 3 500 Kc (5h x 700 Kc)
-- Upsell provize: 900 Kc (10% z 9 000 Kc)
-- **Aktualni marze**: 5 500 Kc (61%) -- nezapocitava provizi
-- **Spravna marze**: 4 600 Kc (51%) -- se zapocitanim provize
+V `src/pages/MyWork.tsx` (radky 183-188) funkce `getColleagueExtraWorkAmount` pouziva `currentColleague.internal_hourly_cost` — tedy globalni sazbu z profilu kolegy. Ale nedavno jsme pridali `internal_hourly_rate` primo na kazdy zaznam viceprace, aby se dala nastavit jina sazba pro ruzne typy praci.
 
-## Reseni
+```
+// Aktualne (spatne):
+currentColleague.internal_hourly_cost * ew.hours_worked
 
-Ve vsech mistech kde se pocita marze viceprace, pridat radek s upsell provizi (pokud existuje `upsold_by_id`) a odecist ji od marze.
+// Spravne:
+(ew.internal_hourly_rate ?? currentColleague.internal_hourly_cost) * ew.hours_worked
+```
+
+Stejna chyba je na radku 227, kde se predava `hourlyRate` do fakturacniho prehledu — opet se pouziva globalni sazba misto te z viceprace.
+
+### Problem 2: Upsell provize — tok je funkcni, ale neni videt bez schvaleni
+
+Upsell provize pro kolegu ktery prodal (upsold_by_id) se do vykazu propisuje spravne pres `getApprovedCommissionsForColleague` z `useUpsellApprovals`. Tento tok funguje:
+
+1. Viceprace ma `upsold_by_id` a `upsell_commission_percent`
+2. Admin schvali provizi na strance Upselly
+3. Provize se objevi v osobnim vykazu kolegy ktery prodal
+
+Toto je **OK** — zadna zmena neni potreba.
 
 ## Zmeny
 
-### 1. ExtraWorkCard -- billing double-check (radky 170-195)
+### 1. MyWork.tsx — `getColleagueExtraWorkAmount` (radky 183-188)
 
-Aktualni kalkulace:
-```
-margin = work.amount - colleagueCost
-```
+Pouzit `ew.internal_hourly_rate` s fallbackem na `currentColleague.internal_hourly_cost`:
 
-Nova kalkulace:
-```
-upsellCommission = work.upsold_by_id ? work.amount * (work.upsell_commission_percent || 10) / 100 : 0
-margin = work.amount - colleagueCost - upsellCommission
-```
-
-Pridat novy radek mezi "Odmena kolegy" a "Marze":
-```
-Upsell provize (10%):  900 Kc  [jmeno kolegy kdo prodal]
+```typescript
+const getColleagueExtraWorkAmount = (ew: typeof extraWorks[0]) => {
+  const rate = ew.internal_hourly_rate ?? currentColleague?.internal_hourly_cost;
+  if (rate && ew.hours_worked) {
+    return rate * ew.hours_worked;
+  }
+  return ew.amount;
+};
 ```
 
-Radek se zobrazi pouze pokud `work.upsold_by_id` neni null. Jmeno kolegy se dohledat z existujiciho pole `colleagues`.
+### 2. MyWork.tsx — `extraWorksForInvoice` (radky 219-229)
 
-### 2. AddExtraWorkDialog -- summary sekce
+Predat spravnou hodinovou sazbu do fakturacniho prehledu:
 
-Aktualizovat vypocet "Odmena kolega" summary, aby pod nim zobrazil i upsell provizi pokud je nastavena, a celkovou marzi.
+```typescript
+const extraWorksForInvoice = myExtraWorks.map((ew) => {
+  const client = clients.find(c => c.id === ew.client_id);
+  const colleagueAmount = getColleagueExtraWorkAmount(ew);
+  const rate = ew.internal_hourly_rate ?? currentColleague?.internal_hourly_cost;
+  return {
+    clientName: client?.brand_name || client?.name || 'Neznamy klient',
+    name: ew.name,
+    amount: colleagueAmount,
+    hours: ew.hours_worked,
+    hourlyRate: rate,
+  };
+});
+```
 
-### 3. EditExtraWorkDialog -- summary sekce
+### 3. MyWork.tsx — zobrazeni sazby v sekci "Vice prace" (radky 382-384)
 
-Stejna zmena jako v AddExtraWorkDialog -- pridat radek upsell provize do summary.
+Stejna oprava v Badge, ktery ukazuje "Xh x Y Kc":
 
-## Technicke detaily
+```typescript
+{ew.hours_worked && (ew.internal_hourly_rate || currentColleague?.internal_hourly_cost) && (
+  <Badge variant="secondary" className="text-xs shrink-0">
+    {ew.hours_worked}h x {ew.internal_hourly_rate ?? currentColleague?.internal_hourly_cost} Kc
+  </Badge>
+)}
+```
 
-### Zmeny v souborech
+## Soubory ke zmene
 
 | Soubor | Zmena |
 |---|---|
-| `src/components/extra-work/ExtraWorkCard.tsx` | Pridat upsell provizi do billing double-check, upravit marzi |
-| `src/components/extra-work/AddExtraWorkDialog.tsx` | Pridat upsell provizi do summary sekce |
-| `src/components/extra-work/EditExtraWorkDialog.tsx` | Pridat upsell provizi do summary sekce |
+| `src/pages/MyWork.tsx` | 3 mista — pouzit `ew.internal_hourly_rate` misto globalni sazby |
 
-### Logika v ExtraWorkCard
+## Co neni potreba menit
 
-```typescript
-const internalRate = work.internal_hourly_rate ?? colleague.internal_hourly_cost!;
-const colleagueCost = work.hours_worked! * internalRate;
-const upsellCommission = work.upsold_by_id
-  ? Math.round(work.amount * (work.upsell_commission_percent || 10) / 100)
-  : 0;
-const totalCost = colleagueCost + upsellCommission;
-const margin = work.amount - totalCost;
-const marginPercent = work.amount > 0 ? Math.round((margin / work.amount) * 100) : 0;
-```
-
-### Zobrazeni v karte
-
-```text
-Odmena kolegy:       5h x 700 = 3 500 Kc
-Upsell provize (10%):          900 Kc  (Jan Novak)
-Marze:                       4 600 Kc (51%)
-```
-
-Radek "Upsell provize" se zobrazi pouze pokud `work.upsold_by_id` neni null. Jmeno kolegy ktery prodal se najde v poli `colleagues` podle `work.upsold_by_id`.
-
-### Zadne dalsi zmeny
-
-- Zadne nove soubory
-- Zadne zmeny v databazi
-- Zadne nove zavislosti
-- Barevne kodovani marze zustava stejne (40%+ zelena, 20-40% oranzova, pod 20% cervena)
+- **Upsell provize** — tok funguje spravne (schvalene provize se propisuji do vykazu kolegy ktery prodal)
+- **InvoicingOverview.tsx** — bere data z props, takze staci opravit zdroj v MyWork.tsx
+- **Zadne zmeny v databazi ani typech**
 
