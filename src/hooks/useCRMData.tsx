@@ -424,27 +424,6 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
-    {
-      id: 'srv-16',
-      code: 'ANALYTICS_MEASUREMENT',
-      name: 'Analytické měření',
-      service_type: 'addon',
-      category: 'performance',
-      base_price: 1900,
-      currency: 'CZK',
-      description: 'Nastavení a kontrola měření pomocí GTM, GA4, Meta Pixelu, konverzí apod.',
-      is_active: true,
-      tier_pricing: null,
-      external_url: null,
-      default_deliverables: [
-        'Nastavení a kontrola Google Tag Manageru',
-        'Konfigurace GA4 a konverzních událostí',
-        'Implementace Meta Pixelu a Conversion API',
-        'Nastavení a ověření konverzního měření pro reklamní platformy',
-      ],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
   ];
 
   const { data: services = [], isLoading: servicesLoading } = useQuery({
