@@ -610,6 +610,61 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
     ],
     tierComparison: [],
   },
+
+  AI_SEO: {
+    code: 'AI_SEO',
+    tagline: 'Měsíční optimalizace webu pro AI vyhledávání – ChatGPT, Google AI Overview, Perplexity',
+    platforms: ['ChatGPT', 'Google AI Overview', 'Perplexity', 'AI vyhledávače'],
+    targetAudience: 'E-shopy a firmy, které chtějí být viditelné v AI vyhledávačích a připravit se na novou éru vyhledávání',
+    benefits: [
+      'Analýza, jak AI váš web chápe a využívá – identifikace slabých míst a příležitostí.',
+      'Návrhy úprav struktury stránek a obsahu pro lepší srozumitelnost AI nástroji.',
+      'Identifikace chybějících témat a budování tematické autority webu.',
+      'Příprava webu na zobrazování produktů a služeb v AI odpovědích.',
+      'Průběžné konzultace s SEO / AI specialistou.',
+    ],
+    setup: [
+      {
+        title: 'Zahájení spolupráce',
+        items: [
+          'Náš kolega si nejprve projde váš web – posoudí, zda je služba pro vás vhodná.',
+          'Pokud služba dává smysl: upřesníme reálný rozsah hodin, doladíme přístupy a domluvíme plán práce.',
+          'Následně se pustíme do realizace.',
+          'Spolupráci doporučujeme minimálně na 6 měsíců pro postupnou implementaci a vyhodnocení dopadu.',
+        ],
+      },
+    ],
+    management: [
+      {
+        title: 'Co v rámci služby řešíme',
+        items: [
+          'Analyzujeme, jak AI váš web chápe a využívá.',
+          'Navrhujeme úpravy struktury stránek a obsahu pro srozumitelnost AI nástrojům.',
+          'Identifikujeme chybějící témata a příležitosti.',
+          'Pomáháme budovat tematickou autoritu webu.',
+          'Průběžně konzultujeme další kroky.',
+        ],
+      },
+      {
+        title: 'Cíle optimalizace',
+        items: [
+          'Web srozumitelný pro AI nástroje.',
+          'Tematicky silný a relevantní obsah.',
+          'Web vnímaný jako odborný zdroj.',
+          'Připravenost na zobrazování produktů a služeb v AI odpovědích.',
+        ],
+      },
+      {
+        title: 'Rozsah a cena',
+        items: [
+          'Odhadovaný rozsah: 10 hodin práce měsíčně.',
+          'Práce je fakturována dle reálně odpracovaných hodin.',
+          'Hodinová sazba: 1 800 Kč / hod.',
+        ],
+      },
+    ],
+    tierComparison: [],
+  },
 };
 
 // Helper function to get service detail by code

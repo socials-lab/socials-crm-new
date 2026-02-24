@@ -402,6 +402,28 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
+    {
+      id: 'srv-15',
+      code: 'AI_SEO',
+      name: 'AI SEO',
+      service_type: 'addon',
+      category: 'performance',
+      base_price: 18000,
+      currency: 'CZK',
+      description: 'Měsíční optimalizace webu pro AI vyhledávání – ChatGPT, Google AI Overview, Perplexity',
+      is_active: true,
+      tier_pricing: null,
+      external_url: null,
+      default_deliverables: [
+        'Analýza, jak AI váš web chápe a využívá',
+        'Návrhy úprav struktury a obsahu pro AI nástroje',
+        'Budování tematické autority webu',
+        'Příprava na zobrazování produktů v AI odpovědích',
+        'Průběžné konzultace s SEO / AI specialistou',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
   ];
 
   const { data: services = [], isLoading: servicesLoading } = useQuery({
