@@ -559,6 +559,57 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
     ],
     tierComparison: [],
   },
+
+  FAVI: {
+    code: 'FAVI',
+    tagline: 'Správa Favi – optimalizace feedu, bidding a maximální ziskovost na srovnávači nábytku a bydlení',
+    platforms: ['Favi', 'Mergado'],
+    targetAudience: 'E-shopy s nábytkem a bydlením, které chtějí maximalizovat výkon na Favi',
+    benefits: [
+      'Import a validace XML feedu – kontrola dat, přemapování kategorií, doplnění EAN kódů',
+      'Optimalizace názvů a párování produktů – klíčová slova, ruční úpravy nespárovaných položek',
+      'Bidding a řízení CPC pro maximální ziskovost – segmentace, automatizovaný i manuální bidding',
+      'Pravidelný reporting a analýza – sledování PNO, ROI, CTR, konverzí',
+    ],
+    setup: [
+      {
+        title: 'Úvodní nastavení',
+        items: [
+          'Import XML feedu do Mergada – kontrola a validace dat.',
+          'Úpravy v Mergadu – přemapování kategorií, úprava názvů, doplnění chybějících EAN kódů a parametrů.',
+          'Testování výstupu – ověření správného zpracování feedu v Favi.',
+        ],
+      },
+    ],
+    management: [
+      {
+        title: 'Optimalizace XML feedu',
+        items: [
+          'Validace feedu – ověřit správnost kategorií, názvů, obrázků, cen a dostupnosti.',
+          'Optimalizace názvů produktů – použití klíčových slov a přesného pojmenování pro správné spárování.',
+          'Správné párování produktů – ruční úpravy u nespárovaných položek.',
+          'EAN kódy a parametry – důležité pro spárování a lepší viditelnost ve filtrech.',
+        ],
+      },
+      {
+        title: 'Bidding – řízení CPC pro maximální ziskovost',
+        items: [
+          'Segmentace produktů – prioritizovat výkonné produkty s vysokou marží.',
+          'Automatizovaný bidding – možné použití nástrojů (Bidding Fox, Beed) pro udržení PNO pod kontrolou.',
+          'Manuální úprava CPC – zvýšení CPC pro klíčové produkty, omezení u těch se slabou návratností.',
+          'Pravidelné vyhodnocení PNO/ROI – zamezit plýtvání rozpočtu na neefektivní produkty.',
+        ],
+      },
+      {
+        title: 'Analýza a reporting',
+        items: [
+          'Sledování výkonu kampaní (PNO, ROI, CTR, konverze) – optimalizace na základě reálných dat.',
+          'Pravidelný reporting – vyhodnocení výsledků a iterativní zlepšování strategií.',
+        ],
+      },
+    ],
+    tierComparison: [],
+  },
 };
 
 // Helper function to get service detail by code

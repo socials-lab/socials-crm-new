@@ -381,6 +381,27 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
+    {
+      id: 'srv-14',
+      code: 'FAVI',
+      name: 'Správa Favi',
+      service_type: 'addon',
+      category: 'performance',
+      base_price: 0,
+      currency: 'CZK',
+      description: 'Správa Favi – optimalizace feedu, bidding a maximální ziskovost na srovnávači nábytku a bydlení',
+      is_active: true,
+      tier_pricing: null,
+      external_url: null,
+      default_deliverables: [
+        'Import a validace XML feedu, přemapování kategorií a doplnění EAN kódů',
+        'Optimalizace názvů produktů a správné párování položek',
+        'Řízení CPC biddingu pro maximální ziskovost',
+        'Pravidelný reporting a analýza výkonu (PNO, ROI, CTR, konverze)',
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
   ];
 
   const { data: services = [], isLoading: servicesLoading } = useQuery({
