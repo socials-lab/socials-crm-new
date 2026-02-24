@@ -44,6 +44,7 @@ interface ExtraWorkCardProps {
 
 const STATUS_BORDER_COLORS: Record<ExtraWorkStatus, string> = {
   pending_approval: 'border-l-amber-500',
+  client_approved: 'border-l-teal-500',
   in_progress: 'border-l-purple-500',
   ready_to_invoice: 'border-l-blue-500',
   invoiced: 'border-l-emerald-500',

@@ -55,6 +55,7 @@ import {
   Pencil,
   Send,
   XCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -228,6 +229,7 @@ export function ExtraWorkTable({
   const StatusIcon = ({ status }: { status: ExtraWorkStatus }) => {
     const icons: Record<ExtraWorkStatus, typeof Clock> = {
       pending_approval: Clock,
+      client_approved: CheckCircle2,
       in_progress: Loader2,
       ready_to_invoice: FileText,
       invoiced: Receipt,
@@ -352,6 +354,7 @@ export function ExtraWorkTable({
             <SelectContent>
               <SelectItem value="all">Všechny stavy</SelectItem>
               <SelectItem value="pending_approval">Čeká na schválení</SelectItem>
+              <SelectItem value="client_approved">Schváleno klientem</SelectItem>
               <SelectItem value="in_progress">V procesu</SelectItem>
               <SelectItem value="ready_to_invoice">K fakturaci</SelectItem>
               <SelectItem value="invoiced">Vyfakturováno</SelectItem>
@@ -373,6 +376,7 @@ export function ExtraWorkTable({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="pending_approval">Čeká na schválení</SelectItem>
+              <SelectItem value="client_approved">Schváleno klientem</SelectItem>
               <SelectItem value="in_progress">V procesu</SelectItem>
               <SelectItem value="ready_to_invoice">K fakturaci</SelectItem>
             </SelectContent>
