@@ -12,6 +12,12 @@ export interface TierFeature {
   elite: string | boolean;
 }
 
+export interface TierPriceEntry {
+  price: number | null; // null = "Individuální kalkulace"
+  spend: string;
+  originalPrice?: number; // for showing crossed-out price (bundles)
+}
+
 export interface ServiceDetail {
   code: string;
   tagline: string;
@@ -22,9 +28,9 @@ export interface ServiceDetail {
   management: SetupItem[];
   tierComparison: TierFeature[];
   tierPricing?: {
-    growth: { price: number; spend: string };
-    pro: { price: number; spend: string };
-    elite: { price: number; spend: string };
+    growth: TierPriceEntry;
+    pro: TierPriceEntry;
+    elite: TierPriceEntry;
   };
   // For credit-based services like Creative Boost
   creditPricing?: {
@@ -119,9 +125,113 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
       { feature: 'Měsíční reporting', growth: 'Video/text/call', pro: 'Video/text/call', elite: 'Video/text/call' },
     ],
     tierPricing: {
-      growth: { price: 15000, spend: 'do 400 000 Kč' },
-      pro: { price: 25000, spend: '400 000 - 800 000 Kč' },
-      elite: { price: 40000, spend: 'nad 800 000 Kč' },
+      growth: { price: 29900, spend: 'do 400 000 Kč' },
+      pro: { price: 39900, spend: '400 000 - 800 000 Kč' },
+      elite: { price: null, spend: 'nad 800 000 Kč' },
+    },
+  },
+
+  PPC_BOOST: {
+    code: 'PPC_BOOST',
+    tagline: 'Komplexní správa Google Ads + Sklik pro maximální výkon',
+    platforms: ['Google Ads (Search, Shopping, Display, YouTube)', 'Sklik (Seznam.cz)'],
+    targetAudience: 'E-shopy a služby, které chtějí pokrýt vyhledávací reklamu na Google i Seznamu',
+    benefits: [
+      'Pokrytí dvou největších vyhledávačů v ČR – Google i Seznam.',
+      'Synergická správa obou platforem pro maximální efektivitu.',
+      'Jednotný reporting a přehled výkonu napříč platformami.',
+      'Kompletní správa od nastavení po průběžnou optimalizaci.',
+    ],
+    setup: [
+      {
+        title: 'Nastavení Google Ads + Sklik',
+        items: [
+          'Struktura účtu: Vytvoření optimální struktury kampaní pro oba systémy.',
+          'Konverzní měření: Nastavení sledování klíčových konverzí.',
+          'Merchant Center: Propojení a optimalizace produktového feedu.',
+          'Remarketing: Nastavení publik pro remarketing kampaně.',
+        ],
+      },
+      {
+        title: 'Tvorba dashboardu v Looker Studio',
+        items: [
+          'Reportovací šablona: Přehledná šablona pro sledování výkonu kampaní.',
+          'Propojení dat: Napojení na Google Ads, Sklik a Google Analytics.',
+          'Vizualizace metrik: Přehledné zobrazení klíčových metrik.',
+        ],
+      },
+    ],
+    management: [
+      {
+        title: 'Správa Google Ads + Sklik',
+        items: [
+          'Optimalizace klíčových slov a bidding strategie.',
+          'A/B testování reklam.',
+          'Správa Shopping/PMax kampaní.',
+          'Měsíční reporting s analýzou výkonu.',
+        ],
+      },
+    ],
+    tierComparison: [
+      { feature: 'Základní setup a struktura účtu', growth: true, pro: true, elite: true },
+      { feature: 'Konverzní měření', growth: true, pro: true, elite: true },
+      { feature: 'Search kampaně (Google + Sklik)', growth: true, pro: true, elite: true },
+      { feature: 'Shopping/PMax kampaně', growth: true, pro: true, elite: true },
+      { feature: 'Optimalizace', growth: '1-2x týdně', pro: '2-3x týdně', elite: '3-4x týdně' },
+      { feature: 'Reporting', growth: 'Měsíční', pro: 'Měsíční', elite: 'Měsíční' },
+    ],
+    tierPricing: {
+      growth: { price: 24900, spend: 'do 400 000 Kč' },
+      pro: { price: 34900, spend: '400 000 - 800 000 Kč' },
+      elite: { price: null, spend: 'nad 800 000 Kč' },
+    },
+  },
+
+  PERFORMANCE_BOOST: {
+    code: 'PERFORMANCE_BOOST',
+    tagline: 'Kombinace Meta Ads + Google Ads + Sklik pro maximální dosah',
+    platforms: ['Meta Ads (Facebook, Instagram)', 'Google Ads', 'Sklik (Seznam.cz)'],
+    targetAudience: 'E-shopy a služby, které chtějí komplexní pokrytí všech klíčových reklamních platforem',
+    benefits: [
+      'Kompletní pokrytí všech hlavních reklamních platforem.',
+      'Zvýhodněná cena oproti samostatným balíčkům.',
+      'Jednotná strategie a optimalizace napříč platformami.',
+      'Synergický efekt – lepší výsledky díky koordinované správě.',
+    ],
+    setup: [
+      {
+        title: 'Nastavení všech platforem',
+        items: [
+          'Meta Business Suite: Pixel, katalog, struktura kampaní.',
+          'Google Ads: Search, Shopping/PMax, remarketing.',
+          'Sklik: Kampaně, produktový feed, konverze.',
+          'Looker Studio: Jednotný dashboard pro všechny platformy.',
+        ],
+      },
+    ],
+    management: [
+      {
+        title: 'Správa Meta Ads + Google Ads + Sklik',
+        items: [
+          'Koordinovaná správa všech platforem.',
+          'Cross-platform optimalizace rozpočtu.',
+          'Jednotný měsíční reporting.',
+          'Strategické konzultace.',
+        ],
+      },
+    ],
+    tierComparison: [
+      { feature: 'Meta Ads správa', growth: true, pro: true, elite: true },
+      { feature: 'Google Ads správa', growth: true, pro: true, elite: true },
+      { feature: 'Sklik správa', growth: true, pro: true, elite: true },
+      { feature: 'Cross-platform optimalizace', growth: true, pro: true, elite: true },
+      { feature: 'Optimalizace', growth: '2-3x týdně', pro: '3-4x týdně', elite: '4-5x týdně' },
+      { feature: 'Reporting', growth: 'Měsíční', pro: 'Měsíční', elite: 'Měsíční' },
+    ],
+    tierPricing: {
+      growth: { price: 43900, spend: 'do 400 000 Kč', originalPrice: 54800 },
+      pro: { price: 59900, spend: '400 000 - 800 000 Kč', originalPrice: 74800 },
+      elite: { price: null, spend: 'nad 800 000 Kč' },
     },
   },
 
@@ -177,7 +287,7 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
     tierPricing: {
       growth: { price: 15000, spend: 'do 400 000 Kč' },
       pro: { price: 25000, spend: '400 000 - 800 000 Kč' },
-      elite: { price: 40000, spend: 'nad 800 000 Kč' },
+      elite: { price: null, spend: 'nad 800 000 Kč' },
     },
   },
 
@@ -261,7 +371,7 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
     tierPricing: {
       growth: { price: 10000, spend: 'do 100 000 Kč' },
       pro: { price: 15000, spend: '100 000 - 300 000 Kč' },
-      elite: { price: 25000, spend: 'nad 300 000 Kč' },
+      elite: { price: null, spend: 'nad 300 000 Kč' },
     },
   },
 
