@@ -17,7 +17,7 @@ export default function ExtraWork() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editWork, setEditWork] = useState<ExtraWorkType | null>(null);
   const [approvalWork, setApprovalWork] = useState<ExtraWorkType | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('kanban');
+const [viewMode, setViewMode] = useState<'table' | 'kanban'>('kanban');
 
   // Filter state
   const [filterStatus, setFilterStatus] = useState<ExtraWorkStatus | 'all'>('all');
