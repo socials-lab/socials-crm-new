@@ -45,14 +45,14 @@ export interface ServiceDetail {
 export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
   SOCIALS_BOOST: {
     code: 'SOCIALS_BOOST',
-    tagline: 'Komplexní správa Meta Ads pro e-shopy a služby – více zákazníků z Facebooku a Instagramu',
+    tagline: 'Komplexní správa Meta Ads pro e-shopy – více objednávek z Facebooku a Instagramu',
     platforms: ['Meta Ads (Facebook, Instagram, Messenger)'],
-    targetAudience: 'E-shopy a služby, které chtějí získat více zákazníků z Facebooku a Instagramu',
+    targetAudience: 'E-shopy, které chtějí zvýšit tržby pomocí reklam na Facebooku a Instagramu',
     benefits: [
-      'Více zakázek a vyšší zisk – reklamy nastavíme tak, aby vám přinášely zákazníky, kteří nakupují.',
-      'Méně starostí, více času na podnikání – postaráme se o celou správu výkonnostní reklamy, abyste se mohli věnovat růstu firmy.',
-      'Partnera, který řeší výkon, ne jen reklamy – přemýšlíme nad vaším byznysem, ne jen nad reklamními účty.',
-      'Kompletní správu Meta Ads – od nastavení účtů po průběžnou optimalizaci a reporting.',
+      'Více objednávek a vyšší tržby – reklamy nastavíme tak, aby přiváděly zákazníky, kteří nakupují.',
+      'Méně starostí, více času na podnikání – postaráme se o celou správu výkonnostní reklamy, abyste se mohli věnovat růstu e-shopu.',
+      'Partnera, který řeší výkon, ne jen reklamy – přemýšlíme nad vaším e-shopem, ne jen nad reklamními účty.',
+      'Kompletní správu Meta Ads – od nastavení účtů a katalogu produktů po průběžnou optimalizaci a reporting.',
     ],
     setup: [
       {
