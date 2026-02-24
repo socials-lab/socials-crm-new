@@ -118,20 +118,26 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
   // Calculate totals
   const totals = useMemo(() => {
-    const monthly = editableServices
-      .filter(s => s.billing_type === 'monthly')
+    const coreMonthly = editableServices
+      .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
       .reduce((sum, s) => sum + s.price, 0);
+    const addonMonthly = editableServices
+      .filter(s => s.billing_type === 'monthly' && s.service_type !== 'core')
+      .reduce((sum, s) => sum + s.price, 0);
+    const monthly = coreMonthly + addonMonthly;
     const oneOff = editableServices
       .filter(s => s.billing_type === 'one_off')
       .reduce((sum, s) => sum + s.price, 0);
     const totalOriginal = editableServices.reduce((sum, s) => sum + (s.original_price || s.price), 0);
     const totalFinal = editableServices.reduce((sum, s) => sum + s.price, 0);
     const totalDiscount = totalOriginal - totalFinal;
-    const monthlyAfterDiscount = monthlyDiscountPercent > 0 
-      ? Math.round(monthly * (1 - monthlyDiscountPercent / 100)) 
-      : monthly;
-    const monthlyDiscountAmount = monthly - monthlyAfterDiscount;
-    return { monthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount };
+    // Discount applies only to core monthly services
+    const coreMonthlyAfterDiscount = monthlyDiscountPercent > 0 
+      ? Math.round(coreMonthly * (1 - monthlyDiscountPercent / 100)) 
+      : coreMonthly;
+    const monthlyDiscountAmount = coreMonthly - coreMonthlyAfterDiscount;
+    const monthlyAfterDiscount = coreMonthlyAfterDiscount + addonMonthly;
+    return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount };
   }, [editableServices, monthlyDiscountPercent]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
@@ -311,8 +317,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                   {/* Price Summary */}
                   {editableServices.length > 0 && (
                     <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">Měsíčně:</span>
+                     <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="text-muted-foreground">Měsíčně celkem:</span>
                         <span className="font-medium">
                           {monthlyDiscountPercent > 0 ? (
                             <>
@@ -326,25 +332,29 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                           )}
                         </span>
                       </div>
-                      {/* Monthly discount input */}
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">Sleva na měsíční:</span>
-                        <div className="flex items-center gap-1">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={monthlyDiscountPercent || ''}
-                            onChange={(e) => setMonthlyDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
-                            placeholder="0"
-                            className="w-16 h-7 text-sm text-right"
-                          />
-                          <span className="text-muted-foreground">%</span>
+                      {/* Core monthly discount */}
+                      {totals.coreMonthly > 0 && (
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="text-muted-foreground text-xs">
+                            Sleva na core služby při odběru všech služeb:
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={monthlyDiscountPercent || ''}
+                              onChange={(e) => setMonthlyDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                              placeholder="0"
+                              className="w-16 h-7 text-sm text-right"
+                            />
+                            <span className="text-muted-foreground">%</span>
+                          </div>
                         </div>
-                      </div>
+                      )}
                       {monthlyDiscountPercent > 0 && (
                         <div className="flex items-center justify-between text-sm text-green-600 mb-1">
-                          <span>Sleva {monthlyDiscountPercent}%:</span>
+                          <span>Sleva {monthlyDiscountPercent}% na core služby:</span>
                           <span className="font-medium">
                             -{totals.monthlyDiscountAmount.toLocaleString('cs-CZ')} {lead.currency}/měs
                           </span>
