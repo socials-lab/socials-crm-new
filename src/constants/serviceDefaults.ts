@@ -481,6 +481,67 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
     detailed_sections: [],
   },
 
+  // ─── Správa TikTok Ads ───
+  'tiktok': {
+    deliverables: [
+      'Vytvoření a nastavení TikTok Business Center a reklamního účtu',
+      'Implementace TikTok Pixel a Events API pro přesné měření konverzí',
+      'Správa akvizičních a remarketingových kampaní',
+      'Testování kreativ, publik a bidding strategií pro maximální výkon',
+      'Měsíční report s vyhodnocením výkonu a plánem na další období',
+    ],
+    frequency: 'Průběžná správa, denní kontrola, měsíční reporting',
+    turnaround: 'Nasazení do 5 pracovních dnů od startu',
+    requirements: [
+      'Přístup do TikTok Business Center',
+      'Přístup k TikTok reklamnímu účtu',
+      'Kreativní podklady (videa, záběry produktů)',
+      'Přístup do Google Analytics (pro propojení s reportingem)',
+    ],
+    detailed_sections: [
+      {
+        emoji: '⚙️',
+        title: 'Úvodní nastavení TikTok Ads',
+        items: [
+          'Vytvoření a nastavení TikTok Business Center a reklamního účtu.',
+          'Implementace TikTok Pixel a Events API pro přesné měření konverzí.',
+          'Propojení produktového katalogu pro dynamické reklamy (pokud je relevantní).',
+          'Nastavení publik – vlastní, lookalike a zájmové segmenty.',
+          'Struktura kampaní – akvizice, remarketing, testovací kampaně.',
+        ],
+      },
+      {
+        emoji: '🚀',
+        title: 'Správa kampaní a optimalizace',
+        items: [
+          'Denní kontrola a průběžná optimalizace kampaní pro maximální výkon.',
+          'Testování kreativ – různé formáty, hooky a CTA pro zjištění, co nejlépe konvertuje.',
+          'Správa nabídek a rozpočtů – optimalizace CPA/ROAS dle cílů.',
+          'Škálování úspěšných kampaní a kreativ.',
+          'A/B testování publik, umístění a bidding strategií.',
+        ],
+      },
+      {
+        emoji: '🎨',
+        title: 'Kreativní strategie pro TikTok',
+        items: [
+          'Doporučení formátů a stylů videí, které fungují na TikToku (UGC, native, hook-based).',
+          'Zadání a briefy pro tvorbu kreativ (ve spolupráci s Creative Boost nebo vlastním týmem klienta).',
+          'Iterativní testování konceptů – hooky, messaging, vizuální styl.',
+        ],
+      },
+      {
+        emoji: '📊',
+        title: 'Měření a reporting',
+        items: [
+          'Sledování klíčových metrik (CPA, ROAS, CTR, konverzní poměr, frekvence).',
+          'Online dashboard s výsledky kampaní dostupný 24/7.',
+          'Měsíční report s vyhodnocením výkonu a plánem na další období.',
+        ],
+      },
+    ],
+  },
+
 
   'audit': {
     deliverables: [
