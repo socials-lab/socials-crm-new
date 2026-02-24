@@ -559,6 +559,63 @@ const SERVICE_DEFAULTS: Record<string, ServiceDefaultConfig> = {
     detailed_sections: [],
   },
 
+  // ─── Správa Glami ───
+  'glami': {
+    deliverables: [
+      'Import a validace XML feedu do Mergada, přemapování kategorií a doplnění EAN kódů',
+      'Optimalizace názvů produktů a správné párování položek na Glami',
+      'Řízení CPC biddingu pro maximální ziskovost (segmentace, automatizace, manuální úpravy)',
+      'Pravidelný reporting a analýza výkonu (PNO, ROI, CTR, konverze)',
+    ],
+    frequency: 'Průběžná správa a měsíční optimalizace',
+    turnaround: 'Úvodní nastavení do 5 pracovních dnů',
+    requirements: [
+      'Přístup k e-shopu a XML feed produktů',
+      'Přístup do Mergada (nebo vytvoření účtu)',
+      'Přístup do administrace Glami',
+      'Informace o maržích produktů pro nastavení biddingu',
+    ],
+    detailed_sections: [
+      {
+        emoji: '⚙️',
+        title: 'Úvodní nastavení',
+        items: [
+          'Import XML feedu do Mergada – kontrola a validace dat.',
+          'Úpravy v Mergadu – přemapování kategorií, úprava názvů, doplnění chybějících EAN kódů a parametrů.',
+          'Testování výstupu – ověření správného zpracování feedu v Glami.',
+        ],
+      },
+      {
+        emoji: '🔧',
+        title: 'Optimalizace XML feedu',
+        items: [
+          'Validace feedu – ověřit správnost kategorií, názvů, obrázků, cen a dostupnosti.',
+          'Optimalizace názvů produktů – použití klíčových slov a přesného pojmenování pro správné spárování.',
+          'Správné párování produktů – ruční úpravy u nespárovaných položek.',
+          'EAN kódy a parametry – důležité pro spárování a lepší viditelnost ve filtrech.',
+        ],
+      },
+      {
+        emoji: '💰',
+        title: 'Bidding – řízení CPC pro maximální ziskovost',
+        items: [
+          'Segmentace produktů – prioritizovat výkonné produkty s vysokou marží.',
+          'Automatizovaný bidding – možné použití nástrojů (Bidding Fox, Beed) pro udržení PNO pod kontrolou.',
+          'Manuální úprava CPC – zvýšení CPC pro klíčové produkty, omezení u těch se slabou návratností.',
+          'Pravidelné vyhodnocení PNO/ROI – zamezit plýtvání rozpočtu na neefektivní produkty.',
+        ],
+      },
+      {
+        emoji: '📊',
+        title: 'Analýza a reporting',
+        items: [
+          'Sledování výkonu kampaní (PNO, ROI, CTR, konverze) – optimalizace na základě reálných dat.',
+          'Pravidelný reporting – vyhodnocení výsledků a iterativní zlepšování strategií.',
+        ],
+      },
+    ],
+  },
+
   // ─── Správa Heuréky a Zboží.cz ───
   'heureka': {
     deliverables: [
