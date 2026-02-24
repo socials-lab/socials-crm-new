@@ -109,7 +109,7 @@ const TEST_OFFER: PublicOffer = {
   audit_summary: 'Sociální sítě nejsou aktivně spravovány – příspěvky nepravidelně, nízký engagement.\n\nPPC kampaně mají prostor pro optimalizaci – vysoké CPC, chybí remarketing.\n\nChybí jednotná vizuální identita napříč kanály.',
   recommendation_intro: 'Proto navrhujeme zaměřit se na systematickou správu sociálních sítí s pravidelným obsahem a paralelně optimalizovat PPC kampaně pro lepší návratnost investic.',
   custom_note: null,
-  notion_url: null,
+  loom_url: null,
   currency: 'CZK',
   total_price: 48000,
   offer_type: 'retainer',
@@ -122,7 +122,6 @@ const TEST_OFFER: PublicOffer = {
   view_count: 0,
   estimated_start_date: 'Do 5 pracovních dnů od podpisu smlouvy',
   monthly_discount_percent: 10,
-  loom_url: 'https://www.loom.com/embed/example123',
   // Contact person info
   owner_name: 'Jan Novák',
   owner_email: 'jan.novak@socials.cz',

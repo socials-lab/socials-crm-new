@@ -41,7 +41,7 @@ export interface PublicOffer {
   audit_summary: string | null;
   recommendation_intro: string | null;  // Why we recommend these services
   custom_note: string | null;
-  notion_url: string | null;
+  loom_url: string | null;
   services: PublicOfferService[];
   portfolio_links: PortfolioLink[];
   total_price: number;
@@ -54,9 +54,8 @@ export interface PublicOffer {
   created_by: string | null;
   created_at: string;
   updated_at: string;
-  estimated_start_date?: string;  // When collaboration can start
-  loom_url?: string;              // Loom video URL for embed
-  monthly_discount_percent?: number; // % discount on total monthly price (0-100)
+  estimated_start_date?: string;
+  monthly_discount_percent?: number;
   // Contact person info (lead owner)
   owner_name?: string;       // Name of assigned colleague
   owner_email?: string;      // Email of assigned colleague
@@ -67,7 +66,7 @@ export interface PublicOffer {
 export interface CreateOfferFormData {
   audit_summary: string;
   custom_note: string;
-  notion_url: string;
+  loom_url: string;
   valid_until: string;
   portfolio_links: PortfolioLink[];
 }

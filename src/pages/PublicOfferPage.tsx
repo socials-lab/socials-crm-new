@@ -787,19 +787,18 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <NextStepsSection />
 
 
-        {/* Notion Link */}
-        {offer.notion_url && (
+        {/* Loom video */}
+        {offer.loom_url && (
           <section className="mb-10">
-            <a
-              href={offer.notion_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-            >
-              <FileText className="h-4 w-4" />
-              Detailní nabídka
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            <h2 className="text-lg font-semibold mb-4">🎥 Video k nabídce</h2>
+            <div className="rounded-xl overflow-hidden border" style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+              <iframe
+                src={offer.loom_url.replace('/share/', '/embed/')}
+                frameBorder="0"
+                allowFullScreen
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+              />
+            </div>
           </section>
         )}
 
