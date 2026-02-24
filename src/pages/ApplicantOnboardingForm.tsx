@@ -22,7 +22,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { CheckCircle2, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle, CalendarIcon, Heart, Camera, ArrowLeft, ArrowRight, Sparkles, ClipboardList } from 'lucide-react';
+import { CheckCircle2, Loader2, User, Building, CreditCard, MapPin, AlertCircle, CalendarIcon, Heart, Camera, ArrowLeft, ArrowRight, Sparkles, ClipboardList } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -191,8 +191,15 @@ export default function ApplicantOnboardingForm() {
     }
     setIsSearching(true);
     try {
-      const params = new URLSearchParams({ obchodniJmeno: query, start: '0', pocet: '8' });
-      const res = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat?${params}`);
+      const res = await fetch('https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          obchodniJmeno: query,
+          start: 0,
+          pocet: 8,
+        }),
+      });
       if (!res.ok) throw new Error('ARES search failed');
       const data = await res.json();
       const items = (data.ekonomickeSubjekty || []).map((s: any) => ({
@@ -602,105 +609,59 @@ export default function ApplicantOnboardingForm() {
             </CardHeader>
             <CardContent className="space-y-4">
               {!noIco && (
-                <div className="space-y-3">
-                  {/* Name-based ARES search */}
-                  <div className="relative">
-                    <FormLabel>Vyhledat firmu / OSVČ</FormLabel>
-                    <div className="flex gap-2 mt-1.5">
-                      <div className="relative flex-1">
-                        <Input
-                          value={aresQuery}
-                          onChange={(e) => handleAresQueryChange(e.target.value)}
-                          onFocus={() => aresResults.length > 0 && setShowResults(true)}
-                          onBlur={() => setTimeout(() => setShowResults(false), 200)}
-                          placeholder="Začni psát jméno nebo název firmy..."
-                        />
-                        {isSearching && (
-                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                        )}
-                      </div>
-                    </div>
-                    <FormDescription className="mt-1">
-                      Zadej alespoň 3 znaky pro vyhledání v ARES
-                    </FormDescription>
-
-                    {/* Dropdown results */}
-                    {showResults && aresResults.length > 0 && (
-                      <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                        {aresResults.map((r) => (
-                          <button
-                            key={r.ico}
-                            type="button"
-                            className="w-full text-left px-3 py-2.5 hover:bg-accent transition-colors border-b last:border-b-0 flex items-center justify-between gap-2"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => handleSelectAresResult(r)}
-                          >
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">{r.name}</p>
-                              {r.city && <p className="text-xs text-muted-foreground">{r.city}</p>}
-                            </div>
-                            <span className="text-xs font-mono text-muted-foreground shrink-0">IČO {r.ico}</span>
-                          </button>
-                        ))}
-                      </div>
+                <div className="relative">
+                  <FormLabel>Vyhledat firmu / OSVČ</FormLabel>
+                  <div className="mt-1.5 relative">
+                    <Input
+                      value={aresQuery}
+                      onChange={(e) => handleAresQueryChange(e.target.value)}
+                      onFocus={() => aresResults.length > 0 && setShowResults(true)}
+                      onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                      placeholder="Začni psát jméno nebo název firmy..."
+                    />
+                    {isSearching && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
                     )}
                   </div>
 
-                  {/* IČO field (manual or auto-filled) */}
-                  <FormField
-                    control={form.control}
-                    name="ico"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>IČO</FormLabel>
-                        <div className="flex gap-2">
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="12345678"
-                              maxLength={8}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                setAresValidated(false);
-                                setAresError(null);
-                              }}
-                            />
-                          </FormControl>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => validateARES(field.value)}
-                            disabled={isValidatingARES || field.value.length !== 8}
-                          >
-                            {isValidatingARES ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <>
-                                <Search className="h-4 w-4 mr-1" />
-                                ARES
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        {aresError && (
-                          <div className="flex items-center gap-1 text-sm text-destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            {aresError}
+                  {aresError && (
+                    <div className="flex items-center gap-1 text-sm text-destructive mt-1">
+                      <AlertCircle className="h-4 w-4" />
+                      {aresError}
+                    </div>
+                  )}
+                  {aresValidated && (
+                    <div className="flex items-center gap-1 text-sm text-green-600 mt-1">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Údaje načteny z ARES (IČO: {form.getValues('ico')})
+                    </div>
+                  )}
+                  {!aresValidated && !aresError && (
+                    <FormDescription className="mt-1">
+                      Zadej alespoň 3 znaky pro vyhledání v ARES
+                    </FormDescription>
+                  )}
+
+                  {/* Dropdown results */}
+                  {showResults && aresResults.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                      {aresResults.map((r) => (
+                        <button
+                          key={r.ico}
+                          type="button"
+                          className="w-full text-left px-3 py-2.5 hover:bg-accent transition-colors border-b last:border-b-0 flex items-center justify-between gap-2"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSelectAresResult(r)}
+                        >
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{r.name}</p>
+                            {r.city && <p className="text-xs text-muted-foreground">{r.city}</p>}
                           </div>
-                        )}
-                        {aresValidated && (
-                          <div className="flex items-center gap-1 text-sm text-green-600">
-                            <CheckCircle2 className="h-4 w-4" />
-                            IČO ověřeno v ARES
-                          </div>
-                        )}
-                        <FormDescription>
-                          Nebo zadej IČO přímo a klikni na ARES
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <span className="text-xs font-mono text-muted-foreground shrink-0">IČO {r.ico}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
