@@ -518,6 +518,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           updated_at: data.updated_at || new Date().toISOString(),
           estimated_start_date: data.estimated_start_date || undefined,
           loom_url: data.loom_url || undefined,
+          monthly_discount_percent: data.monthly_discount_percent || undefined,
+          discount_scope: data.discount_scope || undefined,
           owner_name: data.owner_name || undefined,
           owner_email: data.owner_email || undefined,
           owner_phone: data.owner_phone || undefined,
@@ -590,9 +592,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   }
 
   const isExpired = offer.valid_until && new Date(offer.valid_until) < new Date();
-  const totalMonthly = offer.services
-    .filter(s => s.billing_type === 'monthly')
+  const coreMonthly = offer.services
+    .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
     .reduce((sum, s) => sum + s.price, 0);
+  const addonMonthly = offer.services
+    .filter(s => s.billing_type === 'monthly' && s.service_type !== 'core')
+    .reduce((sum, s) => sum + s.price, 0);
+  const totalMonthly = coreMonthly + addonMonthly;
   const totalOneOff = offer.services
     .filter(s => s.billing_type === 'one_off')
     .reduce((sum, s) => sum + s.price, 0);
@@ -779,17 +785,53 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* Pricing Summary - Clean */}
         <section className="mb-10">
-          <div className="p-5 rounded-xl border bg-card">
+          <div className="p-5 rounded-xl border bg-card space-y-3">
+            {totalMonthly > 0 && (() => {
+              const discountPercent = offer.monthly_discount_percent || 0;
+              const scope = offer.discount_scope || 'core_only';
+              const discountBase = scope === 'all_services' ? totalMonthly : coreMonthly;
+              const discountedBase = discountPercent > 0
+                ? Math.round(discountBase * (1 - discountPercent / 100))
+                : discountBase;
+              const discountAmount = discountBase - discountedBase;
+              const totalAfterDiscount = scope === 'all_services'
+                ? discountedBase
+                : discountedBase + addonMonthly;
+
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Měsíční cena</span>
+                    <div className="text-right">
+                      {discountPercent > 0 ? (
+                        <>
+                          <span className="text-base text-muted-foreground line-through mr-2">
+                            {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
+                          </span>
+                          <span className="text-2xl font-bold text-foreground">
+                            {totalAfterDiscount.toLocaleString('cs-CZ')} {offer.currency}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-2xl font-bold text-foreground">
+                          {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
+                        </span>
+                      )}
+                      <span className="text-sm text-muted-foreground ml-1">/měsíc</span>
+                    </div>
+                  </div>
+                  {discountPercent > 0 && (
+                    <div className="flex items-center justify-between text-sm text-green-600">
+                      <span>Sleva {discountPercent}% {scope === 'all_services' ? 'na všechny služby' : 'na core služby'} při odběru všech služeb</span>
+                      <span className="font-medium">-{discountAmount.toLocaleString('cs-CZ')} {offer.currency}/měs</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="space-y-1">
-                {totalMonthly > 0 && (
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-foreground">
-                      {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
-                    </span>
-                    <span className="text-sm text-muted-foreground">/měsíc</span>
-                  </div>
-                )}
                 {totalOneOff > 0 && (
                   <p className="text-sm text-muted-foreground">
                     + jednorázově {totalOneOff.toLocaleString('cs-CZ')} {offer.currency}

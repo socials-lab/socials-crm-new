@@ -2448,10 +2448,12 @@ export type Database = {
           created_by: string | null
           currency: string | null
           custom_note: string | null
+          discount_scope: string | null
           estimated_start_date: string | null
           id: string
           is_active: boolean | null
           lead_id: string | null
+          monthly_discount_percent: number | null
           notion_url: string | null
           offer_type: string | null
           owner_email: string | null
@@ -2476,10 +2478,12 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           custom_note?: string | null
+          discount_scope?: string | null
           estimated_start_date?: string | null
           id?: string
           is_active?: boolean | null
           lead_id?: string | null
+          monthly_discount_percent?: number | null
           notion_url?: string | null
           offer_type?: string | null
           owner_email?: string | null
@@ -2504,10 +2508,12 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           custom_note?: string | null
+          discount_scope?: string | null
           estimated_start_date?: string | null
           id?: string
           is_active?: boolean | null
           lead_id?: string | null
+          monthly_discount_percent?: number | null
           notion_url?: string | null
           offer_type?: string | null
           owner_email?: string | null
