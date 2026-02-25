@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -36,12 +36,13 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { AvatarUpload } from '@/components/forms/AvatarUpload';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { useAresLookup } from '@/hooks/useAresLookup';
 import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
 import type { CompanySearchResult } from '@/hooks/useAresSearch';
@@ -63,10 +64,13 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function MyProfile() {
+  const { user } = useAuth();
   const { colleagueId } = useUserRole();
-  const { colleagues, updateColleague, getColleagueById } = useCRMData();
+  const { updateColleague, getColleagueById } = useCRMData();
   const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
 
   const currentColleague = useMemo(() => {
     if (!colleagueId) return null;
@@ -106,6 +110,58 @@ export default function MyProfile() {
       });
     }
   }, [currentColleague?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadAvatar = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to load profile avatar:', error);
+        return;
+      }
+
+      setAvatarUrl(data?.avatar_url ?? null);
+    };
+
+    loadAvatar();
+  }, [user?.id]);
+
+  const handleAvatarChange = async (newAvatarUrl: string | null) => {
+    if (!user?.id) return;
+
+    const previousAvatar = avatarUrl;
+    setAvatarUrl(newAvatarUrl);
+    setIsSavingAvatar(true);
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: user.id,
+            avatar_url: newAvatarUrl,
+            full_name: user.user_metadata?.full_name || currentColleague?.full_name || null,
+            email: user.email || null,
+          },
+          { onConflict: 'id' }
+        );
+
+      if (error) throw error;
+      toast.success('Profilová fotka byla uložena');
+    } catch (error) {
+      console.error('Failed to save profile avatar:', error);
+      setAvatarUrl(previousAvatar);
+      toast.error('Nepodařilo se uložit profilovou fotku');
+    } finally {
+      setIsSavingAvatar(false);
+    }
+  };
 
   const handleAresLookup = async () => {
     const ico = form.getValues('ico');
@@ -206,12 +262,6 @@ export default function MyProfile() {
     );
   }
 
-  const initials = currentColleague.full_name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase();
-
   const seniorityLabels: Record<string, string> = {
     junior: 'Junior',
     mid: 'Mid',
@@ -231,11 +281,13 @@ export default function MyProfile() {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-start gap-6">
-            <Avatar className="h-20 w-20 text-2xl">
-              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <AvatarUpload
+              value={avatarUrl}
+              onChange={handleAvatarChange}
+              name={currentColleague.full_name}
+              disabled={isSavingAvatar}
+              className="shrink-0"
+            />
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-2xl font-bold">{currentColleague.full_name}</h2>

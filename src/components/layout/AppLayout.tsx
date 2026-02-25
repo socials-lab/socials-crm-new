@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { MobileBottomNav } from './MobileBottomNav';
@@ -6,7 +7,8 @@ import { Outlet } from 'react-router-dom';
 import { Menu, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { supabase } from '@/integrations/supabase/client';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,12 +39,40 @@ function MobileMenuButton() {
 
 function UserMenu() {
   const { user, signOut } = useAuth();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadAvatar = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to load user avatar:', error);
+        return;
+      }
+
+      setAvatarUrl(data?.avatar_url ?? null);
+    };
+
+    loadAvatar();
+  }, [user?.id]);
 
   if (!user) return null;
 
-  const initials = user.email 
-    ? user.email.substring(0, 2).toUpperCase() 
-    : 'U';
+  const nameForInitials =
+    user.user_metadata?.full_name || user.email?.split('@')[0] || 'Uživatel';
+
+  const initials = nameForInitials
+    .split(' ')
+    .map((part: string) => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   const handleSignOut = async () => {
     await signOut();
@@ -54,6 +84,7 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
+            {avatarUrl ? <AvatarImage src={avatarUrl} alt="Profilová fotka" /> : null}
             <AvatarFallback className="bg-primary text-primary-foreground text-xs">
               {initials}
             </AvatarFallback>
