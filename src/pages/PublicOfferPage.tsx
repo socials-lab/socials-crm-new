@@ -502,7 +502,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           audit_summary: data.audit_summary,
           recommendation_intro: data.recommendation_intro,
           custom_note: data.custom_note,
-          notion_url: data.notion_url,
+          // Hard-disable legacy Notion detail link payload path
+          notion_url: null,
           services: (data.services as PublicOfferService[]) || [],
           portfolio_links: (data.portfolio_links as PortfolioLink[]) || [],
           total_price: data.total_price || 0,
