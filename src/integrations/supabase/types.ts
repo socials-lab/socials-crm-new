@@ -1746,6 +1746,8 @@ export type Database = {
           created_by: string | null
           currency: string | null
           dic: string | null
+          vat_payer_status: string | null
+          vat_payer_checked_at: string | null
           digisign_id: string | null
           estimated_price: number | null
           ico: string
@@ -1807,6 +1809,8 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           dic?: string | null
+          vat_payer_status?: string | null
+          vat_payer_checked_at?: string | null
           digisign_id?: string | null
           estimated_price?: number | null
           ico: string
@@ -1868,6 +1872,8 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           dic?: string | null
+          vat_payer_status?: string | null
+          vat_payer_checked_at?: string | null
           digisign_id?: string | null
           estimated_price?: number | null
           ico?: string

@@ -167,14 +167,40 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   }, [lead?.potential_services, lead?.onboarding_signatories]);
 
   // VAT reliability check
-  const { data: vatData, isLoading: isLoadingVat } = useVatReliability(lead?.dic);
+  // Policy: no automatic background refresh.
+  // We only check when there is no stored result yet.
+  const shouldCheckVatReliability = !!lead?.dic && !lead?.vat_payer_status;
+  const { data: vatData, isLoading: isLoadingVat } = useVatReliability(
+    shouldCheckVatReliability ? lead?.dic : null
+  );
 
-  // Auto-save VAT status when fetched
+  const lastVatPersistAttemptRef = useRef<string | null>(null);
+
+  // Persist first retrieved status + retrieval timestamp (without periodic refreshes)
   useEffect(() => {
-    if (vatData?.vatStatus && lead?.id && vatData.vatStatus !== lead.vat_payer_status) {
-      updateLead(lead.id, { vat_payer_status: vatData.vatStatus } as Partial<Lead>);
+    if (!lead?.id || !vatData?.status) return;
+
+    if (vatData.status !== 'reliable' && vatData.status !== 'unreliable' && vatData.status !== 'not_found') {
+      return;
     }
-  }, [vatData?.vatStatus, lead?.id, lead?.vat_payer_status, updateLead]);
+
+    if (lead.vat_payer_status === vatData.status && lead.vat_payer_checked_at) return;
+
+    const persistKey = `${lead.id}:${vatData.status}`;
+    if (lastVatPersistAttemptRef.current === persistKey) return;
+    lastVatPersistAttemptRef.current = persistKey;
+
+    updateLead(lead.id, {
+      vat_payer_status: vatData.status,
+      vat_payer_checked_at: new Date().toISOString(),
+    } as Partial<Lead>).catch((error) => {
+      console.error('Failed to persist VAT status/timestamp:', {
+        leadId: lead.id,
+        status: vatData.status,
+        error,
+      });
+    });
+  }, [lead?.id, lead?.vat_payer_status, lead?.vat_payer_checked_at, updateLead, vatData?.status]);
 
   if (!lead) return null;
 
@@ -182,6 +208,11 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
   const history = getLeadHistory(lead.id);
   const isNewLead = lead.stage === 'new_lead';
+
+  const resolvedVatStatus =
+    vatData?.status === 'reliable' || vatData?.status === 'unreliable' || vatData?.status === 'not_found'
+      ? vatData.status
+      : lead.vat_payer_status;
 
   const handleStageChange = async (newStage: LeadStage) => {
     const fromStage = lead.stage;
@@ -693,27 +724,38 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                       {/* VAT Payer Reliability Badge */}
                       {lead.dic && (
                         <div className="mt-1">
-                          {isLoadingVat ? (
+                          {shouldCheckVatReliability && isLoadingVat ? (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Loader2 className="h-3 w-3 animate-spin" />
                               Ověřuji spolehlivost plátce DPH…
                             </div>
-                          ) : vatData?.vatStatus === 'reliable' || lead.vat_payer_status === 'reliable' ? (
+                          ) : resolvedVatStatus === 'reliable' ? (
                             <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
                               <ShieldCheck className="h-3 w-3 mr-1" />
                               Spolehlivý plátce DPH
                             </Badge>
-                          ) : vatData?.vatStatus === 'unreliable' || lead.vat_payer_status === 'unreliable' ? (
+                          ) : resolvedVatStatus === 'unreliable' ? (
                             <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive font-medium flex items-center gap-2">
                               <ShieldAlert className="h-4 w-4" />
                               NESPOLEHLIVÝ PLÁTCE DPH
                             </div>
-                          ) : vatData?.vatStatus === 'not_found' || lead.vat_payer_status === 'not_found' ? (
+                          ) : resolvedVatStatus === 'not_found' ? (
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                               <ShieldX className="h-3 w-3" />
                               Není plátce DPH
                             </span>
+                          ) : vatData?.status === 'error' ? (
+                            <span className="text-xs text-amber-700 flex items-center gap-1">
+                              <ShieldAlert className="h-3 w-3" />
+                              Ověření plátce DPH se nepodařilo{vatData.requestId ? ` (ID: ${vatData.requestId.slice(0, 8)})` : ''}
+                            </span>
                           ) : null}
+
+                          {lead.vat_payer_checked_at && (
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              Naposledy ověřeno: {new Date(lead.vat_payer_checked_at).toLocaleString('cs-CZ')}
+                            </p>
+                          )}
                         </div>
                       )}
                       {lead.legal_form && (

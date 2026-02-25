@@ -575,6 +575,8 @@ export interface Lead {
   company_name: string;
   ico: string;
   dic: string | null;
+  vat_payer_status: 'reliable' | 'unreliable' | 'not_found' | null;
+  vat_payer_checked_at: string | null;
   website: string | null;
   industry: string | null;
   

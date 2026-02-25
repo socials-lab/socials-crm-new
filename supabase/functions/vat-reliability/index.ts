@@ -11,11 +11,17 @@ interface VatReliabilityRequest {
 
 interface VatReliabilityResponse {
   dic: string;
-  status: 'reliable' | 'unreliable' | 'not_found' | 'error';
+  status: "reliable" | "unreliable" | "not_found" | "error";
   message?: string;
+  requestId?: string;
+  elapsedMs?: number;
+  upstreamStatus?: number;
 }
 
 serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -23,97 +29,186 @@ serve(async (req) => {
   try {
     const { dic }: VatReliabilityRequest = await req.json();
 
-    if (!dic || dic.length < 10) {
+    if (!dic) {
       return new Response(
-        JSON.stringify({ status: 'error', message: 'Neplatné DIČ' }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        JSON.stringify({ status: "error", message: "Neplatné DIČ", requestId }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
       );
     }
 
-    // Clean the DIC - remove 'CZ' prefix if present
-    const cleanDic = dic.replace(/^CZ/i, '');
+    // Clean DIČ for MFCR service (expects numeric part without CZ prefix)
+    const cleanDic = dic.replace(/^CZ/i, "").trim();
 
-    // Build SOAP request for Czech Ministry of Finance (MFCR) API
+    if (!/^\d{8,10}$/.test(cleanDic)) {
+      return new Response(
+        JSON.stringify({ status: "error", message: "Neplatné DIČ", requestId }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
+      );
+    }
+
+    // MFCR SOAP operation for VAT payer reliability
     const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:roz="http://adis.mfcr.cz/rozhraniCRPDPH/">
-  <soap:Body>
-    <roz:StatusNespsRequest>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:roz="http://adis.mfcr.cz/rozhraniCRPDPH/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <roz:StatusNespolehlivyPlatceRequest>
       <roz:dic>${cleanDic}</roz:dic>
-    </roz:StatusNespsRequest>
-  </soap:Body>
-</soap:Envelope>`;
+    </roz:StatusNespolehlivyPlatceRequest>
+  </soapenv:Body>
+</soapenv:Envelope>`;
 
-    const response = await fetch(
-      "https://adisrws.mfcr.cz/dpr/axis2/services/rozhraniCRPDPH.rozhraniCRPDPHSOAP",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/xml; charset=utf-8",
-          "SOAPAction": "http://adis.mfcr.cz/rozhraniCRPDPH/StatusNespsRequest",
+    // Prevent endless waiting when MFCR is slow/unavailable
+    const timeoutMs = 10000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response: Response;
+    let xmlText = "";
+
+    try {
+      const upstreamStartedAt = Date.now();
+      response = await fetch(
+        "https://adisrws.mfcr.cz/dpr/axis2/services/rozhraniCRPDPH.rozhraniCRPDPHSOAP",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/xml; charset=utf-8",
+            // This endpoint accepts empty SOAPAction; explicit operation strings can fail on Axis routing
+            "SOAPAction": "",
+          },
+          body: soapBody,
+          signal: controller.signal,
         },
-        body: soapBody,
-      }
-    );
-
-    if (!response.ok) {
-      console.error("MFCR API error:", await response.text());
-      return new Response(
-        JSON.stringify({
-          dic,
-          status: 'error',
-          message: 'Nepodařilo se ověřit spolehlivost plátce'
-        } as VatReliabilityResponse),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    }
+      const upstreamElapsedMs = Date.now() - upstreamStartedAt;
 
-    const xmlText = await response.text();
+      xmlText = await response.text();
 
-    // Parse the response - look for nespolehlivyPlatce attribute
-    // 'ANO' = unreliable, 'NE' = reliable
-    const unreliableMatch = xmlText.match(/nespolehlivyPlatce[^>]*>([^<]+)</);
+      console.info("[vat-reliability] upstream response", {
+        requestId,
+        dic: cleanDic,
+        upstreamStatus: response.status,
+        upstreamElapsedMs,
+        totalElapsedMs: Date.now() - startedAt,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        console.warn("[vat-reliability] upstream timeout", {
+          requestId,
+          dic: cleanDic,
+          timeoutMs,
+          totalElapsedMs: Date.now() - startedAt,
+        });
 
-    if (!unreliableMatch) {
-      // Check if DIC was found at all
-      if (xmlText.includes('nenalezeno') || xmlText.includes('neexistuje')) {
         return new Response(
           JSON.stringify({
             dic,
-            status: 'not_found',
-            message: 'DIČ nebylo nalezeno v registru'
+            status: "error",
+            message: "Vypršel čas pro ověření spolehlivosti plátce",
+            requestId,
+            elapsedMs: Date.now() - startedAt,
           } as VatReliabilityResponse),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
+
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (!response.ok || xmlText.includes("<soapenv:Fault")) {
+      console.error("[vat-reliability] MFCR API fault", {
+        requestId,
+        dic: cleanDic,
+        upstreamStatus: response.status,
+        responsePreview: xmlText.slice(0, 500),
+        totalElapsedMs: Date.now() - startedAt,
+      });
 
       return new Response(
         JSON.stringify({
           dic,
-          status: 'error',
-          message: 'Nepodařilo se zpracovat odpověď'
+          status: "error",
+          message: "Nepodařilo se ověřit spolehlivost plátce",
+          requestId,
+          elapsedMs: Date.now() - startedAt,
+          upstreamStatus: response.status,
         } as VatReliabilityResponse),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const isUnreliable = unreliableMatch[1].trim().toUpperCase() === 'ANO';
+    // MFCR returns reliability as attribute nespolehlivyPlatce="ANO|NE"
+    const unreliableAttrMatch = xmlText.match(/nespolehlivyPlatce="([^"]+)"/i);
+    if (unreliableAttrMatch) {
+      const isUnreliable = unreliableAttrMatch[1].trim().toUpperCase() === "ANO";
+
+      return new Response(
+        JSON.stringify({
+          dic,
+          status: isUnreliable ? "unreliable" : "reliable",
+          requestId,
+          elapsedMs: Date.now() - startedAt,
+          upstreamStatus: response.status,
+        } as VatReliabilityResponse),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // MFCR not-found / invalid VAT payer style responses
+    if (
+      /statusCode="1"/i.test(xmlText) ||
+      xmlText.includes("nenalezen") ||
+      xmlText.includes("neexistuje")
+    ) {
+      return new Response(
+        JSON.stringify({
+          dic,
+          status: "not_found",
+          message: "DIČ nebylo nalezeno v registru",
+          requestId,
+          elapsedMs: Date.now() - startedAt,
+          upstreamStatus: response.status,
+        } as VatReliabilityResponse),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    console.error("[vat-reliability] unparsable upstream response", {
+      requestId,
+      dic: cleanDic,
+      upstreamStatus: response.status,
+      responsePreview: xmlText.slice(0, 500),
+      totalElapsedMs: Date.now() - startedAt,
+    });
 
     return new Response(
       JSON.stringify({
         dic,
-        status: isUnreliable ? 'unreliable' : 'reliable'
+        status: "error",
+        message: "Nepodařilo se zpracovat odpověď",
+        requestId,
+        elapsedMs: Date.now() - startedAt,
+        upstreamStatus: response.status,
       } as VatReliabilityResponse),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-
   } catch (error) {
-    console.error("VAT reliability check error:", error);
+    console.error("[vat-reliability] unexpected error", {
+      requestId,
+      totalElapsedMs: Date.now() - startedAt,
+      error,
+    });
+
     return new Response(
       JSON.stringify({
-        status: 'error',
-        message: error instanceof Error ? error.message : 'Interní chyba'
+        status: "error",
+        message: error instanceof Error ? error.message : "Interní chyba",
+        requestId,
+        elapsedMs: Date.now() - startedAt,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 },
     );
   }
 });
