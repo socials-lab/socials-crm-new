@@ -9,6 +9,7 @@ interface GoogleAuthExchangeRequest {
   code: string;
   redirect_uri: string;
   branch: string;
+  anon_key: string;
 }
 
 serve(async (req) => {
@@ -17,22 +18,23 @@ serve(async (req) => {
   }
 
   try {
-    const { code, redirect_uri, branch }: GoogleAuthExchangeRequest = await req.json();
+    const { code, redirect_uri, branch, anon_key }: GoogleAuthExchangeRequest = await req.json();
 
-    if (!code || !redirect_uri || !branch) {
+    if (!code || !redirect_uri || !branch || !anon_key) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: code, redirect_uri, branch" }),
+        JSON.stringify({ error: "Missing required fields: code, redirect_uri, branch, anon_key" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const anonKey = req.headers.get("apikey");
-    if (!anonKey) {
+    if (!/^[a-z0-9]{20}$/i.test(branch)) {
       return new Response(
-        JSON.stringify({ error: "Missing apikey header" }),
+        JSON.stringify({ error: "Invalid branch ref" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const anonKey = anon_key;
 
     const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
     const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
