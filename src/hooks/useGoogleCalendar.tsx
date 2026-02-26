@@ -139,6 +139,99 @@ export function useGoogleCalendar() {
     window.location.href = authUrl;
   };
 
+  const SESSION_RESET_MESSAGE = 'Relace vypršela nebo je neplatná. Přihlaste se prosím znovu.';
+
+  const getSupabaseProjectRef = () => {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) return null;
+      return new URL(supabaseUrl).hostname.split('.')[0] ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  const decodeJwtPayload = (token?: string | null): Record<string, unknown> | null => {
+    if (!token) return null;
+
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+
+    try {
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+      const json = atob(padded);
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  };
+
+  const hasProjectRefMismatch = (accessToken?: string | null) => {
+    const expectedRef = getSupabaseProjectRef();
+    if (!expectedRef) return false;
+
+    const payload = decodeJwtPayload(accessToken);
+    const tokenRef = typeof payload?.ref === 'string' ? payload.ref : null;
+    return !!tokenRef && tokenRef !== expectedRef;
+  };
+
+  const clearSupabaseAuthStorage = () => {
+    const projectRef = getSupabaseProjectRef();
+    const storageAreas = [window.localStorage, window.sessionStorage];
+
+    for (const storage of storageAreas) {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < storage.length; i += 1) {
+        const key = storage.key(i);
+        if (!key) continue;
+
+        const isCurrentProjectAuthKey = projectRef
+          ? key.startsWith(`sb-${projectRef}-`) && key.includes('auth-token')
+          : false;
+        const isSupabaseAuthTokenKey = /^sb-[^-]+-auth-token$/.test(key);
+
+        if (isCurrentProjectAuthKey || isSupabaseAuthTokenKey) {
+          keysToRemove.push(key);
+        }
+      }
+
+      keysToRemove.forEach((key) => storage.removeItem(key));
+    }
+  };
+
+  const forceSessionReset = async () => {
+    await supabase.auth.signOut({ scope: 'local' });
+    clearSupabaseAuthStorage();
+    toast.error(SESSION_RESET_MESSAGE);
+  };
+
+  const isAuthFunctionError = (error: unknown) => {
+    if (!error) return false;
+
+    const candidate = error as {
+      message?: string;
+      name?: string;
+      context?: { status?: number };
+      status?: number;
+    };
+
+    const message = candidate.message?.toLowerCase() ?? '';
+    const status = candidate.context?.status ?? candidate.status;
+
+    if (status === 401) return true;
+
+    const looksLikeInvalidJwt =
+      message.includes('invalid jwt') ||
+      message.includes('jwt expired') ||
+      message.includes('unauthorized') ||
+      message.includes('session') ||
+      message.includes('401');
+
+    const isFunctionsHttpError = candidate.name === 'FunctionsHttpError';
+    return status === 401 || (isFunctionsHttpError && looksLikeInvalidJwt) || looksLikeInvalidJwt;
+  };
+
   const createCalendarEvent = async (meetingId: string) => {
     setIsLoading(true);
     setError(null);
@@ -193,7 +286,7 @@ export function useGoogleCalendar() {
   };
 
   // Fetch calendar events
-  const fetchCalendarEvents = useCallback(async (options?: {
+  const fetchCalendarEvents = async (options?: {
     timeMin?: string;
     timeMax?: string;
     maxResults?: number;
@@ -209,6 +302,12 @@ export function useGoogleCalendar() {
         return [];
       }
 
+      if (hasProjectRefMismatch(session.access_token)) {
+        console.warn('Supabase session project ref mismatch detected, resetting local session');
+        await forceSessionReset();
+        return [];
+      }
+
       // Convert to snake_case for the edge function
       const body = options ? {
         time_min: options.timeMin,
@@ -218,9 +317,36 @@ export function useGoogleCalendar() {
 
       console.log('Fetching calendar events with options:', body);
 
-      const { data, error } = await supabase.functions.invoke('calendar-fetch-events', {
-        body,
-      });
+      const invokeCalendarFetch = () => supabase.functions.invoke('calendar-fetch-events', { body });
+
+      let { data, error } = await invokeCalendarFetch();
+
+      if (error && isAuthFunctionError(error)) {
+        console.warn('Calendar fetch auth error detected, trying one refresh+retry cycle', error);
+
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        const refreshedSession = refreshData.session;
+
+        if (
+          refreshError ||
+          !refreshedSession ||
+          hasProjectRefMismatch(refreshedSession.access_token)
+        ) {
+          console.error('Session refresh failed or produced invalid session, forcing reset', refreshError);
+          await forceSessionReset();
+          return [];
+        }
+
+        const retryResult = await invokeCalendarFetch();
+        data = retryResult.data;
+        error = retryResult.error;
+
+        if (error && isAuthFunctionError(error)) {
+          console.error('Calendar fetch still failing auth after refresh, forcing reset', error);
+          await forceSessionReset();
+          return [];
+        }
+      }
 
       console.log('Calendar fetch response:', { data, error });
 
@@ -257,7 +383,7 @@ export function useGoogleCalendar() {
       toast.error('Nepodařilo se načíst kalendář');
       return [];
     }
-  }, [connectGoogleCalendar]);
+  };
 
   return {
     connectGoogleCalendar,
