@@ -140,6 +140,8 @@ export function useGoogleCalendar() {
   };
 
   const SESSION_RESET_MESSAGE = 'Relace vypršela nebo je neplatná. Přihlaste se prosím znovu.';
+  const RELOGIN_REQUIRED_MESSAGE = 'Vaše přihlášení vyžaduje nové ověření. Přihlaste se prosím znovu.';
+  const PROJECT_REF_RESET_COOLDOWN_KEY = 'google_calendar_project_ref_reset_done';
 
   const getSupabaseProjectRef = () => {
     try {
@@ -200,10 +202,48 @@ export function useGoogleCalendar() {
     }
   };
 
+  const notifySessionInvalid = () => {
+    toast.error(SESSION_RESET_MESSAGE);
+  };
+
+  const notifyReloginRequired = () => {
+    toast.error(RELOGIN_REQUIRED_MESSAGE);
+  };
+
+  const shouldSkipProjectRefReset = () => {
+    try {
+      return window.sessionStorage.getItem(PROJECT_REF_RESET_COOLDOWN_KEY) === '1';
+    } catch {
+      return false;
+    }
+  };
+
+  const markProjectRefResetHandled = () => {
+    try {
+      window.sessionStorage.setItem(PROJECT_REF_RESET_COOLDOWN_KEY, '1');
+    } catch {
+      // Ignore storage failures
+    }
+  };
+
   const forceSessionReset = async () => {
     await supabase.auth.signOut({ scope: 'local' });
     clearSupabaseAuthStorage();
-    toast.error(SESSION_RESET_MESSAGE);
+    notifySessionInvalid();
+  };
+
+  const handleProjectRefMismatch = async (accessToken?: string | null) => {
+    if (!hasProjectRefMismatch(accessToken)) return false;
+
+    if (shouldSkipProjectRefReset()) {
+      console.warn('Supabase session project ref mismatch already handled in this tab, skipping repeated reset');
+      return true;
+    }
+
+    markProjectRefResetHandled();
+    console.warn('Supabase session project ref mismatch detected, resetting local session');
+    await forceSessionReset();
+    return true;
   };
 
   const isAuthFunctionError = (error: unknown) => {
@@ -302,9 +342,7 @@ export function useGoogleCalendar() {
         return [];
       }
 
-      if (hasProjectRefMismatch(session.access_token)) {
-        console.warn('Supabase session project ref mismatch detected, resetting local session');
-        await forceSessionReset();
+      if (await handleProjectRefMismatch(session.access_token)) {
         return [];
       }
 
@@ -327,13 +365,13 @@ export function useGoogleCalendar() {
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
         const refreshedSession = refreshData.session;
 
-        if (
-          refreshError ||
-          !refreshedSession ||
-          hasProjectRefMismatch(refreshedSession.access_token)
-        ) {
-          console.error('Session refresh failed or produced invalid session, forcing reset', refreshError);
-          await forceSessionReset();
+        if (await handleProjectRefMismatch(refreshedSession?.access_token)) {
+          return [];
+        }
+
+        if (refreshError || !refreshedSession) {
+          console.error('Session refresh failed or produced invalid session', refreshError);
+          notifyReloginRequired();
           return [];
         }
 
@@ -342,8 +380,8 @@ export function useGoogleCalendar() {
         error = retryResult.error;
 
         if (error && isAuthFunctionError(error)) {
-          console.error('Calendar fetch still failing auth after refresh, forcing reset', error);
-          await forceSessionReset();
+          console.error('Calendar fetch still failing auth after refresh, re-login required', error);
+          notifyReloginRequired();
           return [];
         }
       }
