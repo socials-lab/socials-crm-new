@@ -26,6 +26,7 @@ export function CompanySearchInput({
   const [inputValue, setInputValue] = useState(value);
   const [isPending, setIsPending] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pointerSelectionRef = useRef(false);
   const { debouncedSearch, results, isSearching, error, clearResults } = useAresSearch();
 
   // Sync input value with prop value
@@ -51,6 +52,11 @@ export function CompanySearchInput({
 
   // Handle company selection
   const handleSelect = (company: CompanySearchResult) => {
+    console.debug('[CompanySearchInput] company selected', {
+      ico: company.ico,
+      name: company.name,
+    });
+
     setInputValue(company.name);
     onChange(company.name);
     setOpen(false);
@@ -116,10 +122,29 @@ export function CompanySearchInput({
             {!error && results.length > 0 && (
               <div className="p-1">
                 {results.map((company) => (
-                  <div
+                  <button
                     key={company.ico}
-                    onClick={() => handleSelect(company)}
-                    className="flex flex-col gap-1 w-full p-2 rounded-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
+                    type="button"
+                    onPointerDown={(event) => {
+                      // Pointer down is the most reliable in dialogs/focus traps.
+                      pointerSelectionRef.current = true;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      handleSelect(company);
+                    }}
+                    onClick={(event) => {
+                      // Fallback for keyboard activation (Enter/Space).
+                      event.preventDefault();
+                      event.stopPropagation();
+
+                      if (pointerSelectionRef.current) {
+                        pointerSelectionRef.current = false;
+                        return;
+                      }
+
+                      handleSelect(company);
+                    }}
+                    className="flex flex-col gap-1 w-full p-2 rounded-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors text-left"
                   >
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -135,7 +160,7 @@ export function CompanySearchInput({
                         <span className="truncate">{company.address}</span>
                       </div>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

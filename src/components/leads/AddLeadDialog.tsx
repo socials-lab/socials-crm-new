@@ -144,14 +144,27 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
   };
 
   const handleCompanySelect = (company: CompanySearchResult) => {
+    console.debug('[AddLeadDialog] applying company autofill', {
+      ico: company.ico,
+      name: company.name,
+      dic: company.dic,
+    });
+
     // Auto-fill all fields from selected company
-    form.setValue('company_name', company.name);
-    form.setValue('ico', company.ico);
-    form.setValue('dic', company.dic || '');
-    form.setValue('billing_street', company.billing_street);
-    form.setValue('billing_city', company.billing_city);
-    form.setValue('billing_zip', company.billing_zip);
-    form.setValue('billing_country', company.billing_country);
+    form.setValue('company_name', company.name, { shouldDirty: true, shouldValidate: true });
+    form.setValue('ico', company.ico, { shouldDirty: true, shouldValidate: true });
+    form.setValue('dic', company.dic || '', { shouldDirty: true });
+    form.setValue('billing_street', company.billing_street, { shouldDirty: true });
+    form.setValue('billing_city', company.billing_city, { shouldDirty: true });
+    form.setValue('billing_zip', company.billing_zip, { shouldDirty: true });
+    form.setValue('billing_country', company.billing_country, { shouldDirty: true });
+
+    console.debug('[AddLeadDialog] autofill applied values', {
+      company_name: form.getValues('company_name'),
+      ico: form.getValues('ico'),
+      dic: form.getValues('dic'),
+    });
+
     toast.success('Údaje načteny z ARES');
   };
 
