@@ -191,7 +191,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
         {/* Cards */}
         <div className={cn(
           "p-1.5 space-y-1.5 flex-1 overflow-y-auto",
-          compact ? "max-h-[200px]" : ""
+          compact ? "max-h-[200px]" : "max-h-[400px]"
         )}>
           {stageLeads.map(lead => (
             <div
