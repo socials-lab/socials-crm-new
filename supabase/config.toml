@@ -16,3 +16,15 @@ redirect_uri = "https://crm.socials.cz/auth-proxy/callback"
 
 [functions.invite-user]
 verify_jwt = false
+
+[functions.calendar-fetch-events]
+verify_jwt = false
+
+[functions.calendar-create-event]
+verify_jwt = false
+
+[functions.calendar-oauth-callback]
+verify_jwt = false
+
+[functions.gmail-send-email]
+verify_jwt = false
