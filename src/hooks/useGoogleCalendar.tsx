@@ -358,7 +358,12 @@ export function useGoogleCalendar() {
       const invokeCalendarFetch = (accessToken?: string | null) =>
         supabase.functions.invoke('calendar-fetch-events', {
           body,
-          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+          headers: accessToken
+            ? {
+                Authorization: `Bearer ${accessToken}`,
+                apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+              }
+            : undefined,
         });
 
       let { data, error } = await invokeCalendarFetch(session.access_token);
