@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { toast } from '@/components/ui/sonner';
 import type { Service, LeadService, ServiceTier } from '@/types/crm';
 import { SERVICE_TIER_CONFIGS } from '@/constants/services';
 
@@ -22,7 +23,7 @@ interface AddLeadServiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   services: Service[];
-  onSubmit: (service: LeadService) => void;
+  onSubmit: (service: LeadService) => Promise<void> | void;
 }
 
 export function AddLeadServiceDialog({
@@ -36,6 +37,7 @@ export function AddLeadServiceDialog({
   const [priceInput, setPriceInput] = useState('0');
   const [currency, setCurrency] = useState('CZK');
   const [billingType, setBillingType] = useState<'monthly' | 'one_off'>('monthly');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedService = services.find(s => s.id === selectedServiceId);
   const isCoreService = selectedService?.service_type === 'core';
@@ -68,26 +70,43 @@ export function AddLeadServiceDialog({
     }
   };
 
-  const handleSubmit = () => {
-    if (!selectedService) return;
+  const handleSubmit = async () => {
+    if (!selectedService) {
+      toast.error('Vyberte službu');
+      return;
+    }
 
-    onSubmit({
-      id: `lead-svc-${Date.now()}`,
-      service_id: selectedServiceId,
-      name: selectedService.name,
-      selected_tier: isCoreService ? selectedTier : null,
-      price: Number(priceInput) || 0,
-      currency,
-      billing_type: billingType,
-    });
+    const parsedPrice = Number(priceInput);
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      toast.error('Zadejte platnou cenu');
+      return;
+    }
 
-    // Reset form
-    setSelectedServiceId('');
-    setSelectedTier(null);
-    setPriceInput('0');
-    setCurrency('CZK');
-    setBillingType('monthly');
-    onOpenChange(false);
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        id: `lead-svc-${Date.now()}`,
+        service_id: selectedServiceId,
+        name: selectedService.name,
+        selected_tier: isCoreService ? selectedTier : null,
+        price: parsedPrice,
+        currency,
+        billing_type: billingType,
+      });
+
+      // Reset form
+      setSelectedServiceId('');
+      setSelectedTier(null);
+      setPriceInput('0');
+      setCurrency('CZK');
+      setBillingType('monthly');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to add service:', error);
+      toast.error('Nepodařilo se přidat službu');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -185,11 +204,11 @@ export function AddLeadServiceDialog({
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Zrušit
             </Button>
-            <Button onClick={handleSubmit} disabled={!selectedServiceId}>
-              Přidat službu
+            <Button type="button" onClick={handleSubmit} disabled={!selectedServiceId || isSubmitting}>
+              {isSubmitting ? 'Přidávám...' : 'Přidat službu'}
             </Button>
           </div>
         </div>

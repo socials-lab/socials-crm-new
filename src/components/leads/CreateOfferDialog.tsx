@@ -215,8 +215,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         });
 
       // Add timeout to prevent hanging forever
+      // Creating an offer can take longer on slower Supabase/connection, so keep this generous.
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Požadavek vypršel. Zkuste to prosím znovu.')), 15000)
+        setTimeout(() => reject(new Error('Požadavek vypršel. Zkuste to prosím znovu.')), 60000)
       );
 
       const { error } = await Promise.race([insertPromise, timeoutPromise]);

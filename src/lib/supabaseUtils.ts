@@ -1,5 +1,40 @@
 import { supabase } from '@/integrations/supabase/client';
 
+async function normalizeInvokeError(error: unknown): Promise<Error> {
+  if (!(error instanceof Error)) {
+    return new Error('Neznámá chyba');
+  }
+
+  const maybeContext = (error as any)?.context;
+  if (maybeContext && typeof maybeContext === 'object' && typeof maybeContext.text === 'function') {
+    try {
+      const response = maybeContext as Response;
+      const status = response.status;
+      const bodyText = await response.clone().text();
+
+      if (bodyText) {
+        try {
+          const parsed = JSON.parse(bodyText) as { error?: string; message?: string; stage?: string; durationMs?: number };
+          const apiMessage = parsed.error || parsed.message;
+          if (apiMessage) {
+            const stage = parsed.stage ? ` [${parsed.stage}]` : '';
+            const duration = parsed.durationMs ? ` (${parsed.durationMs}ms)` : '';
+            return new Error(`${apiMessage}${stage}${duration}`);
+          }
+        } catch {
+          return new Error(`Edge function error (${status}): ${bodyText}`);
+        }
+      }
+
+      return new Error(`Edge function error (${status})`);
+    } catch {
+      // Fall through to original error
+    }
+  }
+
+  return error;
+}
+
 /**
  * Invoke a Supabase edge function with a timeout.
  * Prevents the UI from hanging forever if the function takes too long.
@@ -15,7 +50,8 @@ export async function invokeWithTimeout<T = unknown>(
 ): Promise<{ data: T | null; error: Error | null }> {
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => {
-      reject(new Error('Požadavek vypršel. Zkuste to prosím znovu.'));
+      const timeoutSec = Math.round(timeoutMs / 1000);
+      reject(new Error(`Požadavek vypršel po ${timeoutSec}s (${functionName}). Zkuste to prosím znovu.`));
     }, timeoutMs);
   });
 
@@ -29,7 +65,7 @@ export async function invokeWithTimeout<T = unknown>(
   } catch (error) {
     return {
       data: null,
-      error: error instanceof Error ? error : new Error('Neznámá chyba'),
+      error: await normalizeInvokeError(error),
     };
   }
 }

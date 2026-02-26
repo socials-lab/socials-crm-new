@@ -12,8 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { EmailTagInput } from '@/components/ui/email-tag-input';
 import { useCRMData } from '@/hooks/useCRMData';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { toast } from 'sonner';
 import type { ExtraWork } from '@/types/crm';
 import { Copy, Mail, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -31,6 +32,8 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const [email, setEmail] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -60,6 +63,8 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     if (open) {
       const approvalUrl = getApprovalUrl();
 
+      setCcEmails([]);
+      setBccEmails([DEFAULT_GMAIL_BCC]);
       setEmailSubject(`Schválení vícepráce: ${extraWork.name}`);
 
       const hoursLine = extraWork.hours_worked && extraWork.hourly_rate
@@ -119,7 +124,10 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
         .replace(/\n/g, '<br>')
         .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
 
-      const result = await sendEmail(targetEmail, emailSubject, `<div style="font-family: sans-serif;">${htmlBody}</div>`);
+      const result = await sendEmail(targetEmail, emailSubject, `<div style="font-family: sans-serif;">${htmlBody}</div>`, {
+        cc: ccEmails.join(', '),
+        bcc: bccEmails.join(', '),
+      });
 
       if (result) {
         toast.success(`Email odeslán na ${targetEmail}`);
@@ -212,6 +220,25 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
                   Výchozí kontakt: {defaultEmail}
                 </p>
               )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="cc">CC</Label>
+                <EmailTagInput
+                  value={ccEmails}
+                  onChange={setCcEmails}
+                  placeholder="oddeleni@firma.cz"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bcc">BCC</Label>
+                <EmailTagInput
+                  value={bccEmails}
+                  onChange={setBccEmails}
+                  placeholder="danny@socials.cz"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

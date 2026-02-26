@@ -11,7 +11,11 @@ interface EmailRequest {
   subject: string;
   html: string;
   from?: string;
+  cc?: string;
+  bcc?: string;
 }
+
+const DEFAULT_BCC = 'danny@socials.cz';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -26,7 +30,7 @@ serve(async (req) => {
       throw new Error("SMTP credentials not configured");
     }
 
-    const { to, subject, html, from }: EmailRequest = await req.json();
+    const { to, subject, html, from, cc, bcc }: EmailRequest = await req.json();
     
     if (!to || !subject || !html) {
       return new Response(
@@ -35,7 +39,16 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Attempting to send email to: ${to}, subject: ${subject}`);
+    const parseEmails = (value?: string) =>
+      (value || '')
+        .split(',')
+        .map((email) => email.trim().toLowerCase())
+        .filter((email) => email.length > 0);
+
+    const ccList = parseEmails(cc);
+    const bccList = Array.from(new Set([...parseEmails(DEFAULT_BCC), ...parseEmails(bcc)]));
+
+    console.log(`Attempting to send email to: ${to}, cc: ${ccList.join(', ')}, bcc: ${bccList.join(', ')}, subject: ${subject}`);
 
     // Create transporter with Google Workspace SMTP
     const transporter = nodemailer.createTransport({
@@ -52,6 +65,8 @@ serve(async (req) => {
     const info = await transporter.sendMail({
       from: from || SMTP_USER,
       to: to,
+      cc: ccList.length > 0 ? ccList.join(', ') : undefined,
+      bcc: bccList.length > 0 ? bccList.join(', ') : undefined,
       subject: subject,
       html: html,
     });

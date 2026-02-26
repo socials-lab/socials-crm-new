@@ -12,9 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { EmailTagInput } from '@/components/ui/email-tag-input';
 import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { Lead } from '@/types/crm';
 
@@ -33,7 +34,7 @@ export function SendOfferDialog({
 }: SendOfferDialogProps) {
   const { user } = useAuth();
   const { colleagues } = useCRMData();
-  const { hasGmailScope, isCheckingConnection, isConnected, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
+  const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
   
   const cleanWebsite = (website: string | null) => {
     if (!website) return '';
@@ -48,6 +49,8 @@ export function SendOfferDialog({
     return `Nabídka spolupráce - ${domain} / Socials`;
   };
 
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
   const [emailContent, setEmailContent] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -99,7 +102,7 @@ ${currentUserColleague.phone || ''}`);
   }, [currentUserColleague, lead, open]);
 
   const handleSend = async () => {
-    if (!lead.contact_email) {
+    if (!lead.contact_email?.trim()) {
       toast.error('Kontakt nemá vyplněný email');
       return;
     }
@@ -155,7 +158,10 @@ ${currentUserColleague.phone || ''}`);
         </div>
       `;
 
-      const result = await sendEmail(lead.contact_email, emailSubject, html);
+      const result = await sendEmail(lead.contact_email.trim(), emailSubject, html, {
+        cc: ccEmails.join(', '),
+        bcc: bccEmails.join(', '),
+      });
       
       if (result) {
         onSent?.(lead.owner_id);
@@ -171,6 +177,8 @@ ${currentUserColleague.phone || ''}`);
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
+      setCcEmails([]);
+      setBccEmails([DEFAULT_GMAIL_BCC]);
       setEmailSubject(getDefaultSubject());
     }
     onOpenChange(newOpen);
@@ -252,6 +260,25 @@ ${currentUserColleague.phone || ''}`);
                 <span>Nabídka v Notion</span>
               </a>
             )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">CC</Label>
+              <EmailTagInput
+                value={ccEmails}
+                onChange={setCcEmails}
+                placeholder="oddeleni@firma.cz"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">BCC</Label>
+              <EmailTagInput
+                value={bccEmails}
+                onChange={setBccEmails}
+                placeholder="danny@socials.cz"
+              />
+            </div>
           </div>
 
           {/* Email Subject */}

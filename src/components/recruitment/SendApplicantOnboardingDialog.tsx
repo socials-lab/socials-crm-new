@@ -16,6 +16,8 @@ import { toast } from '@/components/ui/sonner';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
 import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
+import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
+import { EmailTagList } from '@/components/ui/email-tag-list';
 
 interface SendApplicantOnboardingDialogProps {
   applicant: Applicant;
@@ -53,6 +55,10 @@ export function SendApplicantOnboardingDialog({
   const onboardingUrl = `${window.location.origin}/applicant-onboarding/${applicant.id}`;
 
   const [emailTo, setEmailTo] = useState(applicant.email || '');
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [newCcEmail, setNewCcEmail] = useState('');
+  const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
+  const [newBccEmail, setNewBccEmail] = useState('');
   const [subject, setSubject] = useState(`Onboarding - ${applicant.position} | Socials.cz`);
   const [message, setMessage] = useState(buildDefaultMessage(applicant, onboardingUrl));
 
@@ -60,10 +66,63 @@ export function SendApplicantOnboardingDialog({
   useEffect(() => {
     if (open) {
       setEmailTo(applicant.email || '');
+      setCcEmails([]);
+      setNewCcEmail('');
+      setBccEmails([DEFAULT_GMAIL_BCC]);
+      setNewBccEmail('');
       setSubject(`Onboarding - ${applicant.position} | Socials.cz`);
       setMessage(buildDefaultMessage(applicant, `${window.location.origin}/applicant-onboarding/${applicant.id}`));
     }
   }, [open, applicant.id]);
+
+  const parseEmails = (value: string) =>
+    value
+      .split(/[\n,;]+/)
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+
+  const mergeEmails = (base: string[], pending: string) => {
+    const merged = [...base];
+    for (const email of parseEmails(pending)) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+      if (!merged.includes(email)) merged.push(email);
+    }
+    return merged;
+  };
+
+  const addEmail = (
+    email: string,
+    list: string[],
+    setList: (v: string[]) => void,
+    setInput: (v: string) => void
+  ) => {
+    const candidates = parseEmails(email);
+    if (candidates.length === 0) return;
+
+    const next = [...list];
+    let hasInvalid = false;
+
+    for (const candidate of candidates) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidate)) {
+        hasInvalid = true;
+        continue;
+      }
+      if (!next.includes(candidate)) {
+        next.push(candidate);
+      }
+    }
+
+    if (hasInvalid) {
+      toast.error('Některé emaily nejsou platné');
+    }
+
+    setList(next);
+    setInput('');
+  };
+
+  const removeEmail = (email: string, list: string[], setList: (v: string[]) => void) => {
+    setList(list.filter(e => e !== email));
+  };
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(onboardingUrl);
@@ -91,9 +150,14 @@ export function SendApplicantOnboardingDialog({
         })
         .join('');
 
+      const finalCcEmails = mergeEmails(ccEmails, newCcEmail);
+      const finalBccEmails = mergeEmails(bccEmails, newBccEmail);
+
       const { error } = await invokeWithTimeout('send-email', {
         body: {
           to: emailTo.trim(),
+          cc: finalCcEmails.join(', '),
+          bcc: finalBccEmails.join(', '),
           subject,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
@@ -158,6 +222,31 @@ export function SendApplicantOnboardingDialog({
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">CC</Label>
+              <EmailTagList
+                emails={ccEmails}
+                onRemove={(e) => removeEmail(e, ccEmails, setCcEmails)}
+                newEmail={newCcEmail}
+                onNewEmailChange={setNewCcEmail}
+                onAdd={() => addEmail(newCcEmail, ccEmails, setCcEmails, setNewCcEmail)}
+                placeholder="Přidat CC..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">BCC</Label>
+              <EmailTagList
+                emails={bccEmails}
+                onRemove={(e) => removeEmail(e, bccEmails, setBccEmails)}
+                newEmail={newBccEmail}
+                onNewEmailChange={setNewBccEmail}
+                onAdd={() => addEmail(newBccEmail, bccEmails, setBccEmails, setNewBccEmail)}
+                placeholder="Přidat BCC..."
+              />
+            </div>
           </div>
 
           {/* Onboarding link */}

@@ -14,10 +14,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { EmailTagInput } from '@/components/ui/email-tag-input';
 import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useModificationRequests, type StoredModificationRequest } from '@/hooks/useModificationRequests';
 import type {
   AddServiceProposedChanges,
@@ -56,6 +57,8 @@ export function SendModificationEmailDialog({
   const { recordEmailSent } = useModificationRequests();
   
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailContent, setEmailContent] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -130,6 +133,9 @@ export function SendModificationEmailDialog({
       // Set default email
       setRecipientEmail(findDefaultEmail());
       
+      setCcEmails([]);
+      setBccEmails([DEFAULT_GMAIL_BCC]);
+
       // Set default subject
       const subjectPrefix = REQUEST_TYPE_SUBJECTS[request.request_type] || 'Návrh změny';
       setEmailSubject(`${subjectPrefix} – ${clientName} / Socials`);
@@ -233,7 +239,10 @@ ${currentUserColleague.email}${currentUserColleague.phone ? `\n${currentUserColl
         </div>
       `;
 
-      const result = await sendEmail(recipientEmail, emailSubject, html);
+      const result = await sendEmail(recipientEmail, emailSubject, html, {
+        cc: ccEmails.join(', '),
+        bcc: bccEmails.join(', '),
+      });
 
       if (result) {
         // Record the email in history
@@ -317,6 +326,25 @@ ${currentUserColleague.email}${currentUserColleague.phone ? `\n${currentUserColl
               onChange={(e) => setRecipientEmail(e.target.value)}
               placeholder="email@spolecnost.cz"
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">CC</Label>
+              <EmailTagInput
+                value={ccEmails}
+                onChange={setCcEmails}
+                placeholder="oddeleni@firma.cz"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">BCC</Label>
+              <EmailTagInput
+                value={bccEmails}
+                onChange={setBccEmails}
+                placeholder="danny@socials.cz"
+              />
+            </div>
           </div>
 
           {/* Sender Info Card - Current user */}

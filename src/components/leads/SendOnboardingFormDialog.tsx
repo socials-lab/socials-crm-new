@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, ExternalLink, Copy, Check, AlertCircle } from 'lucide-react';
+import { Send, ExternalLink, Copy, Check, AlertCircle, Plus, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/sonner';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import type { Lead } from '@/types/crm';
 
 interface SendOnboardingFormDialogProps {
@@ -21,6 +22,55 @@ interface SendOnboardingFormDialogProps {
   onOpenChange: (open: boolean) => void;
   lead: Lead;
   onSent?: (formUrl: string) => void;
+}
+
+function EmailTagList({
+  emails,
+  onRemove,
+  newEmail,
+  onNewEmailChange,
+  onAdd,
+  placeholder,
+}: {
+  emails: string[];
+  onRemove: (e: string) => void;
+  newEmail: string;
+  onNewEmailChange: (v: string) => void;
+  onAdd: () => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {emails.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {emails.map(email => (
+            <Badge key={email} variant="secondary" className="gap-1 pr-1 font-normal">
+              {email}
+              <button
+                type="button"
+                onClick={() => onRemove(email)}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Input
+          value={newEmail}
+          onChange={(e) => onNewEmailChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } }}
+          placeholder={placeholder}
+          className="text-sm"
+        />
+        <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={onAdd}>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function SendOnboardingFormDialog({
@@ -49,6 +99,10 @@ export function SendOnboardingFormDialog({
     return `Onboarding formulář - ${domain} / Socials`;
   };
 
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [newCcEmail, setNewCcEmail] = useState('');
+  const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
+  const [newBccEmail, setNewBccEmail] = useState('');
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
   const [emailContent, setEmailContent] = useState(() => generateDefaultEmail());
 
@@ -69,6 +123,55 @@ Děkujeme,
 Tým Socials`;
   }
 
+  const parseEmails = (value: string) =>
+    value
+      .split(/[\n,;]+/)
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+
+  const mergeEmails = (base: string[], pending: string) => {
+    const merged = [...base];
+    for (const email of parseEmails(pending)) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+      if (!merged.includes(email)) merged.push(email);
+    }
+    return merged;
+  };
+
+  const addEmail = (
+    email: string,
+    list: string[],
+    setList: (v: string[]) => void,
+    setInput: (v: string) => void
+  ) => {
+    const candidates = parseEmails(email);
+    if (candidates.length === 0) return;
+
+    const next = [...list];
+    let hasInvalid = false;
+
+    for (const candidate of candidates) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidate)) {
+        hasInvalid = true;
+        continue;
+      }
+      if (!next.includes(candidate)) {
+        next.push(candidate);
+      }
+    }
+
+    if (hasInvalid) {
+      toast.error('Některé emaily nejsou platné');
+    }
+
+    setList(next);
+    setInput('');
+  };
+
+  const removeEmail = (email: string, list: string[], setList: (v: string[]) => void) => {
+    setList(list.filter(e => e !== email));
+  };
+
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(formUrl);
@@ -81,7 +184,7 @@ Tým Socials`;
   };
 
   const handleSend = async () => {
-    if (!lead.contact_email) {
+    if (!lead.contact_email?.trim()) {
       toast.error('Kontakt nemá vyplněný email');
       return;
     }
@@ -137,7 +240,13 @@ Tým Socials`;
         </div>
       `;
 
-      const result = await sendEmail(lead.contact_email, emailSubject, html);
+      const finalCcEmails = mergeEmails(ccEmails, newCcEmail);
+      const finalBccEmails = mergeEmails(bccEmails, newBccEmail);
+
+      const result = await sendEmail(lead.contact_email.trim(), emailSubject, html, {
+        cc: finalCcEmails.join(', '),
+        bcc: finalBccEmails.join(', '),
+      });
       
       if (result) {
         // Notify parent about sent form
@@ -154,6 +263,10 @@ Tým Socials`;
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
+      setCcEmails([]);
+      setNewCcEmail('');
+      setBccEmails([DEFAULT_GMAIL_BCC]);
+      setNewBccEmail('');
       setEmailSubject(getDefaultSubject());
       setEmailContent(generateDefaultEmail());
       setIsCopied(false);
@@ -268,6 +381,31 @@ Tým Socials`;
               ) : (
                 <span className="text-amber-600">(chybí email!)</span>
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">CC</Label>
+              <EmailTagList
+                emails={ccEmails}
+                onRemove={(e) => removeEmail(e, ccEmails, setCcEmails)}
+                newEmail={newCcEmail}
+                onNewEmailChange={setNewCcEmail}
+                onAdd={() => addEmail(newCcEmail, ccEmails, setCcEmails, setNewCcEmail)}
+                placeholder="Přidat CC..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">BCC</Label>
+              <EmailTagList
+                emails={bccEmails}
+                onRemove={(e) => removeEmail(e, bccEmails, setBccEmails)}
+                newEmail={newBccEmail}
+                onNewEmailChange={setNewBccEmail}
+                onAdd={() => addEmail(newBccEmail, bccEmails, setBccEmails, setNewBccEmail)}
+                placeholder="Přidat BCC..."
+              />
             </div>
           </div>
 

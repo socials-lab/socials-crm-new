@@ -8,6 +8,8 @@ import { Send, UserX, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
 import type { Applicant } from '@/types/applicant';
+import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
+import { EmailTagList } from '@/components/ui/email-tag-list';
 
 interface SendRejectionEmailDialogProps {
   open: boolean;
@@ -36,6 +38,10 @@ export function SendRejectionEmailDialog({
   onSend
 }: SendRejectionEmailDialogProps) {
   const [emailTo, setEmailTo] = useState(applicant.email || '');
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [newCcEmail, setNewCcEmail] = useState('');
+  const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
+  const [newBccEmail, setNewBccEmail] = useState('');
   const [subject, setSubject] = useState(`Vyjádření k Vaší přihlášce – ${applicant.position} | Socials`);
   const [message, setMessage] = useState(buildDefaultMessage(applicant));
   const [isSending, setIsSending] = useState(false);
@@ -44,10 +50,63 @@ export function SendRejectionEmailDialog({
   useEffect(() => {
     if (open) {
       setEmailTo(applicant.email || '');
+      setCcEmails([]);
+      setNewCcEmail('');
+      setBccEmails([DEFAULT_GMAIL_BCC]);
+      setNewBccEmail('');
       setSubject(`Vyjádření k Vaší přihlášce – ${applicant.position} | Socials`);
       setMessage(buildDefaultMessage(applicant));
     }
   }, [open, applicant.id]);
+
+  const parseEmails = (value: string) =>
+    value
+      .split(/[\n,;]+/)
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+
+  const mergeEmails = (base: string[], pending: string) => {
+    const merged = [...base];
+    for (const email of parseEmails(pending)) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+      if (!merged.includes(email)) merged.push(email);
+    }
+    return merged;
+  };
+
+  const addEmail = (
+    email: string,
+    list: string[],
+    setList: (v: string[]) => void,
+    setInput: (v: string) => void
+  ) => {
+    const candidates = parseEmails(email);
+    if (candidates.length === 0) return;
+
+    const next = [...list];
+    let hasInvalid = false;
+
+    for (const candidate of candidates) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidate)) {
+        hasInvalid = true;
+        continue;
+      }
+      if (!next.includes(candidate)) {
+        next.push(candidate);
+      }
+    }
+
+    if (hasInvalid) {
+      toast.error('Některé emaily nejsou platné');
+    }
+
+    setList(next);
+    setInput('');
+  };
+
+  const removeEmail = (email: string, list: string[], setList: (v: string[]) => void) => {
+    setList(list.filter(e => e !== email));
+  };
 
   const handleSend = async () => {
     if (!emailTo.trim()) {
@@ -63,9 +122,14 @@ export function SendRejectionEmailDialog({
         .map(line => line.trim() ? `<p>${line}</p>` : '<br>')
         .join('');
 
+      const finalCcEmails = mergeEmails(ccEmails, newCcEmail);
+      const finalBccEmails = mergeEmails(bccEmails, newBccEmail);
+
       const { error } = await invokeWithTimeout('send-email', {
         body: {
           to: emailTo.trim(),
+          cc: finalCcEmails.join(', '),
+          bcc: finalBccEmails.join(', '),
           subject,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
@@ -121,6 +185,31 @@ export function SendRejectionEmailDialog({
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">CC</Label>
+              <EmailTagList
+                emails={ccEmails}
+                onRemove={(e) => removeEmail(e, ccEmails, setCcEmails)}
+                newEmail={newCcEmail}
+                onNewEmailChange={setNewCcEmail}
+                onAdd={() => addEmail(newCcEmail, ccEmails, setCcEmails, setNewCcEmail)}
+                placeholder="Přidat CC..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">BCC</Label>
+              <EmailTagList
+                emails={bccEmails}
+                onRemove={(e) => removeEmail(e, bccEmails, setBccEmails)}
+                newEmail={newBccEmail}
+                onNewEmailChange={setNewBccEmail}
+                onAdd={() => addEmail(newBccEmail, bccEmails, setBccEmails, setNewBccEmail)}
+                placeholder="Přidat BCC..."
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -35,6 +35,8 @@ export interface GoogleCalendarEvent {
   updated?: string;
 }
 
+export const DEFAULT_GMAIL_BCC = 'danny@socials.cz';
+
 export function useGoogleCalendar() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -299,14 +301,25 @@ export function useGoogleCalendar() {
     }
   };
 
-  const sendEmail = async (to: string, subject: string, html: string, bcc?: string) => {
+  const sendEmail = async (
+    to: string,
+    subject: string,
+    html: string,
+    options?: { cc?: string; bcc?: string }
+  ) => {
     setIsLoading(true);
     setError(null);
 
     try {
       const { data, error } = await invokeWithTimeout('gmail-send-email', {
-        body: { to, subject, html, bcc },
-      });
+        body: {
+          to,
+          subject,
+          html,
+          cc: options?.cc,
+          bcc: options?.bcc,
+        },
+      }, 60000);
 
       if (error) throw error;
 
@@ -316,7 +329,10 @@ export function useGoogleCalendar() {
 
       return data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Chyba při odesílání emailu';
+      const rawMessage = err instanceof Error ? err.message : 'Chyba při odesílání emailu';
+      const errorMessage = rawMessage.includes('Požadavek vypršel')
+        ? `${rawMessage} (Google API pravděpodobně neodpovědělo včas.)`
+        : rawMessage;
       setError(errorMessage);
       toast.error(errorMessage);
       return null;

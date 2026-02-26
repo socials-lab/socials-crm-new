@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/sonner';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 
 interface RequestAccessDialogProps {
   open: boolean;
@@ -26,7 +26,7 @@ interface RequestAccessDialogProps {
   onSent?: (platforms: string[]) => void;
 }
 
-const DEFAULT_BCC = ['danny@socials.cz', 'dana.bauerova@socials.cz'];
+const DEFAULT_BCC = [DEFAULT_GMAIL_BCC, 'dana.bauerova@socials.cz'];
 
 // EmailTagList component - defined outside to prevent re-creation on each render
 function EmailTagList({
@@ -112,6 +112,8 @@ export function RequestAccessDialog({
 
   const [toEmails, setToEmails] = useState<string[]>(contactEmail ? [contactEmail] : []);
   const [newToEmail, setNewToEmail] = useState('');
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [newCcEmail, setNewCcEmail] = useState('');
   const [bccEmails, setBccEmails] = useState<string[]>(DEFAULT_BCC);
   const [newBccEmail, setNewBccEmail] = useState('');
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
@@ -194,7 +196,10 @@ export function RequestAccessDialog({
       // Note: Gmail API sendEmail might need to be updated to support multiple recipients
       // For now, we send to the first recipient and include others in the message
       const allRecipients = toEmails.join(', ');
-      const result = await sendEmail(allRecipients, emailSubject, html, bccEmails.join(', '));
+      const result = await sendEmail(allRecipients, emailSubject, html, {
+        cc: ccEmails.join(', '),
+        bcc: bccEmails.join(', '),
+      });
 
       if (result) {
         onSent?.(['Google Analytics 4', 'Facebook Business Manager', 'Google Ads', 'S-klik']);
@@ -212,6 +217,8 @@ export function RequestAccessDialog({
     if (newOpen) {
       setToEmails(contactEmail ? [contactEmail] : []);
       setNewToEmail('');
+      setCcEmails([]);
+      setNewCcEmail('');
       setBccEmails(DEFAULT_BCC);
       setNewBccEmail('');
       setEmailSubject(getDefaultSubject());
@@ -262,6 +269,19 @@ export function RequestAccessDialog({
               onNewEmailChange={setNewToEmail}
               onAdd={() => addEmail(newToEmail, toEmails, setToEmails, setNewToEmail)}
               placeholder="Přidat příjemce..."
+            />
+          </div>
+
+          {/* CC */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Kopie (CC)</Label>
+            <EmailTagList
+              emails={ccEmails}
+              onRemove={(e) => removeEmail(e, ccEmails, setCcEmails)}
+              newEmail={newCcEmail}
+              onNewEmailChange={setNewCcEmail}
+              onAdd={() => addEmail(newCcEmail, ccEmails, setCcEmails, setNewCcEmail)}
+              placeholder="Přidat CC..."
             />
           </div>
 
