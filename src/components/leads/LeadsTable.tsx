@@ -49,9 +49,10 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
   const { colleagues } = useCRMData();
   const isMobile = useIsMobile();
 
-  const getOwnerName = (ownerId: string) => {
+  const getOwnerName = (ownerId: string | null) => {
+    if (!ownerId) return '-';
     const owner = colleagues.find(c => c.id === ownerId);
-    return owner?.full_name || 'Neznámý';
+    return owner?.full_name || 'Nepřiřazeno';
   };
 
   // Mobile view: Card stack
@@ -125,12 +126,14 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
                 </TableCell>
                 <TableCell>{getOwnerName(lead.owner_id)}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className="text-xs">
-                    {lead.potential_service}
-                  </Badge>
+                  {lead.potential_service ? (
+                    <Badge variant="secondary" className="text-xs">
+                      {lead.potential_service}
+                    </Badge>
+                  ) : '-'}
                 </TableCell>
                 <TableCell className="text-right">
-                  {lead.estimated_price.toLocaleString()} {lead.currency}
+                  {lead.estimated_price != null ? `${lead.estimated_price.toLocaleString()} ${lead.currency}` : '-'}
                 </TableCell>
                 <TableCell>
                   {lead.offer_url && (
