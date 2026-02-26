@@ -369,27 +369,27 @@ export function useGoogleCalendar() {
       let { data, error } = await invokeCalendarFetch(session.access_token);
 
       if (error && isAuthFunctionError(error)) {
-        console.warn('Calendar fetch auth error detected, trying one refresh+retry cycle', error);
+        console.warn('Calendar fetch auth error detected, trying one session re-read + retry', error);
 
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        const refreshedSession = refreshData.session;
+        const { data: latestData, error: latestError } = await supabase.auth.getSession();
+        const latestSession = latestData.session;
 
-        if (await handleProjectRefMismatch(refreshedSession?.access_token)) {
-          return [];
-        }
-
-        if (refreshError || !refreshedSession) {
-          console.error('Session refresh failed or produced invalid session', refreshError);
+        if (latestError || !latestSession) {
+          console.error('No valid session available for retry', latestError);
           notifyReloginRequired();
           return [];
         }
 
-        const retryResult = await invokeCalendarFetch(refreshedSession.access_token);
+        if (await handleProjectRefMismatch(latestSession.access_token)) {
+          return [];
+        }
+
+        const retryResult = await invokeCalendarFetch(latestSession.access_token);
         data = retryResult.data;
         error = retryResult.error;
 
         if (error && isAuthFunctionError(error)) {
-          console.error('Calendar fetch still failing auth after refresh, re-login required', error);
+          console.error('Calendar fetch still failing auth after retry, re-login required', error);
           notifyReloginRequired();
           return [];
         }
