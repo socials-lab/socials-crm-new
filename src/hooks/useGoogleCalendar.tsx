@@ -355,9 +355,13 @@ export function useGoogleCalendar() {
 
       console.log('Fetching calendar events with options:', body);
 
-      const invokeCalendarFetch = () => supabase.functions.invoke('calendar-fetch-events', { body });
+      const invokeCalendarFetch = (accessToken?: string | null) =>
+        supabase.functions.invoke('calendar-fetch-events', {
+          body,
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+        });
 
-      let { data, error } = await invokeCalendarFetch();
+      let { data, error } = await invokeCalendarFetch(session.access_token);
 
       if (error && isAuthFunctionError(error)) {
         console.warn('Calendar fetch auth error detected, trying one refresh+retry cycle', error);
@@ -375,7 +379,7 @@ export function useGoogleCalendar() {
           return [];
         }
 
-        const retryResult = await invokeCalendarFetch();
+        const retryResult = await invokeCalendarFetch(refreshedSession.access_token);
         data = retryResult.data;
         error = retryResult.error;
 
