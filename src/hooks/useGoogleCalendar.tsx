@@ -369,27 +369,56 @@ export function useGoogleCalendar() {
       let { data, error } = await invokeCalendarFetch(session.access_token);
 
       if (error && isAuthFunctionError(error)) {
-        console.warn('Calendar fetch auth error detected, trying one session re-read + retry', error);
+        console.warn('Calendar fetch auth error detected, trying session recovery flow', error);
 
+        // 1) Re-read current session and retry once with explicit latest token
         const { data: latestData, error: latestError } = await supabase.auth.getSession();
         const latestSession = latestData.session;
 
-        if (latestError || !latestSession) {
-          console.error('No valid session available for retry', latestError);
-          notifyReloginRequired();
-          return [];
-        }
+        if (!latestError && latestSession) {
+          if (await handleProjectRefMismatch(latestSession.access_token)) {
+            return [];
+          }
 
-        if (await handleProjectRefMismatch(latestSession.access_token)) {
-          return [];
-        }
+          const retryWithLatest = await invokeCalendarFetch(latestSession.access_token);
+          data = retryWithLatest.data;
+          error = retryWithLatest.error;
 
-        const retryResult = await invokeCalendarFetch(latestSession.access_token);
-        data = retryResult.data;
-        error = retryResult.error;
+          if (!error || !isAuthFunctionError(error)) {
+            // Recovery succeeded
+          } else {
+            // 2) If still auth failing, force refresh and retry once more
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            const refreshedSession = refreshData.session;
+
+            if (!refreshError && refreshedSession) {
+              if (await handleProjectRefMismatch(refreshedSession.access_token)) {
+                return [];
+              }
+
+              const retryAfterRefresh = await invokeCalendarFetch(refreshedSession.access_token);
+              data = retryAfterRefresh.data;
+              error = retryAfterRefresh.error;
+            }
+          }
+        } else {
+          // 2b) No session from getSession() — try refresh once
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+          const refreshedSession = refreshData.session;
+
+          if (!refreshError && refreshedSession) {
+            if (await handleProjectRefMismatch(refreshedSession.access_token)) {
+              return [];
+            }
+
+            const retryAfterRefresh = await invokeCalendarFetch(refreshedSession.access_token);
+            data = retryAfterRefresh.data;
+            error = retryAfterRefresh.error;
+          }
+        }
 
         if (error && isAuthFunctionError(error)) {
-          console.error('Calendar fetch still failing auth after retry, re-login required', error);
+          console.error('Calendar fetch still failing auth after full recovery flow, re-login required', error);
           notifyReloginRequired();
           return [];
         }
