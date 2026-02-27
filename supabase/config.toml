@@ -34,3 +34,15 @@ verify_jwt = false
 
 [functions.send-notification-email]
 verify_jwt = false
+
+[functions.get-onboarding-lead]
+verify_jwt = false
+
+[functions.submit-onboarding-form]
+verify_jwt = false
+
+[functions.get-applicant-onboarding]
+verify_jwt = false
+
+[functions.submit-applicant-onboarding]
+verify_jwt = false
