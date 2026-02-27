@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import type { ExtraWork } from '@/types/crm';
 import { Copy, Mail, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 interface SendApprovalDialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const { getClientById, clientContacts, colleagues, engagements } = useCRMData();
   const { user } = useAuth();
   const { sendEmail, isConnected } = useGoogleCalendar();
+  const { fillTemplate } = useEmailTemplates();
   const [email, setEmail] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -69,26 +71,27 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
 
       setCcEmails([]);
       setBccEmails([DEFAULT_GMAIL_BCC]);
-      setEmailSubject(`Schválení vícepráce: ${extraWork.name}`);
 
       const hoursLine = extraWork.hours_worked && extraWork.hourly_rate
-        ? `\nRozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
+        ? `Rozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
         : '';
 
       const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Socials' });
+      const { subject, body } = fillTemplate('send_approval', {
+        work_name: extraWork.name,
+        work_description: extraWork.description ? `Popis: ${extraWork.description}` : '',
+        amount: formatCurrency(extraWork.amount),
+        hours_line: hoursLine,
+        engagement_line: engagement ? `Zakázka: ${engagement.name}` : '',
+        colleague_line: colleague ? `Zpracoval/a: ${colleague.full_name}` : '',
+        url: approvalUrl,
+        signature,
+      });
 
-      setEmailBody(
-        `Dobrý den,\n\nrádi bychom Vás požádali o schválení následující vícepráce:\n\nNázev: ${extraWork.name}` +
-        (extraWork.description ? `\nPopis: ${extraWork.description}` : '') +
-        hoursLine +
-        `\nCelková částka: ${formatCurrency(extraWork.amount)}` +
-        (engagement ? `\nZakázka: ${engagement.name}` : '') +
-        (colleague ? `\nZpracoval/a: ${colleague.full_name}` : '') +
-        `\n\nPro schválení nebo zamítnutí klikněte na odkaz níže:\n${approvalUrl}` +
-        `\n\n${signature}`
-      );
+      setEmailSubject(subject);
+      setEmailBody(body);
     }
-  }, [open, extraWork.id, extraWork.approval_token, currentUserColleague, colleague, engagement]);
+  }, [open, extraWork, currentUserColleague, colleague, engagement, fillTemplate]);
 
   const handleCopyLink = () => {
     const url = getApprovalUrl();

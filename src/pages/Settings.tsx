@@ -11,6 +11,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { User, Bell, Loader2 } from 'lucide-react';
+import { EmailTemplatesManager } from '@/components/settings/EmailTemplatesManager';
 
 type EmailNotificationLevel = 'none' | 'important' | 'all';
 
@@ -216,6 +217,7 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        <EmailTemplatesManager />
       </div>
     </div>
   );

@@ -18,6 +18,7 @@ import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar'
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
 import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 interface RequestAccessDialogProps {
   open: boolean;
@@ -81,19 +82,6 @@ function EmailTagList({
   );
 }
 
-const DEFAULT_EMAIL_CONTENT = `Dobrý den,
-
-Na základě našeho telefonátu Vás prosíme o nasdílení přístupů do níže uvedených marketingových nástrojů. Uděláme audit a připravíme pro vás nabídku na případnou spolupráci.
-
-Google Analytics 4 - Přístup na úrovni celého účtu s oprávněním "Čtení" pošlete na e-mail analytics@socials.cz
-
-Facebook Business Manager - Přidejte nás jako partnery (ID našeho účtu: 1196977750459552) s nejnižší úrovní přístupů k těmto položkám: Reklamní účet, Katalog produktů, Meta Pixel (Datový set), FB stránka.
-
-Google Ads - Zašlete nám ID reklamního účtu. Zašleme žádost o přístup která dorazí na e-mail, na který máte Google Ads účet vedený.
-
-S-klik - Nasdílejte na e-mail mysocials@seznam.cz
-
-Pokud si nebudete vědět rady, zde naleznete návod. Případně klidně napište a pomůžeme :)`;
 
 export function RequestAccessDialog({
   open,
@@ -107,15 +95,15 @@ export function RequestAccessDialog({
   const { user } = useAuth();
   const { colleagues } = useCRMData();
   const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
+  const { fillTemplate } = useEmailTemplates();
 
   const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
 
-  const getDefaultSubject = () => {
-    return `Žádost o nasdílení přístupů - ${companyName} / Socials`;
-  };
-
-  const getDefaultEmailContent = () => {
-    return `${DEFAULT_EMAIL_CONTENT}\n\n${getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' })}`;
+  const getDefaults = () => {
+    return fillTemplate('request_access', {
+      company: companyName,
+      signature: getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' }),
+    });
   };
 
   const [toEmails, setToEmails] = useState<string[]>(contactEmail ? [contactEmail] : []);
@@ -124,8 +112,8 @@ export function RequestAccessDialog({
   const [newCcEmail, setNewCcEmail] = useState('');
   const [bccEmails, setBccEmails] = useState<string[]>(DEFAULT_BCC);
   const [newBccEmail, setNewBccEmail] = useState('');
-  const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
-  const [emailContent, setEmailContent] = useState(getDefaultEmailContent());
+  const [emailSubject, setEmailSubject] = useState(() => getDefaults().subject);
+  const [emailContent, setEmailContent] = useState(() => getDefaults().body);
   const [isSending, setIsSending] = useState(false);
 
   const addEmail = (
@@ -229,8 +217,9 @@ export function RequestAccessDialog({
       setNewCcEmail('');
       setBccEmails(DEFAULT_BCC);
       setNewBccEmail('');
-      setEmailSubject(getDefaultSubject());
-      setEmailContent(getDefaultEmailContent());
+      const defaults = getDefaults();
+      setEmailSubject(defaults.subject);
+      setEmailContent(defaults.body);
     }
     onOpenChange(newOpen);
   };

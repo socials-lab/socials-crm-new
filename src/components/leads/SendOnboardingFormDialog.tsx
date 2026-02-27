@@ -18,6 +18,7 @@ import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar'
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
 import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Lead } from '@/types/crm';
 
 interface SendOnboardingFormDialogProps {
@@ -85,6 +86,7 @@ export function SendOnboardingFormDialog({
   const { user } = useAuth();
   const { colleagues } = useCRMData();
   const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
+  const { fillTemplate } = useEmailTemplates();
   const [isSending, setIsSending] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
@@ -103,7 +105,12 @@ export function SendOnboardingFormDialog({
 
   const getDefaultSubject = () => {
     const domain = lead.website ? cleanWebsite(lead.website) : lead.company_name;
-    return `Onboarding formulář - ${domain} / Socials`;
+    return fillTemplate('send_onboarding_form', {
+      contact_name: lead.contact_name,
+      domain,
+      url: formUrl,
+      signature: '',
+    }).subject;
   };
 
   const [ccEmails, setCcEmails] = useState<string[]>([]);
@@ -115,19 +122,12 @@ export function SendOnboardingFormDialog({
 
   function generateDefaultEmail() {
     const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' });
-    return `Dobrý den ${lead.contact_name},
-
-děkujeme za Váš zájem o spolupráci s agenturou Socials.
-
-Pro zahájení spolupráce prosím vyplňte náš onboarding formulář, kde doplníte potřebné údaje pro nastavení služeb a fakturaci.
-
-Formulář je předvyplněný údaji, které již o Vás máme. Prosím zkontrolujte je a případně upravte nebo doplňte.
-
-👉 Odkaz na formulář: ${formUrl}
-
-Po vyplnění formuláře Vás budeme kontaktovat s dalšími kroky.
-
-${signature}`;
+    return fillTemplate('send_onboarding_form', {
+      contact_name: lead.contact_name,
+      domain: lead.website ? cleanWebsite(lead.website) : lead.company_name,
+      url: formUrl,
+      signature,
+    }).body;
   }
 
   const parseEmails = (value: string) =>

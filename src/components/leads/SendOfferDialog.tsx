@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useCRMData } from '@/hooks/useCRMData';
 import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Lead } from '@/types/crm';
 
 interface SendOfferDialogProps {
@@ -36,6 +37,7 @@ export function SendOfferDialog({
   const { user } = useAuth();
   const { colleagues } = useCRMData();
   const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
+  const { fillTemplate } = useEmailTemplates();
   
   const cleanWebsite = (website: string | null) => {
     if (!website) return '';
@@ -47,7 +49,12 @@ export function SendOfferDialog({
 
   const getDefaultSubject = () => {
     const domain = lead.website ? cleanWebsite(lead.website) : lead.company_name;
-    return `Nabídka spolupráce - ${domain} / Socials`;
+    return fillTemplate('send_offer', {
+      domain,
+      company: lead.company_name,
+      contact_name: lead.contact_name,
+      signature: '',
+    }).subject;
   };
 
   const [ccEmails, setCcEmails] = useState<string[]>([]);
@@ -88,22 +95,18 @@ export function SendOfferDialog({
       includePhone: true,
     });
 
-    setEmailContent(`Dobrý den ${lead.contact_name},
+    const { body } = fillTemplate('send_offer', {
+      contact_name: lead.contact_name,
+      company: lead.company_name,
+      domain: lead.website ? cleanWebsite(lead.website) : lead.company_name,
+      services_list: servicesText,
+      price_summary: priceText,
+      offer_url_line: lead.offer_url ? `Detailní nabídku naleznete zde: ${lead.offer_url}` : '',
+      signature: defaultSignature,
+    });
 
-děkuji za náš nedávný rozhovor ohledně spolupráce se společností ${lead.company_name}.
-
-Na základě našeho jednání jsem pro Vás připravil/a nabídku:
-
-${servicesText}
-
-${priceText}
-
-${lead.offer_url ? `Detailní nabídku naleznete zde: ${lead.offer_url}` : ''}
-
-Budu rád/a, když se mi ozvete s případnými dotazy.
-
-${defaultSignature}`);
-  }, [currentUserColleague, lead, open]);
+    setEmailContent(body);
+  }, [currentUserColleague, lead, open, fillTemplate]);
 
   const handleSend = async () => {
     if (!lead.contact_email?.trim()) {

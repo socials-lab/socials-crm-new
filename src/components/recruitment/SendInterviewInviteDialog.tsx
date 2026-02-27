@@ -13,6 +13,7 @@ import { EmailTagList } from '@/components/ui/email-tag-list';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
 import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 interface SendInterviewInviteDialogProps {
   open: boolean;
@@ -21,17 +22,6 @@ interface SendInterviewInviteDialogProps {
   onSend: () => void;
 }
 
-function buildDefaultMessage(applicant: Applicant, signatureName: string) {
-  return `Dobrý den ${applicant.full_name.split(' ')[0]},
-
-děkujeme za Váš zájem o pozici ${applicant.position} v agentuře Socials.
-
-Rádi bychom se s Vámi spojili na krátký telefonát nebo online schůzku, abychom Vás lépe poznali a probrali detaily případné spolupráce.
-
-Dejte prosím vědět, kdy se Vám hodí 15-30 minutový call.
-
-${signatureName}`;
-}
 
 export function SendInterviewInviteDialog({
   open,
@@ -41,16 +31,23 @@ export function SendInterviewInviteDialog({
 }: SendInterviewInviteDialogProps) {
   const { user } = useAuth();
   const { colleagues } = useCRMData();
+  const { fillTemplate } = useEmailTemplates();
   const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
   const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' });
+
+  const getDefaults = () => fillTemplate('interview_invite', {
+    name: applicant.full_name.split(' ')[0],
+    position: applicant.position,
+    signature,
+  });
 
   const [emailTo, setEmailTo] = useState(applicant.email || '');
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [newCcEmail, setNewCcEmail] = useState('');
   const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [newBccEmail, setNewBccEmail] = useState('');
-  const [subject, setSubject] = useState(`Pozvánka na pohovor – ${applicant.position} | Socials`);
-  const [message, setMessage] = useState(buildDefaultMessage(applicant, signature));
+  const [subject, setSubject] = useState(() => getDefaults().subject);
+  const [message, setMessage] = useState(() => getDefaults().body);
   const [isSending, setIsSending] = useState(false);
 
   // Reset fields when applicant changes or dialog opens
@@ -61,10 +58,11 @@ export function SendInterviewInviteDialog({
       setNewCcEmail('');
       setBccEmails([DEFAULT_GMAIL_BCC]);
       setNewBccEmail('');
-      setSubject(`Pozvánka na pohovor – ${applicant.position} | Socials`);
-      setMessage(buildDefaultMessage(applicant, signature));
+      const defaults = getDefaults();
+      setSubject(defaults.subject);
+      setMessage(defaults.body);
     }
-  }, [open, applicant.id, applicant.position, signature]);
+  }, [open, applicant.id, applicant.position, signature, fillTemplate]);
 
   const parseEmails = (value: string) =>
     value

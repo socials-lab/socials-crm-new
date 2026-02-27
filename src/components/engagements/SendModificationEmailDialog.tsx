@@ -21,6 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useModificationRequests, type StoredModificationRequest } from '@/hooks/useModificationRequests';
 import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type {
   AddServiceProposedChanges,
   UpdateServicePriceProposedChanges,
@@ -56,6 +57,7 @@ export function SendModificationEmailDialog({
   const { user } = useAuth();
   const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
   const { recordEmailSent } = useModificationRequests();
+  const { fillTemplate } = useEmailTemplates();
   
   const [recipientEmail, setRecipientEmail] = useState('');
   const [ccEmails, setCcEmails] = useState<string[]>([]);
@@ -139,9 +141,20 @@ export function SendModificationEmailDialog({
 
       // Set default subject
       const subjectPrefix = REQUEST_TYPE_SUBJECTS[request.request_type] || 'Návrh změny';
-      setEmailSubject(`${subjectPrefix} – ${clientName} / Socials`);
+      const { subject } = fillTemplate('send_modification', {
+        type: subjectPrefix,
+        client: clientName,
+        greeting: '',
+        change_type: '',
+        change_details: '',
+        effective_from: '',
+        upgrade_link: '',
+        valid_until: '',
+        signature: '',
+      });
+      setEmailSubject(subject);
     }
-  }, [open, request]);
+  }, [open, request, fillTemplate, clientName]);
 
   // Generate email content when dialog opens or sender info available
   useEffect(() => {
@@ -164,24 +177,20 @@ export function SendModificationEmailDialog({
       includePhone: true,
     });
 
-    setEmailContent(`${greeting}
+    const { body } = fillTemplate('send_modification', {
+      greeting,
+      type: REQUEST_TYPE_SUBJECTS[request.request_type] || 'Návrh změny',
+      client: clientName,
+      change_type: changeTypeLabel,
+      change_details: changeDetails,
+      effective_from: effectiveFrom,
+      upgrade_link: upgradeLink,
+      valid_until: validUntil,
+      signature: defaultSignature,
+    });
 
-rádi bychom Vás informovali o navrhované změně ve spolupráci:
-
-${changeTypeLabel}
-${changeDetails}
-
-Platnost od: ${effectiveFrom}
-
-Pro potvrzení této změny prosím klikněte na následující odkaz:
-${upgradeLink}
-
-Odkaz je platný do: ${validUntil}
-
-V případě dotazů nás neváhejte kontaktovat.
-
-${defaultSignature}`);
-  }, [currentUserColleague, open, request, upgradeLink]);
+    setEmailContent(body);
+  }, [currentUserColleague, open, request, upgradeLink, fillTemplate, clientName]);
 
   const handleSend = async () => {
     if (!recipientEmail.trim()) {
