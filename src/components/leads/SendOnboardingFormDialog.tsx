@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/sonner';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { useAuth } from '@/hooks/useAuth';
+import { useCRMData } from '@/hooks/useCRMData';
 import type { Lead } from '@/types/crm';
 
 interface SendOnboardingFormDialogProps {
@@ -79,9 +81,13 @@ export function SendOnboardingFormDialog({
   lead,
   onSent,
 }: SendOnboardingFormDialogProps) {
+  const { user } = useAuth();
+  const { colleagues } = useCRMData();
   const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
   const [isSending, setIsSending] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+
+  const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
   
   // Generate unique form URL for this lead
   const formUrl = `${window.location.origin}/onboarding/${lead.id}`;
@@ -106,7 +112,7 @@ export function SendOnboardingFormDialog({
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
   const [emailContent, setEmailContent] = useState(() => generateDefaultEmail());
 
-  function generateDefaultEmail() {
+  function generateDefaultEmail(signatureName = currentUserColleague?.full_name || 'Tým Socials') {
     return `Dobrý den ${lead.contact_name},
 
 děkujeme za Váš zájem o spolupráci s agenturou Socials.
@@ -120,7 +126,7 @@ Formulář je předvyplněný údaji, které již o Vás máme. Prosím zkontrol
 Po vyplnění formuláře Vás budeme kontaktovat s dalšími kroky.
 
 Děkujeme,
-Tým Socials`;
+${signatureName}`;
   }
 
   const parseEmails = (value: string) =>

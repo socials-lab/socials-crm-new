@@ -18,6 +18,8 @@ import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
+import { useAuth } from '@/hooks/useAuth';
+import { useCRMData } from '@/hooks/useCRMData';
 
 interface SendApplicantOnboardingDialogProps {
   applicant: Applicant;
@@ -26,7 +28,7 @@ interface SendApplicantOnboardingDialogProps {
   onSend?: () => void;
 }
 
-function buildDefaultMessage(applicant: Applicant, onboardingUrl: string) {
+function buildDefaultMessage(applicant: Applicant, onboardingUrl: string, signatureName: string) {
   return `Dobrý den ${applicant.full_name.split(' ')[0]},
 
 gratulujeme k přijetí na pozici ${applicant.position}!
@@ -39,7 +41,7 @@ Formulář obsahuje předvyplněné údaje z Vaší přihlášky. Prosím zkontr
 Těšíme se na spolupráci!
 
 S pozdravem,
-HR tým Socials.cz`;
+${signatureName}`;
 }
 
 export function SendApplicantOnboardingDialog({
@@ -49,6 +51,9 @@ export function SendApplicantOnboardingDialog({
   onSend,
 }: SendApplicantOnboardingDialogProps) {
   const { sendOnboarding } = useApplicantsData();
+  const { user } = useAuth();
+  const { colleagues } = useCRMData();
+  const signatureName = colleagues.find(c => c.profile_id === user?.id)?.full_name || 'HR tým Socials.cz';
   const [copied, setCopied] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
@@ -60,7 +65,7 @@ export function SendApplicantOnboardingDialog({
   const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [newBccEmail, setNewBccEmail] = useState('');
   const [subject, setSubject] = useState(`Onboarding - ${applicant.position} | Socials.cz`);
-  const [message, setMessage] = useState(buildDefaultMessage(applicant, onboardingUrl));
+  const [message, setMessage] = useState(buildDefaultMessage(applicant, onboardingUrl, signatureName));
 
   // Reset fields when applicant changes or dialog opens
   useEffect(() => {
@@ -71,9 +76,9 @@ export function SendApplicantOnboardingDialog({
       setBccEmails([DEFAULT_GMAIL_BCC]);
       setNewBccEmail('');
       setSubject(`Onboarding - ${applicant.position} | Socials.cz`);
-      setMessage(buildDefaultMessage(applicant, `${window.location.origin}/applicant-onboarding/${applicant.id}`));
+      setMessage(buildDefaultMessage(applicant, `${window.location.origin}/applicant-onboarding/${applicant.id}`, signatureName));
     }
-  }, [open, applicant.id]);
+  }, [open, applicant.id, applicant.position, signatureName]);
 
   const parseEmails = (value: string) =>
     value

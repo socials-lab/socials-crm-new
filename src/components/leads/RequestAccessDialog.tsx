@@ -15,6 +15,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/sonner';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { useAuth } from '@/hooks/useAuth';
+import { useCRMData } from '@/hooks/useCRMData';
 
 interface RequestAccessDialogProps {
   open: boolean;
@@ -92,8 +94,7 @@ S-klik - Nasdílejte na e-mail mysocials@seznam.cz
 
 Pokud si nebudete vědět rady, zde naleznete návod. Případně klidně napište a pomůžeme :)
 
-Děkujeme a přejeme hezký den,
-Tým Socials`;
+Děkujeme a přejeme hezký den,`;
 
 export function RequestAccessDialog({
   open,
@@ -104,10 +105,19 @@ export function RequestAccessDialog({
   leadId,
   onSent,
 }: RequestAccessDialogProps) {
+  const { user } = useAuth();
+  const { colleagues } = useCRMData();
   const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
+
+  const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
 
   const getDefaultSubject = () => {
     return `Žádost o nasdílení přístupů - ${companyName} / Socials`;
+  };
+
+  const getDefaultEmailContent = () => {
+    const signatureName = currentUserColleague?.full_name || 'Tým Socials';
+    return `${DEFAULT_EMAIL_CONTENT}\n${signatureName}`;
   };
 
   const [toEmails, setToEmails] = useState<string[]>(contactEmail ? [contactEmail] : []);
@@ -117,7 +127,7 @@ export function RequestAccessDialog({
   const [bccEmails, setBccEmails] = useState<string[]>(DEFAULT_BCC);
   const [newBccEmail, setNewBccEmail] = useState('');
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
-  const [emailContent, setEmailContent] = useState(DEFAULT_EMAIL_CONTENT);
+  const [emailContent, setEmailContent] = useState(getDefaultEmailContent());
   const [isSending, setIsSending] = useState(false);
 
   const addEmail = (
@@ -222,7 +232,7 @@ export function RequestAccessDialog({
       setBccEmails(DEFAULT_BCC);
       setNewBccEmail('');
       setEmailSubject(getDefaultSubject());
-      setEmailContent(DEFAULT_EMAIL_CONTENT);
+      setEmailContent(getDefaultEmailContent());
     }
     onOpenChange(newOpen);
   };

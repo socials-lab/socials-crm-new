@@ -325,7 +325,8 @@ serve(async (req) => {
         onboarding_signatories,
         potential_services,
         digisign_id,
-        estimated_price
+        estimated_price,
+        owner_name
       `)
       .eq("id", lead_id)
       .single();
@@ -457,7 +458,8 @@ serve(async (req) => {
 // Step 3: Create envelope
   console.log("Creating envelope...");
   const envelopeName = `Smlouva o spolupráci - ${lead.company_name}`;
-  const emailBody = `Dobrý den,\n\nprosím o podpis přiložené smlouvy o spolupráci mezi společností ${lead.company_name} a Socials s.r.o.\n\nDěkujeme,\nSocials`;
+  const signatureName = lead.owner_name || 'Socials';
+  const emailBody = `Dobrý den,\n\nprosím o podpis přiložené smlouvy o spolupráci mezi společností ${lead.company_name} a Socials s.r.o.\n\nDěkujeme,\n${signatureName}`;
   const { envelopeId, selfLink } = await createEnvelope(digisignToken, envelopeName, emailBody);
   console.log(`Envelope created: ${envelopeId}`);
 

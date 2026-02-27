@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { EmailTagInput } from '@/components/ui/email-tag-input';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { toast } from 'sonner';
 import type { ExtraWork } from '@/types/crm';
@@ -28,6 +29,7 @@ interface SendApprovalDialogProps {
 
 export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: SendApprovalDialogProps) {
   const { getClientById, clientContacts, colleagues, engagements } = useCRMData();
+  const { user } = useAuth();
   const { sendEmail, isConnected } = useGoogleCalendar();
   const [email, setEmail] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
@@ -39,6 +41,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const [isSending, setIsSending] = useState(false);
 
   const client = useMemo(() => getClientById(extraWork.client_id), [extraWork.client_id, getClientById]);
+  const currentUserColleague = useMemo(() => colleagues.find(c => c.profile_id === user?.id), [colleagues, user?.id]);
   const colleague = useMemo(() => colleagues.find(c => c.id === extraWork.colleague_id), [extraWork.colleague_id, colleagues]);
   const engagement = useMemo(() => engagements.find(e => e.id === extraWork.engagement_id), [extraWork.engagement_id, engagements]);
 
@@ -71,6 +74,8 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
         ? `\nRozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
         : '';
 
+      const signatureName = currentUserColleague?.full_name || 'Socials';
+
       setEmailBody(
         `Dobrý den,\n\nrádi bychom Vás požádali o schválení následující vícepráce:\n\nNázev: ${extraWork.name}` +
         (extraWork.description ? `\nPopis: ${extraWork.description}` : '') +
@@ -79,10 +84,10 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
         (engagement ? `\nZakázka: ${engagement.name}` : '') +
         (colleague ? `\nZpracoval/a: ${colleague.full_name}` : '') +
         `\n\nPro schválení nebo zamítnutí klikněte na odkaz níže:\n${approvalUrl}` +
-        `\n\nDěkujeme za spolupráci.\n\nS pozdravem,\nSocials`
+        `\n\nDěkujeme za spolupráci.\n\nS pozdravem,\n${signatureName}`
       );
     }
-  }, [open, extraWork.id, extraWork.approval_token]);
+  }, [open, extraWork.id, extraWork.approval_token, currentUserColleague?.full_name, colleague, engagement]);
 
   const handleCopyLink = () => {
     const url = getApprovalUrl();

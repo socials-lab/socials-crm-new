@@ -10,6 +10,8 @@ import { invokeWithTimeout } from '@/lib/supabaseUtils';
 import type { Applicant } from '@/types/applicant';
 import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
+import { useAuth } from '@/hooks/useAuth';
+import { useCRMData } from '@/hooks/useCRMData';
 
 interface SendRejectionEmailDialogProps {
   open: boolean;
@@ -18,7 +20,7 @@ interface SendRejectionEmailDialogProps {
   onSend: () => void;
 }
 
-function buildDefaultMessage(applicant: Applicant) {
+function buildDefaultMessage(applicant: Applicant, signatureName: string) {
   return `Dobrý den ${applicant.full_name.split(' ')[0]},
 
 děkujeme za Váš zájem o pozici ${applicant.position} v agentuře Socials a čas, který jste věnoval/a přípravě své přihlášky.
@@ -28,7 +30,7 @@ Po pečlivém zvážení jsme se rozhodli pokračovat s jinými kandidáty, jeji
 Přejeme Vám mnoho úspěchů v dalším profesním směřování a věříme, že najdete pozici, která bude přesně pro Vás.
 
 S pozdravem,
-Tým Socials`;
+${signatureName}`;
 }
 
 export function SendRejectionEmailDialog({
@@ -37,13 +39,17 @@ export function SendRejectionEmailDialog({
   applicant,
   onSend
 }: SendRejectionEmailDialogProps) {
+  const { user } = useAuth();
+  const { colleagues } = useCRMData();
+  const signatureName = colleagues.find(c => c.profile_id === user?.id)?.full_name || 'Tým Socials';
+
   const [emailTo, setEmailTo] = useState(applicant.email || '');
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [newCcEmail, setNewCcEmail] = useState('');
   const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [newBccEmail, setNewBccEmail] = useState('');
   const [subject, setSubject] = useState(`Vyjádření k Vaší přihlášce – ${applicant.position} | Socials`);
-  const [message, setMessage] = useState(buildDefaultMessage(applicant));
+  const [message, setMessage] = useState(buildDefaultMessage(applicant, signatureName));
   const [isSending, setIsSending] = useState(false);
 
   // Reset fields when applicant changes or dialog opens
@@ -55,9 +61,9 @@ export function SendRejectionEmailDialog({
       setBccEmails([DEFAULT_GMAIL_BCC]);
       setNewBccEmail('');
       setSubject(`Vyjádření k Vaší přihlášce – ${applicant.position} | Socials`);
-      setMessage(buildDefaultMessage(applicant));
+      setMessage(buildDefaultMessage(applicant, signatureName));
     }
-  }, [open, applicant.id]);
+  }, [open, applicant.id, applicant.position, signatureName]);
 
   const parseEmails = (value: string) =>
     value
