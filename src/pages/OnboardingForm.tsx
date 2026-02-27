@@ -96,7 +96,10 @@ const onboardingSchema = z.object({
       message: 'PSČ musí mít formát 12345 nebo 123 45',
     }),
   billing_country: z.string().optional(),
-  billing_email: z.string().email('Neplatný formát e-mailu').optional().or(z.literal('')),
+  billing_email: z.string()
+    .trim()
+    .min(1, 'Fakturační e-mail je povinný')
+    .email('Neplatný formát e-mailu'),
   
   // Signatories (persons who sign the contract) - no limit
   signatories: z.array(signatorySchema).min(1, 'Minimálně jedna osoba pro podpis je povinná'),
@@ -902,7 +905,7 @@ export default function OnboardingForm() {
                   name="billing_email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fakturační e-mail</FormLabel>
+                      <FormLabel>Fakturační e-mail *</FormLabel>
                       <FormControl>
                         <Input type="email" placeholder="fakturace@firma.cz" {...field} />
                       </FormControl>
