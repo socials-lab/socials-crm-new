@@ -543,6 +543,10 @@ export interface LeadService {
   name: string;
   selected_tier: ServiceTier | null;
   price: number;
+  // Optional original price before discount (if a discount was applied)
+  original_price?: number | null;
+  // Optional reason/label for discount in offer snapshot
+  discount_reason?: string | null;
   currency: string;
   billing_type: 'monthly' | 'one_off';
 }

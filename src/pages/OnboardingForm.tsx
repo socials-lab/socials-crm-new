@@ -44,6 +44,9 @@ interface OnboardingLead {
   owner_name?: string;
   owner_email?: string;
   potential_services?: LeadService[];
+  monthly_discount_percent?: number | null;
+  discount_scope?: 'core_only' | 'all_services' | null;
+  offer_snapshot_created_at?: string | null;
 }
 
 
@@ -398,14 +401,11 @@ export default function OnboardingForm() {
     }
   };
 
-  // Calculate order totals with prorated pricing
+  // Calculate order totals with prorated pricing + optional discounts from offer snapshot
   const getOrderSummary = () => {
     const services = lead?.potential_services || [];
     const monthlyServicesRaw = services.filter(s => s.billing_type === 'monthly');
-    const oneOffServices = services.filter(s => s.billing_type === 'one_off');
-
-    const monthlyTotal = monthlyServicesRaw.reduce((sum, s) => sum + s.price, 0);
-    const oneOffTotal = oneOffServices.reduce((sum, s) => sum + s.price, 0);
+    const oneOffServicesRaw = services.filter(s => s.billing_type === 'one_off');
 
     const startDate = form.getValues('startDate');
     const startDay = startDate ? getDate(startDate) : 1;
@@ -413,18 +413,77 @@ export default function OnboardingForm() {
     const daysInMonth = startDate ? getDaysInMonth(startDate) : 30;
     const remainingDays = isProrated ? daysInMonth - startDay + 1 : daysInMonth;
 
-    const monthlyServices = monthlyServicesRaw.map(s => ({
-      ...s,
-      proratedPrice: isProrated ? Math.round((s.price / daysInMonth) * remainingDays) : s.price,
-    }));
+    const getOriginalPrice = (service: LeadService) => {
+      if (typeof service.original_price === 'number' && service.original_price > service.price) {
+        return service.original_price;
+      }
+      return service.price;
+    };
 
+    const monthlyServices = monthlyServicesRaw.map(service => {
+      const originalPrice = getOriginalPrice(service);
+      const hasDiscount = originalPrice > service.price;
+      const proratedPrice = isProrated ? Math.round((service.price / daysInMonth) * remainingDays) : service.price;
+      const proratedOriginalPrice = isProrated ? Math.round((originalPrice / daysInMonth) * remainingDays) : originalPrice;
+
+      return {
+        ...service,
+        hasDiscount,
+        originalPrice,
+        proratedPrice,
+        proratedOriginalPrice,
+      };
+    });
+
+    const oneOffServices = oneOffServicesRaw.map(service => {
+      const originalPrice = getOriginalPrice(service);
+      const hasDiscount = originalPrice > service.price;
+      return {
+        ...service,
+        hasDiscount,
+        originalPrice,
+      };
+    });
+
+    const monthlyTotal = monthlyServices.reduce((sum, s) => sum + s.price, 0);
+    const monthlyOriginalTotal = monthlyServices.reduce((sum, s) => sum + s.originalPrice, 0);
+    const oneOffTotal = oneOffServices.reduce((sum, s) => sum + s.price, 0);
+    const oneOffOriginalTotal = oneOffServices.reduce((sum, s) => sum + s.originalPrice, 0);
     const proratedMonthlyTotal = monthlyServices.reduce((sum, s) => sum + s.proratedPrice, 0);
+    const proratedMonthlyOriginalTotal = monthlyServices.reduce((sum, s) => sum + s.proratedOriginalPrice, 0);
+
     const monthName = startDate ? format(startDate, 'LLLL', { locale: cs }) : '';
 
-    return { monthlyServices, oneOffServices, monthlyTotal, oneOffTotal, isProrated, remainingDays, daysInMonth, proratedMonthlyTotal, monthName };
+    return {
+      monthlyServices,
+      oneOffServices,
+      monthlyTotal,
+      monthlyOriginalTotal,
+      oneOffTotal,
+      oneOffOriginalTotal,
+      isProrated,
+      remainingDays,
+      daysInMonth,
+      proratedMonthlyTotal,
+      proratedMonthlyOriginalTotal,
+      monthName,
+    };
   };
 
-  const { monthlyServices, oneOffServices, monthlyTotal, oneOffTotal, isProrated, remainingDays, daysInMonth, proratedMonthlyTotal, monthName } = getOrderSummary();
+  const {
+    monthlyServices,
+    oneOffServices,
+    monthlyTotal,
+    monthlyOriginalTotal,
+    oneOffTotal,
+    oneOffOriginalTotal,
+    isProrated,
+    remainingDays,
+    daysInMonth,
+    proratedMonthlyTotal,
+    proratedMonthlyOriginalTotal,
+    monthName,
+  } = getOrderSummary();
 
   const formatPrice = (price: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -1194,8 +1253,13 @@ export default function OnboardingForm() {
                             <div className="text-right">
                               {isProrated ? (
                                 <>
-                                  <p className="text-sm text-muted-foreground line-through">{formatPrice(service.price, service.currency)}/měs</p>
+                                  <p className="text-sm text-muted-foreground line-through">{formatPrice(service.originalPrice, service.currency)}/měs</p>
                                   <p className="font-medium">{formatPrice(service.proratedPrice, service.currency)} <span className="text-muted-foreground text-xs">za {monthName} ({remainingDays} z {daysInMonth} dnů)</span></p>
+                                </>
+                              ) : service.hasDiscount ? (
+                                <>
+                                  <p className="text-sm text-muted-foreground line-through">{formatPrice(service.originalPrice, service.currency)}/měs</p>
+                                  <p className="font-medium">{formatPrice(service.price, service.currency)}<span className="text-muted-foreground">/měs</span></p>
                                 </>
                               ) : (
                                 <p className="font-medium">
@@ -1211,14 +1275,25 @@ export default function OnboardingForm() {
                         <div className="text-right">
                           {isProrated ? (
                             <>
-                              <p className="text-sm text-muted-foreground line-through">{formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                              <p className="text-sm text-muted-foreground line-through">{formatPrice(proratedMonthlyOriginalTotal, monthlyServices[0]?.currency || 'Kč')}</p>
                               <p className="font-bold text-lg">{formatPrice(proratedMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                            </>
+                          ) : monthlyOriginalTotal > monthlyTotal ? (
+                            <>
+                              <p className="text-sm text-muted-foreground line-through">{formatPrice(monthlyOriginalTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                              <p className="font-bold text-lg">{formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
                             </>
                           ) : (
                             <p className="font-bold text-lg">{formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
                           )}
                         </div>
                       </div>
+                      {monthlyOriginalTotal > monthlyTotal && (
+                        <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border-t text-sm text-green-700 dark:text-green-400">
+                          <span>Sleva na měsíčních službách</span>
+                          <span className="font-medium">-{formatPrice(monthlyOriginalTotal - monthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs</span>
+                        </div>
+                      )}
                       {isProrated && (
                         <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border-t text-center">
                           <p className="text-xs text-amber-700 dark:text-amber-400">
@@ -1251,7 +1326,16 @@ export default function OnboardingForm() {
                                   )}
                                 </div>
                               </div>
-                              <p className="font-medium text-right">{formatPrice(service.price, service.currency)}</p>
+                              <div className="text-right">
+                                {service.hasDiscount ? (
+                                  <>
+                                    <p className="text-sm text-muted-foreground line-through">{formatPrice(service.originalPrice, service.currency)}</p>
+                                    <p className="font-medium">{formatPrice(service.price, service.currency)}</p>
+                                  </>
+                                ) : (
+                                  <p className="font-medium">{formatPrice(service.price, service.currency)}</p>
+                                )}
+                              </div>
                             </div>
                             <div className="mt-2 ml-8">
                               <span className="inline-flex items-center gap-1 text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-2 py-1 rounded">
@@ -1263,7 +1347,16 @@ export default function OnboardingForm() {
                       </div>
                       <div className="flex items-center justify-between p-3 bg-amber-100 dark:bg-amber-900/40 border-t border-amber-200 dark:border-amber-800">
                         <p className="font-medium">Jednorázově celkem</p>
-                        <p className="font-bold text-lg">{formatPrice(oneOffTotal, oneOffServices[0]?.currency || 'Kč')}</p>
+                        <div className="text-right">
+                          {oneOffOriginalTotal > oneOffTotal ? (
+                            <>
+                              <p className="text-sm text-muted-foreground line-through">{formatPrice(oneOffOriginalTotal, oneOffServices[0]?.currency || 'Kč')}</p>
+                              <p className="font-bold text-lg">{formatPrice(oneOffTotal, oneOffServices[0]?.currency || 'Kč')}</p>
+                            </>
+                          ) : (
+                            <p className="font-bold text-lg">{formatPrice(oneOffTotal, oneOffServices[0]?.currency || 'Kč')}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

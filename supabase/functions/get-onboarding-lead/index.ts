@@ -67,17 +67,60 @@ serve(async (req) => {
       );
     }
 
+    // Prefer the latest active public offer snapshot for onboarding pricing.
+    // This keeps onboarding prices stable even if lead services are edited later.
+    const { data: latestOffer } = await supabaseAdmin
+      .from("public_offers")
+      .select("services, monthly_discount_percent, discount_scope, created_at")
+      .eq("lead_id", leadId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const leadServices = Array.isArray(lead.potential_services) ? lead.potential_services : [];
+    const offerServices = Array.isArray(latestOffer?.services) ? latestOffer.services : [];
+
+    const normalizedOfferServices = offerServices
+      .map((service: any, index: number) => {
+        const price = Number(service?.price);
+        if (!Number.isFinite(price)) return null;
+
+        const currency = typeof service?.currency === "string" && service.currency.trim() !== ""
+          ? service.currency
+          : "CZK";
+        const billingType = service?.billing_type === "one_off" ? "one_off" : "monthly";
+        const originalPrice = Number(service?.original_price);
+
+        return {
+          id: String(service?.id || service?.service_id || `offer-service-${index}`),
+          service_id: String(service?.service_id || service?.id || `offer-service-${index}`),
+          name: String(service?.name || "Služba"),
+          selected_tier: service?.selected_tier || null,
+          price,
+          original_price: Number.isFinite(originalPrice) ? originalPrice : null,
+          discount_reason: typeof service?.discount_reason === "string" ? service.discount_reason : null,
+          currency,
+          billing_type: billingType,
+        };
+      })
+      .filter(Boolean);
+
+    const resolvedPotentialServices = normalizedOfferServices.length > 0
+      ? normalizedOfferServices
+      : leadServices;
+
     // Get owner info for contact display
     let ownerName = "tým Socials";
     let ownerEmail = "info@socials.cz";
-    
+
     if (lead.owner_id) {
       const { data: owner } = await supabaseAdmin
         .from("colleagues")
         .select("full_name, email")
         .eq("id", lead.owner_id)
         .single();
-      
+
       if (owner) {
         ownerName = owner.full_name || ownerName;
         ownerEmail = owner.email || ownerEmail;
@@ -88,6 +131,10 @@ serve(async (req) => {
       JSON.stringify({
         lead: {
           ...lead,
+          potential_services: resolvedPotentialServices,
+          monthly_discount_percent: latestOffer?.monthly_discount_percent ?? null,
+          discount_scope: latestOffer?.discount_scope ?? null,
+          offer_snapshot_created_at: latestOffer?.created_at ?? null,
           owner_name: ownerName,
           owner_email: ownerEmail,
         }
