@@ -16,6 +16,7 @@ import {
 import { useNotifications } from '@/hooks/useNotifications';
 import { NOTIFICATION_CONFIG, NotificationType } from '@/types/notifications';
 import { cn } from '@/lib/utils';
+import { resolveNotificationTargetLink } from '@/utils/notificationLinks';
 import { formatDistanceToNow, format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -28,6 +29,10 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   offer_sent: 'Nabídka odeslána',
   colleague_birthday: 'Narozeniny kolegy',
   new_feedback_idea: 'Nový nápad',
+  client_approved_modification: 'Klient potvrdil změnu',
+  modification_approved: 'Návrh schválen',
+  modification_client_approved: 'Klient potvrdil návrh',
+  modification_rejected: 'Návrh zamítnut',
 };
 
 export default function Notifications() {
@@ -65,8 +70,10 @@ export default function Notifications() {
 
   const handleNotificationClick = (notification: typeof notifications[0]) => {
     markAsRead(notification.id);
-    if (notification.link) {
-      navigate(notification.link);
+
+    const targetLink = resolveNotificationTargetLink(notification);
+    if (targetLink) {
+      navigate(targetLink);
     }
   };
 

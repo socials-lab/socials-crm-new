@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NOTIFICATION_CONFIG } from '@/types/notifications';
 import { cn } from '@/lib/utils';
+import { resolveNotificationTargetLink } from '@/utils/notificationLinks';
 import { formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -27,10 +28,13 @@ export function NotificationsDropdown() {
 
   const handleNotificationClick = (notification: typeof notifications[0]) => {
     markAsRead(notification.id);
-    if (notification.link) {
-      navigate(notification.link);
-      setOpen(false);
+
+    const targetLink = resolveNotificationTargetLink(notification);
+    if (targetLink) {
+      navigate(targetLink);
     }
+
+    setOpen(false);
   };
 
   const formatTime = (dateStr: string) => {

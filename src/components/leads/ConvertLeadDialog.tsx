@@ -345,8 +345,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           p_type: 'lead_converted',
           p_title: 'Lead převeden na klienta!',
           p_message: `Lead "${lead.company_name}" byl úspěšně převeden.`,
-          p_link: '/clients',
-          p_metadata: { lead_id: lead.id, company_name: lead.company_name },
+          p_link: `/clients?highlight=${clientId}`,
+          p_metadata: {
+            lead_id: lead.id,
+            client_id: clientId,
+            company_name: lead.company_name,
+          },
         });
       } catch {
         // Non-blocking

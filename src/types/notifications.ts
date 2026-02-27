@@ -29,8 +29,12 @@ export interface Notification {
     colleague_id?: string;
     colleague_name?: string;
     modification_request_id?: string;
+    engagement_id?: string;
     engagement_name?: string;
     request_id?: string;
+    idea_id?: string;
+    author_id?: string;
+    role?: string;
     client_name?: string;
     client_email?: string;
     rejection_reason?: string;

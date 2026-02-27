@@ -262,7 +262,7 @@ serve(async (req) => {
               type: "contract_signed",
               title: "Smlouva podepsána!",
               message: `Smlouva podepsána pro: "${companyName}"`,
-              link: "/leads",
+              link: `/leads?openLead=${lead.id}`, 
               metadata: { lead_id: lead.id, company_name: companyName },
             }))
           );

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, LayoutGrid, List, Calendar, TrendingUp, Target, Trophy } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
@@ -17,6 +17,7 @@ import { LeadsKanban } from '@/components/leads/LeadsKanban';
 import { LeadsTable } from '@/components/leads/LeadsTable';
 import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
 import { AddLeadDialog } from '@/components/leads/AddLeadDialog';
+import { useSearchParams } from 'react-router-dom';
 import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, isWithinInterval } from 'date-fns';
@@ -52,6 +53,7 @@ const STAGE_ORDER: LeadStage[] = ['new_lead', 'meeting_done', 'waiting_access', 
 export default function Leads() {
   const { leads, updateLeadStage } = useLeadsData();
   const { colleagues } = useCRMData();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [ownerFilter, setOwnerFilter] = useState<string>('all');
@@ -67,6 +69,23 @@ export default function Leads() {
   const selectedLead = selectedLeadId
     ? leads.find(l => l.id === selectedLeadId) ?? null
     : null;
+
+  useEffect(() => {
+    const openLeadId = searchParams.get('openLead');
+    if (!openLeadId) return;
+
+    const targetLead = leads.find((lead) => lead.id === openLeadId);
+    if (!targetLead) return;
+
+    setSelectedLeadId(openLeadId);
+    setIsDetailOpen(true);
+
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('openLead');
+      return next;
+    }, { replace: true });
+  }, [leads, searchParams, setSearchParams]);
 
   const filteredLeads = useMemo(() => {
     return leads.filter(lead => {

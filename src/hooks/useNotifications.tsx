@@ -174,7 +174,7 @@ export function useNotifications() {
             type: 'colleague_birthday',
             title: '🎂 Narozeniny!',
             message: `${colleague.full_name} má dnes narozeniny! Nezapomeňte popřát.`,
-            link: '/colleagues',
+            link: `/colleagues?highlight=${colleague.id}`,
             metadata: {
               colleague_id: colleague.id,
               colleague_name: colleague.full_name,

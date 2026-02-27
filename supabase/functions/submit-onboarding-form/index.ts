@@ -128,7 +128,7 @@ serve(async (req) => {
             type: "form_completed",
             title: "Formulář vyplněn!",
             message: `Onboarding formulář vyplněn pro: "${data.company_name}"`,
-            link: "/leads",
+            link: `/leads?openLead=${data.leadId}`, 
             metadata: { lead_id: data.leadId, company_name: data.company_name },
           }))
         );

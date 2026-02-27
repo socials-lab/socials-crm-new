@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { AddFeedbackDialog } from '@/components/feedback/AddFeedbackDialog';
 import { FeedbackCard } from '@/components/feedback/FeedbackCard';
@@ -14,15 +14,33 @@ import {
 } from '@/components/ui/select';
 import { FEEDBACK_CATEGORY_CONFIG, FEEDBACK_STATUS_CONFIG, type FeedbackIdea, type FeedbackCategory, type FeedbackStatus } from '@/types/feedback';
 import { Lightbulb } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 
 type SortOption = 'newest' | 'most_votes' | 'least_votes';
 
 export default function Feedback() {
   const { ideas, getVoteCounts } = useFeedbackData();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedIdea, setSelectedIdea] = useState<FeedbackIdea | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<FeedbackCategory | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | 'all'>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+
+  useEffect(() => {
+    const ideaId = searchParams.get('idea');
+    if (!ideaId) return;
+
+    const idea = ideas.find((item) => item.id === ideaId);
+    if (!idea) return;
+
+    setSelectedIdea(idea);
+
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('idea');
+      return next;
+    }, { replace: true });
+  }, [ideas, searchParams, setSearchParams]);
 
   const filteredAndSortedIdeas = useMemo(() => {
     let result = [...ideas];
