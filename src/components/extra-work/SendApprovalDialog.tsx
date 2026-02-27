@@ -19,6 +19,7 @@ import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar'
 import { toast } from 'sonner';
 import type { ExtraWork } from '@/types/crm';
 import { Copy, Mail, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { getDefaultEmailSignature } from '@/lib/emailSignature';
 
 interface SendApprovalDialogProps {
   open: boolean;
@@ -74,7 +75,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
         ? `\nRozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
         : '';
 
-      const signatureName = currentUserColleague?.full_name || 'Socials';
+      const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Socials' });
 
       setEmailBody(
         `Dobrý den,\n\nrádi bychom Vás požádali o schválení následující vícepráce:\n\nNázev: ${extraWork.name}` +
@@ -84,10 +85,10 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
         (engagement ? `\nZakázka: ${engagement.name}` : '') +
         (colleague ? `\nZpracoval/a: ${colleague.full_name}` : '') +
         `\n\nPro schválení nebo zamítnutí klikněte na odkaz níže:\n${approvalUrl}` +
-        `\n\nDěkujeme za spolupráci.\n\nS pozdravem,\n${signatureName}`
+        `\n\n${signature}`
       );
     }
-  }, [open, extraWork.id, extraWork.approval_token, currentUserColleague?.full_name, colleague, engagement]);
+  }, [open, extraWork.id, extraWork.approval_token, currentUserColleague, colleague, engagement]);
 
   const handleCopyLink = () => {
     const url = getApprovalUrl();

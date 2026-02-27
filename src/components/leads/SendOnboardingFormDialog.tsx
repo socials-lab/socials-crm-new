@@ -17,6 +17,7 @@ import { toast } from '@/components/ui/sonner';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
+import { getDefaultEmailSignature } from '@/lib/emailSignature';
 import type { Lead } from '@/types/crm';
 
 interface SendOnboardingFormDialogProps {
@@ -112,7 +113,8 @@ export function SendOnboardingFormDialog({
   const [emailSubject, setEmailSubject] = useState(getDefaultSubject());
   const [emailContent, setEmailContent] = useState(() => generateDefaultEmail());
 
-  function generateDefaultEmail(signatureName = currentUserColleague?.full_name || 'Tým Socials') {
+  function generateDefaultEmail() {
+    const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' });
     return `Dobrý den ${lead.contact_name},
 
 děkujeme za Váš zájem o spolupráci s agenturou Socials.
@@ -125,8 +127,7 @@ Formulář je předvyplněný údaji, které již o Vás máme. Prosím zkontrol
 
 Po vyplnění formuláře Vás budeme kontaktovat s dalšími kroky.
 
-Děkujeme,
-${signatureName}`;
+${signature}`;
   }
 
   const parseEmails = (value: string) =>

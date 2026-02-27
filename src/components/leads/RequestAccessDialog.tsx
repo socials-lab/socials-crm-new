@@ -17,6 +17,7 @@ import { toast } from '@/components/ui/sonner';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
+import { getDefaultEmailSignature } from '@/lib/emailSignature';
 
 interface RequestAccessDialogProps {
   open: boolean;
@@ -92,9 +93,7 @@ Google Ads - Zašlete nám ID reklamního účtu. Zašleme žádost o přístup 
 
 S-klik - Nasdílejte na e-mail mysocials@seznam.cz
 
-Pokud si nebudete vědět rady, zde naleznete návod. Případně klidně napište a pomůžeme :)
-
-Děkujeme a přejeme hezký den,`;
+Pokud si nebudete vědět rady, zde naleznete návod. Případně klidně napište a pomůžeme :)`;
 
 export function RequestAccessDialog({
   open,
@@ -116,8 +115,7 @@ export function RequestAccessDialog({
   };
 
   const getDefaultEmailContent = () => {
-    const signatureName = currentUserColleague?.full_name || 'Tým Socials';
-    return `${DEFAULT_EMAIL_CONTENT}\n${signatureName}`;
+    return `${DEFAULT_EMAIL_CONTENT}\n\n${getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' })}`;
   };
 
   const [toEmails, setToEmails] = useState<string[]>(contactEmail ? [contactEmail] : []);

@@ -20,6 +20,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useModificationRequests, type StoredModificationRequest } from '@/hooks/useModificationRequests';
+import { getDefaultEmailSignature } from '@/lib/emailSignature';
 import type {
   AddServiceProposedChanges,
   UpdateServicePriceProposedChanges,
@@ -156,6 +157,12 @@ export function SendModificationEmailDialog({
     const validUntil = request.upgrade_offer_valid_until
       ? format(new Date(request.upgrade_offer_valid_until), 'd. MMMM yyyy', { locale: cs })
       : '14 dní';
+    const defaultSignature = getDefaultEmailSignature(currentUserColleague, {
+      fallbackName: 'Tým Socials',
+      includePosition: true,
+      includeEmail: true,
+      includePhone: true,
+    });
 
     setEmailContent(`${greeting}
 
@@ -173,10 +180,7 @@ Odkaz je platný do: ${validUntil}
 
 V případě dotazů nás neváhejte kontaktovat.
 
-S pozdravem,
-${currentUserColleague.full_name}
-${currentUserColleague.position}
-${currentUserColleague.email}${currentUserColleague.phone ? `\n${currentUserColleague.phone}` : ''}`);
+${defaultSignature}`);
   }, [currentUserColleague, open, request, upgradeLink]);
 
   const handleSend = async () => {

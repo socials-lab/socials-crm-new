@@ -12,6 +12,7 @@ import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
+import { getDefaultEmailSignature } from '@/lib/emailSignature';
 
 interface SendInterviewInviteDialogProps {
   open: boolean;
@@ -29,7 +30,6 @@ Rádi bychom se s Vámi spojili na krátký telefonát nebo online schůzku, aby
 
 Dejte prosím vědět, kdy se Vám hodí 15-30 minutový call.
 
-Děkujeme a těšíme se na Vás,
 ${signatureName}`;
 }
 
@@ -41,7 +41,8 @@ export function SendInterviewInviteDialog({
 }: SendInterviewInviteDialogProps) {
   const { user } = useAuth();
   const { colleagues } = useCRMData();
-  const signatureName = colleagues.find(c => c.profile_id === user?.id)?.full_name || 'Tým Socials';
+  const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
+  const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' });
 
   const [emailTo, setEmailTo] = useState(applicant.email || '');
   const [ccEmails, setCcEmails] = useState<string[]>([]);
@@ -49,7 +50,7 @@ export function SendInterviewInviteDialog({
   const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [newBccEmail, setNewBccEmail] = useState('');
   const [subject, setSubject] = useState(`Pozvánka na pohovor – ${applicant.position} | Socials`);
-  const [message, setMessage] = useState(buildDefaultMessage(applicant, signatureName));
+  const [message, setMessage] = useState(buildDefaultMessage(applicant, signature));
   const [isSending, setIsSending] = useState(false);
 
   // Reset fields when applicant changes or dialog opens
@@ -61,9 +62,9 @@ export function SendInterviewInviteDialog({
       setBccEmails([DEFAULT_GMAIL_BCC]);
       setNewBccEmail('');
       setSubject(`Pozvánka na pohovor – ${applicant.position} | Socials`);
-      setMessage(buildDefaultMessage(applicant, signatureName));
+      setMessage(buildDefaultMessage(applicant, signature));
     }
-  }, [open, applicant.id, applicant.position, signatureName]);
+  }, [open, applicant.id, applicant.position, signature]);
 
   const parseEmails = (value: string) =>
     value

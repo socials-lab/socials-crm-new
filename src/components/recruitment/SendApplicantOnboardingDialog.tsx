@@ -20,6 +20,7 @@ import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
+import { getDefaultEmailSignature } from '@/lib/emailSignature';
 
 interface SendApplicantOnboardingDialogProps {
   applicant: Applicant;
@@ -40,7 +41,6 @@ Formulář obsahuje předvyplněné údaje z Vaší přihlášky. Prosím zkontr
 
 Těšíme se na spolupráci!
 
-S pozdravem,
 ${signatureName}`;
 }
 
@@ -53,7 +53,8 @@ export function SendApplicantOnboardingDialog({
   const { sendOnboarding } = useApplicantsData();
   const { user } = useAuth();
   const { colleagues } = useCRMData();
-  const signatureName = colleagues.find(c => c.profile_id === user?.id)?.full_name || 'HR tým Socials.cz';
+  const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
+  const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'HR tým Socials.cz' });
   const [copied, setCopied] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
@@ -65,7 +66,7 @@ export function SendApplicantOnboardingDialog({
   const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [newBccEmail, setNewBccEmail] = useState('');
   const [subject, setSubject] = useState(`Onboarding - ${applicant.position} | Socials.cz`);
-  const [message, setMessage] = useState(buildDefaultMessage(applicant, onboardingUrl, signatureName));
+  const [message, setMessage] = useState(buildDefaultMessage(applicant, onboardingUrl, signature));
 
   // Reset fields when applicant changes or dialog opens
   useEffect(() => {
@@ -76,9 +77,9 @@ export function SendApplicantOnboardingDialog({
       setBccEmails([DEFAULT_GMAIL_BCC]);
       setNewBccEmail('');
       setSubject(`Onboarding - ${applicant.position} | Socials.cz`);
-      setMessage(buildDefaultMessage(applicant, `${window.location.origin}/applicant-onboarding/${applicant.id}`, signatureName));
+      setMessage(buildDefaultMessage(applicant, `${window.location.origin}/applicant-onboarding/${applicant.id}`, signature));
     }
-  }, [open, applicant.id, applicant.position, signatureName]);
+  }, [open, applicant.id, applicant.position, signature]);
 
   const parseEmails = (value: string) =>
     value

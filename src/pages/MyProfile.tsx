@@ -20,6 +20,7 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -59,6 +60,7 @@ const profileSchema = z.object({
   billing_city: z.string().nullable(),
   billing_zip: z.string().nullable(),
   bank_account: z.string().nullable(),
+  email_signature: z.string().nullable(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -90,6 +92,7 @@ export default function MyProfile() {
       billing_city: currentColleague?.billing_city || null,
       billing_zip: currentColleague?.billing_zip || null,
       bank_account: currentColleague?.bank_account || null,
+      email_signature: currentColleague?.email_signature || null,
     },
   });
 
@@ -107,6 +110,7 @@ export default function MyProfile() {
         billing_city: currentColleague.billing_city || null,
         billing_zip: currentColleague.billing_zip || null,
         bank_account: currentColleague.bank_account || null,
+        email_signature: currentColleague.email_signature || null,
       });
     }
   }, [currentColleague?.id]);
@@ -198,21 +202,40 @@ export default function MyProfile() {
     if (!currentColleague) return;
 
     setIsSubmitting(true);
+
+    const profilePayload = {
+      phone: data.phone || null,
+      birthday: data.birthday ? format(data.birthday, 'yyyy-MM-dd') : null,
+      personal_email: data.personal_email || null,
+      ico: data.ico || null,
+      dic: data.dic || null,
+      company_name: data.company_name || null,
+      billing_street: data.billing_street || null,
+      billing_city: data.billing_city || null,
+      billing_zip: data.billing_zip || null,
+      bank_account: data.bank_account || null,
+      email_signature: data.email_signature || null,
+    };
+
     try {
-      await updateColleague(currentColleague.id, {
-        phone: data.phone || null,
-        birthday: data.birthday ? format(data.birthday, 'yyyy-MM-dd') : null,
-        personal_email: data.personal_email || null,
-        ico: data.ico || null,
-        dic: data.dic || null,
-        company_name: data.company_name || null,
-        billing_street: data.billing_street || null,
-        billing_city: data.billing_city || null,
-        billing_zip: data.billing_zip || null,
-        bank_account: data.bank_account || null,
-      });
+      await updateColleague(currentColleague.id, profilePayload);
       toast.success('Profil byl uložen');
-    } catch (error) {
+    } catch (error: any) {
+      const isMissingEmailSignatureColumn =
+        error?.code === 'PGRST204' &&
+        String(error?.message || '').includes('email_signature');
+
+      if (isMissingEmailSignatureColumn) {
+        try {
+          const { email_signature: _emailSignature, ...payloadWithoutSignature } = profilePayload;
+          await updateColleague(currentColleague.id, payloadWithoutSignature);
+          toast.success('Profil byl uložen (bez podpisu – čeká se na migraci databáze)');
+          return;
+        } catch (fallbackError) {
+          console.error('Failed to update profile after email_signature fallback:', fallbackError);
+        }
+      }
+
       console.error('Failed to update profile:', error);
       toast.error('Nepodařilo se uložit profil');
     } finally {
@@ -483,6 +506,29 @@ export default function MyProfile() {
                     </FormControl>
                     <FormDescription>
                       Pro fakturační a smluvní účely (jiný než pracovní email)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email_signature"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email podpis</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={`Jan Novak\nSocials`}
+                        rows={5}
+                        {...field}
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value || null)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Tento text se používá jako výchozí podpis v odchozích emailech.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

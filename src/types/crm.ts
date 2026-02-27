@@ -333,6 +333,7 @@ export interface Colleague {
   billing_city: string | null;
   billing_zip: string | null;
   bank_account: string | null;
+  email_signature: string | null;
   max_engagements: number | null;
   created_at: string;
   updated_at: string;

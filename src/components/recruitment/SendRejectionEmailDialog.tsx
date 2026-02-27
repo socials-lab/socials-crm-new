@@ -12,6 +12,7 @@ import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
+import { getDefaultEmailSignature } from '@/lib/emailSignature';
 
 interface SendRejectionEmailDialogProps {
   open: boolean;
@@ -29,7 +30,6 @@ Po pečlivém zvážení jsme se rozhodli pokračovat s jinými kandidáty, jeji
 
 Přejeme Vám mnoho úspěchů v dalším profesním směřování a věříme, že najdete pozici, která bude přesně pro Vás.
 
-S pozdravem,
 ${signatureName}`;
 }
 
@@ -41,7 +41,8 @@ export function SendRejectionEmailDialog({
 }: SendRejectionEmailDialogProps) {
   const { user } = useAuth();
   const { colleagues } = useCRMData();
-  const signatureName = colleagues.find(c => c.profile_id === user?.id)?.full_name || 'Tým Socials';
+  const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
+  const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' });
 
   const [emailTo, setEmailTo] = useState(applicant.email || '');
   const [ccEmails, setCcEmails] = useState<string[]>([]);
@@ -49,7 +50,7 @@ export function SendRejectionEmailDialog({
   const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [newBccEmail, setNewBccEmail] = useState('');
   const [subject, setSubject] = useState(`Vyjádření k Vaší přihlášce – ${applicant.position} | Socials`);
-  const [message, setMessage] = useState(buildDefaultMessage(applicant, signatureName));
+  const [message, setMessage] = useState(buildDefaultMessage(applicant, signature));
   const [isSending, setIsSending] = useState(false);
 
   // Reset fields when applicant changes or dialog opens
@@ -61,9 +62,9 @@ export function SendRejectionEmailDialog({
       setBccEmails([DEFAULT_GMAIL_BCC]);
       setNewBccEmail('');
       setSubject(`Vyjádření k Vaší přihlášce – ${applicant.position} | Socials`);
-      setMessage(buildDefaultMessage(applicant, signatureName));
+      setMessage(buildDefaultMessage(applicant, signature));
     }
-  }, [open, applicant.id, applicant.position, signatureName]);
+  }, [open, applicant.id, applicant.position, signature]);
 
   const parseEmails = (value: string) =>
     value

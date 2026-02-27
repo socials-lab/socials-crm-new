@@ -495,6 +495,7 @@ export type Database = {
           created_at: string | null
           dic: string | null
           email: string
+          email_signature: string | null
           full_name: string
           ico: string | null
           id: string
@@ -523,6 +524,7 @@ export type Database = {
           created_at?: string | null
           dic?: string | null
           email: string
+          email_signature?: string | null
           full_name: string
           ico?: string | null
           id?: string
@@ -551,6 +553,7 @@ export type Database = {
           created_at?: string | null
           dic?: string | null
           email?: string
+          email_signature?: string | null
           full_name?: string
           ico?: string | null
           id?: string

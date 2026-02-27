@@ -17,6 +17,7 @@ import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useCRMData } from '@/hooks/useCRMData';
+import { getDefaultEmailSignature } from '@/lib/emailSignature';
 import type { Lead } from '@/types/crm';
 
 interface SendOfferDialogProps {
@@ -80,6 +81,13 @@ export function SendOfferDialog({
       ? `Celková cena: ${totalPrice.toLocaleString()} ${lead.currency}${hasMonthlyServices ? '/měs' : ''}`
       : 'Cena bude stanovena na základě detailní nabídky.';
 
+    const defaultSignature = getDefaultEmailSignature(currentUserColleague, {
+      fallbackName: 'Tým Socials',
+      includePosition: true,
+      includeEmail: true,
+      includePhone: true,
+    });
+
     setEmailContent(`Dobrý den ${lead.contact_name},
 
 děkuji za náš nedávný rozhovor ohledně spolupráce se společností ${lead.company_name}.
@@ -94,11 +102,7 @@ ${lead.offer_url ? `Detailní nabídku naleznete zde: ${lead.offer_url}` : ''}
 
 Budu rád/a, když se mi ozvete s případnými dotazy.
 
-S pozdravem,
-${currentUserColleague.full_name}
-${currentUserColleague.position}
-${currentUserColleague.email}
-${currentUserColleague.phone || ''}`);
+${defaultSignature}`);
   }, [currentUserColleague, lead, open]);
 
   const handleSend = async () => {
