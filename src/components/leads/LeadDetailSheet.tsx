@@ -651,9 +651,9 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
               {/* Total price */}
               {(() => {
                 const hasServices = lead.potential_services && lead.potential_services.length > 0;
-                const totalPrice = hasServices
+                const totalPrice = lead.estimated_price || (hasServices
                   ? lead.potential_services.reduce((sum, s) => sum + s.price, 0)
-                  : 0;
+                  : 0);
                 const hasMonthlyServices = hasServices && lead.potential_services.some(s => s.billing_type === 'monthly');
                 return (
                   <div className="p-3 rounded-lg bg-muted/50">

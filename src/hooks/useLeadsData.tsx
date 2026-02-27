@@ -86,14 +86,45 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      // Transform leads - notes is JSONB array, ensure it's always an array
-      return (data || []).map((lead: Record<string, unknown>) => ({
-        ...lead,
-        notes: Array.isArray(lead.notes) ? lead.notes : [],
-        stage: lead.stage || 'new_lead',
-        potential_services: Array.isArray(lead.potential_services) ? lead.potential_services : [],
-        access_request_platforms: Array.isArray(lead.access_request_platforms) ? lead.access_request_platforms : [],
-      }));
+
+      // Load latest active offer totals so lead list and analytics reflect discounts
+      // applied in the shared-offer flow (including monthly % discounts).
+      const { data: offersData, error: offersError } = await supabase
+        .from('public_offers')
+        .select('lead_id, total_price, created_at')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (offersError) {
+        console.error('Failed to fetch public offer totals:', offersError);
+      }
+
+      const latestOfferTotalByLeadId = new Map<string, number>();
+      (offersData || []).forEach((offer: Record<string, unknown>) => {
+        const leadId = typeof offer.lead_id === 'string' ? offer.lead_id : null;
+        const totalPrice = Number(offer.total_price);
+
+        if (!leadId || !Number.isFinite(totalPrice)) return;
+        if (!latestOfferTotalByLeadId.has(leadId)) {
+          latestOfferTotalByLeadId.set(leadId, totalPrice);
+        }
+      });
+
+      // Transform leads - notes is JSONB array, ensure it's always an array.
+      // If there's an active offer snapshot, prefer its total_price over legacy estimated_price.
+      return (data || []).map((lead: Record<string, unknown>) => {
+        const leadId = typeof lead.id === 'string' ? lead.id : null;
+        const offerTotal = leadId ? latestOfferTotalByLeadId.get(leadId) : undefined;
+
+        return {
+          ...lead,
+          estimated_price: Number.isFinite(offerTotal) ? offerTotal : lead.estimated_price,
+          notes: Array.isArray(lead.notes) ? lead.notes : [],
+          stage: lead.stage || 'new_lead',
+          potential_services: Array.isArray(lead.potential_services) ? lead.potential_services : [],
+          access_request_platforms: Array.isArray(lead.access_request_platforms) ? lead.access_request_platforms : [],
+        };
+      });
     },
   });
 
