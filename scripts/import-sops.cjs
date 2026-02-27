@@ -65,6 +65,83 @@ function parseCSV(csvPath) {
   return mapping;
 }
 
+// Convert Loom URLs to embeddable iframes
+function convertLoomEmbeds(content) {
+  let result = content;
+
+  // Pattern 1: [https://www.loom.com/share/VIDEO_ID](https://www.loom.com/share/VIDEO_ID)
+  // Pattern 2: [text](https://www.loom.com/share/VIDEO_ID)
+  // Pattern 3: Plain URL https://www.loom.com/share/VIDEO_ID
+  // Pattern 4: https://loom.com/share/VIDEO_ID (without www)
+
+  // Extract video ID from loom share URL
+  const extractLoomId = (url) => {
+    const match = url.match(/loom\.com\/share\/([a-zA-Z0-9]+)/);
+    return match ? match[1] : null;
+  };
+
+  // Replace markdown links to Loom with embed div
+  result = result.replace(
+    /\[([^\]]*)\]\((https?:\/\/(?:www\.)?loom\.com\/share\/[a-zA-Z0-9]+[^)]*)\)/gi,
+    (match, text, url) => {
+      const videoId = extractLoomId(url);
+      if (videoId) {
+        const embedUrl = `https://www.loom.com/embed/${videoId}`;
+        return `<div data-loom-embed><iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`;
+      }
+      return match;
+    }
+  );
+
+  // Replace plain Loom URLs (not already in markdown link format)
+  result = result.replace(
+    /(?<!\]\()(?<!\()(https?:\/\/(?:www\.)?loom\.com\/share\/[a-zA-Z0-9]+(?:\?[^\s<)]*)?)/gi,
+    (match, url) => {
+      // Skip if this is part of a markdown link we already processed
+      const videoId = extractLoomId(url);
+      if (videoId) {
+        const embedUrl = `https://www.loom.com/embed/${videoId}`;
+        return `<div data-loom-embed><iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`;
+      }
+      return match;
+    }
+  );
+
+  return result;
+}
+
+// Remove or replace local image/video references that won't work after import
+function handleMediaReferences(content) {
+  // Remove local image references: ![alt](folder/file.png)
+  // These are local files that can't be accessed after import
+  let cleaned = content;
+
+  // Replace local images with a note (keeping the alt text)
+  cleaned = cleaned.replace(
+    /!\[([^\]]*)\]\([^)]+\.(png|jpg|jpeg|gif|webp)\)/gi,
+    (match, alt) => {
+      if (alt && alt.trim()) {
+        return `*[Obrázek: ${alt}]*`;
+      }
+      return '*[Obrázek]*';
+    }
+  );
+
+  // Replace local video links with a note
+  cleaned = cleaned.replace(
+    /\[([^\]]*\.mp4)\]\([^)]+\.mp4\)/gi,
+    (match, name) => `*[Video: ${name}]*`
+  );
+
+  // Remove standalone local file references that aren't images
+  cleaned = cleaned.replace(
+    /\[([^\]]+)\]\(([^)]+\/[^)]+\.(mp4|mov|avi))\)/gi,
+    (match, text) => `*[Video: ${text}]*`
+  );
+
+  return cleaned;
+}
+
 // Clean markdown content and remove Notion metadata
 function cleanMarkdownContent(content) {
   const lines = content.split('\n');
@@ -202,10 +279,10 @@ async function importSOPs() {
   const markedModule = await import('marked');
   marked = markedModule.marked;
 
-  // Configure marked for proper HTML output
+  // Configure marked for cleaner HTML output (Notion-like)
   marked.setOptions({
-    breaks: true,  // Convert \n to <br>
-    gfm: true,     // GitHub Flavored Markdown
+    breaks: false,  // Don't convert single \n to <br> - use double line breaks
+    gfm: true,      // GitHub Flavored Markdown
   });
 
   const sopDir = '/Users/adamrana/Downloads/Private & Shared 3/SOPs (procesy, co se jak v Socials dělá) - public/SOPs';
@@ -266,7 +343,13 @@ async function importSOPs() {
     }
 
     // Clean markdown content
-    const cleanedMarkdown = cleanMarkdownContent(content);
+    let cleanedMarkdown = cleanMarkdownContent(content);
+
+    // Handle local media references (images/videos that can't be imported)
+    cleanedMarkdown = handleMediaReferences(cleanedMarkdown);
+
+    // Convert Loom URLs to embeddable iframes (before HTML conversion)
+    cleanedMarkdown = convertLoomEmbeds(cleanedMarkdown);
 
     // Convert markdown to HTML
     const htmlContent = marked.parse(cleanedMarkdown);

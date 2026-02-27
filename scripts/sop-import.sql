@@ -4,7 +4,7 @@ SET ROLE postgres;
 DELETE FROM sop_articles;
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'6ceaf80a-8db2-4790-bf4f-ed69485b5c99',
+'21261241-7fc7-41cd-a9cc-a2260eb081fc',
 '11111111-1111-1111-1111-111111111108',
 'Buddy pro nové kolegy',
 '<p><strong>Role:</strong> Jaroslav Bobák („Jarda“)</p>
@@ -33,7 +33,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'e6ee3aec-e1cf-439c-8e3b-8eecd74be6f1',
+'60ef0abb-228c-4abe-89a2-f6891697082e',
 '11111111-1111-1111-1111-111111111108',
 'Co dělat, když jedeš na dovolenou',
 '<p>Před odjezdem na dovolenou je klíčové zajistit, aby tvoje absence co nejméně ovlivnila chod projektů a spokojenost klientů. Dobrá příprava umožní týmu hladce pokračovat v práci, minimalizuje stres z nenadálých situací a zároveň ti poskytne klidnou dovolenou bez nutnosti řešit problémy na dálku. 😊</p>
@@ -122,7 +122,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'a41204b3-c2b8-4eef-9c20-2a296ec7d17e',
+'5329d319-04b3-4ad9-b371-5e73b4f60cab',
 '11111111-1111-1111-1111-111111111103',
 'Co dělat, když se zhoršují výsledky',
 '<h3><strong>Cíl: Rychle identifikovat hlavní příčinu problému. Musíš zjistit, jesti je chyba v kampaních, na webu a nebo v externím faktoru (sezónnost, konkurence)</strong></h3>
@@ -418,7 +418,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'99fc7098-4a1e-4538-9f3e-7bd80199e26f',
+'c65aa889-bb01-40d5-b4e3-469221bd3263',
 '11111111-1111-1111-1111-111111111109',
 'Content management',
 '<h1><strong>Zodpovědnosti</strong></h1>
@@ -497,7 +497,7 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <ul>
 <li>Termín: pravidelná publikace každý čtvrtek ráno</li>
 <li>Video editor nahrává epizody na podcasters → příprava popisků na všech platformách → doplnění timeline → příprava thumbnailu a popisku k reelsku k epizodě → naplánování a publikace → vložení příspěvku do stories s odkazem na podcasters</li>
-<li>Postup nahrávání podcastů na platformy: <a href="https://www.loom.com/share/e8d2ed49571f43afa109130455f38f4c?sid=4ffbd85d-06d0-4ffa-a31d-8fe8c5f1006c">https://www.loom.com/share/e8d2ed49571f43afa109130455f38f4c?sid=4ffbd85d-06d0-4ffa-a31d-8fe8c5f1006c</a></li>
+<li>Postup nahrávání podcastů na platformy: <div data-loom-embed><iframe src="https://www.loom.com/embed/e8d2ed49571f43afa109130455f38f4c" frameborder="0" allowfullscreen></iframe></div></li>
 <li>Postup přidání podcastu na web</li>
 <li>Thumbnail pro reels: obrázek dodává editor, overlay připravuje content manager v Canva</li>
 <li>Thumbnail pro YouTube: obrázek dodává editor, overlay připravuje grafička Ivka Šimková v Canva</li>
@@ -528,13 +528,13 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>Veškeré podklady (grafika, texty, videa) se ukládají do G-Drive struktury dle měsíce a typu výstupu.</li>
 </ul>
 ',
-'Zodpovědnosti Plánování, koordinace a exekuce obsahu na všech agenturních kanálech (sociální sítě, blog, newsletter, podcast, případové studie apod.) a kanálech majitelů. Cíl SOP Zajistit jasný postup pro efektivní a konzistentní práci s obsahem napříč kanály agentury a majitelů. Hlavní oblasti odpovědnosti Plánování obsahu Vytváří měsíční publikační plán pro sociální sítě, podcast a newslettery. Úzce spolupracuje s Dannym a Oťasem (někdy specialisty) pro získávání témat. Aktualizuje plány v nástroji Zoomsphere Tvorba obsahu Koordinuje grafika a videoeditora. Píše nebo edituje texty (titulky, příspěvky, thumbnaily, případové studie, popisky k podcastům, emaily). Pro podcasty využívá transkripty z descriptu Zadává produkční podklady pro natáčení (např. scénáře, hooky, popisky). Tvoří short form z long form obsahu: Video (the highest leverage) → Audio → Statické grafické posty → Psaná tvorba (Threads, Twitter, e-mailing, případovky) Dává inspiraci, co tvořit dál (př. top performing reelsko z podcastu → doporučí připravit epizodu podcastu nebo YouTube video). Publikace obsahu Plánuje a publikuje schválený obsah dle kalendáře v Zoomsphere. Používá schválené nástroje pro plánování (Zoomsphere) Dodržuje nastavený harmonogram (např. 1 podcast týdně ve čtvrtek, min. 5 reels týdně, min. 2 statické posty týdně) Vyhodnocení a reporting Stanoví benchmark pro vyhodnocení úspěšného obsahu. Sleduje výkon obsahu (views, dosah, engagement) 1× měsíčně připraví přehled s poznatky: co fungovalo / co ne / návrhy pro zlepšení. Využívá přehledy z platforem Standardní pracovní postupy Měsíční plánování Termín: mít kompletně připravený obsah na minimálně 2 (ideálně 3) týdny dopředu Výstup: Vyplněné Zoomsphere se všemi tématy, formáty a deadliny. 1x měsíčně 1 velký společný meeting nad obsahem pro další období. Vytváření obsahu (long form do short form) Cílem je efektivně přetvářet dlouhé formáty (např. video podcasty, případové studie) do krátkých, atraktivních videí nebo statických postů pro sociální sítě (short-form content). Zdrojem je dlouhé video nebo případová studie. Nástroje pro zpracování videa: zdroj videa: YouTube nástroj pro vytvoření reels: OpusClip Výstup: reels statický příspěvek (carousel, image,…) Vytváření reels Postup: Danny + Oťas natočí videa → nahrají na drive → vytvoří nový post v Zoomsphere → v interním komentáři označí Content Managera a vloží odkaz na složku s videem → předání na editaci → postprodukce → kontrola kvality výstupu → donahrání titulků → upload do Zoomsphere → přichystání thumbnailu → schválení → naplánování → publikace Thumbnail: obrázek dodává editor, overlay připravuje content manager v Canva Případové studie Píše Meta Ads specialista nebo Oťas → před schválením případovky posílá ke gramatické kontrole Content Managerce → po kontrole posílá projektový manažer na klienta → finálně odsouhlasenou případovku → Content Manager nahazuje na web → Příprava obsahu Podcasty Termín: pravidelná publikace každý čtvrtek ráno Video editor nahrává epizody na podcasters → příprava popisků na všech platformách → doplnění timeline → příprava thumbnailu a popisku k reelsku k epizodě → naplánování a publikace → vložení příspěvku do stories s odkazem na podcasters Postup nahrávání podcastů na platformy: https://www.loom.com/share/e8d2ed49571f43afa109130455f38f4c?sid=4ffbd85d-06d0-4ffa-a31d-8fe8c5f1006c Postup přidání podcastu na web Thumbnail pro reels: obrázek dodává editor, overlay připravuje content manager v Canva Thumbnail pro YouTube: obrázek dodává editor, overlay připravuje grafička Ivka Šimková v Canva YouTube Doplní Danny Komunikační linky a odpovědnosti Reportuje komu: CMO Spolupracuje s: CEO, CMO, grafiky, video editory Hlavní komunikační kanály: Zoomsphere, Slack Měřitelné výstupy (KPI) Počet publikovaných agenturních výstupů: 28 reelsek 4 podcasty 8 statických příspěvků 40 stories Plnění harmonogramu: Naplánovaný obsah na 2-3 týdny dopředu Pravidelná zpětná vazba content creatorům Systematizace a názvosloví Dbá na pořádek, dodržování pravidel a správné pojmenování videí, transkriptů a dalších materiálů dodaných od grafiků a editorů. Veškeré podklady (grafika, texty, videa) se ukládají do G-Drive struktury dle měsíce a typu výstupu.',
+'Zodpovědnosti Plánování, koordinace a exekuce obsahu na všech agenturních kanálech (sociální sítě, blog, newsletter, podcast, případové studie apod.) a kanálech majitelů. Cíl SOP Zajistit jasný postup pro efektivní a konzistentní práci s obsahem napříč kanály agentury a majitelů. Hlavní oblasti odpovědnosti Plánování obsahu Vytváří měsíční publikační plán pro sociální sítě, podcast a newslettery. Úzce spolupracuje s Dannym a Oťasem (někdy specialisty) pro získávání témat. Aktualizuje plány v nástroji Zoomsphere Tvorba obsahu Koordinuje grafika a videoeditora. Píše nebo edituje texty (titulky, příspěvky, thumbnaily, případové studie, popisky k podcastům, emaily). Pro podcasty využívá transkripty z descriptu Zadává produkční podklady pro natáčení (např. scénáře, hooky, popisky). Tvoří short form z long form obsahu: Video (the highest leverage) → Audio → Statické grafické posty → Psaná tvorba (Threads, Twitter, e-mailing, případovky) Dává inspiraci, co tvořit dál (př. top performing reelsko z podcastu → doporučí připravit epizodu podcastu nebo YouTube video). Publikace obsahu Plánuje a publikuje schválený obsah dle kalendáře v Zoomsphere. Používá schválené nástroje pro plánování (Zoomsphere) Dodržuje nastavený harmonogram (např. 1 podcast týdně ve čtvrtek, min. 5 reels týdně, min. 2 statické posty týdně) Vyhodnocení a reporting Stanoví benchmark pro vyhodnocení úspěšného obsahu. Sleduje výkon obsahu (views, dosah, engagement) 1× měsíčně připraví přehled s poznatky: co fungovalo / co ne / návrhy pro zlepšení. Využívá přehledy z platforem Standardní pracovní postupy Měsíční plánování Termín: mít kompletně připravený obsah na minimálně 2 (ideálně 3) týdny dopředu Výstup: Vyplněné Zoomsphere se všemi tématy, formáty a deadliny. 1x měsíčně 1 velký společný meeting nad obsahem pro další období. Vytváření obsahu (long form do short form) Cílem je efektivně přetvářet dlouhé formáty (např. video podcasty, případové studie) do krátkých, atraktivních videí nebo statických postů pro sociální sítě (short-form content). Zdrojem je dlouhé video nebo případová studie. Nástroje pro zpracování videa: zdroj videa: YouTube nástroj pro vytvoření reels: OpusClip Výstup: reels statický příspěvek (carousel, image,…) Vytváření reels Postup: Danny + Oťas natočí videa → nahrají na drive → vytvoří nový post v Zoomsphere → v interním komentáři označí Content Managera a vloží odkaz na složku s videem → předání na editaci → postprodukce → kontrola kvality výstupu → donahrání titulků → upload do Zoomsphere → přichystání thumbnailu → schválení → naplánování → publikace Thumbnail: obrázek dodává editor, overlay připravuje content manager v Canva Případové studie Píše Meta Ads specialista nebo Oťas → před schválením případovky posílá ke gramatické kontrole Content Managerce → po kontrole posílá projektový manažer na klienta → finálně odsouhlasenou případovku → Content Manager nahazuje na web → Příprava obsahu Podcasty Termín: pravidelná publikace každý čtvrtek ráno Video editor nahrává epizody na podcasters → příprava popisků na všech platformách → doplnění timeline → příprava thumbnailu a popisku k reelsku k epizodě → naplánování a publikace → vložení příspěvku do stories s odkazem na podcasters Postup nahrávání podcastů na platformy: Postup přidání podcastu na web Thumbnail pro reels: obrázek dodává editor, overlay připravuje content manager v Canva Thumbnail pro YouTube: obrázek dodává editor, overlay připravuje grafička Ivka Šimková v Canva YouTube Doplní Danny Komunikační linky a odpovědnosti Reportuje komu: CMO Spolupracuje s: CEO, CMO, grafiky, video editory Hlavní komunikační kanály: Zoomsphere, Slack Měřitelné výstupy (KPI) Počet publikovaných agenturních výstupů: 28 reelsek 4 podcasty 8 statických příspěvků 40 stories Plnění harmonogramu: Naplánovaný obsah na 2-3 týdny dopředu Pravidelná zpětná vazba content creatorům Systematizace a názvosloví Dbá na pořádek, dodržování pravidel a správné pojmenování videí, transkriptů a dalších materiálů dodaných od grafiků a editorů. Veškeré podklady (grafika, texty, videa) se ukládají do G-Drive struktury dle měsíce a typu výstupu.',
 4,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'1539a246-d8ac-44b2-9228-4742b593e4b7',
+'fef16015-069f-413a-a6b1-16e9b2e14843',
 '11111111-1111-1111-1111-111111111112',
 'Doporučení služby: Creative Boost - Tvorba grafiky do reklam',
 '<p>Služba <strong>Creative Boost</strong> není jen “grafika do kampaní”.</p>
@@ -834,7 +834,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'f62bbbcb-933b-439e-9495-8a7bd760efd9',
+'4e2f0a54-b77a-443d-9836-b68992e1db35',
 '11111111-1111-1111-1111-111111111104',
 'Doručení služby: Správa Meta Ads, Google Ads a S-kliku (Performance Boost)',
 '<h1>🎯 <strong>Cíl služby Performance Boost</strong></h1>
@@ -862,7 +862,8 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <hr>
 <h1>📌 <strong>Zapamatuj si:</strong></h1>
 <blockquote>
-<p>Performance Boost = Výsledky. Peníze. Růst.<br>Ne &quot;kampaně pro kampaně&quot;, ale reálný byznysový efekt pro klienta.</p>
+<p>Performance Boost = Výsledky. Peníze. Růst.
+Ne &quot;kampaně pro kampaně&quot;, ale reálný byznysový efekt pro klienta.</p>
 </blockquote>
 <h1><strong>🚀 Kompas pro řízení kampaní a prioritizaci úkolů</strong></h1>
 <p>Naším <strong>hlavním úkolem</strong> je <strong>zajistit, že každá investovaná koruna do placené reklamy</strong> (Meta Ads, Google Ads, Sklik) <strong>přináší maximální hodnotu</strong> – tedy <strong>nejvyšší možné tržby</strong> za <strong>nejlepší možný ROAS / PNO / CPA</strong>.</p>
@@ -1423,7 +1424,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'d2ef660f-1e62-4df0-ab3b-13980ebdf7bf',
+'41c618d6-cbf5-4f5c-a845-6956c22e9f95',
 '11111111-1111-1111-1111-111111111110',
 'Doručení služby Video Boost: Tvorba prodejních videí do Meta Ads / TikTok Ads',
 '<p>Tento SOP popisuje, <strong>jak má projekťák zadávat tvorbu výkonnostních videí</strong> pro klienty v rámci služby <strong>Video Boost / Creative Boost</strong>.</p>
@@ -1676,7 +1677,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'6541fff5-a113-417e-9e6c-9e7f8888e615',
+'45ad8dbb-5ddc-4a22-bf74-49155d35f2c4',
 '11111111-1111-1111-1111-111111111101',
 'Evidence a schvalování Upsellů u stávajících klientů (10 % provize)',
 '<h3>💡 Co je upsell</h3>
@@ -1722,7 +1723,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'85924fff-a088-4ec5-8a85-5760fd96edbb',
+'02283456-fab2-4b21-8875-3dd6d96dfad5',
 '11111111-1111-1111-1111-111111111102',
 'Faktury po splatnosti',
 '<h3><strong>1. Cíl SOP</strong></h3>
@@ -1815,7 +1816,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'45c7ff02-d2b3-44b5-8202-0334ef1a3039',
+'4ef21944-5014-402f-b034-85e72964224e',
 '11111111-1111-1111-1111-111111111109',
 'Jak dělat (přemýšlet) nad tvorbou obsahu',
 '<h1>Pro koho je tento dokument</h1>
@@ -2086,9 +2087,11 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>Ready Doc – Project Black</li>
 <li>SOP: Jak dělat (přemýšlet) nad tvorbou obsahu</li>
 </ul>
-<p>Postupuj krok za krokem podle této posloupnosti<br>(a jednotlivé kroky si interně odděl):</p>
+<p>Postupuj krok za krokem podle této posloupnosti
+(a jednotlivé kroky si interně odděl):</p>
 <p>1️⃣ VSTUP</p>
-<p>Zpracuj přiložený vstup (transkript / zpětnou vazbu / text / popis screenshotu).<br>Vstup ber jako surovinu, ne jako hotový obsah.</p>
+<p>Zpracuj přiložený vstup (transkript / zpětnou vazbu / text / popis screenshotu).
+Vstup ber jako surovinu, ne jako hotový obsah.</p>
 <p>2️⃣ CORE INSIGHTS</p>
 <p>Z přiloženého vstupu vytáhni 5 core insights:</p>
 <ul>
@@ -2113,7 +2116,8 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <p>U každého insightu implicitně zvol hloubku odpovídající personě:</p>
 <ul>
 <li>Founder: strategická, rozhodovací, dopadová</li>
-<li>CMO: praktická, exekuční, procesní<br>Nevysvětluj technické detaily, pokud nejsou nutné.</li>
+<li>CMO: praktická, exekuční, procesní
+Nevysvětluj technické detaily, pokud nejsou nutné.</li>
 </ul>
 <p>5️⃣ VÝSTUP</p>
 <p>Pro každý insight vytvoř jeden obsahový příspěvek:</p>
@@ -2130,11 +2134,13 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>správnou hloubku</li>
 <li>žádné technické know-how bez kontextu</li>
 </ul>
-<p>⚠️ Vstup: nezapomeň vložit<br>[TEXT / TRANSKRIPT / ZPĚTNOU VAZBU / POPIS SCREENSHOTU]</p>
+<p>⚠️ Vstup: nezapomeň vložit
+[TEXT / TRANSKRIPT / ZPĚTNOU VAZBU / POPIS SCREENSHOTU]</p>
 </aside>
 
 <h2>2️⃣ VARIANTA A: Podcast / dlouhý transkript nebo dlouhý článek (případovka, atp.)</h2>
-<p>Níže je transkript [podcastové epizody, případové studie, nebo blogového článku].<br>Zaměř se na:</p>
+<p>Níže je transkript [podcastové epizody, případové studie, nebo blogového článku].
+Zaměř se na:</p>
 <ul>
 <li>silné myšlenky</li>
 <li>opakující se motivy</li>
@@ -2149,7 +2155,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'afb92c0f-3e83-43ed-8c62-a6f5ef7d0353',
+'4a5dc61c-1f4f-404d-9f8d-1a48954bcc62',
 '11111111-1111-1111-1111-111111111106',
 'Jak dělat audity zdarma',
 '<h2>🎯 <strong>Cíl auditu</strong></h2>
@@ -2280,27 +2286,34 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'fd722016-65c1-4306-b679-77a8b79e902f',
+'c5ee94b4-e9e0-454e-92a1-b50d0642b6b8',
 '11111111-1111-1111-1111-111111111103',
 'Jak na ještě lepší komunikaci s klientem',
 '<h1>Příklad 1: Z naší nevýhody udělejme výhodu</h1>
 <p><strong>Background:</strong> Klient si chystá vše sám pro akci. Úkolem projekťáka je klienta nabriefovat a zajistit vše pro specialisty. V tomto případě se zapomnělo na dodání textů. Meta Ads specialista využil textace z minulého roku ze stejné akce, jen poupravil data a procentuální slevu.</p>
 <p><strong>Reálná situace:</strong></p>
-<p><img src="Jak%20na%20je%C5%A1t%C4%9B%20lep%C5%A1%C3%AD%20komunikaci%20s%20klientem/Snimek_obrazovky_2024-09-18_v_16.23.19.png" alt="Snímek obrazovky 2024-09-18 v 16.23.19.png"></p>
-<p><strong>❌ Popis situace ❌</strong><br>Klient se dozvídá v den spuštění akce, že zapomněl ještě dodat texty, přičemž copywriter je na dovolené.<br>Klient není naštvaný na sebe, klient je naštvaný na Socials, protože agentura si měla vyžádat vše potřebné.</p>
+<p><em>[Obrázek: Snímek obrazovky 2024-09-18 v 16.23.19.png]</em></p>
+<p><strong>❌ Popis situace ❌</strong>
+Klient se dozvídá v den spuštění akce, že zapomněl ještě dodat texty, přičemž copywriter je na dovolené.
+Klient není naštvaný na sebe, klient je naštvaný na Socials, protože agentura si měla vyžádat vše potřebné.</p>
 <p><strong>Preferovaná komunikace</strong></p>
-<p>Vím, že jsem jako projektový manažer udělal chybu, ale využiju to ve svůj prospěch.<br>Udělám si printscreen běžících reklam.<br>Klientovi komunikuji následující:</p>
+<p>Vím, že jsem jako projektový manažer udělal chybu, ale využiju to ve svůj prospěch.
+Udělám si printscreen běžících reklam.
+Klientovi komunikuji následující:</p>
 <blockquote>
-<p>Dobrý den, kampaně běží dle domluvy. 😊<br>Stejná akce běžela také minulý rok, takže jsme si říkali, že vám ušetříme čas psaním textů a jen jsme oprášili texty z minulého roku. </p>
+<p>Dobrý den, kampaně běží dle domluvy. 😊
+Stejná akce běžela také minulý rok, takže jsme si říkali, že vám ušetříme čas psaním textů a jen jsme oprášili texty z minulého roku. </p>
 </blockquote>
-<p>Posílám screenshot reklamy:<br><strong>[vložené printscreeny reklam]</strong></p>
-<p>Můžeme takto ponechat? Pokud ne, klidně mi ještě pošlete své texty a dnes reklamy aktualizujeme.<br>Děkuji moc za spolupráci.</p>
+<p>Posílám screenshot reklamy:
+<strong>[vložené printscreeny reklam]</strong></p>
+<p>Můžeme takto ponechat? Pokud ne, klidně mi ještě pošlete své texty a dnes reklamy aktualizujeme.
+Děkuji moc za spolupráci.</p>
 <blockquote>
 </blockquote>
 <h1>Příklad 2: Inspirujme</h1>
 <p><strong>Background:</strong> Klienta nám tvoří bannery (to už se v budoucnu snad moc dít nebude). Není profesionální grafička a navíc nemá času nazbyt. </p>
 <p><strong>Reálná situace:</strong></p>
-<p><img src="Jak%20na%20je%C5%A1t%C4%9B%20lep%C5%A1%C3%AD%20komunikaci%20s%20klientem/Snimek_obrazovky_2024-09-18_v_16.40.42.png" alt="Snímek obrazovky 2024-09-18 v 16.40.42.png"></p>
+<p><em>[Obrázek: Snímek obrazovky 2024-09-18 v 16.40.42.png]</em></p>
 <p><strong>❌ Popis situace ❌</strong></p>
 <p>Klientka nemá čas a není grafik.</p>
 <p>Klientka má v jednom komentáři za úkol vytvořit “nějaký takový” banner.  Klienta nezná z hlavy rozměry bannerů. </p>
@@ -2308,13 +2321,17 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <p>Potřeba návrh více rozpracovat a dát ji konkrétní tip, co na banneru má být. Stejně jako to děláme u našich grafiků.</p>
 <p><strong>Preferovaná situace</strong></p>
 <blockquote>
-<p>Dobrý den, rádi bychom vás poprosili o vytvoření obecných bannerů, které dáme do dlouhodobých prodejních kampaní.<br>Začal bych nejprodávanějším produktem za posledních 30 dní podle administrace – <strong>jméno produktu.</strong><br>Na banneru by mělo (například) zaznít:</p>
+<p>Dobrý den, rádi bychom vás poprosili o vytvoření obecných bannerů, které dáme do dlouhodobých prodejních kampaní.
+Začal bych nejprodávanějším produktem za posledních 30 dní podle administrace – <strong>jméno produktu.</strong> 
+Na banneru by mělo (například) zaznít:</p>
 </blockquote>
 <ol>
 <li>Název produktu</li>
 <li>Bestseller</li>
 <li>Cena před a po </li>
-<li>Objednejte nyní<br>Zde posílám ukázku od klienta, kterému jsme připravovali podobný banner, tak se můžete inspirovat.<br><strong>[poslat printscreen reklamy, kterou jsme dělali my 👉🏻 inspirace + prodáváme své služby)</strong></li>
+<li>Objednejte nyní
+Zde posílám ukázku od klienta, kterému jsme připravovali podobný banner, tak se můžete inspirovat.
+<strong>[poslat printscreen reklamy, kterou jsme dělali my 👉🏻 inspirace + prodáváme své služby)</strong></li>
 </ol>
 <blockquote>
 </blockquote>
@@ -2323,13 +2340,13 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <p><strong>❌ Popis situace ❌</strong></p>
 <p><strong>Preferovaná situace</strong></p>
 ',
-'Příklad 1: Z naší nevýhody udělejme výhodu Background: Klient si chystá vše sám pro akci. Úkolem projekťáka je klienta nabriefovat a zajistit vše pro specialisty. V tomto případě se zapomnělo na dodání textů. Meta Ads specialista využil textace z minulého roku ze stejné akce, jen poupravil data a procentuální slevu. Reálná situace: !Snímek obrazovky 2024-09-18 v 16.23.19.png ❌ Popis situace ❌ Klient se dozvídá v den spuštění akce, že zapomněl ještě dodat texty, přičemž copywriter je na dovolené. Klient není naštvaný na sebe, klient je naštvaný na Socials, protože agentura si měla vyžádat vše potřebné. Preferovaná komunikace Vím, že jsem jako projektový manažer udělal chybu, ale využiju to ve svůj prospěch. Udělám si printscreen běžících reklam. Klientovi komunikuji následující: Dobrý den, kampaně běží dle domluvy. 😊 Stejná akce běžela také minulý rok, takže jsme si říkali, že vám ušetříme čas psaním textů a jen jsme oprášili texty z minulého roku. Posílám screenshot reklamy: [vložené printscreeny reklam] Můžeme takto ponechat? Pokud ne, klidně mi ještě pošlete své texty a dnes reklamy aktualizujeme. Děkuji moc za spolupráci. Příklad 2: Inspirujme Background: Klienta nám tvoří bannery (to už se v budoucnu snad moc dít nebude). Není profesionální grafička a navíc nemá času nazbyt. Reálná situace: !Snímek obrazovky 2024-09-18 v 16.40.42.png ❌ Popis situace ❌ Klientka nemá čas a není grafik. Klientka má v jednom komentáři za úkol vytvořit “nějaký takový” banner. Klienta nezná z hlavy rozměry bannerů. Správně od nás klientka dostává seznam produktů, ale je jich moc najednou. Potřeba návrh více rozpracovat a dát ji konkrétní tip, co na banneru má být. Stejně jako to děláme u našich grafiků. Preferovaná situace Dobrý den, rádi bychom vás poprosili o vytvoření obecných bannerů, které dáme do dlouhodobých prodejních kampaní. Začal bych nejprodávanějším produktem za posledních 30 dní podle administrace – jméno produktu. Na banneru by mělo (například) zaznít: Název produktu Bestseller Cena před a po Objednejte nyní Zde posílám ukázku od klienta, kterému jsme připravovali podobný banner, tak se můžete inspirovat. [poslat printscreen reklamy, kterou jsme dělali my 👉🏻 inspirace + prodáváme své služby) Příklad 3: [budu doplňovat] Background: ❌ Popis situace ❌ Preferovaná situace',
+'Příklad 1: Z naší nevýhody udělejme výhodu Background: Klient si chystá vše sám pro akci. Úkolem projekťáka je klienta nabriefovat a zajistit vše pro specialisty. V tomto případě se zapomnělo na dodání textů. Meta Ads specialista využil textace z minulého roku ze stejné akce, jen poupravil data a procentuální slevu. Reálná situace: [Obrázek: Snímek obrazovky 2024-09-18 v 16.23.19.png] ❌ Popis situace ❌ Klient se dozvídá v den spuštění akce, že zapomněl ještě dodat texty, přičemž copywriter je na dovolené. Klient není naštvaný na sebe, klient je naštvaný na Socials, protože agentura si měla vyžádat vše potřebné. Preferovaná komunikace Vím, že jsem jako projektový manažer udělal chybu, ale využiju to ve svůj prospěch. Udělám si printscreen běžících reklam. Klientovi komunikuji následující: Dobrý den, kampaně běží dle domluvy. 😊 Stejná akce běžela také minulý rok, takže jsme si říkali, že vám ušetříme čas psaním textů a jen jsme oprášili texty z minulého roku. Posílám screenshot reklamy: [vložené printscreeny reklam] Můžeme takto ponechat? Pokud ne, klidně mi ještě pošlete své texty a dnes reklamy aktualizujeme. Děkuji moc za spolupráci. Příklad 2: Inspirujme Background: Klienta nám tvoří bannery (to už se v budoucnu snad moc dít nebude). Není profesionální grafička a navíc nemá času nazbyt. Reálná situace: [Obrázek: Snímek obrazovky 2024-09-18 v 16.40.42.png] ❌ Popis situace ❌ Klientka nemá čas a není grafik. Klientka má v jednom komentáři za úkol vytvořit “nějaký takový” banner. Klienta nezná z hlavy rozměry bannerů. Správně od nás klientka dostává seznam produktů, ale je jich moc najednou. Potřeba návrh více rozpracovat a dát ji konkrétní tip, co na banneru má být. Stejně jako to děláme u našich grafiků. Preferovaná situace Dobrý den, rádi bychom vás poprosili o vytvoření obecných bannerů, které dáme do dlouhodobých prodejních kampaní. Začal bych nejprodávanějším produktem za posledních 30 dní podle administrace – jméno produktu. Na banneru by mělo (například) zaznít: Název produktu Bestseller Cena před a po Objednejte nyní Zde posílám ukázku od klienta, kterému jsme připravovali podobný banner, tak se můžete inspirovat. [poslat printscreen reklamy, kterou jsme dělali my 👉🏻 inspirace + prodáváme své služby) Příklad 3: [budu doplňovat] Background: ❌ Popis situace ❌ Preferovaná situace',
 12,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'57255976-114f-4f2d-b6de-08ab4b8eb2ae',
+'44ecf8f1-0faf-4a29-a15c-28d92e2e9db1',
 '11111111-1111-1111-1111-111111111101',
 'Jak nacenit a evidovat vícepráce u klientů',
 '<h3><strong>Definice Vícepráce</strong></h3>
@@ -2412,13 +2429,14 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li><p>Vícepráce musí mít svůj vlastní úkol ve Freelu. Pokud se vícepráce domluví s klientem na meetingu a nebo v jiném vlákně ve Freelu, musí projekťák založit nový úkol v to-do listu “<em>Vícepráce</em>” a pojmenovat ho podle vícepráce, tzn. například: “<em>Nastavení Google Tag Manager”.</em> </p>
 </li>
 <li><p>Ve chvíli odsouhlasení se musí přidat v úkolu ve Freelu štítek “<em>Vícepráce - odsouhlaseno</em>” a zapíše se celková domluvená částka.</p>
-<p> <img src="Jak%20nacenit%20a%20evidovat%20v%C3%ADcepr%C3%A1ce%20u%20klient%C5%AF/Screenshot_2025-02-25_at_20.20.35.png" alt="Screenshot 2025-02-25 at 20.20.35.png"></p>
+<p> <em>[Obrázek: Screenshot 2025-02-25 at 20.20.35.png]</em></p>
 </li>
 <li><p>Po dokončení práce se musí dát label “Vícepráce dokončena” a zavřít úkol, aby došlo k jeho automatickému vyfakturování.</p>
-<p> <img src="Jak%20nacenit%20a%20evidovat%20v%C3%ADcepr%C3%A1ce%20u%20klient%C5%AF/Screenshot_2025-02-25_at_20.21.21.png" alt="Screenshot 2025-02-25 at 20.21.21.png"></p>
+<p> <em>[Obrázek: Screenshot 2025-02-25 at 20.21.21.png]</em></p>
 </li>
 </ol>
-<p><a href="https://www.loom.com/share/5a54f8df205644a6b94eaa38031647e0?sid=35bc1aa3-bbf7-4e79-bd4a-5d396c601804">https://www.loom.com/share/5a54f8df205644a6b94eaa38031647e0?sid=35bc1aa3-bbf7-4e79-bd4a-5d396c601804</a></p>
+<div data-loom-embed><iframe src="https://www.loom.com/embed/5a54f8df205644a6b94eaa38031647e0" frameborder="0" allowfullscreen></iframe></div>
+
 <h2>Evidence víceprací (Specialista)</h2>
 <p>Specialista si dopíše vícepráci do svého výkazu včetně počtu hodin (pokud bylo hodinově) a částky.</p>
 <h2>Nejčastější dotazy ohledně víceprací</h2>
@@ -2496,13 +2514,13 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <h2>Záznam školení o evidenci víceprací</h2>
 <p><a href="https://tldv.io/app/meetings/691341647ed558001310c1be/">https://tldv.io/app/meetings/691341647ed558001310c1be/</a></p>
 ',
-'Definice Vícepráce Vícepráce je jednorázová služba, která není součástí fixní ceny za správu nebo základního balíčku. Postup pro realizaci víceprací Identifikace potřeby u klienta Zodpovědná osoba: Projekťák. Projekťák identifikuje potřebu vícepráce u klienta. Požádá specialistu o časový odhad, který se následně vynásobí hodinovou sazbou pro danou pozici. | Pozice | Hodinovka (baseline) | | --| --| | Meta Ads | 1 700 Kč | | PPC | 1 700 Kč | | Analytika | 1 900 Kč | | Grafika / video | 1 500 Kč | | SEO | 1 500 Kč | | Tvorba landing pages pomocí AI | 2 500 Kč | | AI SEO | 1 800 Kč | Nacenění vícepráce Zodpovědná osoba: Projekťák. Vícepráce se vždy naceňuje hodinovou sazbou, nikdy není součástí ceníku jako Flat Fee. Do 20 000 Kč → Projekťák může vícepráci schválit a nacenit samostatně. Nad 20 000 Kč → Projekťák zašle odhad Danielu Bauerovi ke schválení. Nacenění probíhá takto: Projekťák získá od specialisty časový odhad. Násobí se hodinovou sazbou dle role specialisty. Připravenou nabídku projekťák prezentuje klientovi k odsouhlasení. --Schválení vícepráce klientem Zodpovědná osoba: Projekťák. Projekťák prezentuje nacenění klientovi a získá písemné schválení (Freelo, e-mail, Slack). Důležité: Dokud klient vícepráci neodsouhlasí, práce nezačne. Po schválení zašle projekťák podrobnosti do Freela, kde eviduje zadání a přidělí odpovědnou osobu. --Evidence a fakturace vícepráce Zodpovědná osoba: Projekťák. Všechny vícepráce musí být evidovány ve Freelu – včetně schválené ceny, specialisty a termínu dokončení. Vícepráce se fakturuje po dokončení na základě evidence ve Freelu. Fixed Fee produkty se do Freela neevidují, ale přidávají se do Raynetu pro měsíční fakturaci. Projekťák zašle shrnutí vícepráce Daně Bauerové do Slacku, pokud jde o Fixed Fee. Postup evidence ve Freelu Vícepráce musí mít svůj vlastní úkol ve Freelu. Pokud se vícepráce domluví s klientem na meetingu a nebo v jiném vlákně ve Freelu, musí projekťák založit nový úkol v to-do listu “Vícepráce” a pojmenovat ho podle vícepráce, tzn. například: “Nastavení Google Tag Manager”. Ve chvíli odsouhlasení se musí přidat v úkolu ve Freelu štítek “Vícepráce odsouhlaseno” a zapíše se celková domluvená částka. !Screenshot 2025-02-25 at 20.20.35.png Po dokončení práce se musí dát label “Vícepráce dokončena” a zavřít úkol, aby došlo k jeho automatickému vyfakturování. !Screenshot 2025-02-25 at 20.21.21.png https://www.loom.com/share/5a54f8df205644a6b94eaa38031647e0?sid=35bc1aa3-bbf7-4e79-bd4a-5d396c601804 Evidence víceprací (Specialista) Specialista si dopíše vícepráci do svého výkazu včetně počtu hodin (pokud bylo hodinově) a částky. Nejčastější dotazy ohledně víceprací FAQ: Evidence víceprací --Co je vícepráce? Vícepráce je jednorázová služba, která není zahrnuta v základním balíčku služeb nebo fixní ceně za správu. Příklady: příprava reklamních videí, SEO audit, nastavení analytiky. --Jak poznám, že se jedná o vícepráci? Jedná se o vícepráci, pokud: Klient službu neobjednal jako součást základní správy. Služba je jednorázová nebo nad rámec běžných úkolů. --Kdo je zodpovědný za nacenění vícepráce? Za nacenění vícepráce odpovídá Sales Manager (aktuálně Daniel Bauer). Projekťák pouze identifikuje potřebu vícepráce a předává ji k nacenění. --Jaké kroky musím udělat, když identifikuji vícepráci? Založ úkol ve Freelu v to-do listu "Vícepráce". Pošli požadavek na nacenění Sales Managerovi. Po schválení klientem přidej štítek “Vícepráce odsouhlaseno”. --Jak postupovat, když je vícepráce schválena? Přidej do úkolu ve Freelu štítek "Vícepráce odsouhlaseno". Po dokončení práce zapiš finální čas a cenu do výkazu ve Freelu a označ úkol ja ko dokončený. --Co když je potřeba vyřešit interní problém v rámci vícepráce? Pokud je úkol ve Freelu viditelný pro klienta, interní diskuzi veď mimo tento úkol (např. v Slacku nebo v odděleném úkolu). --Jak se vícepráce účtuje? Vícepráce může být účtována: Flat fee, pokud je položka v ceníku. Hodinovou sazbou, pokud položka není v ceníku. V tomto případě se používá časový odhad od specialisty. --Kdo zadává vícepráci specialistovi? Po schválení klientem zadává vícepráci specialistovi přímo projekťák. Specialistu informuje o časovém odhadu a požadovaném termínu. --Co má udělat specialista po dokončení vícepráce? Doplnit počet hodin do svého výkazu a do úkolu ve Freelu. --Co dělat, když klient vícepráci neschválí? Pokud klient vícepráci odmítne, práci nezahajuj. O této skutečnosti zaznamenej poznámku v úkolu ve Freelu a uzavři jej bez dalších kroků. --Jak často je potřeba kontrolovat vícepráce? Projekťák by měl kontrolovat vícepráce při pravidelném reportování projektů (např. na týdenní nebo měsíční bázi). --Co dělat, pokud se vícepráce týká většího týmu? Ve Freelu vytvoř podrobný popis úkolu, aby každý člen týmu měl jasno, co má dělat. Sdílej veškeré důležité informace, odkazy a podklady přímo v úkolu. --Kde najdu všechny vícepráce pro daného klienta? Ve Freelu v to-do listu "Vícepráce" pro konkrétní projekt. --Pokud máš další dotazy, ozvi s',
+'Definice Vícepráce Vícepráce je jednorázová služba, která není součástí fixní ceny za správu nebo základního balíčku. Postup pro realizaci víceprací Identifikace potřeby u klienta Zodpovědná osoba: Projekťák. Projekťák identifikuje potřebu vícepráce u klienta. Požádá specialistu o časový odhad, který se následně vynásobí hodinovou sazbou pro danou pozici. | Pozice | Hodinovka (baseline) | | --| --| | Meta Ads | 1 700 Kč | | PPC | 1 700 Kč | | Analytika | 1 900 Kč | | Grafika / video | 1 500 Kč | | SEO | 1 500 Kč | | Tvorba landing pages pomocí AI | 2 500 Kč | | AI SEO | 1 800 Kč | Nacenění vícepráce Zodpovědná osoba: Projekťák. Vícepráce se vždy naceňuje hodinovou sazbou, nikdy není součástí ceníku jako Flat Fee. Do 20 000 Kč → Projekťák může vícepráci schválit a nacenit samostatně. Nad 20 000 Kč → Projekťák zašle odhad Danielu Bauerovi ke schválení. Nacenění probíhá takto: Projekťák získá od specialisty časový odhad. Násobí se hodinovou sazbou dle role specialisty. Připravenou nabídku projekťák prezentuje klientovi k odsouhlasení. --Schválení vícepráce klientem Zodpovědná osoba: Projekťák. Projekťák prezentuje nacenění klientovi a získá písemné schválení (Freelo, e-mail, Slack). Důležité: Dokud klient vícepráci neodsouhlasí, práce nezačne. Po schválení zašle projekťák podrobnosti do Freela, kde eviduje zadání a přidělí odpovědnou osobu. --Evidence a fakturace vícepráce Zodpovědná osoba: Projekťák. Všechny vícepráce musí být evidovány ve Freelu – včetně schválené ceny, specialisty a termínu dokončení. Vícepráce se fakturuje po dokončení na základě evidence ve Freelu. Fixed Fee produkty se do Freela neevidují, ale přidávají se do Raynetu pro měsíční fakturaci. Projekťák zašle shrnutí vícepráce Daně Bauerové do Slacku, pokud jde o Fixed Fee. Postup evidence ve Freelu Vícepráce musí mít svůj vlastní úkol ve Freelu. Pokud se vícepráce domluví s klientem na meetingu a nebo v jiném vlákně ve Freelu, musí projekťák založit nový úkol v to-do listu “Vícepráce” a pojmenovat ho podle vícepráce, tzn. například: “Nastavení Google Tag Manager”. Ve chvíli odsouhlasení se musí přidat v úkolu ve Freelu štítek “Vícepráce odsouhlaseno” a zapíše se celková domluvená částka. [Obrázek: Screenshot 2025-02-25 at 20.20.35.png] Po dokončení práce se musí dát label “Vícepráce dokončena” a zavřít úkol, aby došlo k jeho automatickému vyfakturování. [Obrázek: Screenshot 2025-02-25 at 20.21.21.png] Evidence víceprací (Specialista) Specialista si dopíše vícepráci do svého výkazu včetně počtu hodin (pokud bylo hodinově) a částky. Nejčastější dotazy ohledně víceprací FAQ: Evidence víceprací --Co je vícepráce? Vícepráce je jednorázová služba, která není zahrnuta v základním balíčku služeb nebo fixní ceně za správu. Příklady: příprava reklamních videí, SEO audit, nastavení analytiky. --Jak poznám, že se jedná o vícepráci? Jedná se o vícepráci, pokud: Klient službu neobjednal jako součást základní správy. Služba je jednorázová nebo nad rámec běžných úkolů. --Kdo je zodpovědný za nacenění vícepráce? Za nacenění vícepráce odpovídá Sales Manager (aktuálně Daniel Bauer). Projekťák pouze identifikuje potřebu vícepráce a předává ji k nacenění. --Jaké kroky musím udělat, když identifikuji vícepráci? Založ úkol ve Freelu v to-do listu "Vícepráce". Pošli požadavek na nacenění Sales Managerovi. Po schválení klientem přidej štítek “Vícepráce odsouhlaseno”. --Jak postupovat, když je vícepráce schválena? Přidej do úkolu ve Freelu štítek "Vícepráce odsouhlaseno". Po dokončení práce zapiš finální čas a cenu do výkazu ve Freelu a označ úkol ja ko dokončený. --Co když je potřeba vyřešit interní problém v rámci vícepráce? Pokud je úkol ve Freelu viditelný pro klienta, interní diskuzi veď mimo tento úkol (např. v Slacku nebo v odděleném úkolu). --Jak se vícepráce účtuje? Vícepráce může být účtována: Flat fee, pokud je položka v ceníku. Hodinovou sazbou, pokud položka není v ceníku. V tomto případě se používá časový odhad od specialisty. --Kdo zadává vícepráci specialistovi? Po schválení klientem zadává vícepráci specialistovi přímo projekťák. Specialistu informuje o časovém odhadu a požadovaném termínu. --Co má udělat specialista po dokončení vícepráce? Doplnit počet hodin do svého výkazu a do úkolu ve Freelu. --Co dělat, když klient vícepráci neschválí? Pokud klient vícepráci odmítne, práci nezahajuj. O této skutečnosti zaznamenej poznámku v úkolu ve Freelu a uzavři jej bez dalších kroků. --Jak často je potřeba kontrolovat vícepráce? Projekťák by měl kontrolovat vícepráce při pravidelném reportování projektů (např. na týdenní nebo měsíční bázi). --Co dělat, pokud se vícepráce týká většího týmu? Ve Freelu vytvoř podrobný popis úkolu, aby každý člen týmu měl jasno, co má dělat. Sdílej veškeré důležité informace, odkazy a podklady přímo v úkolu. --Kde najdu všechny vícepráce pro daného klienta? Ve Freelu v to-do listu "Vícepráce" pro konkrétní projekt. --Pokud máš další dotazy, ozvi se přímo na @Daniel Bauer nebo svůj dotaz napiš do vlákna v rámci úkolu ve Freelu.',
 13,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'2557d970-2963-468b-a274-4c2f47ed9632',
+'6758b1eb-2539-4b5a-b01e-990ea9254ced',
 '11111111-1111-1111-1111-111111111103',
 'Jak reportovat klientovi?',
 '<hr>
@@ -2584,7 +2602,8 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <p><strong>Hlavní zjištění:</strong></p>
 <ul>
 <li><p><strong>[HLAVNÍ INSIGHT 1]</strong> - [STRUČNÝ POPIS A INTERPRETACE]</p>
-<p>  Např.:<br>  Produktové kategorie “Sportovní vybavení” generuje nejlepší PNO 12,3 %. Doporučujeme připravit prodejní videa na tuto kategorii.</p>
+<p>  Např.:
+  Produktové kategorie “Sportovní vybavení” generuje nejlepší PNO 12,3 %. Doporučujeme připravit prodejní videa na tuto kategorii.</p>
 </li>
 <li><p><strong>[HLAVNÍ INSIGHT 2]</strong> - [STRUČNÝ POPIS A INTERPRETACE]</p>
 <p>  Akce na Black Friday se vydařila – investovali jsme 100,000 Kč, splnili PNO do 20 % a překonali historický rekord na e-shopu. </p>
@@ -2624,7 +2643,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'72fa23b3-cc05-4dfe-adf1-1ad54ec7bd02',
+'ef3ded07-c07d-46d7-a4f7-aafb6dc989d4',
 '11111111-1111-1111-1111-111111111101',
 'Jak sdílíme know-how v Socials',
 '<h3><strong>Úvod</strong></h3>
@@ -2726,19 +2745,18 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'ccb90c84-51f1-416a-a469-4c9e299d3d3c',
+'6423bdd9-5011-4a33-9d3c-eb0550821b9e',
 '11111111-1111-1111-1111-111111111101',
 'Jak vyplňovat výkazy práce',
 '<p>Video návod jak vyplňovat výkazy práce zde:</p>
-<p><a href="https://www.loom.com/share/243bae5ee04946839028880a3da7e343?sid=4a486cda-9175-48fe-9fe3-28cabb55a78f">https://www.loom.com/share/243bae5ee04946839028880a3da7e343?sid=4a486cda-9175-48fe-9fe3-28cabb55a78f</a></p>
-',
-'Video návod jak vyplňovat výkazy práce zde: https://www.loom.com/share/243bae5ee04946839028880a3da7e343?sid=4a486cda-9175-48fe-9fe3-28cabb55a78f',
+<div data-loom-embed><iframe src="https://www.loom.com/embed/243bae5ee04946839028880a3da7e343" frameborder="0" allowfullscreen></iframe></div>',
+'Video návod jak vyplňovat výkazy práce zde:',
 16,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'7b842485-ccdd-4b04-8897-4e028a33e3ce',
+'1d5d973a-c31c-46f6-9b07-2ac889c92493',
 '11111111-1111-1111-1111-111111111102',
 'Jak vystavovat faktury za práci pro Socials (pro kolegy)',
 '<p>Cílem tohoto SOP je zajistit přehledné, konzistentní a správné vystavování faktur tak, aby bylo vždy jasné:</p>
@@ -2831,18 +2849,17 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'78f9cbad-0fd4-4410-aa35-864648757df8',
+'5cd4c5d0-5488-4b35-ade2-fee34ba4e89b',
 '11111111-1111-1111-1111-111111111114',
 'Jak vytvořit vlastní GPTs asistenty',
-'<p><a href="https://www.loom.com/share/ed824ed50b7f469e8035bbc8dfb2c1c9?sid=16a973de-d1c8-4ce1-9d72-f9677745d668">https://www.loom.com/share/ed824ed50b7f469e8035bbc8dfb2c1c9?sid=16a973de-d1c8-4ce1-9d72-f9677745d668</a></p>
-',
-'https://www.loom.com/share/ed824ed50b7f469e8035bbc8dfb2c1c9?sid=16a973de-d1c8-4ce1-9d72-f9677745d668',
+'<div data-loom-embed><iframe src="https://www.loom.com/embed/ed824ed50b7f469e8035bbc8dfb2c1c9" frameborder="0" allowfullscreen></iframe></div>',
+'',
 18,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'7df7da45-8e17-4b4e-a08f-d3a50428515b',
+'b10c07b3-e76f-4f25-af92-e976f284b39d',
 '11111111-1111-1111-1111-111111111111',
 'Krizová komunikace: Co dělat, když klient ukončuje spolupráci a tvrdí, že jsme selhali?',
 '<h1>🔺 Spustí se, když:</h1>
@@ -2881,7 +2898,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'c2d913de-80ff-48f1-95dc-9b29732cad22',
+'eb3bda42-fba6-4c91-ab16-830633a8a92d',
 '11111111-1111-1111-1111-111111111101',
 'Lead generation',
 '<h1>Lead Generation (beta) – Socials</h1>
@@ -2974,7 +2991,7 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <p>  → Strategic customer callout: Pre-filters ideal prospects</p>
 <p>  → FAQs: Remove roadblocks, while asking for action</p>
 <p>  → Final CTA placement: Creates urgency after building maximum value</p>
-<p>  <img src="Lead%20generation/1756692707453.jpeg" alt="1756692707453.jpeg"></p>
+<p>  <em>[Obrázek: 1756692707453.jpeg]</em></p>
 </li>
 </ul>
 <hr>
@@ -3026,13 +3043,13 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <p>Vyscrapujeme relevantné weby a dodáme  <strong>zoznam kontaktov</strong> (e-maily, prípadne ďalšie verejne dostupné údaje), ktoré môžete cielene osloviť cez e-mailing.</p>
 <p>Tento modul sa hodí najmä pre segmenty, kde firmy riešia nákup <strong>periodicky</strong> (napr. teambuildingy, školenia, firemné akcie) — často to odkladajú na poslednú chvíľu. V praxi to znamená, že keď sa to začne „horieť“, budú radi, ak v inboxe nájdu <strong>konkrétne riešenie</strong> a môžu sa rýchlo rozhodnúť.</p>
 ',
-'Lead Generation (beta) – Socials 1) Executive summary (co prodáváme) Klientům dodáváme předvídatelný přísun poptávek + systém zpracování leadů, aby se poptávky reálně měnily na obchodní příležitosti a zákazníky. Služba je modulární: klient začíná přes LEAD START (základ, který dává smysl téměř každému) následně si vybírá ADD-ON moduly podle potřeby (kvalita, škálování, více kanálů, automatizace, kreativa) Výsledek pro klienta: více relevantních kontaktů (leads) rychlejší a konzistentní follow-up (vyšší konverze na obchod) přehled nad tím, co se s leady děje (transparentnost, zodpovědnost, škálování) --2) Struktura nabídky (produkty + logika upsellu) Základní balíček LEAD START (25 000 Kč / měs.) „Rozjedeme získávání poptávek přes Meta Ads (on-Facebook + web) a nastavíme automatický přenos leadů do tabulky i na e-mail, aby se žádná poptávka neztratila.“ ADD-ON moduly LEAD PERFORMANCE (Landing Pages + Quality System) Google Ads Lead Generation Creative Boost (bannery / grafika / video) CRM integrace (pipeline + statusy + reporting) Booking automatizace (Calendly / rezervace schůzek) --3) LEAD START – obsah, výstupy, pravidla 🔹 LEAD START (ZÁKLAD) – 25 000 Kč / měs. Positioning (1 věta): „Zajistíme stabilní přísun leadů přes Meta (on-Facebook + web) a nastavíme automatizaci (Sheets + e-mail), aby sales reagoval rychle a konzistentně.“ Co balíček obsahuje A) Kampaně (Meta Ads) On-Facebook lead kampaně (Instant Form / Lead Ads) – rychlý objem, nízká frikce Website lead kampaně – sběr leadů přes web / formulář (pokud má klient funkční web a formulář) B) Automatizace leadů (v ceně) Zapier integrace: automatické odesílání leadů do tabulky (Google Sheets / Excel) zároveň do e-mailu (sales tým / konkrétní osoba) C) Základní Sales SOP (aby lead „nezahníval“) kdo kontaktuje lead do jakého času doporučený první kontakt (call / e-mail + šablona) minimální pravidlo: kontaktovat lead co nejdříve (ideálně do několika minut) → při rychlé reakci („speed-to-lead“) dramaticky roste šance na kvalifikaci oproti čekání 30 minut a více Výstup pro klienta 👉 „Chodí mi leady z Meta i z webu, mám je v tabulce i v e-mailu a umíme je okamžitě zpracovat.“ --4) ADD-ON služby (menu) ✅ ADD-ON: LEAD PERFORMANCE (Landing Pages + Quality System) Kdy dává smysl: Když klient chce vyšší kvalitu leadů, lepší konverzi a škálování (ne jen objem). Nutný brief od klienta, abychom mohli landing pages vytvořit. Co obsahuje Dedikované landing pages (1–3 varianty) – tvorba přes Lovable A/B testování landing pages (vítěz = levnější lead / vyšší kvalita) Kvalitnější website lead gen kampaně na Metě (optimalizace na kvalitu, ne jen CPL) rozšířený Sales SOP (kvalifikace, follow-up logika, práce s jednoduchými námitkami) Positioning (1 věta): „LEAD START dodá leady. LEAD PERFORMANCE řeší, kolik z nich se skutečně promění v zákazníky.“ Ako vytvárať landing pages? V chatpgt vytvoriť agenta, kde zadám brief a on vypluje prompt pre LOVABLE 1️⃣ Visual Hierarchy Layer → Offer above the fold: Instantly communicates value proposition → Short lead with social proof: Builds immediate credibility → Google Reviews section: Third-party validation at the perfect moment 2️⃣ Persuasion Layer → Reason-why benefit bullets: Transforms features into compelling outcomes → Dramatic testimonial video: Shows real transformation stories → How it works section: Removes uncertainty from the process 3️⃣ Qualification Layer → Strategic customer callout: Pre-filters ideal prospects → FAQs: Remove roadblocks, while asking for action → Final CTA placement: Creates urgency after building maximum value !1756692707453.jpeg --✅ ADD-ON: Google Ads Lead Generation Kdy dává smysl: Když klientovi funguje poptávka ze Search / YouTube / Performance Max, nebo chce pokrýt publikum s vysokým nákupním záměrem („high intent“). Možné přístupy Lead form assets (lead formulář přímo v Google reklamě) nebo přesměrování na web / landing page (ideálně v kombinaci s LEAD PERFORMANCE) Positioning (1 věta): „Zachytáváme poptávku ve chvíli, kdy lidé aktivně hledají řešení.“ --✅ ADD-ON: Creative Boost (klíčové hlavně pro LEAD START) Tohle bych komunikoval jako silnou konkurenční výhodu. Proč je Creative Boost důležitý hlavně u LEAD START: Pokud nepoužíváme dedikované landing pages, kreativa dělá velkou část práce za web – vysvětluje nabídku, buduje důvěru a filtruje nerelevantní zájemce. Co obsahuje bannery (statika) + jednoduché motion varianty rychlá testovací matice (úhly, hooky, benefity, CTA) iterace podle výkonu volitelně UGC brief / tvůrci / jednoduchá videa Positioning (1 věta): „Dodáváme kreativu, která zrychlí učení algoritmu a zvýší kvalitu leadů i bez landing pages.“ --✅ ADD-ON: CRM integrace (pipeline + vlastnictví + reporting) napojení leadů do CRM pipeline + statusy (New / Contacted / Qualified / Won) vlastnictví leadů (kdo je za co zodpovědný) základní reporting Positioning (1 věta): „Pokud chcete mít v leadech pořádek a jasnou odpovědnost, CRM je další logický krok.“ --✅ ADD-ON: Booking automatizace ',
+'Lead Generation (beta) – Socials 1) Executive summary (co prodáváme) Klientům dodáváme předvídatelný přísun poptávek + systém zpracování leadů, aby se poptávky reálně měnily na obchodní příležitosti a zákazníky. Služba je modulární: klient začíná přes LEAD START (základ, který dává smysl téměř každému) následně si vybírá ADD-ON moduly podle potřeby (kvalita, škálování, více kanálů, automatizace, kreativa) Výsledek pro klienta: více relevantních kontaktů (leads) rychlejší a konzistentní follow-up (vyšší konverze na obchod) přehled nad tím, co se s leady děje (transparentnost, zodpovědnost, škálování) --2) Struktura nabídky (produkty + logika upsellu) Základní balíček LEAD START (25 000 Kč / měs.) „Rozjedeme získávání poptávek přes Meta Ads (on-Facebook + web) a nastavíme automatický přenos leadů do tabulky i na e-mail, aby se žádná poptávka neztratila.“ ADD-ON moduly LEAD PERFORMANCE (Landing Pages + Quality System) Google Ads Lead Generation Creative Boost (bannery / grafika / video) CRM integrace (pipeline + statusy + reporting) Booking automatizace (Calendly / rezervace schůzek) --3) LEAD START – obsah, výstupy, pravidla 🔹 LEAD START (ZÁKLAD) – 25 000 Kč / měs. Positioning (1 věta): „Zajistíme stabilní přísun leadů přes Meta (on-Facebook + web) a nastavíme automatizaci (Sheets + e-mail), aby sales reagoval rychle a konzistentně.“ Co balíček obsahuje A) Kampaně (Meta Ads) On-Facebook lead kampaně (Instant Form / Lead Ads) – rychlý objem, nízká frikce Website lead kampaně – sběr leadů přes web / formulář (pokud má klient funkční web a formulář) B) Automatizace leadů (v ceně) Zapier integrace: automatické odesílání leadů do tabulky (Google Sheets / Excel) zároveň do e-mailu (sales tým / konkrétní osoba) C) Základní Sales SOP (aby lead „nezahníval“) kdo kontaktuje lead do jakého času doporučený první kontakt (call / e-mail + šablona) minimální pravidlo: kontaktovat lead co nejdříve (ideálně do několika minut) → při rychlé reakci („speed-to-lead“) dramaticky roste šance na kvalifikaci oproti čekání 30 minut a více Výstup pro klienta 👉 „Chodí mi leady z Meta i z webu, mám je v tabulce i v e-mailu a umíme je okamžitě zpracovat.“ --4) ADD-ON služby (menu) ✅ ADD-ON: LEAD PERFORMANCE (Landing Pages + Quality System) Kdy dává smysl: Když klient chce vyšší kvalitu leadů, lepší konverzi a škálování (ne jen objem). Nutný brief od klienta, abychom mohli landing pages vytvořit. Co obsahuje Dedikované landing pages (1–3 varianty) – tvorba přes Lovable A/B testování landing pages (vítěz = levnější lead / vyšší kvalita) Kvalitnější website lead gen kampaně na Metě (optimalizace na kvalitu, ne jen CPL) rozšířený Sales SOP (kvalifikace, follow-up logika, práce s jednoduchými námitkami) Positioning (1 věta): „LEAD START dodá leady. LEAD PERFORMANCE řeší, kolik z nich se skutečně promění v zákazníky.“ Ako vytvárať landing pages? V chatpgt vytvoriť agenta, kde zadám brief a on vypluje prompt pre LOVABLE 1️⃣ Visual Hierarchy Layer → Offer above the fold: Instantly communicates value proposition → Short lead with social proof: Builds immediate credibility → Google Reviews section: Third-party validation at the perfect moment 2️⃣ Persuasion Layer → Reason-why benefit bullets: Transforms features into compelling outcomes → Dramatic testimonial video: Shows real transformation stories → How it works section: Removes uncertainty from the process 3️⃣ Qualification Layer → Strategic customer callout: Pre-filters ideal prospects → FAQs: Remove roadblocks, while asking for action → Final CTA placement: Creates urgency after building maximum value [Obrázek: 1756692707453.jpeg] --✅ ADD-ON: Google Ads Lead Generation Kdy dává smysl: Když klientovi funguje poptávka ze Search / YouTube / Performance Max, nebo chce pokrýt publikum s vysokým nákupním záměrem („high intent“). Možné přístupy Lead form assets (lead formulář přímo v Google reklamě) nebo přesměrování na web / landing page (ideálně v kombinaci s LEAD PERFORMANCE) Positioning (1 věta): „Zachytáváme poptávku ve chvíli, kdy lidé aktivně hledají řešení.“ --✅ ADD-ON: Creative Boost (klíčové hlavně pro LEAD START) Tohle bych komunikoval jako silnou konkurenční výhodu. Proč je Creative Boost důležitý hlavně u LEAD START: Pokud nepoužíváme dedikované landing pages, kreativa dělá velkou část práce za web – vysvětluje nabídku, buduje důvěru a filtruje nerelevantní zájemce. Co obsahuje bannery (statika) + jednoduché motion varianty rychlá testovací matice (úhly, hooky, benefity, CTA) iterace podle výkonu volitelně UGC brief / tvůrci / jednoduchá videa Positioning (1 věta): „Dodáváme kreativu, která zrychlí učení algoritmu a zvýší kvalitu leadů i bez landing pages.“ --✅ ADD-ON: CRM integrace (pipeline + vlastnictví + reporting) napojení leadů do CRM pipeline + statusy (New / Contacted / Qualified / Won) vlastnictví leadů (kdo je za co zodpovědný) základní reporting Positioning (1 věta): „Pokud chcete mít v leadech pořádek a jasnou odpovědnost, CRM je další logický krok.“ --✅ ADD-ON: Booking aut',
 20,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'04ff31c4-4b80-4a65-a8db-01eab3baaf72',
+'1c68bf1b-4d97-4ee2-bfdd-2a093817a6a9',
 '11111111-1111-1111-1111-111111111113',
 'MEET 1: Spätná väzba na klienta',
 '<hr>
@@ -3103,7 +3120,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'8b6512b7-71a0-4969-a39d-13ae75e0a827',
+'95e9ebbc-64ba-4660-8839-89644eed43e5',
 '11111111-1111-1111-1111-111111111113',
 'MEET 2: News, best practises, how to',
 '<hr>
@@ -3166,21 +3183,24 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'4d88a882-9900-4456-97d7-c0bdb49bb8cf',
+'573557f6-f983-444d-b9f5-81b7f8836f15',
 '11111111-1111-1111-1111-111111111104',
 'Meta Ads - Kampaně těsně před a po Vánocích',
 '<h1>Standardy</h1>
 <p>Toto SOP slouží k tomu, abychom se sjednotili v přístupu ke klientovi po Vánocích. </p>
 <h1>Těsně před Vánoci potřebujete</h1>
 <ul>
-<li><p><strong>kontaktovat klienta (Freelo)</strong><br>Zeptejte se, jak stíhá a zdali je ještě prostor trošku přitlačit do ads.</p>
+<li><p><strong>kontaktovat klienta (Freelo)</strong>
+Zeptejte se, jak stíhá a zdali je ještě prostor trošku přitlačit do ads.</p>
 </li>
-<li><p><strong>zjistit garanci doručení do Vánoc</strong><br>Informaci nechte dát klienta na e-shop (banner na HP a informační lištu)</p>
+<li><p><strong>zjistit garanci doručení do Vánoc</strong> 
+Informaci nechte dát klienta na e-shop (banner na HP a informační lištu)</p>
 <ul>
 <li>připravte bannery – poslední CTA před koncem Vánoc, můžete tím ještě boostnout lehce prodeje.</li>
 </ul>
 </li>
-<li><p><strong>povánoční výprodej</strong><br>Dopředu si zjistěte, jestli klient neplánuje nějakou povánoční výprodej, pro kterou byste potřebovali bannery od grafiků nebo klienta.</p>
+<li><p><strong>povánoční výprodej</strong> 
+Dopředu si zjistěte, jestli klient neplánuje nějakou povánoční výprodej, pro kterou byste potřebovali bannery od grafiků nebo klienta.</p>
 <p>  Pokud klient výprodej neplánuje, zkontrolujte, zdali na webu nemá dlouhodobě kategorii se zlevněným zbožím, pro tuto kategorii byste mohli vytvořit katalogovky.</p>
 </li>
 </ul>
@@ -3221,7 +3241,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'1b415540-b41b-41a0-a0da-e6b2d3a713d3',
+'4cb38152-d110-45e4-97b7-a64612d996ec',
 '11111111-1111-1111-1111-111111111104',
 'Meta Ads - Pokročilé optimalizace a rozvoj účtu',
 '<p>Zde evidujeme všechny možné nápady na rozvoj Meta Ads účtů. Jsou rozdělené dle kategorií. </p>
@@ -3268,7 +3288,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'b99b27ca-b551-4f6f-beaa-6f614504fd21',
+'17b17bed-43dc-415d-818a-03e2f84f5bcd',
 '11111111-1111-1111-1111-111111111104',
 'Meta Ads - názvosloví kampaní',
 '<h2>Základní pravidla názvosloví:</h2>
@@ -3384,7 +3404,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'fc496b6a-6de1-4e8f-b4a8-012453bc8b98',
+'e59aba73-cea5-496d-956c-9c4f2e19ce5c',
 '11111111-1111-1111-1111-111111111104',
 'Meta Ads: Jak dělat krátké (flash) akce',
 '<p>Tento SOP je určen pro interní potřeby týmu spravujícího kampaně na platformě Meta Ads. Cílem je zajistit efektivní přípravu, správu a optimalizaci kampaní během krátkodobých Flash akcí. Tyto akce vyžadují rychlou reakci, precizní nastavení kampaní a správné vyhodnocování výsledků, aby byly maximálně využity dostupné rozpočty a dosaženy co nejlepší výsledky.</p>
@@ -3440,7 +3460,8 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li><strong>Monitorování a vyhodnocování</strong>:<ul>
 <li>Vyhodnocujte kampaně <strong>na základě dat z administrace e-shopu klienta</strong> – ta ukazují prodeje téměř v reálném čase.</li>
 <li>Sledujte <strong>PNO (podíl nákladů na obratu)</strong>.</li>
-<li>Při důležité akci kontaktujte klienta a zeptejte se, jak akci v průběhu hodnotí.<br> <strong>Kvůli škálování budgetů a kontrole výsledků by z naší strany během akce měla proběhnout alespoň 1 zpráva o tom, jak se situace vyvíjí a jak hodnotí akci klient.</strong></li>
+<li>Při důležité akci kontaktujte klienta a zeptejte se, jak akci v průběhu hodnotí. 
+ <strong>Kvůli škálování budgetů a kontrole výsledků by z naší strany během akce měla proběhnout alespoň 1 zpráva o tom, jak se situace vyvíjí a jak hodnotí akci klient.</strong></li>
 <li>Data z Meta Ads mohou mít zpoždění (až několik dní) a GA4 zobrazuje konverze nejdříve následující den.</li>
 </ul>
 </li>
@@ -3484,7 +3505,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'bbb3b1c0-0099-48f0-b93c-ffbc60dc8c9c',
+'1c4f3b08-718c-4e62-9fae-5325649c4a1b',
 '11111111-1111-1111-1111-111111111105',
 'Meta creative inspiration',
 '<h3>🌟 <strong>Cieľ</strong></h3>
@@ -3565,7 +3586,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'f246a558-09b7-4788-b076-8d0bbf5e476f',
+'896692fe-496c-4e70-843d-d1530170bd2b',
 '11111111-1111-1111-1111-111111111106',
 'Nacenění rozšíření správy kampaní na další zemi (např. CZ → SK)',
 '<p><em>Poslední aktualizace: 29. 7. 2025</em></p>
@@ -3646,7 +3667,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'4e5c81e0-9f6c-493a-aa7f-0b34e339b3c5',
+'2e56c02a-cf26-4a67-bfb6-353cab9e6c80',
 '11111111-1111-1111-1111-111111111103',
 'Naceňování rozšíření spolupráce u stávajících klientů',
 '<h3>Kdy použít:</h3>
@@ -3688,7 +3709,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'06257ddf-6dbd-424a-ae9a-31795a9dc23f',
+'04e447bd-2a58-4384-b218-b7a5ac4adfeb',
 '11111111-1111-1111-1111-111111111106',
 'Navýšení paušálu u stávajícího klienta při změně rozsahu spolupráce',
 '<p><em>Poslední aktualizace: 29. 7. 2025</em></p>
@@ -3778,13 +3799,14 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'6d631827-485f-4585-82cf-141600fc824b',
+'719e28af-f20e-4cbb-8f3e-01430f8ceb48',
 '11111111-1111-1111-1111-111111111103',
 'Návod na sdílení přístupů - Socials',
 '<h3><strong>1) Google Analytics 4</strong></h3>
 <p>Přístup nasdílejte na e-maily <a href="mailto:socials@socials.cz">socials@socials.cz</a> a <a href="mailto:analytics@socials.cz">analytics@socials.cz</a></p>
 <p>Úroveň přístupu: Marketer</p>
-<p><a href="https://www.loom.com/share/edf982b384d54a0c822391650b2fd6b5?sid=266f439e-6696-4928-82a2-00846943a646">Video návod</a></p>
+<div data-loom-embed><iframe src="https://www.loom.com/embed/edf982b384d54a0c822391650b2fd6b5" frameborder="0" allowfullscreen></iframe></div>
+
 <h3><strong>2) Meta Business Manager</strong></h3>
 <p>Udělte nám partnerský přístup ke všem položkám, které máte svoji značku vytvořené. Primárně se bude jednat o:</p>
 <ul>
@@ -3795,20 +3817,24 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>Katalog produktů</li>
 </ul>
 <p>ID našeho Facebook Business Manager: <strong>1196977750459552</strong></p>
-<p><a href="https://www.loom.com/share/9dc11883f19b4c53b18b7ba4919ceed5?sid=609b3523-ec1a-4b02-8257-71ba62d13acb">Video návod</a></p>
+<div data-loom-embed><iframe src="https://www.loom.com/embed/9dc11883f19b4c53b18b7ba4919ceed5" frameborder="0" allowfullscreen></iframe></div>
+
 <h3><strong>3) Google Ads</strong></h3>
 <p>Pošlete nám ID reklamního účtu. Pozvánku pošleme z našeho MCC reklamního účtu a žádost přijde do e-mailu, na který máte vedený svůj Google Ads účet.</p>
 <h3><strong>4) Google Search Console</strong></h3>
 <p>Přístup nasdílejte na <a href="mailto:analytics@socials.cz">analytics@socials.cz</a></p>
 <p>Úroveň přístupu: Omezený / Plný</p>
-<p><a href="https://www.loom.com/share/92172ae2d403491dbe30f6b3056b77c9?sid=a6e2ea94-cc3c-4adf-8650-a1893c09db25">Video návod</a></p>
+<div data-loom-embed><iframe src="https://www.loom.com/embed/92172ae2d403491dbe30f6b3056b77c9" frameborder="0" allowfullscreen></iframe></div>
+
 <h3><strong>5) Google Tag Manager</strong></h3>
 <p>Přístup nasdílejte na e-mail <a href="mailto:analytics@socials.cz">analytics@socials.cz</a></p>
 <p>Úroveň přístupu: Zveřejňovat / Administrátor</p>
-<p><a href="https://www.loom.com/share/66d51a01893f434f8a46313af521bdf2?sid=b1e2b14d-9e53-4adc-857d-da969c0a74d5">Video návod</a></p>
+<div data-loom-embed><iframe src="https://www.loom.com/embed/66d51a01893f434f8a46313af521bdf2" frameborder="0" allowfullscreen></iframe></div>
+
 <h3><strong>6) Google Merchant Center</strong></h3>
 <p>Přístup nasdílejte na e-maily <a href="mailto:socials@socials.cz">socials@socials.cz</a> a <a href="mailto:analytics@socials.cz">analytics@socials.cz</a></p>
-<p><a href="https://www.loom.com/share/63cd8e1ff5d14a4387dd466b7ea6dcc0?sid=54019cde-4905-41fd-a4c8-035e0c7c5f93">Video návod</a></p>
+<div data-loom-embed><iframe src="https://www.loom.com/embed/63cd8e1ff5d14a4387dd466b7ea6dcc0" frameborder="0" allowfullscreen></iframe></div>
+
 <h3><strong>7) Moje firma na Google</strong></h3>
 <p>Přístup nasdílejte na e-maily <a href="mailto:socials@socials.cz">socials@socials.cz</a> a <a href="mailto:analytics@socials.cz">analytics@socials.cz</a></p>
 <p>Úroveň přístupu: Správce</p>
@@ -3834,13 +3860,13 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <p>Úroveň přístupu: Zápis</p>
 <p><a href="https://www.youtube.com/watch?v=kndo31wVAFY">Video návod</a></p>
 ',
-'1) Google Analytics 4 Přístup nasdílejte na e-maily socials@socials.cz a analytics@socials.cz Úroveň přístupu: Marketer Video návod 2) Meta Business Manager Udělte nám partnerský přístup ke všem položkám, které máte svoji značku vytvořené. Primárně se bude jednat o: Firemní stránka na Facebooku Instagramový profil Meta Ads Manager (správce reklam) Meta Pixel Katalog produktů ID našeho Facebook Business Manager: 1196977750459552 Video návod 3) Google Ads Pošlete nám ID reklamního účtu. Pozvánku pošleme z našeho MCC reklamního účtu a žádost přijde do e-mailu, na který máte vedený svůj Google Ads účet. 4) Google Search Console Přístup nasdílejte na analytics@socials.cz Úroveň přístupu: Omezený / Plný Video návod 5) Google Tag Manager Přístup nasdílejte na e-mail analytics@socials.cz Úroveň přístupu: Zveřejňovat / Administrátor Video návod 6) Google Merchant Center Přístup nasdílejte na e-maily socials@socials.cz a analytics@socials.cz Video návod 7) Moje firma na Google Přístup nasdílejte na e-maily socials@socials.cz a analytics@socials.cz Úroveň přístupu: Správce Video návod 8) Seznam S-klik Přístup nasdílejte na email mysocials@seznam.cz. Úroveň přístupu: Správce kampaní nebo Administrátor účtu Video návod 9) Firmy.cz Přístup nasdílejte na email mysocials@seznam.cz. Mělo by být možné udělit přístup v nastavení, ale může se stát, že budete muset napsat na podporu Firmy.cz, aby nám přístup přidali oni. 10) Heuréka.cz Potřebujeme vaše přihlašovací údaje. Bohužel do Heuréky není možné přidat přístup jiným uživatelům. 11) Zboží.cz Přístup nasdílejte na email mysocials@seznam.cz. Úroveň přístupu: Správce Video návod 12) Favi Potřebujeme vaše přihlašovací údaje. 13) Glami Potřebujeme vaše přihlašovací údaje. 14) Mergado.cz Přístup nasdílejte na email socials@socials.cz Úroveň přístupu: Zápis Video návod',
+'1) Google Analytics 4 Přístup nasdílejte na e-maily socials@socials.cz a analytics@socials.cz Úroveň přístupu: Marketer 2) Meta Business Manager Udělte nám partnerský přístup ke všem položkám, které máte svoji značku vytvořené. Primárně se bude jednat o: Firemní stránka na Facebooku Instagramový profil Meta Ads Manager (správce reklam) Meta Pixel Katalog produktů ID našeho Facebook Business Manager: 1196977750459552 3) Google Ads Pošlete nám ID reklamního účtu. Pozvánku pošleme z našeho MCC reklamního účtu a žádost přijde do e-mailu, na který máte vedený svůj Google Ads účet. 4) Google Search Console Přístup nasdílejte na analytics@socials.cz Úroveň přístupu: Omezený / Plný 5) Google Tag Manager Přístup nasdílejte na e-mail analytics@socials.cz Úroveň přístupu: Zveřejňovat / Administrátor 6) Google Merchant Center Přístup nasdílejte na e-maily socials@socials.cz a analytics@socials.cz 7) Moje firma na Google Přístup nasdílejte na e-maily socials@socials.cz a analytics@socials.cz Úroveň přístupu: Správce Video návod 8) Seznam S-klik Přístup nasdílejte na email mysocials@seznam.cz. Úroveň přístupu: Správce kampaní nebo Administrátor účtu Video návod 9) Firmy.cz Přístup nasdílejte na email mysocials@seznam.cz. Mělo by být možné udělit přístup v nastavení, ale může se stát, že budete muset napsat na podporu Firmy.cz, aby nám přístup přidali oni. 10) Heuréka.cz Potřebujeme vaše přihlašovací údaje. Bohužel do Heuréky není možné přidat přístup jiným uživatelům. 11) Zboží.cz Přístup nasdílejte na email mysocials@seznam.cz. Úroveň přístupu: Správce Video návod 12) Favi Potřebujeme vaše přihlašovací údaje. 13) Glami Potřebujeme vaše přihlašovací údaje. 14) Mergado.cz Přístup nasdílejte na email socials@socials.cz Úroveň přístupu: Zápis Video návod',
 31,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'39885744-148b-4a57-83bc-5a608b4cbd78',
+'db872956-199a-4b80-9c59-0e837fc8e55b',
 '11111111-1111-1111-1111-111111111104',
 'Nový proces',
 '',
@@ -3850,7 +3876,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'384b76ec-0ec1-4274-b4b3-849c6d6b3385',
+'88aa3582-c44f-4021-b5ee-cc5125f2ebae',
 '11111111-1111-1111-1111-111111111104',
 'Nový proces',
 '',
@@ -3860,7 +3886,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'4a921f26-cf7f-4869-99d1-e200b04c06ae',
+'cccfa327-4e51-48bf-92be-fd0639a03038',
 '11111111-1111-1111-1111-111111111108',
 'Onboarding nového kolegy',
 '<h2>Papírovačky @Otakar Lucák</h2>
@@ -3929,7 +3955,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'c8ea0141-4bb9-4819-bafb-0931256fc641',
+'4290980e-4137-4c42-896d-40627dff42db',
 '11111111-1111-1111-1111-111111111101',
 'PÁTEŘNÍ NÁSTROJE, PŘÍSTUPY A ODPOVĚDNOSTI V SOCIALS (KOMPLETNÍ DOKUMENT)',
 '<p>Tento dokument vysvětluje, na jakých nástrojích firma běží, kdo má jaké přístupy, jak fungují procesy a kdo za co odpovídá.</p>
@@ -4169,7 +4195,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'c47413ea-303e-418c-a473-baf11fff8bb4',
+'6e306d63-d585-486c-a50a-ca33329ccd5a',
 '11111111-1111-1111-1111-111111111105',
 'Postup zadání grafiky - bannerů + videí (Creative Boost)',
 '<p>Pokud nevíš, jak funguje Creative Boost, podívej se sem: </p>
@@ -4234,16 +4260,19 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'08d91a33-edf8-4572-bea6-1995a6f571fa',
+'87fe666b-9af5-449c-a3b6-b6fe17bc0c2c',
 '11111111-1111-1111-1111-111111111103',
 'Pravidelné vyhodnocování spokojenosti klienta',
 '<h1>Začátek spolupráce</h1>
 <p>Při onboarding callu se klienta ptáme na řadu otázek, které nám naznačí, co je pro klienta důležité.</p>
 <p>Mezi některé z nich například patří:</p>
 <ul>
-<li><strong>Jaké jsou vaše obchodní cíle pro následující období?</strong><br>To nám pomůže zjistit, jestli klient upřednostňuje růst prodejů, zefektivnění alokace rozpočtu, lepší komunikaci s marketingovou agenturou, zlepšení bannerů, atp.</li>
-<li><strong>Jaké jsou klíčové metriky, které jsou pro vás důležité?</strong><br>PNO není jediný faktor. Majiteli z 99 % záleží na zisku, nikoliv na počtu objednávek nebo výši obratu. Dávejte si například bacha, abyste nereportovali skvělé výsledky z Mety a pak zpětně zjistili, že klient je po měsíci v mínusu.</li>
-<li><strong>Jaký rozsah komunikace a reporting upřednostňujete?</strong><br>Představíme naše způsoby – meetingy, loom či zápisy ve Freelo. Co je pro něj lepší a jak často?</li>
+<li><strong>Jaké jsou vaše obchodní cíle pro následující období?</strong> 
+To nám pomůže zjistit, jestli klient upřednostňuje růst prodejů, zefektivnění alokace rozpočtu, lepší komunikaci s marketingovou agenturou, zlepšení bannerů, atp.</li>
+<li><strong>Jaké jsou klíčové metriky, které jsou pro vás důležité?</strong>
+PNO není jediný faktor. Majiteli z 99 % záleží na zisku, nikoliv na počtu objednávek nebo výši obratu. Dávejte si například bacha, abyste nereportovali skvělé výsledky z Mety a pak zpětně zjistili, že klient je po měsíci v mínusu.</li>
+<li><strong>Jaký rozsah komunikace a reporting upřednostňujete?</strong> 
+Představíme naše způsoby – meetingy, loom či zápisy ve Freelo. Co je pro něj lepší a jak často?</li>
 <li><strong>Má stanovené konkrétní milníky nebo termíny, které jsou pro něj důležité?</strong> Sezónnost, novinky, atp.</li>
 </ul>
 <h1>Pravidelné vyhodnocování spokojenosti klienta</h1>
@@ -4268,7 +4297,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'ae8d7580-d388-4f53-8869-eb3ff9c56d72',
+'124e13d4-c6b9-48be-bd2a-2e3c1dc56925',
 '11111111-1111-1111-1111-111111111107',
 'Pravidelný průzkum klientské spokojenosti',
 '<h1>Popis SOP</h1>
@@ -4278,12 +4307,15 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <h1>Odpovědi psát do Raynetu</h1>
 <p>Do obchodního případu &gt; Historie &gt; + &gt; Telefonát &gt; Nadpis: Získávání zpětné vazby &gt; datum a čas jakékoliv &gt; doplnit hlavní bodový zápisek </p>
 <h1>Skript</h1>
-<p>[pokud klienta neznám, představím se a zmíním svou pozici ve firmě]<br>Dobrý den, jmenuji se Otakar Lucák, jsem spolumajitelem Socials.<br>Nechci vás dlouho zdržovat, mám na vás jen 2 otázky:</p>
+<p>[pokud klienta neznám, představím se a zmíním svou pozici ve firmě]
+Dobrý den, jmenuji se Otakar Lucák, jsem spolumajitelem Socials.
+Nechci vás dlouho zdržovat, mám na vás jen 2 otázky:</p>
 <ol>
 <li>Jak jste se spoluprací se Socials spokojení nebo nespokojení na škále 1-10, kde 1=katastrofa, 10=dokonalost?</li>
 <li>Co nám chybí do 10?</li>
 </ol>
-<p><strong>Vysvětlení:</strong><br>Takhle získáš víc než informaci jedna (spoko) nebo nula (nespoko). Dostaneš relativně širokej benchmark, abys věděl, jestli se v čase zlepšujete, zhoršujete nebo je to konstantní výkon. A zároveň i velmi konkrétní zpětnou vazbu ke spolupráci, aniž bys implikoval, že se v něčem musíte zlepšovat.</p>
+<p><strong>Vysvětlení:</strong>
+Takhle získáš víc než informaci jedna (spoko) nebo nula (nespoko). Dostaneš relativně širokej benchmark, abys věděl, jestli se v čase zlepšujete, zhoršujete nebo je to konstantní výkon. A zároveň i velmi konkrétní zpětnou vazbu ke spolupráci, aniž bys implikoval, že se v něčem musíte zlepšovat.</p>
 ',
 'Popis SOP Jednou za 2-3 měsíce zavolat klientům a zeptat se na zpětnou vazbu, ideálně Oťas, Dan nebo obchoďák. Frekvence Jednou za 2-3 měsíce. Odpovědi psát do Raynetu Do obchodního případu Historie + Telefonát Nadpis: Získávání zpětné vazby datum a čas jakékoliv doplnit hlavní bodový zápisek Skript [pokud klienta neznám, představím se a zmíním svou pozici ve firmě] Dobrý den, jmenuji se Otakar Lucák, jsem spolumajitelem Socials. Nechci vás dlouho zdržovat, mám na vás jen 2 otázky: Jak jste se spoluprací se Socials spokojení nebo nespokojení na škále 1-10, kde 1=katastrofa, 10=dokonalost? Co nám chybí do 10? Vysvětlení: Takhle získáš víc než informaci jedna (spoko) nebo nula (nespoko). Dostaneš relativně širokej benchmark, abys věděl, jestli se v čase zlepšujete, zhoršujete nebo je to konstantní výkon. A zároveň i velmi konkrétní zpětnou vazbu ke spolupráci, aniž bys implikoval, že se v něčem musíte zlepšovat.',
 38,
@@ -4291,7 +4323,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'b1244f89-234a-4764-9d92-2c90309f507b',
+'0c1a8dc7-0bd6-43f0-b94f-b40b6770ab41',
 '11111111-1111-1111-1111-111111111111',
 'Pravidla komunikace ve Slacku a Freelu',
 '<h3>Proč je důležité rozdělovat komunikaci?</h3>
@@ -4401,7 +4433,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'eadf3d88-16d4-4c02-a886-831345acf6a8',
+'47f4161c-e631-4868-8725-3e5026a4cba7',
 '11111111-1111-1111-1111-111111111113',
 'Princípy meetingov',
 '<hr>
@@ -4518,7 +4550,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'24180ae2-be0f-4dd8-b12b-0092489a4176',
+'2a2c858b-f982-4045-9bfc-096bfec8deb4',
 '11111111-1111-1111-1111-111111111107',
 'Pro klienta: Jak přemýšlet nad Meta Ads',
 '<p>Cíl: na úvodu spolupráce ukázat klientovi, jak nad tím přemýšlíme, co je a není důležité. Obzvlášť pro ty klienty, kteří si dělají reklamy sami. </p>
@@ -4532,7 +4564,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'2b594e50-8bf2-43a8-89f6-691e75db2258',
+'ebc7bfb3-3a9a-47a9-976f-04689cc6f3e9',
 '11111111-1111-1111-1111-111111111103',
 'Proaktivita',
 '<h1>🧨 Katalog „wow momentů“ pro výkonnostní marketing</h1>
@@ -4638,7 +4670,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'fcab63e9-e019-47cb-b316-eef2f8fffe28',
+'f682424b-55d4-4bd2-a99a-610f65992fd7',
 '11111111-1111-1111-1111-111111111102',
 'Proces schvalování proplácení přijatých faktur (nákladů) ve Wflow',
 '<p><strong>Schvalovatel:</strong> Daniel Bauer</p>
@@ -4763,7 +4795,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'e40aac6f-1c6a-4354-bf5e-4db5918f1445',
+'0c1234dc-ca5c-4939-8881-ea674c7bf964',
 '11111111-1111-1111-1111-111111111107',
 'Přehled reklamních akcí pro e-shopy',
 '<h1>🔎 Účel SOP</h1>
@@ -4964,40 +4996,59 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>Není potřeba žádná sleva, musíme je správně odkomunikovat</li>
 <li>Průběžně kontrolovat: s klientem, Looker Studio, či admin e-shopu</li>
 <li>Proaktivně tlačíme klienta do vylepšování vstupních stránek a nové grafiky</li>
-<li>Vytvořte si <em>custom label</em> pro katalogové reklamy s top produkty za posledních XY dní |<br>| <strong>Produktové sety</strong> | Kombinace 2+ bestsellerů 👉🏻 zvyšuje AOV  |<br>| <strong>Výhodné balíčky (bundling)</strong> | - Nabídka více produktů jako balíčku za zvýhodněnou cenu. </li>
+<li>Vytvořte si <em>custom label</em> pro katalogové reklamy s top produkty za posledních XY dní |
+| <strong>Produktové sety</strong> | Kombinace 2+ bestsellerů 👉🏻 zvyšuje AOV  |
+| <strong>Výhodné balíčky (bundling)</strong> | - Nabídka více produktů jako balíčku za zvýhodněnou cenu. </li>
 <li>Zákazník koupí set produktů levněji, než kdyby je kupoval jednotlivě. </li>
 <li>Využití napříč sortimentem: dárková sada kosmetiky (šampon + kondicionér + maska jako celek levněji), set elektroniky (notebook + brašna + myš), kombinace příbuzných produktů (fotoaparát + objektiv + pouzdro). </li>
-<li>Balíčky mohou být tematické (např. „výbava pro miminko“ z více položek).<br><strong>👉🏻 zvyšuje AOV a pomáhá prodat i produkty, které by samostatně tolik netáhly.</strong> |<br>| <strong>Recenze a testimonialy</strong> | - Nový zákazník nezná tvou značku → hledá <strong>důkaz důvěryhodnosti</strong>.</li>
-<li>Kdy použít a kde? V akvizičních kampaních, na webu, přímo v reklamních vizuálech a videích |<br>| <strong>Novinky a limitky</strong> | - Vytváří <em>FOMO</em> (strach z promeškání) → motivace k rychlému nákupu</li>
-<li>Chceme, aby nás klient informoval o nových produktech v sortimentu |<br>| <strong>Dárky k nákupu / vzorky zdarma</strong> | - Psychologický trigger 👉🏻 zvlášť účinné pro nové zákazníky.</li>
-<li>Např. při nákupu nad 1000 Kč nebo při koupi konkrétního produktu |<br>| <strong>Množstevní akce (X+1 zdarma)</strong> | - Zvýhodnění při koupi více kusů </li>
+<li>Balíčky mohou být tematické (např. „výbava pro miminko“ z více položek). 
+<strong>👉🏻 zvyšuje AOV a pomáhá prodat i produkty, které by samostatně tolik netáhly.</strong> |
+| <strong>Recenze a testimonialy</strong> | - Nový zákazník nezná tvou značku → hledá <strong>důkaz důvěryhodnosti</strong>.</li>
+<li>Kdy použít a kde? V akvizičních kampaních, na webu, přímo v reklamních vizuálech a videích |
+| <strong>Novinky a limitky</strong> | - Vytváří <em>FOMO</em> (strach z promeškání) → motivace k rychlému nákupu</li>
+<li>Chceme, aby nás klient informoval o nových produktech v sortimentu |
+| <strong>Dárky k nákupu / vzorky zdarma</strong> | - Psychologický trigger 👉🏻 zvlášť účinné pro nové zákazníky.</li>
+<li>Např. při nákupu nad 1000 Kč nebo při koupi konkrétního produktu |
+| <strong>Množstevní akce (X+1 zdarma)</strong> | - Zvýhodnění při koupi více kusů </li>
 <li>př.: 2+1 zdarma </li>
 <li>Alternativně může sleva narůstat s počtem kusů (např. 5% sleva při koupi 2 ks, 10% při 3 ks). </li>
 <li>Funguje dobře u drobnějšího zboží: např. kosmetika a parfemy (2+1 na výrobky), potraviny a nápoje, potřeby pro domácnost či módu (např. trička, ponožky). </li>
-<li>Zvyšuje AOV |<br>| <strong>Doprava zdarma</strong><br>(varianty) | - na celou objednávku</li>
+<li>Zvyšuje AOV |
+| <strong>Doprava zdarma</strong>
+(varianty) | - na celou objednávku</li>
 <li>při nákupu nad určitou částku 👉🏻 zvyšuje AOV</li>
 <li>doprava zdarma do [časově omezit]</li>
-<li>doprava zdarma a při nákupu nad XY Kč dárek zdarma 👉🏻 zvyšuje AOV |<br>| <strong>Slevové kupóny</strong> | - Zákazník získá slevu po zadání speciálního kódu. </li>
+<li>doprava zdarma a při nákupu nad XY Kč dárek zdarma 👉🏻 zvyšuje AOV |
+| <strong>Slevové kupóny</strong> | - Zákazník získá slevu po zadání speciálního kódu. </li>
 <li>Sleva může být procentuální (např. 10%) </li>
 <li>nebo pevná částka (např. 200 Kč). </li>
 <li>Využívá se pro časově omezené akce či exkluzivní nabídky, př. kódy v newsletteru, od influencerů nebo v rámci kampaní typu „BACK2SCHOOL10“. </li>
-<li><strong>Umožňuje snadno měřit efekt konkrétní kampaně.</strong> |<br>| <strong>Okamžitá sleva (bez kódu)</strong> | - Sleva aplikovaná automaticky na vybrané zboží nebo celý sortiment, </li>
+<li><strong>Umožňuje snadno měřit efekt konkrétní kampaně.</strong> |
+| <strong>Okamžitá sleva (bez kódu)</strong> | - Sleva aplikovaná automaticky na vybrané zboží nebo celý sortiment, </li>
 <li>př.: plošná (víkendová 20% sleva na vše),</li>
 <li>nebo sleva na určitý segment (např. 30% na zimní bundy). </li>
-<li>typické pro výprodeje a akce typu Black Friday. |<br>| <strong>Sleva na další nákup</strong> | - fashion či elektronika</li>
+<li>typické pro výprodeje a akce typu Black Friday. |
+| <strong>Sleva na další nákup</strong> | - fashion či elektronika</li>
 <li>Motivace k opětovnému nákupu v budoucnu. </li>
 <li>vhodné i pro e-mailing</li>
 <li>Po dokončení objednávky získá zákazník slevový kupón nebo kredit na příští nákup. </li>
-<li>Př.: „Získejte 200 Kč na další nákup při útratě nad 1000 Kč“  |<br>| <strong>Nákup na splátky bez navýšení</strong> | - Možnost pořídit si zboží na splátky s 0% úrokem (bez navýšení ceny). </li>
+<li>Př.: „Získejte 200 Kč na další nákup při útratě nad 1000 Kč“  |
+| <strong>Nákup na splátky bez navýšení</strong> | - Možnost pořídit si zboží na splátky s 0% úrokem (bez navýšení ceny). </li>
 <li>Zákazník zaplatí postupně, aniž by přeplatil – obchodník či partner financuje úrok. </li>
 <li>atraktivní zejména u dražšího zboží</li>
-<li>Akce bývá časově omezena (např. „jen tento měsíc splátky bez navýšení“) a může být vázána na minimum nákupu.  |<br>| <strong>Časově omezená sleva (Flash sale)</strong> | - Trvá jen několik hodin (tzv. „happy hours“) nebo pár dnů.<br>Vytváří pocit naléhavosti a FOMO </li>
-<li>Příklady: bleskový jednodenní výprodej elektroniky s 15% slevou;<br>odpolední happy hour, během níž je kosmetika se slevou 25 %; nebo víkendová akce na módní kolekci platná pouze do neděle.  |<br>| <strong>Soutěž pro zákazníky</strong> | - Propagační soutěž spojená s nákupem. </li>
+<li>Akce bývá časově omezena (např. „jen tento měsíc splátky bez navýšení“) a může být vázána na minimum nákupu.  |
+| <strong>Časově omezená sleva (Flash sale)</strong> | - Trvá jen několik hodin (tzv. „happy hours“) nebo pár dnů. 
+Vytváří pocit naléhavosti a FOMO </li>
+<li>Příklady: bleskový jednodenní výprodej elektroniky s 15% slevou; 
+odpolední happy hour, během níž je kosmetika se slevou 25 %; nebo víkendová akce na módní kolekci platná pouze do neděle.  |
+| <strong>Soutěž pro zákazníky</strong> | - Propagační soutěž spojená s nákupem. </li>
 <li>Zákazníci, kteří v daném období nakoupí, se mohou zúčastnit losování nebo soutěže o ceny. </li>
 <li>Příklad: Každý, kdo nakoupí během měsíce, získá šanci vyhrát hodnotnou cenu (např. elektroniku, poukaz na dovolenou, nákup zdarma). </li>
 <li>Jiné varianty: prvních X zákazníků získá bonus, nebo soutěž o nejlepší recenzi produktu zakoupeného v akci. </li>
-<li><strong>Je oblíbená například v předvánočních kampaních nebo u uvedení nových produktů.</strong> |<br>| <strong>Omezené množství</strong> | - U <strong>novinek</strong>, limitovaných edicí, <strong>sezónních</strong> produktů nebo zboží, které se rychle vyprodává.</li>
-<li>Když chceš <strong>podpořit rychlý nákup</strong> – např. v kampani s krátkým trváním. |<br>| <strong>Výprodeje</strong> | - Pocit výhodného nákupu</li>
+<li><strong>Je oblíbená například v předvánočních kampaních nebo u uvedení nových produktů.</strong> |
+| <strong>Omezené množství</strong> | - U <strong>novinek</strong>, limitovaných edicí, <strong>sezónních</strong> produktů nebo zboží, které se rychle vyprodává.</li>
+<li>Když chceš <strong>podpořit rychlý nákup</strong> – např. v kampani s krátkým trváním. |
+| <strong>Výprodeje</strong> | - Pocit výhodného nákupu</li>
 <li>Časově omezená příležitost</li>
 <li>Možnost získat kvalitní produkt za méně peněz</li>
 <li><strong>kdy použít:</strong> doprodej zásob, po sezóně (např. po Vánocích, Valentýnu, Black Friday), produktové kolekce, <strong>pro získání</strong> <strong>cash flow,</strong> „uvolnění skladu“ |</li>
@@ -5010,7 +5061,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'29841360-fe45-4fe3-9916-e1ecf7c295e4',
+'784c1447-1982-4ba7-9ef7-4e031a607477',
 '11111111-1111-1111-1111-111111111114',
 'Přihlašování do správce hesel NordPass',
 '<h3>Co je NordPass a proč ho používáme?</h3>
@@ -5077,7 +5128,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'910e33f6-b7e9-4ad4-ad1e-3815f2247491',
+'b7dc5981-f232-4099-9900-9c4bc48074c0',
 '11111111-1111-1111-1111-111111111107',
 'Příprava na krátkou (flash akci)',
 '<p>Flash akce jsou skvělým způsobem, jak rychle zvýšit prodeje a upoutat pozornost zákazníků. Aby však měly maximální efekt, je důležité zajistit, že budou dobře komunikované na všech klíčových kanálech – od webu, přes reklamy na Meta a Google platformách, až po zbožové srovnávače. Tento dokument Vám přináší přehled základních kroků, které je třeba provést v rámci e-shopu, rozdělených na <strong>nezbytné minimum (Must have)</strong> a <strong>doporučená vylepšení (Nice to have)</strong>.</p>
@@ -5166,7 +5217,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'a5221066-72a8-4aad-95e8-b3c0dcfa733b',
+'da254522-ee03-4e0d-b211-cb5a46d7152f',
 '11111111-1111-1111-1111-111111111101',
 'Příprava smluv pro klienty',
 '<h2>✍️ Příprava a podpis smlouvy s novým klientem</h2>
@@ -5194,7 +5245,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'4ac57b4d-9740-4bfb-9e19-ce3fd9a39309',
+'6d9d239b-01c8-4108-a515-2398e8345318',
 '11111111-1111-1111-1111-111111111101',
 'Příprava smluv pro kolegy (IČO, DPP)',
 '<hr>
@@ -5239,60 +5290,61 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'9b8ca703-a426-4dea-b446-38c11048199c',
+'c0ec1957-147c-430c-bb9c-5952957c7313',
 '11111111-1111-1111-1111-111111111108',
 'Příprava smluv pro nové kolegy',
 '<p>🙋‍♂️ Hlavní decision maker: Daniel Bauer</p>
 <p>Smlouvy připravuje: Asistentka</p>
 <p>Cil: Vytvořit smlouvu pro nového kolegu </p>
-<p><a href="https://www.loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?sid=f1d3872d-057e-4d72-a220-2a524f585f79">https://www.loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?sid=f1d3872d-057e-4d72-a220-2a524f585f79</a></p>
+<div data-loom-embed><iframe src="https://www.loom.com/embed/bb93e79ec25a438996ee4ebbf4444ef1" frameborder="0" allowfullscreen></iframe></div>
+
 <h3>Key Steps</h3>
-<p><strong>1. Získání informací o novém kolegovi</strong> <a href="https://loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?t=20">0:20</a></p>
+<p><strong>1. Získání informací o novém kolegovi</strong> <div data-loom-embed><iframe src="https://www.loom.com/embed/bb93e79ec25a438996ee4ebbf4444ef1" frameborder="0" allowfullscreen></iframe></div></p>
 <p><img src="https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-20.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMjAuanBnIiwiQ29uZGl0aW9uIjp7IkRhdGVMZXNzVGhhbiI6eyJBV1M6RXBvY2hUaW1lIjoxNzQ4NjgwMDYyfX19XX0_&Key-Pair-Id=KQOSYIR44AIC0&Signature=myVI4wznl3WB3Rfn-xHWuTymzGuadxdEf7coYdLHM8Xk9qBWDIfzINEhPF-NL7CBifNbJ0eL2hELbtjDLleXGsx5A2kMAauV0MG3OAmfHzAjg329Ebpi2bcM31gGFUSnvjBZwYtbFbtTCpXtplpppXl1bPVpoPGTctYq2n3xGwVFabfotUtoDWPJI6BKVpc8CT4kdiLUa7T62NAts7-C3wbHrcoRsBytriA55vp6pZMph29szvklIYoTRcng%7ES3n8nApCeWWrbO01IP0Pf4uHKzbDJ5ccp7Zmjdviidya1pKKDKquGmvr9nQ-OT1u%7EiRNkLRnumVwczvy7--7pcuIw__" alt=""></p>
 <ul>
 <li>Zkontrolujte e-mail, kde obdržíte odkaz na vytvořenou smlouvu.</li>
 <li>Všechny informace o nových kolezích jsou shromážděny v Google formuláři, který vyplní noví kolegové.</li>
 </ul>
-<p><strong>2. Kontrola informací v nástroji Merck</strong> <a href="https://loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?t=168">2:48</a></p>
+<p><strong>2. Kontrola informací v nástroji Merck</strong> <div data-loom-embed><iframe src="https://www.loom.com/embed/bb93e79ec25a438996ee4ebbf4444ef1" frameborder="0" allowfullscreen></iframe></div></p>
 <p><img src="https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-168.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMTY4LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=QlFHzER4KpAGiG7TB%7E8KoaXUCm5TB0FTeDQl5XS25DttEYGP8IFdWImbGNSNvAm0Uk-F5zbMQVKvowNvaHnBj4UvU8GIdUHqdbT-qgj7UZ9JUaUonEU42M00i7AlJCUxIf0X2xR7tCxG-ObudRRkV9cZzOYOaUw4rqpW7LA-hZ19Es7uP9JxVDySrXV-J1gak8w9MS5-85tYqUvmOB0LgoHaxrjFPNi6ywFtAE9ZqEE4wvUM%7E5nt5DN0nuWx9Y8IiewtVUpavkqcJnyc7SFyNf6wAP6HXgVyloKhAR0-Bz7M-8YE2XrbrY8Zbh4T4pnunrLFgFRd2GDS5h1Jac5bxg__" alt=""></p>
 <ul>
 <li>Přihlaste se do nástroje Merck (<a href="http://www.merk.cz">www.merk.cz</a>).</li>
 <li>Vyhledejte nového kolegu podle IČa nebo názvu subjektu.</li>
 <li>Zkontrolujte správnost adresy a dalších informací.</li>
 </ul>
-<p><strong>3. Příprava smlouvy</strong> <a href="https://loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?t=276">4:36</a></p>
+<p><strong>3. Příprava smlouvy</strong> <div data-loom-embed><iframe src="https://www.loom.com/embed/bb93e79ec25a438996ee4ebbf4444ef1" frameborder="0" allowfullscreen></iframe></div></p>
 <p><img src="https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-276.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMjc2LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=K6YC%7EIV5F7hRnqqHSFnkR9UGu%7EE6Ev2vtffisjs-CM8Zvjo4aGxJsn47M739mtFmjYFOX-nP71u8BzUfPo95w7IB8dr%7EJP2aScoaR%7EqhVbJw72JNfXfo8RY%7EijE0vgOjg9B489YDRR7pif32k2N%7EPycSXPUZviO-PBDbK1mbZ98b6VQO81-Qasry5ldXA1mIPq7bRUDJDVDObUgZLEETDLgShjmqR2MpmOL9eXYsYVE2vuc0eRtBdubOk-bGs1AykU2STk0POUyvGTd8XlLzD3s5kOiEMZq%7EHUdMuWMSF2Qqd6X2D4V8qtGff2WA61NSo2ISeLJBJTi4vZM6a8UAPQ__" alt=""></p>
 <ul>
 <li>Otevřete šablonu smlouvy o spolupráci a GDPR.</li>
 <li>Zkontrolujte, zda jsou všechny informace správně vyplněny.</li>
 <li>Doplňte předmět smlouvy.</li>
 </ul>
-<p><strong>4. Stáhnout smlouvu</strong> <a href="https://loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?t=397">6:37</a></p>
+<p><strong>4. Stáhnout smlouvu</strong> <div data-loom-embed><iframe src="https://www.loom.com/embed/bb93e79ec25a438996ee4ebbf4444ef1" frameborder="0" allowfullscreen></iframe></div></p>
 <p><img src="https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-397.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMzk3LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=lSAjo3Nu8RCTKbhlSc07x-YTTP7A2Li6b60Fvb0gtAZN96xMEg%7EiPCCszzH2cHsGgXt-abJS5y2S1UKAl5Y-BZlSK4OvD-f94b9UOXOFt2fv0YKRvigDSNR39YQV64a%7Ew8bhjjXbCRtgODLU4GEOl5fRYD0bWN9fwqA4RTvuK0nNQu9O4i3M%7E8iJf5A9sOGV%7EN4iAVkjEQhxQuQ-3Pmz5jG7PYcsC%7EN5JR1FkL-H1DcIZP4hmGEkZ4mtTFYs-jcvLu1h3XqgCr1AOy9Qizi7QAkpadrDxNZT2VgUA8720Sk1jMKGGsu4v2h0%7EoWE--sSkyt0c5VJAYC6-nDw34tzPA__" alt=""></p>
 <ul>
 <li>Po dokončení úprav smlouvy klikněte na &#39;Soubor&#39; a vyberte &#39;Stáhnout jako PDF&#39;.</li>
 <li>Uložte dokument na vhodné místo.</li>
 </ul>
-<p><strong>5. Vytvoření obálky v DigiSign</strong> <a href="https://loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?t=426">7:06</a></p>
+<p><strong>5. Vytvoření obálky v DigiSign</strong> <div data-loom-embed><iframe src="https://www.loom.com/embed/bb93e79ec25a438996ee4ebbf4444ef1" frameborder="0" allowfullscreen></iframe></div></p>
 <p><img src="https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-426.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtNDI2LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=jlUte7i2td89yms1MCzl0XPVstoBlGNaj9XLHlp6wJW0epad27u5ZG0OBTWURQinjl9EVCPW5jrG8xnw5bz9ZaEHi9I5Tcg%7EzltnsNqLHw%7ETtV15KGvozLPJQOeUY1F%7ERMtnUEBIjEZeJLEvL0ZxL8oVXQZBIOWrlW1Z8Cwxnfs5Aa4tdB4i6ZrS2Z7P6AEzvacQ7cQgasPpbp7TB4FjaGn3U5p5AtDuUDIlDYtOiq74%7Eg4T9wxwyAcQgXJFbB1R8kx1d7u1Iffm-0P6Se9aWM6Ae8NDx7sWyLtoo7umHpASAzryA8JI24LNacMX0-mJzNrUIyXT3HLGt0sPBoen8w__" alt=""></p>
 <ul>
 <li>Přihlaste se do nástroje DigiSign.</li>
 <li>Založte novou obálku a pojmenujte ji (např. &#39;Smlouva o spolupráci Helena Píšová&#39;).</li>
 <li>Přetáhněte staženou smlouvu do obálky.</li>
 </ul>
-<p><strong>6. Nastavení pořadí podpisů</strong> <a href="https://loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?t=495">8:15</a></p>
+<p><strong>6. Nastavení pořadí podpisů</strong> <div data-loom-embed><iframe src="https://www.loom.com/embed/bb93e79ec25a438996ee4ebbf4444ef1" frameborder="0" allowfullscreen></iframe></div></p>
 <p><img src="https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-495.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtNDk1LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=ndAhH3%7EEbNZZ9q8Tscq78s3v88OFzbpJRVSEO%7E3gQhqz8pK0osvIozHXmrL6pRZ9SAv1cY6%7EayI4qs1HG1b139r8tQOov5trzH7jrazUhLO07rk-VFUJhj3QNBKaqVOG7pnBuofcnyvmFCJXC2XVrGTqnDUh%7Em1qoGx66zme%7EaawFI36qdk5vzyH--r0x17xXx44hZO6-EgpWMSZ6su-%7E9rQj3uvQNidUmyMhWw6wb-Mhtir-dAfQCbSVnVinILLaNOWa0zOxoP9-5ZhHPjl6aC-zozKzn8BdlyV5IXN199Dyc66j5xWJq4AdZvCtkMo2ZYCf0RUVsai-sQ-RkPsTA__" alt=""></p>
 <ul>
 <li>Přidejte příjemce, kteří budou smlouvu podepisovat (nejprve kolega, poté vy).</li>
 <li>Ujistěte se, že pořadí podpisů je správné.</li>
 </ul>
-<p><strong>7. Přidání podpisových archů</strong> <a href="https://loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?t=624">10:24</a></p>
+<p><strong>7. Přidání podpisových archů</strong> <div data-loom-embed><iframe src="https://www.loom.com/embed/bb93e79ec25a438996ee4ebbf4444ef1" frameborder="0" allowfullscreen></iframe></div></p>
 <p><img src="https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-624.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtNjI0LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=IkrdEc-b1aPQURG5KGCOPSCjCUpFzlqaT6GueJEHaHaNkPzjx2Jyc9PC8uDEk8YG76VZX1HJFc%7EHpPR0YYiW4LIzwYlmQqUTGPFSlXn48luhCv%7EQzp0%7EHxIXoiQJigNtDD16Xms5QfyQbDmISI-iPteIJHu1va2mJ5cvF65wkiZFJUyq7FX869Ny0fZkFPp3fMNScrqtp1LloImSx0fzq107FZC%7EGUCmCRJSUL0oVoa7-Z5g4EBaSrAiVQoUkTJCBwhTCUTG5xe0q1jsQWTuK7ucX8uCmXNDmhabwWuQgIhc4d5kTDKTFWjAaIQlkvAQp5Y6NQg%7EXlhE9W-3RARAOw__" alt=""></p>
 <ul>
 <li>Přetáhněte podpisové archy do smlouvy.</li>
 <li>Zkontrolujte, že jsou správně přiřazeni k jednotlivým osobám.</li>
 </ul>
-<p><strong>8. Odeslání smlouvy k podpisu</strong> <a href="https://loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?t=728">12:08</a></p>
+<p><strong>8. Odeslání smlouvy k podpisu</strong> <div data-loom-embed><iframe src="https://www.loom.com/embed/bb93e79ec25a438996ee4ebbf4444ef1" frameborder="0" allowfullscreen></iframe></div></p>
 <p><img src="https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-728.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtNzI4LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=E-VbtaG12tbtzxUwlinHA1KcmTQFEJVCCxtcjqIlOAhnkBPvdF94Zj%7EdSCZkHNTe7wVDgbof4t%7EeXOW0jFPY7zLkAb6IByUvcjriSA6LaoGK%7EGxemAtw%7EqZCIJE8RB5vkC9WvAdQISy0HKILzuJlflgF0HcGeVYzlm3hzMdE5LxQSfgcJpnR8wZHcz1-hf9ThCiulo7Ebr44VmxbGScn89hRYgZdAMXWjGFY1KXehDkJl7Vxrx%7EXhtHA1vr%7EtQNP167mX2Q49YJ9f1AOIVl680yldRJy-ejft-bsH7YpWIJoJQ4B9s2f7Xdqp-anaxa5q%7Eo2pM6IQ16geBarbnC4bw__" alt=""></p>
 <ul>
 <li>Po dokončení všech úprav a přidání podpisů odešlete smlouvu k podpisu kolegovi.</li>
@@ -5307,21 +5359,20 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>Vytvořte si šablony pro smlouvy, abyste ušetřili čas při jejich přípravě.</li>
 <li>Používejte nástroje jako Merck a DigiSign pro rychlejší a efektivnější procesy.</li>
 </ul>
-<p><a href="https://loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1">https://loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1</a></p>
-',
-'🙋‍♂️ Hlavní decision maker: Daniel Bauer Smlouvy připravuje: Asistentka Cil: Vytvořit smlouvu pro nového kolegu https://www.loom.com/share/bb93e79ec25a438996ee4ebbf4444ef1?sid=f1d3872d-057e-4d72-a220-2a524f585f79 Key Steps Získání informací o novém kolegovi 0:20 ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-20.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMjAuanBnIiwiQ29uZGl0aW9uIjp7IkRhdGVMZXNzVGhhbiI6eyJBV1M6RXBvY2hUaW1lIjoxNzQ4NjgwMDYyfX19XX0_&Key-Pair-Id=KQOSYIR44AIC0&Signature=myVI4wznl3WB3Rfn-xHWuTymzGuadxdEf7coYdLHM8Xk9qBWDIfzINEhPF-NL7CBifNbJ0eL2hELbtjDLleXGsx5A2kMAauV0MG3OAmfHzAjg329Ebpi2bcM31gGFUSnvjBZwYtbFbtTCpXtplpppXl1bPVpoPGTctYq2n3xGwVFabfotUtoDWPJI6BKVpc8CT4kdiLUa7T62NAts7-C3wbHrcoRsBytriA55vp6pZMph29szvklIYoTRcng%7ES3n8nApCeWWrbO01IP0Pf4uHKzbDJ5ccp7Zmjdviidya1pKKDKquGmvr9nQ-OT1u%7EiRNkLRnumVwczvy7--7pcuIw__) Zkontrolujte e-mail, kde obdržíte odkaz na vytvořenou smlouvu. Všechny informace o nových kolezích jsou shromážděny v Google formuláři, který vyplní noví kolegové. Kontrola informací v nástroji Merck 2:48 ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-168.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMTY4LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=QlFHzER4KpAGiG7TB%7E8KoaXUCm5TB0FTeDQl5XS25DttEYGP8IFdWImbGNSNvAm0Uk-F5zbMQVKvowNvaHnBj4UvU8GIdUHqdbT-qgj7UZ9JUaUonEU42M00i7AlJCUxIf0X2xR7tCxG-ObudRRkV9cZzOYOaUw4rqpW7LA-hZ19Es7uP9JxVDySrXV-J1gak8w9MS5-85tYqUvmOB0LgoHaxrjFPNi6ywFtAE9ZqEE4wvUM%7E5nt5DN0nuWx9Y8IiewtVUpavkqcJnyc7SFyNf6wAP6HXgVyloKhAR0-Bz7M-8YE2XrbrY8Zbh4T4pnunrLFgFRd2GDS5h1Jac5bxg__) Přihlaste se do nástroje Merck (www.merk.cz). Vyhledejte nového kolegu podle IČa nebo názvu subjektu. Zkontrolujte správnost adresy a dalších informací. Příprava smlouvy 4:36 ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-276.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMjc2LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=K6YC%7EIV5F7hRnqqHSFnkR9UGu%7EE6Ev2vtffisjs-CM8Zvjo4aGxJsn47M739mtFmjYFOX-nP71u8BzUfPo95w7IB8dr%7EJP2aScoaR%7EqhVbJw72JNfXfo8RY%7EijE0vgOjg9B489YDRR7pif32k2N%7EPycSXPUZviO-PBDbK1mbZ98b6VQO81-Qasry5ldXA1mIPq7bRUDJDVDObUgZLEETDLgShjmqR2MpmOL9eXYsYVE2vuc0eRtBdubOk-bGs1AykU2STk0POUyvGTd8XlLzD3s5kOiEMZq%7EHUdMuWMSF2Qqd6X2D4V8qtGff2WA61NSo2ISeLJBJTi4vZM6a8UAPQ__) Otevřete šablonu smlouvy o spolupráci a GDPR. Zkontrolujte, zda jsou všechny informace správně vyplněny. Doplňte předmět smlouvy. Stáhnout smlouvu 6:37 ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-397.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMzk3LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=lSAjo3Nu8RCTKbhlSc07x-YTTP7A2Li6b60Fvb0gtAZN96xMEg%7EiPCCszzH2cHsGgXt-abJS5y2S1UKAl5Y-BZlSK4OvD-f94b9UOXOFt2fv0YKRvigDSNR39YQV64a%7Ew8bhjjXbCRtgODLU4GEOl5fRYD0bWN9fwqA4RTvuK0nNQu9O4i3M%7E8iJf5A9sOGV%7EN4iAVkjEQhxQuQ-3Pmz5jG7PYcsC%7EN5JR1FkL-H1DcIZP4hmGEkZ4mtTFYs-jcvLu1h3XqgCr1AOy9Qizi7QAkpadrDxNZT2VgUA8720Sk1jMKGGsu4v2h0%7EoWE--sSkyt0c5VJAYC6-nDw34tzPA__) Po dokončení úprav smlouvy klikněte na ''Soubor'' a vyberte ''Stáhnout jako PDF''. Uložte dokument na vhodné místo. Vytvoření obálky v DigiSign 7:06 ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-426.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtNDI2LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=jlUte7i2td89yms1MCzl0XPVstoBlGNaj9XLHlp6wJW0epad27u5ZG0OBTWURQinjl9EVCPW5jrG8xnw5bz9ZaEHi9I5Tcg%7EzltnsNqLHw%7ETtV15KGvozLPJQOeUY1F%7ERMtnUEBIjEZeJLEvL0ZxL8oVXQZBIOWrlW1Z8Cwxnfs5Aa4tdB4i6ZrS2Z7P6AEzvacQ7cQgasPpbp7TB4FjaGn3U5p5AtDuUDIlDYtOiq74%7Eg4T9wxwyAcQgXJFbB1R8kx1d7u1Iffm-0P6Se9aWM6Ae8NDx7sWyLtoo7umHpASAzryA8JI24LNacMX0-mJzNrUIyXT3HLGt0sPBoen8w__) Přihlaste se do nástroje DigiSign. Založte novou obálku a pojmenujte ji (např. ''Smlouva o spolupráci Helena Píšová''). Přetáhněte staženou smlouvu do obálky. Nastavení pořadí podpisů 8:15 ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-495.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcH',
+<div data-loom-embed><iframe src="https://www.loom.com/embed/bb93e79ec25a438996ee4ebbf4444ef1" frameborder="0" allowfullscreen></iframe></div>',
+'🙋‍♂️ Hlavní decision maker: Daniel Bauer Smlouvy připravuje: Asistentka Cil: Vytvořit smlouvu pro nového kolegu Key Steps Získání informací o novém kolegovi ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-20.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMjAuanBnIiwiQ29uZGl0aW9uIjp7IkRhdGVMZXNzVGhhbiI6eyJBV1M6RXBvY2hUaW1lIjoxNzQ4NjgwMDYyfX19XX0_&Key-Pair-Id=KQOSYIR44AIC0&Signature=myVI4wznl3WB3Rfn-xHWuTymzGuadxdEf7coYdLHM8Xk9qBWDIfzINEhPF-NL7CBifNbJ0eL2hELbtjDLleXGsx5A2kMAauV0MG3OAmfHzAjg329Ebpi2bcM31gGFUSnvjBZwYtbFbtTCpXtplpppXl1bPVpoPGTctYq2n3xGwVFabfotUtoDWPJI6BKVpc8CT4kdiLUa7T62NAts7-C3wbHrcoRsBytriA55vp6pZMph29szvklIYoTRcng%7ES3n8nApCeWWrbO01IP0Pf4uHKzbDJ5ccp7Zmjdviidya1pKKDKquGmvr9nQ-OT1u%7EiRNkLRnumVwczvy7--7pcuIw__) Zkontrolujte e-mail, kde obdržíte odkaz na vytvořenou smlouvu. Všechny informace o nových kolezích jsou shromážděny v Google formuláři, který vyplní noví kolegové. Kontrola informací v nástroji Merck ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-168.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMTY4LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=QlFHzER4KpAGiG7TB%7E8KoaXUCm5TB0FTeDQl5XS25DttEYGP8IFdWImbGNSNvAm0Uk-F5zbMQVKvowNvaHnBj4UvU8GIdUHqdbT-qgj7UZ9JUaUonEU42M00i7AlJCUxIf0X2xR7tCxG-ObudRRkV9cZzOYOaUw4rqpW7LA-hZ19Es7uP9JxVDySrXV-J1gak8w9MS5-85tYqUvmOB0LgoHaxrjFPNi6ywFtAE9ZqEE4wvUM%7E5nt5DN0nuWx9Y8IiewtVUpavkqcJnyc7SFyNf6wAP6HXgVyloKhAR0-Bz7M-8YE2XrbrY8Zbh4T4pnunrLFgFRd2GDS5h1Jac5bxg__) Přihlaste se do nástroje Merck (www.merk.cz). Vyhledejte nového kolegu podle IČa nebo názvu subjektu. Zkontrolujte správnost adresy a dalších informací. Příprava smlouvy ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-276.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMjc2LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=K6YC%7EIV5F7hRnqqHSFnkR9UGu%7EE6Ev2vtffisjs-CM8Zvjo4aGxJsn47M739mtFmjYFOX-nP71u8BzUfPo95w7IB8dr%7EJP2aScoaR%7EqhVbJw72JNfXfo8RY%7EijE0vgOjg9B489YDRR7pif32k2N%7EPycSXPUZviO-PBDbK1mbZ98b6VQO81-Qasry5ldXA1mIPq7bRUDJDVDObUgZLEETDLgShjmqR2MpmOL9eXYsYVE2vuc0eRtBdubOk-bGs1AykU2STk0POUyvGTd8XlLzD3s5kOiEMZq%7EHUdMuWMSF2Qqd6X2D4V8qtGff2WA61NSo2ISeLJBJTi4vZM6a8UAPQ__) Otevřete šablonu smlouvy o spolupráci a GDPR. Zkontrolujte, zda jsou všechny informace správně vyplněny. Doplňte předmět smlouvy. Stáhnout smlouvu ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-397.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtMzk3LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=lSAjo3Nu8RCTKbhlSc07x-YTTP7A2Li6b60Fvb0gtAZN96xMEg%7EiPCCszzH2cHsGgXt-abJS5y2S1UKAl5Y-BZlSK4OvD-f94b9UOXOFt2fv0YKRvigDSNR39YQV64a%7Ew8bhjjXbCRtgODLU4GEOl5fRYD0bWN9fwqA4RTvuK0nNQu9O4i3M%7E8iJf5A9sOGV%7EN4iAVkjEQhxQuQ-3Pmz5jG7PYcsC%7EN5JR1FkL-H1DcIZP4hmGEkZ4mtTFYs-jcvLu1h3XqgCr1AOy9Qizi7QAkpadrDxNZT2VgUA8720Sk1jMKGGsu4v2h0%7EoWE--sSkyt0c5VJAYC6-nDw34tzPA__) Po dokončení úprav smlouvy klikněte na ''Soubor'' a vyberte ''Stáhnout jako PDF''. Uložte dokument na vhodné místo. Vytvoření obálky v DigiSign ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-426.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtNDI2LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4MDA2Mn19fV19&Key-Pair-Id=KQOSYIR44AIC0&Signature=jlUte7i2td89yms1MCzl0XPVstoBlGNaj9XLHlp6wJW0epad27u5ZG0OBTWURQinjl9EVCPW5jrG8xnw5bz9ZaEHi9I5Tcg%7EzltnsNqLHw%7ETtV15KGvozLPJQOeUY1F%7ERMtnUEBIjEZeJLEvL0ZxL8oVXQZBIOWrlW1Z8Cwxnfs5Aa4tdB4i6ZrS2Z7P6AEzvacQ7cQgasPpbp7TB4FjaGn3U5p5AtDuUDIlDYtOiq74%7Eg4T9wxwyAcQgXJFbB1R8kx1d7u1Iffm-0P6Se9aWM6Ae8NDx7sWyLtoo7umHpASAzryA8JI24LNacMX0-mJzNrUIyXT3HLGt0sPBoen8w__) Přihlaste se do nástroje DigiSign. Založte novou obálku a pojmenujte ji (např. ''Smlouva o spolupráci Helena Píšová''). Přetáhněte staženou smlouvu do obálky. Nastavení pořadí podpisů ![](https://cdn.loom.com/sessions/picture-in-scripture/bb93e79ec25a438996ee4ebbf4444ef1-495.jpg?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZG4ubG9vbS5jb20vc2Vzc2lvbnMvcGljdHVyZS1pbi1zY3JpcHR1cmUvYmI5M2U3OWVjMjVhNDM4OTk2ZWU0ZWJiZjQ0NDRlZjEtNDk1LmpwZyIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0ODY4M',
 49,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'59b9c61f-71d6-469a-80ea-863d928736f9',
+'86f4de94-231a-468d-8863-3907077757b0',
 '11111111-1111-1111-1111-111111111109',
 'Publikování článků',
 '<hr>
 <p>Všechny články píše autor v Notion. Ve výjimečných případech v Google Docs, ale následně prosím o překopírování do Notion. ¨</p>
 <p>Ve Freelu vždy plánujeme články 2 měsíce dopředu. V to-do listu &quot;Content&quot; vytvoříš ze šablony nový úkol a přidáš jednotlivé řešitele a termíny. </p>
-<p>1**) Vytvoření nového příspěvku v <a href="https://www.socials.cz/wp-admin/">administraci wordpress</a> (příspěvky - vytvořit příspěvek) (**<a href="https://www.loom.com/share/f2cc6e7952a34355920b6d7ef7e7e35c">https://www.loom.com/share/f2cc6e7952a34355920b6d7ef7e7e35c</a>) Video</p>
+<p>1**) Vytvoření nového příspěvku v <a href="https://www.socials.cz/wp-admin/">administraci wordpress</a> (příspěvky - vytvořit příspěvek) (**<div data-loom-embed><iframe src="https://www.loom.com/embed/f2cc6e7952a34355920b6d7ef7e7e35c" frameborder="0" allowfullscreen></iframe></div>) Video</p>
 <p>2**) Úprava textu**  </p>
 <ul>
 <li>H1 nepoužíváme</li>
@@ -5387,13 +5438,13 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>Obsah e-mailu upravime - jiný text + odkaz do CallToCaton tlačítka na daný článek</li>
 </ul>
 ',
-'--Všechny články píše autor v Notion. Ve výjimečných případech v Google Docs, ale následně prosím o překopírování do Notion. ¨ Ve Freelu vždy plánujeme články 2 měsíce dopředu. V to-do listu "Content" vytvoříš ze šablony nový úkol a přidáš jednotlivé řešitele a termíny. 1) Vytvoření nového příspěvku v administraci wordpress (příspěvky vytvořit příspěvek) (https://www.loom.com/share/f2cc6e7952a34355920b6d7ef7e7e35c) Video 2) Úprava textu H1 nepoužíváme Nikdy nemůže být H3 před H2 atd H2 vždy uděláme tučně H2 se propisuje jako obsah článku H3 nikdy není tučně Nechceme mít moc dlouhé odstavce – špatně se na webu čtou – kde je to možné, dáme na další řádek 3) Přídání obrázků do textu Nezapomeneme zmenšit obrázky přes tinypng.com Je třeba vždy odstranit URL odkaz na obrázek v Notion a místo něj přidat daný obrázek přes + Vyplníme "Alt" popis obrázků Doplníme zdroj obrázku, pokud bude třeba 4) Nastavení dokumentu Nastavíme datum a čas publikování (ideálně v 7:00) Viditelnost necháme "Veřejná" Vybereme autora Zvolíme příslušnou rubriku Zakážeme komentáře Pokud je URL moc dlouhá, vytvoříme vlastní ideálně s klíčovým slovem 9) Přidáme Featured Image (Hlavní obrázek článku) Template v Canvě Obrázek zmenšíme přes tinypng.com Vyplníme "Alt" popis 10) Stukturovaná data (pod článkem "Configure Rich Snippet") Vybereme "Article" Přidáme Featured image Vyplníme všechna pole Publisher: Socials.cz Publisher logo: Favicon 11) YOAST SEO Vyplníme Title (formát: Jak začít s obsahovým marketingem na sociálních sítích | Socials) Vyplníme description Zkontrolujeme délku title a description v náhledu 12) Interní prolinkování Můžeme přidat odkazy na jiné články? Můžeme přidat do jiných článků odkazy na nový článek? 13) Publikování na sociální sítě Publikování článku na Facebook (1080x1080) Publikování článku na LinkedIn (1080x1080) Publikování článku na Instagram (1080x1350) Publikování stories (1080x1920) 14) Rozesílka newsletter Doporučuji duplikovat již odeslanou kampaň a pouze předělat Vždy uvádět datum a název rozesílky Posíláme na celý seznam V informaci o kampani upravíme: Název kampaně, předmět e-mailu, UTM campaign Obsah e-mailu upravime jiný text + odkaz do CallToCaton tlačítka na daný článek',
+'--Všechny články píše autor v Notion. Ve výjimečných případech v Google Docs, ale následně prosím o překopírování do Notion. ¨ Ve Freelu vždy plánujeme články 2 měsíce dopředu. V to-do listu "Content" vytvoříš ze šablony nový úkol a přidáš jednotlivé řešitele a termíny. 1) Vytvoření nového příspěvku v administraci wordpress (příspěvky vytvořit příspěvek) () Video 2) Úprava textu H1 nepoužíváme Nikdy nemůže být H3 před H2 atd H2 vždy uděláme tučně H2 se propisuje jako obsah článku H3 nikdy není tučně Nechceme mít moc dlouhé odstavce – špatně se na webu čtou – kde je to možné, dáme na další řádek 3) Přídání obrázků do textu Nezapomeneme zmenšit obrázky přes tinypng.com Je třeba vždy odstranit URL odkaz na obrázek v Notion a místo něj přidat daný obrázek přes + Vyplníme "Alt" popis obrázků Doplníme zdroj obrázku, pokud bude třeba 4) Nastavení dokumentu Nastavíme datum a čas publikování (ideálně v 7:00) Viditelnost necháme "Veřejná" Vybereme autora Zvolíme příslušnou rubriku Zakážeme komentáře Pokud je URL moc dlouhá, vytvoříme vlastní ideálně s klíčovým slovem 9) Přidáme Featured Image (Hlavní obrázek článku) Template v Canvě Obrázek zmenšíme přes tinypng.com Vyplníme "Alt" popis 10) Stukturovaná data (pod článkem "Configure Rich Snippet") Vybereme "Article" Přidáme Featured image Vyplníme všechna pole Publisher: Socials.cz Publisher logo: Favicon 11) YOAST SEO Vyplníme Title (formát: Jak začít s obsahovým marketingem na sociálních sítích | Socials) Vyplníme description Zkontrolujeme délku title a description v náhledu 12) Interní prolinkování Můžeme přidat odkazy na jiné články? Můžeme přidat do jiných článků odkazy na nový článek? 13) Publikování na sociální sítě Publikování článku na Facebook (1080x1080) Publikování článku na LinkedIn (1080x1080) Publikování článku na Instagram (1080x1350) Publikování stories (1080x1920) 14) Rozesílka newsletter Doporučuji duplikovat již odeslanou kampaň a pouze předělat Vždy uvádět datum a název rozesílky Posíláme na celý seznam V informaci o kampani upravíme: Název kampaně, předmět e-mailu, UTM campaign Obsah e-mailu upravime jiný text + odkaz do CallToCaton tlačítka na daný článek',
 50,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'6521fe7b-54bb-451b-8220-f333afecfc0f',
+'8b7e3b7e-4bd9-4885-a543-d504b2a7c9b6',
 '11111111-1111-1111-1111-111111111103',
 'Reporting - jak reportovat klientovi',
 '<h3>SOP: Reporting pro klienty s primárním využitím Loom</h3>
@@ -5506,7 +5557,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'3f949a74-a807-433f-bd26-6c17a2a6e68c',
+'d5dc7c3a-2cfc-4687-af06-a3ce1926e512',
 '11111111-1111-1111-1111-111111111105',
 'Rozměry PPC bannerů pro Google Ads a S-klik',
 '<p>Prosíme o přípravu klasických a responzivních / kombinovaných bannerů pro PPC kampaně.</p>
@@ -5579,7 +5630,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'e5d4c8a5-2345-444f-a5da-469a2f35f462',
+'6fb497cc-8714-4d34-82c7-4ca277988355',
 '11111111-1111-1111-1111-111111111111',
 'Řešení neplatičů & ukončení spolupráce',
 '<p>Tento SOP definuje jednotný postup, jak Socials postupuje v případě, kdy klient neproplácí faktury po splatnosti. Cílem je férová, přátelská, ale konzistentní komunikace a ochrana firmy.</p>
@@ -5693,10 +5744,12 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'af87dbc6-fda8-4f6e-8572-ec14121185d1',
+'3c9570ce-cd8d-423b-a256-1a98a7351ad2',
 '11111111-1111-1111-1111-111111111109',
 'SOP – Střih podcastových Reels',
-'<p><a href="https://podcast.adobe.com/en">https://podcast.adobe.com/en</a><br><a href="https://web.descript.com/">https://web.descript.com/</a><br><a href="https://captions.ai/">https://captions.ai/</a></p>
+'<p><a href="https://podcast.adobe.com/en">https://podcast.adobe.com/en</a>
+<a href="https://web.descript.com/">https://web.descript.com/</a>
+<a href="https://captions.ai/">https://captions.ai/</a></p>
 <p>🤖 Chat GPT Asistenti, které můžeme použít:   </p>
 <p>Účel</p>
 <p>Vytvářet krátká vertikální videa (Reels / TikTok / Shorts) z podcastů tak, aby:</p>
@@ -5751,9 +5804,10 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>delší pauza pouze pokud je <strong>záměr (hook / emoce)</strong></li>
 </ul>
 <p>👉 Nesmí vzniknout moment, kdy má divák čas přestat sledovat.</p>
-<p>Takhle bych to osekal já… Zbytečně moc navíc slov.<br>Nebát se, vystřihnout některá slova. Udělat to svižné, rychlé…</p>
-<p><a href="SOP%20%E2%80%93%20St%C5%99ih%20podcastov%C3%BDch%20Reels/reels_1.mp4">reels_1.mp4</a></p>
-<p><a href="SOP%20%E2%80%93%20St%C5%99ih%20podcastov%C3%BDch%20Reels/UGC__influencer.A_pokud_ten_rozdil_neresite_velmi_casto_zbytecne_palite_rozpocet.dave.duc_v_e.mp4">UGC ≠ influencer.A pokud ten rozdíl neřešíte, velmi často zbytečně pálíte rozpočet.@dave.duc v e.mp4</a></p>
+<p>Takhle bych to osekal já… Zbytečně moc navíc slov.
+Nebát se, vystřihnout některá slova. Udělat to svižné, rychlé…</p>
+<p><em>[Video: reels_1.mp4]</em></p>
+<p><em>[Video: UGC ≠ influencer.A pokud ten rozdíl neřešíte, velmi často zbytečně pálíte rozpoč<a href="mailto:et.@dave.duc">et.@dave.duc</a> v e.mp4]</em></p>
 <hr>
 <h2>3. Rytmus střihu</h2>
 <ul>
@@ -5787,7 +5841,7 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 </li>
 </ul>
 <h2>Tohle je špatný zoom 👉🏼</h2>
-<p><img src="SOP%20%E2%80%93%20St%C5%99ih%20podcastov%C3%BDch%20Reels/Snimek_obrazovky_2026-01-27_v_15.01.02.png" alt="Snímek obrazovky 2026-01-27 v 15.01.02.png"></p>
+<p><em>[Obrázek: Snímek obrazovky 2026-01-27 v 15.01.02.png]</em></p>
 <hr>
 <h3>Oči &amp; pozice hlavy:</h3>
 <ul>
@@ -5800,9 +5854,9 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 </li>
 <li>povolený rozdíl max <strong>±5 %</strong></li>
 </ul>
-<p><img src="SOP%20%E2%80%93%20St%C5%99ih%20podcastov%C3%BDch%20Reels/1.jpg" alt="1.jpg"></p>
-<p><img src="SOP%20%E2%80%93%20St%C5%99ih%20podcastov%C3%BDch%20Reels/Frame_1.png" alt="Frame 1.png"></p>
-<p><img src="SOP%20%E2%80%93%20St%C5%99ih%20podcastov%C3%BDch%20Reels/Snimek_obrazovky_2026-01-27_v_15.00.47.png" alt="Snímek obrazovky 2026-01-27 v 15.00.47.png"></p>
+<p><em>[Obrázek: 1.jpg]</em></p>
+<p><em>[Obrázek: Frame 1.png]</em></p>
+<p><em>[Obrázek: Snímek obrazovky 2026-01-27 v 15.00.47.png]</em></p>
 <hr>
 <h2>6. Titulky (Subtitles) - řeší Týnka momentálně</h2>
 <h3>Povinné:</h3>
@@ -5902,7 +5956,7 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li><p><strong>Curves:</strong> lehké „S“ (doporučeno)</p>
 </li>
 </ul>
-<p><img src="SOP%20%E2%80%93%20St%C5%99ih%20podcastov%C3%BDch%20Reels/Snimek_obrazovky_2026-01-27_v_14.56.22.png" alt="Snímek obrazovky 2026-01-27 v 14.56.22.png"></p>
+<p><em>[Obrázek: Snímek obrazovky 2026-01-27 v 14.56.22.png]</em></p>
 <hr>
 <h2>11. Obsahová kontrola (VOLITELNÉ, DOPORUČENO)</h2>
 <p>Pokud si editor není jistý, zda výrazně zkrácené video stále dává smysl:</p>
@@ -5913,7 +5967,8 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>vložit do ChatGPT s dotazem:</li>
 </ol>
 <blockquote>
-<p>„Dává tahle myšlenka obsahově smysl i po výrazném zkrácení?<br>Je sdělení pochopitelné bez kontextu?“</p>
+<p>„Dává tahle myšlenka obsahově smysl i po výrazném zkrácení?
+Je sdělení pochopitelné bez kontextu?“</p>
 </blockquote>
 <p>Pokud <strong>NE</strong> → vrátit se do střihu.</p>
 <hr>
@@ -5933,13 +5988,13 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <p>„Udrželo by to mou pozornost, kdybych to viděl poprvé bez zvuku?“</p>
 </blockquote>
 ',
-'https://podcast.adobe.com/en https://web.descript.com/ https://captions.ai/ 🤖 Chat GPT Asistenti, které můžeme použít: Účel Vytvářet krátká vertikální videa (Reels / TikTok / Shorts) z podcastů tak, aby: udržela pozornost diváka měla vysoký watch time byla srozumitelná i bez zvuku --Základní pravidla Jedno reelsko = jedna myšlenka Z 1–2 minut klidně použít 20–30 sekund Pokud něco nezvyšuje pozornost nebo pochopení → pryč Žádné intro, žádné vysvětlování navíc ((Okecávání)) --Výběr pasáže Vybírat pouze pasáže, které: dávají smysl bez kontextu obsahují jasnou pointu / tvrzení / emoci mají potenciál zaujmout do 2 sekund (e-commerce tempo) ❌ Nevybírat: rozjezd myšlenky vysvětlování pozadí dlouhé příběhy bez pointy někdy to nejde, jasně 🙂 --Střih řeči (NEJDŮLEŽITĚJŠÍ) Povinně odstranit: výplňová slova: „jakoby“, „prostě“, „vlastně“, „jako“, „víš co“, „že“, apod. zbytečné okecávání náběhy vět („já bych chtěl říct…“) Zkracování: Nebát se agresivně zkracovat řeč Pokud zůstane zachovaná myšlenka, je zkrácení vždy správně Ticho: žádná hluchá místa pauzy 0,3–0,5 s vždy odstranit delší pauza pouze pokud je záměr (hook / emoce) 👉 Nesmí vzniknout moment, kdy má divák čas přestat sledovat. Takhle bych to osekal já… Zbytečně moc navíc slov. Nebát se, vystřihnout některá slova. Udělat to svižné, rychlé… reels_1.mp4 UGC ≠ influencer.A pokud ten rozdíl neřešíte, velmi často zbytečně pálíte rozpočet.@dave.duc v e.mp4 --Rytmus střihu žádný záběr delší než 3–4 s bez změny (cut / zoom / text) pokud mluvčí zpomalí → střih zrychlit tempo musí udržovat pozornost --Jump cuts povolené a žádoucí NE: měnit framing tak, že „poskočí hlava“ pokud nelze framing udržet 100 %, minimalizovat rozdíl na maximum ANO: držet stejnou velikost obličeje a osu očí --Zoomy & framing Zoomy: používat jemně max 1 změna zoomu za 2–3 s zoom musí podporovat pointu ❌ Zakázáno: chaotické zoomování zoomy bez důvodu nekonzistentní rytmus zoomů Tohle je špatný zoom 👉🏼 !Snímek obrazovky 2026-01-27 v 15.01.02.png --Oči & pozice hlavy: oči musí být vždy ve stejné horizontální rovině doporučeno nastavit guides / linie v editačním programu při jump cutech: upravit zoom NE posouvat hlavu nahoru/dolů povolený rozdíl max ±5 % !1.jpg !Frame 1.png !Snímek obrazovky 2026-01-27 v 15.00.47.png --Titulky (Subtitles) řeší Týnka momentálně Povinné: každé reelsko MUSÍ mít titulky Umístění: pod hlavou / pod bradou co nejblíž mluvčímu nikdy přes obličej nebo oči Styl: 1–2 řádky max 5–7 slov na řádek titulky nejsou doslovný přepis nechám na Týnce zvýrazňovat klíčová slova (čísla, emoce, negace) 👉 Divák musí vnímat obličej i titulky zároveň. --Hook & struktura Hook: musí fungovat i bez zvuku žádné intro, žádné „ahoj“ rovnou: problém tvrzení otázka Pokročilá technika (občas): nejsilnější věta z prostředku videa → dát na začátek lze doplnit: sound effect (rise / whoosh) tvrdý střih --Loop videa (testovat) konec bez jasného zakončení plynulý přechod zpět na začátek vhodné hlavně pro: myšlenky tipy kontroverze --Zvuk audio nesmí být pouze v jednom kanálu (L / R) Kluci jsou na to experti 😀 hlas má vždy prioritu hlas musí být: čistý konzistentní hudba: velmi potichu pouze pokud podporuje rytmus sound effects: max 1–2 na video jen na hook / přechod špatný zvuk https://podcast.adobe.com/en několikrát mě zachránil --Barvy & obraz lehce zvednout expozici (video má „svítit“) kontrast saturace sjednotit white balance pozor na: přepaly pleti barevné skoky mezi střihy Curves: lehké „S“ (doporučeno) !Snímek obrazovky 2026-01-27 v 14.56.22.png --Obsahová kontrola (VOLITELNÉ, DOPORUČENO) Pokud si editor není jistý, zda výrazně zkrácené video stále dává smysl: exportovat finální zvuk (MP3) nahrát do Descriptu https://web.descript.com/ získat textový přepis vložit do ChatGPT s dotazem: „Dává tahle myšlenka obsahově smysl i po výrazném zkrácení? Je sdělení pochopitelné bez kontextu?“ Pokud NE → vrátit se do střihu. --Kontrolní checklist (POVINNÉ) Před exportem: ☐ nulové ticho ☐ oči ve stejné rovině ☐ titulky blízko hlavy ☐ jedna myšlenka ☐ dává smysl bez zvuku Pokud je odpověď NE → vrátit do střihu. --Závěrečná kontrolní otázka „Udrželo by to mou pozornost, kdybych to viděl poprvé bez zvuku?“ >',
+'https://podcast.adobe.com/en https://web.descript.com/ https://captions.ai/ 🤖 Chat GPT Asistenti, které můžeme použít: Účel Vytvářet krátká vertikální videa (Reels / TikTok / Shorts) z podcastů tak, aby: udržela pozornost diváka měla vysoký watch time byla srozumitelná i bez zvuku --Základní pravidla Jedno reelsko = jedna myšlenka Z 1–2 minut klidně použít 20–30 sekund Pokud něco nezvyšuje pozornost nebo pochopení → pryč Žádné intro, žádné vysvětlování navíc ((Okecávání)) --Výběr pasáže Vybírat pouze pasáže, které: dávají smysl bez kontextu obsahují jasnou pointu / tvrzení / emoci mají potenciál zaujmout do 2 sekund (e-commerce tempo) ❌ Nevybírat: rozjezd myšlenky vysvětlování pozadí dlouhé příběhy bez pointy někdy to nejde, jasně 🙂 --Střih řeči (NEJDŮLEŽITĚJŠÍ) Povinně odstranit: výplňová slova: „jakoby“, „prostě“, „vlastně“, „jako“, „víš co“, „že“, apod. zbytečné okecávání náběhy vět („já bych chtěl říct…“) Zkracování: Nebát se agresivně zkracovat řeč Pokud zůstane zachovaná myšlenka, je zkrácení vždy správně Ticho: žádná hluchá místa pauzy 0,3–0,5 s vždy odstranit delší pauza pouze pokud je záměr (hook / emoce) 👉 Nesmí vzniknout moment, kdy má divák čas přestat sledovat. Takhle bych to osekal já… Zbytečně moc navíc slov. Nebát se, vystřihnout některá slova. Udělat to svižné, rychlé… [Video: reels_1.mp4] [Video: UGC ≠ influencer.A pokud ten rozdíl neřešíte, velmi často zbytečně pálíte rozpočet.@dave.duc v e.mp4] --Rytmus střihu žádný záběr delší než 3–4 s bez změny (cut / zoom / text) pokud mluvčí zpomalí → střih zrychlit tempo musí udržovat pozornost --Jump cuts povolené a žádoucí NE: měnit framing tak, že „poskočí hlava“ pokud nelze framing udržet 100 %, minimalizovat rozdíl na maximum ANO: držet stejnou velikost obličeje a osu očí --Zoomy & framing Zoomy: používat jemně max 1 změna zoomu za 2–3 s zoom musí podporovat pointu ❌ Zakázáno: chaotické zoomování zoomy bez důvodu nekonzistentní rytmus zoomů Tohle je špatný zoom 👉🏼 [Obrázek: Snímek obrazovky 2026-01-27 v 15.01.02.png] --Oči & pozice hlavy: oči musí být vždy ve stejné horizontální rovině doporučeno nastavit guides / linie v editačním programu při jump cutech: upravit zoom NE posouvat hlavu nahoru/dolů povolený rozdíl max ±5 % [Obrázek: 1.jpg] [Obrázek: Frame 1.png] [Obrázek: Snímek obrazovky 2026-01-27 v 15.00.47.png] --Titulky (Subtitles) řeší Týnka momentálně Povinné: každé reelsko MUSÍ mít titulky Umístění: pod hlavou / pod bradou co nejblíž mluvčímu nikdy přes obličej nebo oči Styl: 1–2 řádky max 5–7 slov na řádek titulky nejsou doslovný přepis nechám na Týnce zvýrazňovat klíčová slova (čísla, emoce, negace) 👉 Divák musí vnímat obličej i titulky zároveň. --Hook & struktura Hook: musí fungovat i bez zvuku žádné intro, žádné „ahoj“ rovnou: problém tvrzení otázka Pokročilá technika (občas): nejsilnější věta z prostředku videa → dát na začátek lze doplnit: sound effect (rise / whoosh) tvrdý střih --Loop videa (testovat) konec bez jasného zakončení plynulý přechod zpět na začátek vhodné hlavně pro: myšlenky tipy kontroverze --Zvuk audio nesmí být pouze v jednom kanálu (L / R) Kluci jsou na to experti 😀 hlas má vždy prioritu hlas musí být: čistý konzistentní hudba: velmi potichu pouze pokud podporuje rytmus sound effects: max 1–2 na video jen na hook / přechod špatný zvuk https://podcast.adobe.com/en několikrát mě zachránil --Barvy & obraz lehce zvednout expozici (video má „svítit“) kontrast saturace sjednotit white balance pozor na: přepaly pleti barevné skoky mezi střihy Curves: lehké „S“ (doporučeno) [Obrázek: Snímek obrazovky 2026-01-27 v 14.56.22.png] --Obsahová kontrola (VOLITELNÉ, DOPORUČENO) Pokud si editor není jistý, zda výrazně zkrácené video stále dává smysl: exportovat finální zvuk (MP3) nahrát do Descriptu https://web.descript.com/ získat textový přepis vložit do ChatGPT s dotazem: „Dává tahle myšlenka obsahově smysl i po výrazném zkrácení? Je sdělení pochopitelné bez kontextu?“ Pokud NE → vrátit se do střihu. --Kontrolní checklist (POVINNÉ) Před exportem: ☐ nulové ticho ☐ oči ve stejné rovině ☐ titulky blízko hlavy ☐ jedna myšlenka ☐ dává smysl bez zvuku Pokud je odpověď NE → vrátit do střihu. --Závěrečná kontrolní otázka „Udrželo by to mou pozornost, kdybych to viděl poprvé bez zvuku?“ >',
 54,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'a3ebf0b0-70a6-4acd-b165-8eb3667d0025',
+'f2eb5434-8456-420c-86ed-1b9ea7e17b74',
 '11111111-1111-1111-1111-111111111106',
 'Sales proces náboru nového klienta - od Leadu po podepsání smlouvy',
 '<p>Prirmární odpovědnost má Sales manager.</p>
@@ -6074,7 +6129,7 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 </li>
 </ul>
 <h3>3. <strong>Po callu – kvalifikace klienta</strong></h3>
-<p>Zde video k sekci: <a href="https://www.loom.com/share/2c851183f67a4c9e89b4726a9697d17c?sid=d0754629-3412-4f60-acab-46b538015cb2">https://www.loom.com/share/2c851183f67a4c9e89b4726a9697d17c?sid=d0754629-3412-4f60-acab-46b538015cb2</a></p>
+<p>Zde video k sekci: <div data-loom-embed><iframe src="https://www.loom.com/embed/2c851183f67a4c9e89b4726a9697d17c" frameborder="0" allowfullscreen></iframe></div></p>
 <ul>
 <li>Doplň informace z callu do poznámky k Leadu v Raynetu</li>
 <li>Pokud má klient potenciál, pošli mu <strong>automatizovaný e-mail s žádostí o přístupy</strong> - automatizace v Raynetu</li>
@@ -6183,7 +6238,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'ac3f3907-9b96-4dfa-8d1a-f66af30c68a8',
+'07444025-aa73-48ab-a8f2-1bfcad0d5aca',
 '11111111-1111-1111-1111-111111111107',
 'Shoptet pluginy, které by měli klienti využívat',
 '',
@@ -6193,7 +6248,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'030e0a92-4d8b-4d14-8c31-7f77b8537931',
+'2d6f50e3-17f3-4922-99bc-8c17749f5890',
 '11111111-1111-1111-1111-111111111112',
 'Služby Socials - Jak je prezentujeme klientům',
 '<h3>📢 Socials Boost - Správa Meta Ads</h3>
@@ -6288,7 +6343,16 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>Napojení dat do Looker Studio</li>
 <li>Optimalizace stávajících kampaní</li>
 <li>Vytvoření nové struktury kampaní</li>
-<li>Tvorba textů do reklam | Ano | Ano | Ano |<br>| Strategické vylepšování atraktivity vaší nabídky | Ano | Ano | Ano |<br>| Zadávání reklamních kreativ | Ano | Ano | Ano |<br>| Tvorba nových reklam | 1-2x týdně | 2-3x týdně | 2-3x týdně |<br>| Denní kontrola kampaní | Ano | Ano | Ano |<br>| Optimalizace kampaní pro zaručení maximální efektivity využití rozpočtu | 1–2x týdně | 2–3x týdně | 3–4x týdně |<br>| Psaní nových textů do reklam | Ano | Ano | Ano |<br>| Komunikace přes Freelo | Ano | Ano | Ano |<br>| 24/7 Looker studio report | Ano | Ano | Ano |<br>| Měsíční reporting | Video / text / telefonát (dle domluvy) | Video / text / telefonát (dle domluvy) | Video / text / telefonát (dle domluvy) |</li>
+<li>Tvorba textů do reklam | Ano | Ano | Ano |
+| Strategické vylepšování atraktivity vaší nabídky | Ano | Ano | Ano |
+| Zadávání reklamních kreativ | Ano | Ano | Ano |
+| Tvorba nových reklam | 1-2x týdně | 2-3x týdně | 2-3x týdně |
+| Denní kontrola kampaní | Ano | Ano | Ano |
+| Optimalizace kampaní pro zaručení maximální efektivity využití rozpočtu | 1–2x týdně | 2–3x týdně | 3–4x týdně |
+| Psaní nových textů do reklam | Ano | Ano | Ano |
+| Komunikace přes Freelo | Ano | Ano | Ano |
+| 24/7 Looker studio report | Ano | Ano | Ano |
+| Měsíční reporting | Video / text / telefonát (dle domluvy) | Video / text / telefonát (dle domluvy) | Video / text / telefonát (dle domluvy) |</li>
 </ul>
 <h3>📈 PPC Boost - Správa Google Ads a S-kliku</h3>
 <h3><strong>Co získáte v rámci služby PPC Boost?</strong></h3>
@@ -6388,7 +6452,17 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>Napojení dat do Looker Studio</li>
 <li>Optimalizace stávajících kampaní</li>
 <li>Vytvoření nové struktury kampaní</li>
-<li>Tvorba textů do reklam | Ano | Ano | Ano |<br>| Denní kontrola kampaní | Ano | Ano | Ano |<br>| Optimalizace kampaní | 1–2x týdně | 2–3x týdně | 3–4x týdně |<br>| Tvorba nových reklam | Ano | Ano | Ano |<br>| Zadávání reklamních kreativ | Ano | Ano | Ano |<br>| Psaní nových textů do reklam | Ano | Ano | Ano |<br>| Úprava XML feedů přes Mergado | Ano | Ano | Ano |<br>| Strategické vylepšování atraktivity vaší nabídky | Ano | Ano | Ano |<br>| Komunikace přes Freelo (reakční doba do 48h) | Ano | Ano | Ano |<br>| 24/7 Looker studio report | Ano | Ano | Ano |<br>| Měsíční reporting | Video / text / telefonát | Video / text / telefonát | Video / text / telefonát |</li>
+<li>Tvorba textů do reklam | Ano | Ano | Ano |
+| Denní kontrola kampaní | Ano | Ano | Ano |
+| Optimalizace kampaní | 1–2x týdně | 2–3x týdně | 3–4x týdně |
+| Tvorba nových reklam | Ano | Ano | Ano |
+| Zadávání reklamních kreativ | Ano | Ano | Ano |
+| Psaní nových textů do reklam | Ano | Ano | Ano |
+| Úprava XML feedů přes Mergado | Ano | Ano | Ano |
+| Strategické vylepšování atraktivity vaší nabídky | Ano | Ano | Ano |
+| Komunikace přes Freelo (reakční doba do 48h) | Ano | Ano | Ano |
+| 24/7 Looker studio report | Ano | Ano | Ano |
+| Měsíční reporting | Video / text / telefonát | Video / text / telefonát | Video / text / telefonát |</li>
 </ul>
 <h3>🎨 Creative Boost - Příprava reklamních kreativ</h3>
 <p>Creative Boost je systém, jak váš produkt nebo službu prodat pomocí strategické výkonnostní kreativy.</p>
@@ -6817,7 +6891,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'805e1b27-d832-440b-9018-277bc2ee4bc2',
+'aeba7ce3-4158-45bc-8245-8e2d54bfbc15',
 '11111111-1111-1111-1111-111111111112',
 'Služby Socials - interní detailní informace a interní odměňování',
 '<h3>1. Cíl dokumentu</h3>
@@ -7127,7 +7201,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'560ac344-8c17-4d70-a8dc-bc1444834ae2',
+'0d8b10c8-1e42-4cea-9a89-16243b858edc',
 '11111111-1111-1111-1111-111111111110',
 'Střih a korektura Reels pro firemní sociální sítě',
 '<h1><strong>Cíl SOP</strong></h1>
@@ -7279,11 +7353,14 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'8e66291d-fb61-48c0-9cc9-62e34d1aa22f',
+'371bb64c-df2c-4d95-b058-f2f8bee4334e',
 '11111111-1111-1111-1111-111111111106',
 'Šablona email - odmítnutí',
 '<p>Obsah e-mailu:</p>
-<p>Dobrý den,<br>děkujeme za váš zájem o spolupráci, velmi si toho vážíme. Po zhodnocení vaší poptávky si myslíme, že by pro vás bylo efektivnější navázat spolupráci spíše s nějakým freelancerem. Naše agentura se specializuje na rozsáhlejší kampaně pro větší firmy s obchodním týmem.<br>Doporučujeme vám obrátit se na specialisty, kteří se věnují projektům podobného rozsahu. Skvělým místem k nalezení vhodného partnera je například Facebooková skupina Spravujeme sociální sítě, kde můžete snadno přidat poptávku a získat relevantní nabídky.<br>Věřím, že se vám podaří najít ideální řešení, které vám pomůže dosáhnout skvělých výsledků. Držím palce a přeji hodně úspěchů!</p>
+<p>Dobrý den,
+děkujeme za váš zájem o spolupráci, velmi si toho vážíme. Po zhodnocení vaší poptávky si myslíme, že by pro vás bylo efektivnější navázat spolupráci spíše s nějakým freelancerem. Naše agentura se specializuje na rozsáhlejší kampaně pro větší firmy s obchodním týmem.
+Doporučujeme vám obrátit se na specialisty, kteří se věnují projektům podobného rozsahu. Skvělým místem k nalezení vhodného partnera je například Facebooková skupina Spravujeme sociální sítě, kde můžete snadno přidat poptávku a získat relevantní nabídky.
+Věřím, že se vám podaří najít ideální řešení, které vám pomůže dosáhnout skvělých výsledků. Držím palce a přeji hodně úspěchů!</p>
 ',
 'Obsah e-mailu: Dobrý den, děkujeme za váš zájem o spolupráci, velmi si toho vážíme. Po zhodnocení vaší poptávky si myslíme, že by pro vás bylo efektivnější navázat spolupráci spíše s nějakým freelancerem. Naše agentura se specializuje na rozsáhlejší kampaně pro větší firmy s obchodním týmem. Doporučujeme vám obrátit se na specialisty, kteří se věnují projektům podobného rozsahu. Skvělým místem k nalezení vhodného partnera je například Facebooková skupina Spravujeme sociální sítě, kde můžete snadno přidat poptávku a získat relevantní nabídky. Věřím, že se vám podaří najít ideální řešení, které vám pomůže dosáhnout skvělých výsledků. Držím palce a přeji hodně úspěchů!',
 60,
@@ -7291,7 +7368,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'4e901caf-aee5-4251-97c0-aa5c9faa1f34',
+'6a13d383-4c32-40e1-84a5-b3e18f981811',
 '11111111-1111-1111-1111-111111111108',
 'Team Leader pro Meta Ads',
 '<ul>
@@ -7361,7 +7438,9 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 </li>
 <li><p><strong>Kontrola před akcemi</strong> (např. Valentýn, Black Friday)</p>
 <ul>
-<li>Maximálně 2 týdny před velkými e-commerce akcemi uspořádej interní meetup:<br>  <a href="P%C5%99%C3%ADprava%20na%20kr%C3%A1tkou%20(flash%20akci)%2014951ff3df57800e9f98d706330fc4d8.md">Příprava na krátkou (flash akci) </a><br>  <a href="Meta%20Ads%20Jak%20d%C4%9Blat%20kr%C3%A1tk%C3%A9%20(flash)%20akce%2014951ff3df57809a8590e93ae0a03b33.md">Meta Ads: Jak dělat krátké (flash) akce  </a></li>
+<li>Maximálně 2 týdny před velkými e-commerce akcemi uspořádej interní meetup: 
+  <a href="P%C5%99%C3%ADprava%20na%20kr%C3%A1tkou%20(flash%20akci)%2014951ff3df57800e9f98d706330fc4d8.md">Příprava na krátkou (flash akci) </a> 
+  <a href="Meta%20Ads%20Jak%20d%C4%9Blat%20kr%C3%A1tk%C3%A9%20(flash)%20akce%2014951ff3df57809a8590e93ae0a03b33.md">Meta Ads: Jak dělat krátké (flash) akce  </a></li>
 <li>Pár dnů před akcí ověř přes Slack, zda-li:<ul>
 <li>Mají specialisté vše, co potřebují.</li>
 <li>Byly připraveny kampaně alespoň 24 hodin předem.</li>
@@ -7437,7 +7516,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'8a76237f-86b0-49f5-8a55-02ae6ea8cefc',
+'4b6ea30b-e080-4993-b671-cb2cd67d4112',
 '11111111-1111-1111-1111-111111111109',
 'Tvorba podcastu od A do Z',
 '<p><a href="https://www.notion.so/Podcast-HUB-636700b26c974d1cb4b6897b27358dd1?pvs=21">Podcast HUB</a></p>
@@ -7509,7 +7588,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'01da7b01-4958-4b12-be6c-f0a428d7097e',
+'b3c4f583-6d0b-439a-8026-f33df345ff4b',
 '11111111-1111-1111-1111-111111111107',
 'Vyhodnocení akce (Meta Ads)',
 '<h1>🔎 Cíl</h1>
@@ -7554,10 +7633,11 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'44fc1128-f174-425a-969d-8389be77d24a',
+'173abbe5-4e4e-4808-a779-dedc3ee2a92e',
 '11111111-1111-1111-1111-111111111109',
 'Webináře - Everwebinar',
-'<p><a href="https://www.loom.com/share/2b21cd2e9e5d4dfab3299ca6bfb72da5?sid=fb1433bc-7b69-4ebe-a145-7de9dfd50a0f">https://www.loom.com/share/2b21cd2e9e5d4dfab3299ca6bfb72da5?sid=fb1433bc-7b69-4ebe-a145-7de9dfd50a0f</a></p>
+'<div data-loom-embed><iframe src="https://www.loom.com/embed/2b21cd2e9e5d4dfab3299ca6bfb72da5" frameborder="0" allowfullscreen></iframe></div>
+
 <h1>SOP: Jak nahrát Vimeo video do WebinarJam</h1>
 <h2>Účel</h2>
 <p>Tento postup popisuje, jak správně nahrát &quot;unlisted&quot; video z Vimea do WebinarJamu pro evergreen webináře.</p>
@@ -7597,13 +7677,13 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>Zkuste video nejdřív přehrát přímo přes zkopírovaný link</li>
 </ol>
 ',
-'https://www.loom.com/share/2b21cd2e9e5d4dfab3299ca6bfb72da5?sid=fb1433bc-7b69-4ebe-a145-7de9dfd50a0f SOP: Jak nahrát Vimeo video do WebinarJam Účel Tento postup popisuje, jak správně nahrát "unlisted" video z Vimea do WebinarJamu pro evergreen webináře. Předpoklady Nahraný webinář na Vimeo Nastavení privacy na "Unlisted" Přístup do WebinarJam Postup Získání správného odkazu z Vimea Přejděte na vaše video na Vimeo Klikněte na tři tečky (...) u videa Vyberte "Video file links" Najděte a zkopírujte link pro HD 1080p verzi Nahrání do WebinarJam V WebinarJam zvolte "Source video" Vyberte "An external video file" Do pole "URL to your video file" vložte zkopírovaný HD 1080p link Vyplňte délku videa Klikněte na "Save" Důležité poznámky Nepoužívejte klasický share link z Vimea Video musí být minimálně v HD 1080p kvalitě Nastavení "Unlisted" na Vimeu zajistí dostupnost pouze přes odkaz Řešení problémů Pokud se zobrazí "Invalid video URL": Ověřte, že používáte link z "Video file links" Zkontrolujte, zda jste vybrali HD 1080p verzi Zkuste video nejdřív přehrát přímo přes zkopírovaný link',
+'SOP: Jak nahrát Vimeo video do WebinarJam Účel Tento postup popisuje, jak správně nahrát "unlisted" video z Vimea do WebinarJamu pro evergreen webináře. Předpoklady Nahraný webinář na Vimeo Nastavení privacy na "Unlisted" Přístup do WebinarJam Postup Získání správného odkazu z Vimea Přejděte na vaše video na Vimeo Klikněte na tři tečky (...) u videa Vyberte "Video file links" Najděte a zkopírujte link pro HD 1080p verzi Nahrání do WebinarJam V WebinarJam zvolte "Source video" Vyberte "An external video file" Do pole "URL to your video file" vložte zkopírovaný HD 1080p link Vyplňte délku videa Klikněte na "Save" Důležité poznámky Nepoužívejte klasický share link z Vimea Video musí být minimálně v HD 1080p kvalitě Nastavení "Unlisted" na Vimeu zajistí dostupnost pouze přes odkaz Řešení problémů Pokud se zobrazí "Invalid video URL": Ověřte, že používáte link z "Video file links" Zkontrolujte, zda jste vybrali HD 1080p verzi Zkuste video nejdřív přehrát přímo přes zkopírovaný link',
 64,
 true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'ec8dd078-9099-4eba-9b72-a176271fdbd9',
+'488934ab-4dda-41b8-9414-f46256021767',
 '11111111-1111-1111-1111-111111111104',
 'Zadání implementace Conversion API',
 '<p><strong>Pixel ID:</strong></p>
@@ -7703,7 +7783,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'3ef50023-a7ed-48b0-b5ee-bd9f274d5b9a',
+'73b4ad32-82ee-4ba6-91df-94dcf16549a4',
 '11111111-1111-1111-1111-111111111106',
 'Založení nového projektu (onboarding)',
 '<p><strong>Odpovědná osoba za onboarding:</strong></p>
@@ -7874,7 +7954,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'4db4c383-7259-45ef-9614-8668a097cf95',
+'97cf953e-9422-41fd-b667-9d899c2dde7e',
 '11111111-1111-1111-1111-111111111103',
 'Zásady komunikace s klientem',
 '<h1>Proč potřebujeme mít zásady komunikace?</h1>
@@ -7898,11 +7978,13 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 </li>
 <li><p><strong>Reagujeme rychle ve Freelo:</strong></p>
 <ol>
-<li><strong>Na složitý úkol,</strong> nad kterým se musíme zamyslet, reagujeme:<br> ,,<em>Dobrý den [jméno], úkol registruji. Zamyslím se a vrátím se s odpovědí nejpozději zítra odpoledne.”</em> </li>
+<li><strong>Na složitý úkol,</strong> nad kterým se musíme zamyslet, reagujeme: 
+ ,,<em>Dobrý den [jméno], úkol registruji. Zamyslím se a vrátím se s odpovědí nejpozději zítra odpoledne.”</em> </li>
 <li><strong>Jednoduchý úkol</strong> – snažíme se odbavit co nejrychleji do max. 3 hodin.</li>
 </ol>
 </li>
-<li><p><strong>Před zavřením úkolu končíme vždy naším komentářem</strong>, minimálně např.:<br>,,<em>Krásný den, [jméno], z úkolu máme vše hotové, pro přehlednost úkol zavírám. Mějte se pěkně.”</em></p>
+<li><p><strong>Před zavřením úkolu končíme vždy naším komentářem</strong>, minimálně např.: 
+,,<em>Krásný den, [jméno], z úkolu máme vše hotové, pro přehlednost úkol zavírám. Mějte se pěkně.”</em></p>
 </li>
 <li><p><strong>Vysvětlujeme &amp; opakujeme jako začátečníkům &amp; jsme informativní</strong>, příklady:</p>
 <ol>
@@ -7910,7 +7992,8 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 <li>Nastavovali jsme katalogovky – stručně vysvětlete klientovi, jak fungují a pošlete náhled reklamy, jak vypadají.</li>
 <li>Píšeme o technikáliích, např. o dynamickém remarketingu – znovu zopakujme klientovi, co dynamický remarketing znamená a jak funguje.</li>
 <li>Testovali jsme s klientem nové video? Informujme ho iniciativně, jak se videu daří a pokud nedaří, co můžeme udělat pro to, aby to příště fungovalo lépe.</li>
-<li>Ukončení úkolu pro flash akci – např.: k Black Friday máme vše připraveno a kampaně běží, klientovi napíšu:<br> <em>,,Dobrý den, [jméno klienta], hlásím, že kampaně běží. Úkol zavírám. Držím nám palce. Jsme v kontaktu během akce a výsledky si projdeme na pravidelné schůzce. Děkuji za spolupráci!”</em></li>
+<li>Ukončení úkolu pro flash akci – např.: k Black Friday máme vše připraveno a kampaně běží, klientovi napíšu: 
+ <em>,,Dobrý den, [jméno klienta], hlásím, že kampaně běží. Úkol zavírám. Držím nám palce. Jsme v kontaktu během akce a výsledky si projdeme na pravidelné schůzce. Děkuji za spolupráci!”</em></li>
 </ol>
 </li>
 <li><p><strong>Jsme proaktivní 1x za měsíc</strong></p>
@@ -7932,7 +8015,8 @@ INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_ord
 </li>
 <li><p><strong>Klienti nejsou e-shopy ani reklamní účty, klienti jsou lidé.</strong></p>
 <ol>
-<li>Zkoušíme psát sms nebo volat – když nám klient nereaguje na 2-3 zprávy ve Freelo, napište mu sms nebo zkuste rychle zavolat a skutečně projevit zájem, jestli je u něj všechno v pořádku.<br><strong>Jen pokud je to nezbytné, nemělo by se příliš opakovat!!!</strong> Pokud se na callu s klientem na čemkoliv domluvíte, udělejte vždy zápis / úkol ve freelo.</li>
+<li>Zkoušíme psát sms nebo volat – když nám klient nereaguje na 2-3 zprávy ve Freelo, napište mu sms nebo zkuste rychle zavolat a skutečně projevit zájem, jestli je u něj všechno v pořádku.
+<strong>Jen pokud je to nezbytné, nemělo by se příliš opakovat!!!</strong> Pokud se na callu s klientem na čemkoliv domluvíte, udělejte vždy zápis / úkol ve freelo.</li>
 <li>Uděláme něco navíc – dáme mu konzultaci, poradíme, není klient v Praze, že bychom se setkali na rychlé kafe?</li>
 <li>Oceníme náš společný postup – kde jsme byli předtím, co jsme společně dokázali a kam jdeme.</li>
 <li>Víme od klienta, že je nemocný – napíšeme mu zprávu za pár dní, jestli se cítí lépe.</li>
@@ -7976,7 +8060,7 @@ true
 );
 
 INSERT INTO sop_articles (id, category_id, title, content, search_text, sort_order, is_published) VALUES (
-'3fc14e14-d15d-4fa2-8836-16da71c997bd',
+'c7094e11-44e8-45ed-8397-4c15b09ffbce',
 '11111111-1111-1111-1111-111111111106',
 'Záznam školení - Evidence nového obchodního případu v Raynetu',
 '<h1>Zadávání do Raynetu školení</h1>

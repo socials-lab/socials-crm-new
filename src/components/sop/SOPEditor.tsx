@@ -2,11 +2,15 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import { useEffect, useCallback } from 'react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import { ResizableImage } from './ResizableImage';
 import Placeholder from '@tiptap/extension-placeholder';
 import { LoomEmbed, parseLoomUrl } from './LoomEmbed';
 import { Button } from '@/components/ui/button';
-import { Bold, Italic, Heading1, Heading2, List, ListOrdered, Link as LinkIcon, Video, Undo, Redo, ImagePlus } from 'lucide-react';
+import { Bold, Italic, Heading1, Heading2, Heading3, List, ListOrdered, Link as LinkIcon, Video, Undo, Redo, ImagePlus, Quote, Code, Minus, Table as TableIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -54,15 +58,20 @@ export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
       Link.configure({ openOnClick: false }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
       ResizableImage,
       Placeholder.configure({ placeholder }),
       LoomEmbed,
     ],
     content: initialContent,
     onUpdate: handleUpdate,
+    editable: true,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none min-h-[300px] p-4 focus:outline-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-3 [&_img]:border [&_img]:border-border',
+        class: 'prose prose-base max-w-none min-h-[300px] p-4 focus:outline-none dark:prose-invert [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mt-6 [&_h1]:mb-4 [&_h1]:pb-2 [&_h1]:border-b [&_h1]:border-border [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-foreground [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-foreground [&_p]:my-3 [&_p]:leading-relaxed [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-1 [&_li]:leading-relaxed [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:py-1 [&_blockquote]:my-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_hr]:my-6 [&_hr]:border-border [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_pre]:bg-muted [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-3 [&_img]:border [&_img]:border-border [&_table]:w-full [&_table]:border-collapse [&_table]:my-3 [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:bg-muted [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2',
       },
       handlePaste(view, event) {
         // Check for Loom URL in pasted text
@@ -104,6 +113,20 @@ export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...
       },
     },
   });
+
+  // Sync editor content when content prop changes (e.g., when dialog loads article data)
+  useEffect(() => {
+    if (editor && content && !editor.isDestroyed) {
+      // Only update if content is different and not from localStorage draft
+      const currentContent = editor.getHTML();
+      const hasLocalDraft = cacheKey && localStorage.getItem(cacheKey);
+
+      // If no local draft and content changed significantly, update editor
+      if (!hasLocalDraft && content !== currentContent && content !== '<p></p>') {
+        editor.commands.setContent(content);
+      }
+    }
+  }, [editor, content, cacheKey]);
 
   const insertImageFile = (file: File) => {
     if (!editor) return;
@@ -173,6 +196,9 @@ export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...
         <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Nadpis 2">
           <Heading2 className="h-4 w-4" />
         </ToolbarButton>
+        <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Nadpis 3">
+          <Heading3 className="h-4 w-4" />
+        </ToolbarButton>
         <div className="w-px bg-border mx-1" />
         <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Tučné">
           <Bold className="h-4 w-4" />
@@ -186,6 +212,20 @@ export function SOPEditor({ content, onChange, placeholder = 'Začněte psát...
         </ToolbarButton>
         <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Číslovaný seznam">
           <ListOrdered className="h-4 w-4" />
+        </ToolbarButton>
+        <div className="w-px bg-border mx-1" />
+        <ToolbarButton onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Citace">
+          <Quote className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="Blok kódu">
+          <Code className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Oddělovač">
+          <Minus className="h-4 w-4" />
+        </ToolbarButton>
+        <div className="w-px bg-border mx-1" />
+        <ToolbarButton onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Vložit tabulku">
+          <TableIcon className="h-4 w-4" />
         </ToolbarButton>
         <div className="w-px bg-border mx-1" />
         <ToolbarButton onClick={() => setLinkDialogOpen(true)} active={editor.isActive('link')} title="Odkaz">

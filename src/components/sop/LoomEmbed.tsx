@@ -28,7 +28,13 @@ export const LoomEmbed = Node.create({
   },
 
   parseHTML() {
-    return [{ tag: 'div[data-loom-embed]' }];
+    return [{
+      tag: 'div[data-loom-embed]',
+      getAttrs: (node: HTMLElement) => {
+        const iframe = node.querySelector('iframe');
+        return { src: iframe?.getAttribute('src') || null };
+      },
+    }];
   },
 
   renderHTML({ HTMLAttributes }) {
