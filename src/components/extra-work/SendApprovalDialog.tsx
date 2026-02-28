@@ -26,7 +26,7 @@ interface SendApprovalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   extraWork: ExtraWork;
-  onUpdate?: (id: string, data: Partial<ExtraWork>) => void;
+  onUpdate?: (id: string, data: Partial<ExtraWork>) => Promise<void> | void;
 }
 
 export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: SendApprovalDialogProps) {
@@ -66,47 +66,70 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   };
 
   const ensureApprovalToken = async (): Promise<string> => {
-    const token = approvalToken || crypto.randomUUID();
-    if (!approvalToken) {
-      setApprovalToken(token);
-      if (onUpdate) {
-        onUpdate(extraWork.id, { approval_token: token });
-      }
+    if (approvalToken) return approvalToken;
+
+    const token = crypto.randomUUID();
+    if (!onUpdate) {
+      throw new Error('Missing update handler for approval token.');
     }
+
+    await Promise.resolve(onUpdate(extraWork.id, { approval_token: token }));
+    setApprovalToken(token);
     return token;
   };
 
+  useEffect(() => {
+    setApprovalToken(extraWork.approval_token || null);
+  }, [extraWork.id, extraWork.approval_token]);
+
   // Generate default email content
   useEffect(() => {
-    if (open) {
-      if (!approvalToken) {
-        setApprovalToken(extraWork.approval_token || crypto.randomUUID());
+    if (!open) return;
+
+    let cancelled = false;
+
+    const init = async () => {
+      try {
+        const token = await ensureApprovalToken();
+        const approvalUrl = `${window.location.origin}/extra-work-approval/${token}`;
+
+        if (cancelled) return;
+
+        setCcEmails([]);
+        setBccEmails([DEFAULT_GMAIL_BCC]);
+
+        const hoursLine = extraWork.hours_worked && extraWork.hourly_rate
+          ? `Rozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
+          : '';
+
+        const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Socials' });
+        const { subject, body } = fillTemplate('send_approval', {
+          work_name: extraWork.name,
+          work_description: extraWork.description ? `Popis: ${extraWork.description}` : '',
+          amount: formatCurrency(extraWork.amount),
+          hours_line: hoursLine,
+          engagement_line: engagement ? `Zakázka: ${engagement.name}` : '',
+          colleague_line: colleague ? `Zpracoval/a: ${colleague.full_name}` : '',
+          url: approvalUrl,
+          signature,
+        });
+
+        if (!cancelled) {
+          setEmailSubject(subject);
+          setEmailBody(body);
+        }
+      } catch (error) {
+        console.error('Failed to initialize approval token:', error);
+        toast.error('Nepodařilo se připravit schvalovací odkaz.');
       }
-      const approvalUrl = getApprovalUrl();
+    };
 
-      setCcEmails([]);
-      setBccEmails([DEFAULT_GMAIL_BCC]);
+    init();
 
-      const hoursLine = extraWork.hours_worked && extraWork.hourly_rate
-        ? `Rozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
-        : '';
-
-      const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Socials' });
-      const { subject, body } = fillTemplate('send_approval', {
-        work_name: extraWork.name,
-        work_description: extraWork.description ? `Popis: ${extraWork.description}` : '',
-        amount: formatCurrency(extraWork.amount),
-        hours_line: hoursLine,
-        engagement_line: engagement ? `Zakázka: ${engagement.name}` : '',
-        colleague_line: colleague ? `Zpracoval/a: ${colleague.full_name}` : '',
-        url: approvalUrl,
-        signature,
-      });
-
-      setEmailSubject(subject);
-      setEmailBody(body);
-    }
-  }, [open, extraWork, approvalToken, currentUserColleague, colleague, engagement, fillTemplate]);
+    return () => {
+      cancelled = true;
+    };
+  }, [open, extraWork, currentUserColleague, colleague, engagement, fillTemplate]);
 
   const handleCopyLink = async () => {
     const token = await ensureApprovalToken();

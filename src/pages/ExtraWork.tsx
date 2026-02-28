@@ -103,7 +103,7 @@ export default function ExtraWork() {
   }, [extraWorks]);
 
   const handleUpdate = (id: string, data: Partial<ExtraWorkType>) => {
-    updateExtraWork(id, data);
+    return updateExtraWork(id, data);
   };
 
   const handleDelete = (id: string) => {
