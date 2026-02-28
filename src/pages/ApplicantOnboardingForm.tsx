@@ -22,7 +22,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { CheckCircle2, Loader2, User, Building, CreditCard, MapPin, Search, AlertCircle, CalendarIcon, Heart, Camera, ArrowLeft, ArrowRight, Sparkles, ClipboardList } from 'lucide-react';
+import { CheckCircle2, Loader2, User, Building, CreditCard, MapPin, CalendarIcon, Heart, Camera, ArrowLeft, ArrowRight, Sparkles, ClipboardList } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -31,6 +31,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import socialsLogo from '@/assets/socials-logo.png';
 import { AvatarUpload } from '@/components/forms/AvatarUpload';
+import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
+import type { CompanySearchResult } from '@/hooks/useAresSearch';
 
 const formSchema = z.object({
   full_name: z.string().min(2, 'Jméno je povinné'),
@@ -80,8 +82,6 @@ export default function ApplicantOnboardingForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [alreadyCompleted, setAlreadyCompleted] = useState(false);
-  const [isValidatingARES, setIsValidatingARES] = useState(false);
-  const [aresError, setAresError] = useState<string | null>(null);
   const [aresValidated, setAresValidated] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [noIco, setNoIco] = useState(false);
@@ -178,39 +178,16 @@ export default function ApplicantOnboardingForm() {
     fetchApplicant();
   }, [applicantId, form]);
 
-  const validateARES = async (ico: string) => {
-    if (ico.length !== 8) {
-      setAresError('IČO musí mít přesně 8 číslic');
-      return;
-    }
-
-    setIsValidatingARES(true);
-    setAresError(null);
-
-    try {
-      const response = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
-
-      if (!response.ok) {
-        throw new Error('Subjekt nebyl nalezen v ARES');
-      }
-
-      const data = await response.json();
-
-      form.setValue('company_name', data.obchodniJmeno || '');
-      if (data.dic) form.setValue('dic', data.dic);
-      if (data.sidlo?.textovaAdresa) form.setValue('billing_street', data.sidlo.textovaAdresa.split(',')[0] || '');
-      if (data.sidlo?.nazevObce) form.setValue('billing_city', data.sidlo.nazevObce);
-      if (data.sidlo?.psc) form.setValue('billing_zip', data.sidlo.psc.toString());
-
-      setAresValidated(true);
-      toast.success(`Údaje načteny z ARES: ${data.obchodniJmeno}`);
-    } catch (error) {
-      setAresError(error instanceof Error ? error.message : 'Chyba při validaci IČO');
-      setAresValidated(false);
-    } finally {
-      setIsValidatingARES(false);
-    }
-  };
+  function handleCompanySelect(company: CompanySearchResult) {
+    form.setValue('company_name', company.name, { shouldDirty: true, shouldValidate: true });
+    form.setValue('ico', company.ico, { shouldDirty: true, shouldValidate: true });
+    form.setValue('dic', company.dic || '', { shouldDirty: true });
+    form.setValue('billing_street', company.billing_street, { shouldDirty: true });
+    form.setValue('billing_city', company.billing_city, { shouldDirty: true });
+    form.setValue('billing_zip', company.billing_zip, { shouldDirty: true });
+    setAresValidated(true);
+    toast.success(`Údaje načteny z ARES: ${company.name}`);
+  }
 
   const validateCurrentStep = useCallback(async () => {
     const fields = stepFieldMap[currentStep] as (keyof FormData)[];
@@ -633,60 +610,36 @@ export default function ApplicantOnboardingForm() {
                 Fakturační údaje
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {noIco ? 'Vyplň fakturační údaje ručně.' : 'Zadej své IČO a my doplníme zbytek z ARES.'}
+                {noIco ? 'Vyplň fakturační údaje ručně.' : 'Vyhledej firmu podle názvu a my doplníme zbytek z ARES.'}
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
               {!noIco && (
                 <FormField
                   control={form.control}
-                  name="ico"
+                  name="company_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>IČO</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="12345678"
-                            maxLength={8}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              setAresValidated(false);
-                              setAresError(null);
-                            }}
-                          />
-                        </FormControl>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => validateARES(field.value)}
-                          disabled={isValidatingARES || field.value.length !== 8}
-                        >
-                          {isValidatingARES ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>
-                              <Search className="h-4 w-4 mr-1" />
-                              ARES
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                      {aresError && (
-                        <div className="flex items-center gap-1 text-sm text-destructive">
-                          <AlertCircle className="h-4 w-4" />
-                          {aresError}
-                        </div>
-                      )}
+                      <FormLabel>Název firmy / Jméno OSVČ *</FormLabel>
+                      <FormControl>
+                        <CompanySearchInput
+                          value={field.value}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            setAresValidated(false);
+                          }}
+                          onSelect={handleCompanySelect}
+                          placeholder="Zadej název firmy (min. 3 znaky)..."
+                        />
+                      </FormControl>
                       {aresValidated && (
                         <div className="flex items-center gap-1 text-sm text-green-600">
                           <CheckCircle2 className="h-4 w-4" />
-                          IČO ověřeno v ARES
+                          Firma vybrána z ARES
                         </div>
                       )}
                       <FormDescription>
-                        Zadej IČO a klikni na ARES pro automatické doplnění údajů
+                        Začni psát název a vyber firmu ze seznamu
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -701,7 +654,6 @@ export default function ApplicantOnboardingForm() {
                     setNoIco(checked === true);
                     if (checked) {
                       setAresValidated(false);
-                      setAresError(null);
                       form.setValue('ico', '');
                       form.setValue('company_name', form.getValues('full_name'));
                       form.setValue('dic', '');
@@ -717,12 +669,12 @@ export default function ApplicantOnboardingForm() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="company_name"
+                        name="ico"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Název firmy / Jméno OSVČ *</FormLabel>
+                            <FormLabel>IČO</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input {...field} readOnly className="bg-muted" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
