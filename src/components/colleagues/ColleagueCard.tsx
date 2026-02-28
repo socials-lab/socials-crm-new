@@ -326,7 +326,11 @@ export function ColleagueCard({
                   {canSeeFinancials && (
                     <div className="flex items-center justify-between text-sm p-2 rounded bg-muted/50">
                       <span className="text-muted-foreground">Sazba (vícepráce)</span>
-                      <span className="font-medium">{colleague.internal_hourly_cost.toLocaleString()} Kč/h</span>
+                      {colleague.internal_hourly_cost === null ? (
+                        <span className="font-medium text-destructive">Chybí sazba</span>
+                      ) : (
+                        <span className="font-medium">{colleague.internal_hourly_cost.toLocaleString()} Kč/h</span>
+                      )}
                     </div>
                   )}
                 </div>

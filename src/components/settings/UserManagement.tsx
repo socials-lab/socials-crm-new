@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil, User, Clock, CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil, User, Clock, CheckCircle2, RefreshCw, XCircle, UserMinus, UserCheck } from 'lucide-react';
 import { TierBadge } from '@/components/shared/TierBadge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { AddCRMUserDialog } from './AddCRMUserDialog';
@@ -12,6 +12,7 @@ import { EditUserRoleDialog } from './EditUserRoleDialog';
 import { EditUserNameDialog } from './EditUserNameDialog';
 import { CreateColleagueForUserDialog } from './CreateColleagueForUserDialog';
 import { ApproveUserDialog } from './ApproveUserDialog';
+import { TerminateUserDialog, type LifecycleMode } from './TerminateUserDialog';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -24,6 +25,7 @@ interface UserRoleData {
   user_id: string;
   role: AppRole;
   is_super_admin: boolean;
+  is_active?: boolean | null;
   page_permissions?: PagePermission[];
   can_see_financials?: boolean;
   profile?: {
@@ -48,7 +50,8 @@ interface PendingUser {
 export function UserManagement() {
   const navigate = useNavigate();
   useCRMData(); // Ensure CRMDataProvider is initialized (needed for CreateColleagueForUserDialog)
-  const [userRoles, setUserRoles] = useState<UserRoleData[]>([]);
+  const [activeUserRoles, setActiveUserRoles] = useState<UserRoleData[]>([]);
+  const [inactiveUserRoles, setInactiveUserRoles] = useState<UserRoleData[]>([]);
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -78,6 +81,9 @@ export function UserManagement() {
     page_permissions?: PagePermission[];
     can_see_financials?: boolean;
   } | null>(null);
+  const [lifecycleDialogOpen, setLifecycleDialogOpen] = useState(false);
+  const [lifecycleMode, setLifecycleMode] = useState<LifecycleMode>('terminate');
+  const [lifecycleUser, setLifecycleUser] = useState<UserRoleData | null>(null);
 
   const fetchUserRoles = useCallback(async () => {
     setLoading(true);
@@ -89,19 +95,18 @@ export function UserManagement() {
     );
 
     const fetchData = async () => {
-      // Fetch user roles
+      // Fetch ALL user roles (active and inactive)
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
-        .select('*')
-        .eq('is_active', true);
+        .select('*');
 
       if (rolesError) {
         throw rolesError;
       }
 
-      const activeUserIds = (rolesData || []).map(r => r.user_id).filter(Boolean) as string[];
+      const allUserIdsWithRole = (rolesData || []).map(r => r.user_id).filter(Boolean) as string[];
 
-      // Fetch ALL profiles to find pending ones
+      // Fetch ALL profiles to find pending ones (no role at all)
       const { data: allProfiles = [], error: allProfilesError } = await supabase
         .from('profiles')
         .select('id, email, full_name, created_at');
@@ -110,21 +115,21 @@ export function UserManagement() {
         console.error('Error fetching all profiles:', allProfilesError);
       }
 
-      // Separate pending users (profiles with no active role)
-      const activeUserIdSet = new Set(activeUserIds);
-      const pending = (allProfiles || []).filter(p => !activeUserIdSet.has(p.id));
+      const userIdsWithRoleSet = new Set(allUserIdsWithRole);
+      const pending = (allProfiles || []).filter(p => !userIdsWithRoleSet.has(p.id));
       setPendingUsers(pending);
 
       if (!rolesData || rolesData.length === 0) {
-        setUserRoles([]);
+        setActiveUserRoles([]);
+        setInactiveUserRoles([]);
         return;
       }
 
-      // Fetch profiles for active users
+      // Fetch profiles for users with roles
       const { data: profilesData = [], error: profilesError } = await supabase
         .from('profiles')
         .select('id, email, full_name')
-        .in('id', activeUserIds);
+        .in('id', allUserIdsWithRole);
 
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
@@ -134,24 +139,25 @@ export function UserManagement() {
       const { data: colleaguesData = [], error: colleaguesError } = await supabase
         .from('colleagues')
         .select('id, full_name, position, profile_id')
-        .in('profile_id', activeUserIds);
+        .in('profile_id', allUserIdsWithRole);
 
       if (colleaguesError) {
         console.error('Error fetching colleagues:', colleaguesError);
       }
 
-      // Build lookup maps
       const profilesMap = new Map((profilesData || []).map(p => [p.id, p]));
       const colleaguesMap = new Map((colleaguesData || []).map(c => [c.profile_id, c]));
 
-      // Enrich data
       const enrichedData = rolesData.map(role => ({
         ...role,
         profile: profilesMap.get(role.user_id) || null,
         colleague: colleaguesMap.get(role.user_id) || null,
       }));
 
-      setUserRoles(enrichedData);
+      const active = enrichedData.filter(r => r.is_active !== false);
+      const inactive = enrichedData.filter(r => r.is_active === false);
+      setActiveUserRoles(active);
+      setInactiveUserRoles(inactive);
     };
 
     try {
@@ -168,23 +174,21 @@ export function UserManagement() {
 
   useEffect(() => {
     fetchUserRoles();
-    
-    // Set up real-time subscription for colleague updates
-    const subscription = supabase
-      .channel('colleagues-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'colleagues' },
-        () => {
-          console.log('[UserManagement] Colleague data changed, refetching...');
-          fetchUserRoles();
-        }
-      )
+
+    const channel = supabase
+      .channel('user-management-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'colleagues' }, () => {
+        fetchUserRoles();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_roles' }, () => {
+        fetchUserRoles();
+      })
       .subscribe();
-    
+
     return () => {
-      subscription.unsubscribe();
+      channel.unsubscribe();
     };
-  }, []);
+  }, [fetchUserRoles]);
 
   const handleEditUser = (userRole: UserRoleData) => {
     const displayName = userRole.profile 
@@ -276,14 +280,14 @@ export function UserManagement() {
       )}
 
       <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">Celkem {userRoles.length} uživatelů s přístupem</p>
+        <p className="text-sm text-muted-foreground">Celkem {activeUserRoles.length} uživatelů s přístupem</p>
         <Button size="sm" onClick={() => setAddDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
           Pozvat uživatele
         </Button>
       </div>
 
-      {userRoles.length === 0 ? (
+      {activeUserRoles.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>Žádní uživatelé s rolí.</p>
           <p className="text-sm">Přidejte prvního uživatele pomocí tlačítka výše.</p>
@@ -300,7 +304,7 @@ export function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {userRoles.map(userRole => {
+              {activeUserRoles.map(userRole => {
                 const displayName = userRole.profile 
                   ? (userRole.profile.full_name || userRole.profile.email || 'Neznámý')
                   : 'Neznámý';
@@ -397,6 +401,22 @@ export function UserManagement() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          {!userRole.is_super_admin && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => {
+                                  setLifecycleUser(userRole);
+                                  setLifecycleMode('terminate');
+                                  setLifecycleDialogOpen(true);
+                                }}
+                              >
+                                <UserMinus className="h-4 w-4 mr-2" />
+                                Ukončit uživatele
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -405,6 +425,52 @@ export function UserManagement() {
               })}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {/* Inactive users section */}
+      {inactiveUserRoles.length > 0 && (
+        <div className="rounded-lg border border-muted">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-muted bg-muted/30">
+            <UserMinus className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-muted-foreground">
+              Ukončení uživatelé ({inactiveUserRoles.length})
+            </p>
+          </div>
+          <div className="divide-y divide-border">
+            {inactiveUserRoles.map(userRole => {
+              const displayName = userRole.profile
+                ? (userRole.profile.full_name || userRole.profile.email || 'Neznámý')
+                : 'Neznámý';
+              return (
+                <div key={userRole.id} className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="font-medium text-sm">{displayName}</p>
+                    <p className="text-xs text-muted-foreground">{userRole.profile?.email}</p>
+                    {userRole.colleague && (
+                      <p className="text-xs text-muted-foreground">
+                        {userRole.colleague.full_name} ({userRole.colleague.position})
+                      </p>
+                    )}
+                  </div>
+                  {!userRole.is_super_admin && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setLifecycleUser(userRole);
+                        setLifecycleMode('restore');
+                        setLifecycleDialogOpen(true);
+                      }}
+                    >
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      Obnovit uživatele
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -454,6 +520,57 @@ export function UserManagement() {
         onSuccess={() => {
           fetchUserRoles();
           setApproveUser(null);
+        }}
+      />
+
+      <TerminateUserDialog
+        open={lifecycleDialogOpen}
+        onOpenChange={(open) => {
+          setLifecycleDialogOpen(open);
+          if (!open) setLifecycleUser(null);
+        }}
+        mode={lifecycleMode}
+        user={
+          lifecycleUser
+            ? {
+                id: lifecycleUser.id,
+                user_id: lifecycleUser.user_id,
+                displayName:
+                  lifecycleUser.profile?.full_name || lifecycleUser.profile?.email || 'Neznámý',
+                email: lifecycleUser.profile?.email || '',
+                is_super_admin: lifecycleUser.is_super_admin || false,
+                colleague: lifecycleUser.colleague || null,
+              }
+            : null
+        }
+        onConfirm={async () => {
+          if (!lifecycleUser) return;
+          const isTerminate = lifecycleMode === 'terminate';
+
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .update({ is_active: !isTerminate })
+            .eq('id', lifecycleUser.id);
+
+          if (roleError) {
+            toast.error('Chyba při aktualizaci přístupu');
+            throw roleError;
+          }
+
+          if (lifecycleUser.colleague) {
+            const { error: colleagueError } = await supabase
+              .from('colleagues')
+              .update({ status: isTerminate ? 'left' : 'active' })
+              .eq('id', lifecycleUser.colleague.id);
+
+            if (colleagueError) {
+              toast.error('Chyba při aktualizaci kolegy');
+              throw colleagueError;
+            }
+          }
+
+          toast.success(isTerminate ? 'Uživatel byl ukončen' : 'Uživatel byl obnoven');
+          fetchUserRoles();
         }}
       />
     </div>
