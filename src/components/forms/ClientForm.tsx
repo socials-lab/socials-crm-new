@@ -26,7 +26,7 @@ import type { Client, ClientStatus, LeadSource } from '@/types/crm';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { getAvailableClientStatuses, CLIENT_STATUS_LABELS } from '@/lib/statusTransitions';
-import { validateIcoChecksum, optionalEmail, czechIco, czechDic } from '@/lib/validation';
+import { optionalEmail, czechIco, czechDic, isValidUrlInput, normalizeUrlProtocol } from '@/lib/validation';
 
 const ACQUISITION_OPTIONS: { value: LeadSource; label: string }[] = [
   { value: 'referral', label: 'Doporučení' },
@@ -57,11 +57,12 @@ const clientSchema = z.object({
   dic: czechDic,
   website: z.string()
     .max(500, 'URL je příliš dlouhá')
+    .transform(val => val.trim())
     .refine(
-      val => val === '' || /^https?:\/\/.+/.test(val),
-      'URL musí začínat http:// nebo https://'
+      val => val === '' || isValidUrlInput(val),
+      'Zadejte platnou URL'
     )
-    .or(z.literal('')),
+    .transform(val => val === '' ? '' : normalizeUrlProtocol(val)),
   country: z.string()
     .min(1, 'Země je povinná')
     .max(100, 'Název země je příliš dlouhý'),

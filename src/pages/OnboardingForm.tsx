@@ -22,6 +22,7 @@ import socialsLogo from '@/assets/socials-logo.png';
 import { LeadService } from '@/types/crm';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { isValidUrlInput, normalizeUrlProtocol } from '@/lib/validation';
 
 // Type for lead data from Edge Function
 interface OnboardingLead {
@@ -82,9 +83,11 @@ const onboardingSchema = z.object({
     }),
   website: z.string()
     .optional()
-    .refine(val => !val || val.length === 0 || /^https?:\/\/.+\..+/.test(val), {
-      message: 'Zadejte platnou URL (např. https://example.cz)',
-    }),
+    .transform(val => val?.trim() || '')
+    .refine(val => !val || isValidUrlInput(val), {
+      message: 'Zadejte platnou URL',
+    })
+    .transform(val => val ? normalizeUrlProtocol(val) : ''),
   industry: z.string().optional(),
   
   // Billing address
