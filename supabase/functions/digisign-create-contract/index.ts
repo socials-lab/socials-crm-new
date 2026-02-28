@@ -62,7 +62,8 @@ interface PricingService {
 
 function normalizePricingServices(rawServices: unknown[]): PricingService[] {
   return rawServices
-    .map((service: any, index: number) => {
+    .map((serviceRaw: unknown, index: number) => {
+      const service = serviceRaw as Record<string, unknown>;
       const price = Number(service?.price);
       if (!Number.isFinite(price)) return null;
 
