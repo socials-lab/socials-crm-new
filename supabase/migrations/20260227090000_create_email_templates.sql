@@ -10,23 +10,19 @@ CREATE TABLE IF NOT EXISTS public.email_templates (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
 ALTER TABLE public.email_templates ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "email_templates_select_authenticated" ON public.email_templates;
 CREATE POLICY "email_templates_select_authenticated"
   ON public.email_templates
   FOR SELECT
   TO authenticated
   USING (true);
-
 DROP POLICY IF EXISTS "email_templates_insert_admin" ON public.email_templates;
 CREATE POLICY "email_templates_insert_admin"
   ON public.email_templates
   FOR INSERT
   TO authenticated
   WITH CHECK (is_admin_or_management(auth.uid()) OR is_super_admin(auth.uid()));
-
 DROP POLICY IF EXISTS "email_templates_update_admin" ON public.email_templates;
 CREATE POLICY "email_templates_update_admin"
   ON public.email_templates
@@ -34,20 +30,17 @@ CREATE POLICY "email_templates_update_admin"
   TO authenticated
   USING (is_admin_or_management(auth.uid()) OR is_super_admin(auth.uid()))
   WITH CHECK (is_admin_or_management(auth.uid()) OR is_super_admin(auth.uid()));
-
 DROP POLICY IF EXISTS "email_templates_delete_super_admin" ON public.email_templates;
 CREATE POLICY "email_templates_delete_super_admin"
   ON public.email_templates
   FOR DELETE
   TO authenticated
   USING (is_super_admin(auth.uid()));
-
 DROP TRIGGER IF EXISTS update_email_templates_updated_at ON public.email_templates;
 CREATE TRIGGER update_email_templates_updated_at
   BEFORE UPDATE ON public.email_templates
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
-
 INSERT INTO public.email_templates (template_key, name, description, subject_template, body_template, available_variables)
 VALUES
   (

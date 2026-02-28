@@ -14,7 +14,6 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- offer_sent: link directly to related lead
 CREATE OR REPLACE FUNCTION notify_offer_sent()
 RETURNS TRIGGER AS $$
@@ -31,7 +30,6 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- lead_converted: prefer opening related client when available
 CREATE OR REPLACE FUNCTION notify_lead_converted()
 RETURNS TRIGGER AS $$
