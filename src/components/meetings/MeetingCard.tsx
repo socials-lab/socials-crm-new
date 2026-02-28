@@ -40,19 +40,19 @@ export function MeetingCard({ meeting, client, participants, colleagues, onClick
       }`}
       onClick={onClick}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-medium text-sm truncate">{meeting.title}</h3>
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+              <h3 className="font-medium text-xs sm:text-sm truncate">{meeting.title}</h3>
               {isToday && (
-                <Badge className="bg-primary text-primary-foreground text-xs px-1.5 py-0">
+                <Badge className="bg-primary text-primary-foreground text-[10px] sm:text-xs px-1 sm:px-1.5 py-0">
                   Dnes
                 </Badge>
               )}
             </div>
-            
-            <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+
+            <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground mb-2">
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {format(meetingDate, 'd.M.', { locale: cs })}
@@ -62,28 +62,28 @@ export function MeetingCard({ meeting, client, participants, colleagues, onClick
                 {format(meetingDate, 'HH:mm')}
               </span>
               <span className="text-muted-foreground">
-                {meeting.duration_minutes} min
+                {meeting.duration_minutes}m
               </span>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge className={statusConfig.color}>{statusConfig.label}</Badge>
-              <Badge variant="outline" className="text-xs">
-                {meeting.type === 'internal' ? '🏠 Interní' : '🏢 Klient'}
+            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+              <Badge className={`${statusConfig.color} text-[10px] sm:text-xs`}>{statusConfig.label}</Badge>
+              <Badge variant="outline" className="text-[10px] sm:text-xs">
+                {meeting.type === 'internal' ? '🏠' : '🏢'}
               </Badge>
               {client && (
-                <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                  <Building2 className="h-3 w-3" />
-                  {client.brand_name || client.name}
+                <Badge variant="secondary" className="text-[10px] sm:text-xs flex items-center gap-1 max-w-[120px] sm:max-w-none">
+                  <Building2 className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{client.brand_name || client.name}</span>
                 </Badge>
               )}
             </div>
 
             {(meeting.location || meeting.meeting_link) && (
-              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 mt-2 text-[10px] sm:text-xs text-muted-foreground">
                 {meeting.location && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
+                  <span className="flex items-center gap-1 truncate max-w-[100px] sm:max-w-none">
+                    <MapPin className="h-3 w-3 shrink-0" />
                     {meeting.location}
                   </span>
                 )}
@@ -99,17 +99,17 @@ export function MeetingCard({ meeting, client, participants, colleagues, onClick
 
           {/* Participants Avatars */}
           {participantColleagues.length > 0 && (
-            <div className="flex -space-x-2">
+            <div className="flex -space-x-1.5 sm:-space-x-2 shrink-0">
               {participantColleagues.map((colleague, i) => (
-                <Avatar key={colleague!.id} className="h-7 w-7 border-2 border-background">
-                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                <Avatar key={colleague!.id} className="h-6 w-6 sm:h-7 sm:w-7 border-2 border-background">
+                  <AvatarFallback className="text-[10px] sm:text-xs bg-primary/10 text-primary">
                     {colleague!.full_name.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               ))}
               {participants.length > 3 && (
-                <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground">
+                <div className="h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">
                     +{participants.length - 3}
                   </span>
                 </div>

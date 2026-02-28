@@ -96,85 +96,89 @@ export function PeriodSelector({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-4">
-      <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Období:</span>
-        <Select value={periodMode} onValueChange={(v) => setPeriodMode(v as PeriodMode)}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-background">
-            {(Object.keys(PERIOD_MODE_LABELS) as PeriodMode[]).map((mode) => (
-              <SelectItem key={mode} value={mode}>
-                {PERIOD_MODE_LABELS[mode]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {periodMode !== 'last_year' && (
+    <div className="space-y-3">
+      {/* Row 1: Period mode and year selectors */}
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Rok:</span>
-          <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(Number(v))}>
-            <SelectTrigger className="w-[100px]">
+          <Calendar className="h-4 w-4 text-muted-foreground hidden sm:block" />
+          <span className="text-xs sm:text-sm text-muted-foreground">Období:</span>
+          <Select value={periodMode} onValueChange={(v) => setPeriodMode(v as PeriodMode)}>
+            <SelectTrigger className="w-[110px] sm:w-[140px] h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-background">
-              {years.map((year) => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+              {(Object.keys(PERIOD_MODE_LABELS) as PeriodMode[]).map((mode) => (
+                <SelectItem key={mode} value={mode}>
+                  {PERIOD_MODE_LABELS[mode]}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-      )}
 
-      {periodMode === 'month' && (
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm font-medium w-24 text-center">
-            {MONTH_NAMES[selectedMonth - 1]}
-          </span>
-          <Button variant="outline" size="icon" onClick={goToNextMonth}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        {periodMode !== 'last_year' && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs sm:text-sm text-muted-foreground">Rok:</span>
+            <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(Number(v))}>
+              <SelectTrigger className="w-[80px] sm:w-[100px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background">
+                {years.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {periodMode === 'month' && (
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={goToPreviousMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs sm:text-sm font-medium w-20 sm:w-24 text-center">
+              {MONTH_NAMES[selectedMonth - 1]}
+            </span>
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={goToNextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {periodMode === 'quarter' && (
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={goToPreviousQuarter}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Select value={selectedQuarter.toString()} onValueChange={(v) => setSelectedQuarter(Number(v))}>
+              <SelectTrigger className="w-[70px] sm:w-[80px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background">
+                <SelectItem value="1">Q1</SelectItem>
+                <SelectItem value="2">Q2</SelectItem>
+                <SelectItem value="3">Q3</SelectItem>
+                <SelectItem value="4">Q4</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={goToNextQuarter}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        <div className="px-2 sm:px-3 py-1 bg-primary/10 text-primary rounded-full text-xs sm:text-sm font-medium">
+          {periodLabel}
         </div>
-      )}
-
-      {periodMode === 'quarter' && (
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousQuarter}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Select value={selectedQuarter.toString()} onValueChange={(v) => setSelectedQuarter(Number(v))}>
-            <SelectTrigger className="w-[80px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-background">
-              <SelectItem value="1">Q1</SelectItem>
-              <SelectItem value="2">Q2</SelectItem>
-              <SelectItem value="3">Q3</SelectItem>
-              <SelectItem value="4">Q4</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon" onClick={goToNextQuarter}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      {(periodMode === 'ytd' || periodMode === 'year' || periodMode === 'last_year') && (
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-md">
-          <span className="text-sm text-muted-foreground">{formatDateRange()}</span>
-        </div>
-      )}
-
-      <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-        {periodLabel}
       </div>
+
+      {/* Row 2: Date range (only for ytd/year/last_year) */}
+      {(periodMode === 'ytd' || periodMode === 'year' || periodMode === 'last_year') && (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-md w-fit">
+          <span className="text-xs sm:text-sm text-muted-foreground">{formatDateRange()}</span>
+        </div>
+      )}
     </div>
   );
 }

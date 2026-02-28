@@ -976,7 +976,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 animate-fade-in">
       <PageHeader 
         title="📊 Analytika"
         titleAccent="agentury"
@@ -998,16 +998,18 @@ export default function Analytics() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex lg:grid-cols-8">
-          <TabsTrigger value="overview">Přehled</TabsTrigger>
-          <TabsTrigger value="leads">Leady</TabsTrigger>
-          <TabsTrigger value="clients">Klienti</TabsTrigger>
-          <TabsTrigger value="finance">Finance</TabsTrigger>
-          <TabsTrigger value="upsells">Upselly</TabsTrigger>
-          <TabsTrigger value="creative-boost">Creative Boost</TabsTrigger>
-          <TabsTrigger value="team">Tým</TabsTrigger>
-          <TabsTrigger value="plan-forecast">Plán & Forecast</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-2 px-2 pb-2 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
+          <TabsList className="inline-flex w-max sm:w-auto sm:grid sm:grid-cols-4 lg:inline-flex gap-1">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm px-2 sm:px-3">Přehled</TabsTrigger>
+            <TabsTrigger value="leads" className="text-xs sm:text-sm px-2 sm:px-3">Leady</TabsTrigger>
+            <TabsTrigger value="clients" className="text-xs sm:text-sm px-2 sm:px-3">Klienti</TabsTrigger>
+            <TabsTrigger value="finance" className="text-xs sm:text-sm px-2 sm:px-3">Finance</TabsTrigger>
+            <TabsTrigger value="upsells" className="text-xs sm:text-sm px-2 sm:px-3">Upselly</TabsTrigger>
+            <TabsTrigger value="creative-boost" className="text-xs sm:text-sm px-2 sm:px-3">CB</TabsTrigger>
+            <TabsTrigger value="team" className="text-xs sm:text-sm px-2 sm:px-3">Tým</TabsTrigger>
+            <TabsTrigger value="plan-forecast" className="text-xs sm:text-sm px-2 sm:px-3">Forecast</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="mt-6">
           <AnalyticsOverview

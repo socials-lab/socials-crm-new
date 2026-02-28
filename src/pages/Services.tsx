@@ -179,93 +179,97 @@ export default function Services() {
       <Card key={service.id} className="overflow-hidden">
         {/* Header - Collapsed View */}
         <div
-          className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+          className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={() => toggleExpand(service.id)}
         >
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <span className="text-primary font-semibold text-sm">
-                {service.name.charAt(0).toUpperCase()}
-              </span>
+          {/* Top row - Name and actions */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-primary font-semibold text-sm">
+                  {service.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <div className="font-medium truncate">{service.name}</div>
+                <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                  {service.code}
+                </code>
+              </div>
             </div>
-            <div className="min-w-0">
-              <div className="font-medium truncate">{service.name}</div>
-              <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                {service.code}
-              </code>
+
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+              {canManageServices && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-popover">
+                    <DropdownMenuItem onClick={() => handleEditService(service)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Upravit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleToggleActive(service)}>
+                      {service.is_active ? 'Deaktivovat' : 'Aktivovat'}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => handleDeleteClick(service)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Smazat
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Badge 
-              variant="outline" 
-              className={service.service_type === 'core' 
-                ? 'bg-primary/10 text-primary border-primary/20 text-xs' 
+          {/* Bottom row - Badges */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-2 ml-11">
+            <Badge
+              variant="outline"
+              className={service.service_type === 'core'
+                ? 'bg-primary/10 text-primary border-primary/20 text-xs'
                 : 'bg-muted text-muted-foreground text-xs'
               }
             >
               {service.service_type === 'core' ? 'Core' : 'Add-on'}
             </Badge>
 
-            <Badge variant="outline" className={categoryColors[service.category] || 'bg-muted'}>
+            <Badge variant="outline" className={`text-xs ${categoryColors[service.category] || 'bg-muted'}`}>
               {categoryLabels[service.category] || service.category}
             </Badge>
-            
-            {service.service_type === 'addon' && (
-              <span className="font-semibold text-sm whitespace-nowrap">
-                {service.base_price > 0
-                  ? `${service.base_price.toLocaleString('cs-CZ')} ${service.currency}`
-                  : '—'}
+
+            {service.service_type === 'addon' && service.base_price > 0 && (
+              <span className="font-semibold text-xs whitespace-nowrap">
+                {service.base_price.toLocaleString('cs-CZ')} {service.currency}
               </span>
             )}
 
-            <Badge variant="outline" className="gap-1">
+            <Badge variant="outline" className="gap-1 text-xs">
               <Users className="h-3 w-3" />
               {activeClientCount}
             </Badge>
 
-            <Badge 
-              variant="outline" 
-              className={service.is_active 
-                ? 'bg-status-active/10 text-status-active border-status-active/20 text-xs' 
+            <Badge
+              variant="outline"
+              className={service.is_active
+                ? 'bg-status-active/10 text-status-active border-status-active/20 text-xs'
                 : 'bg-muted text-muted-foreground border-muted text-xs'
               }
             >
               {service.is_active ? 'Aktivní' : 'Neaktivní'}
             </Badge>
-
-            {canManageServices && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-popover">
-                  <DropdownMenuItem onClick={() => handleEditService(service)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Upravit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleToggleActive(service)}>
-                    {service.is_active ? 'Deaktivovat' : 'Aktivovat'}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => handleDeleteClick(service)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Smazat
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {isExpanded ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            )}
           </div>
         </div>
 

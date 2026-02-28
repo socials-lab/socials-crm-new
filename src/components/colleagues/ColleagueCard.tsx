@@ -102,67 +102,67 @@ export function ColleagueCard({
       )}
     >
       {/* Collapsed Header */}
-      <div 
-        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+      <div
+        className="p-3 sm:p-4 cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={onToggleExpand}
       >
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
-            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+        {/* Top row - Avatar, name, and essential actions */}
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-background shadow-sm shrink-0">
+            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm sm:text-base">
               {colleague.full_name.split(' ').map(n => n[0]).join('')}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-base">{colleague.full_name}</span>
+              <span className="font-semibold text-sm sm:text-base">{colleague.full_name}</span>
               {isSuperAdmin && colleague.profile_id && (
-                <Badge 
-                  variant="outline" 
-                  className="text-xs bg-status-active/10 text-status-active border-status-active/20"
+                <Badge
+                  variant="outline"
+                  className="text-[10px] sm:text-xs bg-status-active/10 text-status-active border-status-active/20"
                 >
-                  <Shield className="h-3 w-3 mr-1" />
+                  <Shield className="h-3 w-3 mr-0.5 sm:mr-1" />
                   CRM
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">{colleague.position}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">{colleague.position}</p>
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <StatusBadge status={colleague.status} />
+            {isSuperAdmin && onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 sm:h-8 sm:w-8"
+                onClick={(e) => { e.stopPropagation(); onEdit(colleague); }}
+              >
+                <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-3">
-            <Badge variant="outline" className={cn("text-xs", seniorityColors[colleague.seniority])}>
-              {seniorityLabels[colleague.seniority]}
+        {/* Bottom row - Badges and stats (wrapping on mobile) */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2 ml-[52px] sm:ml-[64px]">
+          <Badge variant="outline" className={cn("text-[10px] sm:text-xs", seniorityColors[colleague.seniority])}>
+            {seniorityLabels[colleague.seniority]}
+          </Badge>
+          {monthCredits > 0 && (
+            <Badge variant="outline" className="text-[10px] sm:text-xs gap-1">
+              <Sparkles className="h-3 w-3" />
+              {monthCredits} kr.
             </Badge>
-            {monthCredits > 0 && (
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" /> Kredity
-                </p>
-                <p className="text-sm font-medium">{monthCredits}</p>
-              </div>
-            )}
-            {isSuperAdmin && (
-              <div className="text-right min-w-[100px]">
-                <p className="text-xs text-muted-foreground">Měs. odměna</p>
-                <p className="text-sm font-bold text-primary">{details.totalMonthlyEarnings.toLocaleString()} Kč</p>
-              </div>
-            )}
-          </div>
-          <StatusBadge status={colleague.status} />
-          {isSuperAdmin && onEdit && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={(e) => { e.stopPropagation(); onEdit(colleague); }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
           )}
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
+          {isSuperAdmin && details.totalMonthlyEarnings > 0 && (
+            <Badge variant="outline" className="text-[10px] sm:text-xs text-primary border-primary/30">
+              {details.totalMonthlyEarnings.toLocaleString()} Kč/měs
+            </Badge>
+          )}
         </div>
       </div>
 

@@ -65,16 +65,16 @@ export function UpsellSummaryCard({ className }: UpsellSummaryCardProps) {
   return (
     <Card className={cn("", className)}>
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Coins className="h-5 w-5 text-amber-500" />
             💰 Přehled upsellů
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-center sm:justify-end">
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="min-w-[120px] text-center text-sm font-medium">{capitalizedMonthLabel}</span>
+            <span className="min-w-[100px] sm:min-w-[120px] text-center text-xs sm:text-sm font-medium">{capitalizedMonthLabel}</span>
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
               <ChevronRight className="h-4 w-4" />
             </Button>

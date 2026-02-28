@@ -161,12 +161,11 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
 
     return (
       <div
-        key={stage}
         onDragOver={(e) => handleDragOver(e, stage)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, stage)}
         className={cn(
-          "rounded-lg border transition-all flex flex-col",
+          "rounded-lg border transition-all flex flex-col h-full",
           config.bgColor,
           isDropTarget && "ring-2 ring-primary shadow-lg",
           compact ? "min-h-[120px]" : "min-h-[200px]"
@@ -223,39 +222,51 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
   return (
     <>
       <div className="space-y-4">
-        {/* Active Stages - 2x3 Grid (fits on screen) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {ACTIVE_STAGES.map(stage => renderStageColumn(stage))}
+        {/* Active Stages - Horizontal scroll on mobile, grid on larger screens */}
+        <div className="overflow-x-auto -mx-2 px-2 pb-2 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
+          <div className="flex gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-6 min-w-max sm:min-w-0">
+            {ACTIVE_STAGES.map(stage => (
+              <div key={stage} className="w-[160px] sm:w-auto flex-shrink-0 sm:flex-shrink">
+                {renderStageColumn(stage)}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Closed Stages - Collapsible Section */}
         <Collapsible open={closedOpen} onOpenChange={setClosedOpen}>
           <CollapsibleTrigger asChild>
-            <button className="flex items-center gap-2 w-full p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors text-left">
+            <button className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors text-left">
               <span className="text-sm font-medium">Uzavřené leady</span>
               <Badge variant="outline" className="text-xs">
                 {closedLeadsCount}
               </Badge>
-              <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="ml-auto flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  {leadsByStage.won.length} won
+                  {leadsByStage.won.length}
                 </span>
                 <span className="flex items-center gap-1">
                   <div className="w-2 h-2 rounded-full bg-red-500" />
-                  {leadsByStage.lost.length} lost
+                  {leadsByStage.lost.length}
                 </span>
                 <span className="flex items-center gap-1">
                   <div className="w-2 h-2 rounded-full bg-gray-500" />
-                  {leadsByStage.postponed.length} odloženo
+                  {leadsByStage.postponed.length}
                 </span>
                 {closedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </div>
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-              {CLOSED_STAGES.map(stage => renderStageColumn(stage, true))}
+            <div className="overflow-x-auto -mx-2 px-2 pb-2 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0 mt-3">
+              <div className="flex gap-3 sm:grid sm:grid-cols-3 min-w-max sm:min-w-0">
+                {CLOSED_STAGES.map(stage => (
+                  <div key={stage} className="w-[160px] sm:w-auto flex-shrink-0 sm:flex-shrink">
+                    {renderStageColumn(stage, true)}
+                  </div>
+                ))}
+              </div>
             </div>
           </CollapsibleContent>
         </Collapsible>

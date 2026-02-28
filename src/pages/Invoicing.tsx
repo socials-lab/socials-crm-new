@@ -187,8 +187,8 @@ const Invoicing = () => {
         description="Správa měsíční fakturace a historie vydaných faktur"
       />
 
-      {/* KPI Cards - horizontal scroll on mobile */}
-      <div className="kpi-scroll-container md:grid md:gap-4 md:grid-cols-5">
+      {/* KPI Cards - responsive grid */}
+      <div className="grid gap-3 md:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         <KPICard
           title="Retainery"
           value={formatCurrency(invoiceKPIs.retainerAmount)}
@@ -202,7 +202,7 @@ const Invoicing = () => {
           icon={Briefcase}
         />
         <KPICard
-          title="Jednorázové položky"
+          title="Jednorázové"
           value={formatCurrency(invoiceKPIs.unbilledOneOffAmount)}
           subtitle={`${issuedStats.oneOff.count}/${invoiceKPIs.unbilledOneOffCount} vystaveno`}
           icon={Package}
@@ -214,25 +214,26 @@ const Invoicing = () => {
           icon={Palette}
         />
         <KPICard
-          title="Celkem k fakturaci"
+          title="Celkem"
           value={formatCurrency(invoiceKPIs.totalAmount)}
-          subtitle={`${issuedStats.totalCount}/${invoiceKPIs.totalItemCount} vystaveno${issuedStats.totalAmount > 0 ? ` (${formatCurrency(issuedStats.totalAmount)})` : ''}`}
+          subtitle={`${issuedStats.totalCount}/${invoiceKPIs.totalItemCount} vystaveno`}
           icon={FileText}
+          className="col-span-2 sm:col-span-3 lg:col-span-1"
         />
       </div>
 
       <Tabs defaultValue="future" className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <TabsList>
-            <TabsTrigger value="future">Budoucí fakturace</TabsTrigger>
-            <TabsTrigger value="history">Historie</TabsTrigger>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="future" className="flex-1 sm:flex-none">Budoucí</TabsTrigger>
+            <TabsTrigger value="history" className="flex-1 sm:flex-none">Historie</TabsTrigger>
           </TabsList>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-center sm:justify-end">
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="min-w-[140px] text-center font-medium">{capitalizedMonthLabel}</div>
+            <div className="min-w-[100px] sm:min-w-[140px] text-center text-sm sm:text-base font-medium">{capitalizedMonthLabel}</div>
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
               <ChevronRight className="h-4 w-4" />
             </Button>

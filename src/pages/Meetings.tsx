@@ -207,24 +207,25 @@ export default function Meetings() {
         title="📅 Meetingy"
         description="Evidence interních a klientských meetingů"
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             {isConnected ? (
               <Button
                 variant="outline"
                 onClick={loadGoogleEvents}
                 disabled={isLoadingGoogle}
+                className="w-full sm:w-auto"
               >
                 {isLoadingGoogle ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
                   <RefreshCw className="h-4 w-4 mr-2" />
                 )}
-                Obnovit kalendář
+                <span className="sm:inline">Obnovit</span>
               </Button>
             ) : (
-              <Button variant="outline" onClick={connectGoogleCalendar}>
+              <Button variant="outline" onClick={connectGoogleCalendar} className="w-full sm:w-auto">
                 <CalendarCheck className="h-4 w-4 mr-2" />
-                Propojit Google účet
+                <span className="sm:inline">Propojit Google</span>
               </Button>
             )}
             <AddMeetingDialog />
@@ -234,12 +235,12 @@ export default function Meetings() {
 
       {/* Today's highlight */}
       {(todaysMeetings.length > 0 || todaysGoogleEvents.length > 0) && (
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 sm:p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Calendar className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">Dnešní meetingy ({todaysMeetings.length + todaysGoogleEvents.length})</h2>
+            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <h2 className="font-semibold text-sm sm:text-base">Dnešní meetingy ({todaysMeetings.length + todaysGoogleEvents.length})</h2>
           </div>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2 sm:gap-3 md:grid-cols-2 lg:grid-cols-3">
             {todaysMeetings.map(meeting => (
               <MeetingCard
                 key={meeting.id}
@@ -258,7 +259,7 @@ export default function Meetings() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -268,60 +269,63 @@ export default function Meetings() {
             className="pl-10"
           />
         </div>
-        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as MeetingType | 'all')}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Typ" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Všechny typy</SelectItem>
-            <SelectItem value="internal">🏠 Interní</SelectItem>
-            <SelectItem value="client">🏢 Klientské</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Všechny statusy</SelectItem>
-            <SelectItem value="scheduled">Naplánováno</SelectItem>
-            <SelectItem value="in_progress">Probíhá</SelectItem>
-            <SelectItem value="completed">Dokončeno</SelectItem>
-            <SelectItem value="cancelled">Zrušeno</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={participantFilter} onValueChange={setParticipantFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Účastník" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Všichni účastníci</SelectItem>
-            {colleagues
-              .filter(c => c.status === 'active')
-              .sort((a, b) => a.full_name.localeCompare(b.full_name))
-              .map(colleague => (
-                <SelectItem key={colleague.id} value={colleague.id}>
-                  {colleague.full_name}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as MeetingType | 'all')}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Typ" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Všechny typy</SelectItem>
+              <SelectItem value="internal">🏠 Interní</SelectItem>
+              <SelectItem value="client">🏢 Klientské</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Všechny statusy</SelectItem>
+              <SelectItem value="scheduled">Naplánováno</SelectItem>
+              <SelectItem value="in_progress">Probíhá</SelectItem>
+              <SelectItem value="completed">Dokončeno</SelectItem>
+              <SelectItem value="cancelled">Zrušeno</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={participantFilter} onValueChange={setParticipantFilter}>
+            <SelectTrigger className="w-full col-span-2 sm:col-span-1">
+              <SelectValue placeholder="Účastník" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Všichni účastníci</SelectItem>
+              {colleagues
+                .filter(c => c.status === 'active')
+                .sort((a, b) => a.full_name.localeCompare(b.full_name))
+                .map(colleague => (
+                  <SelectItem key={colleague.id} value={colleague.id}>
+                    {colleague.full_name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Tabs */}
       <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList>
-          <TabsTrigger value="upcoming" className="flex items-center gap-2">
-            Nadcházející
-            <Badge variant="secondary" className="text-xs">{upcomingMeetings.length + upcomingGoogleEvents.length}</Badge>
+        <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+          <TabsTrigger value="upcoming" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+            <span className="hidden sm:inline">Nadcházející</span>
+            <span className="sm:hidden">Nadch.</span>
+            <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-1.5">{upcomingMeetings.length + upcomingGoogleEvents.length}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center gap-2">
+          <TabsTrigger value="past" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
             Minulé
-            <Badge variant="secondary" className="text-xs">{pastMeetings.length + pastGoogleEvents.length}</Badge>
+            <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-1.5">{pastMeetings.length + pastGoogleEvents.length}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="all" className="flex items-center gap-2">
+          <TabsTrigger value="all" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
             Všechny
-            <Badge variant="secondary" className="text-xs">{filteredMeetings.length + filteredGoogleEvents.length}</Badge>
+            <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-1.5">{filteredMeetings.length + filteredGoogleEvents.length}</Badge>
           </TabsTrigger>
         </TabsList>
 

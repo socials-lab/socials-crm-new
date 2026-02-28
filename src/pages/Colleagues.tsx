@@ -184,7 +184,7 @@ function ColleaguesContent() {
   };
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 animate-fade-in">
       <PageHeader 
         title="👥 Správa" 
         titleAccent="týmu"
@@ -192,29 +192,31 @@ function ColleaguesContent() {
       />
 
       <Tabs defaultValue={tabParam === 'access' && superAdmin ? 'access' : tabParam === 'earnings' && superAdmin ? 'earnings' : 'team'} className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="team" className="gap-2">
-            <Users className="h-4 w-4" />
-            Přehled týmu
+        <TabsList className="mb-4 w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+          <TabsTrigger value="team" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Přehled</span>
+            <span className="sm:hidden">Tým</span>
           </TabsTrigger>
           {superAdmin && (
-            <TabsTrigger value="earnings" className="gap-2">
-              <Coins className="h-4 w-4" />
-              Odměny týmu
+            <TabsTrigger value="earnings" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+              <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Odměny
             </TabsTrigger>
           )}
           {superAdmin && (
-            <TabsTrigger value="access" className="gap-2">
-              <Shield className="h-4 w-4" />
-              Správa přístupů
+            <TabsTrigger value="access" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+              <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Přístupy</span>
+              <span className="sm:hidden">Správa</span>
             </TabsTrigger>
           )}
         </TabsList>
 
-        <TabsContent value="team" className="space-y-6">
-          <div className="flex flex-col sm:flex-row gap-4 justify-between">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1 max-w-sm">
+        <TabsContent value="team" className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 sm:justify-between">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+              <div className="relative flex-1 sm:max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Hledat kolegy..."
@@ -224,7 +226,7 @@ function ColleaguesContent() {
                 />
               </div>
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ColleagueStatus | 'all')}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-full sm:w-[160px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
@@ -236,7 +238,7 @@ function ColleaguesContent() {
               </Select>
             </div>
             {superAdmin && (
-              <Button className="gap-2" onClick={handleAddColleague}>
+              <Button className="gap-2 w-full sm:w-auto" onClick={handleAddColleague}>
                 <Plus className="h-4 w-4" />
                 Přidat kolegu
               </Button>

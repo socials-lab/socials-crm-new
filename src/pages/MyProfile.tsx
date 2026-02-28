@@ -293,7 +293,7 @@ export default function MyProfile() {
   };
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
       <PageHeader
         title="Můj"
         titleAccent="profil"
@@ -302,8 +302,8 @@ export default function MyProfile() {
 
       {/* Profile Header Card */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-start gap-6">
+        <CardContent className="p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
             <AvatarUpload
               value={avatarUrl}
               onChange={handleAvatarChange}
@@ -311,9 +311,9 @@ export default function MyProfile() {
               disabled={isSavingAvatar}
               className="shrink-0"
             />
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-2xl font-bold">{currentColleague.full_name}</h2>
+            <div className="flex-1 space-y-2 text-center sm:text-left min-w-0 w-full">
+              <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                <h2 className="text-xl md:text-2xl font-bold">{currentColleague.full_name}</h2>
                 <Badge variant={currentColleague.is_freelancer ? 'secondary' : 'outline'}>
                   {currentColleague.is_freelancer ? 'Freelancer' : 'Interní'}
                 </Badge>
@@ -321,14 +321,14 @@ export default function MyProfile() {
                   {seniorityLabels[currentColleague.seniority] || currentColleague.seniority}
                 </Badge>
               </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Briefcase className="h-4 w-4" />
-                <span>{currentColleague.position}</span>
+              <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground">
+                <Briefcase className="h-4 w-4 shrink-0" />
+                <span className="truncate">{currentColleague.position}</span>
               </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Mail className="h-4 w-4" />
-                <span>{currentColleague.email}</span>
-                <span className="text-xs">(pracovní)</span>
+              <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-sm">
+                <Mail className="h-4 w-4 shrink-0" />
+                <span className="truncate">{currentColleague.email}</span>
+                <span className="text-xs shrink-0">(pracovní)</span>
               </div>
             </div>
           </div>
@@ -348,7 +348,7 @@ export default function MyProfile() {
                 Kontaktní informace a datum narození
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 md:p-6 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -424,13 +424,13 @@ export default function MyProfile() {
                           <CalendarDays className="h-4 w-4" />
                           Datum narození
                         </FormLabel>
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           <Select
                             value={selectedDay?.toString() || ''}
                             onValueChange={(v) => handleDateChange('day', parseInt(v))}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-[80px]">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Den" />
                               </SelectTrigger>
                             </FormControl>
@@ -448,7 +448,7 @@ export default function MyProfile() {
                             onValueChange={(v) => handleDateChange('month', parseInt(v))}
                           >
                             <FormControl>
-                              <SelectTrigger className="flex-1">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Měsíc" />
                               </SelectTrigger>
                             </FormControl>
@@ -466,7 +466,7 @@ export default function MyProfile() {
                             onValueChange={(v) => handleDateChange('year', parseInt(v))}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-[100px]">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Rok" />
                               </SelectTrigger>
                             </FormControl>
@@ -550,7 +550,7 @@ export default function MyProfile() {
                   : 'Volitelné údaje pro interní zaměstnance'}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 md:p-6 space-y-4">
               <FormField
                 control={form.control}
                 name="company_name"
@@ -708,7 +708,7 @@ export default function MyProfile() {
                 Bankovní účet pro zasílání odměn
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
               <FormField
                 control={form.control}
                 name="bank_account"

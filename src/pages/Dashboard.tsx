@@ -578,7 +578,7 @@ export default function Dashboard() {
       />
 
       {/* === EXECUTIVE KPIs === */}
-      <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
         <KPICard
           title="💰 Fakturace"
           value={canSeeFinancials ? `${(nextMonthInvoicing.total / 1000).toFixed(0)}k` : '***'}

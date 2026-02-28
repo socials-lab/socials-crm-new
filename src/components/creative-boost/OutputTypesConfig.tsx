@@ -177,19 +177,20 @@ export function OutputTypesConfig() {
         </Button>
       </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Název</TableHead>
-              <TableHead className="text-center">Kategorie</TableHead>
-              <TableHead className="text-center">Kredity</TableHead>
-              <TableHead>Popis</TableHead>
-              <TableHead className="text-center">Aktivní</TableHead>
-              <TableHead className="text-right">Akce</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[140px]">Název</TableHead>
+                <TableHead className="text-center min-w-[100px]">Kategorie</TableHead>
+                <TableHead className="text-center min-w-[70px]">Kredity</TableHead>
+                <TableHead className="min-w-[150px]">Popis</TableHead>
+                <TableHead className="text-center min-w-[70px]">Aktivní</TableHead>
+                <TableHead className="text-right min-w-[60px]">Akce</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
             {/* Banner section */}
             <TableRow className="bg-blue-50/50 hover:bg-blue-50/50">
               <TableCell colSpan={6} className="py-2">
@@ -212,7 +213,8 @@ export function OutputTypesConfig() {
             </TableRow>
             {groupedOutputTypes.videoTypes.map(renderTypeRow)}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </Card>
 
       {/* Add/Edit Dialog */}
