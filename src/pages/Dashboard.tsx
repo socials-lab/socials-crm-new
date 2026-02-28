@@ -5,8 +5,6 @@ import {
   Users,
   Target,
   Percent,
-  ExternalLink,
-  TrendingUp,
   TrendingDown,
   AlertTriangle,
   Clock,
@@ -28,13 +26,12 @@ import {
   CheckCircle2,
   CalendarCheck,
   UserCheck,
-  ChevronDown,
-  ChevronRight,
+  ClipboardList,
   PlusCircle,
   BarChart3,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format, subDays, isAfter, parseISO, addMonths, addDays, differenceInDays, formatDistanceToNow } from 'date-fns';
+import { format, subDays, isAfter, parseISO, addDays, differenceInDays, differenceInCalendarDays, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
@@ -51,39 +48,42 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
 import { getTargetForMonth, calculateActualRevenue, formatCurrencyShort } from '@/utils/businessPlanUtils';
 import type { LucideIcon } from 'lucide-react';
 
-// Helper component for activity rows
-interface ActivityRowProps {
+interface ActivityEvent {
+  id: string;
+  title: string;
+  subtitle: string;
+  at: string;
   icon: LucideIcon;
-  label: string;
-  count: number;
-  items?: string[];
   colorClass: string;
   value?: number;
   isNegative?: boolean;
-  date?: string;
 }
 
-function ActivityRow({ icon: Icon, label, count, items, colorClass, value, isNegative, date }: ActivityRowProps) {
+function formatRelativeDate(dateIso: string) {
+  const parsed = parseISO(dateIso);
+  const dayDiff = differenceInCalendarDays(new Date(), parsed);
+  if (dayDiff <= 0) return 'dnes';
+  if (dayDiff === 1) return 'včera';
+  if (dayDiff < 7) return `před ${dayDiff} dny`;
+  return formatDistanceToNow(parsed, { locale: cs, addSuffix: true });
+}
+
+function ActivityFeedRow({ icon: Icon, title, subtitle, at, colorClass, value, isNegative }: ActivityEvent) {
   return (
-    <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 border border-border/50">
-      <div className={`p-1.5 rounded-full ${colorClass}`}>
+    <div className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-muted/20">
+      <div className={`p-1.5 rounded-full shrink-0 ${colorClass}`}>
         <Icon className="h-3.5 w-3.5" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">{label}</span>
-          {date && <span className="text-xs text-muted-foreground">{date}</span>}
+          <span className="text-sm font-medium">{title}</span>
+          <span className="text-xs text-muted-foreground">{formatRelativeDate(at)}</span>
         </div>
-        {items && items.length > 0 && (
-          <p className="text-xs text-muted-foreground truncate">
-            {items.join(', ')}
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
       </div>
       {value !== undefined && value > 0 && (
         <span className={`text-sm font-medium whitespace-nowrap ${isNegative ? 'text-destructive' : 'text-emerald-600'}`}>
@@ -187,116 +187,200 @@ export default function Dashboard() {
     };
   }, [pendingRequests, extraWorks]);
 
-  // === RECENT ACTIVITY (last 7 days) - COMPREHENSIVE ===
-  const recentActivity = useMemo(() => {
+  // === RECENT ACTIVITY FEED (last 7 days) ===
+  const recentEvents = useMemo(() => {
     const sevenDaysAgo = subDays(new Date(), 7);
-    
-    // === LEADS ===
-    // Nové leady
-    const newLeads = leads
-      .filter(l => l.created_at && isAfter(parseISO(l.created_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
-    
-    // Konvertované leady (won)
-    const newClients = leads
-      .filter(l => l.stage === 'won' && l.converted_at && isAfter(parseISO(l.converted_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.converted_at!).getTime() - new Date(a.converted_at!).getTime());
-    
-    // Odeslané nabídky
-    const offersSent = leads
-      .filter(l => l.offer_sent_at && isAfter(parseISO(l.offer_sent_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.offer_sent_at!).getTime() - new Date(a.offer_sent_at!).getTime());
-    
-    // Podepsané smlouvy
-    const contractsSigned = leads
-      .filter(l => l.contract_signed_at && isAfter(parseISO(l.contract_signed_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.contract_signed_at!).getTime() - new Date(a.contract_signed_at!).getTime());
-    
-    // Lost leads
-    const lostLeads = leads
-      .filter(l => l.stage === 'lost' && l.updated_at && isAfter(parseISO(l.updated_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-    
-    // === ENGAGEMENTS ===
-    const newEngagements = engagements
-      .filter(e => e.start_date && isAfter(parseISO(e.start_date), sevenDaysAgo))
-      .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
-    
-    const endedEngagements = engagements
-      .filter(e => e.end_date && isAfter(parseISO(e.end_date), sevenDaysAgo) && ['completed', 'cancelled'].includes(e.status || ''))
-      .sort((a, b) => new Date(b.end_date!).getTime() - new Date(a.end_date!).getTime());
-    
-    // === EXTRA WORKS ===
-    const newExtraWorks = (extraWorks || [])
-      .filter(w => w.created_at && isAfter(parseISO(w.created_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
-    
-    const approvedExtraWorks = (extraWorks || [])
-      .filter(w => w.approval_date && isAfter(parseISO(w.approval_date), sevenDaysAgo))
-      .sort((a, b) => new Date(b.approval_date!).getTime() - new Date(a.approval_date!).getTime());
-    
-    // === MODIFICATIONS ===
-    const newModifications = (pendingRequests || [])
-      .filter(r => r.created_at && isAfter(parseISO(r.created_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    
-    const approvedModifications = (pendingRequests || [])
-      .filter(r => r.reviewed_at && ['approved', 'client_approved'].includes(r.status) && isAfter(parseISO(r.reviewed_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.reviewed_at!).getTime() - new Date(a.reviewed_at!).getTime());
-    
-    // === MEETINGS ===
-    const newMeetingsScheduled = meetings
-      .filter(m => m.created_at && isAfter(parseISO(m.created_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    
-    const completedMeetings = meetings
-      .filter(m => m.status === 'completed' && m.scheduled_at && isAfter(parseISO(m.scheduled_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
-    
-    // === APPLICANTS ===
-    const newApplicants = applicants
-      .filter(a => a.created_at && isAfter(parseISO(a.created_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    
-    const hiredApplicants = applicants
-      .filter(a => a.stage === 'hired' && a.updated_at && isAfter(parseISO(a.updated_at), sevenDaysAgo))
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-    
-    // Check if there's any activity
-    const hasAnyActivity = 
-      newLeads.length > 0 || newClients.length > 0 || offersSent.length > 0 || contractsSigned.length > 0 || lostLeads.length > 0 ||
-      newEngagements.length > 0 || endedEngagements.length > 0 ||
-      newExtraWorks.length > 0 || approvedExtraWorks.length > 0 ||
-      newModifications.length > 0 || approvedModifications.length > 0 ||
-      newMeetingsScheduled.length > 0 || completedMeetings.length > 0 ||
-      newApplicants.length > 0 || hiredApplicants.length > 0;
-    
-    return {
-      // Leads
-      newLeads,
-      newClients,
-      offersSent,
-      contractsSigned,
-      lostLeads,
-      // Engagements
-      newEngagements,
-      endedEngagements,
-      // Extra works
-      newExtraWorks,
-      approvedExtraWorks,
-      // Modifications
-      newModifications,
-      approvedModifications,
-      // Meetings
-      newMeetingsScheduled,
-      completedMeetings,
-      // Applicants
-      newApplicants,
-      hiredApplicants,
-      // Meta
-      hasAnyActivity,
-    };
-  }, [leads, engagements, extraWorks, pendingRequests, meetings, applicants]);
+    const events: ActivityEvent[] = [];
+
+    leads.forEach((lead) => {
+      if (lead.created_at && isAfter(parseISO(lead.created_at), sevenDaysAgo)) {
+        events.push({
+          id: `lead-created-${lead.id}`,
+          title: 'Nový lead',
+          subtitle: lead.company_name,
+          at: lead.created_at,
+          icon: PlusCircle,
+          colorClass: 'text-slate-600 bg-slate-100 dark:bg-slate-800',
+        });
+      }
+      if (lead.converted_at && isAfter(parseISO(lead.converted_at), sevenDaysAgo)) {
+        events.push({
+          id: `lead-converted-${lead.id}`,
+          title: 'Nový klient',
+          subtitle: `${lead.company_name} -> spolupráce zahájena`,
+          at: lead.converted_at,
+          icon: UserPlus,
+          colorClass: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900',
+          value: canSeeFinancials ? (lead.estimated_price || 0) : undefined,
+        });
+      }
+      if (lead.offer_sent_at && isAfter(parseISO(lead.offer_sent_at), sevenDaysAgo)) {
+        events.push({
+          id: `lead-offer-sent-${lead.id}`,
+          title: 'Nabídka odeslána',
+          subtitle: `${lead.company_name} -> nabídka připravena`,
+          at: lead.offer_sent_at,
+          icon: Send,
+          colorClass: 'text-pink-600 bg-pink-100 dark:bg-pink-900',
+        });
+      }
+      if (lead.contract_signed_at && isAfter(parseISO(lead.contract_signed_at), sevenDaysAgo)) {
+        events.push({
+          id: `lead-contract-signed-${lead.id}`,
+          title: 'Smlouva podepsána',
+          subtitle: `${lead.company_name} -> připraveno k předání`,
+          at: lead.contract_signed_at,
+          icon: FileSignature,
+          colorClass: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900',
+          value: canSeeFinancials ? (lead.estimated_price || 0) : undefined,
+        });
+      }
+      if (lead.onboarding_form_completed_at && isAfter(parseISO(lead.onboarding_form_completed_at), sevenDaysAgo)) {
+        events.push({
+          id: `lead-onboarding-completed-${lead.id}`,
+          title: 'Onboarding vyplněn',
+          subtitle: `${lead.company_name} -> klient doplnil vstupní data`,
+          at: lead.onboarding_form_completed_at,
+          icon: ClipboardList,
+          colorClass: 'text-cyan-600 bg-cyan-100 dark:bg-cyan-900',
+        });
+      }
+      if (lead.stage === 'lost' && lead.updated_at && isAfter(parseISO(lead.updated_at), sevenDaysAgo)) {
+        events.push({
+          id: `lead-lost-${lead.id}`,
+          title: 'Lead ztracen',
+          subtitle: lead.company_name,
+          at: lead.updated_at,
+          icon: TrendingDown,
+          colorClass: 'text-red-600 bg-red-100 dark:bg-red-900',
+          value: canSeeFinancials ? (lead.estimated_price || 0) : undefined,
+          isNegative: true,
+        });
+      }
+    });
+
+    engagements.forEach((engagement) => {
+      if (engagement.start_date && isAfter(parseISO(engagement.start_date), sevenDaysAgo)) {
+        const clientName = clients.find((c) => c.id === engagement.client_id)?.brand_name || 'Bez klienta';
+        events.push({
+          id: `engagement-start-${engagement.id}`,
+          title: 'Zakázka zahájena',
+          subtitle: `${clientName} -> ${engagement.name}`,
+          at: engagement.start_date,
+          icon: Briefcase,
+          colorClass: 'text-blue-600 bg-blue-100 dark:bg-blue-900',
+        });
+      }
+      if (engagement.end_date && ['completed', 'cancelled'].includes(engagement.status || '') && isAfter(parseISO(engagement.end_date), sevenDaysAgo)) {
+        events.push({
+          id: `engagement-ended-${engagement.id}`,
+          title: 'Zakázka ukončena',
+          subtitle: engagement.name,
+          at: engagement.end_date,
+          icon: UserMinus,
+          colorClass: 'text-muted-foreground bg-muted',
+        });
+      }
+    });
+
+    (extraWorks || []).forEach((work) => {
+      if (work.created_at && isAfter(parseISO(work.created_at), sevenDaysAgo)) {
+        events.push({
+          id: `extrawork-created-${work.id}`,
+          title: 'Nová vícepráce',
+          subtitle: work.description || 'Bez popisu',
+          at: work.created_at,
+          icon: Wrench,
+          colorClass: 'text-violet-600 bg-violet-100 dark:bg-violet-900',
+          value: canSeeFinancials ? work.amount : undefined,
+        });
+      }
+      if (work.approval_date && isAfter(parseISO(work.approval_date), sevenDaysAgo)) {
+        events.push({
+          id: `extrawork-approved-${work.id}`,
+          title: 'Vícepráce schválena',
+          subtitle: work.description || 'Bez popisu',
+          at: work.approval_date,
+          icon: CheckCircle,
+          colorClass: 'text-green-600 bg-green-100 dark:bg-green-900',
+          value: canSeeFinancials ? work.amount : undefined,
+        });
+      }
+    });
+
+    (pendingRequests || []).forEach((request) => {
+      if (request.created_at && isAfter(parseISO(request.created_at), sevenDaysAgo)) {
+        events.push({
+          id: `modification-created-${request.id}`,
+          title: 'Nový návrh změny',
+          subtitle: request.engagement_name,
+          at: request.created_at,
+          icon: FileText,
+          colorClass: 'text-amber-600 bg-amber-100 dark:bg-amber-900',
+        });
+      }
+      if (request.reviewed_at && ['approved', 'client_approved'].includes(request.status) && isAfter(parseISO(request.reviewed_at), sevenDaysAgo)) {
+        events.push({
+          id: `modification-approved-${request.id}`,
+          title: request.status === 'client_approved' ? 'Návrh potvrzen klientem' : 'Návrh schválen',
+          subtitle: request.engagement_name,
+          at: request.reviewed_at,
+          icon: CheckCircle2,
+          colorClass: 'text-green-600 bg-green-100 dark:bg-green-900',
+        });
+      }
+    });
+
+    meetings.forEach((meeting) => {
+      if (meeting.created_at && isAfter(parseISO(meeting.created_at), sevenDaysAgo)) {
+        events.push({
+          id: `meeting-created-${meeting.id}`,
+          title: 'Meeting naplánován',
+          subtitle: meeting.title,
+          at: meeting.created_at,
+          icon: Calendar,
+          colorClass: 'text-blue-600 bg-blue-100 dark:bg-blue-900',
+        });
+      }
+      if (meeting.status === 'completed' && meeting.scheduled_at && isAfter(parseISO(meeting.scheduled_at), sevenDaysAgo)) {
+        events.push({
+          id: `meeting-completed-${meeting.id}`,
+          title: 'Meeting proběhl',
+          subtitle: meeting.title,
+          at: meeting.scheduled_at,
+          icon: CalendarCheck,
+          colorClass: 'text-teal-600 bg-teal-100 dark:bg-teal-900',
+        });
+      }
+    });
+
+    applicants.forEach((applicant) => {
+      if (applicant.created_at && isAfter(parseISO(applicant.created_at), sevenDaysAgo)) {
+        events.push({
+          id: `applicant-created-${applicant.id}`,
+          title: 'Nový uchazeč',
+          subtitle: applicant.full_name,
+          at: applicant.created_at,
+          icon: Users,
+          colorClass: 'text-slate-600 bg-slate-100 dark:bg-slate-800',
+        });
+      }
+      if (applicant.stage === 'hired' && applicant.updated_at && isAfter(parseISO(applicant.updated_at), sevenDaysAgo)) {
+        events.push({
+          id: `applicant-hired-${applicant.id}`,
+          title: 'Uchazeč přijat',
+          subtitle: applicant.full_name,
+          at: applicant.updated_at,
+          icon: UserCheck,
+          colorClass: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900',
+        });
+      }
+    });
+
+    return events
+      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+      .slice(0, 50);
+  }, [leads, engagements, extraWorks, pendingRequests, meetings, applicants, clients, canSeeFinancials]);
 
   // === CLIENT HEALTH ===
   const clientHealth = useMemo(() => {
@@ -609,215 +693,12 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-4">
-                {/* === SALES & LEADY === */}
-                {(recentActivity.newLeads.length > 0 || recentActivity.newClients.length > 0 || 
-                  recentActivity.offersSent.length > 0 || recentActivity.contractsSigned.length > 0 || 
-                  recentActivity.lostLeads.length > 0) && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
-                      🎯 Sales & Leady
-                    </p>
-                    
-                    {/* Noví klienti (won) */}
-                    {recentActivity.newClients.length > 0 && (
-                      <ActivityRow 
-                        icon={UserPlus} 
-                        label="Noví klienti" 
-                        count={recentActivity.newClients.length}
-                        items={recentActivity.newClients.slice(0, 3).map(l => l.company_name)}
-                        colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900"
-                        value={canSeeFinancials ? recentActivity.newClients.reduce((s, l) => s + (l.estimated_price || 0), 0) : undefined}
-                      />
-                    )}
-                    
-                    {/* Nové leady */}
-                    {recentActivity.newLeads.length > 0 && (
-                      <ActivityRow 
-                        icon={PlusCircle} 
-                        label="Nové leady" 
-                        count={recentActivity.newLeads.length}
-                        items={recentActivity.newLeads.slice(0, 3).map(l => l.company_name)}
-                        colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800"
-                      />
-                    )}
-                    
-                    {/* Odeslané nabídky */}
-                    {recentActivity.offersSent.length > 0 && (
-                      <ActivityRow 
-                        icon={Send} 
-                        label="Odeslané nabídky" 
-                        count={recentActivity.offersSent.length}
-                        items={recentActivity.offersSent.slice(0, 3).map(l => l.company_name)}
-                        colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900"
-                      />
-                    )}
-                    
-                    {/* Podepsané smlouvy */}
-                    {recentActivity.contractsSigned.length > 0 && (
-                      <ActivityRow 
-                        icon={FileSignature} 
-                        label="Podepsané smlouvy" 
-                        count={recentActivity.contractsSigned.length}
-                        items={recentActivity.contractsSigned.slice(0, 3).map(l => l.company_name)}
-                        colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900"
-                      />
-                    )}
-                    
-                    {/* Ztracené leady */}
-                    {recentActivity.lostLeads.length > 0 && (
-                      <ActivityRow 
-                        icon={TrendingDown} 
-                        label="Ztracené leady" 
-                        count={recentActivity.lostLeads.length}
-                        items={recentActivity.lostLeads.slice(0, 3).map(l => l.company_name)}
-                        colorClass="text-red-600 bg-red-100 dark:bg-red-900"
-                        value={canSeeFinancials ? recentActivity.lostLeads.reduce((s, l) => s + (l.estimated_price || 0), 0) : undefined}
-                        isNegative
-                      />
-                    )}
-                  </div>
-                )}
-                
-                {/* === ZAKÁZKY & VÍCEPRÁCE === */}
-                {(recentActivity.newEngagements.length > 0 || recentActivity.endedEngagements.length > 0 ||
-                  recentActivity.newExtraWorks.length > 0 || recentActivity.approvedExtraWorks.length > 0) && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
-                      📁 Zakázky & Vícepráce
-                    </p>
-                    
-                    {recentActivity.newEngagements.length > 0 && (
-                      <ActivityRow 
-                        icon={Briefcase} 
-                        label="Nové zakázky" 
-                        count={recentActivity.newEngagements.length}
-                        items={recentActivity.newEngagements.slice(0, 3).map(e => e.name)}
-                        colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900"
-                      />
-                    )}
-                    
-                    {recentActivity.endedEngagements.length > 0 && (
-                      <ActivityRow 
-                        icon={UserMinus} 
-                        label="Ukončené zakázky" 
-                        count={recentActivity.endedEngagements.length}
-                        items={recentActivity.endedEngagements.slice(0, 3).map(e => e.name)}
-                        colorClass="text-muted-foreground bg-muted"
-                      />
-                    )}
-                    
-                    {recentActivity.newExtraWorks.length > 0 && (
-                      <ActivityRow 
-                        icon={Wrench} 
-                        label="Nové vícepráce" 
-                        count={recentActivity.newExtraWorks.length}
-                        colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900"
-                        value={canSeeFinancials ? recentActivity.newExtraWorks.reduce((s, w) => s + w.amount, 0) : undefined}
-                      />
-                    )}
-                    
-                    {recentActivity.approvedExtraWorks.length > 0 && (
-                      <ActivityRow 
-                        icon={CheckCircle} 
-                        label="Schválené vícepráce" 
-                        count={recentActivity.approvedExtraWorks.length}
-                        colorClass="text-green-600 bg-green-100 dark:bg-green-900"
-                        value={canSeeFinancials ? recentActivity.approvedExtraWorks.reduce((s, w) => s + w.amount, 0) : undefined}
-                      />
-                    )}
-                  </div>
-                )}
-                
-                {/* === NÁVRHY ZMĚN === */}
-                {(recentActivity.newModifications.length > 0 || recentActivity.approvedModifications.length > 0) && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
-                      ✏️ Návrhy změn
-                    </p>
-                    
-                    {recentActivity.newModifications.length > 0 && (
-                      <ActivityRow 
-                        icon={FileText} 
-                        label="Nové návrhy" 
-                        count={recentActivity.newModifications.length}
-                        items={recentActivity.newModifications.slice(0, 3).map(m => m.engagement_name)}
-                        colorClass="text-amber-600 bg-amber-100 dark:bg-amber-900"
-                      />
-                    )}
-                    
-                    {recentActivity.approvedModifications.length > 0 && (
-                      <ActivityRow 
-                        icon={CheckCircle2} 
-                        label="Schválené návrhy" 
-                        count={recentActivity.approvedModifications.length}
-                        items={recentActivity.approvedModifications.slice(0, 3).map(m => m.engagement_name)}
-                        colorClass="text-green-600 bg-green-100 dark:bg-green-900"
-                      />
-                    )}
-                  </div>
-                )}
-                
-                {/* === SCHŮZKY === */}
-                {(recentActivity.newMeetingsScheduled.length > 0 || recentActivity.completedMeetings.length > 0) && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
-                      📅 Schůzky
-                    </p>
-                    
-                    {recentActivity.newMeetingsScheduled.length > 0 && (
-                      <ActivityRow 
-                        icon={Calendar} 
-                        label="Naplánované" 
-                        count={recentActivity.newMeetingsScheduled.length}
-                        items={recentActivity.newMeetingsScheduled.slice(0, 3).map(m => m.title)}
-                        colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900"
-                      />
-                    )}
-                    
-                    {recentActivity.completedMeetings.length > 0 && (
-                      <ActivityRow 
-                        icon={CalendarCheck} 
-                        label="Proběhlé" 
-                        count={recentActivity.completedMeetings.length}
-                        items={recentActivity.completedMeetings.slice(0, 3).map(m => m.title)}
-                        colorClass="text-teal-600 bg-teal-100 dark:bg-teal-900"
-                      />
-                    )}
-                  </div>
-                )}
-                
-                {/* === RECRUITMENT === */}
-                {(recentActivity.newApplicants.length > 0 || recentActivity.hiredApplicants.length > 0) && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">
-                      👥 Recruitment
-                    </p>
-                    
-                    {recentActivity.newApplicants.length > 0 && (
-                      <ActivityRow 
-                        icon={Users} 
-                        label="Noví uchazeči" 
-                        count={recentActivity.newApplicants.length}
-                        items={recentActivity.newApplicants.slice(0, 3).map(a => a.full_name)}
-                        colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800"
-                      />
-                    )}
-                    
-                    {recentActivity.hiredApplicants.length > 0 && (
-                      <ActivityRow 
-                        icon={UserCheck} 
-                        label="Přijatí" 
-                        count={recentActivity.hiredApplicants.length}
-                        items={recentActivity.hiredApplicants.slice(0, 3).map(a => a.full_name)}
-                        colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900"
-                      />
-                    )}
-                  </div>
-                )}
-                
-                {/* Empty state */}
-                {!recentActivity.hasAnyActivity && (
+              <div className="space-y-2">
+                {recentEvents.length > 0 ? (
+                  recentEvents.map((event) => (
+                    <ActivityFeedRow key={event.id} {...event} />
+                  ))
+                ) : (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     Žádné změny za posledních 7 dní
                   </p>
