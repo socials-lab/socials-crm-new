@@ -1109,6 +1109,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { data: result, error } = await supabase.from('extra_works').insert({
         ...data,
         status: 'pending_approval',
+        approval_token: null,
       }).select().single();
       if (error) throw error;
       return result;

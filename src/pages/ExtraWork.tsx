@@ -2,80 +2,105 @@ import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ExtraWorkTable } from '@/components/extra-work/ExtraWorkTable';
-import { ExtraWorkKanban } from '@/components/extra-work/ExtraWorkKanban';
-import { ExtraWorkMobileList } from '@/components/extra-work/ExtraWorkMobileList';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { AddExtraWorkDialog } from '@/components/extra-work/AddExtraWorkDialog';
+import { EditExtraWorkDialog } from '@/components/extra-work/EditExtraWorkDialog';
+import { SendApprovalDialog } from '@/components/extra-work/SendApprovalDialog';
+import { ExtraWorkCard } from '@/components/extra-work/ExtraWorkCard';
 import { useCRMData } from '@/hooks/useCRMData';
-import { useIsMobile } from '@/hooks/use-mobile';
-import type { ExtraWork as ExtraWorkType, ExtraWorkStatus } from '@/types/crm';
-import { Plus, Clock, Loader2, FileText, Receipt, LayoutList, Columns3, TrendingUp } from 'lucide-react';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import type { ExtraWork as ExtraWorkType } from '@/types/crm';
+import { Plus, Clock, Loader2, FileText, Receipt, TrendingUp, Send, CheckCircle2, Package, XCircle } from 'lucide-react';
 
-type ViewMode = 'table' | 'kanban';
+type TabKey = 'pending' | 'waiting_client' | 'client_approved' | 'active' | 'rejected' | 'ready_to_invoice' | 'invoiced';
+
+const TAB_CONFIG: { key: TabKey; label: string; icon: React.ElementType }[] = [
+  { key: 'pending', label: 'Čekající', icon: Clock },
+  { key: 'waiting_client', label: 'Čeká na klienta', icon: Send },
+  { key: 'client_approved', label: 'Klient potvrdil', icon: CheckCircle2 },
+  { key: 'active', label: 'Aktivované', icon: Package },
+  { key: 'ready_to_invoice', label: 'K fakturaci', icon: FileText },
+  { key: 'invoiced', label: 'Vyfakturováno', icon: Receipt },
+  { key: 'rejected', label: 'Zamítnuté', icon: XCircle },
+];
+
+function isClientApprovedStage(work: ExtraWorkType) {
+  return work.status === 'in_progress' && !!work.client_approved_at && !work.approved_by;
+}
+
+function filterByTab(works: ExtraWorkType[], tab: TabKey): ExtraWorkType[] {
+  switch (tab) {
+    case 'pending':
+      return works.filter(w => w.status === 'pending_approval' && !w.approval_token);
+    case 'waiting_client':
+      return works.filter(w => w.status === 'pending_approval' && !!w.approval_token);
+    case 'client_approved':
+      return works.filter(isClientApprovedStage);
+    case 'active':
+      return works.filter(w => w.status === 'in_progress' && !isClientApprovedStage(w));
+    case 'ready_to_invoice':
+      return works.filter(w => w.status === 'ready_to_invoice');
+    case 'invoiced':
+      return works.filter(w => w.status === 'invoiced');
+    case 'rejected':
+      return works.filter(w => w.status === 'rejected');
+    default:
+      return works;
+  }
+}
 
 export default function ExtraWork() {
-  const { extraWorks, addExtraWork, updateExtraWork, deleteExtraWork, isLoading } = useCRMData();
-  const isMobile = useIsMobile();
+  const { extraWorks, addExtraWork, updateExtraWork, deleteExtraWork } = useCRMData();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
-  const [filterStatus, setFilterStatus] = useState<ExtraWorkStatus | 'all'>('all');
-  const [filterClientId, setFilterClientId] = useState<string | 'all'>('all');
-  const [filterColleagueId, setFilterColleagueId] = useState<string | 'all'>('all');
-  const [filterMonth, setFilterMonth] = useState<string | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [editWork, setEditWork] = useState<ExtraWorkType | null>(null);
+  const [approvalWork, setApprovalWork] = useState<ExtraWorkType | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>('pending');
 
-  // Apply filters for kanban and mobile views - use same filters as table
-  const filteredExtraWorks = useMemo(() => {
-    return extraWorks.filter(work => {
-      // Status filter
-      if (filterStatus !== 'all' && work.status !== filterStatus) return false;
-      // Client filter
-      if (filterClientId !== 'all' && work.client_id !== filterClientId) return false;
-      // Colleague filter
-      if (filterColleagueId !== 'all' && work.colleague_id !== filterColleagueId) return false;
-      // Month filter - use billing_period for consistent filtering
-      if (filterMonth !== 'all' && work.billing_period !== filterMonth) return false;
-      // Search filter
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesName = work.name?.toLowerCase().includes(query);
-        const matchesDescription = work.description?.toLowerCase().includes(query);
-        if (!matchesName && !matchesDescription) return false;
-      }
-      return true;
+  const tabCounts = useMemo(() => {
+    const counts: Record<TabKey, number> = {
+      pending: 0, waiting_client: 0, client_approved: 0,
+      active: 0, ready_to_invoice: 0, invoiced: 0, rejected: 0,
+    };
+    extraWorks.forEach(w => {
+      if (w.status === 'pending_approval') {
+        if (w.approval_token) counts.waiting_client++;
+        else counts.pending++;
+      } else if (isClientApprovedStage(w)) counts.client_approved++;
+      else if (w.status === 'in_progress') counts.active++;
+      else if (w.status === 'ready_to_invoice') counts.ready_to_invoice++;
+      else if (w.status === 'invoiced') counts.invoiced++;
+      else if (w.status === 'rejected') counts.rejected++;
     });
-  }, [extraWorks, filterStatus, filterClientId, filterColleagueId, filterMonth, searchQuery]);
+    return counts;
+  }, [extraWorks]);
 
-  // KPI calculations with new status system
+  const filteredWorks = useMemo(() => filterByTab(extraWorks, activeTab), [extraWorks, activeTab]);
+
   const kpis = useMemo(() => {
     const pendingApproval = extraWorks.filter(w => w.status === 'pending_approval');
     const inProgress = extraWorks.filter(w => w.status === 'in_progress');
     const readyToInvoice = extraWorks.filter(w => w.status === 'ready_to_invoice');
     const invoiced = extraWorks.filter(w => w.status === 'invoiced');
+    const upsells = extraWorks.filter(w => w.upsold_by_id);
+    const upsellAmount = upsells.reduce((s, w) => s + w.amount, 0);
+    const avgUpsellCommission = upsells.length > 0
+      ? Math.round(upsellAmount * ((upsells[0]?.upsell_commission_percent || 10) / 100) / upsells.length)
+      : 0;
 
     return {
-      pendingApprovalCount: pendingApproval.length,
-      pendingApprovalAmount: pendingApproval.reduce((sum, w) => sum + w.amount, 0),
+      pendingCount: pendingApproval.length,
+      pendingAmount: pendingApproval.reduce((s, w) => s + w.amount, 0),
       inProgressCount: inProgress.length,
-      inProgressAmount: inProgress.reduce((sum, w) => sum + w.amount, 0),
-      readyToInvoiceCount: readyToInvoice.length,
-      readyToInvoiceAmount: readyToInvoice.reduce((sum, w) => sum + w.amount, 0),
+      inProgressAmount: inProgress.reduce((s, w) => s + w.amount, 0),
+      readyCount: readyToInvoice.length,
+      readyAmount: readyToInvoice.reduce((s, w) => s + w.amount, 0),
       invoicedCount: invoiced.length,
-      invoicedAmount: invoiced.reduce((sum, w) => sum + w.amount, 0),
-      // Upsell metrics
-      upsellCount: extraWorks.filter(w => w.upsold_by_id).length,
-      upsellAmount: extraWorks.filter(w => w.upsold_by_id).reduce((sum, w) => sum + w.amount, 0),
-      upsellCommission: extraWorks
-        .filter(w => w.upsold_by_id && w.upsell_commission_percent)
-        .reduce((sum, w) => sum + (w.amount * (w.upsell_commission_percent || 0) / 100), 0),
+      invoicedAmount: invoiced.reduce((s, w) => s + w.amount, 0),
+      upsellCount: upsells.length,
+      upsellAmount,
+      avgUpsellCommission,
     };
   }, [extraWorks]);
-
-  const handleAddExtraWork = (data: Omit<ExtraWorkType, 'id' | 'created_at' | 'updated_at' | 'status' | 'approval_date' | 'approved_by' | 'invoice_id' | 'invoice_number' | 'invoiced_at'>) => {
-    addExtraWork(data);
-  };
 
   const handleUpdate = (id: string, data: Partial<ExtraWorkType>) => {
     updateExtraWork(id, data);
@@ -85,66 +110,28 @@ export default function ExtraWork() {
     deleteExtraWork(id);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('cs-CZ', {
-      style: 'currency',
-      currency: 'CZK',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <Skeleton className="h-10 w-40" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-4">
-          {[1, 2, 3, 4].map(i => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
-          ))}
-        </div>
-        <Skeleton className="h-96 rounded-lg" />
-      </div>
-    );
-  }
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
-      <PageHeader
-        title="🔧 Vícepráce"
-        titleAccent="& schválení"
-        description="Správa víceprací a jejich fakturace"
-        actions={
-          <div className="flex items-center gap-3">
-            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as ViewMode)}>
-              <ToggleGroupItem value="table" aria-label="Tabulka">
-                <LayoutList className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="kanban" aria-label="Kanban">
-                <Columns3 className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Přidat vícepráci
-            </Button>
-          </div>
-        }
-      />
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <PageHeader
+          title="🔧 Vícepráce"
+          titleAccent="& schválení"
+          description="Správa víceprací a jejich fakturace"
+        />
+        <Button onClick={() => setIsAddDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Přidat vícepráci
+        </Button>
+      </div>
 
-      {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-5">
         <KPICard
           title="Čeká na schválení"
-          value={kpis.pendingApprovalCount.toString()}
-          subtitle={formatCurrency(kpis.pendingApprovalAmount)}
+          value={kpis.pendingCount.toString()}
+          subtitle={formatCurrency(kpis.pendingAmount)}
           icon={Clock}
         />
         <KPICard
@@ -155,8 +142,8 @@ export default function ExtraWork() {
         />
         <KPICard
           title="K fakturaci"
-          value={kpis.readyToInvoiceCount.toString()}
-          subtitle={formatCurrency(kpis.readyToInvoiceAmount)}
+          value={kpis.readyCount.toString()}
+          subtitle={formatCurrency(kpis.readyAmount)}
           icon={FileText}
         />
         <KPICard
@@ -168,49 +155,81 @@ export default function ExtraWork() {
         <KPICard
           title="Upsell"
           value={formatCurrency(kpis.upsellAmount)}
-          subtitle={`${kpis.upsellCount} položek • ${formatCurrency(kpis.upsellCommission)} provize`}
+          subtitle={`${kpis.upsellCount} položek · ${formatCurrency(kpis.avgUpsellCommission)} prům.`}
           icon={TrendingUp}
         />
       </div>
 
-      {/* View - use mobile list on small screens for table view */}
-      {viewMode === 'table' ? (
-        isMobile ? (
-          <ExtraWorkMobileList
-            extraWorks={filteredExtraWorks}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-          />
-        ) : (
-          <ExtraWorkTable
-            extraWorks={extraWorks}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-            filterStatus={filterStatus}
-            onFilterStatusChange={setFilterStatus}
-            filterClientId={filterClientId}
-            onFilterClientChange={setFilterClientId}
-            filterColleagueId={filterColleagueId}
-            onFilterColleagueChange={setFilterColleagueId}
-            filterMonth={filterMonth}
-            onFilterMonthChange={setFilterMonth}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
-        )
-      ) : (
-        <ExtraWorkKanban
-          extraWorks={filteredExtraWorks}
-          onUpdate={handleUpdate}
-          searchQuery={searchQuery}
-        />
-      )}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
+        <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1.5 rounded-xl">
+          {TAB_CONFIG.map(({ key, label, icon: Icon }) => (
+            <TabsTrigger
+              key={key}
+              value={key}
+              className="flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-3 py-2"
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+              {tabCounts[key] > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1 h-5 min-w-[20px] px-1.5 text-xs rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                >
+                  {tabCounts[key]}
+                </Badge>
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {TAB_CONFIG.map(({ key }) => (
+          <TabsContent key={key} value={key} className="mt-4">
+            {filteredWorks.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Žádné položky v této kategorii
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {filteredWorks.map(work => (
+                  <ExtraWorkCard
+                    key={work.id}
+                    work={work}
+                    onEdit={(w) => setEditWork(w)}
+                    onDelete={handleDelete}
+                    onSendApproval={(w) => setApprovalWork(w)}
+                    onUpdate={handleUpdate}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        ))}
+      </Tabs>
 
       <AddExtraWorkDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        onAdd={handleAddExtraWork}
+        onAdd={addExtraWork}
+        onCreated={(work) => setApprovalWork(work)}
       />
+
+      {editWork && (
+        <EditExtraWorkDialog
+          open={!!editWork}
+          onOpenChange={(open) => !open && setEditWork(null)}
+          extraWork={editWork}
+          onSave={handleUpdate}
+        />
+      )}
+
+      {approvalWork && (
+        <SendApprovalDialog
+          open={!!approvalWork}
+          onOpenChange={(open) => !open && setApprovalWork(null)}
+          extraWork={approvalWork}
+          onUpdate={handleUpdate}
+        />
+      )}
     </div>
   );
 }

@@ -42,6 +42,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [approvalToken, setApprovalToken] = useState<string | null>(extraWork.approval_token || null);
 
   const client = useMemo(() => getClientById(extraWork.client_id), [extraWork.client_id, getClientById]);
   const currentUserColleague = useMemo(() => colleagues.find(c => c.profile_id === user?.id), [colleagues, user?.id]);
@@ -60,13 +61,27 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: extraWork.currency || 'CZK', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   const getApprovalUrl = () => {
-    if (!extraWork.approval_token) return '';
-    return `${window.location.origin}/extra-work-approval/${extraWork.approval_token}`;
+    if (!approvalToken) return '';
+    return `${window.location.origin}/extra-work-approval/${approvalToken}`;
+  };
+
+  const ensureApprovalToken = async (): Promise<string> => {
+    const token = approvalToken || crypto.randomUUID();
+    if (!approvalToken) {
+      setApprovalToken(token);
+      if (onUpdate) {
+        onUpdate(extraWork.id, { approval_token: token });
+      }
+    }
+    return token;
   };
 
   // Generate default email content
   useEffect(() => {
     if (open) {
+      if (!approvalToken) {
+        setApprovalToken(extraWork.approval_token || crypto.randomUUID());
+      }
       const approvalUrl = getApprovalUrl();
 
       setCcEmails([]);
@@ -91,14 +106,11 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
       setEmailSubject(subject);
       setEmailBody(body);
     }
-  }, [open, extraWork, currentUserColleague, colleague, engagement, fillTemplate]);
+  }, [open, extraWork, approvalToken, currentUserColleague, colleague, engagement, fillTemplate]);
 
-  const handleCopyLink = () => {
-    const url = getApprovalUrl();
-    if (!url) {
-      toast.error('Chybí schvalovací token');
-      return;
-    }
+  const handleCopyLink = async () => {
+    const token = await ensureApprovalToken();
+    const url = `${window.location.origin}/extra-work-approval/${token}`;
     navigator.clipboard.writeText(url);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
@@ -122,11 +134,15 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
       return;
     }
 
+    const token = await ensureApprovalToken();
+    const approvalUrl = `${window.location.origin}/extra-work-approval/${token}`;
+
     setIsSending(true);
 
     try {
+      const bodyWithUrl = emailBody.includes('http') ? emailBody : `${emailBody}\n\n${approvalUrl}`;
       // Convert plain text to HTML
-      const htmlBody = emailBody
+      const htmlBody = bodyWithUrl
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
