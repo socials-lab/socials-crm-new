@@ -115,7 +115,8 @@ export function LeadFlowStepper({
 }: LeadFlowStepperProps) {
   const servicesCount = lead.potential_services?.length || 0;
   const hasOffer = !!lead.offer_url;
-  const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
+  const isArchived = ['lost', 'postponed'].includes(lead.stage);
+  const canConvert = !lead.converted_to_client_id && !['won', 'lost', 'postponed'].includes(lead.stage);
 
   const steps: FlowStep[] = [
     {
@@ -283,6 +284,17 @@ export function LeadFlowStepper({
       } : undefined,
     },
   ];
+
+  if (isArchived) {
+    steps.push({
+      id: 'archived',
+      label: 'Archivováno',
+      icon: <X className="h-3.5 w-3.5" />,
+      isComplete: true,
+      completedAt: lead.updated_at,
+      detail: lead.stage === 'lost' ? 'Důvod: Prohráno' : 'Důvod: Odloženo',
+    });
+  }
 
   const currentStepIndex = steps.findIndex(s => !s.isComplete);
 
