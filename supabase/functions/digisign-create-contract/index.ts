@@ -435,6 +435,18 @@ serve(async (req) => {
       );
     }
 
+    // Validate all signatories have names (DigiSign requires non-empty recipient name)
+    const signatoriesWithoutName = signatories.filter(s => !s.name || s.name.trim() === '');
+    if (signatoriesWithoutName.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: "Některé podpisující osoby nemají vyplněné jméno. Doplňte jméno každého podepisujícího v onboarding formuláři.",
+          missing_name_signatories_count: signatoriesWithoutName.length,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Validate all signatories have phone numbers (DigiSign requires mobile for all recipients)
     const signatoriesWithoutPhone = signatories.filter(s => !s.phone || s.phone.trim() === '');
     if (signatoriesWithoutPhone.length > 0) {

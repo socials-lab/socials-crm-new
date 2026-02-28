@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 export function useDigiSign() {
   const queryClient = useQueryClient();
@@ -13,17 +14,23 @@ export function useDigiSign() {
     setError(null);
 
     try {
-      const invokePromise = supabase.functions.invoke('digisign-create-contract', {
-        body: { lead_id: leadId, template_id: templateId },
-      });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        throw new Error('Nejste přihlášeni. Obnovte prosím stránku a přihlaste se znovu.');
+      }
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Vytvoření smlouvy trvá příliš dlouho. Zkuste akci prosím znovu.'));
-        }, 90000); // 90s hard timeout for UI responsiveness
-      });
-
-      const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
+      const { data, error } = await invokeWithTimeout<{ error?: string; success?: boolean; digisign_id?: string }>(
+        'digisign-create-contract',
+        {
+          body: { lead_id: leadId, template_id: templateId },
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+        },
+        90000
+      );
 
       // Check for error in response data first (Edge Function error messages)
       if (data?.error) {
@@ -32,21 +39,7 @@ export function useDigiSign() {
 
       // Then check for Supabase client error (non-2xx status codes)
       if (error) {
-        // Try to extract the actual error message from the Edge Function response
-        let errorMsg = 'Chyba při volání DigiSign API';
-        try {
-          // FunctionsHttpError has a context property with the response
-          const ctx = (error as any).context;
-          if (ctx && typeof ctx.json === 'function') {
-            const body = await ctx.json();
-            if (body?.error) errorMsg = body.error;
-          } else if (error.message) {
-            errorMsg = error.message;
-          }
-        } catch {
-          if (error.message) errorMsg = error.message;
-        }
-        throw new Error(errorMsg);
+        throw new Error(error.message || 'Chyba při volání DigiSign API');
       }
 
       // Invalidate leads cache to refresh with new contract data
