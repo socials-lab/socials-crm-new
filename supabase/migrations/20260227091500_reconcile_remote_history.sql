@@ -1,0 +1,3 @@
+-- Reconciliation placeholder for migration 20260227091500
+-- This migration was already applied on remote production DB history.
+-- Intentionally no-op to align local migration directory with remote versions.
