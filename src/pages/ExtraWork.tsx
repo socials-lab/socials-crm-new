@@ -8,6 +8,7 @@ import { ExtraWorkKanban } from '@/components/extra-work/ExtraWorkKanban';
 import { ExtraWorkMobileList } from '@/components/extra-work/ExtraWorkMobileList';
 import { AddExtraWorkDialog } from '@/components/extra-work/AddExtraWorkDialog';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ExtraWork as ExtraWorkType, ExtraWorkStatus } from '@/types/crm';
 import { Plus, Clock, Loader2, FileText, Receipt, LayoutList, Columns3, TrendingUp } from 'lucide-react';
@@ -17,7 +18,14 @@ type ViewMode = 'table' | 'kanban';
 
 export default function ExtraWork() {
   const { extraWorks, addExtraWork, updateExtraWork, deleteExtraWork, isLoading } = useCRMData();
+  const { isSuperAdmin, role, canSeeFinancials } = useUserRole();
   const isMobile = useIsMobile();
+
+  // Financial visibility
+  const showFinancials = isSuperAdmin || role === 'admin' || role === 'management' || role === 'finance' || canSeeFinancials;
+
+  // Delete permission - only admin/management
+  const canDelete = isSuperAdmin || role === 'admin' || role === 'management';
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [filterStatus, setFilterStatus] = useState<ExtraWorkStatus | 'all'>('all');
@@ -82,6 +90,10 @@ export default function ExtraWork() {
   };
 
   const handleDelete = (id: string) => {
+    // Only admin/management can delete extra work
+    if (!canDelete) {
+      return;
+    }
     deleteExtraWork(id);
   };
 
@@ -144,31 +156,31 @@ export default function ExtraWork() {
         <KPICard
           title="Čeká na schválení"
           value={kpis.pendingApprovalCount.toString()}
-          subtitle={formatCurrency(kpis.pendingApprovalAmount)}
+          subtitle={showFinancials ? formatCurrency(kpis.pendingApprovalAmount) : '***'}
           icon={Clock}
         />
         <KPICard
           title="V procesu"
           value={kpis.inProgressCount.toString()}
-          subtitle={formatCurrency(kpis.inProgressAmount)}
+          subtitle={showFinancials ? formatCurrency(kpis.inProgressAmount) : '***'}
           icon={Loader2}
         />
         <KPICard
           title="K fakturaci"
           value={kpis.readyToInvoiceCount.toString()}
-          subtitle={formatCurrency(kpis.readyToInvoiceAmount)}
+          subtitle={showFinancials ? formatCurrency(kpis.readyToInvoiceAmount) : '***'}
           icon={FileText}
         />
         <KPICard
           title="Vyfakturováno"
-          value={formatCurrency(kpis.invoicedAmount)}
+          value={showFinancials ? formatCurrency(kpis.invoicedAmount) : '***'}
           subtitle={`${kpis.invoicedCount} položek`}
           icon={Receipt}
         />
         <KPICard
           title="Upsell"
-          value={formatCurrency(kpis.upsellAmount)}
-          subtitle={`${kpis.upsellCount} položek • ${formatCurrency(kpis.upsellCommission)} provize`}
+          value={showFinancials ? formatCurrency(kpis.upsellAmount) : '***'}
+          subtitle={showFinancials ? `${kpis.upsellCount} položek • ${formatCurrency(kpis.upsellCommission)} provize` : `${kpis.upsellCount} položek`}
           icon={TrendingUp}
         />
       </div>
@@ -186,6 +198,7 @@ export default function ExtraWork() {
             extraWorks={extraWorks}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
+            canDelete={canDelete}
             filterStatus={filterStatus}
             onFilterStatusChange={setFilterStatus}
             filterClientId={filterClientId}

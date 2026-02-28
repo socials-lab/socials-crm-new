@@ -122,10 +122,15 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const canAccessPage = (page: string): boolean => {
     // Super admin has access to everything
     if (isSuperAdmin) return true;
-    // If no allowed_pages defined, allow access (backward compatibility)
-    if (allowedPages.length === 0) return true;
-    // Check if page is in allowed pages
-    return allowedPages.includes(page);
+    // Admin and management roles have access to everything
+    if (role === 'admin' || role === 'management') return true;
+    // If user has specific allowed_pages, check against them
+    if (allowedPages.length > 0) {
+      return allowedPages.includes(page);
+    }
+    // Default: allow basic access for users with any CRM role (backward compatibility)
+    // Action-level permissions are enforced separately via canApprove checks in components
+    return role !== null;
   };
 
   return (

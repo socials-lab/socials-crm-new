@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { LeadsKanban } from '@/components/leads/LeadsKanban';
 import { LeadsTable } from '@/components/leads/LeadsTable';
 import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
@@ -53,7 +54,11 @@ const STAGE_ORDER: LeadStage[] = ['new_lead', 'meeting_done', 'waiting_access', 
 export default function Leads() {
   const { leads, updateLeadStage } = useLeadsData();
   const { colleagues } = useCRMData();
+  const { isSuperAdmin, role, canSeeFinancials } = useUserRole();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Users with financial visibility
+  const showFinancials = isSuperAdmin || role === 'admin' || role === 'management' || role === 'finance' || canSeeFinancials;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [ownerFilter, setOwnerFilter] = useState<string>('all');
@@ -243,14 +248,14 @@ export default function Leads() {
         />
         <KPICard
           title="Potenciální hodnota"
-          value={`${formatCurrency(kpis.potentialValue)} CZK`}
+          value={showFinancials ? `${formatCurrency(kpis.potentialValue)} CZK` : '***'}
           subtitle="aktivní pipeline"
           icon={Target}
         />
         <KPICard
           title="Vyhrané leady"
           value={kpis.wonCount}
-          subtitle={`${formatCurrency(kpis.wonValue)} CZK MRR`}
+          subtitle={showFinancials ? `${formatCurrency(kpis.wonValue)} CZK MRR` : '***'}
           icon={Trophy}
         />
       </div>
@@ -304,6 +309,7 @@ export default function Leads() {
           leads={filteredLeads}
           onLeadClick={handleLeadClick}
           onStageChange={handleStageChange}
+          showFinancials={showFinancials}
         />
       ) : (
         <LeadsTable

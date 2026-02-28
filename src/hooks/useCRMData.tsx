@@ -1143,6 +1143,23 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Permission check: only admin, management, or super admin can approve
+      const { data: userRole, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role, is_super_admin')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (roleError) throw roleError;
+
+      const canApprove = userRole?.is_super_admin ||
+        userRole?.role === 'admin' ||
+        userRole?.role === 'management';
+
+      if (!canApprove) {
+        throw new Error('Nedostatečná oprávnění - pouze admin nebo management může schvalovat vícepráce');
+      }
+
       // Validate current status before approving
       const { data: current, error: fetchError } = await supabase
         .from('extra_works')

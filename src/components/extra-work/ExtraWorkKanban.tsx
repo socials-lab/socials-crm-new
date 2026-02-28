@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import type { ExtraWork, ExtraWorkStatus } from '@/types/crm';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -33,18 +34,22 @@ interface KanbanColumnProps {
   targetStatus: ExtraWorkStatus;
 }
 
-function KanbanCard({ 
-  work, 
+function KanbanCard({
+  work,
   onUpdate,
-}: { 
-  work: ExtraWork; 
+}: {
+  work: ExtraWork;
   onUpdate: (id: string, data: Partial<ExtraWork>) => void;
 }) {
   const { getClientById, getColleagueById, approveExtraWork, completeExtraWork } = useCRMData();
+  const { isSuperAdmin, role } = useUserRole();
   const { toast } = useToast();
   const client = getClientById(work.client_id);
   const colleague = getColleagueById(work.colleague_id);
   const upsoldBy = work.upsold_by_id ? getColleagueById(work.upsold_by_id) : null;
+
+  // Permission check: only admin/management can approve extra work
+  const canApprove = isSuperAdmin || role === 'admin' || role === 'management';
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -56,6 +61,16 @@ function KanbanCard({
   };
 
   const handleStatusChange = async (newStatus: ExtraWorkStatus) => {
+    // Permission check for approval actions
+    if (work.status === 'pending_approval' && newStatus !== 'pending_approval' && !canApprove) {
+      toast({
+        title: 'Nedostatečná oprávnění',
+        description: 'Pouze admin nebo management může schvalovat vícepráce.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Use proper status transition helpers
     if (newStatus === 'in_progress' && work.status === 'pending_approval') {
       await approveExtraWork(work.id);
@@ -65,7 +80,7 @@ function KanbanCard({
       });
       return;
     }
-    
+
     if (newStatus === 'ready_to_invoice' && work.status === 'in_progress') {
       await completeExtraWork(work.id);
       toast({
@@ -126,15 +141,15 @@ function KanbanCard({
           <Select
             value={work.status}
             onValueChange={(val) => handleStatusChange(val as ExtraWorkStatus)}
-            disabled={work.status === 'invoiced'}
+            disabled={work.status === 'invoiced' || (work.status === 'pending_approval' && !canApprove)}
           >
-            <SelectTrigger className="h-6 w-28 text-xs border-0 bg-muted/50 px-2">
+            <SelectTrigger className={cn("h-6 w-28 text-xs border-0 bg-muted/50 px-2", (work.status === 'pending_approval' && !canApprove) && "opacity-70 cursor-not-allowed")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="pending_approval">Čeká</SelectItem>
-              <SelectItem value="in_progress">V procesu</SelectItem>
-              <SelectItem value="ready_to_invoice">K fakturaci</SelectItem>
+              <SelectItem value="in_progress" disabled={work.status === 'pending_approval' && !canApprove}>V procesu</SelectItem>
+              <SelectItem value="ready_to_invoice" disabled={work.status === 'pending_approval' && !canApprove}>K fakturaci</SelectItem>
               <SelectItem value="invoiced" disabled>Vyfakturováno</SelectItem>
             </SelectContent>
           </Select>

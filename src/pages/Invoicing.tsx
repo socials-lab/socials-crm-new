@@ -7,12 +7,41 @@ import { FutureInvoicing, IssuedStats } from '@/components/invoicing/FutureInvoi
 import { InvoiceHistory } from '@/components/invoicing/InvoiceHistory';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { format, startOfMonth, endOfMonth, parseISO, isAfter, isBefore, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { FileText, CheckCircle, Package, Briefcase, ChevronLeft, ChevronRight, Palette } from 'lucide-react';
+import { FileText, CheckCircle, Package, Briefcase, ChevronLeft, ChevronRight, Palette, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 const Invoicing = () => {
+  const { isSuperAdmin, role, canSeeFinancials } = useUserRole();
+
+  // Only admin, management, or finance can access invoicing
+  const canAccessInvoicing = isSuperAdmin || role === 'admin' || role === 'management' || role === 'finance' || canSeeFinancials;
+
+  // Show access denied for users without financial permissions
+  if (!canAccessInvoicing) {
+    return (
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
+        <PageHeader
+          title="🧾 Fakturace"
+          titleAccent="měsíční"
+          description="Správa měsíční fakturace a historie vydaných faktur"
+        />
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Přístup omezen</h3>
+            <p className="text-muted-foreground max-w-md">
+              Tato sekce je dostupná pouze pro uživatele s finančními oprávněními.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
