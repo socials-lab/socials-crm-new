@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { serviceTierConfigs } from '@/constants/services';
 import type { Service, ServiceCategory, ServiceType, CoreServicePricing } from '@/types/crm';
+import { normalizeUrlProtocol } from '@/lib/validation';
 
 interface ServiceFormDialogProps {
   open: boolean;
@@ -145,7 +146,7 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       service_type: serviceType,
       category,
       description: description.trim(),
-      external_url: externalUrl.trim() || null,
+      external_url: externalUrl.trim() ? normalizeUrlProtocol(externalUrl) : null,
       base_price: serviceType === 'core' ? (tierPricing.find(t => t.tier === 'growth')?.price || 0) : basePrice,
       currency,
       billing_type: billingType,
@@ -362,7 +363,8 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
             <Label htmlFor="externalUrl">Externí URL</Label>
             <Input
               id="externalUrl"
-              type="url"
+              type="text"
+              inputMode="url"
               value={externalUrl}
               onChange={(e) => setExternalUrl(e.target.value)}
               placeholder="https://socials.cz/sluzby/..."

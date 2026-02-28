@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { normalizeUrlProtocol } from '@/lib/validation';
 
 interface SelectOption {
   value: string;
@@ -63,9 +64,11 @@ export function InlineEditField({
 
   const handleSave = () => {
     const trimmed = editValue.trim();
+    const normalized = type === 'url' && trimmed ? normalizeUrlProtocol(trimmed) : trimmed;
     const original = String(value ?? '').trim();
-    if (trimmed !== original) {
-      onSave(trimmed);
+
+    if (normalized !== original) {
+      onSave(normalized);
     }
     setIsEditing(false);
   };
@@ -155,7 +158,8 @@ export function InlineEditField({
   return (
     <Input
       ref={inputRef as React.RefObject<HTMLInputElement>}
-      type={type === 'number' ? 'number' : type === 'url' ? 'url' : 'text'}
+      type={type === 'number' ? 'number' : 'text'}
+      inputMode={type === 'url' ? 'url' : undefined}
       value={editValue}
       onChange={(e) => setEditValue(e.target.value)}
       onBlur={handleSave}
