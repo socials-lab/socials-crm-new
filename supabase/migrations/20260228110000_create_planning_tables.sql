@@ -18,6 +18,7 @@ CREATE TRIGGER update_planned_engagements_updated_at
   BEFORE UPDATE ON public.planned_engagements
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
+
 ALTER TABLE public.planned_engagements ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "planned_engagements_select"
   ON public.planned_engagements
@@ -52,6 +53,7 @@ CREATE TRIGGER update_revenue_targets_updated_at
   BEFORE UPDATE ON public.revenue_targets
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
+
 ALTER TABLE public.revenue_targets ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "revenue_targets_select"
   ON public.revenue_targets

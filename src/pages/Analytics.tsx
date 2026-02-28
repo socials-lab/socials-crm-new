@@ -1,19 +1,17 @@
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnalyticsOverview } from '@/components/analytics/AnalyticsOverview';
 import { LeadsAnalytics } from '@/components/analytics/LeadsAnalytics';
 import { ClientsEngagementsAnalytics } from '@/components/analytics/ClientsEngagementsAnalytics';
 import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
+import { CreativeBoostAnalytics } from '@/components/analytics/CreativeBoostAnalytics';
+import { TeamCapacityAnalytics } from '@/components/analytics/TeamCapacityAnalytics';
+import { RevenuePlanForecast } from '@/components/analytics/RevenuePlanForecast';
+import { TeamCapacityForecast } from '@/components/analytics/TeamCapacityForecast';
+import { ExtraWorkMarginSection } from '@/components/analytics/ExtraWorkMarginSection';
+import { UpsellCommissionsAnalytics } from '@/components/analytics/UpsellCommissionsAnalytics';
+import { PeriodSelector, type PeriodMode } from '@/components/analytics/PeriodSelector';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
@@ -38,44 +36,94 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export default function Analytics() {
   const [activeTab, setActiveTab] = useState('overview');
-  const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
-  
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('month');
+  const [selectedQuarter, setSelectedQuarter] = useState(() => Math.ceil((new Date().getMonth() + 1) / 3));
+
   const { leads } = useLeadsData();
   const { getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits } = useCreativeBoostData();
   const { clients, engagements, extraWorks, colleagues, assignments, engagementMetrics, getClientById } = useCRMData();
-  const { canSeeFinancials, canAccessPage } = useUserRole();
+  const { canAccessPage } = useUserRole();
   
   // Check permissions
   const canSeeAnalytics = canAccessPage('analytics');
 
-  const goToPreviousMonth = () => {
-    if (selectedMonth === 1) {
-      setSelectedMonth(12);
-      setSelectedYear(selectedYear - 1);
-    } else {
-      setSelectedMonth(selectedMonth - 1);
-    }
-  };
+  const { periodStart, periodEnd, periodLabel, comparisonStart, comparisonEnd } = useMemo(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
 
-  const goToNextMonth = () => {
-    if (selectedMonth === 12) {
-      setSelectedMonth(1);
-      setSelectedYear(selectedYear + 1);
-    } else {
-      setSelectedMonth(selectedMonth + 1);
+    switch (periodMode) {
+      case 'month': {
+        const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
+        const monthEnd = endOfMonth(monthStart);
+        const prevMonthStart = subMonths(monthStart, 1);
+        return {
+          periodStart: monthStart,
+          periodEnd: monthEnd,
+          periodLabel: `${monthNames[selectedMonth - 1]} ${selectedYear}`,
+          comparisonStart: prevMonthStart,
+          comparisonEnd: endOfMonth(prevMonthStart),
+        };
+      }
+      case 'quarter': {
+        const qStart = (selectedQuarter - 1) * 3;
+        const quarterStart = new Date(selectedYear, qStart, 1);
+        const quarterEnd = endOfMonth(new Date(selectedYear, qStart + 2, 1));
+        const prevQuarterStart = subMonths(quarterStart, 3);
+        return {
+          periodStart: quarterStart,
+          periodEnd: quarterEnd,
+          periodLabel: `Q${selectedQuarter} ${selectedYear}`,
+          comparisonStart: prevQuarterStart,
+          comparisonEnd: endOfMonth(subMonths(quarterEnd, 3)),
+        };
+      }
+      case 'ytd': {
+        const ytdStart = new Date(selectedYear, 0, 1);
+        const ytdEnd = selectedYear === currentYear ? today : new Date(selectedYear, 11, 31);
+        const prevYtdStart = new Date(selectedYear - 1, 0, 1);
+        const prevYtdEnd = selectedYear === currentYear
+          ? new Date(selectedYear - 1, today.getMonth(), today.getDate())
+          : new Date(selectedYear - 1, 11, 31);
+        return {
+          periodStart: ytdStart,
+          periodEnd: ytdEnd,
+          periodLabel: `YTD ${selectedYear}`,
+          comparisonStart: prevYtdStart,
+          comparisonEnd: prevYtdEnd,
+        };
+      }
+      case 'year': {
+        return {
+          periodStart: new Date(selectedYear, 0, 1),
+          periodEnd: new Date(selectedYear, 11, 31),
+          periodLabel: `Rok ${selectedYear}`,
+          comparisonStart: new Date(selectedYear - 1, 0, 1),
+          comparisonEnd: new Date(selectedYear - 1, 11, 31),
+        };
+      }
+      case 'last_year': {
+        const lastYear = currentYear - 1;
+        return {
+          periodStart: new Date(lastYear, 0, 1),
+          periodEnd: new Date(lastYear, 11, 31),
+          periodLabel: `Rok ${lastYear}`,
+          comparisonStart: new Date(lastYear - 1, 0, 1),
+          comparisonEnd: new Date(lastYear - 1, 11, 31),
+        };
+      }
+      default:
+        throw new Error(`Unsupported period mode: ${periodMode}`);
     }
-  };
+  }, [periodMode, selectedMonth, selectedQuarter, selectedYear]);
 
   // =====================================================
   // OVERVIEW DATA
   // =====================================================
   const overviewData = useMemo(() => {
-    const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
-    const periodEnd = new Date(selectedYear, selectedMonth, 0);
-    const prevPeriodStart = subMonths(periodStart, 1);
-    const prevPeriodEnd = endOfMonth(prevPeriodStart);
+    const prevPeriodStart = comparisonStart;
+    const prevPeriodEnd = comparisonEnd;
 
     // Active clients for current period
     const activeClientsForPeriod = clients.filter(c => {
@@ -200,15 +248,14 @@ export default function Analytics() {
         pendingExtraWork,
       },
     };
-  }, [selectedYear, selectedMonth, clients, engagements, engagementMetrics, getClientById, extraWorks, leads, getClientMonthSummaries]);
+  }, [comparisonEnd, comparisonStart, periodEnd, periodStart, selectedMonth, selectedYear, clients, engagements, engagementMetrics, getClientById, extraWorks, leads, getClientMonthSummaries]);
 
   // =====================================================
   // LEADS DATA
   // =====================================================
   const leadsData = useMemo(() => {
-    const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
-    const periodEnd = new Date(selectedYear, selectedMonth, 0);
-    const prevPeriodStart = subMonths(periodStart, 1);
+    const prevPeriodStart = comparisonStart;
+    const prevPeriodEnd = comparisonEnd;
 
     // Leads for current period
     const currentPeriodLeads = leads.filter(l => {
@@ -218,7 +265,7 @@ export default function Analytics() {
 
     const prevPeriodLeads = leads.filter(l => {
       const created = new Date(l.created_at);
-      return created >= prevPeriodStart && created < periodStart;
+      return created >= prevPeriodStart && created <= prevPeriodEnd;
     });
 
     // All active leads
@@ -404,16 +451,14 @@ export default function Analytics() {
       totalWonValue,
       wonDealsCount,
     };
-  }, [selectedYear, selectedMonth, leads, colleagues]);
+  }, [comparisonEnd, comparisonStart, periodEnd, periodStart, leads, colleagues]);
 
   // =====================================================
   // CLIENTS & ENGAGEMENTS DATA
   // =====================================================
   const clientsEngagementsData = useMemo(() => {
-    const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
-    const periodEnd = new Date(selectedYear, selectedMonth, 0);
-    const prevPeriodStart = subMonths(periodStart, 1);
-    const prevPeriodEnd = endOfMonth(prevPeriodStart);
+    const prevPeriodStart = comparisonStart;
+    const prevPeriodEnd = comparisonEnd;
 
     // Active clients
     const activeClientsForPeriod = clients.filter(c => {
@@ -552,16 +597,14 @@ export default function Analytics() {
       topClientsByMargin,
       clientsByTier,
     };
-  }, [selectedYear, selectedMonth, clients, engagements, engagementMetrics]);
+  }, [comparisonEnd, comparisonStart, periodEnd, periodStart, selectedMonth, selectedYear, clients, engagements, engagementMetrics]);
 
   // =====================================================
   // FINANCE DATA
   // =====================================================
   const financeData = useMemo(() => {
-    const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
-    const periodEnd = new Date(selectedYear, selectedMonth, 0);
-    const prevPeriodStart = subMonths(periodStart, 1);
-    const prevPeriodEnd = endOfMonth(prevPeriodStart);
+    const prevPeriodStart = comparisonStart;
+    const prevPeriodEnd = comparisonEnd;
 
     // Active engagements
     const activeEngs = engagements.filter(e => {
@@ -733,7 +776,193 @@ export default function Analytics() {
         creditsTrend,
       },
     };
-  }, [selectedYear, selectedMonth, engagements, engagementMetrics, extraWorks, assignments, getClientById, colleagues, getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits]);
+  }, [comparisonEnd, comparisonStart, periodEnd, periodStart, selectedMonth, selectedYear, engagements, engagementMetrics, extraWorks, assignments, getClientById, colleagues, getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits]);
+
+  const creativeBoostData = useMemo(() => {
+    const allSummaries = getClientMonthSummaries(selectedYear, selectedMonth);
+    const prevSummaries = getClientMonthSummaries(
+      selectedMonth === 1 ? selectedYear - 1 : selectedYear,
+      selectedMonth === 1 ? 12 : selectedMonth - 1
+    );
+
+    const totalCredits = allSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
+    const prevTotalCredits = prevSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
+    const creditsChange = prevTotalCredits > 0
+      ? ((totalCredits - prevTotalCredits) / prevTotalCredits) * 100
+      : 0;
+
+    const totalRevenue = allSummaries.reduce((sum, s) => sum + s.estimatedInvoice, 0);
+    const prevTotalRevenue = prevSummaries.reduce((sum, s) => sum + s.estimatedInvoice, 0);
+    const revenueChange = prevTotalRevenue > 0
+      ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100
+      : 0;
+
+    const totalMaxCredits = allSummaries.reduce((sum, s) => sum + s.maxCredits, 0);
+    const avgUtilization = totalMaxCredits > 0 ? (totalCredits / totalMaxCredits) * 100 : 0;
+    const activeClients = allSummaries.length;
+    const avgPricePerCredit = allSummaries.length > 0
+      ? allSummaries.reduce((sum, s) => sum + s.pricePerCredit, 0) / allSummaries.length
+      : 0;
+
+    const creditsTrend = Array.from({ length: 12 }, (_, i) => {
+      const date = subMonths(periodStart, 11 - i);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+
+      const monthSummaries = getClientMonthSummaries(year, month);
+      const monthCredits = monthSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
+      const monthRevenue = monthSummaries.reduce((sum, s) => sum + s.estimatedInvoice, 0);
+      const maxCredits = monthSummaries.reduce((sum, s) => sum + s.maxCredits, 0);
+      const utilization = maxCredits > 0 ? (monthCredits / maxCredits) * 100 : 0;
+
+      return {
+        month: format(date, 'MMM', { locale: cs }),
+        credits: monthCredits,
+        revenue: monthRevenue,
+        utilization,
+      };
+    });
+
+    const periodOutputs = outputs.filter((o) => o.year === selectedYear && o.month === selectedMonth);
+
+    const creditsByTypeMap = new Map<string, number>();
+    periodOutputs.forEach((output) => {
+      const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
+      const outputType = outputTypes.find((t) => t.id === output.outputTypeId);
+      const typeName = outputType?.name || 'Neznámý typ';
+      creditsByTypeMap.set(typeName, (creditsByTypeMap.get(typeName) || 0) + credits.totalCredits);
+    });
+    const creditsByType = Array.from(creditsByTypeMap.entries())
+      .map(([type, credits]) => ({ type, credits }))
+      .sort((a, b) => b.credits - a.credits);
+
+    const creditsByColleagueMap = new Map<string, number>();
+    periodOutputs.forEach((output) => {
+      if (!output.colleagueId) return;
+      const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
+      const colleague = colleagues.find((c) => c.id === output.colleagueId);
+      const name = colleague?.full_name || 'Neznámý';
+      creditsByColleagueMap.set(name, (creditsByColleagueMap.get(name) || 0) + credits.totalCredits);
+    });
+    const creditsByColleague = Array.from(creditsByColleagueMap.entries())
+      .map(([name, credits]) => ({ name, credits }))
+      .sort((a, b) => b.credits - a.credits)
+      .slice(0, 8);
+
+    const creditsByClient = allSummaries.map((s) => ({
+      clientId: s.clientId,
+      clientName: s.clientName,
+      brandName: s.brandName,
+      usedCredits: s.usedCredits,
+      maxCredits: s.maxCredits,
+      utilizationPercent: s.maxCredits > 0 ? (s.usedCredits / s.maxCredits) * 100 : 0,
+      pricePerCredit: s.pricePerCredit,
+      revenue: s.estimatedInvoice,
+    })).sort((a, b) => b.revenue - a.revenue);
+
+    return {
+      totalCredits,
+      totalRevenue,
+      avgUtilization,
+      activeClients,
+      avgPricePerCredit,
+      creditsTrend: creditsTrend.map(({ month, credits, revenue }) => ({ month, credits, revenue })),
+      utilizationTrend: creditsTrend.map(({ month, utilization }) => ({ month, percent: utilization })),
+      creditsByType,
+      creditsByColleague,
+      creditsByClient,
+      creditsChange,
+      revenueChange,
+    };
+  }, [calculateOutputCredits, colleagues, getClientMonthSummaries, outputTypes, outputs, periodStart, selectedMonth, selectedYear]);
+
+  const teamData = useMemo(() => {
+    const activeColleaguesList = colleagues.filter((c) => c.status === 'active');
+    const activeColleagues = activeColleaguesList.length;
+
+    const activeEngs = engagements.filter((e) => {
+      const start = new Date(e.start_date);
+      const end = e.end_date ? new Date(e.end_date) : null;
+      return e.status === 'active' && start <= periodEnd && (!end || end >= periodStart);
+    });
+
+    const mrr = activeEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const totalTeamCost = assignments
+      .filter((a) => activeEngs.some((e) => e.id === a.engagement_id))
+      .reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
+
+    const avgCostPerEngagement = activeEngs.length > 0 ? totalTeamCost / activeEngs.length : 0;
+    const revenuePerColleague = activeColleagues > 0 ? mrr / activeColleagues : 0;
+
+    const colleagueWorkload = activeColleaguesList.map((c) => {
+      const colleagueAssignments = assignments.filter((a) =>
+        a.colleague_id === c.id && activeEngs.some((e) => e.id === a.engagement_id)
+      );
+      const revenue = colleagueAssignments.reduce((sum, a) => {
+        const eng = activeEngs.find((e) => e.id === a.engagement_id);
+        return sum + (eng?.monthly_fee || 0);
+      }, 0);
+      return {
+        name: c.full_name.split(' ')[0] || c.full_name,
+        assignments: colleagueAssignments.length,
+        revenue,
+      };
+    }).sort((a, b) => b.assignments - a.assignments).slice(0, 10);
+
+    const costModels = ['hourly', 'fixed_monthly', 'percentage'] as const;
+    const costBreakdown = costModels.map((model) => {
+      const modelAssignments = assignments.filter((a) =>
+        a.cost_model === model && activeEngs.some((e) => e.id === a.engagement_id)
+      );
+      return {
+        costModel: model,
+        amount: modelAssignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0),
+        count: modelAssignments.length,
+      };
+    }).filter((c) => c.count > 0);
+
+    const topRevenueGenerators = activeColleaguesList.map((c) => {
+      const colleagueAssignments = assignments.filter((a) =>
+        a.colleague_id === c.id && activeEngs.some((e) => e.id === a.engagement_id)
+      );
+      const engagementCount = new Set(colleagueAssignments.map((a) => a.engagement_id)).size;
+      const revenue = colleagueAssignments.reduce((sum, a) => {
+        const eng = activeEngs.find((e) => e.id === a.engagement_id);
+        return sum + (eng?.monthly_fee || 0);
+      }, 0);
+      return {
+        name: c.full_name,
+        revenue,
+        engagements: engagementCount,
+      };
+    }).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+
+    const employees = activeColleaguesList.filter((c) => !c.is_freelancer);
+    const freelancers = activeColleaguesList.filter((c) => c.is_freelancer);
+
+    const employeeCost = assignments
+      .filter((a) => employees.some((e) => e.id === a.colleague_id) && activeEngs.some((e) => e.id === a.engagement_id))
+      .reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
+    const freelancerCost = assignments
+      .filter((a) => freelancers.some((f) => f.id === a.colleague_id) && activeEngs.some((e) => e.id === a.engagement_id))
+      .reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
+
+    const freelancerVsEmployee = [
+      { type: 'Interní', count: employees.length, cost: employeeCost },
+      { type: 'Freelanceři', count: freelancers.length, cost: freelancerCost },
+    ];
+
+    return {
+      activeColleagues,
+      totalTeamCost,
+      avgCostPerEngagement,
+      revenuePerColleague,
+      colleagueWorkload,
+      costBreakdown,
+      topRevenueGenerators,
+      freelancerVsEmployee,
+    };
+  }, [assignments, colleagues, engagements, periodEnd, periodStart]);
 
   if (!canSeeAnalytics) {
     return (
@@ -754,44 +983,30 @@ export default function Analytics() {
         description="Kompletní přehled výkonu agentury"
       />
 
-      {/* Period Selector */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Rok:</span>
-          <Select 
-            value={selectedYear.toString()} 
-            onValueChange={(v) => setSelectedYear(Number(v))}
-          >
-            <SelectTrigger className="w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[2023, 2024, 2025, 2026].map(year => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm font-medium w-24 text-center">
-            {monthNames[selectedMonth - 1]}
-          </span>
-          <Button variant="outline" size="icon" onClick={goToNextMonth}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <PeriodSelector
+        periodMode={periodMode}
+        setPeriodMode={setPeriodMode}
+        selectedYear={selectedYear}
+        setSelectedYear={setSelectedYear}
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+        selectedQuarter={selectedQuarter}
+        setSelectedQuarter={setSelectedQuarter}
+        periodLabel={periodLabel}
+        periodStart={periodStart}
+        periodEnd={periodEnd}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex lg:grid-cols-8">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
           <TabsTrigger value="leads">Leady</TabsTrigger>
-          <TabsTrigger value="clients">Klienti & Zakázky</TabsTrigger>
+          <TabsTrigger value="clients">Klienti</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
+          <TabsTrigger value="upsells">Upselly</TabsTrigger>
+          <TabsTrigger value="creative-boost">Creative Boost</TabsTrigger>
+          <TabsTrigger value="team">Tým</TabsTrigger>
+          <TabsTrigger value="plan-forecast">Plán & Forecast</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -819,11 +1034,55 @@ export default function Analytics() {
         </TabsContent>
 
         <TabsContent value="finance" className="mt-6">
-          <FinanceAnalytics
+          <div className="space-y-8">
+            <FinanceAnalytics
+              year={selectedYear}
+              month={selectedMonth}
+              {...financeData}
+            />
+            <div className="pt-4 border-t">
+              <h2 className="text-lg font-semibold mb-4">📊 Marže víceprací</h2>
+              <ExtraWorkMarginSection
+                year={selectedYear}
+                month={selectedMonth}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="upsells" className="mt-6">
+          <UpsellCommissionsAnalytics
             year={selectedYear}
             month={selectedMonth}
-            {...financeData}
           />
+        </TabsContent>
+
+        <TabsContent value="creative-boost" className="mt-6">
+          <CreativeBoostAnalytics
+            year={selectedYear}
+            month={selectedMonth}
+            {...creativeBoostData}
+          />
+        </TabsContent>
+
+        <TabsContent value="team" className="mt-6">
+          <TeamCapacityAnalytics {...teamData} />
+        </TabsContent>
+
+        <TabsContent value="plan-forecast" className="mt-6">
+          <div className="space-y-6">
+            <RevenuePlanForecast
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+            />
+            <TeamCapacityForecast
+              engagements={engagements}
+              colleagues={colleagues}
+              assignments={assignments}
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
