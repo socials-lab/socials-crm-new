@@ -75,9 +75,9 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
         {/* Value */}
         {(() => {
           const hasServices = lead.potential_services && lead.potential_services.length > 0;
-          const totalPrice = hasServices
+          const totalPrice = lead.estimated_price || (hasServices
             ? lead.potential_services.reduce((sum, s) => sum + s.price, 0)
-            : 0;
+            : 0);
           const firstServiceName = hasServices ? lead.potential_services[0].name : lead.potential_service;
           const serviceCount = hasServices ? lead.potential_services.length : 0;
 

@@ -53,6 +53,64 @@ interface ContractData {
   products: string;
 }
 
+interface PricingService {
+  name: string;
+  price: number;
+  billing_type: "monthly" | "one_off";
+  service_type?: string | null;
+}
+
+function normalizePricingServices(rawServices: unknown[]): PricingService[] {
+  return rawServices
+    .map((serviceRaw: unknown, index: number) => {
+      const service = serviceRaw as Record<string, unknown>;
+      const price = Number(service?.price);
+      if (!Number.isFinite(price)) return null;
+
+      return {
+        name: String(service?.name || `Služba ${index + 1}`),
+        price,
+        billing_type: service?.billing_type === "one_off" ? "one_off" : "monthly",
+        service_type: typeof service?.service_type === "string" ? service.service_type : null,
+      } as PricingService;
+    })
+    .filter((service): service is PricingService => service !== null);
+}
+
+function calculateFees(
+  services: PricingService[],
+  monthlyDiscountPercent: number,
+  discountScope: "core_only" | "all_services"
+): { monthlyFee: number; setupFee: number } {
+  const coreMonthly = services
+    .filter((s) => s.billing_type === "monthly" && s.service_type === "core")
+    .reduce((sum, s) => sum + s.price, 0);
+
+  const addonMonthly = services
+    .filter((s) => s.billing_type === "monthly" && s.service_type !== "core")
+    .reduce((sum, s) => sum + s.price, 0);
+
+  const totalMonthly = coreMonthly + addonMonthly;
+  const setupFee = services
+    .filter((s) => s.billing_type === "one_off")
+    .reduce((sum, s) => sum + s.price, 0);
+
+  const normalizedDiscountPercent = Number.isFinite(monthlyDiscountPercent)
+    ? Math.min(100, Math.max(0, monthlyDiscountPercent))
+    : 0;
+
+  const discountBase = discountScope === "all_services" ? totalMonthly : coreMonthly;
+  const discountedBase = normalizedDiscountPercent > 0
+    ? Math.round(discountBase * (1 - normalizedDiscountPercent / 100))
+    : discountBase;
+
+  const monthlyFee = discountScope === "all_services"
+    ? discountedBase
+    : discountedBase + addonMonthly;
+
+  return { monthlyFee, setupFee };
+}
+
 // Step 1: Get auth token
 async function getAuthToken(accessKey: string, secretKey: string): Promise<string> {
   const response = await fetchWithTimeout(`${DIGISIGN_API_URL}/auth-token`, {
@@ -325,8 +383,7 @@ serve(async (req) => {
         onboarding_signatories,
         potential_services,
         digisign_id,
-        estimated_price,
-        owner_name
+        estimated_price
       `)
       .eq("id", lead_id)
       .single();
@@ -396,9 +453,23 @@ serve(async (req) => {
       .filter(Boolean)
       .join(", ");
 
-    // Build products string from potential_services
-    // potential_services is a JSONB array of LeadService objects with { name, price, billing_type, ... }
-    const services = lead.potential_services || [];
+    // Prefer latest active offer snapshot pricing to keep DigiSign contract
+    // aligned with what the client saw in the offer (including monthly discounts).
+    const { data: latestOffer } = await supabaseAdmin
+      .from("public_offers")
+      .select("services, monthly_discount_percent, discount_scope, created_at")
+      .eq("lead_id", lead_id)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const leadServices = Array.isArray(lead.potential_services) ? lead.potential_services : [];
+    const offerServices = Array.isArray(latestOffer?.services) ? latestOffer.services : [];
+
+    const normalizedOfferServices = normalizePricingServices(offerServices);
+    const normalizedLeadServices = normalizePricingServices(leadServices);
+    const services = normalizedOfferServices.length > 0 ? normalizedOfferServices : normalizedLeadServices;
 
     // Validate services exist
     if (services.length === 0) {
@@ -408,17 +479,11 @@ serve(async (req) => {
       );
     }
 
-    const products = services.map((s: { name: string }) => s.name).join(", ");
+    const products = services.map((s) => s.name).join(", ");
 
-    // Calculate monthly fee from services (sum of monthly billing_type services)
-    const monthlyFee = services
-      .filter((s: { billing_type: string }) => s.billing_type === 'monthly')
-      .reduce((sum: number, s: { price: number }) => sum + (s.price || 0), 0);
-
-    // Calculate one-off fee (sum of one_off billing_type services)
-    const setupFee = services
-      .filter((s: { billing_type: string }) => s.billing_type === 'one_off')
-      .reduce((sum: number, s: { price: number }) => sum + (s.price || 0), 0);
+    const monthlyDiscountPercent = Number(latestOffer?.monthly_discount_percent ?? 0);
+    const discountScope = latestOffer?.discount_scope === "all_services" ? "all_services" : "core_only";
+    const { monthlyFee, setupFee } = calculateFees(services, monthlyDiscountPercent, discountScope);
 
     // Validate monthly fee is present (required), setup fee is optional
     if (monthlyFee <= 0) {
@@ -458,7 +523,7 @@ serve(async (req) => {
 // Step 3: Create envelope
   console.log("Creating envelope...");
   const envelopeName = `Smlouva o spolupráci - ${lead.company_name}`;
-  const signatureName = lead.owner_name || 'Socials';
+  const signatureName = 'Socials';
   const emailBody = `Dobrý den,\n\nprosím o podpis přiložené smlouvy o spolupráci mezi společností ${lead.company_name} a Socials s.r.o.\n\nDěkujeme,\n${signatureName}`;
   const { envelopeId, selfLink } = await createEnvelope(digisignToken, envelopeName, emailBody);
   console.log(`Envelope created: ${envelopeId}`);

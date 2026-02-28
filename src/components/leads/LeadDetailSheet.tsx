@@ -133,9 +133,23 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const contractReadiness = useMemo(() => {
     const leadServices = lead?.potential_services || [];
     const signatories = lead?.onboarding_signatories || [];
-    const monthlyFee = leadServices
+
+    const monthlyFromServices = leadServices
       .filter((s: LeadService) => s.billing_type === 'monthly')
       .reduce((sum: number, s: LeadService) => sum + (s.price || 0), 0);
+
+    const oneOffFromServices = leadServices
+      .filter((s: LeadService) => s.billing_type === 'one_off')
+      .reduce((sum: number, s: LeadService) => sum + (s.price || 0), 0);
+
+    // estimated_price is synced from latest active offer total in useLeadsData,
+    // so prefer it to keep DigiSign preview aligned with discounted offer totals.
+    const estimatedTotal = Number(lead?.estimated_price || 0);
+    const monthlyFromEstimated = estimatedTotal > 0
+      ? Math.max(estimatedTotal - oneOffFromServices, 0)
+      : 0;
+
+    const monthlyFee = monthlyFromEstimated > 0 ? monthlyFromEstimated : monthlyFromServices;
 
     const allSignatoriesHavePhone = signatories.length > 0 && signatories.every((s: { phone?: string }) => s.phone && s.phone.trim() !== '');
     const allSignatoriesHaveEmail = signatories.length > 0 && signatories.every((s: { email?: string }) => s.email && s.email.trim() !== '');
@@ -149,7 +163,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
       monthlyFee,
       isReady: leadServices.length > 0 && monthlyFee > 0 && signatories.length > 0 && allSignatoriesHavePhone && allSignatoriesHaveEmail,
     };
-  }, [lead?.potential_services, lead?.onboarding_signatories]);
+  }, [lead?.potential_services, lead?.onboarding_signatories, lead?.estimated_price]);
 
   if (!lead) return null;
 
@@ -651,9 +665,9 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
               {/* Total price */}
               {(() => {
                 const hasServices = lead.potential_services && lead.potential_services.length > 0;
-                const totalPrice = hasServices
+                const totalPrice = lead.estimated_price || (hasServices
                   ? lead.potential_services.reduce((sum, s) => sum + s.price, 0)
-                  : 0;
+                  : 0);
                 const hasMonthlyServices = hasServices && lead.potential_services.some(s => s.billing_type === 'monthly');
                 return (
                   <div className="p-3 rounded-lg bg-muted/50">
@@ -1540,9 +1554,11 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isCreatingContract}>Zrušit</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                createContract(lead.id);
-                setIsContractConfirmOpen(false);
+              onClick={async () => {
+                const result = await createContract(lead.id);
+                if (result) {
+                  setIsContractConfirmOpen(false);
+                }
               }}
               disabled={isCreatingContract || !contractReadiness.isReady}
             >

@@ -168,7 +168,7 @@ export function LeadOriginSection({ lead, onStopPropagation }: LeadOriginSection
                     ))}
                   </div>
                   <p className="text-xs font-medium pt-1">
-                    Celkem: {lead.potential_services.reduce((sum, s) => sum + s.price, 0).toLocaleString()} {lead.currency}
+                    Celkem: {(lead.estimated_price || lead.potential_services.reduce((sum, s) => sum + s.price, 0)).toLocaleString()} {lead.currency}
                     <span className="text-muted-foreground font-normal">
                       {lead.offer_type === 'retainer' ? '/měsíc' : ' jednorázově'}
                     </span>
