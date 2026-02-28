@@ -8,6 +8,13 @@ export interface PortfolioLink {
   type: 'case_study' | 'presentation' | 'reference' | 'video';
 }
 
+// Structured detail section for expandable "podrobný rozpis" in service cards
+export interface ServiceDetailSection {
+  emoji: string;
+  title: string;
+  items: string[];
+}
+
 // Service snapshot for public offer
 export interface PublicOfferService {
   id: string;
@@ -28,6 +35,7 @@ export interface PublicOfferService {
   turnaround?: string;            // Delivery time (e.g., "within 14 days")
   requirements?: string[];        // What we need from client
   start_timeline?: string;        // When we can start
+  detailed_sections?: ServiceDetailSection[];  // Expandable structured detail sections
 }
 
 // Public offer for clients
@@ -41,7 +49,7 @@ export interface PublicOffer {
   audit_summary: string | null;
   recommendation_intro: string | null;  // Why we recommend these services
   custom_note: string | null;
-  notion_url: string | null;
+  loom_url: string | null;        // Loom video URL for embed (stored in DB notion_url column)
   services: PublicOfferService[];
   portfolio_links: PortfolioLink[];
   total_price: number;
@@ -55,7 +63,6 @@ export interface PublicOffer {
   created_at: string;
   updated_at: string;
   estimated_start_date?: string;  // When collaboration can start
-  loom_url?: string;              // Loom video URL for embed
   monthly_discount_percent?: number; // % discount on monthly services (0-100)
   discount_scope?: 'core_only' | 'all_services'; // Which monthly services the discount applies to
   // Contact person info (lead owner)
@@ -68,7 +75,7 @@ export interface PublicOffer {
 export interface CreateOfferFormData {
   audit_summary: string;
   custom_note: string;
-  notion_url: string;
+  loom_url: string;
   valid_until: string;
   portfolio_links: PortfolioLink[];
 }

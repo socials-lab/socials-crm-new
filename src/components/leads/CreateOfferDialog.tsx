@@ -18,8 +18,41 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
+import type { Service, ServiceTier } from '@/types/crm';
 import { supabase } from '@/integrations/supabase/client';
+import { mergeWithDefaults } from '@/constants/serviceDefaults';
+import { getServiceDetail } from '@/constants/serviceDetails';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
+
+/** Resolve price for a selected tier from service metadata (DB or constants). Returns null if not found. */
+function resolveTierPrice(service: Service | undefined, tier: ServiceTier): number | null {
+  if (!service?.service_type) return null;
+  if (service.service_type !== 'core') return null;
+  if (!tier) return null;
+
+  // 1. DB tier_pricing: array format { tier, price }[]
+  const tp = service.tier_pricing;
+  if (Array.isArray(tp)) {
+    const found = tp.find((p: { tier?: string }) => p.tier === tier);
+    if (found && typeof found.price === 'number' && Number.isFinite(found.price)) return found.price;
+  }
+  // 2. DB tier_pricing: object format { growth: { price }, pro: {...}, elite: {...} }
+  if (tp && typeof tp === 'object' && !Array.isArray(tp) && tier in tp) {
+    const tierData = (tp as Record<string, { price?: number }>)[tier];
+    if (tierData && typeof tierData.price === 'number' && Number.isFinite(tierData.price)) return tierData.price;
+  }
+
+  // 3. Constants serviceDetails.ts
+  const detail = getServiceDetail(service.code);
+  const tierPricing = detail?.tierPricing;
+  if (tierPricing && tier in tierPricing) {
+    const tierData = tierPricing[tier as keyof typeof tierPricing];
+    if (tierData && typeof (tierData as { price?: number }).price === 'number') {
+      return (tierData as { price: number }).price;
+    }
+  }
+  return null;
+}
 
 interface CreateOfferDialogProps {
   open: boolean;
@@ -55,6 +88,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const { colleagueId } = useUserRole();
   const [auditSummary, setAuditSummary] = useState('');
   const [customNote, setCustomNote] = useState('');
+  const [loomUrl, setLoomUrl] = useState('');
   const [validUntil, setValidUntil] = useState('');
   const [portfolioLinks, setPortfolioLinks] = useState<PortfolioLink[]>(
     DEFAULT_PORTFOLIO_OPTIONS.map((p, idx) => ({ ...p, id: `portfolio-${idx}` }))
@@ -76,6 +110,18 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     if (open && lead.potential_services) {
       const initialServices: PublicOfferService[] = lead.potential_services.map(ls => {
         const serviceDetails = services.find(s => s.id === ls.service_id);
+        const merged = mergeWithDefaults(
+          ls.name,
+          serviceDetails?.default_deliverables,
+          serviceDetails?.default_frequency,
+          serviceDetails?.default_turnaround,
+          serviceDetails?.default_requirements,
+          null, // detailed_sections from defaults only (no DB column)
+        );
+
+        // Resolve tier price from service metadata when available (core + selected_tier)
+        const resolvedPrice = ls.selected_tier ? resolveTierPrice(serviceDetails, ls.selected_tier) : null;
+        const price = resolvedPrice !== null ? resolvedPrice : ls.price;
 
         return {
           id: ls.id,
@@ -84,18 +130,17 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           description: serviceDetails?.description || '',
           offer_description: null,
           selected_tier: ls.selected_tier,
-          price: ls.price,
-          original_price: ls.price,
+          price,
+          original_price: price,
           discount_reason: '',
           currency: ls.currency,
           billing_type: ls.billing_type,
-          // Pass service_type from service definition
           service_type: serviceDetails?.service_type,
-          // Use DB deliverables or empty array (no magic fallbacks)
-          deliverables: serviceDetails?.default_deliverables || [],
-          frequency: '',
-          turnaround: '',
-          requirements: [],
+          deliverables: merged.deliverables,
+          frequency: merged.frequency,
+          turnaround: merged.turnaround,
+          requirements: merged.requirements,
+          detailed_sections: merged.detailed_sections,
           start_timeline: '',
         };
       });
@@ -196,7 +241,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           audit_summary: auditSummary.trim() || null,
           recommendation_intro: null,
           custom_note: customNote.trim() || null,
-          notion_url: null,
+          notion_url: loomUrl.trim() || null,  // DB column stores Loom video URL
           // Cast to unknown to satisfy Supabase's JSONB column type (typed arrays -> Json)
           services: editableServices as unknown as Record<string, unknown>[],
           portfolio_links: portfolioLinks as unknown as Record<string, unknown>[],
@@ -249,6 +294,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const handleClose = () => {
     setAuditSummary('');
     setCustomNote('');
+    setLoomUrl('');
     setValidUntil('');
     setCreatedOfferUrl(null);
     setCopied(false);
@@ -457,6 +503,21 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                     placeholder="Těšíme se na spolupráci! V případě dotazů se neváhejte obrátit..."
                     rows={3}
                   />
+                </div>
+
+                {/* Loom video */}
+                <div className="space-y-2">
+                  <Label htmlFor="loom">Loom video k nabídce / auditu (volitelné)</Label>
+                  <Input
+                    id="loom"
+                    type="url"
+                    value={loomUrl}
+                    onChange={(e) => setLoomUrl(e.target.value)}
+                    placeholder="https://www.loom.com/share/..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Odkaz na Loom video, kde klientovi popisujete nabídku nebo výsledky auditu
+                  </p>
                 </div>
 
                 {/* Valid until */}

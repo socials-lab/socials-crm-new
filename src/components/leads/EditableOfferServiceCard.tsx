@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronUp, X, Plus, Trash2, Package, Clock, Zap, ClipboardList } from 'lucide-react';
-import type { PublicOfferService } from '@/types/publicOffer';
+import { ChevronDown, ChevronUp, X, Plus, Trash2, Package, Clock, Zap, ClipboardList, Layers } from 'lucide-react';
+import type { PublicOfferService, ServiceDetailSection } from '@/types/publicOffer';
 
 interface EditableOfferServiceCardProps {
   service: PublicOfferService;
@@ -48,7 +48,10 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
     onUpdate({ ...service, discount_reason: value });
   };
   
-  const handleFieldChange = (field: keyof PublicOfferService, value: any) => {
+  const handleFieldChange = (
+    field: 'frequency' | 'turnaround' | 'offer_description',
+    value: string,
+  ) => {
     onUpdate({ ...service, [field]: value });
   };
   
@@ -86,6 +89,48 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
   const handleRemoveRequirement = (index: number) => {
     const newRequirements = (service.requirements || []).filter((_, i) => i !== index);
     onUpdate({ ...service, requirements: newRequirements });
+  };
+
+  const sections = service.detailed_sections || [];
+
+  const handleSectionChange = (sectionIndex: number, updates: Partial<ServiceDetailSection>) => {
+    const newSections = sections.map((s, i) =>
+      i === sectionIndex ? { ...s, ...updates } : s
+    );
+    onUpdate({ ...service, detailed_sections: newSections });
+  };
+
+  const handleSectionItemChange = (sectionIndex: number, itemIndex: number, value: string) => {
+    const section = sections[sectionIndex];
+    if (!section) return;
+    const newItems = [...section.items];
+    newItems[itemIndex] = value;
+    handleSectionChange(sectionIndex, { items: newItems });
+  };
+
+  const handleAddSectionItem = (sectionIndex: number) => {
+    const section = sections[sectionIndex];
+    if (!section) return;
+    handleSectionChange(sectionIndex, { items: [...section.items, ''] });
+  };
+
+  const handleRemoveSectionItem = (sectionIndex: number, itemIndex: number) => {
+    const section = sections[sectionIndex];
+    if (!section) return;
+    const newItems = section.items.filter((_, i) => i !== itemIndex);
+    handleSectionChange(sectionIndex, { items: newItems });
+  };
+
+  const handleAddSection = () => {
+    onUpdate({
+      ...service,
+      detailed_sections: [...sections, { emoji: '📌', title: '', items: [''] }],
+    });
+  };
+
+  const handleRemoveSection = (sectionIndex: number) => {
+    const newSections = sections.filter((_, i) => i !== sectionIndex);
+    onUpdate({ ...service, detailed_sections: newSections });
   };
 
   return (
@@ -281,6 +326,80 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
                 >
                   <Plus className="h-3 w-3 mr-1" />
                   Přidat požadavek
+                </Button>
+              </div>
+            </div>
+
+            {/* Detailed Sections (Podrobný rozpis) */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Layers className="h-4 w-4 text-primary" />
+                <span>Podrobný rozpis</span>
+              </div>
+              <div className="space-y-3 pl-4 border-l-2 border-muted">
+                {sections.map((section, sectionIndex) => (
+                  <div key={sectionIndex} className="space-y-2 p-2 rounded-md bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={section.emoji}
+                        onChange={(e) => handleSectionChange(sectionIndex, { emoji: e.target.value })}
+                        className="w-12 h-8 text-center text-lg"
+                        placeholder="📌"
+                      />
+                      <Input
+                        value={section.title}
+                        onChange={(e) => handleSectionChange(sectionIndex, { title: e.target.value })}
+                        placeholder="Název sekce"
+                        className="h-8 text-sm flex-1"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveSection(sectionIndex)}
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="space-y-2 pl-4">
+                      {section.items.map((item, itemIndex) => (
+                        <div key={itemIndex} className="flex items-center gap-2">
+                          <Input
+                            value={item}
+                            onChange={(e) => handleSectionItemChange(sectionIndex, itemIndex, e.target.value)}
+                            placeholder="Položka"
+                            className="h-8 text-sm flex-1"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveSectionItem(sectionIndex, itemIndex)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleAddSectionItem(sectionIndex)}
+                        className="h-7 text-xs"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Přidat položku
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddSection}
+                  className="h-7 text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Přidat sekci
                 </Button>
               </div>
             </div>

@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
 import socialsLogo from '@/assets/socials-logo.png';
 import { supabase } from '@/integrations/supabase/client';
-import { TEST_OFFER } from '@/data/publicOffersMockData';
+import { TEST_OFFER, ADDON_ONLY_OFFER } from '@/data/publicOffersMockData';
 
 // Portfolio icon by type
 function getPortfolioIcon(type: PortfolioLink['type']) {
@@ -143,7 +143,8 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
   // Use deliverables if available, otherwise parse offer_description
   const hasDeliverables = service.deliverables && service.deliverables.length > 0;
   const hasRequirements = service.requirements && service.requirements.length > 0;
-  const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline;
+  const hasDetailedSections = service.detailed_sections && service.detailed_sections.length > 0;
+  const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline || hasDetailedSections || hasRequirements;
 
   // Parse offer description into bullet points if no deliverables
   const descriptionLines = !hasDeliverables 
@@ -288,6 +289,31 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Detailed sections (second-level expandable) */}
+              {hasDetailedSections && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-muted-foreground">Podrobný rozpis</p>
+                  {service.detailed_sections!.map((section, sectionIdx) => (
+                    <Collapsible key={sectionIdx}>
+                      <CollapsibleTrigger className="flex items-center gap-2 w-full text-left p-3 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors [&[data-state=open]>svg]:rotate-180">
+                        <span className="text-lg">{section.emoji || '📌'}</span>
+                        <span className="text-sm font-medium">{section.title || 'Sekce'}</span>
+                        <ChevronDown className="h-4 w-4 ml-auto shrink-0 transition-transform" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <ul className="mt-2 pl-4 space-y-1.5 border-l-2 border-muted ml-2">
+                          {(section.items || []).filter(Boolean).map((item, itemIdx) => (
+                            <li key={itemIdx} className="text-sm text-muted-foreground py-0.5">
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
                 </div>
               )}
             </div>
@@ -469,9 +495,14 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         return;
       }
 
-      // Test offer fallback
+      // Test offer fallbacks
       if (token === 'test-nabidka-123') {
         setOffer(TEST_OFFER);
+        setLoading(false);
+        return;
+      }
+      if (token === 'test-addon-only') {
+        setOffer(ADDON_ONLY_OFFER);
         setLoading(false);
         return;
       }
@@ -502,8 +533,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           audit_summary: data.audit_summary,
           recommendation_intro: data.recommendation_intro,
           custom_note: data.custom_note,
-          // Hard-disable legacy Notion detail link payload path
-          notion_url: null,
+          loom_url: data.notion_url || null,  // DB column notion_url stores Loom video URL
           services: (data.services as PublicOfferService[]) || [],
           portfolio_links: (data.portfolio_links as PortfolioLink[]) || [],
           total_price: data.total_price || 0,
@@ -517,7 +547,6 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString(),
           estimated_start_date: data.estimated_start_date || undefined,
-          loom_url: data.loom_url || undefined,
           monthly_discount_percent: data.monthly_discount_percent || undefined,
           discount_scope: data.discount_scope || undefined,
           owner_name: data.owner_name || undefined,
@@ -602,6 +631,17 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const totalOneOff = offer.services
     .filter(s => s.billing_type === 'one_off')
     .reduce((sum, s) => sum + s.price, 0);
+
+  const discountPercent = offer.monthly_discount_percent || 0;
+  const scope = offer.discount_scope || 'core_only';
+  const discountBase = scope === 'all_services' ? totalMonthly : coreMonthly;
+  const discountedBase = discountPercent > 0
+    ? Math.round(discountBase * (1 - discountPercent / 100))
+    : discountBase;
+  const monthlyAfterDiscount = scope === 'all_services'
+    ? discountedBase
+    : discountedBase + addonMonthly;
+  const displayTotal = monthlyAfterDiscount + totalOneOff;
 
   const onboardingUrl = `/onboarding/${offer.lead_id}`;
 
@@ -688,24 +728,28 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 {offer.audit_summary}
               </p>
             </div>
+          </section>
+        )}
 
-            {/* Loom video embed */}
-            {offer.loom_url && (
-              <div className="mt-6 rounded-xl overflow-hidden border shadow-sm">
+        {/* Loom video embed */}
+        {offer.loom_url && (() => {
+          const embedUrl = offer.loom_url.replace(/\/share\//, '/embed/');
+          return (
+            <section className="mb-10">
+              <div className="rounded-xl overflow-hidden border shadow-sm">
                 <AspectRatio ratio={16 / 9}>
                   <iframe
-                    src={offer.loom_url}
+                    src={embedUrl}
                     title="Video k nabídce"
                     className="w-full h-full"
                     frameBorder="0"
-                    allowFullScreen
-                    allow="autoplay; fullscreen"
+                    allow="autoplay; fullscreen; picture-in-picture"
                   />
                 </AspectRatio>
               </div>
-            )}
-          </section>
-        )}
+            </section>
+          );
+        })()}
 
         {/* Services - As recommendations */}
         <section className="mb-10">
@@ -718,8 +762,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </span>
           </h2>
           
-          {/* Service structure explanation */}
-          <ServiceStructureExplanation />
+          {/* Service structure explanation - only for mixed core + addon offers */}
+          {offer.services.some(s => s.service_type === 'core') && offer.services.some(s => s.service_type === 'addon') && (
+            <ServiceStructureExplanation />
+          )}
           
           {/* Group services by type */}
           {(() => {
@@ -727,8 +773,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             const addonServices = offer.services.filter(s => s.service_type === 'addon');
             const otherServices = offer.services.filter(s => !s.service_type);
             
-            // If no service_type set, show all in one list
-            if (coreServices.length === 0 && addonServices.length === 0) {
+            // If no core services, show all in one flat list (addon-only / legacy)
+            if (coreServices.length === 0) {
               return (
                 <div className="space-y-4">
                   {offer.services.map((service, idx) => (
@@ -786,58 +832,51 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* Pricing Summary - Clean */}
         <section className="mb-10">
           <div className="p-5 rounded-xl border bg-card space-y-3">
-            {totalMonthly > 0 && (() => {
-              const discountPercent = offer.monthly_discount_percent || 0;
-              const scope = offer.discount_scope || 'core_only';
-              const discountBase = scope === 'all_services' ? totalMonthly : coreMonthly;
-              const discountedBase = discountPercent > 0
-                ? Math.round(discountBase * (1 - discountPercent / 100))
-                : discountBase;
-              const discountAmount = discountBase - discountedBase;
-              const totalAfterDiscount = scope === 'all_services'
-                ? discountedBase
-                : discountedBase + addonMonthly;
-
-              return (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Měsíční cena</span>
-                    <div className="text-right">
-                      {discountPercent > 0 ? (
-                        <>
-                          <span className="text-base text-muted-foreground line-through mr-2">
-                            {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
-                          </span>
-                          <span className="text-2xl font-bold text-foreground">
-                            {totalAfterDiscount.toLocaleString('cs-CZ')} {offer.currency}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-2xl font-bold text-foreground">
+            {totalMonthly > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Měsíční cena</span>
+                  <div className="text-right">
+                    {discountPercent > 0 ? (
+                      <>
+                        <span className="text-base text-muted-foreground line-through mr-2">
                           {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                         </span>
-                      )}
-                      <span className="text-sm text-muted-foreground ml-1">/měsíc</span>
-                    </div>
+                        <span className="text-2xl font-bold text-foreground">
+                          {monthlyAfterDiscount.toLocaleString('cs-CZ')} {offer.currency}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-2xl font-bold text-foreground">
+                        {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
+                      </span>
+                    )}
+                    <span className="text-sm text-muted-foreground ml-1">/měsíc</span>
                   </div>
-                  {discountPercent > 0 && (
-                    <div className="flex items-center justify-between text-sm text-green-600">
-                      <span>Sleva {discountPercent}% {scope === 'all_services' ? 'na všechny služby' : 'na core služby'} při odběru všech služeb</span>
-                      <span className="font-medium">-{discountAmount.toLocaleString('cs-CZ')} {offer.currency}/měs</span>
-                    </div>
-                  )}
                 </div>
-              );
-            })()}
-
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="space-y-1">
-                {totalOneOff > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    + jednorázově {totalOneOff.toLocaleString('cs-CZ')} {offer.currency}
-                  </p>
+                {discountPercent > 0 && (
+                  <div className="flex items-center justify-between text-sm text-green-600">
+                    <span>Sleva {discountPercent}% {scope === 'all_services' ? 'na všechny služby' : 'na core služby'} při odběru všech služeb</span>
+                    <span className="font-medium">-{(discountBase - discountedBase).toLocaleString('cs-CZ')} {offer.currency}/měs</span>
+                  </div>
                 )}
               </div>
+            )}
+
+            {totalOneOff > 0 && (
+              <div className="flex items-center justify-between pt-2 border-t">
+                <span className="text-sm text-muted-foreground">Jednorázově</span>
+                <span className="text-sm font-medium">
+                  {totalOneOff.toLocaleString('cs-CZ')} {offer.currency}
+                </span>
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              Ceny jsou uvedeny bez DPH. Při měsíční spolupráci fakturujeme průběžně dle dohodnutého rozsahu.
+            </p>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-2">
               <Button
                 asChild
                 size="lg"
@@ -945,7 +984,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur border-t shadow-lg sm:hidden safe-area-bottom">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="font-bold">{(totalMonthly + totalOneOff).toLocaleString('cs-CZ')} {offer.currency}</p>
+            <p className="font-bold">{displayTotal.toLocaleString('cs-CZ')} {offer.currency}</p>
             <p className="text-xs text-muted-foreground">
               {totalMonthly > 0 ? '/měsíc' : 'celkem'}
             </p>
