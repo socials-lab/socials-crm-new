@@ -60,6 +60,7 @@ serve(async (req) => {
         ico: data.ico || null,
         company_name: data.company_name,
         dic: data.dic || null,
+        billing_country: data.billing_country || null,
         billing_street: data.billing_street || null,
         billing_city: data.billing_city || null,
         billing_zip: data.billing_zip || null,

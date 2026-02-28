@@ -45,6 +45,7 @@ const formSchema = z.object({
   ico: z.string().optional().or(z.literal('')),
   company_name: z.string().min(1, 'Název firmy je povinný'),
   dic: z.string().optional(),
+  billing_country: z.string().optional(),
   billing_street: z.string().min(1, 'Ulice je povinná'),
   billing_city: z.string().min(1, 'Město je povinné'),
   billing_zip: z.string().min(5, 'PSČ je povinné'),
@@ -85,6 +86,7 @@ export default function ApplicantOnboardingForm() {
   const [aresValidated, setAresValidated] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [noIco, setNoIco] = useState(false);
+  const [billingCountry, setBillingCountry] = useState<'CZ' | 'SK'>('CZ');
   const [birthdayOpen, setBirthdayOpen] = useState(false);
 
   const form = useForm<FormData>({
@@ -100,6 +102,7 @@ export default function ApplicantOnboardingForm() {
       ico: '',
       company_name: '',
       dic: '',
+      billing_country: 'Česká republika',
       billing_street: '',
       billing_city: '',
       billing_zip: '',
@@ -158,6 +161,7 @@ export default function ApplicantOnboardingForm() {
           ico: a.ico || '',
           company_name: a.company_name || '',
           dic: a.dic || '',
+          billing_country: a.billing_country || 'Česká republika',
           billing_street: a.billing_street || '',
           billing_city: a.billing_city || '',
           billing_zip: a.billing_zip || '',
@@ -165,6 +169,11 @@ export default function ApplicantOnboardingForm() {
           bank_account: a.bank_account || '',
         });
 
+        if (a.billing_country === 'Slovensko') {
+          setBillingCountry('SK');
+        } else {
+          setBillingCountry('CZ');
+        }
         if (a.ico) setAresValidated(true);
         if (a.avatar_url) form.setValue('avatar_url', a.avatar_url);
         setIsLoading(false);
@@ -182,6 +191,7 @@ export default function ApplicantOnboardingForm() {
     form.setValue('company_name', company.name, { shouldDirty: true, shouldValidate: true });
     form.setValue('ico', company.ico, { shouldDirty: true, shouldValidate: true });
     form.setValue('dic', company.dic || '', { shouldDirty: true });
+    form.setValue('billing_country', 'Česká republika', { shouldDirty: true });
     form.setValue('billing_street', company.billing_street, { shouldDirty: true });
     form.setValue('billing_city', company.billing_city, { shouldDirty: true });
     form.setValue('billing_zip', company.billing_zip, { shouldDirty: true });
@@ -610,11 +620,50 @@ export default function ApplicantOnboardingForm() {
                 Fakturační údaje
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {noIco ? 'Vyplň fakturační údaje ručně.' : 'Vyhledej firmu podle názvu a my doplníme zbytek z ARES.'}
+                {noIco
+                  ? 'Vyplň fakturační údaje ručně.'
+                  : billingCountry === 'CZ'
+                    ? 'Vyhledej firmu podle názvu a my doplníme zbytek z ARES.'
+                    : 'Vyplň své IČO a fakturační údaje ručně.'}
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!noIco && (
+              <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+                <button
+                  type="button"
+                  className={cn(
+                    "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                    billingCountry === 'CZ'
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => {
+                    setBillingCountry('CZ');
+                    setAresValidated(false);
+                    form.setValue('billing_country', 'Česká republika', { shouldDirty: true });
+                  }}
+                >
+                  🇨🇿 Česko
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                    billingCountry === 'SK'
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => {
+                    setBillingCountry('SK');
+                    setAresValidated(false);
+                    form.setValue('billing_country', 'Slovensko', { shouldDirty: true });
+                  }}
+                >
+                  🇸🇰 Slovensko
+                </button>
+              </div>
+
+              {!noIco && billingCountry === 'CZ' && (
                 <FormField
                   control={form.control}
                   name="company_name"
@@ -647,6 +696,61 @@ export default function ApplicantOnboardingForm() {
                 />
               )}
 
+              {!noIco && billingCountry === 'SK' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="ico"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>IČO</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="12345678"
+                              {...field}
+                              onChange={(event) => {
+                                field.onChange(event);
+                                setAresValidated(false);
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>Slovenské IČO</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dic"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>DIČ / IČ DPH</FormLabel>
+                          <FormControl>
+                            <Input placeholder="SK1234567890" {...field} />
+                          </FormControl>
+                          <FormDescription>Volitelné</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="company_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Názov firmy / Meno SZČO *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Názov firmy s.r.o." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+
               <label className="flex items-center gap-2 cursor-pointer text-sm">
                 <Checkbox
                   checked={noIco}
@@ -663,9 +767,9 @@ export default function ApplicantOnboardingForm() {
                 Nemám IČO
               </label>
 
-              {(aresValidated || noIco) && (
+              {(aresValidated || noIco || billingCountry === 'SK') && (
                 <div className="space-y-4 animate-fade-in">
-                  {!noIco && (
+                  {!noIco && billingCountry === 'CZ' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
