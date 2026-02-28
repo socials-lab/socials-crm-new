@@ -39,17 +39,27 @@ export function AddLeadServiceDialog({
   const [billingType, setBillingType] = useState<'monthly' | 'one_off'>('monthly');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const selectedService = services.find(s => s.id === selectedServiceId);
+  const normalizedServices = services.filter((service): service is Service => (
+    Boolean(service) &&
+    typeof service.id === 'string' &&
+    service.id.trim().length > 0
+  ));
+
+  const selectedService = normalizedServices.find(s => s.id === selectedServiceId);
   const isCoreService = selectedService?.service_type === 'core';
+  const selectedServiceTierPricing = Array.isArray(selectedService?.tier_pricing)
+    ? selectedService.tier_pricing
+    : [];
 
   const handleServiceChange = (serviceId: string) => {
     setSelectedServiceId(serviceId);
-    const service = services.find(s => s.id === serviceId);
+    const service = normalizedServices.find(s => s.id === serviceId);
     if (service) {
       setCurrency(service.currency);
       if (service.service_type === 'core') {
         setSelectedTier('growth');
-        const growthPricing = service.tier_pricing?.find(p => p.tier === 'growth');
+        const tierPricing = Array.isArray(service.tier_pricing) ? service.tier_pricing : [];
+        const growthPricing = tierPricing.find(p => p.tier === 'growth');
         setPriceInput(String(growthPricing?.price ?? 0));
       } else {
         setSelectedTier(null);
@@ -60,13 +70,11 @@ export function AddLeadServiceDialog({
 
   const handleTierChange = (tier: ServiceTier) => {
     setSelectedTier(tier);
-    if (selectedService?.tier_pricing) {
-      const tierPricing = selectedService.tier_pricing.find(p => p.tier === tier);
-      if (tierPricing?.price !== null && tierPricing?.price !== undefined) {
-        setPriceInput(String(tierPricing.price));
-      } else {
-        setPriceInput('');
-      }
+    const tierPricing = selectedServiceTierPricing.find(p => p.tier === tier);
+    if (tierPricing?.price !== null && tierPricing?.price !== undefined) {
+      setPriceInput(String(tierPricing.price));
+    } else {
+      setPriceInput('');
     }
   };
 
@@ -124,7 +132,7 @@ export function AddLeadServiceDialog({
                 <SelectValue placeholder="Vyberte službu" />
               </SelectTrigger>
               <SelectContent>
-                {services.filter(s => s.is_active).map(service => (
+                {normalizedServices.filter(s => s.is_active).map(service => (
                   <SelectItem key={service.id} value={service.id}>
                     {service.name}
                   </SelectItem>
@@ -145,7 +153,7 @@ export function AddLeadServiceDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {SERVICE_TIER_CONFIGS.map((config) => {
-                    const tierPricing = selectedService?.tier_pricing?.find(p => p.tier === config.tier);
+                    const tierPricing = selectedServiceTierPricing.find(p => p.tier === config.tier);
                     const priceLabel = tierPricing?.price 
                       ? `${tierPricing.price.toLocaleString('cs-CZ')} Kč`
                       : 'Individuální kalkulace';
