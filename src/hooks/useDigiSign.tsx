@@ -13,9 +13,17 @@ export function useDigiSign() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('digisign-create-contract', {
+      const invokePromise = supabase.functions.invoke('digisign-create-contract', {
         body: { lead_id: leadId, template_id: templateId },
       });
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Vytvoření smlouvy trvá příliš dlouho. Zkuste akci prosím znovu.'));
+        }, 90000); // 90s hard timeout for UI responsiveness
+      });
+
+      const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
 
       // Check for error in response data first (Edge Function error messages)
       if (data?.error) {

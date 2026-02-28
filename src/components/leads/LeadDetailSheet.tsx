@@ -1554,9 +1554,11 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isCreatingContract}>Zrušit</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                createContract(lead.id);
-                setIsContractConfirmOpen(false);
+              onClick={async () => {
+                const result = await createContract(lead.id);
+                if (result) {
+                  setIsContractConfirmOpen(false);
+                }
               }}
               disabled={isCreatingContract || !contractReadiness.isReady}
             >
