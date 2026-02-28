@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -43,6 +43,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [approvalToken, setApprovalToken] = useState<string | null>(extraWork.approval_token || null);
+  const tokenPersistPromiseRef = useRef<Promise<string> | null>(null);
 
   const client = useMemo(() => getClientById(extraWork.client_id), [extraWork.client_id, getClientById]);
   const currentUserColleague = useMemo(() => colleagues.find(c => c.profile_id === user?.id), [colleagues, user?.id]);
@@ -67,15 +68,30 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
 
   const ensureApprovalToken = async (): Promise<string> => {
     if (approvalToken) return approvalToken;
-
-    const token = crypto.randomUUID();
     if (!onUpdate) {
       throw new Error('Missing update handler for approval token.');
     }
 
-    await Promise.resolve(onUpdate(extraWork.id, { approval_token: token }));
+    if (tokenPersistPromiseRef.current) {
+      return tokenPersistPromiseRef.current;
+    }
+
+    const token = crypto.randomUUID();
+    // Optimistically set local token to prevent repeated update loops while mutation is in flight.
     setApprovalToken(token);
-    return token;
+
+    const persistPromise = Promise.resolve(onUpdate(extraWork.id, { approval_token: token }))
+      .then(() => token)
+      .catch((error) => {
+        setApprovalToken(null);
+        throw error;
+      })
+      .finally(() => {
+        tokenPersistPromiseRef.current = null;
+      });
+
+    tokenPersistPromiseRef.current = persistPromise;
+    return persistPromise;
   };
 
   useEffect(() => {
@@ -129,15 +145,33 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     return () => {
       cancelled = true;
     };
-  }, [open, extraWork, currentUserColleague, colleague, engagement, fillTemplate]);
+  }, [
+    open,
+    extraWork.id,
+    extraWork.name,
+    extraWork.description,
+    extraWork.amount,
+    extraWork.currency,
+    extraWork.hours_worked,
+    extraWork.hourly_rate,
+    currentUserColleague,
+    colleague,
+    engagement,
+    fillTemplate,
+  ]);
 
   const handleCopyLink = async () => {
-    const token = await ensureApprovalToken();
-    const url = `${window.location.origin}/extra-work-approval/${token}`;
-    navigator.clipboard.writeText(url);
-    setLinkCopied(true);
-    setTimeout(() => setLinkCopied(false), 2000);
-    toast.success('Odkaz zkopírován do schránky');
+    try {
+      const token = await ensureApprovalToken();
+      const url = `${window.location.origin}/extra-work-approval/${token}`;
+      navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+      toast.success('Odkaz zkopírován do schránky');
+    } catch (error) {
+      console.error('Failed to copy approval link:', error);
+      toast.error('Nepodařilo se připravit schvalovací odkaz.');
+    }
   };
 
   const handleSendEmail = async () => {
@@ -157,12 +191,11 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
       return;
     }
 
-    const token = await ensureApprovalToken();
-    const approvalUrl = `${window.location.origin}/extra-work-approval/${token}`;
-
     setIsSending(true);
 
     try {
+      const token = await ensureApprovalToken();
+      const approvalUrl = `${window.location.origin}/extra-work-approval/${token}`;
       const bodyWithUrl = emailBody.includes('http') ? emailBody : `${emailBody}\n\n${approvalUrl}`;
       // Convert plain text to HTML
       const htmlBody = bodyWithUrl
