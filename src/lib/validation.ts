@@ -4,35 +4,6 @@
 import { z } from 'zod';
 
 /**
- * Normalizes URL input by prepending https:// when protocol is missing
- */
-export function normalizeUrlProtocol(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return '';
-
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-
-  return `https://${trimmed}`;
-}
-
-/**
- * Validates URL-like input with optional protocol
- */
-export function isValidUrlInput(value: string): boolean {
-  const normalized = normalizeUrlProtocol(value);
-  if (!normalized) return true;
-
-  try {
-    const parsed = new URL(normalized);
-    return Boolean(parsed.hostname);
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Validates Czech IČO checksum using modulo 11 algorithm
  * @param ico - 8 digit Czech company identification number
  * @returns true if checksum is valid

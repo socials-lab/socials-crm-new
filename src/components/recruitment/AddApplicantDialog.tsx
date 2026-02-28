@@ -32,7 +32,6 @@ import { useCRMData } from '@/hooks/useCRMData';
 import type { Applicant, ApplicantSource, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_SOURCE_LABELS, APPLICANT_STAGE_CONFIG } from '@/types/applicant';
 import { toast } from '@/components/ui/sonner';
-import { isValidUrlInput, normalizeUrlProtocol } from '@/lib/validation';
 
 const formSchema = z.object({
   full_name: z.string().min(1, 'Jméno je povinné'),
@@ -40,14 +39,8 @@ const formSchema = z.object({
   phone: z.string().optional(),
   position: z.string().min(1, 'Pozice je povinná'),
   cover_letter: z.string().optional(),
-  cv_url: z.string()
-    .transform(val => val?.trim() || '')
-    .refine(val => val === '' || isValidUrlInput(val), 'Zadejte platnou URL')
-    .transform(val => val === '' ? '' : normalizeUrlProtocol(val)),
-  video_url: z.string()
-    .transform(val => val?.trim() || '')
-    .refine(val => val === '' || isValidUrlInput(val), 'Zadejte platnou URL')
-    .transform(val => val === '' ? '' : normalizeUrlProtocol(val)),
+  cv_url: z.string().url().optional().or(z.literal('')),
+  video_url: z.string().url().optional().or(z.literal('')),
   stage: z.string(),
   owner_id: z.string().optional(),
   source: z.string(),

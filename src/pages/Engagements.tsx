@@ -69,7 +69,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/sonner';
-import { normalizeUrlProtocol } from '@/lib/validation';
 
 // Dynamic lookup for Creative Boost service ID
 const CREATIVE_BOOST_SERVICE_NAME = 'Creative Boost';
@@ -79,11 +78,6 @@ function EngagementsContent() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
-
-  const normalizeOptionalUrl = (value: string) => {
-    const trimmed = value.trim();
-    return trimmed ? normalizeUrlProtocol(trimmed) : null;
-  };
   const highlightedRef = useRef<HTMLDivElement>(null);
   const { isSuperAdmin, canSeeFinancials } = useUserRole();
 
@@ -1225,8 +1219,7 @@ function EngagementsContent() {
                         {editingOfferUrlId === engagement.id ? (
                           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             <Input
-                              type="text"
-                              inputMode="url"
+                              type="url"
                               value={tempOfferUrl}
                               onChange={(e) => setTempOfferUrl(e.target.value)}
                               className="h-8 text-sm flex-1"
@@ -1234,7 +1227,7 @@ function EngagementsContent() {
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                  safeUpdateEngagement(engagement.id, { offer_url: normalizeOptionalUrl(tempOfferUrl) }, 'Odkaz na nabídku uložen');
+                                  safeUpdateEngagement(engagement.id, { offer_url: tempOfferUrl || null }, 'Odkaz na nabídku uložen');
                                   setEditingOfferUrlId(null);
                                 } else if (e.key === 'Escape') {
                                   setEditingOfferUrlId(null);
@@ -1246,7 +1239,7 @@ function EngagementsContent() {
                               size="icon"
                               className="h-8 w-8 text-status-active"
                               onClick={() => {
-                                safeUpdateEngagement(engagement.id, { offer_url: normalizeOptionalUrl(tempOfferUrl) }, 'Odkaz na nabídku uložen');
+                                safeUpdateEngagement(engagement.id, { offer_url: tempOfferUrl || null }, 'Odkaz na nabídku uložen');
                                 setEditingOfferUrlId(null);
                               }}
                             >
@@ -1307,8 +1300,7 @@ function EngagementsContent() {
                         {editingContractUrlId === engagement.id ? (
                           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             <Input
-                              type="text"
-                              inputMode="url"
+                              type="url"
                               value={tempContractUrl}
                               onChange={(e) => setTempContractUrl(e.target.value)}
                               className="h-8 text-sm flex-1"
@@ -1316,7 +1308,7 @@ function EngagementsContent() {
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                  safeUpdateEngagement(engagement.id, { contract_url: normalizeOptionalUrl(tempContractUrl) }, 'Odkaz na smlouvu uložen');
+                                  safeUpdateEngagement(engagement.id, { contract_url: tempContractUrl || null }, 'Odkaz na smlouvu uložen');
                                   setEditingContractUrlId(null);
                                 } else if (e.key === 'Escape') {
                                   setEditingContractUrlId(null);
@@ -1328,7 +1320,7 @@ function EngagementsContent() {
                               size="icon"
                               className="h-8 w-8 text-status-active"
                               onClick={() => {
-                                safeUpdateEngagement(engagement.id, { contract_url: normalizeOptionalUrl(tempContractUrl) }, 'Odkaz na smlouvu uložen');
+                                safeUpdateEngagement(engagement.id, { contract_url: tempContractUrl || null }, 'Odkaz na smlouvu uložen');
                                 setEditingContractUrlId(null);
                               }}
                             >
@@ -1396,8 +1388,7 @@ function EngagementsContent() {
                       {editingFreeloId === engagement.id ? (
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                           <Input
-                            type="text"
-                            inputMode="url"
+                            type="url"
                             value={tempFreeloUrl}
                             onChange={(e) => setTempFreeloUrl(e.target.value)}
                             className="h-8 text-sm flex-1"
@@ -1405,7 +1396,7 @@ function EngagementsContent() {
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
-                                safeUpdateEngagement(engagement.id, { freelo_url: normalizeOptionalUrl(tempFreeloUrl) }, 'Freelo odkaz uložen');
+                                safeUpdateEngagement(engagement.id, { freelo_url: tempFreeloUrl || null }, 'Freelo odkaz uložen');
                                 setEditingFreeloId(null);
                               } else if (e.key === 'Escape') {
                                 setEditingFreeloId(null);
@@ -1417,7 +1408,7 @@ function EngagementsContent() {
                             size="icon"
                             className="h-8 w-8 text-status-active"
                             onClick={() => {
-                              safeUpdateEngagement(engagement.id, { freelo_url: normalizeOptionalUrl(tempFreeloUrl) }, 'Freelo odkaz uložen');
+                              safeUpdateEngagement(engagement.id, { freelo_url: tempFreeloUrl || null }, 'Freelo odkaz uložen');
                               setEditingFreeloId(null);
                             }}
                           >
