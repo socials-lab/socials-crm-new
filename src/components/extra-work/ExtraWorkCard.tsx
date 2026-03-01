@@ -256,7 +256,7 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                 <span>{work.billing_period}</span>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end max-w-full">
+              <div className="w-full sm:w-auto grid grid-cols-1 sm:flex sm:flex-wrap gap-2 justify-start sm:justify-end max-w-full">
                 {isPending && (
                   <>
                     {onDelete && (
@@ -265,13 +265,13 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                       </Button>
                     )}
                     {onEdit && (
-                      <Button variant="ghost" size="sm" className="h-8" onClick={() => onEdit(work)}>
+                      <Button variant="ghost" size="sm" className="h-8 w-full sm:w-auto" onClick={() => onEdit(work)}>
                         <Pencil className="h-3.5 w-3.5 mr-1" />
                         Upravit
                       </Button>
                     )}
                     {onSendApproval && (
-                      <Button size="sm" className="h-8" onClick={() => onSendApproval(work)}>
+                      <Button size="sm" className="h-8 w-full sm:w-auto" onClick={() => onSendApproval(work)}>
                         <Send className="h-3.5 w-3.5 mr-1" />
                         Odeslat ke schválení
                       </Button>
@@ -287,18 +287,18 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                       </Button>
                     )}
                     {onEdit && (
-                      <Button variant="ghost" size="sm" className="h-8" onClick={() => onEdit(work)}>
+                      <Button variant="ghost" size="sm" className="h-8 w-full sm:w-auto" onClick={() => onEdit(work)}>
                         <Pencil className="h-3.5 w-3.5 mr-1" />
                         Upravit
                       </Button>
                     )}
                     {onSendApproval && (
-                      <Button variant="outline" size="sm" className="h-8" onClick={() => onSendApproval(work)}>
+                      <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto" onClick={() => onSendApproval(work)}>
                         <Mail className="h-3.5 w-3.5 mr-1" />
                         Odeslat email
                       </Button>
                     )}
-                    <Button variant="outline" size="sm" className="h-8" onClick={handleCopyLink}>
+                    <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto" onClick={handleCopyLink}>
                       {linkCopied ? (
                         <><CheckCircle2 className="h-3.5 w-3.5 mr-1 text-green-600" /> Zkopírováno</>
                       ) : (
@@ -309,14 +309,14 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                 )}
 
                 {isClientApproved && (
-                  <Button size="sm" className="h-8" onClick={handleMarkActive}>
+                  <Button size="sm" className="h-8 w-full sm:w-auto" onClick={handleMarkActive}>
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                     Aktivovat
                   </Button>
                 )}
 
                 {work.status === 'in_progress' && !isClientApproved && onUpdate && (
-                  <Button size="sm" className="h-8" onClick={handleMoveToInvoice}>
+                  <Button size="sm" className="h-8 w-full sm:w-auto" onClick={handleMoveToInvoice}>
                     <FileText className="h-3.5 w-3.5 mr-1" />
                     K fakturaci
                   </Button>
