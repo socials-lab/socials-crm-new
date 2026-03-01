@@ -98,6 +98,10 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     setApprovalToken(extraWork.approval_token || null);
   }, [extraWork.id, extraWork.approval_token]);
 
+  const currentUserColleagueId = currentUserColleague?.id || '';
+  const colleagueName = colleague?.full_name || '';
+  const engagementName = engagement?.name || '';
+
   // Generate default email content
   useEffect(() => {
     if (!open) return;
@@ -111,8 +115,8 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
 
         if (cancelled) return;
 
-        setCcEmails([]);
-        setBccEmails([DEFAULT_GMAIL_BCC]);
+        setCcEmails((prev) => (prev.length === 0 ? prev : []));
+        setBccEmails((prev) => (prev.length === 1 && prev[0] === DEFAULT_GMAIL_BCC ? prev : [DEFAULT_GMAIL_BCC]));
 
         const hoursLine = extraWork.hours_worked && extraWork.hourly_rate
           ? `Rozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
@@ -124,15 +128,15 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
           work_description: extraWork.description ? `Popis: ${extraWork.description}` : '',
           amount: formatCurrency(extraWork.amount),
           hours_line: hoursLine,
-          engagement_line: engagement ? `Zakázka: ${engagement.name}` : '',
-          colleague_line: colleague ? `Zpracoval/a: ${colleague.full_name}` : '',
+          engagement_line: engagementName ? `Zakázka: ${engagementName}` : '',
+          colleague_line: colleagueName ? `Zpracoval/a: ${colleagueName}` : '',
           url: approvalUrl,
           signature,
         });
 
         if (!cancelled) {
-          setEmailSubject(subject);
-          setEmailBody(body);
+          setEmailSubject((prev) => (prev === subject ? prev : subject));
+          setEmailBody((prev) => (prev === body ? prev : body));
         }
       } catch (error) {
         console.error('Failed to initialize approval token:', error);
@@ -154,9 +158,9 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     extraWork.currency,
     extraWork.hours_worked,
     extraWork.hourly_rate,
-    currentUserColleague,
-    colleague,
-    engagement,
+    currentUserColleagueId,
+    colleagueName,
+    engagementName,
     fillTemplate,
   ]);
 
