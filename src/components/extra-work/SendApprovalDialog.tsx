@@ -267,17 +267,18 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
           {/* Approval link */}
           <div className="space-y-2">
             <Label>Schvalovací odkaz</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 min-w-0">
               <Input
                 value={getApprovalUrl()}
                 readOnly
-                className="font-mono text-xs"
+                className="font-mono text-xs min-w-0 flex-1"
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handleCopyLink}
                 title="Zkopírovat odkaz"
+                className="shrink-0"
               >
                 {linkCopied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               </Button>
