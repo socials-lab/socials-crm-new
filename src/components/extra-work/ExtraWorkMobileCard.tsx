@@ -28,6 +28,7 @@ interface ExtraWorkMobileCardProps {
   engagementName?: string;
   colleagueName?: string;
   isSelected: boolean;
+  canApprove?: boolean;
   onSelect: () => void;
   onStatusChange: (status: ExtraWorkStatus) => void;
   onDelete: () => void;
@@ -40,6 +41,7 @@ export function ExtraWorkMobileCard({
   engagementName,
   colleagueName,
   isSelected,
+  canApprove = true,
   onSelect,
   onStatusChange,
   onDelete,
@@ -47,6 +49,7 @@ export function ExtraWorkMobileCard({
 }: ExtraWorkMobileCardProps) {
   const config = statusConfig[work.status];
   const isInvoiced = work.status === 'invoiced';
+  const isPendingApproval = work.status === 'pending_approval';
 
   const formatCurrency = (amount: number, currency: string = 'CZK') => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -132,18 +135,19 @@ export function ExtraWorkMobileCard({
           <Select
             value={work.status}
             onValueChange={(val) => onStatusChange(val as ExtraWorkStatus)}
-            disabled={isInvoiced}
+            disabled={isInvoiced || (isPendingApproval && !canApprove)}
           >
             <SelectTrigger className={cn(
               'h-8 w-auto min-w-[140px] text-xs',
-              config.className
+              config.className,
+              (isPendingApproval && !canApprove) && 'opacity-70 cursor-not-allowed'
             )}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-popover">
               <SelectItem value="pending_approval">Čeká na schválení</SelectItem>
-              <SelectItem value="in_progress">V procesu</SelectItem>
-              <SelectItem value="ready_to_invoice">K fakturaci</SelectItem>
+              <SelectItem value="in_progress" disabled={isPendingApproval && !canApprove}>V procesu</SelectItem>
+              <SelectItem value="ready_to_invoice" disabled={isPendingApproval && !canApprove}>K fakturaci</SelectItem>
               <SelectItem value="invoiced" disabled>Vyfakturováno</SelectItem>
             </SelectContent>
           </Select>

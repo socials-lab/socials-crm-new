@@ -39,6 +39,7 @@ import { BillingPeriodDialog } from './BillingPeriodDialog';
 import { SendApprovalDialog } from './SendApprovalDialog';
 import { statusConfig } from './ExtraWorkStatusBadge';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useToast } from '@/hooks/use-toast';
 import type { ExtraWork, ExtraWorkStatus } from '@/types/crm';
 import { format } from 'date-fns';
@@ -63,6 +64,7 @@ interface ExtraWorkTableProps {
   extraWorks: ExtraWork[];
   onUpdate: (id: string, data: Partial<ExtraWork>) => void;
   onDelete: (id: string) => void;
+  canDelete?: boolean;
   filterStatus?: ExtraWorkStatus | 'all';
   onFilterStatusChange?: (status: ExtraWorkStatus | 'all') => void;
   filterClientId?: string | 'all';
@@ -79,6 +81,7 @@ export function ExtraWorkTable({
   extraWorks,
   onUpdate,
   onDelete,
+  canDelete = true,
   filterStatus = 'all',
   onFilterStatusChange,
   filterClientId = 'all',
@@ -91,7 +94,11 @@ export function ExtraWorkTable({
   onSearchChange,
 }: ExtraWorkTableProps) {
   const { clients, colleagues, getClientById, getEngagementById, getColleagueById, approveExtraWork, completeExtraWork, issuedInvoices } = useCRMData();
+  const { isSuperAdmin, role } = useUserRole();
   const { toast } = useToast();
+
+  // Permission check: only admin/management can approve extra work
+  const canApprove = isSuperAdmin || role === 'admin' || role === 'management';
   // Use controlled search if prop provided, otherwise use internal state
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const searchQuery = searchQueryProp ?? internalSearchQuery;
@@ -201,6 +208,16 @@ export function ExtraWorkTable({
     const work = extraWorks.find(w => w.id === id);
     if (!work) return;
 
+    // Permission check for approval actions
+    if (work.status === 'pending_approval' && newStatus !== 'pending_approval' && !canApprove) {
+      toast({
+        title: 'Nedostatečná oprávnění',
+        description: 'Pouze admin nebo management může schvalovat vícepráce.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // If changing to ready_to_invoice, show billing period dialog
     if (newStatus === 'ready_to_invoice') {
       setPendingStatusChange({ id, work });
@@ -284,6 +301,21 @@ export function ExtraWorkTable({
   };
 
   const handleBulkStatusChange = async (newStatus: ExtraWorkStatus) => {
+    // Check if any selected work requires approval and user doesn't have permission
+    const needsApproval = Array.from(selectedIds).some(id => {
+      const work = extraWorks.find(w => w.id === id);
+      return work?.status === 'pending_approval' && newStatus !== 'pending_approval';
+    });
+
+    if (needsApproval && !canApprove) {
+      toast({
+        title: 'Nedostatečná oprávnění',
+        description: 'Pouze admin nebo management může schvalovat vícepráce.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     for (const id of selectedIds) {
       await handleStatusChange(id, newStatus);
     }
@@ -399,28 +431,30 @@ export function ExtraWorkTable({
               <SelectItem value="ready_to_invoice">K fakturaci</SelectItem>
             </SelectContent>
           </Select>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="h-4 w-4 mr-1" />
-                Smazat ({selectedIds.size})
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Smazat vybrané vícepráce?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Tato akce je nevratná. Bude odstraněno {selectedIds.size} položek.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Zrušit</AlertDialogCancel>
-                <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive hover:bg-destructive/90">
-                  Smazat
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {canDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Smazat ({selectedIds.size})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Smazat vybrané vícepráce?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tato akce je nevratná. Bude odstraněno {selectedIds.size} položek.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive hover:bg-destructive/90">
+                    Smazat
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
           <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
             Zrušit výběr
           </Button>
@@ -562,13 +596,13 @@ export function ExtraWorkTable({
                       <Select
                         value={work.status}
                         onValueChange={(val) => handleStatusChange(work.id, val as ExtraWorkStatus)}
-                        disabled={work.status === 'invoiced'}
+                        disabled={work.status === 'invoiced' || (work.status === 'pending_approval' && !canApprove)}
                       >
-                        <SelectTrigger 
+                        <SelectTrigger
                           className={cn(
                             "h-8 w-[160px] text-xs gap-1.5",
                             config.className,
-                            work.status === 'invoiced' && "opacity-70 cursor-not-allowed"
+                            (work.status === 'invoiced' || (work.status === 'pending_approval' && !canApprove)) && "opacity-70 cursor-not-allowed"
                           )}
                         >
                           <StatusIcon status={work.status} />
@@ -578,16 +612,16 @@ export function ExtraWorkTable({
                           <SelectItem value="pending_approval" className="text-xs">
                             Čeká na schválení
                           </SelectItem>
-                          <SelectItem value="in_progress" className="text-xs">
+                          <SelectItem value="in_progress" className="text-xs" disabled={work.status === 'pending_approval' && !canApprove}>
                             V procesu
                           </SelectItem>
-                          <SelectItem value="ready_to_invoice" className="text-xs">
+                          <SelectItem value="ready_to_invoice" className="text-xs" disabled={work.status === 'pending_approval' && !canApprove}>
                             K fakturaci
                           </SelectItem>
                           <SelectItem value="invoiced" disabled className="text-xs">
                             Vyfakturováno
                           </SelectItem>
-                          <SelectItem value="rejected" className="text-xs text-red-600">
+                          <SelectItem value="rejected" className="text-xs text-red-600" disabled={work.status === 'pending_approval' && !canApprove}>
                             Zamítnuto
                           </SelectItem>
                         </SelectContent>
@@ -603,7 +637,7 @@ export function ExtraWorkTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {work.status === 'pending_approval' && (
+                          {work.status === 'pending_approval' && canApprove && (
                             <DropdownMenuItem onClick={() => setSendApprovalWork(work)}>
                               <Send className="h-4 w-4 mr-2" />
                               Odeslat ke schválení
@@ -615,7 +649,7 @@ export function ExtraWorkTable({
                               Faktura #{work.invoice_number}
                             </DropdownMenuItem>
                           )}
-                          {!isInvoiced && (
+                          {!isInvoiced && canDelete && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">

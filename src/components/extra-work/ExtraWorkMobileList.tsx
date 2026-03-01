@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ExtraWorkMobileCard } from './ExtraWorkMobileCard';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import type { ExtraWork, ExtraWorkStatus } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,8 +17,12 @@ export function ExtraWorkMobileList({
   onDelete,
 }: ExtraWorkMobileListProps) {
   const { getClientById, getEngagementById, getColleagueById, approveExtraWork, completeExtraWork } = useCRMData();
+  const { isSuperAdmin, role } = useUserRole();
   const { toast } = useToast();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Permission check: only admin/management can approve extra work
+  const canApprove = isSuperAdmin || role === 'admin' || role === 'management';
 
   const handleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -35,6 +40,15 @@ export function ExtraWorkMobileList({
     try {
       // Use proper status transition helpers
       if (newStatus === 'in_progress' && work.status === 'pending_approval') {
+        // Permission check for approval actions
+        if (!canApprove) {
+          toast({
+            title: 'Nedostatečná oprávnění',
+            description: 'Pouze admin nebo management může schvalovat vícepráce.',
+            variant: 'destructive',
+          });
+          return;
+        }
         await approveExtraWork(work.id);
         toast({
           title: 'Schváleno',
@@ -87,6 +101,7 @@ export function ExtraWorkMobileList({
             engagementName={engagement?.name}
             colleagueName={colleague?.full_name}
             isSelected={selectedIds.has(work.id)}
+            canApprove={canApprove}
             onSelect={() => handleSelect(work.id)}
             onStatusChange={(status) => handleStatusChange(work, status)}
             onDelete={() => onDelete(work.id)}
