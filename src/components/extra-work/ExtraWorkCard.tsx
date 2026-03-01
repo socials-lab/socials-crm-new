@@ -249,14 +249,14 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
               </p>
             )}
 
-            <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1 min-w-0">
               <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
                 <span>{createdAt}</span>
                 <span>•</span>
                 <span>{work.billing_period}</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end max-w-full">
                 {isPending && (
                   <>
                     {onDelete && (
