@@ -15,6 +15,7 @@ import {
   FileText,
   Receipt,
   X,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ import { toast } from 'sonner';
 import type { ExtraWork, ExtraWorkStatus } from '@/types/crm';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface ExtraWorkCardProps {
   work: ExtraWork;
@@ -281,30 +283,39 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
 
                 {isWaitingForClient && (
                   <>
-                    {onDelete && (
-                      <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive" onClick={() => setIsDeleteDialogOpen(true)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                    {onEdit && (
-                      <Button variant="ghost" size="sm" className="h-auto min-h-8 w-full md:w-auto whitespace-normal md:whitespace-nowrap text-left justify-start md:justify-center py-2 md:py-1 md:shrink-0" onClick={() => onEdit(work)}>
-                        <Pencil className="h-3.5 w-3.5 mr-1" />
-                        Upravit
-                      </Button>
-                    )}
                     {onSendApproval && (
-                      <Button variant="outline" size="sm" className="h-auto min-h-8 w-full md:w-auto whitespace-normal md:whitespace-nowrap text-left justify-start md:justify-center py-2 md:py-1 md:shrink-0" onClick={() => onSendApproval(work)}>
+                      <Button variant="outline" size="sm" className="h-8 w-full md:w-auto md:shrink-0" onClick={() => onSendApproval(work)}>
                         <Mail className="h-3.5 w-3.5 mr-1" />
                         Odeslat email
                       </Button>
                     )}
-                    <Button variant="outline" size="sm" className="h-auto min-h-8 w-full md:w-auto whitespace-normal md:whitespace-nowrap text-left justify-start md:justify-center py-2 md:py-1 md:shrink-0" onClick={handleCopyLink}>
-                      {linkCopied ? (
-                        <><CheckCircle2 className="h-3.5 w-3.5 mr-1 text-green-600" /> Zkopírováno</>
-                      ) : (
-                        <><Copy className="h-3.5 w-3.5 mr-1" /> Zkopírovat odkaz</>
-                      )}
-                    </Button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-full md:w-8 md:px-0 md:shrink-0" title="Další akce">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="md:hidden">Další akce</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onSelect={() => handleCopyLink()}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          {linkCopied ? 'Zkopírováno' : 'Zkopírovat odkaz'}
+                        </DropdownMenuItem>
+                        {onEdit && (
+                          <DropdownMenuItem onSelect={() => onEdit(work)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Upravit
+                          </DropdownMenuItem>
+                        )}
+                        {onDelete && (
+                          <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Smazat
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </>
                 )}
 
