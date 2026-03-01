@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -26,7 +26,7 @@ interface SendApprovalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   extraWork: ExtraWork;
-  onUpdate?: (id: string, data: Partial<ExtraWork>) => void;
+  onUpdate?: (id: string, data: Partial<ExtraWork>) => Promise<void> | void;
 }
 
 export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: SendApprovalDialogProps) {
@@ -42,6 +42,8 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [approvalToken, setApprovalToken] = useState<string | null>(extraWork.approval_token || null);
+  const tokenPersistPromiseRef = useRef<Promise<string> | null>(null);
 
   const client = useMemo(() => getClientById(extraWork.client_id), [extraWork.client_id, getClientById]);
   const currentUserColleague = useMemo(() => colleagues.find(c => c.profile_id === user?.id), [colleagues, user?.id]);
@@ -60,49 +62,120 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: extraWork.currency || 'CZK', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   const getApprovalUrl = () => {
-    if (!extraWork.approval_token) return '';
-    return `${window.location.origin}/extra-work-approval/${extraWork.approval_token}`;
+    if (!approvalToken) return '';
+    return `${window.location.origin}/extra-work-approval/${approvalToken}`;
   };
+
+  const ensureApprovalToken = async (): Promise<string> => {
+    if (approvalToken) return approvalToken;
+    if (!onUpdate) {
+      throw new Error('Missing update handler for approval token.');
+    }
+
+    if (tokenPersistPromiseRef.current) {
+      return tokenPersistPromiseRef.current;
+    }
+
+    const token = crypto.randomUUID();
+    // Optimistically set local token to prevent repeated update loops while mutation is in flight.
+    setApprovalToken(token);
+
+    const persistPromise = Promise.resolve(onUpdate(extraWork.id, { approval_token: token }))
+      .then(() => token)
+      .catch((error) => {
+        setApprovalToken(null);
+        throw error;
+      })
+      .finally(() => {
+        tokenPersistPromiseRef.current = null;
+      });
+
+    tokenPersistPromiseRef.current = persistPromise;
+    return persistPromise;
+  };
+
+  useEffect(() => {
+    setApprovalToken(extraWork.approval_token || null);
+  }, [extraWork.id, extraWork.approval_token]);
+
+  const currentUserColleagueId = currentUserColleague?.id || '';
+  const colleagueName = colleague?.full_name || '';
+  const engagementName = engagement?.name || '';
 
   // Generate default email content
   useEffect(() => {
-    if (open) {
-      const approvalUrl = getApprovalUrl();
+    if (!open) return;
 
-      setCcEmails([]);
-      setBccEmails([DEFAULT_GMAIL_BCC]);
+    let cancelled = false;
 
-      const hoursLine = extraWork.hours_worked && extraWork.hourly_rate
-        ? `Rozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
-        : '';
+    const init = async () => {
+      try {
+        const token = await ensureApprovalToken();
+        const approvalUrl = `${window.location.origin}/extra-work-approval/${token}`;
 
-      const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Socials' });
-      const { subject, body } = fillTemplate('send_approval', {
-        work_name: extraWork.name,
-        work_description: extraWork.description ? `Popis: ${extraWork.description}` : '',
-        amount: formatCurrency(extraWork.amount),
-        hours_line: hoursLine,
-        engagement_line: engagement ? `Zakázka: ${engagement.name}` : '',
-        colleague_line: colleague ? `Zpracoval/a: ${colleague.full_name}` : '',
-        url: approvalUrl,
-        signature,
-      });
+        if (cancelled) return;
 
-      setEmailSubject(subject);
-      setEmailBody(body);
+        setCcEmails((prev) => (prev.length === 0 ? prev : []));
+        setBccEmails((prev) => (prev.length === 1 && prev[0] === DEFAULT_GMAIL_BCC ? prev : [DEFAULT_GMAIL_BCC]));
+
+        const hoursLine = extraWork.hours_worked && extraWork.hourly_rate
+          ? `Rozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
+          : '';
+
+        const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Socials' });
+        const { subject, body } = fillTemplate('send_approval', {
+          work_name: extraWork.name,
+          work_description: extraWork.description ? `Popis: ${extraWork.description}` : '',
+          amount: formatCurrency(extraWork.amount),
+          hours_line: hoursLine,
+          engagement_line: engagementName ? `Zakázka: ${engagementName}` : '',
+          colleague_line: colleagueName ? `Zpracoval/a: ${colleagueName}` : '',
+          url: approvalUrl,
+          signature,
+        });
+
+        if (!cancelled) {
+          setEmailSubject((prev) => (prev === subject ? prev : subject));
+          setEmailBody((prev) => (prev === body ? prev : body));
+        }
+      } catch (error) {
+        console.error('Failed to initialize approval token:', error);
+        toast.error('Nepodařilo se připravit schvalovací odkaz.');
+      }
+    };
+
+    init();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    extraWork.id,
+    extraWork.name,
+    extraWork.description,
+    extraWork.amount,
+    extraWork.currency,
+    extraWork.hours_worked,
+    extraWork.hourly_rate,
+    currentUserColleagueId,
+    colleagueName,
+    engagementName,
+    fillTemplate,
+  ]);
+
+  const handleCopyLink = async () => {
+    try {
+      const token = await ensureApprovalToken();
+      const url = `${window.location.origin}/extra-work-approval/${token}`;
+      navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+      toast.success('Odkaz zkopírován do schránky');
+    } catch (error) {
+      console.error('Failed to copy approval link:', error);
+      toast.error('Nepodařilo se připravit schvalovací odkaz.');
     }
-  }, [open, extraWork, currentUserColleague, colleague, engagement, fillTemplate]);
-
-  const handleCopyLink = () => {
-    const url = getApprovalUrl();
-    if (!url) {
-      toast.error('Chybí schvalovací token');
-      return;
-    }
-    navigator.clipboard.writeText(url);
-    setLinkCopied(true);
-    setTimeout(() => setLinkCopied(false), 2000);
-    toast.success('Odkaz zkopírován do schránky');
   };
 
   const handleSendEmail = async () => {
@@ -125,8 +198,11 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     setIsSending(true);
 
     try {
+      const token = await ensureApprovalToken();
+      const approvalUrl = `${window.location.origin}/extra-work-approval/${token}`;
+      const bodyWithUrl = emailBody.includes('http') ? emailBody : `${emailBody}\n\n${approvalUrl}`;
       // Convert plain text to HTML
-      const htmlBody = emailBody
+      const htmlBody = bodyWithUrl
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -191,17 +267,18 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
           {/* Approval link */}
           <div className="space-y-2">
             <Label>Schvalovací odkaz</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 min-w-0">
               <Input
                 value={getApprovalUrl()}
                 readOnly
-                className="font-mono text-xs"
+                className="font-mono text-xs min-w-0 flex-1"
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handleCopyLink}
                 title="Zkopírovat odkaz"
+                className="shrink-0"
               >
                 {linkCopied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               </Button>
