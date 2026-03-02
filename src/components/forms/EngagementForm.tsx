@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import type { Engagement, Client, ClientContact, EngagementStatus } from '@/types/crm';
 import { getAvailableEngagementStatuses, ENGAGEMENT_STATUS_LABELS, canTerminateEngagement } from '@/lib/statusTransitions';
+import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 import { toast } from 'sonner';
 
 const engagementSchema = z.object({
@@ -222,7 +223,7 @@ export function EngagementForm({
                 <SelectContent>
                   {clients.map(client => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.brand_name}
+                      {getClientOptionLabel(client)}
                     </SelectItem>
                   ))}
                 </SelectContent>

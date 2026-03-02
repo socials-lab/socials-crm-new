@@ -33,6 +33,7 @@ import {
 import type { ClientContact, Client } from '@/types/crm';
 import { contactSchema as baseContactSchema, type ContactFormData as BaseContactFormData } from '@/lib/validation';
 import { useCRMData } from '@/hooks/useCRMData';
+import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 import { toast } from 'sonner';
 
 // Extended schema with optional client_id for client selection mode
@@ -93,7 +94,7 @@ export function AddContactDialog({
     : [];
 
   // Get client name from props or fetch from CRM data
-  const resolvedClientName = clientName || (clientId ? getClientById(clientId)?.name : undefined);
+  const resolvedClientName = clientName || (clientId ? getClientOptionLabel(getClientById(clientId) || {}) : undefined);
 
   // Determine which schema to use
   const schema = showClientSelector ? contactSchemaWithClient : baseContactSchema;
@@ -194,7 +195,7 @@ export function AddContactDialog({
                       <SelectContent>
                         {activeClients.map(client => (
                           <SelectItem key={client.id} value={client.id}>
-                            {client.name}
+                            {getClientOptionLabel(client)}
                           </SelectItem>
                         ))}
                       </SelectContent>
