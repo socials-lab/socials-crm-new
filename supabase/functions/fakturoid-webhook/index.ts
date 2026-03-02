@@ -43,9 +43,9 @@ serve(async (req) => {
     const payload: FakturoidWebhookPayload = JSON.parse(bodyText);
 
     // Verify webhook authorization header (REQUIRED)
-    const WEBHOOK_SECRET = Deno.env.get("FAKTUROID_WEBHOOK_SECRET");
+    const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET");
     if (!WEBHOOK_SECRET) {
-      console.error("FAKTUROID_WEBHOOK_SECRET not configured - rejecting webhook");
+      console.error("WEBHOOK_SECRET not configured - rejecting webhook");
       return new Response(
         JSON.stringify({ error: "Webhook secret not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
