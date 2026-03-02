@@ -239,8 +239,8 @@ export function EngagementForm({
             <FormItem>
               <FormLabel>Kontaktní osoba</FormLabel>
               <Select 
-                onValueChange={field.onChange} 
-                value={field.value || ''} 
+                onValueChange={(value) => field.onChange(value === '__none__' ? null : value)} 
+                value={field.value ?? '__none__'} 
                 disabled={!selectedClientId}
               >
                 <FormControl>
@@ -249,6 +249,7 @@ export function EngagementForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value="__none__">Bez kontaktu</SelectItem>
                   {clientContacts.map(contact => (
                     <SelectItem key={contact.id} value={contact.id}>
                       {contact.name}

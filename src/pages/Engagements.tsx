@@ -107,6 +107,7 @@ function EngagementsContent() {
     removeAssignment,
     addEngagementService,
     updateEngagementService,
+    deleteEngagement,
     deleteEngagementService,
     getUnbilledOneOffServices,
     getMetricsByEngagementId,
@@ -123,6 +124,7 @@ function EngagementsContent() {
 
   // State for service deletion confirmation
   const [serviceToDelete, setServiceToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [engagementToDelete, setEngagementToDelete] = useState<Engagement | null>(null);
 
   const { 
     getClientMonthSummaryByEngagementServiceId, 
@@ -374,6 +376,21 @@ function EngagementsContent() {
     setServiceToDelete(null);
   };
 
+  const handleDeleteEngagement = async () => {
+    if (!engagementToDelete) return;
+    try {
+      await deleteEngagement(engagementToDelete.id);
+      toast.success('Zakázka byla odstraněna');
+      if (expandedEngagementId === engagementToDelete.id) {
+        setExpandedEngagementId(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete engagement:', error);
+      toast.error(getErrorMessage(error, 'Nepodařilo se odstranit zakázku'));
+    }
+    setEngagementToDelete(null);
+  };
+
   // Safe inline update helpers with error handling
   const safeUpdateEngagement = async (id: string, data: Partial<Engagement>, successMessage: string) => {
     try {
@@ -623,6 +640,13 @@ function EngagementsContent() {
                           <Clock className="h-4 w-4 mr-2" />
                           Historie změn
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setEngagementToDelete(engagement)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Smazat zakázku
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
@@ -660,9 +684,10 @@ function EngagementsContent() {
                             <div className="flex items-center gap-2">
                               <span className="text-muted-foreground">Kontakt:</span>
                               <Select
-                                value={engagement.contact_person_id || ''}
+                                value={engagement.contact_person_id ?? '__none__'}
                                 onValueChange={(value) => {
-                                  safeUpdateEngagement(engagement.id, { contact_person_id: value || null }, 'Kontaktní osoba změněna');
+                                  const nextContactId = value === '__none__' ? null : value;
+                                  safeUpdateEngagement(engagement.id, { contact_person_id: nextContactId }, nextContactId ? 'Kontaktní osoba změněna' : 'Kontaktní osoba odebrána');
                                 }}
                               >
                                 <SelectTrigger 
@@ -678,6 +703,7 @@ function EngagementsContent() {
                                   </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent onClick={(e) => e.stopPropagation()}>
+                                  <SelectItem value="__none__">Bez kontaktu</SelectItem>
                                   {clientContactsList.length > 0 ? (
                                     clientContactsList.map(contact => (
                                       <SelectItem key={contact.id} value={contact.id}>
@@ -1744,6 +1770,28 @@ function EngagementsContent() {
           engagementName={historyEngagement.name}
         />
       )}
+
+      {/* Engagement Deletion Confirmation Dialog */}
+      <AlertDialog open={!!engagementToDelete} onOpenChange={(open) => !open && setEngagementToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat zakázku?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete odstranit zakázku <span className="font-medium">{engagementToDelete?.name}</span>?
+              Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteEngagement}
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Service Deletion Confirmation Dialog */}
       <AlertDialog open={!!serviceToDelete} onOpenChange={(open) => !open && setServiceToDelete(null)}>
