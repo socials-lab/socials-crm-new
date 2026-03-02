@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Loader2, ShieldCheck, ShieldAlert, ShieldX, FileSignature, CheckCircle2, X } from 'lucide-react';
+import { Loader2, ShieldCheck, ShieldAlert, ShieldX, FileSignature, CheckCircle2 } from 'lucide-react';
 import {
   Building2,
   Globe,
@@ -114,7 +114,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
 };
 
 export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDetailDialogProps) {
-  const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
+  const { updateLeadStage, updateLead, deleteLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
   const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
@@ -131,6 +131,8 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const [isContractConfirmOpen, setIsContractConfirmOpen] = useState(false);
   const [isManualSignConfirmOpen, setIsManualSignConfirmOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeletingLead, setIsDeletingLead] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   // Inline note form state
@@ -336,6 +338,27 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
     } catch (error) {
       console.error('Failed to update lead:', error);
       toast.error('Nepodařilo se uložit změny');
+    }
+  };
+
+  const handleDeleteLead = async () => {
+    if (lead.converted_to_client_id || lead.converted_to_engagement_id) {
+      toast.error('Smazání není dostupné: lead už byl převeden na zakázku');
+      setIsDeleteConfirmOpen(false);
+      return;
+    }
+
+    setIsDeletingLead(true);
+    try {
+      await deleteLead(lead.id);
+      toast.success('Lead byl smazán');
+      setIsDeleteConfirmOpen(false);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to delete lead:', error);
+      toast.error('Nepodařilo se smazat lead');
+    } finally {
+      setIsDeletingLead(false);
     }
   };
 
@@ -579,10 +602,32 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Delete Lead Confirmation Dialog */}
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete smazat lead <strong>{lead.company_name}</strong>? Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingLead}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLead}
+              disabled={isDeletingLead}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingLead ? 'Mazání...' : 'Smazat lead'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 pb-4 border-b flex-shrink-0">
+          <div className="flex items-center justify-between p-6 pb-4 border-b flex-shrink-0 gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
                 <DialogTitle className="text-xl font-semibold">
@@ -611,6 +656,16 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                 />
               </div>
             </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setIsDeleteConfirmOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Smazat lead
+            </Button>
           </div>
 
           {/* 2-column layout */}
