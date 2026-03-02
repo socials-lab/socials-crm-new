@@ -1102,6 +1102,9 @@ export type Database = {
           end_date: string | null
           freelo_url: string | null
           id: string
+          termination_initiated_by: string | null
+          termination_notes: string | null
+          termination_reason: string | null
           monthly_fee: number | null
           name: string
           notes: string | null
@@ -1134,6 +1137,9 @@ export type Database = {
           platforms?: string[] | null
           start_date: string
           status?: Database["public"]["Enums"]["engagement_status"] | null
+          termination_initiated_by?: string | null
+          termination_notes?: string | null
+          termination_reason?: string | null
           type: Database["public"]["Enums"]["engagement_type"]
           updated_at?: string | null
         }
@@ -1157,6 +1163,9 @@ export type Database = {
           platforms?: string[] | null
           start_date?: string
           status?: Database["public"]["Enums"]["engagement_status"] | null
+          termination_initiated_by?: string | null
+          termination_notes?: string | null
+          termination_reason?: string | null
           type?: Database["public"]["Enums"]["engagement_type"]
           updated_at?: string | null
         }
