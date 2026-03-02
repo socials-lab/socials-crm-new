@@ -681,21 +681,22 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Začátek *</p>
-                  <div className="p-3 rounded-lg bg-muted/30 border">
-                    <p className="text-sm font-medium">
-                      {lead.contract_signed_at
-                        ? new Date(lead.contract_signed_at).toLocaleDateString('cs-CZ', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })
-                        : 'Datum podpisu smlouvy'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">Datum podpisu smlouvy</p>
-                  </div>
-                </div>
+                <FormField
+                  control={form.control}
+                  name="start_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Začátek *</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Předvyplněno z data podpisu smlouvy, ale můžete upravit (např. u starších smluv).
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="end_date"
