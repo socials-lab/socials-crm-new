@@ -44,6 +44,12 @@ const LABEL_TO_STAGE: Record<string, LeadStage> = {
   'Odloženo': 'postponed',
 };
 
+const isMissingDeletedAtColumnError = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { code?: string; message?: string };
+  return err.code === '42703' || err.message?.includes('deleted_at') === true;
+};
+
 interface LeadHistoryRecord {
   id: string;
   lead_id: string;
@@ -81,10 +87,22 @@ export function useLeadTransitions() {
   const { data: leadsData = [] } = useQuery({
     queryKey: ['lead_transitions_leads'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('leads')
         .select('id, source, stage, estimated_price, created_at')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
+
+      if (error && isMissingDeletedAtColumnError(error)) {
+        console.warn('leads.deleted_at missing in DB, falling back to legacy transitions query without soft-delete filter');
+        const fallback = await supabase
+          .from('leads')
+          .select('id, source, stage, estimated_price, created_at')
+          .order('created_at', { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
+
       if (error) throw error;
       return (data || []) as LeadRecord[];
     },
