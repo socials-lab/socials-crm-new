@@ -370,23 +370,8 @@ export function EngagementForm({
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {engagementType === 'retainer' && (
-            <FormField
-              control={form.control}
-              name="monthly_fee"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Měsíční cena</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-          {engagementType === 'one_off' && (
+        {engagementType === 'one_off' && (
+          <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="one_off_fee"
@@ -400,8 +385,8 @@ export function EngagementForm({
                 </FormItem>
               )}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
