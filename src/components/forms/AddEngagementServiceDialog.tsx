@@ -34,7 +34,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import type { Service, EngagementService, ServiceTier } from '@/types/crm';
 import { serviceTierConfigs } from '@/constants/services';
 
-const CREATIVE_BOOST_SERVICE_ID = 'srv-3';
+const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
 
 const engagementServiceSchema = z.object({
   service_id: z.string().min(1, 'Vyberte službu'),
@@ -59,6 +59,10 @@ interface AddEngagementServiceDialogProps {
   services: Service[];
   onSubmit: (data: Omit<EngagementService, 'id' | 'created_at' | 'updated_at'>) => void | Promise<void>;
 }
+
+const isCreativeBoostService = (service?: Service) =>
+  service?.code === CREATIVE_BOOST_SERVICE_CODE ||
+  service?.name.toLowerCase().includes('creative boost');
 
 export function AddEngagementServiceDialog({
   open,
@@ -90,9 +94,9 @@ export function AddEngagementServiceDialog({
 
   const selectedServiceId = form.watch('service_id');
   const selectedTier = form.watch('selected_tier');
-  const isCreativeBoost = selectedServiceId === CREATIVE_BOOST_SERVICE_ID;
-  
+
   const selectedService = services.find(s => s.id === selectedServiceId);
+  const isCreativeBoost = isCreativeBoostService(selectedService);
   const isCoreService = selectedService?.service_type === 'core';
 
   // Auto-fill name and price when service is selected
@@ -104,7 +108,7 @@ export function AddEngagementServiceDialog({
         form.setValue('name', service.name);
       }
       // Set default values for Creative Boost
-      if (serviceId === CREATIVE_BOOST_SERVICE_ID) {
+      if (isCreativeBoostService(service)) {
         form.setValue('creative_boost_min_credits', 0);
         form.setValue('creative_boost_max_credits', 50);
         form.setValue('creative_boost_price_per_credit', 400);
@@ -165,7 +169,7 @@ export function AddEngagementServiceDialog({
     }
 
     // Validate Creative Boost has at least 1 credit
-    if (data.service_id === CREATIVE_BOOST_SERVICE_ID) {
+    if (isCreativeBoostService(selectedService)) {
       if (!data.creative_boost_max_credits || data.creative_boost_max_credits <= 0) {
         toast.error('Creative Boost musí mít alespoň 1 kredit');
         return;
