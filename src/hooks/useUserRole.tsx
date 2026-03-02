@@ -19,6 +19,8 @@ interface UserRoleContextType {
 
 const UserRoleContext = createContext<UserRoleContextType | undefined>(undefined);
 
+const DEFAULT_PAGES_WITHOUT_EXPLICIT_PERMISSIONS = ['my-work'];
+
 export function UserRoleProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [role, setRole] = useState<AppRole | null>(null);
@@ -124,13 +126,14 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     if (isSuperAdmin) return true;
     // Admin and management roles have access to everything
     if (role === 'admin' || role === 'management') return true;
-    // If user has specific allowed_pages, check against them
+    // If user has specific page permissions, check against them
     if (allowedPages.length > 0) {
       return allowedPages.includes(page);
     }
-    // Default: allow basic access for users with any CRM role (backward compatibility)
-    // Action-level permissions are enforced separately via canApprove checks in components
-    return role !== null;
+
+    // Default for non-admin users without explicit page permissions:
+    // show only self-service area until admin grants additional pages.
+    return DEFAULT_PAGES_WITHOUT_EXPLICIT_PERMISSIONS.includes(page);
   };
 
   return (

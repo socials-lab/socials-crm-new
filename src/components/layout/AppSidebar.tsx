@@ -86,7 +86,7 @@ const managementNavItems = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const { colleagueId, canAccessPage } = useUserRole();
+  const { colleagueId, canAccessPage, allowedPages, role } = useUserRole();
   const { setOpenMobile } = useSidebar();
 
   const isActive = (path: string) => {
@@ -102,7 +102,14 @@ export function AppSidebar() {
 
   const getVisibleItems = (items: NavItem[]) =>
     items.filter(item => {
-      if (item.requiresColleague) return hasColleagueId;
+      if (item.requiresColleague && !hasColleagueId) return false;
+
+      // New users without explicit page permissions should only see "Můj přehled".
+      if (item.page === 'my-profile' && role && role !== 'admin' && role !== 'management' && allowedPages.length === 0) {
+        return false;
+      }
+
+      if (item.page === 'my-profile') return true;
       return canAccessPage(item.page);
     });
 

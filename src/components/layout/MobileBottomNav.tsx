@@ -7,6 +7,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 // Main navigation items for bottom bar (max 5 for usability)
 const bottomNavItems = [
   { title: 'Přehled', emoji: '🏠', url: '/', page: 'dashboard' },
+  { title: 'Můj přehled', emoji: '👤', url: '/my-work', page: 'my-work' },
   { title: 'Leady', emoji: '🎯', url: '/leads', page: 'leads' },
   { title: 'Zakázky', emoji: '📋', url: '/engagements', page: 'engagements' },
   { title: 'Klienti', emoji: '🏢', url: '/clients', page: 'clients' },
@@ -16,15 +17,12 @@ export function MobileBottomNav() {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { toggleSidebar } = useSidebar();
-  const { isSuperAdmin } = useUserRole();
+  const { canAccessPage } = useUserRole();
   
   // Only show on mobile
   if (!isMobile) return null;
   
-  // For now, allow all pages (role-based permissions will be implemented later)
-  const canViewPage = (_pageName: string): boolean => {
-    return true;
-  };
+  const canViewPage = (pageName: string): boolean => canAccessPage(pageName);
   
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';

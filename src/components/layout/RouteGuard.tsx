@@ -112,7 +112,10 @@ export function RouteGuard({ children }: RouteGuardProps) {
   // Check page access based on allowed_pages
   const pageId = ROUTE_TO_PAGE[currentPath];
   if (pageId && !canAccessPage(pageId)) {
-    // Redirect to my-profile if no access (avoids loop if dashboard is also blocked)
+    // Prefer redirect to my-work for restricted users, fallback to profile.
+    if (canAccessPage('my-work')) {
+      return <Navigate to="/my-work" replace />;
+    }
     return <Navigate to="/my-profile" replace />;
   }
 
