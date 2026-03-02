@@ -711,7 +711,12 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
 
   const addEngagementMutation = useMutation({
     mutationFn: async (data: Omit<Engagement, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data: result, error } = await supabase.from('engagements').insert(data).select().single();
+      const normalizedData = {
+        ...data,
+        end_date: typeof data.end_date === 'string' && data.end_date.trim() === '' ? null : data.end_date,
+      };
+
+      const { data: result, error } = await supabase.from('engagements').insert(normalizedData).select().single();
       if (error) throw error;
       const engagement = transformEngagement(result);
 
@@ -783,7 +788,15 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
         // Continue with update even if history logging fails
       }
 
-      const { error } = await supabase.from('engagements').update(data).eq('id', id);
+      const normalizedData = {
+        ...data,
+        end_date:
+          typeof data.end_date === 'string' && data.end_date.trim() === ''
+            ? null
+            : data.end_date,
+      };
+
+      const { error } = await supabase.from('engagements').update(normalizedData).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
