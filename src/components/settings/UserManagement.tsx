@@ -223,6 +223,35 @@ export function UserManagement() {
     return <Badge variant="secondary">{roleLabels[role] || role}</Badge>;
   };
 
+  function handleOpenColleagueCard(colleagueId: string) {
+    if (!colleagueId) {
+      toast.error('Chybí ID kolegy pro otevření karty');
+      return;
+    }
+
+    const targetPath = `/colleagues?tab=team&highlight=${colleagueId}`;
+    console.info('[UserManagement] Open colleague card requested', {
+      colleagueId,
+      from: `${window.location.pathname}${window.location.search}`,
+      targetPath,
+    });
+
+    navigate(targetPath);
+
+    // Debug + hard fallback if SPA navigation silently fails.
+    window.setTimeout(() => {
+      const currentPath = `${window.location.pathname}${window.location.search}`;
+      if (currentPath !== targetPath) {
+        console.warn('[UserManagement] SPA navigate did not reach target, using hard redirect', {
+          currentPath,
+          targetPath,
+        });
+        toast.error('Navigace selhala, otevírám kartu natvrdo');
+        window.location.assign(targetPath);
+      }
+    }, 120);
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center py-8"><p className="text-muted-foreground">Načítání...</p></div>;
   }
@@ -395,7 +424,7 @@ export function UserManagement() {
                           {userRole.colleague && (
                             <>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => navigate(`/colleagues?tab=team&highlight=${userRole.colleague!.id}`)}>
+                              <DropdownMenuItem onSelect={() => handleOpenColleagueCard(userRole.colleague!.id)}>
                                 <ExternalLink className="h-4 w-4 mr-2" />
                                 Zobrazit kartu kolegy
                               </DropdownMenuItem>
