@@ -125,18 +125,17 @@ function ColleaguesContent() {
 
   const handleFormSubmit = async (data: Omit<Colleague, 'id' | 'created_at' | 'updated_at'> & { invite_to_crm?: boolean; role?: string }) => {
     const { invite_to_crm, role, ...colleagueData } = data;
-    
-    if (editingColleague) {
-      updateColleague(editingColleague.id, colleagueData);
-      toast.success('Kolega byl upraven');
-    } else {
-      // If invite_to_crm is checked, use edge function (creates colleague + user + sends email)
-      if (invite_to_crm && role) {
-        try {
+
+    try {
+      if (editingColleague) {
+        await updateColleague(editingColleague.id, colleagueData);
+      } else {
+        // If invite_to_crm is checked, use edge function (creates colleague + user + sends email)
+        if (invite_to_crm && role) {
           const nameParts = colleagueData.full_name.split(' ');
           const firstName = nameParts[0] || '';
           const lastName = nameParts.slice(1).join(' ') || '';
-          
+
           const { data: responseData, error } = await supabase.functions.invoke('invite-user', {
             body: {
               email: colleagueData.email,
@@ -153,29 +152,29 @@ function ColleaguesContent() {
               max_engagements: colleagueData.max_engagements,
             },
           });
-          
+
           if (error) {
             const errorMessage = error.message || 'Nepodařilo se pozvat uživatele';
             throw new Error(errorMessage);
           }
-          
+
           if (responseData?.error) {
             throw new Error(responseData.error);
           }
-          
+
           toast.success(`Kolega vytvořen a pozvánka odeslána na ${colleagueData.email}`);
-        } catch (error: any) {
-          console.error('Error inviting user:', error);
-          toast.error(error.message || 'Nepodařilo se pozvat uživatele');
+        } else {
+          // No invite - just create colleague locally
+          await addColleague(colleagueData);
         }
-      } else {
-        // No invite - just create colleague locally
-        addColleague(colleagueData);
-        toast.success('Kolega byl vytvořen');
       }
+
+      setIsFormOpen(false);
+      setEditingColleague(null);
+    } catch (error: any) {
+      console.error('Error saving colleague:', error);
+      toast.error(error?.message || 'Nepodařilo se uložit kolegu');
     }
-    setIsFormOpen(false);
-    setEditingColleague(null);
   };
 
   const handleUpdateAssignment = (assignmentId: string, data: { monthly_cost: number }) => {
