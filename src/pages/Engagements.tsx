@@ -63,7 +63,7 @@ import { serviceTierConfigs } from '@/constants/services';
 
 // Default reward per credit when not configured in assignment
 const DEFAULT_REWARD_PER_CREDIT = 80;
-import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier } from '@/types/crm';
+import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier, Service } from '@/types/crm';
 import { ADVERTISING_PLATFORMS } from '@/types/crm';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -73,6 +73,24 @@ import { normalizeUrlProtocol } from '@/lib/validation';
 
 // Dynamic lookup for Creative Boost service ID
 const CREATIVE_BOOST_SERVICE_NAME = 'Creative Boost';
+
+const getTierPrice = (service: Service | undefined, tier: ServiceTier): number | null => {
+  if (!service || service.service_type !== 'core') return null;
+
+  const tierPricing = service.tier_pricing as unknown;
+
+  if (Array.isArray(tierPricing)) {
+    const match = tierPricing.find((item) => item?.tier === tier);
+    return typeof match?.price === 'number' ? match.price : null;
+  }
+
+  if (tierPricing && typeof tierPricing === 'object') {
+    const tierData = (tierPricing as Record<string, { price?: unknown } | undefined>)[tier];
+    return typeof tierData?.price === 'number' ? tierData.price : null;
+  }
+
+  return null;
+};
 
 function EngagementsContent() {
   const navigate = useNavigate();
@@ -861,16 +879,16 @@ function EngagementsContent() {
                                               </DropdownMenuTrigger>
                                               <DropdownMenuContent align="start" className="w-56">
                                                 {serviceTierConfigs.map((config) => {
-                                                  const tierPricing = service?.tier_pricing?.find(p => p.tier === config.tier);
-                                                  const priceLabel = tierPricing?.price 
-                                                    ? `${tierPricing.price.toLocaleString()} Kč`
+                                                  const tierPrice = getTierPrice(service, config.tier);
+                                                  const priceLabel = tierPrice !== null
+                                                    ? `${tierPrice.toLocaleString()} Kč`
                                                     : 'Individuální';
                                                   return (
                                                     <DropdownMenuItem
                                                       key={config.tier}
                                                       onClick={(e) => {
                                                         e.stopPropagation();
-                                                        const newPrice = tierPricing?.price || engService.price;
+                                                        const newPrice = tierPrice ?? engService.price;
                                                         updateEngagementService(engService.id, { 
                                                           selected_tier: config.tier as ServiceTier,
                                                           price: newPrice

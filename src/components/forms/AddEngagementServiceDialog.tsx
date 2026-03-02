@@ -62,7 +62,25 @@ interface AddEngagementServiceDialogProps {
 
 const isCreativeBoostService = (service?: Service) =>
   service?.code === CREATIVE_BOOST_SERVICE_CODE ||
-  service?.name.toLowerCase().includes('creative boost');
+  service?.name?.toLowerCase().includes('creative boost');
+
+const getTierPrice = (service: Service | undefined, tier: ServiceTier): number | null => {
+  if (!service || service.service_type !== 'core') return null;
+
+  const tierPricing = service.tier_pricing as unknown;
+
+  if (Array.isArray(tierPricing)) {
+    const match = tierPricing.find((item) => item?.tier === tier);
+    return typeof match?.price === 'number' ? match.price : null;
+  }
+
+  if (tierPricing && typeof tierPricing === 'object') {
+    const tierData = (tierPricing as Record<string, { price?: unknown } | undefined>)[tier];
+    return typeof tierData?.price === 'number' ? tierData.price : null;
+  }
+
+  return null;
+};
 
 export function AddEngagementServiceDialog({
   open,
@@ -121,8 +139,8 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_price_per_credit', null);
         form.setValue('selected_tier', 'growth'); // Default to GROWTH
         // Auto-fill price from GROWTH tier
-        const growthPricing = service.tier_pricing?.find(p => p.tier === 'growth');
-        form.setValue('price', growthPricing?.price ?? 0);
+        const growthPrice = getTierPrice(service, 'growth');
+        form.setValue('price', growthPrice ?? 0);
         form.setValue('currency', service.currency);
       } else {
         // Add-on service
@@ -139,14 +157,13 @@ export function AddEngagementServiceDialog({
   // Handle tier change for Core services
   const handleTierChange = (tier: string) => {
     form.setValue('selected_tier', tier);
-    if (selectedService?.tier_pricing) {
-      const tierPricing = selectedService.tier_pricing.find(p => p.tier === tier);
-      if (tierPricing?.price !== null && tierPricing?.price !== undefined) {
-        form.setValue('price', tierPricing.price);
-      } else {
-        // Individuální kalkulace - set to 0, user must enter manually
-        form.setValue('price', 0);
-      }
+
+    const tierPrice = getTierPrice(selectedService, tier as ServiceTier);
+    if (tierPrice !== null) {
+      form.setValue('price', tierPrice);
+    } else {
+      // Individuální kalkulace - set to 0, user must enter manually
+      form.setValue('price', 0);
     }
   };
 
@@ -356,9 +373,9 @@ export function AddEngagementServiceDialog({
                         </FormControl>
                         <SelectContent>
                           {serviceTierConfigs.map((config) => {
-                            const tierPricing = selectedService?.tier_pricing?.find(p => p.tier === config.tier);
-                            const priceLabel = tierPricing?.price 
-                              ? `${tierPricing.price.toLocaleString('cs-CZ')} Kč`
+                            const tierPrice = getTierPrice(selectedService, config.tier);
+                            const priceLabel = tierPrice !== null
+                              ? `${tierPrice.toLocaleString('cs-CZ')} Kč`
                               : 'Individuální kalkulace';
                             const spendLabel = config.max_spend 
                               ? `do ${(config.max_spend/1000).toFixed(0)}K Kč`
