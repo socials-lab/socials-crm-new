@@ -43,7 +43,7 @@ function resolveTab(tabParam: string | null, isSuperAdmin: boolean): ColleaguesT
 }
 
 function ColleaguesContent() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
   const tabParam = searchParams.get('tab');
   const highlightedRef = useRef<HTMLDivElement>(null);
@@ -69,15 +69,15 @@ function ColleaguesContent() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingColleague, setEditingColleague] = useState<Colleague | null>(null);
 
-  // Handle highlight from URL
+  // Handle highlight from URL and when switching back to team tab.
   useEffect(() => {
-    if (highlightId) {
+    if (highlightId && activeTab === 'team') {
       setExpandedColleagueId(highlightId);
       setTimeout(() => {
         highlightedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
     }
-  }, [highlightId]);
+  }, [highlightId, activeTab]);
 
   // Keep tabs in sync with URL param changes (e.g. "Zobrazit kartu kolegy").
   useEffect(() => {
@@ -208,7 +208,19 @@ function ColleaguesContent() {
         description="Kolegové, přístupy a oprávnění"
       />
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ColleaguesTab)} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          const nextTab = value as ColleaguesTab;
+          setActiveTab(nextTab);
+
+          // Keep URL in sync with selected tab so cross-tab navigation can reliably trigger.
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.set('tab', nextTab);
+          setSearchParams(nextParams, { replace: true });
+        }}
+        className="w-full"
+      >
         <TabsList className="mb-4 w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
           <TabsTrigger value="team" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
             <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
