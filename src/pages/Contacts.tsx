@@ -39,6 +39,7 @@ import type { ClientContact } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUserRole } from '@/hooks/useUserRole';
+import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 
 // Copy button component
 function CopyButton({ value, className }: { value: string; className?: string }) {
@@ -130,11 +131,13 @@ export default function Contacts() {
       // Text search
       if (debouncedSearch) {
         const query = debouncedSearch.toLowerCase();
+        const clientLabel = getClientOptionLabel(contact.client ?? {}).toLowerCase();
         const matchesSearch =
           contact.name.toLowerCase().includes(query) ||
           contact.email?.toLowerCase().includes(query) ||
           contact.phone?.toLowerCase().includes(query) ||
-          contact.client?.name.toLowerCase().includes(query) ||
+          clientLabel.includes(query) ||
+          contact.client?.brand_name?.toLowerCase().includes(query) ||
           contact.position?.toLowerCase().includes(query) ||
           contact.notes?.toLowerCase().includes(query);
         if (!matchesSearch) return false;
@@ -325,7 +328,7 @@ export default function Contacts() {
               {/* Issue #18: Only show active clients in filter dropdown */}
               {activeClients.map(client => (
                 <SelectItem key={client.id} value={client.id}>
-                  {client.name}
+                  {getClientOptionLabel(client)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -478,7 +481,7 @@ export default function Contacts() {
                     onClick={() => navigate(`/clients?highlight=${contact.client_id}`)}
                     className="text-primary hover:underline"
                   >
-                    {contact.client?.name}
+                    {getClientOptionLabel(contact.client ?? {})}
                   </button>
                   {canModify && (
                     <div className="flex gap-1">
@@ -552,7 +555,7 @@ export default function Contacts() {
                         onClick={() => navigate(`/clients?highlight=${contact.client_id}`)}
                         className="text-primary hover:underline"
                       >
-                        {contact.client?.name}
+                        {getClientOptionLabel(contact.client ?? {})}
                       </button>
                       {contact.position && <span> • {contact.position}</span>}
                     </p>

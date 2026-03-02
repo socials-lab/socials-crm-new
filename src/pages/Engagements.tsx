@@ -70,6 +70,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/sonner';
 import { normalizeUrlProtocol } from '@/lib/validation';
+import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 
 // Dynamic lookup for Creative Boost service ID
 const CREATIVE_BOOST_SERVICE_NAME = 'Creative Boost';
@@ -256,13 +257,17 @@ function EngagementsContent() {
   }, [hasUnbilledOneOffServices]);
 
   const filteredEngagements = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+
     return engagements.filter(engagement => {
       const client = getClientById(engagement.client_id);
-      const matchesSearch = 
-        engagement.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client?.brand_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client?.name.toLowerCase().includes(searchQuery.toLowerCase());
-      
+      const clientLabel = getClientOptionLabel(client ?? {}).toLowerCase();
+      const matchesSearch =
+        engagement.name.toLowerCase().includes(query) ||
+        clientLabel.includes(query) ||
+        client?.brand_name?.toLowerCase().includes(query) ||
+        client?.name?.toLowerCase().includes(query);
+
       const matchesStatus = statusFilter === 'all' || engagement.status === statusFilter;
       const matchesType = typeFilter === 'all' || engagement.type === typeFilter;
       const matchesMonth = isEngagementActiveInMonth(engagement, filterYear, filterMonth);
@@ -504,6 +509,7 @@ function EngagementsContent() {
           </Card>
         ) : paginatedEngagements.map((engagement) => {
           const client = getClientById(engagement.client_id);
+          const clientLabel = getClientOptionLabel(client ?? {});
           const marginPercent = canSeeFinancials ? getLatestMargin(engagement.id) : null;
           const engagementAssignments = getAssignmentsByEngagementId(engagement.id).filter(a => !a.end_date);
           const isExpanded = expandedEngagementId === engagement.id;
@@ -562,7 +568,7 @@ function EngagementsContent() {
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary font-semibold text-sm shrink-0">
-                    {client?.brand_name.charAt(0) || '?'}
+                    {clientLabel.charAt(0) || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="font-medium text-sm">{engagement.name}</span>
@@ -574,7 +580,7 @@ function EngagementsContent() {
                         }}
                         className="text-primary hover:underline"
                       >
-                        {client?.brand_name}
+                        {clientLabel}
                       </button>
                     </p>
                   </div>
@@ -696,7 +702,7 @@ function EngagementsContent() {
                                 }}
                                 className="text-primary hover:underline"
                               >
-                                {client?.brand_name}
+                                {clientLabel}
                               </button>
                             </p>
                             <div className="flex items-center gap-2">
