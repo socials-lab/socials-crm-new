@@ -12,10 +12,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Send, CheckCircle2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCRMData } from '@/hooks/useCRMData';
-import { supabase } from '@/integrations/supabase/client';
 import type { MonthlyEngagementInvoice, IssuedInvoice } from '@/types/crm';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 interface IssueInvoicesDialogProps {
   open: boolean;
@@ -137,9 +137,14 @@ export function IssueInvoicesDialog({
       let fakturoidFailed = false;
 
       try {
-        const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
+        const { data: fakturoidResult, error: fakturoidError } = await invokeWithTimeout<{
+          success?: boolean;
+          fakturoid_url?: string;
+          error?: string;
+        }>(
           'fakturoid-create-invoice',
-          { body: { invoice_id: createdInvoice.id } }
+          { body: { invoice_id: createdInvoice.id } },
+          30000,
         );
 
         if (fakturoidError || fakturoidResult?.error) {
@@ -147,7 +152,7 @@ export function IssueInvoicesDialog({
           fakturoidFailed = true;
           fakturoidFailures++;
         } else if (fakturoidResult?.success) {
-          fakturoidUrl = fakturoidResult.fakturoid_url;
+          fakturoidUrl = fakturoidResult.fakturoid_url ?? null;
         }
       } catch (err) {
         console.warn(`Fakturoid error for invoice ${createdInvoice.invoice_number}:`, err);
