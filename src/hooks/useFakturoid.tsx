@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 export interface FakturoidSubjectData {
   id: number;
@@ -70,9 +71,11 @@ export function useFakturoid() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('fakturoid-create-invoice', {
-        body: { invoice_id: invoiceId },
-      });
+      const { data, error } = await invokeWithTimeout<{ error?: string }>(
+        'fakturoid-create-invoice',
+        { body: { invoice_id: invoiceId } },
+        30000,
+      );
 
       if (error) throw error;
 

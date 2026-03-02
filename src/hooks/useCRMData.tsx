@@ -797,7 +797,33 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       };
 
       const { error } = await supabase.from('engagements').update(normalizedData).eq('id', id);
-      if (error) throw error;
+      if (!error) return;
+
+      const isMissingTerminationColumn =
+        error.code === 'PGRST204' &&
+        typeof error.message === 'string' &&
+        error.message.includes("termination_initiated_by");
+
+      if (isMissingTerminationColumn && 'termination_initiated_by' in normalizedData) {
+        const fallbackData = { ...normalizedData };
+        delete (fallbackData as Partial<Engagement>).termination_initiated_by;
+
+        const { error: fallbackError } = await supabase
+          .from('engagements')
+          .update(fallbackData)
+          .eq('id', id);
+
+        if (!fallbackError) {
+          console.warn(
+            "Retried engagement update without 'termination_initiated_by' due to schema drift (PGRST204).",
+          );
+          return;
+        }
+
+        throw fallbackError;
+      }
+
+      throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engagements'] });
