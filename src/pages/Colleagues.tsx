@@ -30,6 +30,18 @@ import { CreativeBoostProvider, useCreativeBoostData } from '@/hooks/useCreative
 import { supabase } from '@/integrations/supabase/client';
 import { TeamEarningsOverview } from '@/components/colleagues/TeamEarningsOverview';
 
+type ColleaguesTab = 'team' | 'earnings' | 'access';
+
+function resolveTab(tabParam: string | null, isSuperAdmin: boolean): ColleaguesTab {
+  if (!isSuperAdmin) {
+    return 'team';
+  }
+  if (tabParam === 'access' || tabParam === 'earnings' || tabParam === 'team') {
+    return tabParam;
+  }
+  return 'team';
+}
+
 function ColleaguesContent() {
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
@@ -37,6 +49,7 @@ function ColleaguesContent() {
   const highlightedRef = useRef<HTMLDivElement>(null);
   
   const { isSuperAdmin: superAdmin, canSeeFinancials } = useUserRole();
+  const [activeTab, setActiveTab] = useState<ColleaguesTab>(() => resolveTab(tabParam, superAdmin));
 
   const {
     colleagues,
@@ -65,6 +78,11 @@ function ColleaguesContent() {
       }, 100);
     }
   }, [highlightId]);
+
+  // Keep tabs in sync with URL param changes (e.g. "Zobrazit kartu kolegy").
+  useEffect(() => {
+    setActiveTab(resolveTab(tabParam, superAdmin));
+  }, [tabParam, superAdmin]);
 
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
@@ -191,7 +209,7 @@ function ColleaguesContent() {
         description="Kolegové, přístupy a oprávnění"
       />
 
-      <Tabs defaultValue={tabParam === 'access' && superAdmin ? 'access' : tabParam === 'earnings' && superAdmin ? 'earnings' : 'team'} className="w-full">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ColleaguesTab)} className="w-full">
         <TabsList className="mb-4 w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
           <TabsTrigger value="team" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
             <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
