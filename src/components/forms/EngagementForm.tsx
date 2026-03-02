@@ -35,7 +35,14 @@ const engagementSchema = z.object({
   one_off_fee: z.coerce.number().min(0),
   status: z.enum(['planned', 'active', 'paused', 'completed', 'cancelled'] as const),
   start_date: z.string().min(1, 'Datum je povinné'),
-  end_date: z.string().optional(),
+  end_date: z.preprocess(
+    (value) => {
+      if (typeof value !== 'string') return value;
+      const trimmed = value.trim();
+      return trimmed === '' ? null : trimmed;
+    },
+    z.string().nullable().optional()
+  ),
   notice_period_months: z.coerce.number().min(0).nullable(),
   notes: z.string(),
 }).refine(
@@ -149,7 +156,13 @@ export function EngagementForm({
       return;
     }
 
-    const data = form.getValues();
+    const data = {
+      ...form.getValues(),
+      end_date: (() => {
+        const value = form.getValues('end_date');
+        return value && value.trim() !== '' ? value : null;
+      })(),
+    };
 
     // Check notice period if changing to completed/cancelled
     if (engagement && (data.status === 'completed' || data.status === 'cancelled') && engagement.status !== data.status) {
