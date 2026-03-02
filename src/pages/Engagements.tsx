@@ -1615,6 +1615,7 @@ function EngagementsContent() {
             if (!open) setServiceEngagementId(null);
           }}
           engagementId={serviceEngagementId}
+          engagementCurrency={engagements.find(e => e.id === serviceEngagementId)?.currency || 'CZK'}
           services={services}
           onSubmit={async (data) => {
             const newService = await addEngagementService(data);

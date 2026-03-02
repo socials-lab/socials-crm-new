@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -56,6 +56,7 @@ interface AddEngagementServiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   engagementId: string;
+  engagementCurrency: string;
   services: Service[];
   onSubmit: (data: Omit<EngagementService, 'id' | 'created_at' | 'updated_at'>) => void | Promise<void>;
 }
@@ -86,6 +87,7 @@ export function AddEngagementServiceDialog({
   open,
   onOpenChange,
   engagementId,
+  engagementCurrency,
   services,
   onSubmit,
 }: AddEngagementServiceDialogProps) {
@@ -101,7 +103,7 @@ export function AddEngagementServiceDialog({
       service_id: '',
       name: '',
       price: 0,
-      currency: 'CZK',
+      currency: engagementCurrency || 'CZK',
       notes: '',
       selected_tier: null,
       creative_boost_min_credits: null,
@@ -112,6 +114,11 @@ export function AddEngagementServiceDialog({
 
   const selectedServiceId = form.watch('service_id');
   const selectedTier = form.watch('selected_tier');
+
+  useEffect(() => {
+    if (!open) return;
+    form.setValue('currency', engagementCurrency || 'CZK');
+  }, [open, engagementCurrency, form]);
 
   const selectedService = services.find(s => s.id === selectedServiceId);
   const isCreativeBoost = isCreativeBoostService(selectedService);
@@ -141,7 +148,7 @@ export function AddEngagementServiceDialog({
         // Auto-fill price from GROWTH tier
         const growthPrice = getTierPrice(service, 'growth');
         form.setValue('price', growthPrice ?? 0);
-        form.setValue('currency', service.currency);
+        form.setValue('currency', engagementCurrency || 'CZK');
       } else {
         // Add-on service
         form.setValue('creative_boost_min_credits', null);
@@ -149,7 +156,7 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_price_per_credit', null);
         form.setValue('selected_tier', null);
         form.setValue('price', service.base_price);
-        form.setValue('currency', service.currency);
+        form.setValue('currency', engagementCurrency || 'CZK');
       }
     }
   };
@@ -214,7 +221,7 @@ export function AddEngagementServiceDialog({
           name: data.name,
           price: data.price,
           billing_type: selectedService.billing_type,
-          currency: data.currency,
+          currency: engagementCurrency || data.currency,
           is_active: true,
           notes: data.notes,
           // Core service tier selection
@@ -433,19 +440,22 @@ export function AddEngagementServiceDialog({
               name="currency"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Měna</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormLabel>Měna zakázky</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange} disabled>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="CZK">CZK</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value={engagementCurrency || 'CZK'}>
+                        {engagementCurrency || 'CZK'}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormDescription className="text-xs">
+                    Služba musí mít stejnou měnu jako zakázka.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
