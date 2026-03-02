@@ -84,7 +84,11 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
       if (error) throw error;
 
       // Load latest active offer totals so lead list and analytics reflect discounts
@@ -225,8 +229,19 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('leads').delete().eq('id', id);
+      const deletedAt = now();
+      const { error } = await supabase
+        .from('leads')
+        .update({
+          deleted_at: deletedAt,
+          updated_at: deletedAt,
+        })
+        .eq('id', id)
+        .is('deleted_at', null);
       if (error) throw error;
+
+      // Keep an audit trail entry for soft delete action
+      await addHistoryEntry(id, 'field_update', 'deleted_at', 'Smazáno', null, deletedAt);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
   });

@@ -84,6 +84,7 @@ export function useLeadTransitions() {
       const { data, error } = await supabase
         .from('leads')
         .select('id, source, stage, estimated_price, created_at')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []) as LeadRecord[];
