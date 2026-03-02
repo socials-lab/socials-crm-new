@@ -141,34 +141,88 @@ serve(async (req) => {
 
     console.log(`User invited successfully, ID: ${inviteData.user.id}`);
 
-    // Pre-create colleague record with all provided data AND link to profile
-    // We set profile_id directly since the invite already created the user/profile
-    const { error: colleagueError } = await supabaseAdmin
+    // Reuse existing colleague by email/profile when present to avoid duplicates.
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data: colleaguesByEmail, error: colleaguesByEmailError } = await supabaseAdmin
       .from("colleagues")
-      .insert({
-        email,
-        full_name: fullName,
-        position: position || "Team Member",
-        status: "active",
-        seniority: seniority || "mid",
-        phone: phone || null,
-        notes: notes || "",
-        is_freelancer: is_freelancer || false,
-        internal_hourly_cost: internal_hourly_cost || 0,
-        monthly_fixed_cost: monthly_fixed_cost || null,
-        capacity_hours_per_month: capacity_hours_per_month || null,
-        profile_id: inviteData.user.id, // Link colleague to user profile directly
-      });
+      .select("id, profile_id")
+      .ilike("email", normalizedEmail);
 
-    if (colleagueError) {
-      console.error("Colleague creation error:", colleagueError);
+    if (colleaguesByEmailError) {
+      console.error("Colleagues-by-email query error:", colleaguesByEmailError);
       return new Response(
-        JSON.stringify({ error: "Nepodařilo se vytvořit kolegu: " + colleagueError.message }),
+        JSON.stringify({ error: "Nepodařilo se načíst kolegy podle emailu: " + colleaguesByEmailError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    
-    console.log(`Colleague created and linked to profile for ${email}`);
+
+    const { data: colleaguesByProfile, error: colleaguesByProfileError } = await supabaseAdmin
+      .from("colleagues")
+      .select("id")
+      .eq("profile_id", inviteData.user.id);
+
+    if (colleaguesByProfileError) {
+      console.error("Colleagues-by-profile query error:", colleaguesByProfileError);
+      return new Response(
+        JSON.stringify({ error: "Nepodařilo se načíst kolegy podle profilu: " + colleaguesByProfileError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if ((colleaguesByEmail?.length || 0) > 1) {
+      return new Response(
+        JSON.stringify({ error: "Nalezeno více kolegů se stejným emailem. Nejprve opravte duplicity v databázi." }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if ((colleaguesByProfile?.length || 0) > 1) {
+      return new Response(
+        JSON.stringify({ error: "Nalezeno více kolegů napojených na stejný profil. Nejprve opravte duplicity v databázi." }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const colleagueByEmail = colleaguesByEmail?.[0];
+    const colleagueByProfile = colleaguesByProfile?.[0];
+
+    if (colleagueByEmail && colleagueByProfile && colleagueByEmail.id !== colleagueByProfile.id) {
+      return new Response(
+        JSON.stringify({ error: "Konflikt vazeb kolegy (email vs. profil). Nejprve opravte data v databázi." }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const colleaguePayload = {
+      email: normalizedEmail,
+      full_name: fullName,
+      position: position || "Team Member",
+      status: "active",
+      seniority: seniority || "mid",
+      phone: phone || null,
+      notes: notes || "",
+      is_freelancer: is_freelancer || false,
+      internal_hourly_cost: internal_hourly_cost || 0,
+      monthly_fixed_cost: monthly_fixed_cost || null,
+      capacity_hours_per_month: capacity_hours_per_month || null,
+      profile_id: inviteData.user.id,
+    };
+
+    const targetColleagueId = colleagueByEmail?.id || colleagueByProfile?.id;
+    const colleagueMutation = targetColleagueId
+      ? await supabaseAdmin.from("colleagues").update(colleaguePayload).eq("id", targetColleagueId)
+      : await supabaseAdmin.from("colleagues").insert(colleaguePayload);
+    const colleagueError = colleagueMutation.error;
+
+    if (colleagueError) {
+      console.error("Colleague upsert error:", colleagueError);
+      return new Response(
+        JSON.stringify({ error: "Nepodařilo se vytvořit nebo aktualizovat kolegu: " + colleagueError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`${targetColleagueId ? "Colleague updated" : "Colleague created"} and linked to profile for ${email}`);
 
     // Pre-assign role
     const { error: roleError } = await supabaseAdmin
