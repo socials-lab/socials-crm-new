@@ -1,4 +1,4 @@
-import { useState, useCallback, createContext, useContext, ReactNode } from 'react';
+import { useCallback, createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/utils/asyncUtils';
@@ -47,6 +47,12 @@ const STAGE_LABELS: Record<LeadStage, string> = {
 
 export { STAGE_LABELS };
 
+const isMissingDeletedAtColumnError = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { code?: string; message?: string };
+  return err.code === '42703' || err.message?.includes('deleted_at') === true;
+};
+
 interface LeadsDataContextType {
   leads: Lead[];
   leadHistory: LeadHistoryEntry[];
@@ -84,12 +90,29 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let data: Record<string, unknown>[] | null = null;
+
+      // Preferred path: hide soft-deleted records.
+      let { data: filteredData, error } = await supabase
         .from('leads')
         .select('*')
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
+
+      // Backward compatibility for environments where deleted_at migration
+      // has not been applied yet (e.g. freshly cloned DB snapshots).
+      if (error && isMissingDeletedAtColumnError(error)) {
+        console.warn('leads.deleted_at missing in DB, falling back to legacy lead query without soft-delete filter');
+        const fallback = await supabase
+          .from('leads')
+          .select('*')
+          .order('created_at', { ascending: false });
+        filteredData = fallback.data;
+        error = fallback.error;
+      }
+
       if (error) throw error;
+      data = filteredData;
 
       // Load latest active offer totals so lead list and analytics reflect discounts
       // applied in the shared-offer flow (including monthly % discounts).
@@ -238,7 +261,13 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         })
         .eq('id', id)
         .is('deleted_at', null);
-      if (error) throw error;
+
+      if (error) {
+        if (isMissingDeletedAtColumnError(error)) {
+          throw new Error('Soft delete is unavailable: database schema is outdated (missing leads.deleted_at). Apply latest migrations first.');
+        }
+        throw error;
+      }
 
       // Keep an audit trail entry for soft delete action
       await addHistoryEntry(id, 'field_update', 'deleted_at', 'Smazáno', null, deletedAt);
