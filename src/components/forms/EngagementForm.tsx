@@ -111,7 +111,7 @@ export function EngagementForm({
       one_off_fee: engagement?.one_off_fee || 0,
       status: engagement?.status || 'planned',
       start_date: engagement?.start_date || new Date().toISOString().split('T')[0],
-      end_date: engagement?.end_date || '',
+      end_date: engagement?.end_date || null,
       notice_period_months: engagement?.notice_period_months ?? null,
       notes: engagement?.notes || '',
     },
@@ -409,7 +409,11 @@ export function EngagementForm({
               <FormItem>
                 <FormLabel>Konec (volitelné)</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input
+                    type="date"
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

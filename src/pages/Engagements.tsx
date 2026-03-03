@@ -1771,17 +1771,22 @@ function EngagementsContent() {
           setEndEngagementDialogOpen(open);
           if (!open) setEngagementToEnd(null);
         }}
-        onConfirm={(data) => {
+        onConfirm={async (data) => {
           if (engagementToEnd) {
-            // Save end_date and termination fields
-            updateEngagement(engagementToEnd.id, {
-              end_date: data.end_date,
-              termination_reason: data.termination_reason,
-              termination_initiated_by: data.termination_initiated_by,
-              termination_notes: data.termination_notes || null,
-            });
-            toast.success(`Spolupráce bude ukončena k ${format(parseISO(data.end_date), 'd. MMMM yyyy', { locale: cs })}`);
-            setEngagementToEnd(null);
+            try {
+              // Save end_date and termination fields
+              await updateEngagement(engagementToEnd.id, {
+                end_date: data.end_date,
+                termination_reason: data.termination_reason,
+                termination_initiated_by: data.termination_initiated_by,
+                termination_notes: data.termination_notes || null,
+              });
+              toast.success(`Spolupráce bude ukončena k ${format(parseISO(data.end_date), 'd. MMMM yyyy', { locale: cs })}`);
+              setEngagementToEnd(null);
+            } catch (error) {
+              console.error('Failed to end engagement:', error);
+              toast.error(getErrorMessage(error, 'Nepodařilo se ukončit spolupráci'));
+            }
           }
         }}
       />
