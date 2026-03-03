@@ -73,7 +73,7 @@ import { normalizeUrlProtocol } from '@/lib/validation';
 import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 
 // Dynamic lookup for Creative Boost service ID
-const CREATIVE_BOOST_SERVICE_NAME = 'Creative Boost';
+const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
 
 const getTierPrice = (service: Service | undefined, tier: ServiceTier): number | null => {
   if (!service || service.service_type !== 'core') return null;
@@ -137,7 +137,7 @@ function EngagementsContent() {
 
   // Dynamic Creative Boost service ID lookup
   const CREATIVE_BOOST_SERVICE_ID = useMemo(() => {
-    const cbService = services.find(s => s.name === CREATIVE_BOOST_SERVICE_NAME);
+    const cbService = services.find((service) => service.code === CREATIVE_BOOST_SERVICE_CODE);
     return cbService?.id || null;
   }, [services]);
 
@@ -1625,20 +1625,24 @@ function EngagementsContent() {
           services={services}
           onSubmit={async (data) => {
             const newService = await addEngagementService(data);
+            const selectedService = services.find((service) => service.id === data.service_id);
+            if (!selectedService) throw new Error('Vybraná služba nebyla nalezena');
             
             // If Creative Boost service, automatically create record in Creative Boost tab
-            if (CREATIVE_BOOST_SERVICE_ID && data.service_id === CREATIVE_BOOST_SERVICE_ID) {
-              const engagement = engagements.find(e => e.id === data.engagement_id);
-              if (engagement) {
-                addClientToMonth(engagement.client_id, currentYear, currentMonth, {
-                  minCredits: data.creative_boost_min_credits ?? 30,
-                  maxCredits: data.creative_boost_max_credits ?? 50,
-                  pricePerCredit: data.creative_boost_price_per_credit ?? 1500,
-                  engagementServiceId: newService.id,
-                  engagementId: engagement.id,
-                  status: 'active',
-                });
+            if (selectedService.code === CREATIVE_BOOST_SERVICE_CODE) {
+              if (data.creative_boost_max_credits === null || data.creative_boost_price_per_credit === null) {
+                throw new Error('Creative Boost vyžaduje počet kreditů a cenu za kredit');
               }
+              const engagement = engagements.find(e => e.id === data.engagement_id);
+              if (!engagement) throw new Error('Zakázka pro Creative Boost nebyla nalezena');
+              await addClientToMonth(engagement.client_id, currentYear, currentMonth, {
+                minCredits: data.creative_boost_min_credits ?? undefined,
+                maxCredits: data.creative_boost_max_credits,
+                pricePerCredit: data.creative_boost_price_per_credit,
+                engagementServiceId: newService.id,
+                engagementId: engagement.id,
+                status: 'active',
+              });
             }
             
             toast.success('Služba přidána');
