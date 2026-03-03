@@ -15,6 +15,7 @@ interface InvoiceMonth {
   isInvoiced: boolean;
   isPending: boolean;
   amount: number | null;
+  currency: string | null;
   issuedAt: string | null;
   fakturoidUrl: string | null;
   invoiceNumber: string | null;
@@ -59,6 +60,7 @@ export function getRecentMonths(engagement: Engagement, invoices: IssuedInvoice[
       isInvoiced,
       isPending,
       amount: invoice?.total_amount || null,
+      currency: invoice?.currency ?? null,
       issuedAt: invoice?.issued_at || null,
       fakturoidUrl: invoice?.fakturoid_url || null,
       invoiceNumber: invoice?.invoice_number || null,
@@ -99,6 +101,7 @@ export function getAllInvoicingMonths(engagement: Engagement, invoices: IssuedIn
       isInvoiced,
       isPending,
       amount: invoice?.total_amount || null,
+      currency: invoice?.currency ?? null,
       issuedAt: invoice?.issued_at || null,
       fakturoidUrl: invoice?.fakturoid_url || null,
       invoiceNumber: invoice?.invoice_number || null,
@@ -167,6 +170,15 @@ export function EngagementInvoicingSection({ engagement, invoices, currency }: E
     }).format(amount);
   };
 
+  const formatRowAmount = (amount: number, invoiceCurrency: string | null) => {
+    return new Intl.NumberFormat('cs-CZ', {
+      style: 'currency',
+      currency: invoiceCurrency || currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -218,7 +230,7 @@ export function EngagementInvoicingSection({ engagement, invoices, currency }: E
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">
-                  {m.amount ? formatCurrency(m.amount) : '-'}
+                  {m.amount ? formatRowAmount(m.amount, m.currency) : '-'}
                 </span>
                 {m.fakturoidUrl ? (
                   <Badge variant="outline" className="text-[10px] h-5 bg-green-50 text-green-700 border-green-200">

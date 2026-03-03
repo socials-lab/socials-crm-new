@@ -30,8 +30,36 @@ interface IssuedInvoiceInfo {
   invoice_number: string;
   engagement_name: string;
   amount: number;
+  currency: string;
   fakturoid_url: string | null;
   fakturoid_failed: boolean;
+  partial_success?: boolean;
+}
+
+function requireCurrency(value: string | null | undefined, context: string): string {
+  if (!value) {
+    throw new Error(`Missing currency for ${context}`);
+  }
+  return value;
+}
+
+function formatAmountsByCurrency(items: Array<{ amount: number; currency: string }>) {
+  if (items.length === 0) return '-';
+  const byCurrency = new Map<string, number>();
+  items.forEach((item) => {
+    byCurrency.set(item.currency, (byCurrency.get(item.currency) ?? 0) + item.amount);
+  });
+  return Array.from(byCurrency.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([currency, amount]) =>
+      new Intl.NumberFormat('cs-CZ', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount),
+    )
+    .join(' + ');
 }
 
 export function IssueInvoicesDialog({ 
@@ -48,14 +76,14 @@ export function IssueInvoicesDialog({
   const [isSuccess, setIsSuccess] = useState(false);
   const [successData, setSuccessData] = useState<{ 
     count: number; 
-    amount: number;
+    totalsByCurrency: Array<{ amount: number; currency: string }>;
     issuedInvoices: IssuedInvoiceInfo[];
   } | null>(null);
 
   const periodDate = new Date(year, month - 1);
   const periodLabel = format(periodDate, 'LLLL yyyy', { locale: cs });
 
-  const formatCurrency = (amount: number, currency: string = 'CZK') => {
+  const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
       currency: currency,
@@ -71,8 +99,25 @@ export function IssueInvoicesDialog({
   };
 
   const handleIssue = async () => {
+    // Block if any invoice has mixed line-item currencies
+    const hasMixedCurrency = invoices.some(inv => {
+      const invCurrency = requireCurrency(inv.currency, `invoice ${inv.id}`);
+      return inv.line_items.some(item => requireCurrency(item.currency, `line item ${item.id}`) !== invCurrency);
+    });
+    if (hasMixedCurrency) {
+      toast({
+        title: 'Smíšené měny',
+        description: 'Každá faktura musí mít všechny položky ve stejné měně. Sjednoťte měny před vystavením.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const count = invoices.length;
-    const amount = invoices.reduce((sum, inv) => sum + inv.total_amount, 0);
+    const totalsByCurrency = invoices.map((inv) => ({
+      amount: inv.total_amount,
+      currency: requireCurrency(inv.currency, `invoice ${inv.id}`),
+    }));
 
     setIsSubmitting(true);
 
@@ -135,10 +180,12 @@ export function IssueInvoicesDialog({
       // Now push to Fakturoid
       let fakturoidUrl: string | null = null;
       let fakturoidFailed = false;
+      let partialSuccess = false;
 
       try {
         const { data: fakturoidResult, error: fakturoidError } = await invokeWithTimeout<{
           success?: boolean;
+          partial_success?: boolean;
           fakturoid_url?: string;
           error?: string;
         }>(
@@ -151,6 +198,10 @@ export function IssueInvoicesDialog({
           console.warn(`Fakturoid failed for invoice ${createdInvoice.invoice_number}:`, fakturoidError || fakturoidResult?.error);
           fakturoidFailed = true;
           fakturoidFailures++;
+          if (fakturoidResult?.partial_success && fakturoidResult?.fakturoid_url) {
+            fakturoidUrl = fakturoidResult.fakturoid_url;
+            partialSuccess = true;
+          }
         } else if (fakturoidResult?.success) {
           fakturoidUrl = fakturoidResult.fakturoid_url ?? null;
         }
@@ -159,13 +210,14 @@ export function IssueInvoicesDialog({
         fakturoidFailed = true;
         fakturoidFailures++;
       }
-
       issuedInvoiceInfos.push({
         invoice_number: createdInvoice.invoice_number,
         engagement_name: invoice.engagement_name,
         amount: invoice.total_amount,
+        currency: requireCurrency(invoice.currency, `invoice ${invoice.id}`),
         fakturoid_url: fakturoidUrl,
         fakturoid_failed: fakturoidFailed,
+        partial_success: partialSuccess,
       });
     }
     } catch (error: unknown) {
@@ -195,7 +247,7 @@ export function IssueInvoicesDialog({
     setIsSubmitting(false);
 
     // Store data for success screen
-    setSuccessData({ count, amount, issuedInvoices: issuedInvoiceInfos });
+    setSuccessData({ count, totalsByCurrency, issuedInvoices: issuedInvoiceInfos });
     setIsSuccess(true);
 
     // Call success callback with invoice IDs
@@ -253,7 +305,7 @@ export function IssueInvoicesDialog({
               </p>
               
               <p className="text-lg font-medium mt-2 text-green-600">
-                {formatCurrency(successData.amount)}
+                {formatAmountsByCurrency(successData.totalsByCurrency)}
               </p>
             </div>
 
@@ -269,7 +321,7 @@ export function IssueInvoicesDialog({
                     <p className="text-xs text-muted-foreground">{inv.engagement_name}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-medium text-sm">{formatCurrency(inv.amount)}</span>
+                    <span className="font-medium text-sm">{formatCurrency(inv.amount, inv.currency)}</span>
                     {inv.fakturoid_url ? (
                       <Button
                         variant="ghost"
@@ -283,7 +335,7 @@ export function IssueInvoicesDialog({
                     ) : (
                       <span className="text-xs text-orange-600 flex items-center gap-1">
                         <AlertTriangle className="h-3.5 w-3.5" />
-                        Nutno odeslat ručně
+                        {inv.partial_success ? 'Propojte manuálně v CRM' : 'Nutno odeslat ručně'}
                       </span>
                     )}
                   </div>
@@ -296,7 +348,12 @@ export function IssueInvoicesDialog({
             <Alert>
               <AlertDescription>
                 Bude vystaveno <strong>{invoices.length} faktur</strong> v celkové hodnotě{' '}
-                <strong>{formatCurrency(invoices.reduce((sum, inv) => sum + inv.total_amount, 0))}</strong>.
+                <strong>{formatAmountsByCurrency(
+                  invoices.map((inv) => ({
+                    amount: inv.total_amount,
+                    currency: requireCurrency(inv.currency, `invoice ${inv.id}`),
+                  })),
+                )}</strong>.
               </AlertDescription>
             </Alert>
 

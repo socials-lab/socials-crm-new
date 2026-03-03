@@ -103,7 +103,7 @@ export function AddEngagementServiceDialog({
       service_id: '',
       name: '',
       price: 0,
-      currency: engagementCurrency || 'CZK',
+      currency: engagementCurrency,
       notes: '',
       selected_tier: null,
       creative_boost_min_credits: null,
@@ -117,7 +117,7 @@ export function AddEngagementServiceDialog({
 
   useEffect(() => {
     if (!open) return;
-    form.setValue('currency', engagementCurrency || 'CZK');
+    form.setValue('currency', engagementCurrency);
   }, [open, engagementCurrency, form]);
 
   const selectedService = services.find(s => s.id === selectedServiceId);
@@ -148,7 +148,7 @@ export function AddEngagementServiceDialog({
         // Auto-fill price from GROWTH tier
         const growthPrice = getTierPrice(service, 'growth');
         form.setValue('price', growthPrice ?? 0);
-        form.setValue('currency', engagementCurrency || 'CZK');
+        form.setValue('currency', engagementCurrency);
       } else {
         // Add-on service
         form.setValue('creative_boost_min_credits', null);
@@ -156,7 +156,7 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_price_per_credit', null);
         form.setValue('selected_tier', null);
         form.setValue('price', service.base_price);
-        form.setValue('currency', engagementCurrency || 'CZK');
+        form.setValue('currency', engagementCurrency);
       }
     }
   };
@@ -221,7 +221,7 @@ export function AddEngagementServiceDialog({
           name: data.name,
           price: data.price,
           billing_type: selectedService.billing_type,
-          currency: engagementCurrency || data.currency,
+          currency: engagementCurrency,
           is_active: true,
           notes: data.notes,
           // Core service tier selection
@@ -351,12 +351,12 @@ export function AddEngagementServiceDialog({
                             onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                            CZK
+                            {engagementCurrency}
                           </span>
                         </div>
                       </FormControl>
                       <FormDescription className="text-xs">
-                        Kolik klient zaplatí za jeden kredit (doporučeno: 400 Kč)
+                        Kolik klient zaplatí za jeden kredit
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -368,11 +368,11 @@ export function AddEngagementServiceDialog({
                     <p className="text-sm font-medium">
                       Měsíční fakturace: {' '}
                       <span className="text-primary">
-                        {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)).toLocaleString('cs-CZ')} CZK
+                        {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)).toLocaleString('cs-CZ')} {engagementCurrency}
                       </span>
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      = {form.watch('creative_boost_max_credits') ?? 0} kreditů × {form.watch('creative_boost_price_per_credit') ?? 0} Kč/kredit
+                      = {form.watch('creative_boost_max_credits') ?? 0} kreditů × {form.watch('creative_boost_price_per_credit') ?? 0} {engagementCurrency}/kredit
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground border-t pt-2 mt-2">
@@ -405,7 +405,7 @@ export function AddEngagementServiceDialog({
                           {serviceTierConfigs.map((config) => {
                             const tierPrice = getTierPrice(selectedService, config.tier);
                             const priceLabel = tierPrice !== null
-                              ? `${tierPrice.toLocaleString('cs-CZ')} Kč`
+                              ? `${tierPrice.toLocaleString('cs-CZ')} ${engagementCurrency}`
                               : 'Individuální kalkulace';
                             const spendLabel = config.max_spend 
                               ? `do ${(config.max_spend/1000).toFixed(0)}K Kč`
@@ -471,8 +471,8 @@ export function AddEngagementServiceDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={engagementCurrency || 'CZK'}>
-                        {engagementCurrency || 'CZK'}
+                      <SelectItem value={engagementCurrency}>
+                        {engagementCurrency}
                       </SelectItem>
                     </SelectContent>
                   </Select>

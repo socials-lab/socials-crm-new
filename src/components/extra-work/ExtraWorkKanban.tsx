@@ -29,7 +29,7 @@ interface KanbanColumnProps {
   title: string;
   items: ExtraWork[];
   colorClass: string;
-  total: number;
+  totalLabel: string;
   onUpdate: (id: string, data: Partial<ExtraWork>) => void;
   targetStatus: ExtraWorkStatus;
 }
@@ -54,7 +54,7 @@ function KanbanCard({
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
-      currency: 'CZK',
+      currency: work.currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -171,18 +171,9 @@ function KanbanColumn({
   title, 
   items, 
   colorClass, 
-  total, 
+  totalLabel,
   onUpdate,
 }: KanbanColumnProps) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('cs-CZ', {
-      style: 'currency',
-      currency: 'CZK',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
   return (
     <div className="flex-1 min-w-[300px]">
       <div className={cn("rounded-t-lg px-4 py-3 border-b-2", colorClass)}>
@@ -193,7 +184,7 @@ function KanbanColumn({
           </span>
         </div>
         <div className="text-xs mt-1 opacity-80">
-          {formatCurrency(total)}
+          {totalLabel}
         </div>
       </div>
       <div className="bg-muted/30 rounded-b-lg p-3 min-h-[200px] max-h-[70vh] overflow-y-auto">
@@ -242,22 +233,38 @@ export function ExtraWorkKanban({ extraWorks, onUpdate, searchQuery }: ExtraWork
     const readyToInvoice = filteredWorks.filter(w => w.status === 'ready_to_invoice');
     const invoiced = filteredWorks.filter(w => w.status === 'invoiced');
 
+    const formatAmountsByCurrency = (works: ExtraWork[]) => {
+      if (works.length === 0) return '0';
+      const totals = new Map<string, number>();
+      works.forEach((work) => {
+        totals.set(work.currency, (totals.get(work.currency) ?? 0) + work.amount);
+      });
+      return Array.from(totals.entries())
+        .map(([currency, amount]) => new Intl.NumberFormat('cs-CZ', {
+          style: 'currency',
+          currency,
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(amount))
+        .join(' + ');
+    };
+
     return {
       pendingApproval: {
         items: pendingApproval,
-        total: pendingApproval.reduce((sum, w) => sum + w.amount, 0),
+        totalLabel: formatAmountsByCurrency(pendingApproval),
       },
       inProgress: {
         items: inProgress,
-        total: inProgress.reduce((sum, w) => sum + w.amount, 0),
+        totalLabel: formatAmountsByCurrency(inProgress),
       },
       readyToInvoice: {
         items: readyToInvoice,
-        total: readyToInvoice.reduce((sum, w) => sum + w.amount, 0),
+        totalLabel: formatAmountsByCurrency(readyToInvoice),
       },
       invoiced: {
         items: invoiced,
-        total: invoiced.reduce((sum, w) => sum + w.amount, 0),
+        totalLabel: formatAmountsByCurrency(invoiced),
       },
     };
   }, [filteredWorks]);
@@ -267,7 +274,7 @@ export function ExtraWorkKanban({ extraWorks, onUpdate, searchQuery }: ExtraWork
       <KanbanColumn
         title="Čeká na schválení"
         items={columns.pendingApproval.items}
-        total={columns.pendingApproval.total}
+        totalLabel={columns.pendingApproval.totalLabel}
         colorClass="bg-amber-500/10 border-amber-500 text-amber-700"
         onUpdate={onUpdate}
         targetStatus="pending_approval"
@@ -275,7 +282,7 @@ export function ExtraWorkKanban({ extraWorks, onUpdate, searchQuery }: ExtraWork
       <KanbanColumn
         title="V procesu"
         items={columns.inProgress.items}
-        total={columns.inProgress.total}
+        totalLabel={columns.inProgress.totalLabel}
         colorClass="bg-purple-500/10 border-purple-500 text-purple-700"
         onUpdate={onUpdate}
         targetStatus="in_progress"
@@ -283,7 +290,7 @@ export function ExtraWorkKanban({ extraWorks, onUpdate, searchQuery }: ExtraWork
       <KanbanColumn
         title="K fakturaci"
         items={columns.readyToInvoice.items}
-        total={columns.readyToInvoice.total}
+        totalLabel={columns.readyToInvoice.totalLabel}
         colorClass="bg-blue-500/10 border-blue-500 text-blue-700"
         onUpdate={onUpdate}
         targetStatus="ready_to_invoice"
@@ -291,7 +298,7 @@ export function ExtraWorkKanban({ extraWorks, onUpdate, searchQuery }: ExtraWork
       <KanbanColumn
         title="Vyfakturováno"
         items={columns.invoiced.items}
-        total={columns.invoiced.total}
+        totalLabel={columns.invoiced.totalLabel}
         colorClass="bg-emerald-500/10 border-emerald-500 text-emerald-700"
         onUpdate={onUpdate}
         targetStatus="invoiced"

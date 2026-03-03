@@ -25,6 +25,10 @@ interface ExtraWorkMarginSectionProps {
 
 export function ExtraWorkMarginSection({ year, month }: ExtraWorkMarginSectionProps) {
   const { extraWorks, getClientById, getColleagueById } = useCRMData();
+  const hasUnsupportedCurrency = useMemo(
+    () => extraWorks.some((work) => work.currency !== 'CZK'),
+    [extraWorks],
+  );
 
   const extraWorkMarginData = useMemo(() => {
     const monthStart = startOfMonth(new Date(year, month - 1));
@@ -158,6 +162,19 @@ export function ExtraWorkMarginSection({ year, month }: ExtraWorkMarginSectionPr
     if (percent >= 40) return 'bg-status-active/10 text-status-active border-status-active/20';
     if (percent >= 20) return 'bg-status-paused/10 text-status-paused border-status-paused/20';
     return 'bg-status-lost/10 text-status-lost border-status-lost/20';
+  }
+
+  if (hasUnsupportedCurrency) {
+    return (
+      <Card className="border-amber-400/40 bg-amber-500/5">
+        <CardContent className="pt-6 flex items-center gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <span>
+            Marže víceprací zatím nepodporuje kombinaci měn. Obsahuje data mimo CZK.
+          </span>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

@@ -35,6 +35,13 @@ export interface UpsellItem {
   isOneOff?: boolean;
 }
 
+function requireCurrency(value: string | null | undefined, context: string): string {
+  if (!value) {
+    throw new Error(`Missing currency for ${context}`);
+  }
+  return value;
+}
+
 export function useUpsellApprovals() {
   const queryClient = useQueryClient();
   const {
@@ -165,7 +172,7 @@ export function useUpsellApprovals() {
         engagementName: engagement?.name || 'N/A',
         itemName: ew.name,
         amount: ew.amount,
-        currency: ew.currency || 'CZK',
+        currency: requireCurrency(ew.currency, `extra work ${ew.id}`),
         upsoldById: ew.upsold_by_id,
         upsoldByName: seller?.full_name || 'Neznámý',
         commissionPercent: ew.upsell_commission_percent,
@@ -229,7 +236,7 @@ export function useUpsellApprovals() {
         engagementName: engagement.name,
         itemName: es.name,
         amount,
-        currency: es.currency || 'CZK',
+        currency: requireCurrency(es.currency, `engagement service ${es.id}`),
         upsoldById: es.upsold_by_id,
         upsoldByName: seller?.full_name || 'Neznámý',
         commissionPercent: es.upsell_commission_percent,
@@ -280,7 +287,7 @@ export function useUpsellApprovals() {
         engagementName: engagement?.name || 'N/A',
         itemName: ew.name,
         amount: ew.amount,
-        currency: ew.currency || 'CZK',
+        currency: requireCurrency(ew.currency, `extra work ${ew.id}`),
         upsoldById: ew.upsold_by_id,
         upsoldByName: seller?.full_name || 'Neznámý',
         commissionPercent: ew.upsell_commission_percent,
@@ -347,7 +354,7 @@ export function useUpsellApprovals() {
         engagementName: engagement.name,
         itemName: es.name,
         amount,
-        currency: es.currency || 'CZK',
+        currency: requireCurrency(es.currency, `engagement service ${es.id}`),
         upsoldById: es.upsold_by_id,
         upsoldByName: seller?.full_name || 'Neznámý',
         commissionPercent: es.upsell_commission_percent,

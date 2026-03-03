@@ -35,7 +35,7 @@ export function AddLeadServiceDialog({
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [selectedTier, setSelectedTier] = useState<ServiceTier | null>(null);
   const [priceInput, setPriceInput] = useState('0');
-  const [currency, setCurrency] = useState('CZK');
+  const [currency, setCurrency] = useState('');
   const [billingType, setBillingType] = useState<'monthly' | 'one_off'>('monthly');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -89,6 +89,10 @@ export function AddLeadServiceDialog({
       toast.error('Zadejte platnou cenu');
       return;
     }
+    if (!currency) {
+      toast.error('Služba nemá nastavenou měnu');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -106,7 +110,7 @@ export function AddLeadServiceDialog({
       setSelectedServiceId('');
       setSelectedTier(null);
       setPriceInput('0');
-      setCurrency('CZK');
+      setCurrency('');
       setBillingType('monthly');
       onOpenChange(false);
     } catch (error) {

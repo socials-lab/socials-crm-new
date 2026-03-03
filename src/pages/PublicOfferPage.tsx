@@ -537,7 +537,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           services: (data.services as PublicOfferService[]) || [],
           portfolio_links: (data.portfolio_links as PortfolioLink[]) || [],
           total_price: data.total_price || 0,
-          currency: data.currency || 'CZK',
+          currency: (() => {
+            if (!data.currency) throw new Error(`Public offer ${data.id} has no currency`);
+            return data.currency;
+          })(),
           offer_type: (data.offer_type as 'retainer' | 'one_off') || 'retainer',
           valid_until: data.valid_until,
           is_active: data.is_active ?? true,

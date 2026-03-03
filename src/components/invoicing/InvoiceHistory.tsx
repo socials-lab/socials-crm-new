@@ -11,12 +11,19 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useFakturoid } from '@/hooks/useFakturoid';
 import { Link } from 'react-router-dom';
 
+function requireCurrency(value: string | null | undefined, context: string): string {
+  if (!value) {
+    throw new Error(`Missing currency for ${context}`);
+  }
+  return value;
+}
+
 export function InvoiceHistory() {
   const { issuedInvoices, getIssuedInvoicesByYear } = useCRMData();
   const { createInvoiceInFakturoid, isLoading: isCreatingFakturoid } = useFakturoid();
   const [selectedYear, setSelectedYear] = useState('2024');
 
-  const formatCurrency = (amount: number, currency: string = 'CZK') => {
+  const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
       currency,
@@ -34,20 +41,36 @@ export function InvoiceHistory() {
       .sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime());
   }, [selectedYear, getIssuedInvoicesByYear]);
 
-  // Group by month for summary
+  // Group by month for summary, with amounts per currency
   const monthlyStats = useMemo(() => {
-    const stats = new Map<number, { count: number; amount: number }>();
-    
+    const stats = new Map<number, { count: number; byCurrency: Map<string, number> }>();
     filteredHistory.forEach(inv => {
-      const existing = stats.get(inv.month) || { count: 0, amount: 0 };
-      stats.set(inv.month, {
-        count: existing.count + 1,
-        amount: existing.amount + inv.total_amount,
-      });
+      const existing = stats.get(inv.month) || { count: 0, byCurrency: new Map<string, number>() };
+      const curr = requireCurrency(inv.currency, `invoice ${inv.id}`);
+      existing.byCurrency.set(curr, (existing.byCurrency.get(curr) ?? 0) + inv.total_amount);
+      stats.set(inv.month, { count: existing.count + 1, byCurrency: existing.byCurrency });
     });
-    
     return stats;
   }, [filteredHistory]);
+
+  // Totals grouped by currency
+  const totalByCurrency = useMemo(() => {
+    const byCurrency = new Map<string, number>();
+    filteredHistory.forEach(inv => {
+      const curr = requireCurrency(inv.currency, `invoice ${inv.id}`);
+      byCurrency.set(curr, (byCurrency.get(curr) ?? 0) + inv.total_amount);
+    });
+    return byCurrency;
+  }, [filteredHistory]);
+
+  const formatAmountsByCurrency = (byCurrency: Map<string, number>) => {
+    return Array.from(byCurrency.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([currency, amount]) =>
+        new Intl.NumberFormat('cs-CZ', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)
+      )
+      .join(' + ');
+  };
 
   // Available years from data
   const availableYears = useMemo(() => {
@@ -55,8 +78,16 @@ export function InvoiceHistory() {
     return Array.from(years).sort((a, b) => b - a);
   }, [issuedInvoices]);
 
-  const totalYear = filteredHistory.reduce((sum, inv) => sum + inv.total_amount, 0);
-  const avgMonthly = monthlyStats.size > 0 ? totalYear / monthlyStats.size : 0;
+  const totalYearFormatted = formatAmountsByCurrency(totalByCurrency);
+  const monthsWithInvoices = monthlyStats.size;
+  const avgByCurrency = useMemo(() => {
+    if (monthsWithInvoices === 0) return new Map<string, number>();
+    const avg = new Map<string, number>();
+    totalByCurrency.forEach((sum, curr) => {
+      avg.set(curr, Math.round(sum / monthsWithInvoices));
+    });
+    return avg;
+  }, [totalByCurrency, monthsWithInvoices]);
 
   return (
     <div className="space-y-6">
@@ -100,7 +131,7 @@ export function InvoiceHistory() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">
-                  {formatCurrency(totalYear)}
+                  {totalYearFormatted}
                 </p>
               </CardContent>
             </Card>
@@ -112,7 +143,7 @@ export function InvoiceHistory() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">
-                  {formatCurrency(avgMonthly)}
+                  {monthsWithInvoices > 0 ? formatAmountsByCurrency(avgByCurrency) : '-'}
                 </p>
               </CardContent>
             </Card>
@@ -250,7 +281,7 @@ export function InvoiceHistory() {
                       </p>
                       {stats ? (
                         <>
-                          <p className="font-medium text-sm">{formatCurrency(stats.amount)}</p>
+                          <p className="font-medium text-sm">{formatAmountsByCurrency(stats.byCurrency)}</p>
                           <p className="text-xs text-muted-foreground">{stats.count} faktur</p>
                         </>
                       ) : (

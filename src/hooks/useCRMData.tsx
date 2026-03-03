@@ -126,6 +126,19 @@ interface CRMDataContextType {
 
 const CRMDataContext = createContext<CRMDataContextType | null>(null);
 
+const ALLOWED_CURRENCIES = ['CZK', 'EUR', 'USD'] as const;
+
+function requireCurrency(value: unknown, context: string): 'CZK' | 'EUR' | 'USD' {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`Missing currency for ${context}`);
+  }
+  const currency = value.trim().toUpperCase();
+  if (!ALLOWED_CURRENCIES.includes(currency as (typeof ALLOWED_CURRENCIES)[number])) {
+    throw new Error(`Invalid currency "${currency}" for ${context}`);
+  }
+  return currency as 'CZK' | 'EUR' | 'USD';
+}
+
 // Helper function to transform DB row to Client type
 // Handles all nullable fields from Supabase to match application types
 const transformClient = (row: Record<string, unknown>): Client => ({
@@ -134,6 +147,7 @@ const transformClient = (row: Record<string, unknown>): Client => ({
   brand_name: (row.brand_name as string) || '',
   country: (row.country as string) || 'Czech Republic',
   industry: (row.industry as string) || '',
+  currency: requireCurrency(row.currency, `client ${String(row.id ?? '')}`),
   // Enum fields with defaults
   status: (row.status as Client['status']) || 'active',
   tier: (row.tier as Client['tier']) || 'standard',
@@ -182,7 +196,7 @@ const transformService = (row: Record<string, unknown>): Service => ({
   category: row.category || 'performance',
   description: row.description ?? '',
   base_price: row.base_price ?? 0,
-  currency: row.currency ?? 'CZK',
+  currency: requireCurrency(row.currency, `service ${String(row.id ?? '')}`),
   billing_type: (row.billing_type || 'monthly') as 'monthly' | 'one_off',
   is_active: row.is_active ?? true,
   created_at: row.created_at || new Date().toISOString(),
@@ -1477,123 +1491,96 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     oneOffServiceIds: string[],
     creativeBoostClientMonthIds: string[] = []
   ): Promise<IssuedInvoice> => {
-    // Generate invoice number - fetch fresh from database to avoid duplicates
-    const { data: latestInvoices, error: fetchError } = await supabase
-      .from('issued_invoices')
-      .select('invoice_number')
-      .eq('year', invoice.year)
-      .order('invoice_number', { ascending: false })
-      .limit(10);
-
-    if (fetchError) throw fetchError;
-
-    let maxNumber = 0;
-    (latestInvoices || []).forEach(inv => {
-      const match = inv.invoice_number.match(/FV-\d{4}-(\d+)/);
-      const num = match ? parseInt(match[1], 10) : 0;
-      maxNumber = Math.max(maxNumber, num);
-    });
-    const invoiceNumber = `FV-${invoice.year}-${String(maxNumber + 1).padStart(3, '0')}`;
-    
-    // Get current user for issued_by
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
-    
-    // Create invoice
-    const { data: createdInvoice, error: invoiceError } = await supabase
-      .from('issued_invoices')
-      .insert({
-        ...invoice,
-        invoice_number: invoiceNumber,
-        issued_by: user.id,
-      })
-      .select()
-      .single();
-    
-    if (invoiceError) throw invoiceError;
-    
-    // Create line items
-    const lineItemsWithInvoiceId = lineItems.map(item => ({
-      ...item,
-      invoice_id: createdInvoice.id,
-    }));
-    
-    if (lineItemsWithInvoiceId.length > 0) {
-      const { error: lineItemsError } = await supabase
-        .from('invoice_line_items')
-        .insert(lineItemsWithInvoiceId);
-      
-      if (lineItemsError) throw lineItemsError;
+
+    if (!invoice.currency) {
+      throw new Error('Invoice currency is required');
     }
-    
-    // Update extra works to invoiced status - atomic update with status check
-    if (extraWorkIds.length > 0) {
-      // Atomic update: only update items that are still ready_to_invoice
-      // This prevents race conditions where another request invoices the same item
-      const { data: updatedWorks, error: extraWorkError } = await supabase
-        .from('extra_works')
-        .update({
-          status: 'invoiced',
-          invoice_id: createdInvoice.id,
-          invoice_number: invoiceNumber,
-          invoiced_at: new Date().toISOString(),
-        })
-        .in('id', extraWorkIds)
-        .eq('status', 'ready_to_invoice')  // Only update if still ready_to_invoice
-        .select('id');
-
-      if (extraWorkError) throw extraWorkError;
-
-      // Verify all items were updated (none were already invoiced)
-      if (!updatedWorks || updatedWorks.length !== extraWorkIds.length) {
-        const updatedIds = new Set(updatedWorks?.map(w => w.id) || []);
-        const failedIds = extraWorkIds.filter(id => !updatedIds.has(id));
-        throw new Error(`Some extra works could not be invoiced (may have been invoiced already): ${failedIds.join(', ')}`);
+    const currency = requireCurrency(invoice.currency, `invoice ${invoice.engagement_id} ${invoice.year}-${invoice.month}`);
+    const normalizedLineItems = lineItems.map((item) => {
+      const normalizedCurrency = requireCurrency(
+        item.currency,
+        `line item "${item.line_description}"`,
+      );
+      if (normalizedCurrency !== currency) {
+        throw new Error(`Line item currency (${normalizedCurrency}) must match invoice currency (${currency})`);
       }
-    }
-    
-    // Update one-off services to invoiced status
-    if (oneOffServiceIds.length > 0) {
-      const { error: serviceError } = await supabase
-        .from('engagement_services')
-        .update({
-          invoicing_status: 'invoiced',
-          invoiced_at: new Date().toISOString(),
-          invoice_id: createdInvoice.id,
-        })
-        .in('id', oneOffServiceIds);
 
-      if (serviceError) throw serviceError;
-    }
+      const calculatedFinalAmount = (item.unit_price * item.quantity) + item.adjustment_amount;
+      if (Math.abs(calculatedFinalAmount - item.final_amount) > 0.01) {
+        throw new Error(
+          `Line item "${item.line_description}" has invalid final amount (${item.final_amount}); expected ${calculatedFinalAmount}`,
+        );
+      }
 
-    // Update Creative Boost client months to invoiced status
-    if (creativeBoostClientMonthIds.length > 0) {
-      // Calculate total credits from line items for this invoice
-      const cbLineItems = lineItems.filter(li => li.source === 'creative_boost');
-      const totalCredits = cbLineItems.reduce((sum, li) => sum + (li.quantity || 0), 0);
-      const totalAmount = cbLineItems.reduce((sum, li) => sum + ((li.unit_price || 0) * (li.quantity || 0)), 0);
+      return {
+        ...item,
+        currency: normalizedCurrency,
+      };
+    });
 
-      const { error: cbError } = await supabase
-        .from('creative_boost_client_months')
-        .update({
-          invoice_id: createdInvoice.id,
-          invoiced_at: new Date().toISOString(),
-          invoiced_credits: totalCredits,
-          invoiced_amount: totalAmount,
-        })
-        .in('id', creativeBoostClientMonthIds);
-
-      if (cbError) throw cbError;
+    const calculatedInvoiceTotal = normalizedLineItems.reduce((sum, item) => sum + item.final_amount, 0);
+    if (Math.abs(calculatedInvoiceTotal - invoice.total_amount) > 0.01) {
+      throw new Error(
+        `Invoice total mismatch: expected ${calculatedInvoiceTotal}, got ${invoice.total_amount}`,
+      );
     }
 
-    // Invalidate queries
+    const lineItemsForRpc = normalizedLineItems.map(item => ({
+      source: item.source,
+      engagement_id: item.engagement_id,
+      extra_work_id: item.extra_work_id,
+      engagement_service_id: item.engagement_service_id,
+      source_description: item.source_description,
+      source_amount: item.source_amount,
+      period_start: item.period_start,
+      period_end: item.period_end,
+      prorated_days: item.prorated_days,
+      total_days_in_month: item.total_days_in_month,
+      prorated_amount: item.prorated_amount,
+      line_description: item.line_description,
+      unit_price: item.unit_price,
+      quantity: item.quantity,
+      adjustment_amount: item.adjustment_amount,
+      adjustment_reason: item.adjustment_reason,
+      final_amount: item.final_amount,
+      is_approved: item.is_approved,
+      note: item.note,
+      hours: item.hours,
+      hourly_rate: item.hourly_rate,
+      currency: item.currency,
+      is_reverse_charge: item.is_reverse_charge,
+      vat_rate: item.vat_rate ?? 21,
+      unit_name: item.unit_name || 'ks',
+    }));
+
+    const { data: createdInvoice, error } = await supabase.rpc('create_invoice_with_items', {
+      p_engagement_id: invoice.engagement_id,
+      p_engagement_name: invoice.engagement_name,
+      p_client_id: invoice.client_id,
+      p_client_name: invoice.client_name,
+      p_year: invoice.year,
+      p_month: invoice.month,
+      p_line_items: lineItemsForRpc,
+      p_total_amount: invoice.total_amount,
+      p_currency: currency,
+      p_issued_by: user.id,
+      p_extra_work_ids: extraWorkIds,
+      p_one_off_service_ids: oneOffServiceIds,
+      p_creative_boost_client_month_ids: creativeBoostClientMonthIds,
+    });
+
+    if (error) throw error;
+    if (!createdInvoice) throw new Error('Invoice creation returned no data');
+
     queryClient.invalidateQueries({ queryKey: ['issued_invoices'] });
     queryClient.invalidateQueries({ queryKey: ['invoice_line_items'] });
     queryClient.invalidateQueries({ queryKey: ['extra_works'] });
     queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
     queryClient.invalidateQueries({ queryKey: ['creative_boost_client_months'] });
-    
-    return createdInvoice;
+
+    return createdInvoice as IssuedInvoice;
   };
 
   // Memoize context value to prevent unnecessary re-renders

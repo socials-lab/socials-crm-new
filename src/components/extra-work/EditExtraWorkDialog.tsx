@@ -75,7 +75,7 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
   );
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: extraWork.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   const handleSubmit = () => {
     if (!colleagueId || !name) return;
@@ -150,7 +150,7 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
               <Input type="number" step="0.5" value={hoursWorked} onChange={(e) => setHoursWorked(e.target.value)} />
             </div>
             <div className="grid gap-2">
-              <Label>Sazba (Kč/h) *</Label>
+              <Label>Sazba ({extraWork.currency}/h) *</Label>
               <Input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} />
             </div>
           </div>

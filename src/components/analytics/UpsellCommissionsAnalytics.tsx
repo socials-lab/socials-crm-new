@@ -33,6 +33,10 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
 
   // Current month stats
   const currentMonthUpsells = useMemo(() => getUpsellsForMonth(year, month), [year, month, getUpsellsForMonth]);
+  const hasUnsupportedCurrency = useMemo(
+    () => currentMonthUpsells.some((upsell) => upsell.currency !== 'CZK'),
+    [currentMonthUpsells],
+  );
 
   const currentMonthStats = useMemo(() => {
     const total = currentMonthUpsells.reduce((sum, u) => sum + u.commissionAmount, 0);
@@ -152,6 +156,19 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
   const totalPaidYear = useMemo(() => {
     return upsellTrend.reduce((sum, m) => sum + m.approved, 0);
   }, [upsellTrend]);
+
+  if (hasUnsupportedCurrency) {
+    return (
+      <Card className="border-amber-400/40 bg-amber-500/5">
+        <CardContent className="pt-6 flex items-center gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <span>
+            Upsell analytics zatím nepodporuje kombinaci měn. Obsahuje data mimo CZK.
+          </span>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

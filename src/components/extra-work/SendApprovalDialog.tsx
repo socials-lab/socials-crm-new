@@ -59,7 +59,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   }, [extraWork.client_id, clientContacts, client]);
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: extraWork.currency || 'CZK', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: extraWork.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   const getApprovalUrl = () => {
     if (!approvalToken) return '';
@@ -119,7 +119,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
         setBccEmails((prev) => (prev.length === 1 && prev[0] === DEFAULT_GMAIL_BCC ? prev : [DEFAULT_GMAIL_BCC]));
 
         const hoursLine = extraWork.hours_worked && extraWork.hourly_rate
-          ? `Rozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency || 'CZK'}/h`
+          ? `Rozsah: ${extraWork.hours_worked}h × ${extraWork.hourly_rate.toLocaleString('cs-CZ')} ${extraWork.currency}/h`
           : '';
 
         const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Socials' });

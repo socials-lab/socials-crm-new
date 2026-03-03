@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Calculator, CalendarDays, FileText, Plus, Trash2, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import type { Engagement, Client, EngagementService } from '@/types/crm';
 import { format, subMonths, addMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -61,12 +62,6 @@ interface CreateInvoiceFromEngagementDialogProps {
   }) => void;
 }
 
-const CURRENCY_OPTIONS = [
-  { value: 'CZK', label: 'CZK' },
-  { value: 'EUR', label: 'EUR' },
-  { value: 'USD', label: 'USD' },
-];
-
 const createEmptyItem = (currency: string): InvoiceItemDraft => ({
   id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
   serviceId: null,
@@ -89,6 +84,12 @@ export function CreateInvoiceFromEngagementDialog({
   isLoading = false,
   onCreateInvoice,
 }: CreateInvoiceFromEngagementDialogProps) {
+  const { toast } = useToast();
+  if (!engagement.currency) {
+    throw new Error(`Missing engagement currency for ${engagement.id}`);
+  }
+  const engagementCurrency = engagement.currency;
+
   // Generate period options - past 6 months + current + next 2 months
   const periodOptions = useMemo(() => {
     const now = new Date();
@@ -160,16 +161,16 @@ export function CreateInvoiceFromEngagementDialog({
           hours: '',
           hourlyRate: '',
           amount: s.price.toString(),
-          currency: s.currency,
+          currency: engagementCurrency,
           isReverseCharge: false,
           isAmountManual: true,
         }));
         setItems(prefilled);
       } else {
-        setItems([createEmptyItem(engagement.currency || 'CZK')]);
+        setItems([createEmptyItem(engagementCurrency)]);
       }
     }
-  }, [open, engagementServices, engagement.currency, defaultPeriod, getPeriodLabel]);
+  }, [open, engagementServices, engagementCurrency, defaultPeriod, getPeriodLabel]);
 
   // Update descriptions when period changes
   useEffect(() => {
@@ -212,7 +213,7 @@ export function CreateInvoiceFromEngagementDialog({
   };
 
   const addEmptyItem = () => {
-    setItems(prev => [...prev, createEmptyItem(engagement.currency || 'CZK')]);
+    setItems(prev => [...prev, createEmptyItem(engagementCurrency)]);
   };
 
   const removeItem = (id: string) => {
@@ -227,16 +228,19 @@ export function CreateInvoiceFromEngagementDialog({
     const selectedOption = periodOptions.find(p => p.value === selectedPeriod);
     if (!selectedOption) return;
 
+    const invoiceCurrency = engagementCurrency;
+    const normalizedItems = validItems.map(item => ({ ...item, currency: invoiceCurrency }));
+
     onCreateInvoice({
       engagementId: engagement.id,
       year: selectedOption.year,
       month: selectedOption.month,
-      items: validItems.map(item => ({
+      items: normalizedItems.map(item => ({
         description: item.description,
         amount: Number(item.amount),
         hours: item.hours ? Number(item.hours) : null,
         hourly_rate: item.hourlyRate ? Number(item.hourlyRate) : null,
-        currency: item.currency,
+        currency: invoiceCurrency,
         is_reverse_charge: item.isReverseCharge,
         service_id: item.serviceId,
       })),
@@ -374,18 +378,9 @@ export function CreateInvoiceFromEngagementDialog({
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground">Měna</Label>
-                          <Select value={item.currency} onValueChange={(v) => updateItem(item.id, { currency: v })}>
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CURRENCY_OPTIONS.map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex h-8 items-center rounded-md border border-input bg-muted px-2 text-sm text-muted-foreground">
+                            {engagementCurrency}
+                          </div>
                         </div>
                       </div>
 
@@ -423,7 +418,7 @@ export function CreateInvoiceFromEngagementDialog({
 
         <div className="flex items-center justify-between pt-2 border-t">
           <div className="text-sm text-muted-foreground">
-            Celkem: <span className="font-semibold text-foreground">{totalAmount.toLocaleString('cs-CZ')} {items[0]?.currency || 'CZK'}</span>
+            Celkem: <span className="font-semibold text-foreground">{totalAmount.toLocaleString('cs-CZ')} {engagementCurrency}</span>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>

@@ -6,6 +6,50 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const ALLOWED_CURRENCIES = ["CZK", "EUR", "USD"] as const;
+
+class ValidationError extends Error {}
+
+function requireCurrency(value: unknown, context: string): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new ValidationError(`Missing currency for ${context}`);
+  }
+  const currency = value.trim().toUpperCase();
+  if (!ALLOWED_CURRENCIES.includes(currency as typeof ALLOWED_CURRENCIES[number])) {
+    throw new ValidationError(`Invalid currency "${currency}" for ${context}`);
+  }
+  return currency;
+}
+
+function normalizeServices(
+  services: unknown[],
+  source: "offer" | "lead",
+) {
+  return services.map((service, index) => {
+    const serviceRecord = (service && typeof service === "object") ? service as Record<string, unknown> : {};
+    const price = Number(serviceRecord.price);
+    if (!Number.isFinite(price)) {
+      throw new ValidationError(`Invalid price for ${source} service ${index}`);
+    }
+
+    const currency = requireCurrency(serviceRecord.currency, `${source} service ${index}`);
+    const billingType = serviceRecord.billing_type === "one_off" ? "one_off" : "monthly";
+    const originalPrice = Number(serviceRecord.original_price);
+
+    return {
+      id: String(serviceRecord.id || serviceRecord.service_id || `${source}-service-${index}`),
+      service_id: String(serviceRecord.service_id || serviceRecord.id || `${source}-service-${index}`),
+      name: String(serviceRecord.name || "Služba"),
+      selected_tier: serviceRecord.selected_tier || null,
+      price,
+      original_price: Number.isFinite(originalPrice) ? originalPrice : null,
+      discount_reason: typeof serviceRecord.discount_reason === "string" ? serviceRecord.discount_reason : null,
+      currency,
+      billing_type: billingType,
+    };
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -81,34 +125,12 @@ serve(async (req) => {
     const leadServices = Array.isArray(lead.potential_services) ? lead.potential_services : [];
     const offerServices = Array.isArray(latestOffer?.services) ? latestOffer.services : [];
 
-    const normalizedOfferServices = offerServices
-      .map((service: any, index: number) => {
-        const price = Number(service?.price);
-        if (!Number.isFinite(price)) return null;
-
-        const currency = typeof service?.currency === "string" && service.currency.trim() !== ""
-          ? service.currency
-          : "CZK";
-        const billingType = service?.billing_type === "one_off" ? "one_off" : "monthly";
-        const originalPrice = Number(service?.original_price);
-
-        return {
-          id: String(service?.id || service?.service_id || `offer-service-${index}`),
-          service_id: String(service?.service_id || service?.id || `offer-service-${index}`),
-          name: String(service?.name || "Služba"),
-          selected_tier: service?.selected_tier || null,
-          price,
-          original_price: Number.isFinite(originalPrice) ? originalPrice : null,
-          discount_reason: typeof service?.discount_reason === "string" ? service.discount_reason : null,
-          currency,
-          billing_type: billingType,
-        };
-      })
-      .filter(Boolean);
+    const normalizedOfferServices = normalizeServices(offerServices, "offer");
+    const normalizedLeadServices = normalizeServices(leadServices, "lead");
 
     const resolvedPotentialServices = normalizedOfferServices.length > 0
       ? normalizedOfferServices
-      : leadServices;
+      : normalizedLeadServices;
 
     // Get owner info for contact display
     let ownerName = "tým Socials";
@@ -143,9 +165,11 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Get onboarding lead error:", error);
+    const status = error instanceof ValidationError ? 400 : 500;
+    const message = error instanceof ValidationError ? error.message : "Internal server error";
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: message }),
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

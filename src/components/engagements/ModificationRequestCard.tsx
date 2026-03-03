@@ -202,7 +202,10 @@ export function ModificationRequestCard({
           <div className="space-y-1 text-sm">
             <p><span className="text-muted-foreground">Služba:</span> {c.service_name || 'Neznámá služba'}</p>
             {c.price != null && (
-              <p><span className="text-muted-foreground">Aktuální cena:</span> {c.price.toLocaleString('cs-CZ')} {c.currency || 'CZK'}</p>
+              <p><span className="text-muted-foreground">Aktuální cena:</span> {c.price.toLocaleString('cs-CZ')} {(() => {
+                if (!c.currency) throw new Error('Chybí měna v požadavku na deaktivaci služby');
+                return c.currency;
+              })()}</p>
             )}
           </div>
         );

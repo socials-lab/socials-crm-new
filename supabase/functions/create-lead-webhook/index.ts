@@ -33,6 +33,17 @@ const allowedIndustries = [
   "LeadGen",
 ] as const;
 
+const ALLOWED_CURRENCIES = ["CZK", "EUR", "USD"] as const;
+
+function normalizeCurrency(value: string | null | undefined): string | undefined {
+  if (value === undefined || value === null || value.trim() === "") return undefined;
+  const trimmed = value.trim().toUpperCase();
+  if (!ALLOWED_CURRENCIES.includes(trimmed as typeof ALLOWED_CURRENCIES[number])) {
+    throw new Error(`Invalid field "currency": expected one of ${ALLOWED_CURRENCIES.join(", ")}`);
+  }
+  return trimmed;
+}
+
 interface CreateLeadPayload {
   company_name: string;
   ico: string;
@@ -173,7 +184,7 @@ function validatePayload(input: unknown): CreateLeadPayload {
     potential_service: validateOptionalStringField("potential_service", payload.potential_service),
     owner_id: validateOptionalStringField("owner_id", payload.owner_id),
     estimated_price: validateOptionalNumberField("estimated_price", payload.estimated_price),
-    currency: validateOptionalStringField("currency", payload.currency),
+    currency: normalizeCurrency(validateOptionalStringField("currency", payload.currency)),
     probability_percent: validateOptionalNumberField("probability_percent", payload.probability_percent),
     offer_url: validateOptionalStringField("offer_url", payload.offer_url),
     court_name: validateOptionalStringField("court_name", payload.court_name),

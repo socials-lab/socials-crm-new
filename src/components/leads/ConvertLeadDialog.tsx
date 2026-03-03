@@ -392,7 +392,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const oneOffTotal = lead.potential_services
     ?.filter(s => s.billing_type === 'one_off')
     .reduce((sum, s) => sum + s.price, 0) || 0;
-  const currency = lead.currency || 'CZK';
+  if (!lead.currency) {
+    throw new Error(`Lead ${lead.id} has no currency`);
+  }
+  const currency = lead.currency;
 
   // Check if lead has at least one service
   const hasServices = (lead.potential_services?.length ?? 0) > 0;

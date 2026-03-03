@@ -165,7 +165,7 @@ export default function ExtraWorkApproval() {
     }
   };
 
-  const formatCurrency = (amount: number, currency: string = 'CZK') =>
+  const formatCurrency = (amount: number, currency: string) =>
     new Intl.NumberFormat('cs-CZ', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   if (isLoading) {

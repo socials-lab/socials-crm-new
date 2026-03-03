@@ -22,6 +22,7 @@ interface InvoiceLineItem {
   vat_rate?: number;
   unit_name?: string;
   is_reverse_charge?: boolean;
+  currency?: string;
 }
 
 interface FakturoidInvoiceItem {
@@ -30,6 +31,35 @@ interface FakturoidInvoiceItem {
   unit_name: string;
   unit_price: number;
   vat_rate: number;
+}
+
+const ALLOWED_CURRENCIES = ["CZK", "EUR", "USD"] as const;
+
+class ValidationError extends Error {}
+
+function requireCurrency(value: unknown, context: string): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new ValidationError(`Missing currency for ${context}`);
+  }
+  const currency = value.trim().toUpperCase();
+  if (!ALLOWED_CURRENCIES.includes(currency as typeof ALLOWED_CURRENCIES[number])) {
+    throw new ValidationError(`Invalid currency "${currency}" for ${context}`);
+  }
+  return currency;
+}
+
+function parseNumber(value: unknown, context: string, opts: { min?: number; allowZero?: boolean } = {}): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new ValidationError(`Invalid numeric value for ${context}`);
+  }
+  if (opts.min !== undefined && parsed < opts.min) {
+    throw new ValidationError(`Invalid numeric value for ${context}: must be >= ${opts.min}`);
+  }
+  if (opts.allowZero === false && parsed === 0) {
+    throw new ValidationError(`Invalid numeric value for ${context}: must be > 0`);
+  }
+  return parsed;
 }
 
 serve(async (req) => {
@@ -107,6 +137,22 @@ serve(async (req) => {
       );
     }
 
+    const invoiceCurrency = requireCurrency(invoice.currency, `invoice ${invoice_id}`);
+    const lineItems = (invoice.invoice_line_items ?? []) as InvoiceLineItem[];
+
+    const hasMixedCurrency = lineItems.some(
+      (item) => requireCurrency(item.currency, `line item "${item.line_description}"`) !== invoiceCurrency
+    );
+    if (hasMixedCurrency) {
+      const lineCurrencies = [...new Set(lineItems.map((i) => requireCurrency(i.currency, `line item "${i.line_description}"`)))];
+      return new Response(
+        JSON.stringify({
+          error: `Nekonzistentní měny: faktura má měnu ${invoiceCurrency}, položky mají: ${lineCurrencies.join(", ")}. Sjednoťte měny před exportem do Fakturoid.`,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get Fakturoid credentials
     const accountSlug = getAccountSlug();
     const accessToken = await getFakturoidAccessToken();
@@ -116,14 +162,18 @@ serve(async (req) => {
     const isVatPayer = Deno.env.get("FAKTUROID_VAT_PAYER") === "true";
 
     // Map line items to Fakturoid format
-    const lines: FakturoidInvoiceItem[] = (invoice.invoice_line_items as InvoiceLineItem[]).map((item) => ({
+    const lines: FakturoidInvoiceItem[] = lineItems.map((item, index) => ({
       name: item.line_description,
-      quantity: Number(item.quantity),
+      quantity: parseNumber(item.quantity, `line item ${index + 1} quantity`, { min: 0, allowZero: false }),
       unit_name: item.unit_name || 'ks',
-      unit_price: Number(item.unit_price),
+      unit_price: parseNumber(item.unit_price, `line item ${index + 1} unit_price`, { min: 0 }),
+      // Non-CZK = reverse charge (transferred_tax_liability) => vat 0
       // Non-VAT payer: always 0%, VAT payer: use reverse charge or line item rate
-      vat_rate: isVatPayer ? (item.is_reverse_charge ? 0 : (item.vat_rate ?? 21)) : 0,
+      vat_rate: invoiceCurrency !== 'CZK' ? 0 : (isVatPayer ? (item.is_reverse_charge ? 0 : parseNumber(item.vat_rate ?? 21, `line item ${index + 1} vat_rate`, { min: 0 })) : 0),
     }));
+
+    // Non-CZK invoices must be issued with reverse charge (přenesená daňová odpovědnost)
+    const useReverseCharge = invoiceCurrency !== 'CZK';
 
     // Note: We don't send issued_on or due dates - let Fakturoid use its server's current date
     // This avoids date validation issues when local system clock differs from Fakturoid's server
@@ -131,6 +181,8 @@ serve(async (req) => {
     const payload = {
       subject_id: client.fakturoid_subject_id,
       lines,
+      currency: invoiceCurrency,
+      transferred_tax_liability: useReverseCharge,
       // due_in: 14 means "due 14 days from issued_on" - Fakturoid will calculate actual date
       due_in: 14,
       note: `Faktura ${invoice.invoice_number}`,
@@ -161,7 +213,7 @@ serve(async (req) => {
         action: 'create_invoice_db_update_failed',
         related_table: 'issued_invoices',
         related_record_id: invoiceId,
-        request_payload: payload,
+        request_payload: { ...payload, currency_diagnostics: { invoice_currency: invoiceCurrency, line_count: lineItems.length } },
         response_payload: {
           fakturoid_invoice: fakturoidInvoice,
           db_error: updateError.message,
@@ -232,9 +284,10 @@ serve(async (req) => {
     }
 
     console.error("Fakturoid create invoice error:", error);
+    const status = error instanceof ValidationError ? 400 : 500;
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

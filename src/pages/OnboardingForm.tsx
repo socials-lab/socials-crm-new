@@ -499,6 +499,25 @@ export default function OnboardingForm() {
     }).format(price) + ' ' + currency;
   };
 
+  const getSummaryCurrency = (
+    services: Array<{ currency: string }>,
+    context: string,
+  ) => {
+    if (services.length === 0) return null;
+    const firstCurrency = services[0].currency;
+    if (!firstCurrency) {
+      throw new Error(`Missing currency in ${context} summary`);
+    }
+    const hasMixedCurrency = services.some((service) => service.currency !== firstCurrency);
+    if (hasMixedCurrency) {
+      throw new Error(`Mixed currencies in ${context} summary are not supported`);
+    }
+    return firstCurrency;
+  };
+
+  const monthlySummaryCurrency = getSummaryCurrency(monthlyServices, 'monthly services');
+  const oneOffSummaryCurrency = getSummaryCurrency(oneOffServices, 'one-off services');
+
   // Wizard navigation
   const TOTAL_STEPS = 6;
   const stepLabels = [
@@ -1281,23 +1300,23 @@ export default function OnboardingForm() {
                         <div className="text-right">
                           {isProrated ? (
                             <>
-                              <p className="text-sm text-muted-foreground line-through">{formatPrice(proratedMonthlyOriginalTotal, monthlyServices[0]?.currency || 'Kč')}</p>
-                              <p className="font-bold text-lg">{formatPrice(proratedMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                              <p className="text-sm text-muted-foreground line-through">{formatPrice(proratedMonthlyOriginalTotal, monthlySummaryCurrency!)}</p>
+                              <p className="font-bold text-lg">{formatPrice(proratedMonthlyTotal, monthlySummaryCurrency!)}</p>
                             </>
                           ) : monthlyOriginalTotal > monthlyTotal ? (
                             <>
-                              <p className="text-sm text-muted-foreground line-through">{formatPrice(monthlyOriginalTotal, monthlyServices[0]?.currency || 'Kč')}</p>
-                              <p className="font-bold text-lg">{formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                              <p className="text-sm text-muted-foreground line-through">{formatPrice(monthlyOriginalTotal, monthlySummaryCurrency!)}</p>
+                              <p className="font-bold text-lg">{formatPrice(monthlyTotal, monthlySummaryCurrency!)}</p>
                             </>
                           ) : (
-                            <p className="font-bold text-lg">{formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                            <p className="font-bold text-lg">{formatPrice(monthlyTotal, monthlySummaryCurrency!)}</p>
                           )}
                         </div>
                       </div>
                       {monthlyOriginalTotal > monthlyTotal && (
                         <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border-t text-sm text-green-700 dark:text-green-400">
                           <span>Sleva na měsíčních službách</span>
-                          <span className="font-medium">-{formatPrice(monthlyOriginalTotal - monthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs</span>
+                          <span className="font-medium">-{formatPrice(monthlyOriginalTotal - monthlyTotal, monthlySummaryCurrency!)}/měs</span>
                         </div>
                       )}
                       {isProrated && (
@@ -1356,11 +1375,11 @@ export default function OnboardingForm() {
                         <div className="text-right">
                           {oneOffOriginalTotal > oneOffTotal ? (
                             <>
-                              <p className="text-sm text-muted-foreground line-through">{formatPrice(oneOffOriginalTotal, oneOffServices[0]?.currency || 'Kč')}</p>
-                              <p className="font-bold text-lg">{formatPrice(oneOffTotal, oneOffServices[0]?.currency || 'Kč')}</p>
+                              <p className="text-sm text-muted-foreground line-through">{formatPrice(oneOffOriginalTotal, oneOffSummaryCurrency!)}</p>
+                              <p className="font-bold text-lg">{formatPrice(oneOffTotal, oneOffSummaryCurrency!)}</p>
                             </>
                           ) : (
-                            <p className="font-bold text-lg">{formatPrice(oneOffTotal, oneOffServices[0]?.currency || 'Kč')}</p>
+                            <p className="font-bold text-lg">{formatPrice(oneOffTotal, oneOffSummaryCurrency!)}</p>
                           )}
                         </div>
                       </div>

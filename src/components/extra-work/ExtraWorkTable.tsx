@@ -166,13 +166,24 @@ export function ExtraWorkTable({
   const activeClients = useMemo(() => clients.filter(c => c.status === 'active'), [clients]);
   const activeColleagues = useMemo(() => colleagues.filter(c => c.status === 'active'), [colleagues]);
 
-  const formatCurrency = (amount: number, currency: string = 'CZK') => {
+  const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
       currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const formatAmountsByCurrency = (works: ExtraWork[]) => {
+    const byCurrency = new Map<string, number>();
+    works.forEach((work) => {
+      byCurrency.set(work.currency, (byCurrency.get(work.currency) ?? 0) + work.amount);
+    });
+    if (byCurrency.size === 0) return '0';
+    return Array.from(byCurrency.entries())
+      .map(([currency, amount]) => formatCurrency(amount, currency))
+      .join(' + ');
   };
 
   const formatMonthLabel = (monthStr: string) => {
@@ -579,7 +590,7 @@ export function ExtraWorkTable({
                         />
                         <span className="text-muted-foreground text-xs">=</span>
                         <span className="font-semibold whitespace-nowrap">
-                          {formatCurrency(work.amount)}
+                          {formatCurrency(work.amount, work.currency)}
                         </span>
                       </div>
                     </TableCell>
@@ -688,7 +699,7 @@ export function ExtraWorkTable({
       <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
         <span>Zobrazeno {filteredWorks.length} z {extraWorks.length} víceprací</span>
         <span>
-          Celkem: {formatCurrency(filteredWorks.reduce((sum, w) => sum + w.amount, 0))}
+          Celkem: {formatAmountsByCurrency(filteredWorks)}
         </span>
       </div>
 

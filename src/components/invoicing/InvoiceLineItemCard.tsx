@@ -19,10 +19,18 @@ interface InvoiceLineItemCardProps {
   onDuplicate?: () => void;
 }
 
+function requireCurrency(value: string | null | undefined, context: string): string {
+  if (!value || value.trim() === '') {
+    throw new Error(`Missing currency for ${context}`);
+  }
+  return value;
+}
+
 export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDuplicate }: InvoiceLineItemCardProps) {
   const isProrated = item.prorated_days < item.total_days_in_month;
   const isManual = item.source === 'manual';
   const hasNote = item.note && item.note.trim().length > 0;
+  const lineItemCurrency = requireCurrency(item.currency, `invoice line item ${item.id}`);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -181,7 +189,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
             <p className="text-xs text-muted-foreground h-4 flex items-center">
               {item.hours && item.hourly_rate ? (
                 <span className="font-medium text-purple-700">
-                  = {(item.hours * item.hourly_rate).toLocaleString('cs-CZ')} Kč
+                  = {new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: lineItemCurrency, minimumFractionDigits: 0 }).format(item.hours * item.hourly_rate)}
                 </span>
               ) : (
                 'Vyplňte hodiny a sazbu pro výpočet'
@@ -237,7 +245,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
             {item.hours && item.hourly_rate && (
               <span className="inline-flex items-center gap-1 mr-2">
                 <Clock className="h-3 w-3" />
-                {item.hours}h × {item.hourly_rate.toLocaleString('cs-CZ')} Kč/h
+                {item.hours}h × {new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: lineItemCurrency, minimumFractionDigits: 0 }).format(item.hourly_rate)}/h
               </span>
             )}
             {formatCurrency(item.unit_price)} × {item.quantity}

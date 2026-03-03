@@ -51,7 +51,7 @@ export function ExtraWorkMobileCard({
   const isInvoiced = work.status === 'invoiced';
   const isPendingApproval = work.status === 'pending_approval';
 
-  const formatCurrency = (amount: number, currency: string = 'CZK') => {
+  const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
       currency,

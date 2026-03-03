@@ -93,6 +93,7 @@ export interface Client {
   industry: string;
   status: ClientStatus;
   tier: ClientTier;
+  currency: string;
   // Sales representative who acquired the client
   sales_representative_id: string | null;
   // Billing address

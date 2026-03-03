@@ -70,6 +70,7 @@ const clientSchema = z.object({
     .min(1, 'Odvětví je povinné')
     .max(100, 'Název odvětví je příliš dlouhý'),
   status: z.enum(['lead', 'active', 'paused', 'lost', 'potential'] as const),
+  currency: z.enum(['CZK', 'EUR', 'USD']),
   // Billing - transform empty strings to null for clean database storage
   billing_email: optionalEmail,
   billing_street: z.string().max(255, 'Adresa je příliš dlouhá').transform(val => val?.trim() || null).nullable(),
@@ -103,21 +104,38 @@ const clientSchema = z.object({
 
 type ClientFormData = z.infer<typeof clientSchema>;
 
+const CURRENCY_OPTIONS = [
+  { value: 'CZK', label: 'CZK' },
+  { value: 'EUR', label: 'EUR' },
+  { value: 'USD', label: 'USD' },
+] as const;
+
 interface ClientFormProps {
   client?: Client;
   hasActiveEngagements?: boolean;
+  hasEngagements?: boolean;
   isSuperAdmin?: boolean;
   onSubmit: (data: ClientFormData & { end_date: string | null; created_by: string }) => void;
   onCancel: () => void;
 }
 
-export function ClientForm({ client, hasActiveEngagements = false, isSuperAdmin = false, onSubmit, onCancel }: ClientFormProps) {
+export function ClientForm({ client, hasActiveEngagements = false, hasEngagements = false, isSuperAdmin = false, onSubmit, onCancel }: ClientFormProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get available status options based on current status and user role
   const currentStatus = client?.status || 'lead';
   const availableStatuses = getAvailableClientStatuses(currentStatus, isSuperAdmin);
+  const isCurrencyLocked = hasEngagements || hasActiveEngagements;
+
+  const normalizeClientCurrency = (value: string | undefined): 'CZK' | 'EUR' | 'USD' => {
+    if (!value) return 'CZK';
+    if (!CURRENCY_OPTIONS.some((option) => option.value === value)) {
+      throw new Error(`Neplatná měna klienta: ${value}`);
+    }
+    return value as 'CZK' | 'EUR' | 'USD';
+  };
+
   const getDefaultValues = (c?: Client): ClientFormData => ({
     name: c?.name || '',
     brand_name: c?.brand_name || '',
@@ -127,6 +145,7 @@ export function ClientForm({ client, hasActiveEngagements = false, isSuperAdmin 
     country: c?.country || 'Czech Republic',
     industry: c?.industry || '',
     status: c?.status || 'lead',
+    currency: normalizeClientCurrency(c?.currency),
     billing_email: c?.billing_email || '',
     billing_street: c?.billing_street || '',
     billing_city: c?.billing_city || '',
@@ -312,7 +331,37 @@ export function ClientForm({ client, hasActiveEngagements = false, isSuperAdmin 
         {/* Fakturační údaje */}
         <div className="space-y-4">
           <h4 className="font-medium text-sm border-b pb-2">Fakturační údaje</h4>
-          
+
+          <FormField
+            control={form.control}
+            name="currency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Měna *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={!!client && isCurrencyLocked}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Vyberte měnu" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {CURRENCY_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {client && isCurrencyLocked && (
+                  <p className="text-xs text-muted-foreground">
+                    Měna nelze změnit, dokud má klient zakázky.
+                  </p>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="billing_email"

@@ -38,6 +38,27 @@ interface FutureInvoicingProps {
   onIssuedStatsChange?: (stats: IssuedStats) => void;
 }
 
+function requireCurrency(value: string | null | undefined, context: string): string {
+  if (!value) {
+    throw new Error(`Missing currency for ${context}`);
+  }
+  return value;
+}
+
+function requireSingleCurrency(items: InvoiceLineItem[], context: string): string {
+  if (items.length === 0) {
+    throw new Error(`Missing line items for ${context}`);
+  }
+  const firstCurrency = requireCurrency(items[0].currency, `${context} line item ${items[0].id}`);
+  const mixed = items.find(
+    (item) => requireCurrency(item.currency, `${context} line item ${item.id}`) !== firstCurrency,
+  );
+  if (mixed) {
+    throw new Error(`Mixed currencies in ${context}`);
+  }
+  return firstCurrency;
+}
+
 
 export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvoicingProps) {
   const { clients, engagements, engagementServices, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices, issuedInvoices } = useCRMData();
@@ -56,6 +77,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set());
   const [singleIssueInvoice, setSingleIssueInvoice] = useState<MonthlyEngagementInvoice | null>(null);
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
+  const [showMixedCurrencyWarning, setShowMixedCurrencyWarning] = useState(false);
   const [issuedInvoiceIds, setIssuedInvoiceIds] = useState<Set<string>>(new Set());
   const [savingDraft, setSavingDraft] = useState(false);
 
@@ -107,7 +129,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     const periodEnd = endOfMonth(new Date(year, month - 1));
     const totalDays = getDaysInMonth(new Date(year, month - 1));
 
-    // Get Creative Boost data for the period (grouped by client for now, will associate with engagement)
+    // Get Creative Boost data for the period (grouped by engagement)
     // Skip months that are already invoiced to prevent double-billing
     const creativeBoostData = new Map<string, { usedCredits: number; pricePerCredit: number; totalAmount: number; clientMonthId: string }>();
 
@@ -123,7 +145,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
         });
 
         if (totalCredits > 0) {
-          creativeBoostData.set(cm.clientId, {
+          creativeBoostData.set(cm.engagementId, {
             usedCredits: totalCredits,
             pricePerCredit: cm.pricePerCredit,
             totalAmount: totalCredits * cm.pricePerCredit,
@@ -219,13 +241,13 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
               note: '',
               hours: null,
               hourly_rate: null,
-              currency: service.currency || 'CZK',
+              currency: requireCurrency(service.currency, `service ${service.id}`),
               is_reverse_charge: false,
             });
           });
 
-        // Add Creative Boost line item if applicable for this client
-        const cbData = creativeBoostData.get(engagement.client_id);
+        // Add Creative Boost line item if applicable for this engagement
+        const cbData = creativeBoostData.get(engagement.id);
         if (cbData) {
           lineItems.push({
             id: `li-cb-${engagement.id}-${year}-${month}`,
@@ -234,7 +256,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             engagement_id: engagement.id,
             extra_work_id: null,
             creative_boost_client_month_id: cbData.clientMonthId,
-            source_description: `Creative Boost - ${cbData.usedCredits} kreditů × ${cbData.pricePerCredit.toLocaleString()} Kč`,
+            source_description: `Creative Boost - ${cbData.usedCredits} kreditů × ${new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: requireCurrency(engagement.currency, `engagement ${engagement.id}`), minimumFractionDigits: 0 }).format(cbData.pricePerCredit)}`,
             source_amount: cbData.totalAmount,
             period_start: format(periodStart, 'yyyy-MM-dd'),
             period_end: format(periodEnd, 'yyyy-MM-dd'),
@@ -251,11 +273,11 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             note: '',
             hours: null,
             hourly_rate: null,
-            currency: engagement.currency || 'CZK',
+            currency: requireCurrency(engagement.currency, `engagement ${engagement.id}`),
             is_reverse_charge: false,
           });
-          // Remove from map so it's not duplicated across multiple engagements for same client
-          creativeBoostData.delete(engagement.client_id);
+          // Remove from map so it's not duplicated
+          creativeBoostData.delete(engagement.id);
         }
 
         // Add Extra Work line items for this engagement
@@ -284,7 +306,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             note: '',
             hours: ew.hours_worked,
             hourly_rate: ew.hourly_rate,
-            currency: ew.currency || 'CZK',
+            currency: requireCurrency(ew.currency, `extra work ${ew.id}`),
             is_reverse_charge: false,
           });
         });
@@ -316,7 +338,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             note: '',
             hours: null,
             hourly_rate: null,
-            currency: service.currency || 'CZK',
+            currency: requireCurrency(service.currency, `service ${service.id}`),
             is_reverse_charge: false,
           });
         });
@@ -326,6 +348,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
         const subtotal = lineItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
         const totalAdjustments = lineItems.reduce((sum, item) => sum + item.adjustment_amount, 0);
 
+        const invoiceCurrency = requireSingleCurrency(lineItems, `generated invoice ${engagement.id} ${year}-${month}`);
         newInvoices.push({
           id: `inv-${engagement.id}-${year}-${month}`,
           engagement_id: engagement.id,
@@ -337,7 +360,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
           subtotal,
           total_adjustments: totalAdjustments,
           total_amount: subtotal + totalAdjustments,
-          currency: engagement.currency || 'CZK',
+          currency: invoiceCurrency,
           status: 'draft',
           issued_at: null,
           webhook_sent_at: null,
@@ -389,6 +412,13 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   };
 
   const handleAddManualItem = (invoiceId: string) => {
+    const base = invoices.length > 0 ? invoices : generatedInvoices;
+    const invoice = base.find(inv => inv.id === invoiceId);
+    if (!invoice?.currency) {
+      throw new Error(`Missing invoice currency for invoice ${invoiceId}`);
+    }
+    const parentCurrency = invoice.currency;
+
     const newItem: InvoiceLineItem = {
       id: `li-manual-${Date.now()}`,
       invoice_id: invoiceId,
@@ -412,17 +442,17 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       note: '',
       hours: null,
       hourly_rate: null,
-      currency: 'CZK',
+      currency: parentCurrency,
       is_reverse_charge: false,
     };
 
     setInvoices(prev => {
-      const base = prev.length > 0 ? prev : generatedInvoices;
-      return base.map(invoice => {
-        if (invoice.id !== invoiceId) return invoice;
+      const baseInner = prev.length > 0 ? prev : generatedInvoices;
+      return baseInner.map(inv => {
+        if (inv.id !== invoiceId) return inv;
         return {
-          ...invoice,
-          line_items: [...invoice.line_items, newItem],
+          ...inv,
+          line_items: [...inv.line_items, newItem],
           updated_at: new Date().toISOString(),
         };
       });
@@ -539,7 +569,22 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     const periodStart = startOfMonth(new Date(year, month - 1));
     const periodEnd = endOfMonth(new Date(year, month - 1));
     const totalDays = getDaysInMonth(new Date(year, month - 1));
-    
+    const engagement = engagements.find(e => e.id === engagementId);
+    if (!engagement?.currency) {
+      throw new Error(`Missing engagement currency for ${engagementId}`);
+    }
+    const effectiveCurrency = engagement.currency;
+
+    const base = invoices.length > 0 ? invoices : generatedInvoices;
+    const existingInvoice = base.find(inv => inv.engagement_id === engagementId);
+    const itemCurrency = existingInvoice
+      ? requireCurrency(existingInvoice.currency, `invoice ${existingInvoice.id}`)
+      : effectiveCurrency;
+    const submittedCurrency = requireCurrency(itemData.currency, `manual item for engagement ${engagementId}`);
+    if (submittedCurrency !== itemCurrency) {
+      throw new Error(`Manual item currency (${submittedCurrency}) must match invoice currency (${itemCurrency})`);
+    }
+
     const newItem: InvoiceLineItem = {
       id: `li-manual-${Date.now()}`,
       invoice_id: `inv-${engagementId}-${year}-${month}`,
@@ -563,17 +608,17 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       note: '',
       hours: itemData.hours,
       hourly_rate: itemData.hourly_rate,
-      currency: itemData.currency,
+      currency: submittedCurrency,
       is_reverse_charge: itemData.is_reverse_charge,
     };
 
     setInvoices(prev => {
-      const base = prev.length > 0 ? prev : generatedInvoices;
-      const existingInvoice = base.find(inv => inv.engagement_id === engagementId);
+      const baseInner = prev.length > 0 ? prev : generatedInvoices;
+      const existingInvoice = baseInner.find(inv => inv.engagement_id === engagementId);
 
       if (existingInvoice) {
         // Add to existing invoice
-        return base.map(invoice => {
+        return baseInner.map(invoice => {
           if (invoice.id !== existingInvoice.id) return invoice;
           
           const updatedItems = [...invoice.line_items, newItem];
@@ -591,21 +636,21 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
         });
       } else {
         // Create new invoice for engagement
-        const engagement = engagements.find(e => e.id === engagementId);
-        if (!engagement) return base;
+        const eng = engagements.find(e => e.id === engagementId);
+        if (!eng) return baseInner;
 
         const newInvoice: MonthlyEngagementInvoice = {
           id: `inv-${engagementId}-${year}-${month}`,
           engagement_id: engagementId,
-          engagement_name: engagement.name,
-          client_id: engagement.client_id,
+          engagement_name: eng.name,
+          client_id: eng.client_id,
           year,
           month,
           line_items: [newItem],
           subtotal: itemData.amount,
           total_adjustments: 0,
           total_amount: itemData.amount,
-          currency: 'CZK',
+          currency: itemCurrency,
           status: 'draft',
           issued_at: null,
           webhook_sent_at: null,
@@ -613,7 +658,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        return [...base, newInvoice];
+        return [...baseInner, newInvoice];
       }
     });
 
@@ -672,7 +717,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const formatAmountsByCurrency = (invoiceList: MonthlyEngagementInvoice[]) => {
     const byCurrency = new Map<string, number>();
     invoiceList.forEach(inv => {
-      const curr = inv.currency || 'CZK';
+      const curr = requireCurrency(inv.currency, `invoice ${inv.id}`);
       byCurrency.set(curr, (byCurrency.get(curr) || 0) + inv.total_amount);
     });
 
@@ -755,6 +800,13 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   
   // Invoices to issue - either single or selected multiple
   const invoicesToIssue = singleIssueInvoice ? [singleIssueInvoice] : selectedInvoices;
+
+  // Check if any invoice has mixed line-item currencies (must match invoice.currency)
+  const hasMixedCurrency = (inv: MonthlyEngagementInvoice) => {
+    const invCurrency = requireCurrency(inv.currency, `invoice ${inv.id}`);
+    return inv.line_items.some(item => requireCurrency(item.currency, `line item ${item.id}`) !== invCurrency);
+  };
+  const hasMixedCurrencyInSelected = invoicesToIssue.some(hasMixedCurrency);
 
   // Helper to calculate detailed issued stats by category
   const calculateIssuedStats = (issuedIds: Set<string>): IssuedStats => {
@@ -839,6 +891,8 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const handleIssueClick = () => {
     if (hasUnapprovedSelected) {
       setShowApprovalWarning(true);
+    } else if (hasMixedCurrencyInSelected) {
+      setShowMixedCurrencyWarning(true);
     } else {
       setIsIssueDialogOpen(true);
     }
@@ -973,6 +1027,29 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setShowApprovalWarning(false)}>
+              Rozumím
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showMixedCurrencyWarning} onOpenChange={setShowMixedCurrencyWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <AlertDialogTitle>Smíšené měny</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="pt-2">
+              Některé faktury obsahují položky s různými měnami. Každá faktura musí mít všechny položky ve stejné měně jako je měna faktury.
+              <br /><br />
+              Sjednoťte měnu položek nebo upravte měnu faktury před vystavením.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowMixedCurrencyWarning(false)}>
               Rozumím
             </AlertDialogAction>
           </AlertDialogFooter>

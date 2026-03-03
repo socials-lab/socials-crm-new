@@ -53,7 +53,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
   const [serviceName, setServiceName] = useState('');
   const [servicePrice, setServicePrice] = useState<number>(0);
-  const [serviceCurrency, setServiceCurrency] = useState('CZK');
+  const [serviceCurrency, setServiceCurrency] = useState('');
   const [serviceBillingType, setServiceBillingType] = useState<'monthly' | 'one_off'>('monthly');
   const [selectedTier, setSelectedTier] = useState<ServiceTier | 'none'>('none');
 
@@ -132,7 +132,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
       setSelectedServiceId('');
       setServiceName('');
       setServicePrice(0);
-      setServiceCurrency('CZK');
+      setServiceCurrency('');
       setServiceBillingType('monthly');
       setSelectedTier('none');
       setCbMaxCredits(50);
@@ -214,6 +214,9 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
 
     switch (requestType) {
       case 'add_service':
+        if (!serviceCurrency) {
+          throw new Error('Služba nemá nastavenou měnu');
+        }
         if (isCreativeBoost) {
           // Creative Boost: credit-based pricing
           proposed_changes = {
@@ -250,11 +253,17 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
         break;
       case 'deactivate_service':
         const serviceToDeactivate = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+        if (!serviceToDeactivate) {
+          throw new Error('Služba k deaktivaci nebyla nalezena');
+        }
+        if (!serviceToDeactivate.currency) {
+          throw new Error(`Chybí měna služby ${serviceToDeactivate.id}`);
+        }
         proposed_changes = {
           engagement_service_id: selectedEngagementServiceId,
-          service_name: serviceToDeactivate?.name || 'Neznámá služba',
-          price: serviceToDeactivate?.price || 0,
-          currency: serviceToDeactivate?.currency || 'CZK',
+          service_name: serviceToDeactivate.name || 'Neznámá služba',
+          price: serviceToDeactivate.price || 0,
+          currency: serviceToDeactivate.currency,
         };
         break;
       case 'add_assignment':

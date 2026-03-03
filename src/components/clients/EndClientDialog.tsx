@@ -65,9 +65,16 @@ export function EndClientDialog({
     );
   }, [client, engagements]);
 
-  // Calculate total MRR from active engagements
-  const totalMRR = useMemo(() => {
-    return activeEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+  // Calculate total MRR grouped by currency
+  const totalMRRByCurrency = useMemo(() => {
+    const byCurrency = new Map<string, number>();
+    activeEngagements.forEach((engagement) => {
+      byCurrency.set(
+        engagement.currency,
+        (byCurrency.get(engagement.currency) ?? 0) + (engagement.monthly_fee || 0),
+      );
+    });
+    return byCurrency;
   }, [activeEngagements]);
 
   // Reset form when dialog opens
@@ -95,14 +102,18 @@ export function EndClientDialog({
 
   const isFormValid = selectedDate && reason;
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
-      currency: 'CZK',
+      currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
   };
+
+  const totalMRRLabel = Array.from(totalMRRByCurrency.entries())
+    .map(([currency, amount]) => `${formatCurrency(amount, currency)}/měsíc`)
+    .join(' + ');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -130,14 +141,14 @@ export function EndClientDialog({
                       <span>{e.name}</span>
                     </div>
                     <span className="text-muted-foreground">
-                      {formatCurrency(e.monthly_fee || 0)}/měsíc
+                      {formatCurrency(e.monthly_fee || 0, e.currency)}/měsíc
                     </span>
                   </div>
                 ))}
               </div>
               <div className="pt-2 border-t border-destructive/20 flex justify-between font-medium">
                 <span>Celkové MRR k ukončení:</span>
-                <span className="text-destructive">{formatCurrency(totalMRR)}</span>
+                <span className="text-destructive">{totalMRRLabel}</span>
               </div>
             </div>
           )}

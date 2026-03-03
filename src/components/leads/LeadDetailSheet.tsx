@@ -1486,7 +1486,10 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                           </div>
                           <div className="text-right ml-3">
                             <div className="font-semibold">
-                              {service.price.toLocaleString('cs-CZ')} {service.currency || 'CZK'}
+                              {service.price.toLocaleString('cs-CZ')} {(() => {
+                                if (!service.currency) throw new Error(`Lead service ${service.name} has no currency`);
+                                return service.currency;
+                              })()}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {service.billing_type === 'monthly' ? 'měsíčně' : 'jednorázově'}
@@ -1544,7 +1547,10 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Odhadovaná cena:</span>
                   <span className="font-medium">
-                    {lead.estimated_price ? `${lead.estimated_price.toLocaleString('cs-CZ')} ${lead.currency || 'CZK'}` : 'Neuvedeno'}
+                    {lead.estimated_price ? `${lead.estimated_price.toLocaleString('cs-CZ')} ${(() => {
+                      if (!lead.currency) throw new Error(`Lead ${lead.id} has no currency`);
+                      return lead.currency;
+                    })()}` : 'Neuvedeno'}
                   </span>
                 </div>
               </div>

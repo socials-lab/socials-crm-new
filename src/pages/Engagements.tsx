@@ -788,7 +788,7 @@ function EngagementsContent() {
                               Služby ({engServices.length})
                               {canSeeFinancials && engServices.length > 0 && (
                                 <span className="text-xs font-normal text-muted-foreground">
-                                  – {totalServicesPrice.toLocaleString()} CZK
+                                  – {totalServicesPrice.toLocaleString()} {engagement.currency}
                                 </span>
                               )}
                             </h4>
@@ -887,7 +887,7 @@ function EngagementsContent() {
                                                 {serviceTierConfigs.map((config) => {
                                                   const tierPrice = getTierPrice(service, config.tier);
                                                   const priceLabel = tierPrice !== null
-                                                    ? `${tierPrice.toLocaleString()} Kč`
+                                                    ? `${tierPrice.toLocaleString()} ${engService.currency}`
                                                     : 'Individuální';
                                                   return (
                                                     <DropdownMenuItem
@@ -1614,6 +1614,12 @@ function EngagementsContent() {
 
       {/* Add Engagement Service Dialog */}
       {serviceEngagementId && (
+        (() => {
+          const selectedEngagement = engagements.find(e => e.id === serviceEngagementId);
+          if (!selectedEngagement?.currency) {
+            throw new Error(`Missing engagement currency for ${serviceEngagementId}`);
+          }
+          return (
         <AddEngagementServiceDialog
           open={isServiceDialogOpen}
           onOpenChange={(open) => {
@@ -1621,7 +1627,7 @@ function EngagementsContent() {
             if (!open) setServiceEngagementId(null);
           }}
           engagementId={serviceEngagementId}
-          engagementCurrency={engagements.find(e => e.id === serviceEngagementId)?.currency || 'CZK'}
+          engagementCurrency={selectedEngagement.currency}
           services={services}
           onSubmit={async (data) => {
             const newService = await addEngagementService(data);
@@ -1648,6 +1654,8 @@ function EngagementsContent() {
             toast.success('Služba přidána');
           }}
         />
+          );
+        })()
       )}
 
       {invoiceDialogEngagement && (
@@ -1686,7 +1694,12 @@ function EngagementsContent() {
                 fakturoid_url: null,
                 line_items: [],
                 total_amount: data.items.reduce((sum, item) => sum + item.amount, 0),
-                currency: data.items[0]?.currency || invoiceDialogEngagement.currency || 'CZK',
+                currency: (() => {
+                  if (!invoiceDialogEngagement.currency) {
+                    throw new Error(`Missing engagement currency for ${invoiceDialogEngagement.id}`);
+                  }
+                  return invoiceDialogEngagement.currency;
+                })(),
                 issued_at: new Date().toISOString(),
                 issued_by: null,
               };

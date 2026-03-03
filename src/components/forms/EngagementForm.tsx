@@ -98,15 +98,18 @@ export function EngagementForm({
   // Use schema with contact-client validation
   const schemaWithContactValidation = createEngagementSchemaWithContactValidation(contacts);
 
+  const initialClientId = engagement?.client_id || defaultClientId || '';
+  const initialClient = clients.find(c => c.id === initialClientId);
+
   const form = useForm<EngagementFormData>({
     resolver: zodResolver(schemaWithContactValidation),
     defaultValues: {
       name: engagement?.name || '',
-      client_id: engagement?.client_id || defaultClientId || '',
+      client_id: initialClientId,
       contact_person_id: engagement?.contact_person_id || null,
       type: engagement?.type || 'retainer',
       billing_model: engagement?.billing_model || 'fixed_fee',
-      currency: engagement?.currency || 'CZK',
+      currency: engagement?.currency || initialClient?.currency || '',
       monthly_fee: engagement?.monthly_fee || 0,
       one_off_fee: engagement?.one_off_fee || 0,
       status: engagement?.status || 'planned',
@@ -119,12 +122,20 @@ export function EngagementForm({
 
   const engagementType = form.watch('type');
   const selectedClientId = form.watch('client_id');
+  const selectedClient = clients.find(c => c.id === selectedClientId);
 
   // Filter contacts by selected client
   const clientContacts = contacts.filter(c => c.client_id === selectedClientId);
 
+  // Sync currency from client when client changes
+  useEffect(() => {
+    if (selectedClient?.currency) {
+      form.setValue('currency', selectedClient.currency);
+    }
+  }, [selectedClientId, selectedClient?.currency, form.setValue]);
+
   // Reset contact when client changes (only if it's not the initial client)
-  const initialClientId = useMemo(() => engagement?.client_id || defaultClientId, [engagement?.client_id, defaultClientId]);
+  const initialClientIdMemo = useMemo(() => engagement?.client_id || defaultClientId, [engagement?.client_id, defaultClientId]);
 
   // Memoize the reset function to avoid recreating on every render
   const resetContactIfInvalid = useCallback((clientId: string, currentContact: string | null) => {
@@ -139,11 +150,11 @@ export function EngagementForm({
   }, [contacts, form.setValue]);
 
   useEffect(() => {
-    if (selectedClientId && selectedClientId !== initialClientId) {
+    if (selectedClientId && selectedClientId !== initialClientIdMemo) {
       const currentContact = form.getValues('contact_person_id');
       resetContactIfInvalid(selectedClientId, currentContact);
     }
-  }, [selectedClientId, initialClientId, resetContactIfInvalid, form.getValues]);
+  }, [selectedClientId, initialClientIdMemo, resetContactIfInvalid, form.getValues]);
 
   // Handle form submission with notice period check
   const handleManualSubmit = async () => {
@@ -352,10 +363,10 @@ export function EngagementForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Měna</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} disabled>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder={selectedClientId ? "Z klienta" : "Vyberte klienta"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -364,6 +375,9 @@ export function EngagementForm({
                     <SelectItem value="USD">USD</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Měna je nastavena dle klienta (jedna měna na klienta).
+                </p>
                 <FormMessage />
               </FormItem>
             )}

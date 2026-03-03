@@ -37,12 +37,6 @@ interface AddInvoiceDialogProps {
   existingEngagementIds: string[];
 }
 
-const CURRENCY_OPTIONS = [
-  { value: 'CZK', label: 'CZK' },
-  { value: 'EUR', label: 'EUR' },
-  { value: 'USD', label: 'USD' },
-];
-
 export function AddInvoiceDialog({ 
   open, 
   onOpenChange, 
@@ -55,7 +49,9 @@ export function AddInvoiceDialog({
   const [hours, setHours] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState('CZK');
+
+  const selectedEngagement = engagements.find(e => e.id === selectedEngagementId);
+  const effectiveCurrency = selectedEngagement?.currency;
   const [isReverseCharge, setIsReverseCharge] = useState(false);
   const [isAmountManual, setIsAmountManual] = useState(false);
 
@@ -89,13 +85,16 @@ export function AddInvoiceDialog({
 
   const handleSubmit = () => {
     if (!selectedEngagementId || !description || !amount) return;
+    if (!effectiveCurrency) {
+      throw new Error(`Missing engagement currency for ${selectedEngagementId}`);
+    }
     
     onAdd(selectedEngagementId, {
       description,
       amount: Number(amount),
       hours: hours ? Number(hours) : null,
       hourly_rate: hourlyRate ? Number(hourlyRate) : null,
-      currency,
+      currency: effectiveCurrency,
       is_reverse_charge: isReverseCharge,
     });
     handleClose();
@@ -107,13 +106,11 @@ export function AddInvoiceDialog({
     setHours('');
     setHourlyRate('');
     setAmount('');
-    setCurrency('CZK');
     setIsReverseCharge(false);
     setIsAmountManual(false);
     onOpenChange(false);
   };
 
-  const selectedEngagement = engagements.find(e => e.id === selectedEngagementId);
   const selectedClient = selectedEngagement ? getClientById(selectedEngagement.client_id) : null;
   const isExistingEngagement = existingEngagementIds.includes(selectedEngagementId);
 
@@ -227,18 +224,10 @@ export function AddInvoiceDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="currency">Měna</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger id="currency">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCY_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                {effectiveCurrency}
+              </div>
+              <p className="text-xs text-muted-foreground">Měna zakázky (nelze měnit)</p>
             </div>
           </div>
 

@@ -49,6 +49,24 @@ function filterByTab(works: ExtraWorkType[], tab: TabKey): ExtraWorkType[] {
   }
 }
 
+function formatAmountsByCurrency(works: ExtraWorkType[]): string {
+  if (works.length === 0) return '0';
+
+  const totals = new Map<string, number>();
+  works.forEach((work) => {
+    totals.set(work.currency, (totals.get(work.currency) ?? 0) + work.amount);
+  });
+
+  return Array.from(totals.entries())
+    .map(([currency, amount]) => new Intl.NumberFormat('cs-CZ', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount))
+    .join(' + ');
+}
+
 export default function ExtraWork() {
   const { extraWorks, addExtraWork, updateExtraWork, deleteExtraWork } = useCRMData();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -83,9 +101,22 @@ export default function ExtraWork() {
     const invoiced = extraWorks.filter(w => w.status === 'invoiced');
     const upsells = extraWorks.filter(w => w.upsold_by_id);
     const upsellAmount = upsells.reduce((s, w) => s + w.amount, 0);
-    const avgUpsellCommission = upsells.length > 0
-      ? Math.round(upsellAmount * ((upsells[0]?.upsell_commission_percent || 10) / 100) / upsells.length)
-      : 0;
+    const upsellCommissionByCurrency = new Map<string, number>();
+    upsells.forEach((work) => {
+      const commission = Math.round(work.amount * (work.upsell_commission_percent || 10) / 100);
+      upsellCommissionByCurrency.set(
+        work.currency,
+        (upsellCommissionByCurrency.get(work.currency) ?? 0) + commission,
+      );
+    });
+    const upsellCommissionLabel = Array.from(upsellCommissionByCurrency.entries())
+      .map(([currency, amount]) => new Intl.NumberFormat('cs-CZ', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount))
+      .join(' + ');
 
     return {
       pendingCount: pendingApproval.length,
@@ -98,7 +129,12 @@ export default function ExtraWork() {
       invoicedAmount: invoiced.reduce((s, w) => s + w.amount, 0),
       upsellCount: upsells.length,
       upsellAmount,
-      avgUpsellCommission,
+      pendingAmountLabel: formatAmountsByCurrency(pendingApproval),
+      inProgressAmountLabel: formatAmountsByCurrency(inProgress),
+      readyAmountLabel: formatAmountsByCurrency(readyToInvoice),
+      invoicedAmountLabel: formatAmountsByCurrency(invoiced),
+      upsellAmountLabel: formatAmountsByCurrency(upsells),
+      upsellCommissionLabel,
     };
   }, [extraWorks]);
 
@@ -109,9 +145,6 @@ export default function ExtraWork() {
   const handleDelete = (id: string) => {
     deleteExtraWork(id);
   };
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
@@ -131,31 +164,31 @@ export default function ExtraWork() {
         <KPICard
           title="Čeká na schválení"
           value={kpis.pendingCount.toString()}
-          subtitle={formatCurrency(kpis.pendingAmount)}
+          subtitle={kpis.pendingAmountLabel}
           icon={Clock}
         />
         <KPICard
           title="V procesu"
           value={kpis.inProgressCount.toString()}
-          subtitle={formatCurrency(kpis.inProgressAmount)}
+          subtitle={kpis.inProgressAmountLabel}
           icon={Loader2}
         />
         <KPICard
           title="K fakturaci"
           value={kpis.readyCount.toString()}
-          subtitle={formatCurrency(kpis.readyAmount)}
+          subtitle={kpis.readyAmountLabel}
           icon={FileText}
         />
         <KPICard
           title="Vyfakturováno"
-          value={formatCurrency(kpis.invoicedAmount)}
+          value={kpis.invoicedAmountLabel}
           subtitle={`${kpis.invoicedCount} položek`}
           icon={Receipt}
         />
         <KPICard
           title="Upsell"
-          value={formatCurrency(kpis.upsellAmount)}
-          subtitle={`${kpis.upsellCount} položek · ${formatCurrency(kpis.avgUpsellCommission)} prům.`}
+          value={kpis.upsellAmountLabel}
+          subtitle={`${kpis.upsellCount} položek · Provize ${kpis.upsellCommissionLabel || '0'}`}
           icon={TrendingUp}
         />
       </div>

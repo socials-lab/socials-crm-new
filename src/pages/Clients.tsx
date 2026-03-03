@@ -1035,8 +1035,8 @@ export default function Clients() {
                             <div className="text-right">
                               <p className="font-semibold text-sm">
                                 {eng.type === 'retainer' 
-                                  ? `${eng.monthly_fee.toLocaleString()} CZK/měs`
-                                  : `${eng.one_off_fee.toLocaleString()} CZK`
+                                  ? `${eng.monthly_fee.toLocaleString()} ${eng.currency}/měs`
+                                  : `${eng.one_off_fee.toLocaleString()} ${eng.currency}`
                                 }
                               </p>
                               <p className="text-xs text-muted-foreground">
@@ -1099,6 +1099,9 @@ export default function Clients() {
           <div className="mt-6">
             <ClientForm
               client={editingClient || undefined}
+              hasEngagements={
+                editingClient ? getEngagementsByClientId(editingClient.id).length > 0 : false
+              }
               hasActiveEngagements={
                 editingClient
                   ? getEngagementsByClientId(editingClient.id).some(

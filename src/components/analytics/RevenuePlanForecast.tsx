@@ -53,6 +53,14 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
   } = useCRMData();
   const { plannedEngagements, addPlannedEngagement, deletePlannedEngagement } = usePlannedEngagements();
   const { getTargetForMonth, upsertTargets } = useRevenueTargets();
+  const hasUnsupportedCurrency = useMemo(() => {
+    return (
+      engagements.some((engagement) => engagement.currency !== 'CZK') ||
+      issuedInvoices.some((invoice) => invoice.currency !== 'CZK') ||
+      extraWorks.some((work) => work.currency !== 'CZK') ||
+      engagementServices.some((service) => service.currency !== 'CZK')
+    );
+  }, [engagements, issuedInvoices, extraWorks, engagementServices]);
 
   const [draftTargets, setDraftTargets] = useState<Record<number, string>>({});
   const [newPlan, setNewPlan] = useState({
@@ -218,6 +226,19 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
       assigned_colleague_ids: [],
       notes: '',
     });
+  }
+
+  if (hasUnsupportedCurrency) {
+    return (
+      <Card className="border-amber-400/40 bg-amber-500/5">
+        <CardContent className="pt-6 flex items-center gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <span>
+            Revenue forecast zatím nepodporuje kombinaci měn. Obsahuje data mimo CZK.
+          </span>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

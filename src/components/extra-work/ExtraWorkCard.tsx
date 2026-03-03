@@ -67,7 +67,7 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
   const isClientApproved = work.status === 'in_progress' && !!work.client_approved_at && !work.approved_by;
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: work.currency || 'CZK', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: work.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   const handleCopyLink = async () => {
     if (work.approval_token) {
@@ -176,7 +176,7 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                 {work.hours_worked && work.hourly_rate ? (
                   <p>
                     <span className="text-muted-foreground">Fakturace klientovi:</span>{' '}
-                    {work.hours_worked}h × {work.hourly_rate.toLocaleString('cs-CZ')} {work.currency || 'CZK'} ={' '}
+                    {work.hours_worked}h × {work.hourly_rate.toLocaleString('cs-CZ')} {work.currency} ={' '}
                     <span className="font-medium">{formatCurrency(work.amount)}</span>
                   </p>
                 ) : (
@@ -204,7 +204,7 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                     <>
                       <p>
                         <span className="text-muted-foreground">Odměna kolegy:</span>{' '}
-                        {work.hours_worked}h × {colleague.internal_hourly_cost.toLocaleString('cs-CZ')} {work.currency || 'CZK'} ={' '}
+                        {work.hours_worked}h × {colleague.internal_hourly_cost.toLocaleString('cs-CZ')} {work.currency} ={' '}
                         <span className="font-medium">{formatCurrency(colleagueCost)}</span>
                       </p>
                       {upsellCommission > 0 && (

@@ -248,7 +248,10 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           total_price: totals.monthlyAfterDiscount + totals.oneOff,
           monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : null,
           discount_scope: monthlyDiscountPercent > 0 ? discountScope : null,
-          currency: lead.currency || 'CZK',
+          currency: (() => {
+            if (!lead.currency) throw new Error(`Lead ${lead.id} has no currency`);
+            return lead.currency;
+          })(),
           offer_type: getOfferTypeFromServices(editableServices),
           valid_until: validUntil || defaultValidUntil,
           is_active: true,

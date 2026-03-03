@@ -98,6 +98,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
     engagements.find(e => e.id === engagementId),
     [engagements, engagementId]
   );
+  const selectedEngagementCurrency = selectedEngagement?.currency;
 
   const client = useMemo(() =>
     selectedEngagement ? getClientById(selectedEngagement.client_id) : null,
@@ -152,6 +153,10 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
       toast({ title: 'Chyba', description: 'Zakázka nebyla nalezena', variant: 'destructive' });
       return;
     }
+    if (!selectedEngagementCurrency) {
+      toast({ title: 'Chyba', description: 'Zakázka nemá nastavenou měnu', variant: 'destructive' });
+      return;
+    }
     if (isSubmitting) return;
 
     setIsSubmitting(true);
@@ -171,7 +176,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
           name,
           description,
           amount: calculatedAmount,
-          currency: 'CZK',
+          currency: selectedEngagementCurrency,
           hours_worked: hoursWorked ? parseFloat(hoursWorked) : null,
           hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
           work_date: format(workDate, 'yyyy-MM-dd'),
@@ -213,9 +218,13 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
   const isValid = engagementId && colleagueId && name && workDate && (hoursWorked && hourlyRate);
 
   const formatCurrency = (amount: number) => {
+    const curr = selectedEngagementCurrency;
+    if (!curr) {
+      return amount.toLocaleString('cs-CZ');
+    }
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
-      currency: 'CZK',
+      currency: curr,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -338,7 +347,7 @@ export function AddExtraWorkDialog({ open, onOpenChange, onAdd, onCreated }: Add
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="rate">Sazba (Kč/h) *</Label>
+              <Label htmlFor="rate">Sazba ({selectedEngagementCurrency || 'N/A'}/h) *</Label>
               <Input
                 id="rate"
                 type="number"

@@ -111,7 +111,10 @@ function HistoryItem({ record }: { record: EngagementHistoryRecord }) {
             <p>Přidána služba <span className="font-medium">{metadata.service_name}</span></p>
             {metadata.price !== undefined && (
               <p className="text-xs text-muted-foreground">
-                Cena: {metadata.price.toLocaleString('cs-CZ')} {metadata.currency || 'CZK'}
+                Cena: {metadata.price.toLocaleString('cs-CZ')} {(() => {
+                  if (!metadata.currency) throw new Error('Chybí měna v historii služby');
+                  return metadata.currency;
+                })()}
                 {metadata.billing_type && ` • ${formatHistoryValue('billing_type', metadata.billing_type)}`}
               </p>
             )}
