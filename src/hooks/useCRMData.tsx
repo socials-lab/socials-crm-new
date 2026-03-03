@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getErrorMessage, isPrimaryContactConstraintError, isEngagementReferenceError } from '@/lib/errorUtils';
+import { toDateOnlyString } from '@/lib/dbNormalize';
 import { withTimeout } from '@/utils/asyncUtils';
 import type { 
   Client, 
@@ -153,7 +154,7 @@ const transformClient = (row: Record<string, unknown>): Client => ({
   tier: (row.tier as Client['tier']) || 'standard',
   // Other potentially null string fields
   acquisition_channel: (row.acquisition_channel as string) || '',
-  start_date: (row.start_date as string) || new Date().toISOString().split('T')[0],
+  start_date: (row.start_date as string) || toDateOnlyString(new Date()),
   notes: (row.notes as string) || '',
   pinned_notes: (row.pinned_notes as string) || '',
   // Timestamps
@@ -1506,24 +1507,39 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (normalizedCurrency !== currency) {
         throw new Error(`Line item currency (${normalizedCurrency}) must match invoice currency (${currency})`);
       }
+      const unitPrice = Number(item.unit_price);
+      const quantity = Number(item.quantity);
+      const adjustmentAmount = Number(item.adjustment_amount);
+      const finalAmount = Number(item.final_amount);
+      if (!Number.isFinite(unitPrice) || !Number.isFinite(quantity) || !Number.isFinite(adjustmentAmount) || !Number.isFinite(finalAmount)) {
+        throw new Error(`Line item "${item.line_description}" has invalid numeric values (unit_price, quantity, adjustment_amount, or final_amount)`);
+      }
 
-      const calculatedFinalAmount = (item.unit_price * item.quantity) + item.adjustment_amount;
-      if (Math.abs(calculatedFinalAmount - item.final_amount) > 0.01) {
+      const calculatedFinalAmount = (unitPrice * quantity) + adjustmentAmount;
+      if (Math.abs(calculatedFinalAmount - finalAmount) > 0.01) {
         throw new Error(
-          `Line item "${item.line_description}" has invalid final amount (${item.final_amount}); expected ${calculatedFinalAmount}`,
+          `Line item "${item.line_description}" has invalid final amount (${finalAmount}); expected ${calculatedFinalAmount}`,
         );
       }
 
       return {
         ...item,
+        unit_price: unitPrice,
+        quantity,
+        adjustment_amount: adjustmentAmount,
+        final_amount: finalAmount,
         currency: normalizedCurrency,
       };
     });
 
+    const invoiceTotal = Number(invoice.total_amount);
+    if (!Number.isFinite(invoiceTotal)) {
+      throw new Error('Invoice total_amount is not a valid number');
+    }
     const calculatedInvoiceTotal = normalizedLineItems.reduce((sum, item) => sum + item.final_amount, 0);
-    if (Math.abs(calculatedInvoiceTotal - invoice.total_amount) > 0.01) {
+    if (Math.abs(calculatedInvoiceTotal - invoiceTotal) > 0.01) {
       throw new Error(
-        `Invoice total mismatch: expected ${calculatedInvoiceTotal}, got ${invoice.total_amount}`,
+        `Invoice total mismatch: expected ${calculatedInvoiceTotal}, got ${invoiceTotal}`,
       );
     }
 

@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCRMData } from '@/hooks/useCRMData';
+import { toDateOnlyString, toNullableNumber } from '@/lib/dbNormalize';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Lead, CostModel, ClientTier } from '@/types/crm';
@@ -113,8 +114,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           ? `${lead.potential_services[0].name} - ${lead.company_name}`
           : `${lead.company_name}`,
         start_date: lead.contract_signed_at
-          ? new Date(lead.contract_signed_at).toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0], // Fallback to today
+          ? toDateOnlyString(new Date(lead.contract_signed_at))
+          : toDateOnlyString(new Date()),
         end_date: '',
         notice_period_months: 3,
         engagement_notes: lead.summary,
@@ -287,7 +288,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             one_off_fee: oneOffFee,
             start_date: data.start_date,
             end_date: data.end_date || null,
-            notice_period_months: data.notice_period_months || null,
+            notice_period_months: toNullableNumber(data.notice_period_months),
             offer_url: lead.offer_url || null,
             contract_url: lead.contract_url || null,
             notes: data.engagement_notes || '',
@@ -917,7 +918,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                         const field = watchCostModel(index) === 'hourly' ? 'hourly_cost' :
                                       watchCostModel(index) === 'percentage' ? 'percentage_of_revenue' :
                                       'monthly_cost';
-                        updateTeamMember(index, field, e.target.value === '' ? 0 : Number(e.target.value));
+                        const raw = e.target.value;
+                        updateTeamMember(index, field, raw === '' ? 0 : (Number(raw) || 0));
                       }}
                       placeholder="0"
                     />

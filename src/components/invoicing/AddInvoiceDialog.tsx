@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCRMData } from '@/hooks/useCRMData';
+import { toNullableNumber } from '@/lib/dbNormalize';
 import { FileText, Building2, Calculator } from 'lucide-react';
 
 export interface NewInvoiceItemData {
@@ -88,12 +89,15 @@ export function AddInvoiceDialog({
     if (!effectiveCurrency) {
       throw new Error(`Missing engagement currency for ${selectedEngagementId}`);
     }
-    
+    const amountNum = toNullableNumber(amount);
+    const hoursNum = toNullableNumber(hours);
+    const rateNum = toNullableNumber(hourlyRate);
+    if (amountNum === null || amountNum <= 0) return;
     onAdd(selectedEngagementId, {
       description,
-      amount: Number(amount),
-      hours: hours ? Number(hours) : null,
-      hourly_rate: hourlyRate ? Number(hourlyRate) : null,
+      amount: amountNum,
+      hours: hoursNum,
+      hourly_rate: rateNum,
       currency: effectiveCurrency,
       is_reverse_charge: isReverseCharge,
     });
@@ -252,7 +256,7 @@ export function AddInvoiceDialog({
           </Button>
           <Button 
             onClick={handleSubmit}
-            disabled={!selectedEngagementId || !description || !amount || Number(amount) <= 0}
+            disabled={!selectedEngagementId || !description || !amount || (toNullableNumber(amount) ?? 0) <= 0}
           >
             {isExistingEngagement ? 'Přidat položku' : 'Vytvořit fakturu'}
           </Button>

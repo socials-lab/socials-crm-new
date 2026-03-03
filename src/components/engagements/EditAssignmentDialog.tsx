@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toNullableNumber } from '@/lib/dbNormalize';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -88,7 +89,7 @@ export function EditAssignmentDialog({
   const handleSave = () => {
     // If per_credit model, save reward_per_credit to DB
     if (costModel === 'per_credit') {
-      const reward = parseFloat(perCreditReward) || DEFAULT_REWARD_PER_CREDIT;
+      const reward = toNullableNumber(perCreditReward) ?? DEFAULT_REWARD_PER_CREDIT;
 
       onSave({
         cost_model: 'fixed_monthly', // Store as fixed_monthly in DB
@@ -101,10 +102,10 @@ export function EditAssignmentDialog({
     } else {
       onSave({
         cost_model: costModel as CostModel,
-        hourly_cost: costModel === 'hourly' ? parseFloat(hourlyCost) || null : null,
-        monthly_cost: costModel === 'fixed_monthly' ? parseFloat(monthlyCost) || null : null,
-        percentage_of_revenue: costModel === 'percentage' ? parseFloat(percentageOfRevenue) || null : null,
-        reward_per_credit: null, // Clear reward_per_credit when not using per_credit model
+        hourly_cost: costModel === 'hourly' ? toNullableNumber(hourlyCost) : null,
+        monthly_cost: costModel === 'fixed_monthly' ? toNullableNumber(monthlyCost) : null,
+        percentage_of_revenue: costModel === 'percentage' ? toNullableNumber(percentageOfRevenue) : null,
+        reward_per_credit: null,
         role_on_engagement: roleOnEngagement,
       });
     }

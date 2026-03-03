@@ -23,6 +23,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { getServiceDetail } from '@/constants/serviceDetails';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
+import { format } from 'date-fns';
 
 /** Resolve price for a selected tier from service metadata (DB or constants). Returns null if not found. */
 function resolveTierPrice(service: Service | undefined, tier: ServiceTier): number | null {
@@ -198,11 +199,11 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     setEditableServices(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Default valid_until to 14 days from now
+  // Default valid_until to 14 days from now (local date)
   const defaultValidUntil = useMemo(() => {
     const date = new Date();
     date.setDate(date.getDate() + 14);
-    return date.toISOString().split('T')[0];
+    return format(date, 'yyyy-MM-dd');
   }, []);
 
   const handleCreate = async () => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
+import { toDateOnlyString } from '@/lib/dbNormalize';
 import { cs } from 'date-fns/locale';
 import { CalendarIcon, AlertTriangle, Briefcase } from 'lucide-react';
 import {
@@ -90,7 +91,7 @@ export function EndClientDialog({
   const handleConfirm = () => {
     if (selectedDate && reason) {
       onConfirm({
-        end_date: selectedDate.toISOString().split('T')[0],
+        end_date: toDateOnlyString(selectedDate),
         termination_reason: reason as TerminationReason,
         termination_initiated_by: 'client', // Client-level termination is always initiated by client
         termination_notes: notes,

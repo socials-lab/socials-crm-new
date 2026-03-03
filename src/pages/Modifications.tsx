@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, ModificationProposedChanges } from '@/types/crm';
+import { toNullableNumber } from '@/lib/dbNormalize';
 import type { StoredModificationRequest } from '@/hooks/useModificationRequests';
 import { getAppliedModificationsHistory, type AppliedModificationHistory } from '@/data/appliedModificationsHistory';
 
@@ -219,9 +220,9 @@ export default function Modifications() {
             is_active: true,
             notes: '',
             selected_tier: changes.selected_tier || null,
-            creative_boost_min_credits: changes.creative_boost_min_credits || null,
-            creative_boost_max_credits: changes.creative_boost_max_credits || null,
-            creative_boost_price_per_credit: changes.creative_boost_price_per_credit || null,
+            creative_boost_min_credits: toNullableNumber(changes.creative_boost_min_credits),
+            creative_boost_max_credits: toNullableNumber(changes.creative_boost_max_credits),
+            creative_boost_price_per_credit: toNullableNumber(changes.creative_boost_price_per_credit),
             invoicing_status: 'not_applicable',
             invoiced_at: null,
             invoiced_in_period: null,

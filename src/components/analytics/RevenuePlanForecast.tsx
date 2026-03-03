@@ -14,6 +14,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { format, isSameMonth, parseISO, startOfMonth } from 'date-fns';
+import { toDateOnlyString, toNullableNumber } from '@/lib/dbNormalize';
 import { cs } from 'date-fns/locale';
 import {
   ResponsiveContainer,
@@ -206,12 +207,16 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
     if (!newPlan.client_name || !newPlan.name || !newPlan.monthly_fee || !newPlan.start_date) {
       return;
     }
+    const monthlyFee = toNullableNumber(newPlan.monthly_fee);
+    if (monthlyFee === null || monthlyFee < 0) return;
+    const prob = toNullableNumber(newPlan.probability_percent);
+    const probabilityPercent = prob != null ? Math.min(100, Math.max(0, prob)) : 100;
     await addPlannedEngagement({
       client_name: newPlan.client_name,
       name: newPlan.name,
-      monthly_fee: Number(newPlan.monthly_fee),
-      start_date: new Date(newPlan.start_date).toISOString(),
-      probability_percent: newPlan.probability_percent,
+      monthly_fee: monthlyFee,
+      start_date: toDateOnlyString(new Date(newPlan.start_date)),
+      probability_percent: probabilityPercent,
       assigned_colleague_ids: newPlan.assigned_colleague_ids,
       notes: newPlan.notes,
       lead_id: null,
@@ -399,7 +404,7 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
                 min={0}
                 max={100}
                 value={newPlan.probability_percent}
-                onChange={(e) => setNewPlan((p) => ({ ...p, probability_percent: Number(e.target.value) }))}
+                onChange={(e) => { const v = toNullableNumber(e.target.value); setNewPlan((p) => ({ ...p, probability_percent: v ?? 100 })); }}
               />
             </div>
             <div className="space-y-1">

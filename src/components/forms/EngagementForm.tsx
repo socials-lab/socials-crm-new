@@ -23,6 +23,7 @@ import {
 import type { Engagement, Client, ClientContact, EngagementStatus } from '@/types/crm';
 import { getAvailableEngagementStatuses, ENGAGEMENT_STATUS_LABELS, canTerminateEngagement } from '@/lib/statusTransitions';
 import { getClientOptionLabel } from '@/lib/clientOptionLabel';
+import { toDateOnlyString } from '@/lib/dbNormalize';
 import { toast } from 'sonner';
 
 const engagementSchema = z.object({
@@ -113,7 +114,7 @@ export function EngagementForm({
       monthly_fee: engagement?.monthly_fee || 0,
       one_off_fee: engagement?.one_off_fee || 0,
       status: engagement?.status || 'planned',
-      start_date: engagement?.start_date || new Date().toISOString().split('T')[0],
+      start_date: engagement?.start_date || toDateOnlyString(new Date()),
       end_date: engagement?.end_date || null,
       notice_period_months: engagement?.notice_period_months ?? null,
       notes: engagement?.notes || '',

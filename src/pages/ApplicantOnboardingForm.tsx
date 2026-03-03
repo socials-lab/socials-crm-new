@@ -23,6 +23,7 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { CheckCircle2, Loader2, User, Building, CreditCard, MapPin, CalendarIcon, Heart, Camera, ArrowLeft, ArrowRight, Sparkles, ClipboardList } from 'lucide-react';
+import { toDateOnlyString } from '@/lib/dbNormalize';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -227,7 +228,7 @@ export default function ApplicantOnboardingForm() {
         body: {
           applicantId,
           ...formData,
-          birthday: formData.birthday ? formData.birthday.toISOString().split('T')[0] : null,
+          birthday: formData.birthday ? toDateOnlyString(formData.birthday) : null,
         },
       });
 

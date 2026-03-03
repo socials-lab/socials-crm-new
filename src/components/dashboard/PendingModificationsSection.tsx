@@ -8,6 +8,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { ModificationRequestCard } from '@/components/engagements/ModificationRequestCard';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges } from '@/types/crm';
+import { toDateOnlyString, toNullableNumber } from '@/lib/dbNormalize';
 import type { StoredModificationRequest } from '@/hooks/useModificationRequests';
 
 export function PendingModificationsSection() {
@@ -50,9 +51,9 @@ export function PendingModificationsSection() {
             invoiced_at: null,
             invoiced_in_period: null,
             invoice_id: null,
-            creative_boost_min_credits: changes.creative_boost_min_credits || null,
-            creative_boost_max_credits: changes.creative_boost_max_credits || null,
-            creative_boost_price_per_credit: changes.creative_boost_price_per_credit || null,
+            creative_boost_min_credits: toNullableNumber(changes.creative_boost_min_credits),
+            creative_boost_max_credits: toNullableNumber(changes.creative_boost_max_credits),
+            creative_boost_price_per_credit: toNullableNumber(changes.creative_boost_price_per_credit),
             upsold_by_id: request.upsold_by_id,
             upsell_commission_percent: request.upsell_commission_percent,
             effective_from: request.effective_from,
@@ -93,11 +94,11 @@ export function PendingModificationsSection() {
             colleague_id: changes.colleague_id,
             role_on_engagement: changes.role_on_engagement,
             cost_model: changes.cost_model,
-            hourly_cost: changes.hourly_cost || null,
-            monthly_cost: changes.monthly_cost || null,
-            percentage_of_revenue: changes.percentage_of_revenue || null,
+            hourly_cost: toNullableNumber(changes.hourly_cost),
+            monthly_cost: toNullableNumber(changes.monthly_cost),
+            percentage_of_revenue: toNullableNumber(changes.percentage_of_revenue),
             engagement_service_id: null,
-            start_date: request.effective_from || new Date().toISOString().split('T')[0],
+            start_date: request.effective_from || toDateOnlyString(new Date()),
             end_date: null,
             notes: '',
           });
@@ -115,9 +116,9 @@ export function PendingModificationsSection() {
             };
             await updateAssignment(request.engagement_assignment_id, {
               cost_model: changes.new_cost_model,
-              hourly_cost: changes.new_hourly_cost || null,
-              monthly_cost: changes.new_monthly_cost || null,
-              percentage_of_revenue: changes.new_percentage || null,
+              hourly_cost: toNullableNumber(changes.new_hourly_cost),
+              monthly_cost: toNullableNumber(changes.new_monthly_cost),
+              percentage_of_revenue: toNullableNumber(changes.new_percentage),
               role_on_engagement: changes.new_role || undefined,
             });
           }

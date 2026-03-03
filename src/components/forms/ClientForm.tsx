@@ -27,6 +27,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { getAvailableClientStatuses, CLIENT_STATUS_LABELS } from '@/lib/statusTransitions';
 import { optionalEmail, czechIco, czechDic, isValidUrlInput, normalizeUrlProtocol } from '@/lib/validation';
+import { toDateOnlyString } from '@/lib/dbNormalize';
 
 const ACQUISITION_OPTIONS: { value: LeadSource; label: string }[] = [
   { value: 'referral', label: 'Doporučení' },
@@ -152,7 +153,7 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
     billing_zip: c?.billing_zip || '',
     billing_country: c?.billing_country || 'Czech Republic',
     acquisition_channel: c?.acquisition_channel || '',
-    start_date: c?.start_date || new Date().toISOString().split('T')[0],
+    start_date: c?.start_date || toDateOnlyString(new Date()),
     notes: c?.notes || '',
   });
 

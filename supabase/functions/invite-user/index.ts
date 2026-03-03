@@ -6,6 +6,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const APP_ROLES = ['admin', 'management', 'project_manager', 'specialist', 'finance', 'client'] as const;
+const SENIORITIES = ['junior', 'mid', 'senior', 'partner'] as const;
+
+function toNullableNumber(v: unknown): number | null {
+  if (v === '' || v === undefined || v === null) return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toBoolean(v: unknown): boolean {
+  if (typeof v === 'boolean') return v;
+  if (v === 'true' || v === 1) return true;
+  return false;
+}
+
 interface InviteRequest {
   email: string;
   firstName: string;
@@ -101,7 +116,23 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Inviting user: ${email} with role: ${role}`);
+    const roleNorm = String(role).toLowerCase();
+    if (!APP_ROLES.includes(roleNorm as typeof APP_ROLES[number])) {
+      return new Response(
+        JSON.stringify({ error: `Neplatná role: ${role}. Povolené: ${APP_ROLES.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const seniorityNorm = seniority ? String(seniority).toLowerCase() : 'mid';
+    if (!SENIORITIES.includes(seniorityNorm as typeof SENIORITIES[number])) {
+      return new Response(
+        JSON.stringify({ error: `Neplatná seniorita: ${seniority}. Povolené: ${SENIORITIES.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Inviting user: ${email} with role: ${roleNorm}`);
 
     // Check if user already exists in auth.users
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
@@ -193,18 +224,22 @@ serve(async (req) => {
       );
     }
 
+    const internalCost = toNullableNumber(internal_hourly_cost);
+    const monthlyCost = toNullableNumber(monthly_fixed_cost);
+    const capacityHours = toNullableNumber(capacity_hours_per_month);
+
     const colleaguePayload = {
       email: normalizedEmail,
       full_name: fullName,
       position: position || "Team Member",
       status: "active",
-      seniority: seniority || "mid",
-      phone: phone || null,
-      notes: notes || "",
-      is_freelancer: is_freelancer || false,
-      internal_hourly_cost: internal_hourly_cost || 0,
-      monthly_fixed_cost: monthly_fixed_cost || null,
-      capacity_hours_per_month: capacity_hours_per_month || null,
+      seniority: seniorityNorm,
+      phone: (phone && String(phone).trim()) || null,
+      notes: notes ? String(notes) : "",
+      is_freelancer: toBoolean(is_freelancer),
+      internal_hourly_cost: internalCost ?? 0,
+      monthly_fixed_cost: monthlyCost,
+      capacity_hours_per_month: capacityHours,
       profile_id: inviteData.user.id,
     };
 
@@ -224,12 +259,12 @@ serve(async (req) => {
 
     console.log(`${targetColleagueId ? "Colleague updated" : "Colleague created"} and linked to profile for ${email}`);
 
-    // Pre-assign role
+    // Pre-assign role (invited users are new - no existing user_roles row)
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
       .insert({
         user_id: inviteData.user.id,
-        role: role,
+        role: roleNorm,
         is_super_admin: false,
         is_active: true,
       });

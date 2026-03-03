@@ -35,6 +35,7 @@ import type { CompanySearchResult } from '@/hooks/useAresSearch';
 import { toast } from '@/components/ui/sonner';
 import { useEffect, useState, useCallback } from 'react';
 import { Loader2, Search } from 'lucide-react';
+import { toNullableNumber } from '@/lib/dbNormalize';
 
 const leadSchema = z.object({
   company_name: z.string().min(1, 'Název firmy je povinný'),
@@ -297,7 +298,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       source: data.source,
       source_custom: data.source === 'other' ? (data.source_custom || null) : null,
       client_message: data.client_message || null,
-      ad_spend_monthly: data.ad_spend_monthly || null,
+      ad_spend_monthly: toNullableNumber(data.ad_spend_monthly),
       summary: data.summary,
       estimated_price: data.estimated_price,
       currency: data.currency,

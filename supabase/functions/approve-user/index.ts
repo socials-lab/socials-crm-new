@@ -6,6 +6,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const APP_ROLES = ['admin', 'management', 'project_manager', 'specialist', 'finance', 'client'] as const;
+const SENIORITIES = ['junior', 'mid', 'senior', 'partner'] as const;
+
+function toNullableNumber(v: unknown): number | null {
+  if (v === '' || v === undefined || v === null) return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toBoolean(v: unknown): boolean {
+  if (typeof v === 'boolean') return v;
+  if (v === 'true' || v === 1) return true;
+  return false;
+}
+
 interface ApproveRequest {
   user_id: string;
   role: string;
@@ -94,6 +109,22 @@ serve(async (req) => {
       );
     }
 
+    const roleNorm = String(role).toLowerCase();
+    if (!APP_ROLES.includes(roleNorm as typeof APP_ROLES[number])) {
+      return new Response(
+        JSON.stringify({ error: `Neplatná role: ${role}. Povolené: ${APP_ROLES.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const seniorityNorm = seniority ? String(seniority).toLowerCase() : 'mid';
+    if (!SENIORITIES.includes(seniorityNorm as typeof SENIORITIES[number])) {
+      return new Response(
+        JSON.stringify({ error: `Neplatná seniorita: ${seniority}. Povolené: ${SENIORITIES.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Verify the profile exists
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
@@ -108,22 +139,21 @@ serve(async (req) => {
       );
     }
 
-    // Check that user doesn't already have an active role
+    // Check for existing role (active or inactive - UNIQUE(user_id) means at most one row)
     const { data: existingRole } = await supabaseAdmin
       .from("user_roles")
-      .select("id")
+      .select("id, is_active")
       .eq("user_id", user_id)
-      .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
-    if (existingRole) {
+    if (existingRole?.is_active) {
       return new Response(
         JSON.stringify({ error: "Uživatel již má přiřazenou aktivní roli" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Approving user: ${profile.email} (${user_id}) with role: ${role}`);
+    console.log(`Approving user: ${profile.email} (${user_id}) with role: ${roleNorm}`);
 
     // Update the profile name if it differs
     if (full_name !== profile.full_name) {
@@ -133,15 +163,11 @@ serve(async (req) => {
         .eq("id", user_id);
     }
 
-    // Create the user_roles entry
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .insert({
-        user_id,
-        role,
-        is_super_admin: false,
-        is_active: true,
-      });
+    // Upsert user_roles: update if row exists (inactive), insert if not
+    const rolePayload = { role: roleNorm, is_super_admin: false, is_active: true };
+    const { error: roleError } = existingRole
+      ? await supabaseAdmin.from("user_roles").update(rolePayload).eq("id", existingRole.id)
+      : await supabaseAdmin.from("user_roles").insert({ user_id, ...rolePayload });
 
     if (roleError) {
       console.error("Role assignment error:", roleError);
@@ -205,18 +231,22 @@ serve(async (req) => {
       );
     }
 
+    const internalCost = toNullableNumber(internal_hourly_cost);
+    const monthlyCost = toNullableNumber(monthly_fixed_cost);
+    const capacityHours = toNullableNumber(capacity_hours_per_month);
+
     const colleaguePayload = {
       email: normalizedEmail,
       full_name,
       position,
       status: "active",
-      seniority: seniority || "mid",
-      phone: phone || null,
-      notes: notes || "",
-      is_freelancer: is_freelancer || false,
-      internal_hourly_cost: internal_hourly_cost || 0,
-      monthly_fixed_cost: monthly_fixed_cost || null,
-      capacity_hours_per_month: capacity_hours_per_month || null,
+      seniority: seniorityNorm,
+      phone: (phone && String(phone).trim()) || null,
+      notes: notes ? String(notes) : "",
+      is_freelancer: toBoolean(is_freelancer),
+      internal_hourly_cost: internalCost ?? 0,
+      monthly_fixed_cost: monthlyCost,
+      capacity_hours_per_month: capacityHours,
       profile_id: user_id,
     };
 

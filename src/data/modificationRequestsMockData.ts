@@ -101,7 +101,7 @@ export function createModificationRequest(params: {
     engagement_assignment_id: params.engagement_assignment_id || null,
     effective_from: params.effective_from || null,
     upsold_by_id: params.upsold_by_id || null,
-    upsell_commission_percent: params.upsell_commission_percent || 10,
+    upsell_commission_percent: params.upsell_commission_percent ?? 10,
     requested_by: params.requested_by,
     requested_at: new Date().toISOString(),
     note: params.note || null,

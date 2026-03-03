@@ -585,7 +585,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                 <Input
                   type="number"
                   value={newPrice || ''}
-                  onChange={(e) => setNewPrice(e.target.value === '' ? 0 : Number(e.target.value))}
+                  onChange={(e) => { const v = e.target.value; setNewPrice(v === '' ? 0 : (Number(v) || 0)); }}
                 />
               </div>
             </div>

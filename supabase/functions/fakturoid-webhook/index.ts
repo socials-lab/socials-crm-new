@@ -100,11 +100,25 @@ serve(async (req) => {
 
     // Update invoice status
     const updates: Record<string, unknown> = {};
-    
+
+    /** Parse to YYYY-MM-DD for DATE column. Fakturoid paid_on is typically YYYY-MM-DD. Uses local date for fallback. */
+    function toDateOnly(v: unknown): string {
+      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+      const d = !v ? new Date() : (v instanceof Date ? v : new Date(String(v)));
+      if (isNaN(d.getTime())) {
+        const n = new Date();
+        return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+      }
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
     if (payload.body.invoice.status === "paid") {
       updates.status = "paid";
-      // Payment date comes from payment object, not invoice
-      updates.paid_at = payload.body.payment?.paid_on || new Date().toISOString().split('T')[0];
+      const paidOn = payload.body.payment?.paid_on;
+      if (paidOn != null && paidOn !== '') {
+        updates.paid_at = toDateOnly(paidOn);
+      }
+      // When paid_on is missing, leave paid_at unchanged (do not guess "today")
     } else if (payload.body.invoice.status === "sent") {
       updates.status = "sent";
     } else if (payload.body.invoice.status === "overdue") {

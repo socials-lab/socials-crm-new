@@ -185,7 +185,7 @@ export function useModificationRequests() {
           effective_from: params.effective_from || null,
           upsold_by_id: params.upsold_by_id || null,
           upsold_by_name: upsoldByColleague?.full_name || null,
-          upsell_commission_percent: params.upsell_commission_percent || 10,
+          upsell_commission_percent: params.upsell_commission_percent ?? 10,
           note: params.note || null,
           requested_by: user.id,
           // Denormalized fields

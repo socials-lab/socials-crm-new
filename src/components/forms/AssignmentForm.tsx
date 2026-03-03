@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Colleague, EngagementAssignment } from '@/types/crm';
+import { toDateOnlyString } from '@/lib/dbNormalize';
 
 const assignmentSchema = z.object({
   colleague_id: z.string().min(1, 'Vyberte kolegu'),
@@ -90,7 +91,7 @@ export function AssignmentForm({
       hourly_cost: null,
       monthly_cost: null,
       percentage_of_revenue: null,
-      start_date: new Date().toISOString().split('T')[0],
+      start_date: toDateOnlyString(new Date()),
       notes: '',
     },
   });

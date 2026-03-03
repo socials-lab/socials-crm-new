@@ -6,6 +6,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function toNullableNumber(v: unknown): number | null {
+  if (v === '' || v === undefined || v === null) return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Parse to YYYY-MM-DD for DATE column. Returns null if invalid. */
+function toDateOnly(v: unknown): string | null {
+  if (!v) return null;
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const d = v instanceof Date ? v : new Date(String(v));
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+function toNullableString(v: unknown): string | null {
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  return s === '' ? null : s;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -22,6 +42,15 @@ serve(async (req) => {
     if (!data.applicantId) {
       return new Response(
         JSON.stringify({ error: "Applicant ID is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const fullName = String(data.full_name ?? '').trim();
+    const email = String(data.email ?? '').trim();
+    if (!fullName || !email) {
+      return new Response(
+        JSON.stringify({ error: "Full name and email are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -47,25 +76,25 @@ serve(async (req) => {
       );
     }
 
-    // Update applicant with onboarding data
+    // Update applicant with onboarding data (normalize types for DB)
     const { error: updateError } = await supabaseAdmin
       .from("applicants")
       .update({
-        full_name: data.full_name,
-        email: data.email,
-        phone: data.phone || null,
-        birthday: data.birthday || null,
-        avatar_url: data.avatar_url || null,
-        personal_email: data.personal_email || null,
-        ico: data.ico || null,
-        company_name: data.company_name,
-        dic: data.dic || null,
-        billing_country: data.billing_country || null,
-        billing_street: data.billing_street || null,
-        billing_city: data.billing_city || null,
-        billing_zip: data.billing_zip || null,
-        hourly_rate: data.hourly_rate || null,
-        bank_account: data.bank_account || null,
+        full_name: fullName,
+        email: email,
+        phone: toNullableString(data.phone),
+        birthday: toDateOnly(data.birthday),
+        avatar_url: toNullableString(data.avatar_url),
+        personal_email: toNullableString(data.personal_email),
+        ico: toNullableString(data.ico),
+        company_name: toNullableString(data.company_name),
+        dic: toNullableString(data.dic),
+        billing_country: toNullableString(data.billing_country),
+        billing_street: toNullableString(data.billing_street),
+        billing_city: toNullableString(data.billing_city),
+        billing_zip: toNullableString(data.billing_zip),
+        hourly_rate: toNullableNumber(data.hourly_rate),
+        bank_account: toNullableString(data.bank_account),
         onboarding_completed_at: new Date().toISOString(),
       })
       .eq("id", data.applicantId);

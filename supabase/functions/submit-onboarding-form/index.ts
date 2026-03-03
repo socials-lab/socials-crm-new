@@ -36,6 +36,18 @@ interface OnboardingFormData {
   startDate: string;
 }
 
+function isValidEmailFormat(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+/** Parse to YYYY-MM-DD for DATE column. Returns null if invalid. */
+function toDateOnly(v: unknown): string | null {
+  if (!v) return null;
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const d = v instanceof Date ? v : new Date(String(v));
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -79,6 +91,22 @@ serve(async (req) => {
 
     // Update lead with onboarding data
     const primarySignatory = data.signatories[0];
+    if (!primarySignatory?.email?.trim()) {
+      return new Response(
+        JSON.stringify({ error: "Email primárního signatáře je povinný" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const contactEmail = primarySignatory.email.trim();
+    if (!isValidEmailFormat(contactEmail)) {
+      return new Response(
+        JSON.stringify({ error: "Neplatný formát emailu primárního signatáře" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const onboardingStartDate = toDateOnly(data.startDate) ?? data.startDate;
+
     const { error: updateError } = await supabaseAdmin
       .from("leads")
       .update({
@@ -92,15 +120,13 @@ serve(async (req) => {
         billing_zip: data.billing_zip || null,
         billing_country: data.billing_country || null,
         billing_email: data.billing_email || null,
-        // Update contact with primary signatory
         contact_name: primarySignatory.name,
         contact_position: primarySignatory.position || null,
-        contact_email: primarySignatory.email,
+        contact_email: contactEmail,
         contact_phone: primarySignatory.phone || null,
-        // Store signatories and project contacts as JSON
         onboarding_signatories: data.signatories,
         onboarding_project_contacts: data.projectContacts,
-        onboarding_start_date: data.startDate,
+        onboarding_start_date: onboardingStartDate,
         onboarding_form_completed_at: new Date().toISOString(),
       })
       .eq("id", data.leadId);

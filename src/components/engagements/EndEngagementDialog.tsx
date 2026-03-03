@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, addMonths } from 'date-fns';
+import { toDateOnlyString } from '@/lib/dbNormalize';
 import { cs } from 'date-fns/locale';
 import { CalendarIcon, AlertTriangle, User, Building2 } from 'lucide-react';
 import {
@@ -62,7 +63,7 @@ export function EndEngagementDialog({
   const handleConfirm = () => {
     if (selectedDate && reason) {
       onConfirm({
-        end_date: selectedDate.toISOString().split('T')[0],
+        end_date: toDateOnlyString(selectedDate),
         termination_reason: reason as TerminationReason,
         termination_initiated_by: initiatedBy,
         termination_notes: notes,
