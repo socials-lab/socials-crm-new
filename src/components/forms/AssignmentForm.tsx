@@ -89,6 +89,7 @@ export function AssignmentForm({
 
   const costModel = form.watch('cost_model');
   const selectedColleagueId = form.watch('colleague_id');
+  const selectedRole = form.watch('role_on_engagement');
 
   // Auto-detect designer position and switch to per_credit
   const selectedColleague = colleagues.find(c => c.id === selectedColleagueId);
@@ -96,13 +97,21 @@ export function AssignmentForm({
     if (!hasCreativeBoost || !selectedColleague) return;
     const pos = selectedColleague.position.toLowerCase();
     if (pos.includes('video')) {
-      form.setValue('cost_model', 'per_credit');
       form.setValue('role_on_engagement', 'Video Editor');
     } else if (pos.includes('design') || pos.includes('grafik')) {
-      form.setValue('cost_model', 'per_credit');
       form.setValue('role_on_engagement', 'Graphic Designer');
     }
   }, [selectedColleagueId, hasCreativeBoost, selectedColleague]);
+
+  // Auto-switch cost model based on selected role
+  useEffect(() => {
+    if (!selectedRole) return;
+    if (hasCreativeBoost && (selectedRole === 'Graphic Designer' || selectedRole === 'Video Editor')) {
+      form.setValue('cost_model', 'per_credit');
+    } else {
+      form.setValue('cost_model', 'fixed_monthly');
+    }
+  }, [selectedRole, hasCreativeBoost]);
 
   // Filter out already assigned colleagues
   const assignedColleagueIds = existingAssignments
