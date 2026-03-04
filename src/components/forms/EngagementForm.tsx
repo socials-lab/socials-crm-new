@@ -287,7 +287,7 @@ export function EngagementForm({
           name="contact_person_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Kontaktní osoba</FormLabel>
+              <FormLabel>Hlavní kontaktní osoba</FormLabel>
               <Select 
                 onValueChange={(value) => field.onChange(value === '__none__' ? null : value)} 
                 value={field.value ?? '__none__'} 
