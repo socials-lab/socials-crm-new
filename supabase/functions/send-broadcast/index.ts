@@ -13,23 +13,23 @@ serve(async (req) => {
   try {
     const { subject, body, recipients, cc_emails, bcc_emails } = await req.json();
 
-    console.log('=== BROADCAST EMAIL ===');
+    console.log('=== BROADCAST — INDIVIDUAL EMAILS ===');
     console.log('Subject:', subject);
     console.log('Recipients count:', recipients?.length);
     console.log('CC:', cc_emails);
     console.log('BCC:', bcc_emails);
-    console.log('Body template:', body?.substring(0, 200));
     
-    // Log each personalized recipient
+    // Each recipient gets their own individual email (no BCC)
     for (const r of recipients || []) {
       const personalizedBody = body
         .replace(/\{contact_name\}/g, r.contact_name || '')
         .replace(/\{company\}/g, r.company || '');
-      console.log(`→ To: ${r.email} (${r.contact_name} @ ${r.company})`);
+      console.log(`→ Individual email to: ${r.email} (${r.contact_name} @ ${r.company})`);
+      // TODO: Resend API call per recipient:
+      // await resend.emails.send({ from, to: r.email, subject, html: personalizedBody, cc: cc_emails, bcc: bcc_emails })
     }
 
     console.log('=== END BROADCAST ===');
-    // TODO: Integrate with Resend API for actual email sending
 
     return new Response(JSON.stringify({ success: true, sent: recipients?.length || 0 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
