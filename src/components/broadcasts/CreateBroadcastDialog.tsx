@@ -142,6 +142,11 @@ export function CreateBroadcastDialog({ open, onOpenChange, onCreated }: CreateB
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="rounded-md border p-3 bg-muted/50">
+            <Label className="text-xs text-muted-foreground">Odesílatel</Label>
+            <p className="text-sm font-medium">{user?.email || '—'}</p>
+          </div>
+
           <div>
             <Label>Předmět</Label>
             <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Předmět emailu" />
