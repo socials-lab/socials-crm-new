@@ -7,6 +7,7 @@ import { CreateBroadcastDialog } from '@/components/broadcasts/CreateBroadcastDi
 import { Plus, Loader2, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface Broadcast {
   id: string;
@@ -16,6 +17,7 @@ interface Broadcast {
 }
 
 export default function Broadcasts() {
+  const { isSuperAdmin } = useUserRole();
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,9 +42,11 @@ export default function Broadcasts() {
         title="Rozesílky"
         description="Hromadné emaily kontaktům aktivních klientů"
         actions={
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" /> Nová rozesílka
-          </Button>
+          isSuperAdmin ? (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" /> Nová rozesílka
+            </Button>
+          ) : undefined
         }
       />
 
