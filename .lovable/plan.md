@@ -1,27 +1,30 @@
 
 
-## Plan: Finanční přehled zakázky (Revenue, Náklady, Marže)
+## Plan: Individuální odesílání emailů + omezení na adminy
 
-### Co se změní
+### Rozhodnutí: Individuální emaily (ne BCC)
 
-**`src/pages/Engagements.tsx`**
-- V rozbalené kartě zakázky přidat novou sekci **"Finanční přehled"** (viditelnou pouze při `canSeeFinancials`)
-- Sekce zobrazí:
-  - **Fakturace**: součet cen aktivních služeb (již kalkulováno jako `totalServicesAmount`)
-  - **Náklady**: součet `monthly_cost` všech aktivních přiřazení (assignments) na zakázce
-  - **Marže**: fakturace - náklady, s procentuálním vyjádřením
-  - Barevné kódování marže: zelená (40%+), oranžová (20-40%), červená (<20%)
-- Sekce se zobrazí v horní části rozbalené karty (pod připnutou poznámkou, nad grid s detaily)
+Best practice pro hromadné rozesílky je **odeslat každému příjemci samostatný email**. Důvody:
+- Příjemci nevidí ostatní adresy (na rozdíl od BCC, kde chyba = únik kontaktů)
+- Lepší personalizace (`{contact_name}`, `{company}`)
+- Lepší deliverability (emailové servery méně penalizují individuální emaily)
+- Možnost sledovat doručení per příjemce v budoucnu
 
-### Přístupová oprávnění
-- Stávající `canSeeFinancials` flag (z `useUserRole`) je již implementován a kontrolován
-- Administrátor (`isSuperAdmin`) vidí vždy
-- Ostatní uživatelé vidí pouze pokud mají `can_see_financials = true` v `user_roles`
-- V nastavení přístupů (`Settings > Správa přístupů`) již existuje toggle pro `can_see_financials` — žádná změna není potřeba
+### Změny
+
+**1. `supabase/functions/send-broadcast/index.ts`**
+- Upravit edge function tak, aby iterovala přes příjemce a pro každého připravila samostatný email (aktuálně už iteruje, jen upřesnit log, že jde o individuální odeslání)
+- Až se napojí Resend API, každý příjemce dostane vlastní API call
+
+**2. `src/pages/Broadcasts.tsx`**
+- Přidat kontrolu `isSuperAdmin` z `useUserRole`
+- Tlačítko "Nová rozesílka" zobrazit pouze pro adminy
+- Ostatní uživatelé vidí historii rozesílek (read-only), ale nemohou vytvářet nové
+
+**3. `src/components/broadcasts/CreateBroadcastDialog.tsx`**
+- Žádné změny potřeba — dialog se otevírá jen z tlačítka, které bude skryté pro ne-adminy
 
 ### Technické detaily
-- Náklady se spočítají z `getAssignmentsByEngagementId(engagement.id)` — filtrují se jen aktivní (bez `end_date`)
-- Součet `assignment.monthly_cost || 0` pro každé přiřazení
-- Marže % = `((revenue - cost) / revenue) * 100`
-- Žádné DB změny nejsou potřeba — všechna data jsou již dostupná
+- Edge function již iteruje přes `recipients` pole — struktura je připravena na individuální Resend API volání
+- Omezení na adminy je čistě UI-side (tlačítko skryté) + RLS na DB úrovni již omezuje na CRM users; pro přísnější kontrolu by se dala přidat RLS policy s `is_admin(auth.uid())` na INSERT
 
