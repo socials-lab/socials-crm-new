@@ -101,7 +101,7 @@ export function CreateBroadcastDialog({ open, onOpenChange, onCreated }: CreateB
       }));
 
       // Save to DB
-      const { error: dbError } = await supabase.from('broadcasts' as any).insert({
+      const { data: broadcastData, error: dbError } = await supabase.from('broadcasts' as any).insert({
         subject,
         body,
         recipient_count: selectedRecipients.length,
@@ -109,15 +109,16 @@ export function CreateBroadcastDialog({ open, onOpenChange, onCreated }: CreateB
         cc_emails: ccEmails,
         bcc_emails: bccEmails,
         sent_by: user?.id,
-      });
+      }).select('id').single();
 
       if (dbError) throw dbError;
 
-      // Call edge function
-      const { error: fnError } = await supabase.functions.invoke('send-broadcast', {
-        body: { subject, body, recipients: recipientsPayload, cc_emails: ccEmails, bcc_emails: bccEmails },
-      });
+      const broadcastId = (broadcastData as any)?.id;
 
+      // Call edge function with broadcast_id for recipient tracking
+      const { error: fnError } = await supabase.functions.invoke('send-broadcast', {
+        body: { subject, body, recipients: recipientsPayload, cc_emails: ccEmails, bcc_emails: bccEmails, broadcast_id: broadcastId },
+      });
       if (fnError) console.warn('Edge function warning:', fnError);
 
       toast({ title: `Rozesílka odeslána ${selectedRecipients.length} příjemcům` });

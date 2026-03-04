@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,22 +12,62 @@ serve(async (req) => {
   }
 
   try {
-    const { subject, body, recipients, cc_emails, bcc_emails } = await req.json();
+    const { subject, body, recipients, cc_emails, bcc_emails, broadcast_id } = await req.json();
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabase = createClient(
+      supabaseUrl,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    const trackingBaseUrl = `${supabaseUrl}/functions/v1/broadcast-track`;
 
     console.log('=== BROADCAST — INDIVIDUAL EMAILS ===');
     console.log('Subject:', subject);
     console.log('Recipients count:', recipients?.length);
-    console.log('CC:', cc_emails);
-    console.log('BCC:', bcc_emails);
-    
-    // Each recipient gets their own individual email (no BCC)
+    console.log('Broadcast ID:', broadcast_id);
+
     for (const r of recipients || []) {
-      const personalizedBody = body
+      // Create recipient record with tracking ID
+      const { data: recipientRecord, error: insertError } = await supabase
+        .from('broadcast_recipients')
+        .insert({
+          broadcast_id,
+          email: r.email,
+          contact_name: r.contact_name,
+          company: r.company,
+        })
+        .select('tracking_id')
+        .single();
+
+      if (insertError) {
+        console.error(`Failed to create recipient record for ${r.email}:`, insertError);
+        continue;
+      }
+
+      const trackingId = recipientRecord.tracking_id;
+
+      // Personalize body
+      let personalizedBody = body
         .replace(/\{contact_name\}/g, r.contact_name || '')
         .replace(/\{company\}/g, r.company || '');
-      console.log(`→ Individual email to: ${r.email} (${r.contact_name} @ ${r.company})`);
-      // TODO: Resend API call per recipient:
-      // await resend.emails.send({ from, to: r.email, subject, html: personalizedBody, cc: cc_emails, bcc: bcc_emails })
+
+      // Rewrite links for click tracking
+      personalizedBody = personalizedBody.replace(
+        /href="(https?:\/\/[^"]+)"/g,
+        (match: string, url: string) => {
+          const trackUrl = `${trackingBaseUrl}?id=${trackingId}&type=click&url=${encodeURIComponent(url)}`;
+          return `href="${trackUrl}"`;
+        }
+      );
+
+      // Add tracking pixel at the end
+      const trackingPixel = `<img src="${trackingBaseUrl}?id=${trackingId}&type=open" width="1" height="1" style="display:none" alt="" />`;
+      const htmlBody = personalizedBody + trackingPixel;
+
+      console.log(`→ Individual email to: ${r.email} (tracking: ${trackingId})`);
+      // TODO: Resend API call:
+      // await resend.emails.send({ from, to: r.email, subject, html: htmlBody, cc: cc_emails, bcc: bcc_emails })
     }
 
     console.log('=== END BROADCAST ===');

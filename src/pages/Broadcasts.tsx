@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { CreateBroadcastDialog } from '@/components/broadcasts/CreateBroadcastDialog';
+import { BroadcastDetailSheet } from '@/components/broadcasts/BroadcastDetailSheet';
 import { Plus, Loader2, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -12,7 +13,10 @@ import { useUserRole } from '@/hooks/useUserRole';
 interface Broadcast {
   id: string;
   subject: string;
+  body: string | null;
   recipient_count: number;
+  open_count: number;
+  click_count: number;
   created_at: string;
   sent_by_name: string | null;
 }
@@ -22,12 +26,13 @@ export default function Broadcasts() {
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedBroadcast, setSelectedBroadcast] = useState<Broadcast | null>(null);
 
   const loadBroadcasts = async () => {
     setLoading(true);
     const { data } = await supabase
       .from('broadcasts' as any)
-      .select('id, subject, recipient_count, created_at, sent_by')
+      .select('id, subject, body, recipient_count, open_count, click_count, created_at, sent_by')
       .order('created_at', { ascending: false });
 
     const rows = (data as any[]) || [];
@@ -54,6 +59,11 @@ export default function Broadcasts() {
   useEffect(() => {
     loadBroadcasts();
   }, []);
+
+  const formatRate = (count: number, total: number) => {
+    if (total === 0) return '—';
+    return `${Math.round((count / total) * 100)}%`;
+  };
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -86,17 +96,25 @@ export default function Broadcasts() {
               <TableHead>Předmět</TableHead>
               <TableHead>Odeslal</TableHead>
               <TableHead className="text-right">Příjemců</TableHead>
+              <TableHead className="text-right">Open rate</TableHead>
+              <TableHead className="text-right">Click rate</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {broadcasts.map(b => (
-              <TableRow key={b.id}>
+              <TableRow
+                key={b.id}
+                className="cursor-pointer"
+                onClick={() => setSelectedBroadcast(b)}
+              >
                 <TableCell className="text-muted-foreground">
                   {format(new Date(b.created_at), 'd. MMMM yyyy, HH:mm', { locale: cs })}
                 </TableCell>
                 <TableCell className="font-medium">{b.subject}</TableCell>
                 <TableCell className="text-muted-foreground">{b.sent_by_name || '—'}</TableCell>
                 <TableCell className="text-right">{b.recipient_count}</TableCell>
+                <TableCell className="text-right">{formatRate(b.open_count, b.recipient_count)}</TableCell>
+                <TableCell className="text-right">{formatRate(b.click_count, b.recipient_count)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -107,6 +125,12 @@ export default function Broadcasts() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onCreated={loadBroadcasts}
+      />
+
+      <BroadcastDetailSheet
+        broadcast={selectedBroadcast}
+        open={!!selectedBroadcast}
+        onOpenChange={(open) => { if (!open) setSelectedBroadcast(null); }}
       />
     </div>
   );
