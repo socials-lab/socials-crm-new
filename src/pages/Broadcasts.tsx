@@ -14,6 +14,7 @@ interface Broadcast {
   subject: string;
   recipient_count: number;
   created_at: string;
+  sent_by_name: string | null;
 }
 
 export default function Broadcasts() {
@@ -26,9 +27,27 @@ export default function Broadcasts() {
     setLoading(true);
     const { data } = await supabase
       .from('broadcasts' as any)
-      .select('id, subject, recipient_count, created_at')
+      .select('id, subject, recipient_count, created_at, sent_by')
       .order('created_at', { ascending: false });
-    setBroadcasts((data as any) || []);
+
+    const rows = (data as any[]) || [];
+    const senderIds = [...new Set(rows.map(r => r.sent_by).filter(Boolean))];
+
+    let profileMap = new Map<string, string>();
+    if (senderIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', senderIds);
+      for (const p of profiles || []) {
+        profileMap.set(p.id, [p.first_name, p.last_name].filter(Boolean).join(' '));
+      }
+    }
+
+    setBroadcasts(rows.map(r => ({
+      ...r,
+      sent_by_name: profileMap.get(r.sent_by) || null,
+    })));
     setLoading(false);
   };
 
@@ -65,6 +84,7 @@ export default function Broadcasts() {
             <TableRow>
               <TableHead>Datum</TableHead>
               <TableHead>Předmět</TableHead>
+              <TableHead>Odeslal</TableHead>
               <TableHead className="text-right">Příjemců</TableHead>
             </TableRow>
           </TableHeader>
@@ -75,6 +95,7 @@ export default function Broadcasts() {
                   {format(new Date(b.created_at), 'd. MMMM yyyy, HH:mm', { locale: cs })}
                 </TableCell>
                 <TableCell className="font-medium">{b.subject}</TableCell>
+                <TableCell className="text-muted-foreground">{b.sent_by_name || '—'}</TableCell>
                 <TableCell className="text-right">{b.recipient_count}</TableCell>
               </TableRow>
             ))}
