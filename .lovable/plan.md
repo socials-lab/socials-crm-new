@@ -1,63 +1,47 @@
 
 
-## Plan: Tracking otevření a kliknutí v rozesílkách + detail rozesílky
+## Plan: Kontrola přefakturace víceprací klientům
 
-### Přehled
+### Problém
 
-Přidáme per-recipient tracking (open/click) pomocí nové tabulky `broadcast_recipients` a tracking edge function. V přehledu rozesílek zobrazíme open rate a click rate. Po kliknutí na řádek se otevře detail sheet se seznamem příjemců a jejich statusy.
+Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
+
+### Řešení
+
+Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
+- `expected` — vícepráce se má přefakturovat klientovi (default)
+- `reinvoiced` — přefakturováno klientovi
+- `not_expected` — nepředpokládá se přefakturace klientovi
+
+Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
 
 ### Databázové změny
 
-**Nová tabulka `broadcast_recipients`**
-- `id`, `broadcast_id` (FK → broadcasts), `email`, `contact_name`, `company`
-- `opened_at` (timestamptz, nullable) — kdy si otevřel email
-- `clicked_at` (timestamptz, nullable) — kdy kliknul na odkaz
-- `tracking_id` (uuid, unique) — unikátní identifikátor pro tracking pixel/link
-- RLS: CRM users can read
+```sql
+CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
+ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
+ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+```
 
-**Úprava `broadcasts` tabulky**
-- Přidat `open_count` (integer, default 0) a `click_count` (integer, default 0) pro rychlý přehled bez joinů
+### UI změny
 
-### Nová edge function: `broadcast-track`
+**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
+- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
+- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
 
-Endpoint volaný z tracking pixelu (open) nebo redirect linku (click):
-- `GET /broadcast-track?id={tracking_id}&type=open` — vrátí 1x1 transparentní pixel, zapíše `opened_at`
-- `GET /broadcast-track?id={tracking_id}&type=click&url={encoded_url}` — redirectne na URL, zapíše `clicked_at`
-- Při každém zápisu aktualizuje `open_count`/`click_count` v `broadcasts` tabulce
-- `verify_jwt = false` (veřejný endpoint, volá se z emailového klienta)
-- Používá service role key pro zápis do DB
+**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
+- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
+- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
 
-### Úprava edge function: `send-broadcast`
+**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
+- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
+- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
 
-- Při odesílání pro každého příjemce vytvořit záznam v `broadcast_recipients` s unikátním `tracking_id`
-- Do HTML těla emailu vložit:
-  - Tracking pixel: `<img src="...broadcast-track?id={tracking_id}&type=open" />`
-  - Přepsat odkazy v těle na tracking redirect: `broadcast-track?id={tracking_id}&type=click&url={encoded_original_url}`
-
-### Úprava `CreateBroadcastDialog`
-
-- Při ukládání broadcast předat `broadcast_id` do edge function, aby mohla vytvářet záznamy v `broadcast_recipients`
-
-### Úprava `Broadcasts.tsx` — přehled
-
-- Rozšířit select o `open_count`, `click_count`
-- Přidat sloupce **Open rate** a **Click rate** (počítáno jako `open_count / recipient_count * 100`)
-- Řádky budou klikatelné — otevřou detail sheet
-
-### Nový komponent: `BroadcastDetailSheet`
-
-- Sheet/dialog s detailem rozesílky:
-  - Předmět, datum, odesílatel
-  - Souhrnné metriky: příjemců, otevřeno, kliknuto (s procentem)
-  - Tabulka příjemců: jméno, email, firma, status (otevřeno ✓/✗, kliknuto ✓/✗, čas)
-  - Barevné badge pro status (zelená = otevřeno+kliknuto, žlutá = jen otevřeno, šedá = neotevřeno)
+**4. `src/types/crm.ts`**
+- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
 
 ### Technické detaily
-
-- Tracking pixel je standardní technika — 1x1 GIF vrácený jako `image/gif` response
-- Click tracking funguje přes server-side redirect (302)
-- `broadcast-track` funkce musí být veřejná (bez JWT) — emailoví klienti nemají auth
-- Pro DB operace v tracking funkci se použije `SUPABASE_SERVICE_ROLE_KEY`
-- Idempotence: opakované otevření/kliknutí nezmění `opened_at`/`clicked_at` (pouze první záznam)
-- Open tracking má přirozeně nižší spolehlivost (někteří klienti blokují obrázky), ale je to standard
+- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
+- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
+- Badge se zobrazí vedle existujícího status badge
 
