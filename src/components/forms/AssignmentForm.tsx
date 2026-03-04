@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,7 +24,7 @@ import {
 import type { Colleague, EngagementAssignment } from '@/types/crm';
 import { toDateOnlyString } from '@/lib/dbNormalize';
 
-const assignmentSchema = z.object({
+const assignmentSchemaBase = z.object({
   colleague_id: z.string().min(1, 'Vyberte kolegu'),
   role_on_engagement: z.string().min(1, 'Role je povinná'),
   cost_model: z.enum(['hourly', 'fixed_monthly', 'percentage'] as const),
@@ -35,7 +35,7 @@ const assignmentSchema = z.object({
   notes: z.string(),
 });
 
-type AssignmentFormData = z.infer<typeof assignmentSchema>;
+type AssignmentFormData = z.infer<typeof assignmentSchemaBase>;
 
 interface AssignmentFormProps {
   engagementId: string;
@@ -51,13 +51,38 @@ interface AssignmentFormProps {
 export function AssignmentForm({
   engagementId,
   engagementServiceId,
-  engagementStartDate: _engagementStartDate,
-  engagementEndDate: _engagementEndDate,
+  engagementStartDate,
+  engagementEndDate,
   colleagues,
   existingAssignments,
   onSubmit,
   onCancel
 }: AssignmentFormProps) {
+  const todayDateOnly = toDateOnlyString(new Date());
+  const defaultStartDate = engagementStartDate > todayDateOnly ? engagementStartDate : todayDateOnly;
+
+  const assignmentSchema = useMemo(
+    () =>
+      assignmentSchemaBase.superRefine((data, ctx) => {
+        if (data.start_date < engagementStartDate) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['start_date'],
+            message: `Datum začátku musí být od ${engagementStartDate}.`,
+          });
+        }
+
+        if (engagementEndDate && data.start_date > engagementEndDate) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['start_date'],
+            message: `Datum začátku musí být v rozsahu zakázky (${engagementStartDate} až ${engagementEndDate}).`,
+          });
+        }
+      }),
+    [engagementStartDate, engagementEndDate]
+  );
+
   const form = useForm<AssignmentFormData>({
     resolver: zodResolver(assignmentSchema),
     defaultValues: {
@@ -67,7 +92,7 @@ export function AssignmentForm({
       hourly_cost: null,
       monthly_cost: null,
       percentage_of_revenue: null,
-      start_date: toDateOnlyString(new Date()),
+      start_date: defaultStartDate,
       notes: '',
     },
   });
@@ -266,8 +291,17 @@ export function AssignmentForm({
             <FormItem>
               <FormLabel>Začátek</FormLabel>
               <FormControl>
-                <Input type="date" {...field} />
+                <Input
+                  type="date"
+                  min={engagementStartDate}
+                  max={engagementEndDate || undefined}
+                  {...field}
+                />
               </FormControl>
+              <p className="text-xs text-muted-foreground">
+                Povolený rozsah: {engagementStartDate}
+                {engagementEndDate ? ` až ${engagementEndDate}` : ' a dále'}
+              </p>
               <FormMessage />
             </FormItem>
           )}
