@@ -182,8 +182,7 @@ function EngagementsContent() {
   // Service dialog state
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
   const [serviceEngagementId, setServiceEngagementId] = useState<string | null>(null);
-  const [editingServicePrice, setEditingServicePrice] = useState<string | null>(null);
-  const [tempServicePrice, setTempServicePrice] = useState<string>('');
+  const [editingEngagementService, setEditingEngagementService] = useState<EngagementService | null>(null);
   
   // Creative Boost - no inline editing state needed, handled by unified component
 
@@ -810,7 +809,6 @@ function EngagementsContent() {
                             {engServices.length > 0 ? (
                               engServices.map(engService => {
                                 const service = services.find(s => s.id === engService.service_id);
-                                const isEditing = editingServicePrice === engService.id;
                                 const isCreativeBoost = CREATIVE_BOOST_SERVICE_ID !== null && engService.service_id === CREATIVE_BOOST_SERVICE_ID;
                                 const cbSummary = isCreativeBoost 
                                   ? getClientMonthSummaryByEngagementServiceId(engService.id, filterYear, filterMonth)
@@ -923,67 +921,24 @@ function EngagementsContent() {
                                     </div>
                                     <div className="flex items-center gap-2">
                                       {canSeeFinancials && (
-                                        isEditing ? (
-                                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                            <Input
-                                              type="number"
-                                              value={tempServicePrice}
-                                              onChange={(e) => setTempServicePrice(e.target.value)}
-                                              className="h-6 w-24 text-xs"
-                                              placeholder="0"
-                                              autoFocus
-                                              onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                  const price = parseFloat(tempServicePrice) || 0;
-                                                  updateEngagementService(engService.id, { price });
-                                                  setEditingServicePrice(null);
-                                                  toast.success('Cena služby aktualizována');
-                                                } else if (e.key === 'Escape') {
-                                                  setEditingServicePrice(null);
-                                                }
-                                              }}
-                                            />
-                                            <span className="text-xs text-muted-foreground">{engService.currency}</span>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-5 w-5 text-status-active"
-                                              onClick={() => {
-                                                const price = parseFloat(tempServicePrice) || 0;
-                                                updateEngagementService(engService.id, { price });
-                                                setEditingServicePrice(null);
-                                                toast.success('Cena služby aktualizována');
-                                              }}
-                                            >
-                                              <Check className="h-3 w-3" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-5 w-5"
-                                              onClick={() => setEditingServicePrice(null)}
-                                            >
-                                              <X className="h-3 w-3" />
-                                            </Button>
-                                          </div>
-                                        ) : (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setEditingServicePrice(engService.id);
-                                              setTempServicePrice(String(engService.price || 0));
-                                            }}
-                                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors group"
-                                            title="Klikněte pro úpravu"
-                                          >
-                                            <span>
-                                              {engService.price.toLocaleString()} {engService.currency}
-                                              {engService.billing_type === 'monthly' && '/měs'}
-                                            </span>
-                                            <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                          </button>
-                                        )
+                                        <span className="text-xs text-muted-foreground">
+                                          {engService.price.toLocaleString()} {engService.currency}
+                                          {engService.billing_type === 'monthly' && '/měs'}
+                                        </span>
                                       )}
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingEngagementService(engService);
+                                          setServiceEngagementId(engagement.id);
+                                          setIsServiceDialogOpen(true);
+                                        }}
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
                                       <Button
                                         variant="ghost"
                                         size="icon"
@@ -1624,12 +1579,34 @@ function EngagementsContent() {
           open={isServiceDialogOpen}
           onOpenChange={(open) => {
             setIsServiceDialogOpen(open);
-            if (!open) setServiceEngagementId(null);
+            if (!open) {
+              setServiceEngagementId(null);
+              setEditingEngagementService(null);
+            }
           }}
           engagementId={serviceEngagementId}
           engagementCurrency={selectedEngagement.currency}
           services={services}
+          existingService={editingEngagementService}
           onSubmit={async (data) => {
+            if (editingEngagementService) {
+              await updateEngagementService(editingEngagementService.id, {
+                service_id: data.service_id,
+                name: data.name,
+                price: data.price,
+                billing_type: data.billing_type,
+                currency: data.currency,
+                notes: data.notes,
+                selected_tier: data.selected_tier,
+                creative_boost_min_credits: data.creative_boost_min_credits,
+                creative_boost_max_credits: data.creative_boost_max_credits,
+                creative_boost_price_per_credit: data.creative_boost_price_per_credit,
+                upsold_by_id: data.upsold_by_id,
+                upsell_commission_percent: data.upsell_commission_percent,
+              });
+              return;
+            }
+
             const newService = await addEngagementService(data);
             const selectedService = services.find((service) => service.id === data.service_id);
             if (!selectedService) throw new Error('Vybraná služba nebyla nalezena');

@@ -58,6 +58,7 @@ interface AddEngagementServiceDialogProps {
   engagementId: string;
   engagementCurrency: string;
   services: Service[];
+  existingService?: EngagementService | null;
   onSubmit: (data: Omit<EngagementService, 'id' | 'created_at' | 'updated_at'>) => void | Promise<void>;
 }
 
@@ -89,6 +90,7 @@ export function AddEngagementServiceDialog({
   engagementId,
   engagementCurrency,
   services,
+  existingService = null,
   onSubmit,
 }: AddEngagementServiceDialogProps) {
   const { colleagues } = useCRMData();
@@ -114,11 +116,39 @@ export function AddEngagementServiceDialog({
 
   const selectedServiceId = form.watch('service_id');
   const selectedTier = form.watch('selected_tier');
+  const isEditing = existingService !== null;
 
   useEffect(() => {
     if (!open) return;
-    form.setValue('currency', engagementCurrency);
-  }, [open, engagementCurrency, form]);
+    if (existingService) {
+      form.reset({
+        service_id: existingService.service_id,
+        name: existingService.name,
+        price: existingService.price,
+        currency: existingService.currency,
+        notes: existingService.notes || '',
+        selected_tier: existingService.selected_tier,
+        creative_boost_min_credits: existingService.creative_boost_min_credits,
+        creative_boost_max_credits: existingService.creative_boost_max_credits,
+        creative_boost_price_per_credit: existingService.creative_boost_price_per_credit,
+      });
+      setUpsoldById(existingService.upsold_by_id);
+      return;
+    }
+
+    form.reset({
+      service_id: '',
+      name: '',
+      price: 0,
+      currency: engagementCurrency,
+      notes: '',
+      selected_tier: null,
+      creative_boost_min_credits: null,
+      creative_boost_max_credits: null,
+      creative_boost_price_per_credit: null,
+    });
+    setUpsoldById(null);
+  }, [open, engagementCurrency, existingService, form]);
 
   const selectedService = services.find(s => s.id === selectedServiceId);
   const isCreativeBoost = isCreativeBoostService(selectedService);
@@ -230,13 +260,14 @@ export function AddEngagementServiceDialog({
           creative_boost_max_credits: data.creative_boost_max_credits,
           creative_boost_price_per_credit: data.creative_boost_price_per_credit,
           // One-off invoicing tracking
-          invoicing_status: isOneOff ? 'pending' : 'not_applicable',
-          invoiced_at: null,
-          invoiced_in_period: null,
-          invoice_id: null,
+          invoicing_status: existingService ? existingService.invoicing_status : (isOneOff ? 'pending' : 'not_applicable'),
+          invoiced_at: existingService ? existingService.invoiced_at : null,
+          invoiced_in_period: existingService ? existingService.invoiced_in_period : null,
+          invoice_id: existingService ? existingService.invoice_id : null,
           // Upsell tracking
           upsold_by_id: upsoldById,
           upsell_commission_percent: upsoldById ? 10 : null,
+          effective_from: existingService ? existingService.effective_from : null,
         }),
         timeoutPromise
       ]);
@@ -258,7 +289,7 @@ export function AddEngagementServiceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Přidat službu k zakázce</DialogTitle>
+          <DialogTitle>{isEditing ? 'Upravit službu zakázky' : 'Přidat službu k zakázce'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form className="space-y-4">
@@ -268,7 +299,7 @@ export function AddEngagementServiceDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Typ služby</FormLabel>
-                  <Select onValueChange={handleServiceChange} defaultValue={field.value}>
+                  <Select onValueChange={handleServiceChange} value={field.value} disabled={isEditing}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Vyberte službu" />
@@ -283,6 +314,11 @@ export function AddEngagementServiceDialog({
                     </SelectContent>
                   </Select>
                   <FormMessage />
+                  {isEditing && (
+                    <FormDescription className="text-xs">
+                      Typ služby nelze měnit, upravit lze název, cenu a další nastavení.
+                    </FormDescription>
+                  )}
                 </FormItem>
               )}
             />
@@ -535,7 +571,7 @@ export function AddEngagementServiceDialog({
                 Zrušit
               </Button>
               <Button type="button" onClick={handleManualSubmit} disabled={isSubmitting}>
-                {isSubmitting ? 'Přidávám...' : 'Přidat službu'}
+                {isSubmitting ? (isEditing ? 'Ukládám...' : 'Přidávám...') : (isEditing ? 'Uložit změny' : 'Přidat službu')}
               </Button>
             </div>
           </form>
