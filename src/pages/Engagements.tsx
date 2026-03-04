@@ -57,6 +57,7 @@ import { CreateInvoiceFromEngagementDialog } from '@/components/engagements/Crea
 import { EngagementInvoicingSection } from '@/components/engagements/EngagementInvoicingStatus';
 import { EndEngagementDialog } from '@/components/engagements/EndEngagementDialog';
 import { EngagementHistoryDialog } from '@/components/engagements/EngagementHistoryDialog';
+import { EngagementFinancialOverview } from '@/components/engagements/EngagementFinancialOverview';
 import { EditAssignmentDialog } from '@/components/engagements/EditAssignmentDialog';
 import { serviceTierConfigs } from '@/constants/services';
 import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier } from '@/types/crm';
@@ -615,6 +616,15 @@ function EngagementsContent() {
                       </p>
                     )}
                   </div>
+
+                  {/* Finanční přehled - pouze pro uživatele s oprávněním */}
+                  {canSeeFinancials && (
+                    <EngagementFinancialOverview
+                      revenue={totalServicesAmount}
+                      assignments={engagementAssignments}
+                      currency={engagement.currency || 'CZK'}
+                    />
+                  )}
 
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <div className="space-y-3">
