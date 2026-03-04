@@ -4,13 +4,14 @@ import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AddExtraWorkDialog } from '@/components/extra-work/AddExtraWorkDialog';
 import { EditExtraWorkDialog } from '@/components/extra-work/EditExtraWorkDialog';
 import { SendApprovalDialog } from '@/components/extra-work/SendApprovalDialog';
 import { ExtraWorkCard } from '@/components/extra-work/ExtraWorkCard';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { ExtraWork as ExtraWorkType, ExtraWorkStatus } from '@/types/crm';
-import { Plus, Clock, Loader2, FileText, Receipt, TrendingUp, Send, CheckCircle2, Package, XCircle } from 'lucide-react';
+import { Plus, Clock, Loader2, FileText, Receipt, TrendingUp, Send, CheckCircle2, Package, XCircle, AlertTriangle } from 'lucide-react';
 
 type TabKey = 'pending' | 'waiting_client' | 'client_approved' | 'active' | 'rejected' | 'ready_to_invoice' | 'invoiced';
 
@@ -72,6 +73,12 @@ export default function ExtraWork() {
   }, [extraWorks]);
 
   const filteredWorks = useMemo(() => filterByTab(extraWorks, activeTab), [extraWorks, activeTab]);
+
+  // Reinvoice control: invoiced by colleague but not yet reinvoiced to client
+  const uninvoicedToClient = useMemo(() =>
+    extraWorks.filter(w => w.status === 'invoiced' && w.client_reinvoice_status === 'expected'),
+    [extraWorks]
+  );
 
   // KPI calculations
   const kpis = useMemo(() => {
@@ -157,6 +164,18 @@ export default function ExtraWork() {
           icon={TrendingUp}
         />
       </div>
+
+      {/* Reinvoice control alert */}
+      {uninvoicedToClient.length > 0 && (
+        <Alert variant="destructive" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 [&>svg]:text-amber-600">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Nepřefakturované vícepráce</AlertTitle>
+          <AlertDescription>
+            {uninvoicedToClient.length} {uninvoicedToClient.length === 1 ? 'vícepráce byla vyfakturována' : 'víceprací bylo vyfakturováno'} kolegou, ale dosud {uninvoicedToClient.length === 1 ? 'nebyla přefakturována' : 'nebyly přefakturovány'} klientovi.
+            Celkem: {new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', minimumFractionDigits: 0 }).format(uninvoicedToClient.reduce((s, w) => s + w.amount, 0))}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>

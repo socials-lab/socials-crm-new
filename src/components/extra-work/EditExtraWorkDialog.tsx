@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useToast } from '@/hooks/use-toast';
-import type { ExtraWork } from '@/types/crm';
+import type { ExtraWork, ClientReinvoiceStatus } from '@/types/crm';
 
 function getRateForPosition(position: string): number | null {
   const p = position.toLowerCase();
@@ -52,6 +52,8 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
   const [hourlyRate, setHourlyRate] = useState(extraWork.hourly_rate?.toString() || '');
   const [internalHourlyRate, setInternalHourlyRate] = useState(extraWork.internal_hourly_rate?.toString() || '');
   const [notes, setNotes] = useState(extraWork.notes);
+  const [reinvoiceStatus, setReinvoiceStatus] = useState<ClientReinvoiceStatus>(extraWork.client_reinvoice_status || 'expected');
+  const [reinvoiceNote, setReinvoiceNote] = useState(extraWork.client_invoice_note || '');
 
   useEffect(() => {
     if (open) {
@@ -65,6 +67,8 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
         return col?.internal_hourly_cost?.toString() || '';
       })());
       setNotes(extraWork.notes);
+      setReinvoiceStatus(extraWork.client_reinvoice_status || 'expected');
+      setReinvoiceNote(extraWork.client_invoice_note || '');
     }
   }, [open, extraWork]);
 
@@ -94,6 +98,8 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
       internal_hourly_rate: internalHourlyRate ? parseFloat(internalHourlyRate) : null,
       amount: calculatedAmount,
       notes,
+      client_reinvoice_status: reinvoiceStatus,
+      client_invoice_note: reinvoiceNote || null,
     });
 
     toast({
@@ -225,6 +231,25 @@ export function EditExtraWorkDialog({ open, onOpenChange, extraWork, onSave }: E
               </div>
             );
           })()}
+
+          <div className="grid gap-2">
+            <Label>Přefakturace klientovi</Label>
+            <Select value={reinvoiceStatus} onValueChange={(v) => setReinvoiceStatus(v as ClientReinvoiceStatus)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expected">🟠 Čeká na přefakturaci</SelectItem>
+                <SelectItem value="reinvoiced">🟢 Přefakturováno klientovi</SelectItem>
+                <SelectItem value="not_expected">⚪ Nepředpokládá se přefakturace</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Poznámka k přefakturaci</Label>
+            <Input value={reinvoiceNote} onChange={(e) => setReinvoiceNote(e.target.value)} placeholder="Např. faktura č. 2026-03-001" />
+          </div>
 
           <div className="grid gap-2">
             <Label>Poznámky</Label>

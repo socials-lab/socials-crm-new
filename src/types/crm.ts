@@ -365,6 +365,9 @@ export type LineItemSource = 'engagement' | 'manual' | 'creative_boost' | 'extra
 // Extra Work types - unified linear workflow
 export type ExtraWorkStatus = 'pending_approval' | 'client_approved' | 'in_progress' | 'ready_to_invoice' | 'invoiced' | 'rejected';
 
+// Client reinvoice tracking
+export type ClientReinvoiceStatus = 'expected' | 'reinvoiced' | 'not_expected';
+
 export interface ExtraWork {
   id: string;
   client_id: string;
@@ -404,6 +407,10 @@ export interface ExtraWork {
   // Upsell tracking - who sold this extra work
   upsold_by_id: string | null;
   upsell_commission_percent: number | null;
+  
+  // Client reinvoice tracking
+  client_reinvoice_status: ClientReinvoiceStatus;
+  client_invoice_note: string | null;
   
   notes: string;
   created_at: string;
