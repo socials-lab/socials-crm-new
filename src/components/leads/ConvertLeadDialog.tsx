@@ -271,6 +271,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         notice_period_months: data.notice_period_months || null,
         freelo_url: null,
         platforms: [],
+        managed_countries: [],
         notes: data.engagement_notes || '',
         // Copy document links from lead
         offer_url: lead.offer_url || null,
