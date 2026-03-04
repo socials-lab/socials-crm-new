@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,27 +20,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Colleague, EngagementAssignment } from '@/types/crm';
+import type { Colleague, EngagementAssignment, EngagementService } from '@/types/crm';
+import { DEFAULT_BANNER_REWARD, DEFAULT_VIDEO_REWARD } from '@/data/creativeBoostRewardsMockData';
+import { Palette } from 'lucide-react';
+
+const CREATIVE_BOOST_SERVICE_ID = 'srv-3';
 
 const assignmentSchema = z.object({
   colleague_id: z.string().min(1, 'Vyberte kolegu'),
   role_on_engagement: z.string().min(1, 'Role je povinná'),
-  cost_model: z.enum(['hourly', 'fixed_monthly', 'percentage'] as const),
+  cost_model: z.enum(['hourly', 'fixed_monthly', 'percentage', 'per_credit'] as const),
   hourly_cost: z.coerce.number().min(0).nullable(),
   monthly_cost: z.coerce.number().min(0).nullable(),
   percentage_of_revenue: z.coerce.number().min(0).max(100).nullable(),
+  banner_reward_per_credit: z.coerce.number().min(0).nullable(),
+  video_reward_per_credit: z.coerce.number().min(0).nullable(),
   start_date: z.string().min(1, 'Datum je povinné'),
   notes: z.string(),
 });
 
 type AssignmentFormData = z.infer<typeof assignmentSchema>;
 
+export interface AssignmentFormSubmitData extends Omit<EngagementAssignment, 'id' | 'created_at' | 'updated_at'> {
+  _perCreditRewards?: {
+    bannerRewardPerCredit: number;
+    videoRewardPerCredit: number;
+  };
+}
+
 interface AssignmentFormProps {
   engagementId: string;
   engagementServiceId?: string | null;
   colleagues: Colleague[];
   existingAssignments: EngagementAssignment[];
-  onSubmit: (data: Omit<EngagementAssignment, 'id' | 'created_at' | 'updated_at'>) => void;
+  engagementServices?: EngagementService[];
+  onSubmit: (data: AssignmentFormSubmitData) => void;
   onCancel: () => void;
 }
 
@@ -48,9 +63,14 @@ export function AssignmentForm({
   engagementServiceId,
   colleagues, 
   existingAssignments,
+  engagementServices = [],
   onSubmit, 
   onCancel 
 }: AssignmentFormProps) {
+  // Check if engagement has a Creative Boost service
+  const cbService = engagementServices.find(es => es.service_id === CREATIVE_BOOST_SERVICE_ID && es.is_active);
+  const hasCreativeBoost = !!cbService;
+
   const form = useForm<AssignmentFormData>({
     resolver: zodResolver(assignmentSchema),
     defaultValues: {
@@ -60,12 +80,26 @@ export function AssignmentForm({
       hourly_cost: null,
       monthly_cost: null,
       percentage_of_revenue: null,
+      banner_reward_per_credit: DEFAULT_BANNER_REWARD,
+      video_reward_per_credit: DEFAULT_VIDEO_REWARD,
       start_date: new Date().toISOString().split('T')[0],
       notes: '',
     },
   });
 
   const costModel = form.watch('cost_model');
+  const selectedColleagueId = form.watch('colleague_id');
+
+  // Auto-detect designer position and switch to per_credit
+  const selectedColleague = colleagues.find(c => c.id === selectedColleagueId);
+  useEffect(() => {
+    if (!hasCreativeBoost || !selectedColleague) return;
+    const pos = selectedColleague.position.toLowerCase();
+    if (pos.includes('design') || pos.includes('grafik') || pos.includes('video')) {
+      form.setValue('cost_model', 'per_credit');
+      form.setValue('role_on_engagement', 'Graphic Designer');
+    }
+  }, [selectedColleagueId, hasCreativeBoost, selectedColleague]);
 
   // Filter out already assigned colleagues
   const assignedColleagueIds = existingAssignments
@@ -76,19 +110,27 @@ export function AssignmentForm({
   );
 
   const handleSubmit = (data: AssignmentFormData) => {
-    onSubmit({
+    const isPerCredit = data.cost_model === 'per_credit';
+    const submitData: AssignmentFormSubmitData = {
       engagement_id: engagementId,
-      engagement_service_id: engagementServiceId || null,
+      engagement_service_id: isPerCredit && cbService ? cbService.id : (engagementServiceId || null),
       colleague_id: data.colleague_id,
       role_on_engagement: data.role_on_engagement,
-      cost_model: data.cost_model,
+      cost_model: isPerCredit ? 'fixed_monthly' : data.cost_model as 'hourly' | 'fixed_monthly' | 'percentage',
       hourly_cost: data.cost_model === 'hourly' ? data.hourly_cost : null,
       monthly_cost: data.cost_model === 'fixed_monthly' ? data.monthly_cost : null,
       percentage_of_revenue: data.cost_model === 'percentage' ? data.percentage_of_revenue : null,
       start_date: data.start_date,
       end_date: null,
       notes: data.notes,
-    });
+    };
+    if (isPerCredit) {
+      submitData._perCreditRewards = {
+        bannerRewardPerCredit: data.banner_reward_per_credit ?? DEFAULT_BANNER_REWARD,
+        videoRewardPerCredit: data.video_reward_per_credit ?? DEFAULT_VIDEO_REWARD,
+      };
+    }
+    onSubmit(submitData);
   };
 
   return (
@@ -142,7 +184,7 @@ export function AssignmentForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Model nákladů</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue />
@@ -152,6 +194,14 @@ export function AssignmentForm({
                   <SelectItem value="fixed_monthly">Fixní měsíčně</SelectItem>
                   <SelectItem value="hourly">Hodinová sazba</SelectItem>
                   <SelectItem value="percentage">Procenta z revenue</SelectItem>
+                  {hasCreativeBoost && (
+                    <SelectItem value="per_credit">
+                      <span className="flex items-center gap-1.5">
+                        <Palette className="h-3.5 w-3.5" />
+                        Za kredit (Creative Boost)
+                      </span>
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -221,6 +271,51 @@ export function AssignmentForm({
               </FormItem>
             )}
           />
+        )}
+
+        {costModel === 'per_credit' && (
+          <div className="space-y-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-primary">
+              <Palette className="h-4 w-4" />
+              Odměna za kredit (Creative Boost)
+            </div>
+            <FormField
+              control={form.control}
+              name="banner_reward_per_credit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Odměna za kredit – Bannery (CZK)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min={0}
+                      value={field.value ?? DEFAULT_BANNER_REWARD} 
+                      onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="video_reward_per_credit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Odměna za kredit – Videa (CZK)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min={0}
+                      value={field.value ?? DEFAULT_VIDEO_REWARD} 
+                      onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         )}
 
         <FormField

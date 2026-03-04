@@ -50,7 +50,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { getRewards, setRewards } from '@/data/creativeBoostRewardsMockData';
 import { EngagementForm } from '@/components/forms/EngagementForm';
-import { AssignmentForm } from '@/components/forms/AssignmentForm';
+import { AssignmentForm, type AssignmentFormSubmitData } from '@/components/forms/AssignmentForm';
 import { AddEngagementServiceDialog } from '@/components/forms/AddEngagementServiceDialog';
 import { CreativeBoostCreditOverview } from '@/components/engagements/CreativeBoostCreditOverview';
 import { CreateInvoiceFromEngagementDialog } from '@/components/engagements/CreateInvoiceFromEngagementDialog';
@@ -300,8 +300,13 @@ function EngagementsContent() {
     setIsAssignmentFormOpen(true);
   };
 
-  const handleAssignmentSubmit = (data: Omit<EngagementAssignment, 'id' | 'created_at' | 'updated_at'>) => {
-    addAssignment(data);
+  const handleAssignmentSubmit = async (data: AssignmentFormSubmitData) => {
+    const { _perCreditRewards, ...assignmentData } = data;
+    const newAssignment = await addAssignment(assignmentData);
+    // Save per-credit rewards if configured
+    if (_perCreditRewards && newAssignment?.id) {
+      setRewards(newAssignment.id, _perCreditRewards);
+    }
     toast.success('Kolega byl přiřazen');
     setIsAssignmentFormOpen(false);
     setAssignmentEngagementId(null);
@@ -1299,6 +1304,7 @@ function EngagementsContent() {
               engagementId={assignmentEngagementId}
               colleagues={colleagues}
               existingAssignments={getAssignmentsByEngagementId(assignmentEngagementId)}
+              engagementServices={getEngagementServicesByEngagementId(assignmentEngagementId)}
               onSubmit={handleAssignmentSubmit}
               onCancel={() => setIsAssignmentFormOpen(false)}
             />
