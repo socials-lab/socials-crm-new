@@ -49,6 +49,7 @@ function ColleaguesContent() {
   const highlightedRef = useRef<HTMLDivElement>(null);
   
   const { isSuperAdmin: superAdmin, canSeeFinancials } = useUserRole();
+  const canViewFinancials = superAdmin || canSeeFinancials;
   const [activeTab, setActiveTab] = useState<ColleaguesTab>(() => resolveTab(tabParam, superAdmin));
 
   const {
@@ -293,7 +294,7 @@ function ColleaguesContent() {
                     onToggleExpand={() => toggleExpand(colleague.id)}
                     onEdit={superAdmin ? handleEditColleague : undefined}
                     isSuperAdmin={superAdmin}
-                    canSeeFinancials={canSeeFinancials}
+                    canSeeFinancials={canViewFinancials}
                     highlighted={highlightId === colleague.id}
                     details={details}
                     monthCredits={monthCredits}

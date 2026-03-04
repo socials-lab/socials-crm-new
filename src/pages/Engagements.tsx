@@ -105,6 +105,7 @@ function EngagementsContent() {
   };
   const highlightedRef = useRef<HTMLDivElement>(null);
   const { isSuperAdmin, canSeeFinancials } = useUserRole();
+  const canViewFinancials = isSuperAdmin || canSeeFinancials;
 
   const {
     clients,
@@ -509,7 +510,7 @@ function EngagementsContent() {
         ) : paginatedEngagements.map((engagement) => {
           const client = getClientById(engagement.client_id);
           const clientLabel = getClientOptionLabel(client ?? {});
-          const marginPercent = canSeeFinancials ? getLatestMargin(engagement.id) : null;
+          const marginPercent = canViewFinancials ? getLatestMargin(engagement.id) : null;
           const engagementAssignments = getAssignmentsByEngagementId(engagement.id).filter(a => !a.end_date);
           const isExpanded = expandedEngagementId === engagement.id;
           const metrics = getMetricsByEngagementId(engagement.id);
@@ -614,7 +615,7 @@ function EngagementsContent() {
                     {engagement.type === 'retainer' ? 'Retainer' : engagement.type === 'one_off' ? 'Jednorázově' : 'Interní'}
                   </Badge>
                   {/* Price - now showing total from services */}
-                  {canSeeFinancials && (
+                  {canViewFinancials && (
                     <span className="text-sm font-semibold whitespace-nowrap hidden sm:flex items-center gap-1">
                       {displayAmount.toLocaleString()} {engagement.currency}
                       {engagement.type === 'retainer' && '/měs'}
@@ -785,7 +786,7 @@ function EngagementsContent() {
                             <h4 className="font-medium text-sm flex items-center gap-2">
                               <Briefcase className="h-4 w-4 text-muted-foreground" />
                               Služby ({engServices.length})
-                              {canSeeFinancials && engServices.length > 0 && (
+                              {canViewFinancials && engServices.length > 0 && (
                                 <span className="text-xs font-normal text-muted-foreground">
                                   – {totalServicesPrice.toLocaleString()} {engagement.currency}
                                 </span>
@@ -828,7 +829,7 @@ function EngagementsContent() {
                                       summary={cbSummary}
                                       year={filterYear}
                                       month={filterMonth}
-                                      canSeeFinancials={canSeeFinancials}
+                                      canSeeFinancials={canViewFinancials}
                                       assignedColleagueAssignmentId={cbAssignment?.id}
                                       onUpdateSettings={(updates) => {
                                         updateEngagementService(engService.id, { 
@@ -920,7 +921,7 @@ function EngagementsContent() {
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      {canSeeFinancials && (
+                                      {canViewFinancials && (
                                         <span className="text-xs text-muted-foreground">
                                           {engService.price.toLocaleString()} {engService.currency}
                                           {engService.billing_type === 'monthly' && '/měs'}
@@ -1008,7 +1009,7 @@ function EngagementsContent() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  {canSeeFinancials && (
+                                  {canViewFinancials && (
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -1068,7 +1069,7 @@ function EngagementsContent() {
                     </div>
 
                     {/* Profitability Section */}
-                    {canSeeFinancials && (() => {
+                    {canViewFinancials && (() => {
                       const engServices = getEngagementServicesByEngagementId(engagement.id);
                       const engAssignments = getAssignmentsByEngagementId(engagement.id).filter(a => !a.end_date);
 

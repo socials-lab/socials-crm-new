@@ -75,6 +75,7 @@ export function ColleagueCard({
   onUpdateAssignment,
 }: ColleagueCardProps) {
   const navigate = useNavigate();
+  const canViewFinancials = isSuperAdmin || canSeeFinancials;
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [tempCost, setTempCost] = useState<string>('');
 
@@ -323,7 +324,7 @@ export function ColleagueCard({
                   </div>
 
                   {/* Hourly Rate */}
-                  {canSeeFinancials && (
+                  {canViewFinancials && (
                     <div className="flex items-center justify-between text-sm p-2 rounded bg-muted/50">
                       <span className="text-muted-foreground">Sazba (vícepráce)</span>
                       {colleague.internal_hourly_cost === null ? (
