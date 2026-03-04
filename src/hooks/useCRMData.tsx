@@ -895,7 +895,18 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
   const addEngagementServiceMutation = useMutation({
     mutationFn: async (data: Omit<EngagementService, 'id' | 'created_at' | 'updated_at'>) => {
       const { data: result, error } = await supabase.from('engagement_services').insert(data).select().single();
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to insert engagement service', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          engagement_id: data.engagement_id,
+          service_id: data.service_id,
+          payload_keys: Object.keys(data),
+        });
+        throw error;
+      }
       
       // Log service addition in history (non-blocking)
       supabase.rpc('log_engagement_change', {
@@ -918,6 +929,20 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     },
     onError: (error) => {
       console.error('Failed to add service:', error);
+
+      const errorCode = (error as { code?: string })?.code;
+      const errorMessage = (error as { message?: string })?.message;
+
+      if (errorCode === 'PGRST204') {
+        toast.error('Službu se nepodařilo uložit kvůli nesouladu databázového schématu. Tým byl upozorněn.');
+        return;
+      }
+
+      if (errorMessage?.includes('new row violates row-level security policy')) {
+        toast.error('Nemáte oprávnění přidat službu k této zakázce.');
+        return;
+      }
+
       toast.error('Nepodařilo se přidat službu');
     },
   });

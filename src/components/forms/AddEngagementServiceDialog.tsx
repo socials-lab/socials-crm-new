@@ -267,7 +267,6 @@ export function AddEngagementServiceDialog({
           // Upsell tracking
           upsold_by_id: upsoldById,
           upsell_commission_percent: upsoldById ? 10 : null,
-          effective_from: existingService ? existingService.effective_from : null,
         }),
         timeoutPromise
       ]);
