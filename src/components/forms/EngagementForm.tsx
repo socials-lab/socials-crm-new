@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,11 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import type { Engagement, Client, ClientContact, EngagementStatus } from '@/types/crm';
 import { getAvailableEngagementStatuses, ENGAGEMENT_STATUS_LABELS, canTerminateEngagement } from '@/lib/statusTransitions';
 import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 import { toDateOnlyString } from '@/lib/dbNormalize';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const engagementSchema = z.object({
   name: z.string().min(1, 'Název je povinný'),
@@ -91,6 +95,7 @@ export function EngagementForm({
   onCancel
 }: EngagementFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClientPopoverOpen, setIsClientPopoverOpen] = useState(false);
 
   // Get available status options based on current status and user role
   const currentStatus: EngagementStatus = engagement?.status || 'planned';
@@ -226,20 +231,52 @@ export function EngagementForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Klient</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Vyberte klienta" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {clients.map(client => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {getClientOptionLabel(client)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={isClientPopoverOpen} onOpenChange={setIsClientPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isClientPopoverOpen}
+                      className={cn('w-full justify-between font-normal', !field.value && 'text-muted-foreground')}
+                    >
+                      {field.value
+                        ? getClientOptionLabel(clients.find(client => client.id === field.value) || {})
+                        : 'Vyberte klienta'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Hledat klienta..." />
+                    <CommandList>
+                      <CommandEmpty>Žádný klient nenalezen</CommandEmpty>
+                      <CommandGroup>
+                        {clients.map(client => (
+                          <CommandItem
+                            key={client.id}
+                            value={getClientOptionLabel(client)}
+                            onSelect={() => {
+                              field.onChange(client.id);
+                              setIsClientPopoverOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                field.value === client.id ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            {getClientOptionLabel(client)}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <FormMessage />
             </FormItem>
           )}
