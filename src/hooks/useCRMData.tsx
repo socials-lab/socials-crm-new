@@ -251,6 +251,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       internal_hourly_rate: 700,
       approval_token: null, client_approval_email: null, client_approved_at: null, client_rejected_at: null, client_rejection_reason: null,
       upsold_by_id: colleagues[1]?.id || colleagues[0]?.id || null, upsell_commission_percent: 10,
+      client_reinvoice_status: 'expected' as const, client_invoice_note: null,
       notes: '', created_at: '2026-02-20T10:00:00Z', updated_at: '2026-02-20T10:00:00Z',
     },
     {
@@ -272,6 +273,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       internal_hourly_rate: 600,
       approval_token: 'mock-token-1', client_approval_email: 'klient@test.cz', client_approved_at: '2026-02-19T14:30:00Z', client_rejected_at: null, client_rejection_reason: null,
       upsold_by_id: null, upsell_commission_percent: null,
+      client_reinvoice_status: 'expected' as const, client_invoice_note: null,
       notes: '', created_at: '2026-02-18T09:00:00Z', updated_at: '2026-02-19T14:30:00Z',
     },
     {
@@ -293,6 +295,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       internal_hourly_rate: 750,
       approval_token: 'mock-token-2', client_approval_email: 'klient@test.cz', client_approved_at: '2026-02-16T11:00:00Z', client_rejected_at: null, client_rejection_reason: null,
       upsold_by_id: colleagues[2]?.id || colleagues[0]?.id || null, upsell_commission_percent: 10,
+      client_reinvoice_status: 'reinvoiced' as const, client_invoice_note: 'Přefakturováno v březnu',
       notes: '', created_at: '2026-02-15T08:00:00Z', updated_at: '2026-02-16T11:00:00Z',
     },
   ];

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { ReinvoiceBadge } from './ReinvoiceBadge';
 import { BillingPeriodDialog } from './BillingPeriodDialog';
 import {
   Building2,
@@ -147,6 +148,9 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                       <Receipt className="h-3 w-3 mr-1" />
                       Vyfakturováno
                     </Badge>
+                  )}
+                  {(work.status === 'ready_to_invoice' || work.status === 'invoiced') && work.client_reinvoice_status && (
+                    <ReinvoiceBadge status={work.client_reinvoice_status} note={work.client_invoice_note} />
                   )}
                   {work.status === 'rejected' && (
                     <Badge variant="destructive">
