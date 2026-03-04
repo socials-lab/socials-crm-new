@@ -235,6 +235,7 @@ export interface Engagement {
   notice_period_months: number | null;
   freelo_url: string | null;
   platforms: string[];
+  managed_countries: string[];
   notes: string;
   pinned_notes: string | null;
   // Document links from lead conversion

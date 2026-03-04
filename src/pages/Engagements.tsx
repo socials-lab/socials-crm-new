@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isSameMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock, StickyNote } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock, StickyNote, Globe } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -61,6 +61,7 @@ import { EditAssignmentDialog } from '@/components/engagements/EditAssignmentDia
 import { serviceTierConfigs } from '@/constants/services';
 import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier } from '@/types/crm';
 import { ADVERTISING_PLATFORMS } from '@/types/crm';
+import { MANAGED_COUNTRIES, getCountryFlag } from '@/constants/countries';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -446,6 +447,11 @@ function EngagementsContent() {
                       >
                         {client?.brand_name}
                       </button>
+                      {engagement.managed_countries?.length > 0 && (
+                        <span className="ml-1">
+                          {engagement.managed_countries.map(c => getCountryFlag(c)).join(' ')}
+                        </span>
+                      )}
                     </p>
                     {/* Připnutá poznámka v zabaleném stavu */}
                     {engagement.pinned_notes && !isExpanded && (
@@ -1095,6 +1101,64 @@ function EngagementsContent() {
                               {platform}
                             </Badge>
                           ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Managed countries section */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                        Spravované země ({engagement.managed_countries?.length || 0})
+                      </h4>
+                      <Popover>
+                        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="outline" className="w-full justify-between h-auto min-h-9 py-2">
+                            <span className="text-sm text-left truncate">
+                              {engagement.managed_countries?.length > 0 
+                                ? engagement.managed_countries.map(c => {
+                                    const country = MANAGED_COUNTRIES.find(mc => mc.code === c);
+                                    return country ? `${country.flag} ${country.name}` : c;
+                                  }).join(', ')
+                                : 'Vybrat země...'}
+                            </span>
+                            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-2 max-h-72 overflow-y-auto" align="start" onClick={(e) => e.stopPropagation()}>
+                          <div className="space-y-1">
+                            {MANAGED_COUNTRIES.map((country) => {
+                              const isSelected = engagement.managed_countries?.includes(country.code) || false;
+                              return (
+                                <div
+                                  key={country.code}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
+                                  onClick={() => {
+                                    const currentCountries = engagement.managed_countries || [];
+                                    const newCountries = isSelected
+                                      ? currentCountries.filter(c => c !== country.code)
+                                      : [...currentCountries, country.code];
+                                    updateEngagement(engagement.id, { managed_countries: newCountries });
+                                  }}
+                                >
+                                  <Checkbox checked={isSelected} />
+                                  <span className="text-sm">{country.flag} {country.name}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      {engagement.managed_countries?.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {engagement.managed_countries.map((code) => {
+                            const country = MANAGED_COUNTRIES.find(c => c.code === code);
+                            return (
+                              <Badge key={code} variant="secondary" className="text-xs">
+                                {country?.flag} {country?.name || code}
+                              </Badge>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
