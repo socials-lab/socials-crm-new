@@ -95,7 +95,10 @@ export function AssignmentForm({
   useEffect(() => {
     if (!hasCreativeBoost || !selectedColleague) return;
     const pos = selectedColleague.position.toLowerCase();
-    if (pos.includes('design') || pos.includes('grafik') || pos.includes('video')) {
+    if (pos.includes('video')) {
+      form.setValue('cost_model', 'per_credit');
+      form.setValue('role_on_engagement', 'Video Editor');
+    } else if (pos.includes('design') || pos.includes('grafik')) {
       form.setValue('cost_model', 'per_credit');
       form.setValue('role_on_engagement', 'Graphic Designer');
     }
@@ -170,9 +173,21 @@ export function AssignmentForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Role na zakázce</FormLabel>
-              <FormControl>
-                <Input placeholder="Account Manager, Specialist..." {...field} />
-              </FormControl>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vyberte roli" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Meta Ads Specialist">Meta Ads Specialist</SelectItem>
+                  <SelectItem value="PPC Specialist">PPC Specialist</SelectItem>
+                  <SelectItem value="Graphic Designer">Graphic Designer</SelectItem>
+                  <SelectItem value="Video Editor">Video Editor</SelectItem>
+                  <SelectItem value="Sales Specialist">Sales Specialist</SelectItem>
+                  <SelectItem value="Account Manager">Account Manager</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
