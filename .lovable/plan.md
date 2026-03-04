@@ -1,30 +1,20 @@
 
 
-## Plan: Individuální odesílání emailů + omezení na adminy
-
-### Rozhodnutí: Individuální emaily (ne BCC)
-
-Best practice pro hromadné rozesílky je **odeslat každému příjemci samostatný email**. Důvody:
-- Příjemci nevidí ostatní adresy (na rozdíl od BCC, kde chyba = únik kontaktů)
-- Lepší personalizace (`{contact_name}`, `{company}`)
-- Lepší deliverability (emailové servery méně penalizují individuální emaily)
-- Možnost sledovat doručení per příjemce v budoucnu
+## Plan: Zobrazit odesílatele v přehledu rozesílek
 
 ### Změny
 
-**1. `supabase/functions/send-broadcast/index.ts`**
-- Upravit edge function tak, aby iterovala přes příjemce a pro každého připravila samostatný email (aktuálně už iteruje, jen upřesnit log, že jde o individuální odeslání)
-- Až se napojí Resend API, každý příjemce dostane vlastní API call
+**1. `src/pages/Broadcasts.tsx`**
+- Rozšířit select query o `sent_by` a joinovat na `profiles` tabulku pro získání jména odesílatele
+- Přidat sloupec "Odeslal" do tabulky mezi Předmět a Příjemců
+- Zobrazit jméno (first_name + last_name) uživatele, který rozesílku odeslal
 
-**2. `src/pages/Broadcasts.tsx`**
-- Přidat kontrolu `isSuperAdmin` z `useUserRole`
-- Tlačítko "Nová rozesílka" zobrazit pouze pro adminy
-- Ostatní uživatelé vidí historii rozesílek (read-only), ale nemohou vytvářet nové
-
-**3. `src/components/broadcasts/CreateBroadcastDialog.tsx`**
-- Žádné změny potřeba — dialog se otevírá jen z tlačítka, které bude skryté pro ne-adminy
+**2. `src/components/broadcasts/CreateBroadcastDialog.tsx`**
+- Již ukládá `sent_by: user?.id` — žádná změna potřeba
+- Dialog je přístupný jen adminům (tlačítko skryté pro ostatní)
 
 ### Technické detaily
-- Edge function již iteruje přes `recipients` pole — struktura je připravena na individuální Resend API volání
-- Omezení na adminy je čistě UI-side (tlačítko skryté) + RLS na DB úrovni již omezuje na CRM users; pro přísnější kontrolu by se dala přidat RLS policy s `is_admin(auth.uid())` na INSERT
+- Query: `broadcasts` se selectne s `sent_by` a přes něj se joinuje `profiles(first_name, last_name)`
+- Protože `broadcasts` tabulka není v generated types (používá `as any`), join se provede buď přes separátní dotaz na profiles, nebo inline
+- Jednodušší varianta: načíst `sent_by` UUID a pak udělat lookup na profiles separátně, nebo použít `.select('*, profiles!sent_by(first_name, last_name)')` s typovým přetypováním
 
