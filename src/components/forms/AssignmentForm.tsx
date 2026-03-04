@@ -51,39 +51,15 @@ interface AssignmentFormProps {
 export function AssignmentForm({
   engagementId,
   engagementServiceId,
-  engagementStartDate,
-  engagementEndDate,
+  engagementStartDate: _engagementStartDate,
+  engagementEndDate: _engagementEndDate,
   colleagues,
   existingAssignments,
   onSubmit,
   onCancel
 }: AssignmentFormProps) {
-  // Create schema with engagement date validation
-  const assignmentSchemaWithDates = assignmentSchema.refine(
-    (data) => {
-      const assignStart = new Date(data.start_date);
-      const engStart = new Date(engagementStartDate);
-
-      // Assignment cannot start before engagement
-      if (assignStart < engStart) return false;
-
-      // If engagement has end date, assignment cannot start after it
-      if (engagementEndDate) {
-        const engEnd = new Date(engagementEndDate);
-        if (assignStart > engEnd) return false;
-      }
-
-      return true;
-    },
-    {
-      message: engagementEndDate
-        ? `Datum musí být v rozsahu zakázky (${engagementStartDate} - ${engagementEndDate})`
-        : `Datum nesmí být před začátkem zakázky (${engagementStartDate})`,
-      path: ['start_date']
-    }
-  );
   const form = useForm<AssignmentFormData>({
-    resolver: zodResolver(assignmentSchemaWithDates),
+    resolver: zodResolver(assignmentSchema),
     defaultValues: {
       colleague_id: '',
       role_on_engagement: '',
