@@ -32,6 +32,7 @@ import MyWork from "./pages/MyWork";
 import Recruitment from "./pages/Recruitment";
 import Meetings from "./pages/Meetings";
 import Upsells from "./pages/Upsells";
+import Broadcasts from "./pages/Broadcasts";
 import ApplicantOnboardingForm from "./pages/ApplicantOnboardingForm";
 import NotFound from "./pages/NotFound";
 import OnboardingForm from "./pages/OnboardingForm";
@@ -91,6 +92,7 @@ const App = () => (
                               <Route path="/modifications" element={<Modifications />} />
                               <Route path="/extra-work" element={<ExtraWork />} />
                               <Route path="/upsells" element={<Upsells />} />
+                              <Route path="/broadcasts" element={<Broadcasts />} />
                               <Route path="/invoicing" element={<Invoicing />} />
                               <Route path="/creative-boost" element={<CreativeBoost />} />
                               <Route path="/meetings" element={<Meetings />} />
