@@ -51,6 +51,9 @@ const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
   client: 'Přístup k vlastním datům a zakázkám',
 };
 
+const DEFAULT_NEW_COLLEAGUE_PAGES = ['my-work'];
+const PRIVILEGED_ROLES: AppRole[] = ['admin', 'management'];
+
 export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUserRoleDialogProps) {
   const [role, setRole] = useState<AppRole>('specialist');
   const [allowedPages, setAllowedPages] = useState<string[]>([]);
@@ -64,7 +67,10 @@ export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUse
       const pageIds = (user.page_permissions || [])
         .filter(p => p.can_view)
         .map(p => p.page);
-      setAllowedPages(pageIds);
+      const shouldUseDefaultMinimalAccess = !user.is_super_admin
+        && !PRIVILEGED_ROLES.includes(user.role)
+        && pageIds.length === 0;
+      setAllowedPages(shouldUseDefaultMinimalAccess ? DEFAULT_NEW_COLLEAGUE_PAGES : pageIds);
       setCanSeeFinancials(user.can_see_financials || false);
     }
   }, [user]);
@@ -82,7 +88,12 @@ export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUse
   };
 
   const handleDeselectAll = () => {
-    setAllowedPages([]);
+    if (PRIVILEGED_ROLES.includes(role)) {
+      setAllowedPages([]);
+      return;
+    }
+
+    setAllowedPages(DEFAULT_NEW_COLLEAGUE_PAGES);
   };
 
   const handleSave = async () => {
@@ -90,12 +101,17 @@ export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUse
     
     setIsSaving(true);
     
+    const effectiveAllowedPages = (!user.is_super_admin
+      && !PRIVILEGED_ROLES.includes(role)
+      && allowedPages.length === 0)
+      ? DEFAULT_NEW_COLLEAGUE_PAGES
+      : allowedPages;
+
     // Transform allowedPages to page_permissions format
     // For simplicity, we set can_view=true for selected pages, can_edit based on role
-    const canEditRoles: AppRole[] = ['admin', 'management'];
-    const canEdit = canEditRoles.includes(role);
+    const canEdit = PRIVILEGED_ROLES.includes(role);
     
-    const page_permissions: PagePermission[] = allowedPages.map(page => ({
+    const page_permissions: PagePermission[] = effectiveAllowedPages.map(page => ({
       page: page as PagePermission['page'],
       can_view: true,
       can_edit: canEdit,
