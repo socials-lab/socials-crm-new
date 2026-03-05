@@ -21,6 +21,8 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Calculator, Info, Megaphone, Building2, Briefcase } from 'lucide-react';
 import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
+import { useMemo } from 'react';
 import type { ActivityReward, ActivityCategory } from '@/hooks/useActivityRewards';
 import { CATEGORY_LABELS, generateInvoiceItemName } from '@/hooks/useActivityRewards';
 
@@ -30,6 +32,7 @@ interface AddActivityRewardDialogProps {
   onAdd: (reward: Omit<ActivityReward, 'id' | 'created_at' | 'invoice_item_name'>) => void;
   colleagueId: string;
   clientNames?: string[];
+  defaultDate?: string; // e.g. '2026-01-15' — pre-fill for specific billing period
 }
 
 export function AddActivityRewardDialog({
@@ -38,6 +41,7 @@ export function AddActivityRewardDialog({
   onAdd,
   colleagueId,
   clientNames = [],
+  defaultDate,
 }: AddActivityRewardDialogProps) {
   const [category, setCategory] = useState<ActivityCategory>('marketing');
   const [description, setDescription] = useState('');
@@ -46,7 +50,29 @@ export function AddActivityRewardDialog({
   const [amount, setAmount] = useState('');
   const [hours, setHours] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
-  const [activityDate, setActivityDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [activityDate, setActivityDate] = useState(defaultDate || format(new Date(), 'yyyy-MM-dd'));
+
+  // Update activityDate when defaultDate changes (dialog re-opened for different month)
+  useEffect(() => {
+    if (defaultDate) {
+      setActivityDate(defaultDate);
+    }
+  }, [defaultDate]);
+
+  // Check if adding to a past month
+  const isPastMonth = useMemo(() => {
+    const now = new Date();
+    const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const activityPeriod = activityDate.substring(0, 7);
+    return activityPeriod < currentPeriod;
+  }, [activityDate]);
+
+  const billingMonthLabel = useMemo(() => {
+    if (!isPastMonth) return '';
+    const [y, m] = activityDate.split('-');
+    const date = new Date(parseInt(y), parseInt(m) - 1);
+    return format(date, 'LLLL yyyy', { locale: cs });
+  }, [activityDate, isPastMonth]);
   const [isAmountManual, setIsAmountManual] = useState(false);
 
   // Auto-calculate amount when hours and hourly rate change
@@ -110,7 +136,7 @@ export function AddActivityRewardDialog({
     setAmount('');
     setHours('');
     setHourlyRate('');
-    setActivityDate(format(new Date(), 'yyyy-MM-dd'));
+    setActivityDate(defaultDate || format(new Date(), 'yyyy-MM-dd'));
     setIsAmountManual(false);
     onOpenChange(false);
   };
@@ -216,6 +242,16 @@ export function AddActivityRewardDialog({
               rows={2}
             />
           </div>
+
+          {/* Past month info alert */}
+          {isPastMonth && (
+            <Alert className="border-amber-500/50 bg-amber-500/10">
+              <Info className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-sm">
+                Položka bude zařazena do fakturace za <strong>{billingMonthLabel}</strong>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Generated Invoice Item Name Preview */}
           {description && (category !== 'client_work' || clientName) && (

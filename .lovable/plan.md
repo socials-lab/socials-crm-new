@@ -1,33 +1,47 @@
 
 
-## Problem
+## Plan: Kontrola přefakturace víceprací klientům
 
-When a colleague forgets to add a manual activity item for a previous month, or needs to correct one, there's no easy way to do it. The "Add" button and activity list on the MyWork page are tied to the current month context. While the date picker in the AddActivityRewardDialog technically allows picking a past date, the UX doesn't guide users to do this — and the InvoicingOverview section for past months shows items read-only without an "Add" button.
+### Problém
 
-## Solution: Billing Period Awareness for Manual Items
+Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
 
-### 1. Add "Přidat položku" button to InvoicingOverview for ALL months (not just current)
-In `src/components/my-work/InvoicingOverview.tsx`:
-- Add a "+ Přidat položku" button at the bottom of the internal work section, visible for every month (not just current)
-- Pass `selectedYear` and `selectedMonth` to the `onAddInternalWork` callback so the dialog opens pre-filled with the correct month
+### Řešení
 
-### 2. Pre-fill activity date from selected billing period
-In `src/components/my-work/AddActivityRewardDialog.tsx`:
-- Accept optional `defaultDate` prop (e.g. `2026-01-15` — middle of the target month)
-- When provided, initialize `activityDate` to that value instead of today
-- Show an info alert when adding to a past month: "Položka bude zařazena do fakturace za [měsíc rok]"
+Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
+- `expected` — vícepráce se má přefakturovat klientovi (default)
+- `reinvoiced` — přefakturováno klientovi
+- `not_expected` — nepředpokládá se přefakturace klientovi
 
-### 3. Allow editing items in past months
-In `src/components/my-work/InvoicingOverview.tsx`:
-- The edit pencil icon is already rendered for `isEditable` items in all months — just verify it works for past months too (it should, since `getRewardsByCategory` already returns past data)
+Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
 
-### 4. Update MyWork page to pass selected period context
-In `src/pages/MyWork.tsx`:
-- Track which billing period the InvoicingOverview currently has selected
-- When `onAddInternalWork` fires with a specific period, pass the corresponding default date to AddActivityRewardDialog
+### Databázové změny
 
-### Files to modify
-- `src/components/my-work/InvoicingOverview.tsx` — add button for all months, pass period info
-- `src/components/my-work/AddActivityRewardDialog.tsx` — accept `defaultDate` prop
-- `src/pages/MyWork.tsx` — wire period context between components
+```sql
+CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
+ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
+ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+```
+
+### UI změny
+
+**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
+- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
+- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
+
+**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
+- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
+- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
+
+**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
+- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
+- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
+
+**4. `src/types/crm.ts`**
+- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
+
+### Technické detaily
+- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
+- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
+- Badge se zobrazí vedle existujícího status badge
 
