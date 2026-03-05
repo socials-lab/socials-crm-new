@@ -599,30 +599,6 @@ function MyWorkContent() {
         onEditReward={(reward) => setEditingReward(reward)}
       />
 
-      {/* Socials HUB */}
-      <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-        <CardContent className="p-6">
-          <a 
-            href="https://notion.so/socials-hub" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-4 group"
-          >
-            <div className="p-4 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-              <FileText className="h-8 w-8 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                Socials HUB
-                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Přístupové údaje • SOP & Procesy • Mise & Vize • Hodnoty • Principy rozhodování
-              </p>
-            </div>
-          </a>
-        </CardContent>
-      </Card>
 
 
       {/* Add Activity Reward Dialog */}
