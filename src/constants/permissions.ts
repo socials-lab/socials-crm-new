@@ -11,11 +11,12 @@ export const ALL_PAGES = [
   { id: 'broadcasts', label: 'Rozesílky', emoji: '📨' },
   // Práce & dodávka
   { id: 'extra-work', label: 'Vícepráce', emoji: '🔧' },
+  { id: 'upsells', label: 'Provize', emoji: '💰' },
   { id: 'creative-boost', label: 'Creative Boost', emoji: '🎨' },
   { id: 'meetings', label: 'Meetingy', emoji: '📅' },
-  // Finance & služby
-  { id: 'invoicing', label: 'Fakturace', emoji: '🧾' },
   { id: 'services', label: 'Služby', emoji: '📦' },
+  // Finance
+  { id: 'invoicing', label: 'Fakturace', emoji: '🧾' },
   // Tým & interní
   { id: 'colleagues', label: 'Kolegové', emoji: '👥' },
   { id: 'recruitment', label: 'Nábor', emoji: '🎓' },
@@ -26,6 +27,7 @@ export const ALL_PAGES = [
   { id: 'analytics', label: 'Analytika', emoji: '📊' },
   // Nastavení
   { id: 'settings', label: 'Nastavení', emoji: '⚙️' },
+  { id: 'notifications', label: 'Notifikace', emoji: '🔔' },
 ] as const;
 
 export type PageId = typeof ALL_PAGES[number]['id'];
@@ -33,8 +35,8 @@ export type PageId = typeof ALL_PAGES[number]['id'];
 export const PAGE_GROUPS = [
   { label: 'Osobní přehledy', pages: ['dashboard', 'my-work'] },
   { label: 'Obchodní proces', pages: ['leads', 'clients', 'contacts', 'engagements', 'modifications', 'broadcasts'] },
-  { label: 'Práce & dodávka', pages: ['extra-work', 'creative-boost', 'meetings'] },
-  { label: 'Finance & služby', pages: ['invoicing', 'services'] },
+  { label: 'Práce & dodávka', pages: ['extra-work', 'upsells', 'creative-boost', 'meetings', 'services'] },
+  { label: 'Finance', pages: ['invoicing'] },
   { label: 'Tým & interní', pages: ['colleagues', 'recruitment', 'feedback', 'academy', 'sop'] },
-  { label: 'Reporting & nastavení', pages: ['analytics', 'settings'] },
+  { label: 'Reporting & nastavení', pages: ['analytics', 'settings', 'notifications'] },
 ] as const;
