@@ -53,6 +53,7 @@ function MyWorkContent() {
   const navigate = useNavigate();
   const { colleagueId } = useUserRole();
   const [showAddActivityDialog, setShowAddActivityDialog] = useState(false);
+  const [addActivityDefaultDate, setAddActivityDefaultDate] = useState<string | undefined>(undefined);
   const [editingReward, setEditingReward] = useState<ActivityReward | null>(null);
   
   const { 
@@ -414,7 +415,7 @@ function MyWorkContent() {
                 size="sm" 
                 variant="outline" 
                 className="gap-1.5 h-7"
-                onClick={() => setShowAddActivityDialog(true)}
+                onClick={() => { setAddActivityDefaultDate(undefined); setShowAddActivityDialog(true); }}
               >
                 <Plus className="h-3.5 w-3.5" />
                 Přidat
@@ -433,7 +434,7 @@ function MyWorkContent() {
                   variant="ghost" 
                   size="sm" 
                   className="mt-2"
-                  onClick={() => setShowAddActivityDialog(true)}
+                  onClick={() => { setAddActivityDefaultDate(undefined); setShowAddActivityDialog(true); }}
                 >
                   Přidat položku
                 </Button>
@@ -589,7 +590,12 @@ function MyWorkContent() {
         internalRewards={activityRewards}
         getRewardsByMonth={getRewardsByMonth}
         getRewardsByCategory={getRewardsByCategory}
-        onAddInternalWork={() => setShowAddActivityDialog(true)}
+        onAddInternalWork={(year, month) => {
+          // Pre-fill date to middle of selected month
+          const defaultDate = `${year}-${String(month).padStart(2, '0')}-15`;
+          setAddActivityDefaultDate(defaultDate);
+          setShowAddActivityDialog(true);
+        }}
         onEditReward={(reward) => setEditingReward(reward)}
       />
 
@@ -623,10 +629,14 @@ function MyWorkContent() {
       {currentColleague && (
         <AddActivityRewardDialog
           open={showAddActivityDialog}
-          onOpenChange={setShowAddActivityDialog}
+          onOpenChange={(open) => {
+            setShowAddActivityDialog(open);
+            if (!open) setAddActivityDefaultDate(undefined);
+          }}
           onAdd={addReward}
           colleagueId={currentColleague.id}
           clientNames={myWorkData.clientData.map(cd => cd.client.brand_name || cd.client.name)}
+          defaultDate={addActivityDefaultDate}
         />
       )}
 
