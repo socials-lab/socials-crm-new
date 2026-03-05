@@ -203,12 +203,22 @@ export function TeamInvoicingOverview() {
         <Select value={selectedMonth.toString()} onValueChange={v => setSelectedMonth(Number(v))}>
           <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {MONTHS.map((m, i) => (
-              <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
-            ))}
+            {MONTHS.map((m, i) => {
+              const monthNum = i + 1;
+              const isFuture = selectedYear === now.getFullYear() && monthNum > now.getMonth() + 1;
+              if (isFuture) return null;
+              return <SelectItem key={monthNum} value={monthNum.toString()}>{m}</SelectItem>;
+            })}
           </SelectContent>
         </Select>
-        <Select value={selectedYear.toString()} onValueChange={v => setSelectedYear(Number(v))}>
+        <Select value={selectedYear.toString()} onValueChange={v => {
+          const newYear = Number(v);
+          setSelectedYear(newYear);
+          // If switching to current year and selected month is in the future, clamp it
+          if (newYear === now.getFullYear() && selectedMonth > now.getMonth() + 1) {
+            setSelectedMonth(now.getMonth() + 1);
+          }
+        }}>
           <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             {availableYears.map(y => (
