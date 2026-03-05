@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.broadcast-track]
 verify_jwt = false
+
+[functions.get-users-auth-info]
+verify_jwt = false
