@@ -1,62 +1,47 @@
 
 
-## Plan: Login status, last login, and activity log in Access Management
+## Plan: Kontrola přefakturace víceprací klientům
 
-### 1. Login status & last login date
+### Problém
 
-The `auth.users` table (managed by Supabase) contains `last_sign_in_at` and `email_confirmed_at` fields, but these cannot be queried from the client. Solution:
+Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
 
-**Create an edge function `get-users-auth-info`** that:
-- Accepts a list of user IDs
-- Uses the Supabase Admin API to fetch `last_sign_in_at` and `created_at` from `auth.users`
-- Returns a map of `user_id → { last_sign_in_at, email_confirmed_at, created_at }`
-- Only callable by super admins (verify via `is_admin` check)
+### Řešení
 
-**Update `UserManagement.tsx`**:
-- Call the edge function after fetching user roles
-- Add two new columns to the table:
-  - "Status" — green badge "Aktivní" if `last_sign_in_at` exists, orange "Čeká na přijetí" if not
-  - "Poslední přihlášení" — formatted `last_sign_in_at` date, or "—"
+Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
+- `expected` — vícepráce se má přefakturovat klientovi (default)
+- `reinvoiced` — přefakturováno klientovi
+- `not_expected` — nepředpokládá se přefakturace klientovi
 
-### 2. Activity log
+Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
 
-**Create a `user_activity_log` table** with columns:
-- `id` (uuid, PK)
-- `user_id` (uuid, NOT NULL, references auth.users)
-- `action` (text) — e.g. "lead_created", "engagement_updated", "extra_work_approved"
-- `entity_type` (text) — e.g. "lead", "engagement", "client"
-- `entity_id` (uuid, nullable)
-- `entity_name` (text, nullable) — human-readable name for display
-- `metadata` (jsonb, nullable) — extra details
-- `created_at` (timestamptz, default now())
+### Databázové změny
 
-RLS: Super admins can read all; users can read their own.
+```sql
+CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
+ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
+ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+```
 
-**Create a logging utility `src/services/activityLogger.ts`**:
-- `logActivity(action, entityType, entityId, entityName, metadata?)` — inserts into `user_activity_log` using the current auth user
-- Simple fire-and-forget (no await needed in calling code)
+### UI změny
 
-**Integrate logging into key CRM actions** (initial set):
-- `useCRMData` hook: log on `addClient`, `addEngagement`, `updateEngagement`, `addColleague`
-- `useLeadsData` hook: log on `addLead`, `updateLead`
-- `useModificationRequests`: log on create/approve
-- Extra work creation/approval
-- Meeting creation
+**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
+- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
+- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
 
-**Add activity log display in `UserManagement.tsx`**:
-- Add a "Log aktivity" button in the user row dropdown menu
-- Opens a Sheet/Dialog showing the last 50 actions for that user
-- Each row: timestamp, action description, entity link
+**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
+- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
+- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
 
-### Files to create
-- `supabase/functions/get-users-auth-info/index.ts`
-- `src/services/activityLogger.ts`
+**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
+- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
+- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
 
-### Files to modify
-- `src/components/settings/UserManagement.tsx` — add columns + activity log button
-- `src/hooks/useCRMData.tsx` — add activity logging calls
-- `src/hooks/useLeadsData.tsx` — add activity logging calls
+**4. `src/types/crm.ts`**
+- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
 
-### Database migration
-- Create `user_activity_log` table with RLS policies
+### Technické detaily
+- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
+- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
+- Badge se zobrazí vedle existujícího status badge
 

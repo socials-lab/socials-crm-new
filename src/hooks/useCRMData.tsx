@@ -1,6 +1,7 @@
 import { createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { logActivity } from '@/services/activityLogger';
 import type { 
   Client, 
   ClientContact,
@@ -543,7 +544,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return transformClient(result);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    onSuccess: (newClient) => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      logActivity('client_created', 'client', newClient.id, newClient.name);
+    },
   });
 
   const updateClientMutation = useMutation({
@@ -593,7 +597,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return transformEngagement(result);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagements'] }),
+    onSuccess: (newEng) => {
+      queryClient.invalidateQueries({ queryKey: ['engagements'] });
+      logActivity('engagement_created', 'engagement', newEng.id, newEng.name);
+    },
   });
 
   const updateEngagementMutation = useMutation({
@@ -643,7 +650,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return transformColleague(result);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['colleagues'] }),
+    onSuccess: (newColleague) => {
+      queryClient.invalidateQueries({ queryKey: ['colleagues'] });
+      logActivity('colleague_created', 'colleague', newColleague.id, newColleague.full_name);
+    },
   });
 
   const updateColleagueMutation = useMutation({
