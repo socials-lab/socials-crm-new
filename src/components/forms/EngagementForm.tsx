@@ -121,7 +121,7 @@ export function EngagementForm({
       status: engagement?.status || 'planned',
       start_date: engagement?.start_date || toDateOnlyString(new Date()),
       end_date: engagement?.end_date || null,
-      notice_period_months: engagement?.notice_period_months ?? null,
+      notice_period_months: engagement?.notice_period_months ?? 1,
       notes: engagement?.notes || '',
     },
   });
