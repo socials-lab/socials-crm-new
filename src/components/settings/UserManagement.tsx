@@ -4,12 +4,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil, History } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { supabase } from '@/integrations/supabase/client';
 import { AddCRMUserDialog } from './AddCRMUserDialog';
 import { EditUserRoleDialog } from './EditUserRoleDialog';
+import { UserActivityLogSheet } from './UserActivityLogSheet';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -35,13 +38,22 @@ interface UserRoleData {
   } | null;
 }
 
+interface AuthInfo {
+  last_sign_in_at: string | null;
+  email_confirmed_at: string | null;
+  created_at: string;
+}
+
 export function UserManagement() {
   const navigate = useNavigate();
   const { colleagues } = useCRMData();
   const [userRoles, setUserRoles] = useState<UserRoleData[]>([]);
+  const [authInfoMap, setAuthInfoMap] = useState<Record<string, AuthInfo>>({});
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [activityLogOpen, setActivityLogOpen] = useState(false);
+  const [activityLogUser, setActivityLogUser] = useState<{ userId: string; name: string } | null>(null);
   const [selectedUser, setSelectedUser] = useState<{
     id: string;
     user_id: string;
@@ -83,6 +95,22 @@ export function UserManagement() {
       return { ...role, profile, colleague };
     }));
     setUserRoles(enrichedData);
+
+    // Fetch auth info via edge function
+    const userIds = enrichedData.map(r => r.user_id);
+    if (userIds.length > 0) {
+      try {
+        const { data: authData, error: authError } = await supabase.functions.invoke('get-users-auth-info', {
+          body: { user_ids: userIds },
+        });
+        if (!authError && authData) {
+          setAuthInfoMap(authData);
+        }
+      } catch (e) {
+        console.error('Error fetching auth info:', e);
+      }
+    }
+
     setLoading(false);
   };
 
@@ -109,6 +137,14 @@ export function UserManagement() {
     setEditDialogOpen(true);
   };
 
+  const handleOpenActivityLog = (userRole: UserRoleData) => {
+    const displayName = userRole.profile 
+      ? `${userRole.profile.first_name || ''} ${userRole.profile.last_name || ''}`.trim() || userRole.profile.email || 'Neznámý'
+      : 'Neznámý';
+    setActivityLogUser({ userId: userRole.user_id, name: displayName });
+    setActivityLogOpen(true);
+  };
+
   const getRoleBadge = (role: AppRole, isSuperAdmin: boolean) => {
     if (isSuperAdmin) {
       return <Badge className="bg-primary/10 text-primary border-primary/20"><ShieldCheck className="h-3 w-3 mr-1" />Super Admin</Badge>;
@@ -121,6 +157,21 @@ export function UserManagement() {
       finance: 'Finance',
     };
     return <Badge variant="secondary">{roleLabels[role] || role}</Badge>;
+  };
+
+  const getLoginStatusBadge = (userId: string) => {
+    const info = authInfoMap[userId];
+    if (!info) return <Badge variant="outline" className="text-xs">—</Badge>;
+    if (info.last_sign_in_at) {
+      return <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">Aktivní</Badge>;
+    }
+    return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-xs">Čeká na přijetí</Badge>;
+  };
+
+  const getLastLoginText = (userId: string) => {
+    const info = authInfoMap[userId];
+    if (!info?.last_sign_in_at) return '—';
+    return format(new Date(info.last_sign_in_at), 'd. M. yyyy HH:mm', { locale: cs });
   };
 
   if (loading) {
@@ -150,6 +201,8 @@ export function UserManagement() {
                 <TableHead>Uživatel</TableHead>
                 <TableHead>Propojený kolega</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Poslední přihlášení</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -183,6 +236,10 @@ export function UserManagement() {
                       )}
                     </TableCell>
                     <TableCell>{getRoleBadge(userRole.role, userRole.is_super_admin || false)}</TableCell>
+                    <TableCell>{getLoginStatusBadge(userRole.user_id)}</TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">{getLastLoginText(userRole.user_id)}</span>
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -194,6 +251,10 @@ export function UserManagement() {
                           <DropdownMenuItem onClick={() => handleEditUser(userRole)}>
                             <Pencil className="h-4 w-4 mr-2" />
                             Upravit roli
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenActivityLog(userRole)}>
+                            <History className="h-4 w-4 mr-2" />
+                            Log aktivity
                           </DropdownMenuItem>
                           {userRole.colleague && (
                             <>
@@ -231,6 +292,15 @@ export function UserManagement() {
         user={selectedUser}
         onSave={fetchUserRoles}
       />
+
+      {activityLogUser && (
+        <UserActivityLogSheet
+          open={activityLogOpen}
+          onOpenChange={setActivityLogOpen}
+          userId={activityLogUser.userId}
+          userName={activityLogUser.name}
+        />
+      )}
     </div>
   );
 }
