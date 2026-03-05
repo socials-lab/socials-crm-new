@@ -328,7 +328,7 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
           </CardHeader>
           <CardContent className="space-y-2">
             {endingThisMonth.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Žádné zakázky nekončí tento měsíc</p>
+              <p className="text-sm text-muted-foreground text-center py-4">Žádné zakázky nekončí v aktuálním forecast měsíci</p>
             ) : endingThisMonth.map((eng) => (
               <div key={eng.id} className="flex items-center justify-between p-3 rounded-lg border bg-destructive/5">
                 <div className="text-sm">{eng.name}</div>
@@ -347,7 +347,7 @@ export function RevenuePlanForecast({ selectedYear, selectedMonth }: RevenuePlan
           </CardHeader>
           <CardContent className="space-y-2">
             {[...startingThisMonth, ...plannedThisMonth].length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Žádné nové zakázky tento měsíc</p>
+              <p className="text-sm text-muted-foreground text-center py-4">Žádné nové zakázky v aktuálním forecast měsíci</p>
             ) : (
               <>
                 {startingThisMonth.map((eng) => (

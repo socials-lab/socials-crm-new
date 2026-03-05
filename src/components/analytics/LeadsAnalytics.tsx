@@ -142,7 +142,7 @@ export function LeadsAnalytics({
               leadChange >= 0 ? "text-status-active" : "text-status-lost"
             )}>
               {leadChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-              {Math.abs(leadChange)} vs minulý měsíc
+              {Math.abs(leadChange)} vs předchozí období
             </span>
           }
         />
@@ -150,7 +150,7 @@ export function LeadsAnalytics({
           title="Nové leady"
           value={newLeadsThisMonth}
           icon={Users}
-          subtitle="tento měsíc"
+          subtitle="v období"
         />
         <KPICard
           title="Win Rate"

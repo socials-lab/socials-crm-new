@@ -85,7 +85,7 @@ export function ClientsEngagementsAnalytics({
               clientChange >= 0 ? "text-status-active" : "text-status-lost"
             )}>
               {clientChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-              {Math.abs(clientChange)} vs minulý měsíc
+              {Math.abs(clientChange)} vs předchozí období
             </span>
           }
         />
@@ -93,13 +93,13 @@ export function ClientsEngagementsAnalytics({
           title="Noví klienti"
           value={newClients.length}
           icon={UserPlus}
-          subtitle="tento měsíc"
+          subtitle="v období"
         />
         <KPICard
           title="Ztracení klienti"
           value={lostClients.length}
           icon={UserMinus}
-          subtitle="tento měsíc"
+          subtitle="v období"
         />
         <KPICard
           title="Churn rate"
@@ -121,7 +121,7 @@ export function ClientsEngagementsAnalytics({
           icon={TrendingUp}
         />
         <KPICard
-          title="MoM změna fakturace"
+          title="Změna fakturace"
           value={`${invoicingChange >= 0 ? '+' : ''}${invoicingChange.toFixed(1)}%`}
           icon={invoicingChange >= 0 ? ArrowUp : ArrowDown}
           subtitle={
@@ -129,7 +129,7 @@ export function ClientsEngagementsAnalytics({
               "text-xs",
               invoicingChange >= 0 ? "text-status-active" : "text-status-lost"
             )}>
-              vs minulý měsíc
+              vs předchozí období
             </span>
           }
         />
@@ -319,7 +319,7 @@ export function ClientsEngagementsAnalytics({
           <CardContent>
             {newClients.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                Tento měsíc nebyli získáni noví klienti
+                V tomto období nebyli získáni noví klienti
               </p>
             ) : (
               <div className="space-y-2">
@@ -347,7 +347,7 @@ export function ClientsEngagementsAnalytics({
           <CardContent>
             {lostClients.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                Tento měsíc nebyli ztraceni žádní klienti 🎉
+                V tomto období nebyli ztraceni žádní klienti 🎉
               </p>
             ) : (
               <div className="space-y-2">

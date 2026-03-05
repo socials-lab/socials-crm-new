@@ -19,11 +19,12 @@ import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO
 import { cs } from 'date-fns/locale';
 
 interface ExtraWorkMarginSectionProps {
-  year: number;
-  month: number;
+  periodStart: Date;
+  periodEnd: Date;
+  periodLabel: string;
 }
 
-export function ExtraWorkMarginSection({ year, month }: ExtraWorkMarginSectionProps) {
+export function ExtraWorkMarginSection({ periodStart, periodEnd, periodLabel }: ExtraWorkMarginSectionProps) {
   const { extraWorks, getClientById, getColleagueById } = useCRMData();
   const hasUnsupportedCurrency = useMemo(
     () => extraWorks.some((work) => work.currency !== 'CZK'),
@@ -31,12 +32,9 @@ export function ExtraWorkMarginSection({ year, month }: ExtraWorkMarginSectionPr
   );
 
   const extraWorkMarginData = useMemo(() => {
-    const monthStart = startOfMonth(new Date(year, month - 1));
-    const monthEnd = endOfMonth(new Date(year, month - 1));
-
     const monthExtraWorks = extraWorks.filter((ew) => {
       const workDate = parseISO(ew.work_date);
-      return isWithinInterval(workDate, { start: monthStart, end: monthEnd });
+      return isWithinInterval(workDate, { start: periodStart, end: periodEnd });
     });
 
     const extraWorksWithMargin = monthExtraWorks.map((ew) => {
@@ -110,11 +108,12 @@ export function ExtraWorkMarginSection({ year, month }: ExtraWorkMarginSectionPr
       count: calculable.length,
       issueCount: extraWorksWithMargin.filter((item) => item.dataIssue).length,
     };
-  }, [extraWorks, year, month, getClientById, getColleagueById]);
+  }, [extraWorks, periodEnd, periodStart, getClientById, getColleagueById]);
 
   const extraWorkMarginTrend = useMemo(() => {
+    const anchorDate = new Date(periodEnd.getFullYear(), periodEnd.getMonth(), 1);
     return Array.from({ length: 12 }, (_, i) => {
-      const date = subMonths(new Date(year, month - 1), 11 - i);
+      const date = subMonths(anchorDate, 11 - i);
       const monthStart = startOfMonth(date);
       const monthEnd = endOfMonth(date);
 
@@ -147,7 +146,7 @@ export function ExtraWorkMarginSection({ year, month }: ExtraWorkMarginSectionPr
         marginPercent: Math.round(marginPercent),
       };
     });
-  }, [extraWorks, year, month, getColleagueById]);
+  }, [extraWorks, getColleagueById, periodEnd]);
 
   function formatCurrency(value: number) {
     return new Intl.NumberFormat('cs-CZ', {
@@ -279,13 +278,13 @@ export function ExtraWorkMarginSection({ year, month }: ExtraWorkMarginSectionPr
             <FileText className="h-4 w-4" />
             Detail víceprací s marží
           </CardTitle>
-          <CardDescription>Aktuální měsíc</CardDescription>
+          <CardDescription>{periodLabel}</CardDescription>
         </CardHeader>
         <CardContent>
           {extraWorkMarginData.extraWorks.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              <p>Žádné vícepráce v tomto měsíci</p>
+              <p>Žádné vícepráce v tomto období</p>
             </div>
           ) : (
             <div className="overflow-x-auto">

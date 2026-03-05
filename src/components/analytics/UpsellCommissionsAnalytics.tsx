@@ -16,23 +16,56 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { Coins, Users, Trophy, ArrowUp, ArrowDown, TrendingUp, Sparkles, FileText, Briefcase } from 'lucide-react';
+import { Coins, Users, Trophy, ArrowUp, ArrowDown, TrendingUp, Sparkles, FileText, Briefcase, AlertTriangle } from 'lucide-react';
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { format, subMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 interface UpsellCommissionsAnalyticsProps {
-  year: number;
-  month: number;
+  periodStart: Date;
+  periodEnd: Date;
+  comparisonStart: Date;
+  comparisonEnd: Date;
+  periodLabel: string;
 }
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
-export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAnalyticsProps) {
+function getMonthKeysBetween(start: Date, end: Date): Array<{ year: number; month: number }> {
+  const keys: Array<{ year: number; month: number }> = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const endKey = new Date(end.getFullYear(), end.getMonth(), 1);
+
+  while (cursor <= endKey) {
+    keys.push({ year: cursor.getFullYear(), month: cursor.getMonth() + 1 });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  return keys;
+}
+
+export function UpsellCommissionsAnalytics({
+  periodStart,
+  periodEnd,
+  comparisonStart,
+  comparisonEnd,
+  periodLabel,
+}: UpsellCommissionsAnalyticsProps) {
   const { getUpsellsForMonth } = useUpsellApprovals();
 
-  // Current month stats
-  const currentMonthUpsells = useMemo(() => getUpsellsForMonth(year, month), [year, month, getUpsellsForMonth]);
+  const currentPeriodMonthKeys = useMemo(
+    () => getMonthKeysBetween(periodStart, periodEnd),
+    [periodStart, periodEnd]
+  );
+  const comparisonPeriodMonthKeys = useMemo(
+    () => getMonthKeysBetween(comparisonStart, comparisonEnd),
+    [comparisonStart, comparisonEnd]
+  );
+
+  const currentMonthUpsells = useMemo(
+    () => currentPeriodMonthKeys.flatMap((key) => getUpsellsForMonth(key.year, key.month)),
+    [currentPeriodMonthKeys, getUpsellsForMonth]
+  );
   const hasUnsupportedCurrency = useMemo(
     () => currentMonthUpsells.some((upsell) => upsell.currency !== 'CZK'),
     [currentMonthUpsells],
@@ -48,18 +81,18 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
     const extraWorkCount = currentMonthUpsells.filter(u => u.type === 'extra_work').length;
     const serviceCount = currentMonthUpsells.filter(u => u.type === 'service').length;
 
-    const prevDate = subMonths(new Date(year, month - 1), 1);
-    const prevUpsells = getUpsellsForMonth(prevDate.getFullYear(), prevDate.getMonth() + 1);
+    const prevUpsells = comparisonPeriodMonthKeys.flatMap((key) => getUpsellsForMonth(key.year, key.month));
     const prevTotal = prevUpsells.reduce((sum, u) => sum + u.commissionAmount, 0);
     const change = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : 0;
 
     return { total, approved, pending, count, change, extraWorkCount, serviceCount };
-  }, [currentMonthUpsells, year, month, getUpsellsForMonth]);
+  }, [comparisonPeriodMonthKeys, currentMonthUpsells, getUpsellsForMonth]);
 
   // 12-month trend
   const upsellTrend = useMemo(() => {
+    const anchorDate = new Date(periodEnd.getFullYear(), periodEnd.getMonth(), 1);
     return Array.from({ length: 12 }, (_, i) => {
-      const date = subMonths(new Date(year, month - 1), 11 - i);
+      const date = subMonths(anchorDate, 11 - i);
       const y = date.getFullYear();
       const m = date.getMonth() + 1;
       
@@ -77,7 +110,7 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
         count: upsells.length,
       };
     });
-  }, [year, month, getUpsellsForMonth]);
+  }, [getUpsellsForMonth, periodEnd]);
 
   // Top upsellers (last 6 months)
   const topUpsellers = useMemo(() => {
@@ -93,7 +126,7 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
     }>();
 
     for (let i = 0; i < 6; i++) {
-      const date = subMonths(new Date(year, month - 1), i);
+      const date = subMonths(new Date(periodEnd.getFullYear(), periodEnd.getMonth(), 1), i);
       const y = date.getFullYear();
       const m = date.getMonth() + 1;
       
@@ -130,7 +163,7 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
     return Array.from(colleagueStats.values())
       .sort((a, b) => b.commissionAmount - a.commissionAmount)
       .slice(0, 10);
-  }, [year, month, getUpsellsForMonth]);
+  }, [getUpsellsForMonth, periodEnd]);
 
   // Upsell type distribution
   const typeDistribution = useMemo(() => {
@@ -175,7 +208,7 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
       {/* KPI Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <KPICard
-          title="Provize tento měsíc"
+          title="Provize v období"
           value={formatCurrency(currentMonthStats.total)}
           subtitle={
             <span className="flex items-center gap-1">
@@ -184,7 +217,7 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
               ) : (
                 <ArrowDown className="h-3 w-3 text-status-lost" />
               )}
-              {Math.abs(currentMonthStats.change).toFixed(0)}% vs minulý měsíc
+              {Math.abs(currentMonthStats.change).toFixed(0)}% vs předchozí období
             </span>
           }
           icon={Coins}
@@ -204,7 +237,7 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
         <KPICard
           title="Počet upsellů"
           value={currentMonthStats.count.toString()}
-          subtitle={`${currentMonthStats.extraWorkCount} víceprací, ${currentMonthStats.serviceCount} služeb`}
+          subtitle={`${currentMonthStats.extraWorkCount} víceprací, ${currentMonthStats.serviceCount} služeb (${periodLabel})`}
           icon={Users}
         />
       </div>
@@ -256,13 +289,13 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
               <Sparkles className="h-4 w-4 text-primary" />
               Rozložení provizí podle typu
             </CardTitle>
-            <CardDescription>Tento měsíc</CardDescription>
+            <CardDescription>{periodLabel}</CardDescription>
           </CardHeader>
           <CardContent>
             {typeDistribution.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground">
                 <Coins className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                <p>Žádné upselly tento měsíc</p>
+                <p>Žádné upselly v tomto období</p>
               </div>
             ) : (
               <div className="h-[280px]">
@@ -364,14 +397,15 @@ export function UpsellCommissionsAnalytics({ year, month }: UpsellCommissionsAna
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Coins className="h-4 w-4" />
-            Detail upsellů tento měsíc
+            Detail upsellů v období
           </CardTitle>
+            <CardDescription>{periodLabel}</CardDescription>
         </CardHeader>
         <CardContent>
           {currentMonthUpsells.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              <p>Žádné upselly v tomto měsíci</p>
+              <p>Žádné upselly v tomto období</p>
             </div>
           ) : (
             <div className="overflow-x-auto">

@@ -72,7 +72,7 @@ export function AnalyticsOverview({
               clientChange >= 0 ? "text-status-active" : "text-status-lost"
             )}>
               {clientChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-              {Math.abs(clientChange)} vs minulý měsíc
+              {Math.abs(clientChange)} vs předchozí období
             </span>
           }
         />
@@ -91,7 +91,7 @@ export function AnalyticsOverview({
               mrrChange >= 0 ? "text-status-active" : "text-status-lost"
             )}>
               {mrrChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-              {Math.abs(mrrChange).toFixed(1)}% vs minulý měsíc
+              {Math.abs(mrrChange).toFixed(1)}% vs předchozí období
             </span>
           }
         />

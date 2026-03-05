@@ -104,7 +104,7 @@ export function FinanceAnalytics({
               invoicingChange >= 0 ? "text-status-active" : "text-status-lost"
             )}>
               {invoicingChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-              {Math.abs(invoicingChange).toFixed(1)}% vs minulý měsíc
+              {Math.abs(invoicingChange).toFixed(1)}% vs předchozí období
             </span>
           }
         />

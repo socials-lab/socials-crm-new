@@ -34,6 +34,24 @@ const SOURCE_LABELS: Record<string, string> = {
   'website': 'Web',
 };
 
+interface YearMonthKey {
+  year: number;
+  month: number;
+}
+
+function getMonthKeysBetween(start: Date, end: Date): YearMonthKey[] {
+  const keys: YearMonthKey[] = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const endKey = new Date(end.getFullYear(), end.getMonth(), 1);
+
+  while (cursor <= endKey) {
+    keys.push({ year: cursor.getFullYear(), month: cursor.getMonth() + 1 });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  return keys;
+}
+
 export default function Analytics() {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
@@ -118,6 +136,16 @@ export default function Analytics() {
     }
   }, [periodMode, selectedMonth, selectedQuarter, selectedYear]);
 
+  const currentPeriodMonthKeys = useMemo(
+    () => getMonthKeysBetween(periodStart, periodEnd),
+    [periodStart, periodEnd]
+  );
+
+  const comparisonPeriodMonthKeys = useMemo(
+    () => getMonthKeysBetween(comparisonStart, comparisonEnd),
+    [comparisonStart, comparisonEnd]
+  );
+
   // =====================================================
   // OVERVIEW DATA
   // =====================================================
@@ -157,7 +185,9 @@ export default function Analytics() {
       .reduce((sum, e) => sum + e.monthly_fee, 0);
 
     // Average margin
-    const metrics = engagementMetrics.filter(m => m.year === selectedYear && m.month === selectedMonth);
+    const metrics = engagementMetrics.filter((m) =>
+      currentPeriodMonthKeys.some((key) => key.year === m.year && key.month === m.month)
+    );
     const avgMargin = metrics.length > 0 
       ? metrics.reduce((sum, m) => sum + m.margin_percent, 0) / metrics.length 
       : 0;
@@ -197,8 +227,10 @@ export default function Analytics() {
     });
     const extraWorkRevenue = periodExtraWorks.reduce((sum, ew) => sum + ew.amount, 0);
     
-    const cbSummaries = getClientMonthSummaries(selectedYear, selectedMonth);
-    const creativeBoostRevenue = cbSummaries.reduce((sum, s) => sum + s.estimatedInvoice, 0);
+    const creativeBoostRevenue = currentPeriodMonthKeys.reduce((sum, key) => {
+      const cbSummaries = getClientMonthSummaries(key.year, key.month);
+      return sum + cbSummaries.reduce((monthSum, summary) => monthSum + summary.estimatedInvoice, 0);
+    }, 0);
     
     const revenueBreakdown = [
       { name: 'Retainery', value: retainerRevenue },
@@ -248,7 +280,7 @@ export default function Analytics() {
         pendingExtraWork,
       },
     };
-  }, [comparisonEnd, comparisonStart, periodEnd, periodStart, selectedMonth, selectedYear, clients, engagements, engagementMetrics, getClientById, extraWorks, leads, getClientMonthSummaries]);
+  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, clients, engagements, engagementMetrics, getClientById, extraWorks, leads, getClientMonthSummaries]);
 
   // =====================================================
   // LEADS DATA
@@ -320,7 +352,7 @@ export default function Analytics() {
     });
 
     // Funnel data
-    const stages = ['new_lead', 'contacted', 'in_progress', 'offer_sent', 'won', 'lost'] as const;
+    const stages = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'won', 'lost', 'postponed'] as const;
     const funnelData = stages.map(stage => ({
       stage,
       count: leads.filter(l => l.stage === stage).length,
@@ -562,7 +594,9 @@ export default function Analytics() {
       .slice(0, 10);
 
     // Top clients by margin
-    const metrics = engagementMetrics.filter(m => m.year === selectedYear && m.month === selectedMonth);
+    const metrics = engagementMetrics.filter((m) =>
+      currentPeriodMonthKeys.some((key) => key.year === m.year && key.month === m.month)
+    );
     const topClientsByMargin = activeClientsForPeriod
       .map(c => {
         const clientEngs = activeEngs.filter(e => e.client_id === c.id);
@@ -597,7 +631,7 @@ export default function Analytics() {
       topClientsByMargin,
       clientsByTier,
     };
-  }, [comparisonEnd, comparisonStart, periodEnd, periodStart, selectedMonth, selectedYear, clients, engagements, engagementMetrics]);
+  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, clients, engagements, engagementMetrics]);
 
   // =====================================================
   // FINANCE DATA
@@ -627,7 +661,9 @@ export default function Analytics() {
       : 0;
 
     // Metrics
-    const metrics = engagementMetrics.filter(m => m.year === selectedYear && m.month === selectedMonth);
+    const metrics = engagementMetrics.filter((m) =>
+      currentPeriodMonthKeys.some((key) => key.year === m.year && key.month === m.month)
+    );
     const avgMarginPercent = metrics.length > 0 
       ? metrics.reduce((sum, m) => sum + m.margin_percent, 0) / metrics.length 
       : 0;
@@ -706,11 +742,15 @@ export default function Analytics() {
     });
 
     // Creative Boost stats
-    const allSummaries = getClientMonthSummaries(selectedYear, selectedMonth);
-    const totalCredits = allSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
+    const totalCredits = currentPeriodMonthKeys.reduce((sum, key) => {
+      const monthSummaries = getClientMonthSummaries(key.year, key.month);
+      return sum + monthSummaries.reduce((monthSum, summary) => monthSum + summary.usedCredits, 0);
+    }, 0);
 
     // Credits by type - calculate from actual outputs
-    const periodOutputs = outputs.filter(o => o.year === selectedYear && o.month === selectedMonth);
+    const periodOutputs = outputs.filter((output) =>
+      currentPeriodMonthKeys.some((key) => key.year === output.year && key.month === output.month)
+    );
     const creditsByTypeMap = new Map<string, number>();
     
     periodOutputs.forEach(output => {
@@ -776,13 +816,14 @@ export default function Analytics() {
         creditsTrend,
       },
     };
-  }, [comparisonEnd, comparisonStart, periodEnd, periodStart, selectedMonth, selectedYear, engagements, engagementMetrics, extraWorks, assignments, getClientById, colleagues, getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits]);
+  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, engagements, engagementMetrics, extraWorks, assignments, getClientById, colleagues, getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits]);
 
   const creativeBoostData = useMemo(() => {
-    const allSummaries = getClientMonthSummaries(selectedYear, selectedMonth);
-    const prevSummaries = getClientMonthSummaries(
-      selectedMonth === 1 ? selectedYear - 1 : selectedYear,
-      selectedMonth === 1 ? 12 : selectedMonth - 1
+    const allSummaries = currentPeriodMonthKeys.flatMap((key) =>
+      getClientMonthSummaries(key.year, key.month)
+    );
+    const prevSummaries = comparisonPeriodMonthKeys.flatMap((key) =>
+      getClientMonthSummaries(key.year, key.month)
     );
 
     const totalCredits = allSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
@@ -799,7 +840,7 @@ export default function Analytics() {
 
     const totalMaxCredits = allSummaries.reduce((sum, s) => sum + s.maxCredits, 0);
     const avgUtilization = totalMaxCredits > 0 ? (totalCredits / totalMaxCredits) * 100 : 0;
-    const activeClients = allSummaries.length;
+    const activeClients = new Set(allSummaries.map((summary) => summary.clientId)).size;
     const avgPricePerCredit = allSummaries.length > 0
       ? allSummaries.reduce((sum, s) => sum + s.pricePerCredit, 0) / allSummaries.length
       : 0;
@@ -823,7 +864,9 @@ export default function Analytics() {
       };
     });
 
-    const periodOutputs = outputs.filter((o) => o.year === selectedYear && o.month === selectedMonth);
+    const periodOutputs = outputs.filter((output) =>
+      currentPeriodMonthKeys.some((key) => key.year === output.year && key.month === output.month)
+    );
 
     const creditsByTypeMap = new Map<string, number>();
     periodOutputs.forEach((output) => {
@@ -849,16 +892,49 @@ export default function Analytics() {
       .sort((a, b) => b.credits - a.credits)
       .slice(0, 8);
 
-    const creditsByClient = allSummaries.map((s) => ({
-      clientId: s.clientId,
-      clientName: s.clientName,
-      brandName: s.brandName,
-      usedCredits: s.usedCredits,
-      maxCredits: s.maxCredits,
-      utilizationPercent: s.maxCredits > 0 ? (s.usedCredits / s.maxCredits) * 100 : 0,
-      pricePerCredit: s.pricePerCredit,
-      revenue: s.estimatedInvoice,
-    })).sort((a, b) => b.revenue - a.revenue);
+    const clientTotals = new Map<string, {
+      clientId: string;
+      clientName: string;
+      brandName: string;
+      usedCredits: number;
+      maxCredits: number;
+      pricePerCreditTotal: number;
+      pricePerCreditSamples: number;
+      revenue: number;
+    }>();
+
+    allSummaries.forEach((summary) => {
+      const existing = clientTotals.get(summary.clientId) || {
+        clientId: summary.clientId,
+        clientName: summary.clientName,
+        brandName: summary.brandName,
+        usedCredits: 0,
+        maxCredits: 0,
+        pricePerCreditTotal: 0,
+        pricePerCreditSamples: 0,
+        revenue: 0,
+      };
+
+      existing.usedCredits += summary.usedCredits;
+      existing.maxCredits += summary.maxCredits;
+      existing.pricePerCreditTotal += summary.pricePerCredit;
+      existing.pricePerCreditSamples += 1;
+      existing.revenue += summary.estimatedInvoice;
+      clientTotals.set(summary.clientId, existing);
+    });
+
+    const creditsByClient = Array.from(clientTotals.values())
+      .map((client) => ({
+        clientId: client.clientId,
+        clientName: client.clientName,
+        brandName: client.brandName,
+        usedCredits: client.usedCredits,
+        maxCredits: client.maxCredits,
+        utilizationPercent: client.maxCredits > 0 ? (client.usedCredits / client.maxCredits) * 100 : 0,
+        pricePerCredit: client.pricePerCreditSamples > 0 ? client.pricePerCreditTotal / client.pricePerCreditSamples : 0,
+        revenue: client.revenue,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
 
     return {
       totalCredits,
@@ -874,7 +950,7 @@ export default function Analytics() {
       creditsChange,
       revenueChange,
     };
-  }, [calculateOutputCredits, colleagues, getClientMonthSummaries, outputTypes, outputs, periodStart, selectedMonth, selectedYear]);
+  }, [calculateOutputCredits, colleagues, comparisonPeriodMonthKeys, currentPeriodMonthKeys, getClientMonthSummaries, outputTypes, outputs, periodStart]);
 
   const teamData = useMemo(() => {
     const activeColleaguesList = colleagues.filter((c) => c.status === 'active');
@@ -1045,8 +1121,9 @@ export default function Analytics() {
             <div className="pt-4 border-t">
               <h2 className="text-lg font-semibold mb-4">📊 Marže víceprací</h2>
               <ExtraWorkMarginSection
-                year={selectedYear}
-                month={selectedMonth}
+                periodStart={periodStart}
+                periodEnd={periodEnd}
+                periodLabel={periodLabel}
               />
             </div>
           </div>
@@ -1054,8 +1131,11 @@ export default function Analytics() {
 
         <TabsContent value="upsells" className="mt-6">
           <UpsellCommissionsAnalytics
-            year={selectedYear}
-            month={selectedMonth}
+            periodStart={periodStart}
+            periodEnd={periodEnd}
+            comparisonStart={comparisonStart}
+            comparisonEnd={comparisonEnd}
+            periodLabel={periodLabel}
           />
         </TabsContent>
 
