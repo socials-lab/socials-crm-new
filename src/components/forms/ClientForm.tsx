@@ -246,7 +246,7 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
                 <FormItem>
                   <FormLabel>DIČ</FormLabel>
                   <FormControl>
-                    <Input placeholder="CZ12345678" {...field} value={field.value || ''} />
+                    <Input placeholder="CZ12345678 / SK1234567890" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

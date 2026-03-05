@@ -123,14 +123,20 @@ export const czechIco = z.string()
   .refine(val => validateIcoChecksum(val), 'Neplatné IČO - kontrolní součet nesouhlasí');
 
 /**
- * Validates Czech DIČ format (optional)
- * - CZ prefix followed by 8-10 digits
+ * Validates supported DIČ/VAT formats (optional)
+ * - Czech VAT: CZ + 8-10 digits
+ * - Slovak VAT: SK + 10 digits
+ * - Slovak local DIČ: 10 digits (without country prefix)
  */
+function isSupportedDicFormat(value: string): boolean {
+  return /^CZ\d{8,10}$/.test(value) || /^SK\d{10}$/.test(value) || /^\d{10}$/.test(value);
+}
+
 export const czechDic = z.string()
   .transform(val => val?.trim() || '')
   .refine(
-    val => val === '' || /^CZ\d{8,10}$/.test(val),
-    'DIČ musí být ve formátu CZ + 8-10 číslic'
+    val => val === '' || isSupportedDicFormat(val),
+    'DIČ musí být ve formátu CZ12345678, SK1234567890 nebo 10 číslic'
   )
   .transform(val => val === '' ? null : val);
 
