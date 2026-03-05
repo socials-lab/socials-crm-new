@@ -34,6 +34,11 @@ const MONTHS = [
   'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'
 ];
 
+const MONTHS_SHORT = [
+  'Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čvn',
+  'Čvc', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro'
+];
+
 interface ColleagueInvoiceSheetProps {
   colleague: Colleague | null;
   open: boolean;
@@ -139,35 +144,40 @@ export function ColleagueInvoiceSheet({ colleague, open, onOpenChange, initialYe
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
-          {/* Month Selector */}
-          <div className="flex gap-2">
-            <Select value={selectedMonth.toString()} onValueChange={v => setSelectedMonth(Number(v))}>
-              <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {MONTHS.map((m, i) => {
-                  const monthNum = i + 1;
-                  const now = new Date();
-                  const isFuture = selectedYear === now.getFullYear() && monthNum > now.getMonth() + 1;
-                  if (isFuture) return null;
-                  return <SelectItem key={monthNum} value={monthNum.toString()}>{m}</SelectItem>;
-                })}
-              </SelectContent>
-            </Select>
-            <Select value={selectedYear.toString()} onValueChange={v => {
-              const newYear = Number(v);
-              const now = new Date();
-              setSelectedYear(newYear);
-              if (newYear === now.getFullYear() && selectedMonth > now.getMonth() + 1) {
-                setSelectedMonth(now.getMonth() + 1);
-              }
-            }}>
-              <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {availableYears.map(y => (
-                  <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Month selector — horizontal scrollable pills */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+              {monthlyHistory.filter(month => {
+                const now = new Date();
+                return month.year < now.getFullYear() || (month.year === now.getFullYear() && month.month <= now.getMonth() + 1);
+              }).map((month) => {
+                const isSelected = month.year === selectedYear && month.month === selectedMonth;
+                return (
+                  <button
+                    key={`${month.year}-${month.month}`}
+                    onClick={() => {
+                      setSelectedYear(month.year);
+                      setSelectedMonth(month.month);
+                    }}
+                    className={`shrink-0 px-3 py-2 rounded-lg border text-left transition-colors ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'hover:bg-muted/50'
+                    }`}
+                  >
+                    <span className="text-xs font-medium block">
+                      {MONTHS_SHORT[month.month - 1]}
+                    </span>
+                    <span className={`text-sm font-bold block ${isSelected ? 'text-primary' : ''}`}>
+                      {(month.totalEarnings / 1000).toFixed(0)}k
+                    </span>
+                    {month.year !== new Date().getFullYear() && (
+                      <span className="text-[10px] text-muted-foreground">{month.year}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Summary card */}
@@ -304,70 +314,6 @@ export function ColleagueInvoiceSheet({ colleague, open, onOpenChange, initialYe
               </div>
             </>
           )}
-
-          <Separator />
-
-          {/* Monthly history timeline */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              Historie po měsících
-            </h4>
-            <div className="space-y-2">
-              {monthlyHistory.filter(month => {
-                const now = new Date();
-                return month.year < now.getFullYear() || (month.year === now.getFullYear() && month.month <= now.getMonth() + 1);
-              }).map((month) => (
-                <button
-                  key={`${month.year}-${month.month}`}
-                  onClick={() => {
-                    setSelectedYear(month.year);
-                    setSelectedMonth(month.month);
-                  }}
-                  className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                    month.year === selectedYear && month.month === selectedMonth
-                      ? 'border-primary bg-primary/5'
-                      : 'hover:bg-muted/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      {MONTHS[month.month - 1]} {month.year}
-                    </span>
-                    <span className="font-semibold text-primary">
-                      {month.totalEarnings.toLocaleString('cs-CZ')} Kč
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    {month.fixedEarnings > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Briefcase className="h-3 w-3" />
-                        {(month.fixedEarnings / 1000).toFixed(0)}k
-                      </span>
-                    )}
-                    {month.creativeBoostCredits > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Sparkles className="h-3 w-3" />
-                        {month.creativeBoostCredits} kr
-                      </span>
-                    )}
-                    {month.commissionsReward > 0 && (
-                      <span className="flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3" />
-                        {(month.commissionsReward / 1000).toFixed(1)}k
-                      </span>
-                    )}
-                    {month.activitiesCount > 0 && (
-                      <span className="flex items-center gap-1">
-                        <ListTodo className="h-3 w-3" />
-                        {month.activitiesCount}×
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </SheetContent>
     </Sheet>
