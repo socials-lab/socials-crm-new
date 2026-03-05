@@ -548,6 +548,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       logActivity('client_created', 'client', newClient.id, newClient.name);
     },
+  });
 
   const updateClientMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Client> }) => {
