@@ -144,12 +144,23 @@ export function ColleagueInvoiceSheet({ colleague, open, onOpenChange, initialYe
             <Select value={selectedMonth.toString()} onValueChange={v => setSelectedMonth(Number(v))}>
               <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {MONTHS.map((m, i) => (
-                  <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
-                ))}
+                {MONTHS.map((m, i) => {
+                  const monthNum = i + 1;
+                  const now = new Date();
+                  const isFuture = selectedYear === now.getFullYear() && monthNum > now.getMonth() + 1;
+                  if (isFuture) return null;
+                  return <SelectItem key={monthNum} value={monthNum.toString()}>{m}</SelectItem>;
+                })}
               </SelectContent>
             </Select>
-            <Select value={selectedYear.toString()} onValueChange={v => setSelectedYear(Number(v))}>
+            <Select value={selectedYear.toString()} onValueChange={v => {
+              const newYear = Number(v);
+              const now = new Date();
+              setSelectedYear(newYear);
+              if (newYear === now.getFullYear() && selectedMonth > now.getMonth() + 1) {
+                setSelectedMonth(now.getMonth() + 1);
+              }
+            }}>
               <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {availableYears.map(y => (
