@@ -123,10 +123,15 @@ export default function Dashboard() {
   const metrics = useMemo(() => {
     const activeClients = clients.filter(c => c.status === 'active');
     const activeEngagements = engagements.filter(e => e.status === 'active');
-    const activeColleagues = colleagues.filter(c => c.status === 'active');
+    const activeEngagementIds = new Set(activeEngagements.map(e => e.id));
+    const activeMonthlyServices = (engagementServices || []).filter(service =>
+      service.is_active &&
+      service.billing_type === 'monthly' &&
+      activeEngagementIds.has(service.engagement_id)
+    );
     
-    // MRR calculation
-    const mrr = activeEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    // MRR from active monthly services (matches invoicing logic better than stale engagement.monthly_fee)
+    const mrr = activeMonthlyServices.reduce((sum, service) => sum + (service.price || 0), 0);
     const arr = mrr * 12;
     
     // Pipeline value (leads not yet won)
@@ -134,20 +139,14 @@ export default function Dashboard() {
       .filter(l => !['won', 'lost', 'postponed'].includes(l.stage))
       .reduce((sum, l) => sum + (l.estimated_price || 0), 0);
     
-    // Team costs (simplified) - monthly fixed + hourly costs
-    const teamCosts = activeColleagues.reduce((sum, c) => 
-      sum + (c.monthly_fixed_cost || 0) + ((c.internal_hourly_cost || 0) * (c.capacity_hours_per_month || 0)), 0);
-    
-    // Assignment costs from engagement_assignments
+    // Assignment costs from engagement_assignments (source of truth for delivery costs)
     const assignmentCosts = assignments.reduce((sum, a) => {
-      // Only count assignments for active engagements
-      const isActiveEngagement = activeEngagements.some(e => e.id === a.engagement_id);
-      if (!isActiveEngagement) return sum;
+      if (!activeEngagementIds.has(a.engagement_id)) return sum;
       return sum + (a.monthly_cost || 0);
     }, 0);
     
-    // Total costs = team overhead + assignment costs
-    const totalCosts = teamCosts + assignmentCosts;
+    // Keep costs aligned with analytics (assignment-based engagement costs)
+    const totalCosts = assignmentCosts;
     
     // Planned margin (absolute) = MRR - Total costs
     const plannedMargin = mrr - totalCosts;
@@ -155,23 +154,22 @@ export default function Dashboard() {
     // Profitability % = (MRR - Costs) / MRR * 100
     const profitabilityPercent = mrr > 0 ? ((mrr - totalCosts) / mrr * 100) : 0;
     
-    // Gross margin estimate (keeping for backwards compatibility)
-    const grossMargin = mrr > 0 ? ((mrr - teamCosts) / mrr * 100) : 0;
+    // Gross margin kept for compatibility; currently equals profitability with assignment-based costs
+    const grossMargin = profitabilityPercent;
     
     return {
       activeClients: activeClients.length,
       activeEngagements: activeEngagements.length,
-      activeColleagues: activeColleagues.length,
+      activeColleagues: colleagues.filter(c => c.status === 'active').length,
       mrr,
       arr,
       pipelineValue,
-      teamCosts,
       totalCosts,
       plannedMargin,
       profitabilityPercent,
       grossMargin,
     };
-  }, [clients, engagements, colleagues, leads, assignments]);
+  }, [clients, engagements, colleagues, leads, assignments, engagementServices]);
 
   // === PENDING APPROVALS ===
   const pendingApprovals = useMemo(() => {
@@ -467,15 +465,33 @@ export default function Dashboard() {
 
   // === NEXT MONTH INVOICING ===
   const nextMonthInvoicing = useMemo(() => {
-    const activeEngagements = engagements.filter(e => e.status === 'active');
-    const retainerTotal = activeEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const now = new Date();
+    const invoiceYear = now.getFullYear();
+    const invoiceMonth = now.getMonth() + 1;
+    const invoicePeriod = `${invoiceYear}-${String(invoiceMonth).padStart(2, '0')}`;
+    const activeEngagementIds = new Set(
+      engagements.filter(e => e.status === 'active').map(e => e.id)
+    );
+    const retainerTotal = (engagementServices || [])
+      .filter(service =>
+        service.is_active &&
+        service.billing_type === 'monthly' &&
+        activeEngagementIds.has(service.engagement_id) &&
+        !service.creative_boost_max_credits
+      )
+      .reduce((sum, service) => sum + (service.price || 0), 0);
     
     const extraWorksToInvoice = extraWorks
-      ?.filter(w => w.status === 'ready_to_invoice')
+      ?.filter(w => w.status === 'ready_to_invoice' && w.billing_period === invoicePeriod)
       .reduce((sum, w) => sum + w.amount, 0) || 0;
     
     const oneOffPending = engagementServices
-      ?.filter(s => s.billing_type === 'one_off' && s.invoicing_status === 'pending')
+      ?.filter(s =>
+        s.is_active &&
+        s.billing_type === 'one_off' &&
+        s.invoicing_status === 'pending' &&
+        activeEngagementIds.has(s.engagement_id)
+      )
       .reduce((sum, s) => sum + (s.price || 0), 0) || 0;
     
     return {
@@ -567,7 +583,7 @@ export default function Dashboard() {
   , [leadsPipeline]);
 
   // Previous month name (invoicing is for previous month's work)
-  const previousMonthName = format(new Date(), 'LLLL', { locale: cs });
+  const previousMonthName = format(addDays(new Date(new Date().getFullYear(), new Date().getMonth(), 1), -1), 'LLLL', { locale: cs });
 
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
