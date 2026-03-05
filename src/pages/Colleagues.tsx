@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Plus, Users, Shield, Coins, FileText } from 'lucide-react';
+import { Search, Plus, Users, Shield, FileText } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,6 @@ import type { ColleagueStatus, Colleague } from '@/types/crm';
 import { toast } from 'sonner';
 import { CreativeBoostProvider, useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { supabase } from '@/integrations/supabase/client';
-import { TeamEarningsOverview } from '@/components/colleagues/TeamEarningsOverview';
 import { TeamInvoicingOverview } from '@/components/colleagues/TeamInvoicingOverview';
 import { enrichColleaguesWithDemoData } from '@/utils/colleagueDemoData';
 
@@ -196,7 +195,7 @@ function ColleaguesContent() {
         description="Kolegové, přístupy a oprávnění"
       />
 
-      <Tabs defaultValue={tabParam === 'access' && superAdmin ? 'access' : tabParam === 'earnings' && superAdmin ? 'earnings' : tabParam === 'invoicing' && superAdmin ? 'invoicing' : 'team'} className="w-full">
+      <Tabs defaultValue={tabParam === 'access' && superAdmin ? 'access' : tabParam === 'invoicing' && superAdmin ? 'invoicing' : 'team'} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="team" className="gap-2">
             <Users className="h-4 w-4" />
@@ -205,13 +204,7 @@ function ColleaguesContent() {
           {superAdmin && (
             <TabsTrigger value="invoicing" className="gap-2">
               <FileText className="h-4 w-4" />
-              Výkazy
-            </TabsTrigger>
-          )}
-          {superAdmin && (
-            <TabsTrigger value="earnings" className="gap-2">
-              <Coins className="h-4 w-4" />
-              Odměny týmu
+              Výkazy a odměny
             </TabsTrigger>
           )}
           {superAdmin && (
@@ -317,11 +310,6 @@ function ColleaguesContent() {
           </TabsContent>
         )}
 
-        {superAdmin && (
-          <TabsContent value="earnings" className="space-y-4">
-            <TeamEarningsOverview />
-          </TabsContent>
-        )}
 
         {superAdmin && (
           <TabsContent value="access" className="space-y-4">
