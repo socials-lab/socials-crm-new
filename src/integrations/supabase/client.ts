@@ -11,10 +11,9 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// In-memory promise-based mutex to serialize token refresh calls within the same tab.
-// This replaces the noOpLock that was allowing concurrent refresh attempts, which caused
-// race conditions: the first refresh invalidates the old token, then the second sends
-// the now-invalid token, causing Supabase to revoke the entire session.
+// In-memory promise-based mutex to serialize token refresh calls within one tab.
+// Browser LockManager (navigator.locks) should be preferred because it also coordinates
+// across tabs/windows. This in-memory fallback is used only when LockManager is unavailable.
 const locks = new Map<string, Promise<unknown>>();
 
 const inMemoryLock = async <R>(
@@ -29,8 +28,18 @@ const inMemoryLock = async <R>(
   locks.set(name, next);
 
   try {
-    // Wait for the previous holder to finish before running fn
-    await existing;
+    // Wait for the previous holder to finish before running fn.
+    // Respect Supabase's acquire timeout to avoid indefinite waiting.
+    if (Number.isFinite(acquireTimeout) && acquireTimeout > 0) {
+      await Promise.race([
+        existing,
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error(`Lock acquire timeout: ${name}`)), acquireTimeout);
+        }),
+      ]);
+    } else {
+      await existing;
+    }
     return await fn();
   } finally {
     resolve!();
@@ -41,12 +50,17 @@ const inMemoryLock = async <R>(
   }
 };
 
+const authLock =
+  typeof navigator !== 'undefined' && 'locks' in navigator
+    ? undefined // Let supabase-js use browser LockManager for cross-tab refresh locking.
+    : inMemoryLock;
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    lock: inMemoryLock, // In-memory mutex to serialize token refreshes within the same tab
+    ...(authLock ? { lock: authLock } : {}),
   }
 });
