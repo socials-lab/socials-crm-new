@@ -108,6 +108,15 @@ export function AssignmentForm({
     c => c.status === 'active' && !assignedColleagueIds.includes(c.id)
   );
 
+  function handleColleagueChange(colleagueId: string) {
+    form.setValue('colleague_id', colleagueId, { shouldValidate: true, shouldDirty: true });
+    const selectedColleague = availableColleagues.find(colleague => colleague.id === colleagueId);
+    if (!selectedColleague) {
+      throw new Error(`Selected colleague ${colleagueId} is not available for assignment.`);
+    }
+    form.setValue('role_on_engagement', selectedColleague.position, { shouldValidate: true, shouldDirty: true });
+  }
+
   const handleManualSubmit = async () => {
     const isValid = await form.trigger();
     if (!isValid) {
@@ -161,7 +170,7 @@ export function AssignmentForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Kolega</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={handleColleagueChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Vyberte kolegu" />
