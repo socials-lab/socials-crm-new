@@ -159,7 +159,7 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
     }
   };
 
-  const inviteToCrm = form.watch('invite_to_crm');
+  
 
   const handleSubmit = (data: ColleagueFormData) => {
     onSubmit({
@@ -616,50 +616,34 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
         {showInviteOption && !colleague && (
           <div className="border-t pt-4 space-y-4">
             <h4 className="font-medium text-sm">Přístup do CRM</h4>
+            <p className="text-sm text-muted-foreground">
+              Novému kolegovi bude automaticky odeslána pozvánka do CRM s přístupem k sekci „Můj přehled".
+            </p>
+            
             <FormField
               control={form.control}
-              name="invite_to_crm"
+              name="role"
               render={({ field }) => (
-                <FormItem className="flex items-center gap-3">
-                  <FormControl>
-                    <Checkbox 
-                      checked={field.value} 
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormLabel className="!mt-0 cursor-pointer">
-                    Pozvat jako uživatele CRM (pošle email s pozvánkou)
-                  </FormLabel>
+                <FormItem>
+                  <FormLabel>Role v systému</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="management">Management</SelectItem>
+                      <SelectItem value="project_manager">Project Manager</SelectItem>
+                      <SelectItem value="specialist">Specialista</SelectItem>
+                      <SelectItem value="finance">Finance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
                 </FormItem>
               )}
             />
-            
-            {inviteToCrm && (
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role v systému</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="management">Management</SelectItem>
-                        <SelectItem value="project_manager">Project Manager</SelectItem>
-                        <SelectItem value="specialist">Specialista</SelectItem>
-                        <SelectItem value="finance">Finance</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
           </div>
         )}
 
