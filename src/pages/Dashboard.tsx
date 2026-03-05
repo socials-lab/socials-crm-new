@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Building2, 
   FileText, 
@@ -15,18 +16,11 @@ import {
   ArrowRight,
   Briefcase,
   UserPlus,
-  UserMinus,
   Package,
   Bell,
   Activity,
   Receipt,
   Wrench,
-  Send,
-  FileSignature,
-  CheckCircle2,
-  CalendarCheck,
-  UserCheck,
-  ClipboardList,
   PlusCircle,
   BarChart3,
 } from 'lucide-react';
@@ -50,6 +44,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
 import { getTargetForMonth, calculateActualRevenue, formatCurrencyShort } from '@/utils/businessPlanUtils';
+import { supabase } from '@/integrations/supabase/client';
 import type { LucideIcon } from 'lucide-react';
 
 interface ActivityEvent {
@@ -61,6 +56,59 @@ interface ActivityEvent {
   colorClass: string;
   value?: number;
   isNegative?: boolean;
+}
+
+interface HistoryRowBase {
+  id: string;
+  change_type: string;
+  created_at: string | null;
+  field_label: string | null;
+  old_value: string | null;
+  new_value: string | null;
+}
+
+type DashboardHistoryRow =
+  | (HistoryRowBase & { entity: 'lead'; lead_id: string })
+  | (HistoryRowBase & { entity: 'engagement'; engagement_id: string })
+  | (HistoryRowBase & { entity: 'client'; client_id: string })
+  | (HistoryRowBase & { entity: 'extra_work'; extra_work_id: string })
+  | (HistoryRowBase & { entity: 'meeting'; meeting_id: string })
+  | (HistoryRowBase & { entity: 'applicant'; applicant_id: string });
+
+const CHANGE_TYPE_LABELS: Record<string, string> = {
+  created: 'Vytvořeno',
+  deleted: 'Smazáno',
+  stage_change: 'Změna stavu',
+  status_change: 'Změna stavu',
+  field_update: 'Úprava pole',
+  owner_change: 'Změna vlastníka',
+  note_added: 'Poznámka',
+  converted: 'Konverze',
+  tier_change: 'Změna tieru',
+  contact_added: 'Kontakt přidán',
+  contact_removed: 'Kontakt odebrán',
+  service_added: 'Služba přidána',
+  service_removed: 'Služba odebrána',
+  service_updated: 'Služba upravena',
+  colleague_assigned: 'Kolega přiřazen',
+  colleague_removed: 'Kolega odebrán',
+  colleague_updated: 'Kolega upraven',
+  end_date_set: 'Nastaven konec',
+  invoiced: 'Vyfakturováno',
+  rescheduled: 'Přeplánováno',
+  cancelled: 'Zrušeno',
+  participant_added: 'Účastník přidán',
+  participant_removed: 'Účastník odebrán',
+};
+
+function getChangeTypeLabel(changeType: string) {
+  return CHANGE_TYPE_LABELS[changeType] || changeType;
+}
+
+function getFieldChangeSubtitle(entityName: string, oldValue: string | null, newValue: string | null) {
+  const fromValue = oldValue && oldValue.trim() !== '' ? oldValue : '(prázdné)';
+  const toValue = newValue && newValue.trim() !== '' ? newValue : '(prázdné)';
+  return `${entityName}: ${fromValue} -> ${toValue}`;
 }
 
 function formatRelativeDate(dateIso: string) {
@@ -103,6 +151,68 @@ export default function Dashboard() {
   const { pendingRequests } = useModificationRequests();
   
   const canSeeFinancials = userCanSeeFinancials || isSuperAdmin;
+  const activityFromIso = useMemo(() => subDays(new Date(), 7).toISOString(), []);
+
+  const { data: activityHistoryRows = [] } = useQuery({
+    queryKey: ['dashboard-activity-history', activityFromIso],
+    queryFn: async (): Promise<DashboardHistoryRow[]> => {
+      const [leadHistory, engagementHistory, clientHistory, extraWorkHistory, meetingHistory, applicantHistory] = await Promise.all([
+        supabase
+          .from('lead_history')
+          .select('id, lead_id, change_type, created_at, field_label, old_value, new_value')
+          .gte('created_at', activityFromIso)
+          .order('created_at', { ascending: false })
+          .limit(150),
+        supabase
+          .from('engagement_history')
+          .select('id, engagement_id, change_type, created_at, field_label, old_value, new_value')
+          .gte('created_at', activityFromIso)
+          .order('created_at', { ascending: false })
+          .limit(150),
+        supabase
+          .from('client_history')
+          .select('id, client_id, change_type, created_at, field_label, old_value, new_value')
+          .gte('created_at', activityFromIso)
+          .order('created_at', { ascending: false })
+          .limit(150),
+        supabase
+          .from('extra_work_history')
+          .select('id, extra_work_id, change_type, created_at, field_label, old_value, new_value')
+          .gte('created_at', activityFromIso)
+          .order('created_at', { ascending: false })
+          .limit(150),
+        supabase
+          .from('meeting_history')
+          .select('id, meeting_id, change_type, created_at, field_label, old_value, new_value')
+          .gte('created_at', activityFromIso)
+          .order('created_at', { ascending: false })
+          .limit(150),
+        supabase
+          .from('applicant_history')
+          .select('id, applicant_id, change_type, created_at, field_label, old_value, new_value')
+          .gte('created_at', activityFromIso)
+          .order('created_at', { ascending: false })
+          .limit(150),
+      ]);
+
+      const firstError = leadHistory.error
+        || engagementHistory.error
+        || clientHistory.error
+        || extraWorkHistory.error
+        || meetingHistory.error
+        || applicantHistory.error;
+      if (firstError) throw firstError;
+
+      return [
+        ...(leadHistory.data || []).map((row) => ({ ...row, entity: 'lead' as const })),
+        ...(engagementHistory.data || []).map((row) => ({ ...row, entity: 'engagement' as const })),
+        ...(clientHistory.data || []).map((row) => ({ ...row, entity: 'client' as const })),
+        ...(extraWorkHistory.data || []).map((row) => ({ ...row, entity: 'extra_work' as const })),
+        ...(meetingHistory.data || []).map((row) => ({ ...row, entity: 'meeting' as const })),
+        ...(applicantHistory.data || []).map((row) => ({ ...row, entity: 'applicant' as const })),
+      ];
+    },
+  });
 
   // === BUSINESS PLAN (current month) ===
   const currentMonthPlan = useMemo(() => {
@@ -185,200 +295,93 @@ export default function Dashboard() {
     };
   }, [pendingRequests, extraWorks]);
 
-  // === RECENT ACTIVITY FEED (last 7 days) ===
+  // === RECENT ACTIVITY FEED (history tables, last 7 days) ===
   const recentEvents = useMemo(() => {
-    const sevenDaysAgo = subDays(new Date(), 7);
-    const events: ActivityEvent[] = [];
+    const leadsById = new Map(leads.map((lead) => [lead.id, lead]));
+    const engagementsById = new Map(engagements.map((engagement) => [engagement.id, engagement]));
+    const clientsById = new Map(clients.map((client) => [client.id, client]));
+    const extraWorksById = new Map((extraWorks || []).map((work) => [work.id, work]));
+    const meetingsById = new Map(meetings.map((meeting) => [meeting.id, meeting]));
+    const applicantsById = new Map(applicants.map((applicant) => [applicant.id, applicant]));
 
-    leads.forEach((lead) => {
-      if (lead.created_at && isAfter(parseISO(lead.created_at), sevenDaysAgo)) {
-        events.push({
-          id: `lead-created-${lead.id}`,
-          title: 'Nový lead',
-          subtitle: lead.company_name,
-          at: lead.created_at,
-          icon: PlusCircle,
-          colorClass: 'text-slate-600 bg-slate-100 dark:bg-slate-800',
-        });
+    const getEventConfig = (entity: DashboardHistoryRow['entity']) => {
+      switch (entity) {
+        case 'lead':
+          return { entityLabel: 'Lead', icon: PlusCircle, colorClass: 'text-slate-600 bg-slate-100 dark:bg-slate-800' };
+        case 'engagement':
+          return { entityLabel: 'Zakázka', icon: Briefcase, colorClass: 'text-blue-600 bg-blue-100 dark:bg-blue-900' };
+        case 'client':
+          return { entityLabel: 'Klient', icon: Building2, colorClass: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900' };
+        case 'extra_work':
+          return { entityLabel: 'Vícepráce', icon: Wrench, colorClass: 'text-violet-600 bg-violet-100 dark:bg-violet-900' };
+        case 'meeting':
+          return { entityLabel: 'Meeting', icon: Calendar, colorClass: 'text-cyan-600 bg-cyan-100 dark:bg-cyan-900' };
+        case 'applicant':
+          return { entityLabel: 'Uchazeč', icon: Users, colorClass: 'text-amber-600 bg-amber-100 dark:bg-amber-900' };
       }
-      if (lead.converted_at && isAfter(parseISO(lead.converted_at), sevenDaysAgo)) {
-        events.push({
-          id: `lead-converted-${lead.id}`,
-          title: 'Nový klient',
-          subtitle: `${lead.company_name} -> spolupráce zahájena`,
-          at: lead.converted_at,
-          icon: UserPlus,
-          colorClass: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900',
-          value: canSeeFinancials ? (lead.estimated_price || 0) : undefined,
-        });
-      }
-      if (lead.offer_sent_at && isAfter(parseISO(lead.offer_sent_at), sevenDaysAgo)) {
-        events.push({
-          id: `lead-offer-sent-${lead.id}`,
-          title: 'Nabídka odeslána',
-          subtitle: `${lead.company_name} -> nabídka připravena`,
-          at: lead.offer_sent_at,
-          icon: Send,
-          colorClass: 'text-pink-600 bg-pink-100 dark:bg-pink-900',
-        });
-      }
-      if (lead.contract_signed_at && isAfter(parseISO(lead.contract_signed_at), sevenDaysAgo)) {
-        events.push({
-          id: `lead-contract-signed-${lead.id}`,
-          title: 'Smlouva podepsána',
-          subtitle: `${lead.company_name} -> připraveno k předání`,
-          at: lead.contract_signed_at,
-          icon: FileSignature,
-          colorClass: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900',
-          value: canSeeFinancials ? (lead.estimated_price || 0) : undefined,
-        });
-      }
-      if (lead.onboarding_form_completed_at && isAfter(parseISO(lead.onboarding_form_completed_at), sevenDaysAgo)) {
-        events.push({
-          id: `lead-onboarding-completed-${lead.id}`,
-          title: 'Onboarding vyplněn',
-          subtitle: `${lead.company_name} -> klient doplnil vstupní data`,
-          at: lead.onboarding_form_completed_at,
-          icon: ClipboardList,
-          colorClass: 'text-cyan-600 bg-cyan-100 dark:bg-cyan-900',
-        });
-      }
-      if (lead.stage === 'lost' && lead.updated_at && isAfter(parseISO(lead.updated_at), sevenDaysAgo)) {
-        events.push({
-          id: `lead-lost-${lead.id}`,
-          title: 'Lead ztracen',
-          subtitle: lead.company_name,
-          at: lead.updated_at,
-          icon: TrendingDown,
-          colorClass: 'text-red-600 bg-red-100 dark:bg-red-900',
-          value: canSeeFinancials ? (lead.estimated_price || 0) : undefined,
-          isNegative: true,
-        });
-      }
-    });
+    };
 
-    engagements.forEach((engagement) => {
-      if (engagement.start_date && isAfter(parseISO(engagement.start_date), sevenDaysAgo)) {
-        const clientName = clients.find((c) => c.id === engagement.client_id)?.brand_name || 'Bez klienta';
-        events.push({
-          id: `engagement-start-${engagement.id}`,
-          title: 'Zakázka zahájena',
-          subtitle: `${clientName} -> ${engagement.name}`,
-          at: engagement.start_date,
-          icon: Briefcase,
-          colorClass: 'text-blue-600 bg-blue-100 dark:bg-blue-900',
-        });
-      }
-      if (engagement.end_date && ['completed', 'cancelled'].includes(engagement.status || '') && isAfter(parseISO(engagement.end_date), sevenDaysAgo)) {
-        events.push({
-          id: `engagement-ended-${engagement.id}`,
-          title: 'Zakázka ukončena',
-          subtitle: engagement.name,
-          at: engagement.end_date,
-          icon: UserMinus,
-          colorClass: 'text-muted-foreground bg-muted',
-        });
-      }
-    });
+    const events: ActivityEvent[] = activityHistoryRows
+      .filter((row) => !!row.created_at)
+      .map((row) => {
+        const config = getEventConfig(row.entity);
+        const title = `${config.entityLabel}: ${getChangeTypeLabel(row.change_type)}`;
+        const subtitlePrefix = row.field_label ? `${row.field_label} - ` : '';
 
-    (extraWorks || []).forEach((work) => {
-      if (work.created_at && isAfter(parseISO(work.created_at), sevenDaysAgo)) {
-        events.push({
-          id: `extrawork-created-${work.id}`,
-          title: 'Nová vícepráce',
-          subtitle: work.description || 'Bez popisu',
-          at: work.created_at,
-          icon: Wrench,
-          colorClass: 'text-violet-600 bg-violet-100 dark:bg-violet-900',
-          value: canSeeFinancials ? work.amount : undefined,
-        });
-      }
-      if (work.approval_date && isAfter(parseISO(work.approval_date), sevenDaysAgo)) {
-        events.push({
-          id: `extrawork-approved-${work.id}`,
-          title: 'Vícepráce schválena',
-          subtitle: work.description || 'Bez popisu',
-          at: work.approval_date,
-          icon: CheckCircle,
-          colorClass: 'text-green-600 bg-green-100 dark:bg-green-900',
-          value: canSeeFinancials ? work.amount : undefined,
-        });
-      }
-    });
+        if (row.entity === 'lead') {
+          const leadName = leadsById.get(row.lead_id)?.company_name || 'Neznámý lead';
+          const subtitle = row.change_type === 'field_update' || row.change_type === 'stage_change' || row.change_type === 'owner_change'
+            ? `${subtitlePrefix}${getFieldChangeSubtitle(leadName, row.old_value, row.new_value)}`
+            : `${subtitlePrefix}${leadName}`;
+          return { id: `lead-${row.id}`, title, subtitle, at: row.created_at!, icon: config.icon, colorClass: config.colorClass };
+        }
 
-    (pendingRequests || []).forEach((request) => {
-      if (request.created_at && isAfter(parseISO(request.created_at), sevenDaysAgo)) {
-        events.push({
-          id: `modification-created-${request.id}`,
-          title: 'Nový návrh změny',
-          subtitle: request.engagement_name,
-          at: request.created_at,
-          icon: FileText,
-          colorClass: 'text-amber-600 bg-amber-100 dark:bg-amber-900',
-        });
-      }
-      if (request.reviewed_at && ['approved', 'client_approved'].includes(request.status) && isAfter(parseISO(request.reviewed_at), sevenDaysAgo)) {
-        events.push({
-          id: `modification-approved-${request.id}`,
-          title: request.status === 'client_approved' ? 'Návrh potvrzen klientem' : 'Návrh schválen',
-          subtitle: request.engagement_name,
-          at: request.reviewed_at,
-          icon: CheckCircle2,
-          colorClass: 'text-green-600 bg-green-100 dark:bg-green-900',
-        });
-      }
-    });
+        if (row.entity === 'engagement') {
+          const engagement = engagementsById.get(row.engagement_id);
+          const engagementName = engagement?.name || 'Neznámá zakázka';
+          const clientName = engagement ? (clientsById.get(engagement.client_id)?.brand_name || clientsById.get(engagement.client_id)?.name || 'Bez klienta') : 'Bez klienta';
+          const baseName = `${clientName} -> ${engagementName}`;
+          const subtitle = row.change_type === 'field_update' || row.change_type === 'status_change'
+            ? `${subtitlePrefix}${getFieldChangeSubtitle(baseName, row.old_value, row.new_value)}`
+            : `${subtitlePrefix}${baseName}`;
+          return { id: `engagement-${row.id}`, title, subtitle, at: row.created_at!, icon: config.icon, colorClass: config.colorClass };
+        }
 
-    meetings.forEach((meeting) => {
-      if (meeting.created_at && isAfter(parseISO(meeting.created_at), sevenDaysAgo)) {
-        events.push({
-          id: `meeting-created-${meeting.id}`,
-          title: 'Meeting naplánován',
-          subtitle: meeting.title,
-          at: meeting.created_at,
-          icon: Calendar,
-          colorClass: 'text-blue-600 bg-blue-100 dark:bg-blue-900',
-        });
-      }
-      if (meeting.status === 'completed' && meeting.scheduled_at && isAfter(parseISO(meeting.scheduled_at), sevenDaysAgo)) {
-        events.push({
-          id: `meeting-completed-${meeting.id}`,
-          title: 'Meeting proběhl',
-          subtitle: meeting.title,
-          at: meeting.scheduled_at,
-          icon: CalendarCheck,
-          colorClass: 'text-teal-600 bg-teal-100 dark:bg-teal-900',
-        });
-      }
-    });
+        if (row.entity === 'client') {
+          const clientName = clientsById.get(row.client_id)?.brand_name || clientsById.get(row.client_id)?.name || 'Neznámý klient';
+          const subtitle = row.change_type === 'field_update' || row.change_type === 'status_change' || row.change_type === 'tier_change'
+            ? `${subtitlePrefix}${getFieldChangeSubtitle(clientName, row.old_value, row.new_value)}`
+            : `${subtitlePrefix}${clientName}`;
+          return { id: `client-${row.id}`, title, subtitle, at: row.created_at!, icon: config.icon, colorClass: config.colorClass };
+        }
 
-    applicants.forEach((applicant) => {
-      if (applicant.created_at && isAfter(parseISO(applicant.created_at), sevenDaysAgo)) {
-        events.push({
-          id: `applicant-created-${applicant.id}`,
-          title: 'Nový uchazeč',
-          subtitle: applicant.full_name,
-          at: applicant.created_at,
-          icon: Users,
-          colorClass: 'text-slate-600 bg-slate-100 dark:bg-slate-800',
-        });
-      }
-      if (applicant.stage === 'hired' && applicant.updated_at && isAfter(parseISO(applicant.updated_at), sevenDaysAgo)) {
-        events.push({
-          id: `applicant-hired-${applicant.id}`,
-          title: 'Uchazeč přijat',
-          subtitle: applicant.full_name,
-          at: applicant.updated_at,
-          icon: UserCheck,
-          colorClass: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900',
-        });
-      }
-    });
+        if (row.entity === 'extra_work') {
+          const workName = extraWorksById.get(row.extra_work_id)?.description || 'Neznámá vícepráce';
+          const subtitle = row.change_type === 'field_update' || row.change_type === 'status_change'
+            ? `${subtitlePrefix}${getFieldChangeSubtitle(workName, row.old_value, row.new_value)}`
+            : `${subtitlePrefix}${workName}`;
+          return { id: `extra-work-${row.id}`, title, subtitle, at: row.created_at!, icon: config.icon, colorClass: config.colorClass };
+        }
+
+        if (row.entity === 'meeting') {
+          const meetingName = meetingsById.get(row.meeting_id)?.title || 'Neznámý meeting';
+          const subtitle = row.change_type === 'field_update' || row.change_type === 'status_change' || row.change_type === 'rescheduled'
+            ? `${subtitlePrefix}${getFieldChangeSubtitle(meetingName, row.old_value, row.new_value)}`
+            : `${subtitlePrefix}${meetingName}`;
+          return { id: `meeting-${row.id}`, title, subtitle, at: row.created_at!, icon: config.icon, colorClass: config.colorClass };
+        }
+
+        const applicantName = applicantsById.get(row.applicant_id)?.full_name || 'Neznámý uchazeč';
+        const subtitle = row.change_type === 'field_update' || row.change_type === 'stage_change'
+          ? `${subtitlePrefix}${getFieldChangeSubtitle(applicantName, row.old_value, row.new_value)}`
+          : `${subtitlePrefix}${applicantName}`;
+        return { id: `applicant-${row.id}`, title, subtitle, at: row.created_at!, icon: config.icon, colorClass: config.colorClass };
+      });
 
     return events
       .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
       .slice(0, 50);
-  }, [leads, engagements, extraWorks, pendingRequests, meetings, applicants, clients, canSeeFinancials]);
+  }, [activityHistoryRows, leads, engagements, clients, extraWorks, meetings, applicants]);
 
   // === CLIENT HEALTH ===
   const clientHealth = useMemo(() => {

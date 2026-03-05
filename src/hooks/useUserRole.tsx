@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { withTimeout } from '@/utils/asyncUtils';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -59,11 +60,15 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       try {
         // Fetch user role - use raw query to handle both old and new schema
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle();
+        const { data: roleData, error: roleError } = await withTimeout(
+          supabase
+            .from('user_roles')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle(),
+          12000,
+          'Timeout while loading user role'
+        );
 
         if (roleError) {
           console.error('Error fetching user role:', roleError);
@@ -94,11 +99,15 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         }
 
         // Fetch linked colleague
-        const { data: colleagueData, error: colleagueError } = await supabase
-          .from('colleagues')
-          .select('id')
-          .eq('profile_id', userId)
-          .maybeSingle();
+        const { data: colleagueData, error: colleagueError } = await withTimeout(
+          supabase
+            .from('colleagues')
+            .select('id')
+            .eq('profile_id', userId)
+            .maybeSingle(),
+          12000,
+          'Timeout while loading colleague link'
+        );
 
         if (colleagueError) {
           console.error('Error fetching colleague:', colleagueError);
@@ -108,6 +117,12 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         setLastFetchedUserId(userId);
       } catch (error) {
         console.error('Error in fetchUserRole:', error);
+        setRole(null);
+        setIsSuperAdmin(false);
+        setColleagueId(null);
+        setCanSeeFinancials(false);
+        setCanEditAcademy(false);
+        setAllowedPages([]);
       } finally {
         setIsLoading(false);
       }

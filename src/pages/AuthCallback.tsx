@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Loader2 } from 'lucide-react';
+import { withTimeout } from '@/utils/asyncUtils';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -17,6 +18,12 @@ export default function AuthCallback() {
     console.log('[AuthCallback] Component mounted, URL:', window.location.href);
 
     const handleCallback = async () => {
+      const callbackSafetyTimeout = setTimeout(() => {
+        console.error('[AuthCallback] Safety timeout reached');
+        toast.error('Přihlášení trvá příliš dlouho. Zkuste to prosím znovu.');
+        navigate('/auth', { replace: true });
+      }, 15000);
+
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -112,10 +119,21 @@ export default function AuthCallback() {
             sessionStorage.setItem('auth_invite_flow', 'true');
           }
           
-          // Don't manually call setSession - Supabase's detectSessionInUrl handles this
-          // Just wait a moment for Supabase to process
-          console.log('[AuthCallback] Waiting for Supabase to process tokens...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Set session explicitly to avoid callback hangs when detectSessionInUrl races.
+          const { error: setSessionError } = await withTimeout(
+            supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            }),
+            10000,
+            'Timeout while creating auth session'
+          );
+          if (setSessionError) {
+            throw setSessionError;
+          }
+
+          // Remove tokens from URL hash after processing.
+          window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
         }
         
         // Handle invite/recovery token verification (if token is in URL params, not hash)
@@ -162,7 +180,11 @@ export default function AuthCallback() {
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Try to get existing session (might be set by Supabase automatically)
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await withTimeout(
+          supabase.auth.getSession(),
+          10000,
+          'Timeout while checking auth session'
+        );
         
         console.log('[AuthCallback] Session check:', { 
           hasSession: !!session, 
@@ -214,17 +236,20 @@ export default function AuthCallback() {
           
           // Redirect to profile so user can fill in their info
           toast.success('Úspěšně přihlášeno!');
-          navigate('/my-profile');
+          navigate('/my-profile', { replace: true });
         } else {
           // No session and no token - user needs to log in
           console.log('[AuthCallback] No session found, no tokens in URL');
           toast.error('Odkaz pro přihlášení není platný nebo již vypršel. Přihlaste se prosím.');
-          navigate('/auth');
+          navigate('/auth', { replace: true });
         }
       } catch (error) {
         console.error('[AuthCallback] Callback processing error:', error);
         toast.error('Neočekávaná chyba při zpracování přihlášení');
-        navigate('/auth');
+        navigate('/auth', { replace: true });
+      } finally {
+        clearTimeout(callbackSafetyTimeout);
+        setIsProcessing(false);
       }
     };
 

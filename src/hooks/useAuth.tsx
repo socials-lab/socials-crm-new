@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import * as Sentry from '@sentry/react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { withTimeout } from '@/utils/asyncUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -23,20 +24,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isExplicitSignOut = useRef(false);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      // Set initial Sentry user context
-      if (session?.user) {
-        Sentry.setUser({
-          id: session.user.id,
-          email: session.user.email,
-        });
+    // Get initial session; always resolve loading state to avoid infinite spinner.
+    async function initializeAuth() {
+      try {
+        const { data: { session }, error } = await withTimeout(
+          supabase.auth.getSession(),
+          12000,
+          'Timeout while loading auth session'
+        );
+        if (error) {
+          throw error;
+        }
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          Sentry.setUser({
+            id: session.user.id,
+            email: session.user.email,
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing auth session:', error);
+        Sentry.captureException(error);
+        setSession(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    });
+    }
+
+    void initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

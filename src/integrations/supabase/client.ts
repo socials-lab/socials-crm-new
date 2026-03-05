@@ -50,10 +50,9 @@ const inMemoryLock = async <R>(
   }
 };
 
-const authLock =
-  typeof navigator !== 'undefined' && 'locks' in navigator
-    ? undefined // Let supabase-js use browser LockManager for cross-tab refresh locking.
-    : inMemoryLock;
+// Browser LockManager can deadlock in long-lived dev sessions with multiple tabs/clients.
+// Use the local mutex consistently to keep auth calls responsive.
+const authLock = inMemoryLock;
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
