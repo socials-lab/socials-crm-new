@@ -28,7 +28,6 @@ import type { ColleagueStatus, Colleague } from '@/types/crm';
 import { toast } from 'sonner';
 import { CreativeBoostProvider, useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { supabase } from '@/integrations/supabase/client';
-import { TeamEarningsOverview } from '@/components/colleagues/TeamEarningsOverview';
 import { TeamInvoicingOverview } from '@/components/colleagues/TeamInvoicingOverview';
 import { enrichColleaguesWithDemoData } from '@/utils/colleagueDemoData';
 
