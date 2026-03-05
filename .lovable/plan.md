@@ -1,47 +1,47 @@
 
-
-## Plan: Kontrola přefakturace víceprací klientům
+## Plan: Admin přehled výkazů kolegů
 
 ### Problém
-
-Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
+Administrátor potřebí vidět kompletní výkazy všech kolegů — jaké položky mají na faktuře (zakázky, Creative Boost, provize, vícepráce, manuální položky) a jakou celkovou částku.
 
 ### Řešení
+Přidat nový tab **"Výkazy"** na stránku Správa týmu (Colleagues), dostupný pro super adminy. Tab zobrazí:
 
-Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
-- `expected` — vícepráce se má přefakturovat klientovi (default)
-- `reinvoiced` — přefakturováno klientovi
-- `not_expected` — nepředpokládá se přefakturace klientovi
+1. **Přehledová tabulka** — seznam všech aktivních kolegů s celkovou fakturovatelnou částkou za vybraný měsíc
+2. **Rozbalitelný detail** — po kliknutí na kolegu se zobrazí kompletní výpis položek (stejná struktura jako InvoicingOverview na MyWork)
 
-Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
+### Nový komponent: `TeamInvoicingOverview.tsx`
 
-### Databázové změny
+Stránka s:
+- Filtrem měsíc/rok (stejný pattern jako TeamEarningsOverview)
+- KPI karty: celkem k fakturaci za tým, počet kolegů s výkazy
+- Tabulka kolegů: jméno, počet položek, klientská práce (Kč), režijní položky (Kč), celkem (Kč)
+- Po kliknutí na řádek se otevře sheet s kompletním výpisem položek kolegy (re-use logiky z InvoicingOverview)
 
-```sql
-CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
-ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
-ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
-```
+### Nový komponent: `ColleagueInvoiceSheet.tsx`
 
-### UI změny
+Sheet zobrazující:
+- Jméno kolegy, pozice
+- Kompletní seznam položek seskupených podle kategorií (zakázky, CB, provize, vícepráce, marketing, interní práce)
+- Celková částka
 
-**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
-- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
-- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
+### Úprava `src/pages/Colleagues.tsx`
 
-**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
-- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
-- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
+- Přidat tab "Výkazy" (vedle "Odměny týmu")
+- Viditelný pouze pro super adminy
 
-**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
-- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
-- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
+### Datové zdroje
 
-**4. `src/types/crm.ts`**
-- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
+Využijeme stávající hooky:
+- `useCRMData` — assignments, engagements, clients, extraWorks
+- `useCreativeBoostData` — Creative Boost kredity
+- `useUpsellApprovals` — provize
+- `useActivityRewards` (localStorage) — manuální položky
+- `useTeamEarnings` — základní earnings data
 
-### Technické detaily
-- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
-- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
-- Badge se zobrazí vedle existujícího status badge
-
+Pro každého kolegu se vypočítají stejné položky jako na MyWork/InvoicingOverview:
+- Fixní ze zakázek (assignment.monthly_cost s prorated logikou)
+- Creative Boost odměny
+- Schválené provize za upsell
+- Vícepráce (hours × internal_hourly_rate)
+- Manuální položky (marketing, overhead, client_work)
