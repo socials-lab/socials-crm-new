@@ -314,7 +314,10 @@ export function ColleagueInvoiceSheet({ colleague, open, onOpenChange, initialYe
               Historie po měsících
             </h4>
             <div className="space-y-2">
-              {monthlyHistory.map((month) => (
+              {monthlyHistory.filter(month => {
+                const now = new Date();
+                return month.year < now.getFullYear() || (month.year === now.getFullYear() && month.month <= now.getMonth() + 1);
+              }).map((month) => (
                 <button
                   key={`${month.year}-${month.month}`}
                   onClick={() => {
