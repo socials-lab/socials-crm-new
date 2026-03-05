@@ -2,6 +2,8 @@ import { useState, useCallback, createContext, useContext, ReactNode } from 'rea
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { logActivity } from '@/services/activityLogger';
+import type { Lead, LeadStage, LeadNote, LeadChangeType, LeadHistoryEntry, LeadNoteType } from '@/types/crm';
 import type { Lead, LeadStage, LeadNote, LeadChangeType, LeadHistoryEntry, LeadNoteType } from '@/types/crm';
 
 // Field labels for history display
@@ -412,6 +414,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (newLead) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       addHistoryEntry(newLead.id, 'created', null, null, newLead.company_name);
+      logActivity('lead_created', 'lead', newLead.id, newLead.company_name);
     },
   });
 
@@ -423,8 +426,14 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       }).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
-  });
+    onSuccess: (_, { id, data }) => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      if (data.stage) {
+        logActivity('lead_stage_changed', 'lead', id, undefined, { new_stage: data.stage });
+      } else {
+        logActivity('lead_updated', 'lead', id);
+      }
+    },
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
