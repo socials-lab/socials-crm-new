@@ -35,6 +35,7 @@ export interface ColleagueInvoiceData {
   extraWorkItems: { name: string; amount: number; hours?: number | null; rate?: number | null }[];
   manualItems: { name: string; category: string; amount: number }[];
   clientTotal: number;
+  marketingTotal: number;
   internalTotal: number;
   grandTotal: number;
 }
@@ -135,6 +136,10 @@ function buildColleagueInvoiceData(
     + extraWorkItems.reduce((s: number, i: any) => s + i.amount, 0)
     + manualItems.filter(i => i.category === 'client_work').reduce((s, i) => s + i.amount, 0);
   
+  const marketingTotal = manualItems
+    .filter(i => i.category === 'marketing')
+    .reduce((s, i) => s + i.amount, 0);
+
   const internalTotal = manualItems
     .filter(i => i.category === 'marketing' || i.category === 'overhead')
     .reduce((s, i) => s + i.amount, 0);
@@ -150,6 +155,7 @@ function buildColleagueInvoiceData(
     extraWorkItems,
     manualItems,
     clientTotal,
+    marketingTotal,
     internalTotal,
     grandTotal,
     itemCount,
@@ -271,10 +277,11 @@ export function TeamInvoicingOverview() {
         </CardHeader>
         <CardContent className="p-0">
           {/* Desktop header */}
-          <div className="hidden md:grid grid-cols-[1fr_80px_120px_120px_120px_80px] gap-2 px-4 py-2 border-b text-xs font-medium text-muted-foreground">
+          <div className="hidden md:grid grid-cols-[1fr_80px_120px_120px_120px_120px_80px] gap-2 px-4 py-2 border-b text-xs font-medium text-muted-foreground">
             <span>Kolega</span>
             <span className="text-center">Položek</span>
             <span className="text-right">Klientská</span>
+            <span className="text-right">Marketing</span>
             <span className="text-right">Režijní</span>
             <span className="text-right">Celkem</span>
             <span></span>
@@ -287,7 +294,7 @@ export function TeamInvoicingOverview() {
                 className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
                 onClick={() => handleViewDetail(data.colleague)}
               >
-                <div className="md:grid md:grid-cols-[1fr_80px_120px_120px_120px_80px] md:gap-2 md:items-center">
+                <div className="md:grid md:grid-cols-[1fr_80px_120px_120px_120px_120px_80px] md:gap-2 md:items-center">
                   {/* Name */}
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
@@ -307,6 +314,11 @@ export function TeamInvoicingOverview() {
                   {/* Client total */}
                   <div className="hidden md:block text-right text-sm">
                     {data.clientTotal > 0 ? `${data.clientTotal.toLocaleString('cs-CZ')} Kč` : '–'}
+                  </div>
+
+                  {/* Marketing total */}
+                  <div className="hidden md:block text-right text-sm text-muted-foreground">
+                    {data.marketingTotal > 0 ? `${data.marketingTotal.toLocaleString('cs-CZ')} Kč` : '–'}
                   </div>
 
                   {/* Internal total */}
