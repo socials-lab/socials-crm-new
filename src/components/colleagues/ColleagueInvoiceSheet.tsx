@@ -34,6 +34,11 @@ const MONTHS = [
   'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'
 ];
 
+const MONTHS_SHORT = [
+  'Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čvn',
+  'Čvc', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro'
+];
+
 interface ColleagueInvoiceSheetProps {
   colleague: Colleague | null;
   open: boolean;
