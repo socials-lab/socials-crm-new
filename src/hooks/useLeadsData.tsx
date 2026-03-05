@@ -434,6 +434,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         logActivity('lead_updated', 'lead', id);
       }
     },
+  });
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
