@@ -134,24 +134,6 @@ export function TeamEarningsOverview() {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-muted">
-                <Briefcase className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Průměr na kolegu</p>
-                <p className="text-2xl font-bold">
-                  {teamSummary.length > 0 
-                    ? ((teamTotal / teamSummary.length) / 1000).toFixed(0) 
-                    : 0}k Kč
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Team List */}
