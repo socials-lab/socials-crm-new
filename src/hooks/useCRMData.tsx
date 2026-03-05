@@ -601,6 +601,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['engagements'] });
       logActivity('engagement_created', 'engagement', newEng.id, newEng.name);
     },
+  });
 
   const updateEngagementMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Engagement> }) => {
@@ -653,6 +654,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['colleagues'] });
       logActivity('colleague_created', 'colleague', newColleague.id, newColleague.full_name);
     },
+  });
 
   const updateColleagueMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Colleague> }) => {
