@@ -258,22 +258,22 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                 <span>{work.billing_period}</span>
               </div>
 
-              <div className="w-full grid grid-cols-1 gap-2 justify-start max-w-full md:flex md:flex-wrap md:justify-end">
+              <div className="w-auto flex flex-wrap items-center justify-end gap-2">
                 {isPending && (
                   <>
                     {onDelete && (
-                      <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 px-0 text-destructive hover:text-destructive" onClick={() => setIsDeleteDialogOpen(true)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
                     {onEdit && (
-                      <Button variant="ghost" size="sm" className="h-auto min-h-8 w-full md:w-auto whitespace-normal md:whitespace-nowrap text-left justify-start md:justify-center py-2 md:py-1 md:shrink-0" onClick={() => onEdit(work)}>
+                      <Button variant="ghost" size="sm" className="h-8 whitespace-nowrap" onClick={() => onEdit(work)}>
                         <Pencil className="h-3.5 w-3.5 mr-1" />
                         Upravit
                       </Button>
                     )}
                     {onSendApproval && (
-                      <Button size="sm" className="h-auto min-h-8 w-full md:w-auto whitespace-normal md:whitespace-nowrap text-left justify-start md:justify-center py-2 md:py-1 md:shrink-0" onClick={() => onSendApproval(work)}>
+                      <Button size="sm" className="h-8 whitespace-nowrap" onClick={() => onSendApproval(work)}>
                         <Send className="h-3.5 w-3.5 mr-1" />
                         Odeslat ke schválení
                       </Button>
@@ -284,7 +284,7 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                 {isWaitingForClient && (
                   <>
                     {onSendApproval && (
-                      <Button variant="outline" size="sm" className="h-8 w-full md:w-auto md:shrink-0" onClick={() => onSendApproval(work)}>
+                      <Button variant="outline" size="sm" className="h-8 whitespace-nowrap" onClick={() => onSendApproval(work)}>
                         <Mail className="h-3.5 w-3.5 mr-1" />
                         Odeslat email
                       </Button>
@@ -292,9 +292,8 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-full md:w-8 md:px-0 md:shrink-0" title="Další akce">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 px-0" title="Další akce">
                           <MoreHorizontal className="h-4 w-4" />
-                          <span className="md:hidden">Další akce</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
@@ -320,14 +319,14 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                 )}
 
                 {isClientApproved && (
-                  <Button size="sm" className="h-auto min-h-8 w-full md:w-auto whitespace-normal md:whitespace-nowrap text-left justify-start md:justify-center py-2 md:py-1 md:shrink-0" onClick={handleMarkActive}>
+                  <Button size="sm" className="h-8 whitespace-nowrap" onClick={handleMarkActive}>
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                     Aktivovat
                   </Button>
                 )}
 
                 {work.status === 'in_progress' && !isClientApproved && onUpdate && (
-                  <Button size="sm" className="h-auto min-h-8 w-full md:w-auto whitespace-normal md:whitespace-nowrap text-left justify-start md:justify-center py-2 md:py-1 md:shrink-0" onClick={handleMoveToInvoice}>
+                  <Button size="sm" className="h-8 whitespace-nowrap" onClick={handleMoveToInvoice}>
                     <FileText className="h-3.5 w-3.5 mr-1" />
                     K fakturaci
                   </Button>

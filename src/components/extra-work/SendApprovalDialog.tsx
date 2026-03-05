@@ -18,7 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { toast } from 'sonner';
 import type { ExtraWork } from '@/types/crm';
-import { Copy, Mail, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Copy, Mail, CheckCircle2, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { getDefaultEmailSignature } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
@@ -32,7 +32,7 @@ interface SendApprovalDialogProps {
 export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: SendApprovalDialogProps) {
   const { getClientById, clientContacts, colleagues, engagements } = useCRMData();
   const { user } = useAuth();
-  const { sendEmail, isConnected } = useGoogleCalendar();
+  const { sendEmail, hasGmailScope, isCheckingConnection, connectGoogleCalendar, isLoading: googleLoading } = useGoogleCalendar();
   const { fillTemplate } = useEmailTemplates();
   const [email, setEmail] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
@@ -43,6 +43,8 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [approvalToken, setApprovalToken] = useState<string | null>(extraWork.approval_token || null);
+  const [isPreparingApprovalLink, setIsPreparingApprovalLink] = useState(false);
+  const [approvalLinkError, setApprovalLinkError] = useState<string | null>(null);
   const tokenPersistPromiseRef = useRef<Promise<string> | null>(null);
 
   const client = useMemo(() => getClientById(extraWork.client_id), [extraWork.client_id, getClientById]);
@@ -94,6 +96,20 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
     return persistPromise;
   };
 
+  async function prepareApprovalToken() {
+    setApprovalLinkError(null);
+    setIsPreparingApprovalLink(true);
+    try {
+      await ensureApprovalToken();
+    } catch (error) {
+      console.error('Failed to initialize approval token:', error);
+      setApprovalLinkError('Schvalovací odkaz se nepodařilo připravit.');
+      toast.error('Nepodařilo se připravit schvalovací odkaz.');
+    } finally {
+      setIsPreparingApprovalLink(false);
+    }
+  }
+
   useEffect(() => {
     setApprovalToken(extraWork.approval_token || null);
   }, [extraWork.id, extraWork.approval_token]);
@@ -110,6 +126,8 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
 
     const init = async () => {
       try {
+        setApprovalLinkError(null);
+        setIsPreparingApprovalLink(true);
         const token = await ensureApprovalToken();
         const approvalUrl = `${window.location.origin}/extra-work-approval/${token}`;
 
@@ -140,7 +158,14 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
         }
       } catch (error) {
         console.error('Failed to initialize approval token:', error);
+        if (!cancelled) {
+          setApprovalLinkError('Schvalovací odkaz se nepodařilo připravit.');
+        }
         toast.error('Nepodařilo se připravit schvalovací odkaz.');
+      } finally {
+        if (!cancelled) {
+          setIsPreparingApprovalLink(false);
+        }
       }
     };
 
@@ -166,6 +191,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
 
   const handleCopyLink = async () => {
     try {
+      setApprovalLinkError(null);
       const token = await ensureApprovalToken();
       const url = `${window.location.origin}/extra-work-approval/${token}`;
       navigator.clipboard.writeText(url);
@@ -174,6 +200,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
       toast.success('Odkaz zkopírován do schránky');
     } catch (error) {
       console.error('Failed to copy approval link:', error);
+      setApprovalLinkError('Schvalovací odkaz se nepodařilo připravit.');
       toast.error('Nepodařilo se připravit schvalovací odkaz.');
     }
   };
@@ -190,7 +217,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
       return;
     }
 
-    if (!isConnected) {
+    if (!hasGmailScope) {
       toast.error('Google účet není propojen. Propojte ho v nastavení profilu.');
       return;
     }
@@ -272,6 +299,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
                 value={getApprovalUrl()}
                 readOnly
                 className="font-mono text-xs min-w-0 flex-1"
+                placeholder={isPreparingApprovalLink ? 'Připravuji schvalovací odkaz...' : ''}
               />
               <Button
                 variant="outline"
@@ -279,10 +307,25 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
                 onClick={handleCopyLink}
                 title="Zkopírovat odkaz"
                 className="shrink-0"
+                disabled={isPreparingApprovalLink || !getApprovalUrl()}
               >
                 {linkCopied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
+            {approvalLinkError && (
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-destructive">{approvalLinkError}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={prepareApprovalToken}
+                  disabled={isPreparingApprovalLink}
+                >
+                  Zkusit znovu
+                </Button>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               Tento odkaz můžete zkopírovat a poslat klientovi přímo, nebo použít email níže.
             </p>
@@ -292,6 +335,26 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
 
           {/* Email form */}
           <div className="space-y-4">
+            {!isCheckingConnection && !hasGmailScope && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    Pro odesílání emailů je potřeba propojit Google účet
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={connectGoogleCalendar}
+                    disabled={googleLoading}
+                  >
+                    Propojit Google účet
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email příjemce</Label>
               <Input
@@ -373,7 +436,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
           </Button>
-          <Button onClick={handleSendEmail} disabled={isSending || !isConnected}>
+          <Button onClick={handleSendEmail} disabled={isSending || !hasGmailScope}>
             {isSending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

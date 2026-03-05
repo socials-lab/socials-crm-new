@@ -222,7 +222,7 @@ export default function ExtraWork() {
                 Žádné položky v této kategorii
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 xl:grid-cols-2 2xl:grid-cols-3">
                 {filteredWorks.map(work => (
                   <ExtraWorkCard
                     key={work.id}
