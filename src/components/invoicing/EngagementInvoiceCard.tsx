@@ -30,6 +30,7 @@ interface EngagementInvoiceCardProps {
   onDuplicateInvoice?: (invoice: MonthlyEngagementInvoice) => void;
   onRemoveInvoice?: (invoice: MonthlyEngagementInvoice) => void;
   isIssued?: boolean;
+  isDeliveredToFakturoid?: boolean;
   onApproveAllItems?: (invoiceId: string) => void;
 }
 
@@ -46,6 +47,7 @@ export function EngagementInvoiceCard({
   onDuplicateInvoice,
   onRemoveInvoice,
   isIssued = false,
+  isDeliveredToFakturoid = false,
   onApproveAllItems,
 }: EngagementInvoiceCardProps) {
   const { getClientById } = useCRMData();
@@ -91,7 +93,8 @@ export function EngagementInvoiceCard({
         !isIssued && "hover:bg-accent/5",
         isSelected && "ring-2 ring-primary",
         isSelected && !allApproved && "ring-amber-500 bg-amber-50/50 dark:bg-amber-950/20",
-        isIssued && "ring-2 ring-green-500 bg-green-50/50 dark:bg-green-950/20 opacity-75"
+        isIssued && isDeliveredToFakturoid && "ring-2 ring-green-500 bg-green-50/50 dark:bg-green-950/20 opacity-75",
+        isIssued && !isDeliveredToFakturoid && "ring-2 ring-amber-500 bg-amber-50/60 dark:bg-amber-950/20"
       )}
       onClick={handleCardClick}
     >
@@ -222,8 +225,11 @@ export function EngagementInvoiceCard({
                 </TooltipProvider>
               )}
               {isIssued && (
-                <span className="text-xs text-green-600 font-medium px-2">
-                  ✓ Odesláno
+                <span className={cn(
+                  "text-xs font-medium px-2",
+                  isDeliveredToFakturoid ? "text-green-600" : "text-amber-700 dark:text-amber-400",
+                )}>
+                  {isDeliveredToFakturoid ? "✓ Odesláno do Fakturoid" : "⚠ Neodesláno do Fakturoid"}
                 </span>
               )}
               <DropdownMenu>

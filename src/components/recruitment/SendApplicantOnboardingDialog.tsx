@@ -183,13 +183,6 @@ export function SendApplicantOnboardingDialog({
     }
   };
 
-  const handleMarkAsSent = () => {
-    sendOnboarding(applicant.id);
-    onSend?.();
-    toast.success('Označeno jako odesláno');
-    onOpenChange(false);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -287,8 +280,8 @@ export function SendApplicantOnboardingDialog({
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={handleMarkAsSent}>
-            Pouze označit jako odesláno
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Zrušit
           </Button>
           <Button onClick={handleSend} disabled={isSending || !emailTo.trim()}>
             {isSending ? (

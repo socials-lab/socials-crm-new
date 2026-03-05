@@ -44,9 +44,11 @@ export function useFakturoid() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('fakturoid-create-subject', {
-        body: { client_id: clientId },
-      });
+      const { data, error } = await invokeWithTimeout<{ error?: string }>(
+        'fakturoid-create-subject',
+        { body: { client_id: clientId } },
+        30000,
+      );
 
       if (error) throw error;
 
@@ -106,9 +108,11 @@ export function useFakturoid() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('fakturoid-sync-subject', {
-        body: { client_id: clientId },
-      });
+      const { data, error } = await invokeWithTimeout<{ error?: string }>(
+        'fakturoid-sync-subject',
+        { body: { client_id: clientId } },
+        30000,
+      );
 
       if (error) throw error;
 
@@ -133,9 +137,11 @@ export function useFakturoid() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('fakturoid-get-subject', {
-        body: { subject_id: subjectId },
-      });
+      const { data, error } = await invokeWithTimeout<{ error?: string; subject?: FakturoidSubjectData }>(
+        'fakturoid-get-subject',
+        { body: { subject_id: subjectId } },
+        30000,
+      );
 
       if (error) throw error;
 
@@ -164,9 +170,11 @@ export function useFakturoid() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('fakturoid-bidirectional-sync', {
-        body: { client_id: clientId, import_missing: importMissing },
-      });
+      const { data, error } = await invokeWithTimeout<{ error?: string }>(
+        'fakturoid-bidirectional-sync',
+        { body: { client_id: clientId, import_missing: importMissing } },
+        30000,
+      );
 
       if (error) throw error;
 

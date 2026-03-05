@@ -79,6 +79,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
   const [showMixedCurrencyWarning, setShowMixedCurrencyWarning] = useState(false);
   const [issuedInvoiceIds, setIssuedInvoiceIds] = useState<Set<string>>(new Set());
+  const [issuedInvoiceDeliveryByGeneratedId, setIssuedInvoiceDeliveryByGeneratedId] = useState<Map<string, boolean>>(new Map());
   const [savingDraft, setSavingDraft] = useState(false);
 
   // Clear draft state when year/month changes and reload from localStorage
@@ -110,6 +111,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   // Initialize issuedInvoiceIds based on actual issued invoices from database
   useEffect(() => {
     const alreadyIssuedIds = new Set<string>();
+    const deliveryMap = new Map<string, boolean>();
 
     // Check which engagements already have issued invoices for this year/month
     issuedInvoices
@@ -118,9 +120,11 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
         // The generated invoice ID format is `inv-{engagement_id}-{year}-{month}`
         const generatedId = `inv-${inv.engagement_id}-${year}-${month}`;
         alreadyIssuedIds.add(generatedId);
+        deliveryMap.set(generatedId, !!inv.fakturoid_id);
       });
 
     setIssuedInvoiceIds(alreadyIssuedIds);
+    setIssuedInvoiceDeliveryByGeneratedId(deliveryMap);
   }, [issuedInvoices, year, month]);
 
   // Generate invoices from engagements - ONE INVOICE PER ENGAGEMENT
@@ -961,6 +965,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             onDuplicateInvoice={handleDuplicateInvoice}
             onRemoveInvoice={handleRemoveInvoice}
             isIssued={issuedInvoiceIds.has(invoice.id)}
+            isDeliveredToFakturoid={issuedInvoiceDeliveryByGeneratedId.get(invoice.id) ?? false}
             onApproveAllItems={handleApproveAllItems}
           />
         ))}

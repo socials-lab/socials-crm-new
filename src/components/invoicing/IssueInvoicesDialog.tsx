@@ -32,8 +32,15 @@ interface IssuedInvoiceInfo {
   amount: number;
   currency: string;
   fakturoid_url: string | null;
-  fakturoid_failed: boolean;
-  partial_success?: boolean;
+}
+
+function withPromiseTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timeout after ${timeoutMs}ms`)), timeoutMs);
+    }),
+  ]);
 }
 
 function requireCurrency(value: string | null | undefined, context: string): string {
@@ -82,6 +89,17 @@ export function IssueInvoicesDialog({
 
   const periodDate = new Date(year, month - 1);
   const periodLabel = format(periodDate, 'LLLL yyyy', { locale: cs });
+  const missingFakturoidClients = Array.from(new Set(
+    invoices
+      .filter((inv) => {
+        const client = getClientById(inv.client_id);
+        return !client?.fakturoid_subject_id;
+      })
+      .map((inv) => {
+        const client = getClientById(inv.client_id);
+        return client?.brand_name || client?.name || inv.engagement_name;
+      }),
+  ));
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -113,6 +131,15 @@ export function IssueInvoicesDialog({
       return;
     }
 
+    if (missingFakturoidClients.length > 0) {
+      toast({
+        title: 'Chybí propojení klienta s Fakturoid',
+        description: `Nelze vystavit faktury, protože klient nemá fakturoid_subject_id: ${missingFakturoidClients.join(', ')}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const count = invoices.length;
     const totalsByCurrency = invoices.map((inv) => ({
       amount: inv.total_amount,
@@ -122,7 +149,7 @@ export function IssueInvoicesDialog({
     setIsSubmitting(true);
 
     const issuedInvoiceInfos: IssuedInvoiceInfo[] = [];
-    let fakturoidFailures = 0;
+    const successfullyIssuedDraftIds: string[] = [];
 
     try {
     for (let i = 0; i < invoices.length; i++) {
@@ -169,56 +196,63 @@ export function IssueInvoicesDialog({
         issued_by: null,
       };
 
-      const createdInvoice = await createInvoiceWithLineItems(
-        invoiceData,
-        lineItemsWithoutInvoiceId,
-        extraWorkIds,
-        oneOffServiceIds,
-        creativeBoostClientMonthIds
+      const createdInvoice = await withPromiseTimeout(
+        createInvoiceWithLineItems(
+          invoiceData,
+          lineItemsWithoutInvoiceId,
+          extraWorkIds,
+          oneOffServiceIds,
+          creativeBoostClientMonthIds
+        ),
+        30000,
+        'createInvoiceWithLineItems',
       );
 
-      // Now push to Fakturoid
-      let fakturoidUrl: string | null = null;
-      let fakturoidFailed = false;
-      let partialSuccess = false;
+      // Push to Fakturoid (blocking).
+      const { data: fakturoidResult, error: fakturoidError } = await invokeWithTimeout<{
+        success?: boolean;
+        partial_success?: boolean;
+        fakturoid_url?: string;
+        error?: string;
+      }>(
+        'fakturoid-create-invoice',
+        { body: { invoice_id: createdInvoice.id } },
+        30000,
+      );
 
-      try {
-        const { data: fakturoidResult, error: fakturoidError } = await invokeWithTimeout<{
+      const isFakturoidFailure = !!fakturoidError || !!fakturoidResult?.error || !fakturoidResult?.success;
+      if (isFakturoidFailure) {
+        // Roll back local invoice to keep "issued" state strictly tied to successful export.
+        const { data: rollbackResult, error: rollbackError } = await invokeWithTimeout<{
           success?: boolean;
-          partial_success?: boolean;
-          fakturoid_url?: string;
           error?: string;
         }>(
-          'fakturoid-create-invoice',
-          { body: { invoice_id: createdInvoice.id } },
+          'rollback-issued-invoice',
+          { body: { invoice_id: createdInvoice.id, reason: 'fakturoid_export_failed' } },
           30000,
         );
 
-        if (fakturoidError || fakturoidResult?.error) {
-          console.warn(`Fakturoid failed for invoice ${createdInvoice.invoice_number}:`, fakturoidError || fakturoidResult?.error);
-          fakturoidFailed = true;
-          fakturoidFailures++;
-          if (fakturoidResult?.partial_success && fakturoidResult?.fakturoid_url) {
-            fakturoidUrl = fakturoidResult.fakturoid_url;
-            partialSuccess = true;
-          }
-        } else if (fakturoidResult?.success) {
-          fakturoidUrl = fakturoidResult.fakturoid_url ?? null;
+        const fakturoidDetail = fakturoidResult?.error || fakturoidError?.message || 'Neznámá chyba';
+        if (rollbackError || rollbackResult?.error || !rollbackResult?.success) {
+          const rollbackDetail = rollbackResult?.error || rollbackError?.message || 'Neznámá chyba rollbacku';
+          throw new Error(
+            `Fakturoid export selhal u faktury ${createdInvoice.invoice_number} (${fakturoidDetail}) a rollback také selhal (${rollbackDetail}).`,
+          );
         }
-      } catch (err) {
-        console.warn(`Fakturoid error for invoice ${createdInvoice.invoice_number}:`, err);
-        fakturoidFailed = true;
-        fakturoidFailures++;
+
+        throw new Error(
+          `Fakturoid export selhal u faktury ${createdInvoice.invoice_number} (${fakturoidDetail}). Lokální vystavení bylo vráceno zpět.`,
+        );
       }
+
       issuedInvoiceInfos.push({
         invoice_number: createdInvoice.invoice_number,
         engagement_name: invoice.engagement_name,
         amount: invoice.total_amount,
         currency: requireCurrency(invoice.currency, `invoice ${invoice.id}`),
-        fakturoid_url: fakturoidUrl,
-        fakturoid_failed: fakturoidFailed,
-        partial_success: partialSuccess,
+        fakturoid_url: fakturoidResult.fakturoid_url ?? null,
       });
+      successfullyIssuedDraftIds.push(invoice.id);
     }
     } catch (error: unknown) {
       console.error('Failed to issue invoices:', error);
@@ -252,21 +286,13 @@ export function IssueInvoicesDialog({
 
     // Call success callback with invoice IDs
     if (onIssueSuccess) {
-      onIssueSuccess(invoices.map(inv => inv.id));
+      onIssueSuccess(successfullyIssuedDraftIds);
     }
 
-    if (fakturoidFailures > 0) {
-      toast({
-        title: 'Faktury vystaveny s varováním',
-        description: `Vystaveno ${count} faktur, ale ${fakturoidFailures} se nepodařilo odeslat do Fakturoid.`,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Faktury vystaveny',
-        description: `Úspěšně vystaveno ${count} faktur do Fakturoid.`,
-      });
-    }
+    toast({
+      title: 'Faktury vystaveny',
+      description: `Úspěšně vystaveno ${count} faktur do Fakturoid.`,
+    });
   };
 
   const handleClose = () => {
@@ -314,7 +340,7 @@ export function IssueInvoicesDialog({
               {successData.issuedInvoices.map((inv) => (
                 <div
                   key={inv.invoice_number}
-                  className={`flex items-center justify-between p-3 rounded-lg ${inv.fakturoid_failed ? 'bg-orange-50 border border-orange-200' : 'bg-muted/50'}`}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
                 >
                   <div>
                     <p className="font-medium text-sm">{inv.invoice_number}</p>
@@ -335,7 +361,7 @@ export function IssueInvoicesDialog({
                     ) : (
                       <span className="text-xs text-orange-600 flex items-center gap-1">
                         <AlertTriangle className="h-3.5 w-3.5" />
-                        {inv.partial_success ? 'Propojte manuálně v CRM' : 'Nutno odeslat ručně'}
+                        Chybí odkaz
                       </span>
                     )}
                   </div>
@@ -356,6 +382,14 @@ export function IssueInvoicesDialog({
                 )}</strong>.
               </AlertDescription>
             </Alert>
+            {missingFakturoidClients.length > 0 && (
+              <Alert className="border-destructive/30 bg-destructive/5">
+                <AlertDescription className="text-destructive">
+                  Nelze pokračovat: klient nemá propojení na Fakturoid (`fakturoid_subject_id`): {missingFakturoidClients.join(', ')}.
+                  Nejprve propojte klienta ve Fakturoid.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <p className="text-sm text-muted-foreground text-center">
               Opravdu chcete vystavit tyto faktury? Budou uloženy do historie s propojením na Fakturoid.
@@ -371,7 +405,7 @@ export function IssueInvoicesDialog({
               <Button variant="outline" onClick={handleClose}>
                 Zrušit
               </Button>
-              <Button onClick={handleIssue} disabled={isSubmitting}>
+              <Button onClick={handleIssue} disabled={isSubmitting || missingFakturoidClients.length > 0}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -380,7 +414,7 @@ export function IssueInvoicesDialog({
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Potvrdit a vystavit
+                    {missingFakturoidClients.length > 0 ? 'Nelze vystavit' : 'Potvrdit a vystavit'}
                   </>
                 )}
               </Button>

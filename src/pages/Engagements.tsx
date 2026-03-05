@@ -75,6 +75,15 @@ import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 // Dynamic lookup for Creative Boost service ID
 const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
 
+function withPromiseTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timeout after ${timeoutMs}ms`)), timeoutMs);
+    }),
+  ]);
+}
+
 const getTierPrice = (service: Service | undefined, tier: ServiceTier): number | null => {
   if (!service || service.service_type !== 'core') return null;
 
@@ -1654,6 +1663,9 @@ function EngagementsContent() {
             try {
               const client = getClientById(invoiceDialogEngagement.client_id);
               if (!client) throw new Error('Client not found');
+              if (!client.fakturoid_subject_id) {
+                throw new Error(`Klient "${client.brand_name || client.name}" nemá propojení s Fakturoid (fakturoid_subject_id).`);
+              }
 
               // Calculate period dates
               const periodStart = new Date(data.year, data.month - 1, 1);
@@ -1710,47 +1722,37 @@ function EngagementsContent() {
                 is_reverse_charge: item.is_reverse_charge,
               }));
 
-              const createdInvoice = await createInvoiceWithLineItems(invoice, lineItems, [], []);
+              const createdInvoice = await withPromiseTimeout(
+                createInvoiceWithLineItems(invoice, lineItems, [], []),
+                30000,
+                'createInvoiceWithLineItems',
+              );
 
-              // Now sync to Fakturoid
-              let fakturoidSuccess = false;
-              let fakturoidErrorMessage: string | null = null;
+              const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
+                'fakturoid-create-invoice',
+                { body: { invoice_id: createdInvoice.id } }
+              );
 
-              try {
-                const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
-                  'fakturoid-create-invoice',
-                  { body: { invoice_id: createdInvoice.id } }
+              if (fakturoidError || fakturoidResult?.error || !fakturoidResult?.success) {
+                const errorDetail = fakturoidResult?.error || fakturoidError?.message || 'Neznámá chyba';
+                const { data: rollbackResult, error: rollbackError } = await supabase.functions.invoke(
+                  'rollback-issued-invoice',
+                  { body: { invoice_id: createdInvoice.id, reason: 'fakturoid_export_failed' } }
                 );
-
-                if (fakturoidError) {
-                  console.warn('Fakturoid sync failed:', fakturoidError);
-                  fakturoidErrorMessage = fakturoidError.message || 'Neznámá chyba';
-                } else if (fakturoidResult?.error) {
-                  console.warn('Fakturoid sync failed:', fakturoidResult.error);
-                  fakturoidErrorMessage = fakturoidResult.error;
-                } else if (fakturoidResult?.success) {
-                  fakturoidSuccess = true;
+                if (rollbackError || rollbackResult?.error || !rollbackResult?.success) {
+                  throw new Error(`Fakturoid export selhal (${errorDetail}) a rollback selhal. Kontaktujte administrátora.`);
                 }
-              } catch (fakturoidErr) {
-                console.warn('Fakturoid error:', fakturoidErr);
-                fakturoidErrorMessage = 'Nepodařilo se spojit s Fakturoid';
+                throw new Error(`Fakturoid export selhal (${errorDetail}). Lokální vystavení bylo vráceno zpět.`);
               }
 
-              if (fakturoidSuccess) {
-                // Refresh issued_invoices to show the new fakturoid_url
-                await queryClient.invalidateQueries({ queryKey: ['issued_invoices'] });
-                toast.success(`Faktura za ${data.month}/${data.year} byla vytvořena a odeslána do Fakturoid`);
-              } else {
-                // Show specific error message
-                const errorDetail = fakturoidErrorMessage || 'Neznámá chyba';
-                toast.warning(`Faktura vytvořena, ale Fakturoid selhal: ${errorDetail}`);
-              }
-
+              // Refresh issued_invoices to show the new fakturoid_url
+              await queryClient.invalidateQueries({ queryKey: ['issued_invoices'] });
+              toast.success(`Faktura za ${data.month}/${data.year} byla vytvořena a odeslána do Fakturoid`);
               setIsInvoiceDialogOpen(false);
               setInvoiceDialogEngagement(null);
             } catch (error) {
               console.error('Failed to create invoice:', error);
-              toast.error('Nepodařilo se vytvořit fakturu');
+              toast.error(getErrorMessage(error, 'Nepodařilo se vytvořit fakturu'));
             } finally {
               setIsCreatingInvoice(false);
             }
