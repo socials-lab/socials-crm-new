@@ -171,9 +171,7 @@ export function ColleagueInvoiceSheet({ colleague, open, onOpenChange, initialYe
                     <span className={`text-sm font-bold block ${isSelected ? 'text-primary' : ''}`}>
                       {(month.totalEarnings / 1000).toFixed(0)}k
                     </span>
-                    {month.year !== new Date().getFullYear() && (
-                      <span className="text-[10px] text-muted-foreground">{month.year}</span>
-                    )}
+                    <span className="text-[10px] text-muted-foreground">{month.year}</span>
                   </button>
                 );
               })}
