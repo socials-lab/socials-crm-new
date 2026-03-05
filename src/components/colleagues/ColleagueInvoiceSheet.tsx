@@ -147,10 +147,10 @@ export function ColleagueInvoiceSheet({ colleague, open, onOpenChange, initialYe
           {/* Month selector — horizontal scrollable pills */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-              {monthlyHistory.filter(month => {
+            {[...monthlyHistory.filter(month => {
                 const now = new Date();
                 return month.year < now.getFullYear() || (month.year === now.getFullYear() && month.month <= now.getMonth() + 1);
-              }).map((month) => {
+              })].reverse().map((month) => {
                 const isSelected = month.year === selectedYear && month.month === selectedMonth;
                 return (
                   <button
@@ -171,9 +171,7 @@ export function ColleagueInvoiceSheet({ colleague, open, onOpenChange, initialYe
                     <span className={`text-sm font-bold block ${isSelected ? 'text-primary' : ''}`}>
                       {(month.totalEarnings / 1000).toFixed(0)}k
                     </span>
-                    {month.year !== new Date().getFullYear() && (
-                      <span className="text-[10px] text-muted-foreground">{month.year}</span>
-                    )}
+                    <span className="text-[10px] text-muted-foreground">{month.year}</span>
                   </button>
                 );
               })}
