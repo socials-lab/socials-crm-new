@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -60,21 +61,24 @@ function isAuthError(error: unknown): boolean {
 
 let authErrorRedirecting = false;
 
-function handleAuthError(error: unknown) {
+async function handleAuthError(error: unknown) {
   if (!isAuthError(error) || authErrorRedirecting) return;
-  // Don't redirect if already on auth pages
   if (window.location.pathname.startsWith('/auth')) return;
   authErrorRedirecting = true;
-  toast.error('Session expired. Please sign in again.');
-  window.location.href = '/auth';
+  try {
+    toast.error('Session expired. Please sign in again.');
+    await supabase.auth.signOut({ scope: 'local' });
+  } finally {
+    authErrorRedirecting = false;
+  }
 }
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError: (error) => handleAuthError(error),
+    onError: (error) => { void handleAuthError(error); },
   }),
   mutationCache: new MutationCache({
-    onError: (error) => handleAuthError(error),
+    onError: (error) => { void handleAuthError(error); },
   }),
   defaultOptions: {
     queries: {

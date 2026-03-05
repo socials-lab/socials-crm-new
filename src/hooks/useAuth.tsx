@@ -22,6 +22,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const isExplicitSignOut = useRef(false);
+  const revalidateInFlightRef = useRef(false);
+  const lastVisibilityState = useRef<DocumentVisibilityState>(document.visibilityState);
+  const hiddenAtRef = useRef<number | null>(null);
+  const lastRevalidateAtRef = useRef(0);
+  const sessionLossToastShownRef = useRef(false);
 
   useEffect(() => {
     // Get initial session; always resolve loading state to avoid infinite spinner.
@@ -76,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Update last_login on sign in
         if (event === 'SIGNED_IN' && session?.user) {
+          sessionLossToastShownRef.current = false;
           await supabase
             .from('user_roles')
             .update({ last_login: new Date().toISOString() })
@@ -84,17 +90,132 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Handle unexpected session loss (e.g. refresh token revoked by race condition)
         if (event === 'SIGNED_OUT' && !isExplicitSignOut.current) {
-          // Don't redirect if already on auth pages
           if (!window.location.pathname.startsWith('/auth')) {
-            toast.error('Session expired. Please sign in again.');
-            window.location.href = '/auth';
+            if (!sessionLossToastShownRef.current) {
+              toast.error('Session expired. Please sign in again.');
+              sessionLossToastShownRef.current = true;
+            }
+            setSession(null);
+            setUser(null);
           }
         }
         isExplicitSignOut.current = false;
       }
     );
 
-    return () => subscription.unsubscribe();
+    const isHardAuthFailure = (error: unknown): boolean => {
+      const message = String((error as { message?: string })?.message ?? '').toLowerCase();
+      return (
+        message.includes('invalid refresh token') ||
+        message.includes('refresh_token_not_found') ||
+        message.includes('jwt expired') ||
+        message.includes('session refresh returned no session')
+      );
+    };
+
+    const isTransientFailure = (error: unknown): boolean => {
+      const message = String((error as { message?: string })?.message ?? '').toLowerCase();
+      return (
+        message.includes('timeout') ||
+        message.includes('abort') ||
+        message.includes('network') ||
+        message.includes('failed to fetch')
+      );
+    };
+
+    const revalidateSession = async () => {
+      if (revalidateInFlightRef.current) return;
+
+      const now = Date.now();
+      if (now - lastRevalidateAtRef.current < 10000) return;
+      lastRevalidateAtRef.current = now;
+
+      if (!session?.user) return;
+      if (session.expires_at && session.expires_at * 1000 - now > 5 * 60 * 1000) {
+        return;
+      }
+
+      revalidateInFlightRef.current = true;
+
+      try {
+        const { data, error } = await withTimeout(
+          supabase.auth.getSession(),
+          5000,
+          'Timeout while revalidating auth session'
+        );
+
+        if (error) {
+          throw error;
+        }
+
+        if (data.session) {
+          setSession(data.session);
+          setUser(data.session.user);
+          return;
+        }
+
+        const { data: refreshed, error: refreshError } = await withTimeout(
+          supabase.auth.refreshSession(),
+          8000,
+          'Timeout while refreshing auth session'
+        );
+
+        if (refreshError || !refreshed.session) {
+          throw refreshError || new Error('Session refresh returned no session');
+        }
+
+        setSession(refreshed.session);
+        setUser(refreshed.session.user);
+        sessionLossToastShownRef.current = false;
+      } catch (error) {
+        console.error('Session revalidation failed:', error);
+        if (isTransientFailure(error)) {
+          return;
+        }
+
+        if (isHardAuthFailure(error) && !window.location.pathname.startsWith('/auth')) {
+          if (!sessionLossToastShownRef.current) {
+            toast.error('Session expired. Please sign in again.');
+            sessionLossToastShownRef.current = true;
+          }
+          setSession(null);
+          setUser(null);
+        }
+      } finally {
+        revalidateInFlightRef.current = false;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAtRef.current = Date.now();
+      }
+
+      if (lastVisibilityState.current === 'hidden' && document.visibilityState === 'visible') {
+        const hiddenMs = hiddenAtRef.current ? Date.now() - hiddenAtRef.current : 0;
+        if (hiddenMs >= 30000) {
+          void revalidateSession();
+        }
+      }
+
+      lastVisibilityState.current = document.visibilityState;
+    };
+
+    const handleFocus = () => {
+      const now = Date.now();
+      if (now - lastRevalidateAtRef.current > 30000) {
+        void revalidateSession();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

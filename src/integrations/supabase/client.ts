@@ -54,7 +54,33 @@ const inMemoryLock = async <R>(
 // Use the local mutex consistently to keep auth calls responsive.
 const authLock = inMemoryLock;
 
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const originalSignal = init?.signal;
+
+  if (originalSignal) {
+    if (originalSignal.aborted) {
+      controller.abort();
+    } else {
+      originalSignal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+  }
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: {
+    fetch: fetchWithTimeout,
+  },
   auth: {
     storage: localStorage,
     persistSession: true,
