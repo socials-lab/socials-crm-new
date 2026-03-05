@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, Copy, Briefcase, Building2, Sparkles, 
-  CheckCircle, Megaphone, AlertCircle, Pencil
+  CheckCircle, Megaphone, AlertCircle, Pencil, Plus
 } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import { toast } from 'sonner';
@@ -67,7 +67,7 @@ interface InvoicingOverviewProps {
   getRewardsByMonth: (year: number, month: number) => ActivityReward[];
   getRewardsByCategory: (year: number, month: number) => { marketing: ActivityReward[]; overhead: ActivityReward[]; client_work: ActivityReward[] };
   // Actions
-  onAddInternalWork: () => void;
+  onAddInternalWork: (year: number, month: number) => void;
   onEditReward?: (reward: ActivityReward) => void;
 }
 
@@ -393,11 +393,22 @@ export function InvoicingOverview({
               )}
 
               {/* INTERNAL WORK SECTION */}
-              {hasInternalWork && (
+              {(hasInternalWork || true) && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Režijní položky</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Režijní položky</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 h-7 text-xs"
+                      onClick={() => onAddInternalWork(selectedYear, selectedMonth)}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Přidat položku
+                    </Button>
                   </div>
                   
                   {/* Marketing */}
