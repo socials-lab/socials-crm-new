@@ -39,7 +39,7 @@ interface RouteGuardProps {
 export function RouteGuard({ children }: RouteGuardProps) {
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const { isLoading: roleLoading, isSuperAdmin, colleagueId, role, canAccessPage } = useUserRole();
+  const { isLoading: roleLoading, isSuperAdmin, colleagueId, isColleagueLoading, role, canAccessPage } = useUserRole();
   const currentPath = location.pathname;
 
   // Track how long we've been loading
@@ -104,6 +104,14 @@ export function RouteGuard({ children }: RouteGuardProps) {
 
   // Special handling for /my-work - requires colleague_id
   if (currentPath === '/my-work') {
+    if (isColleagueLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
     if (!colleagueId) {
       return <Navigate to="/my-profile" replace />;
     }

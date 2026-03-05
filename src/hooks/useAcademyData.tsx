@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { withTimeout } from '@/utils/asyncUtils';
 
 export interface AcademyLink {
   label: string;
@@ -125,37 +126,39 @@ export function AcademyDataProvider({ children }: { children: ReactNode }) {
     setError(null);
     
     try {
-      // Try direct table access using any type to bypass TypeScript
-      const modulesResult = await (supabase as any)
-        .from('academy_modules')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
+      // Fetch modules and videos in parallel to minimize first-render wait.
+      const [modulesResult, videosResult] = await Promise.all([
+        withTimeout(
+          (supabase as any)
+            .from('academy_modules')
+            .select('*')
+            .eq('is_active', true)
+            .order('sort_order', { ascending: true }),
+          6000,
+          'Timeout while loading academy modules'
+        ),
+        withTimeout(
+          (supabase as any)
+            .from('academy_videos')
+            .select('*')
+            .eq('is_active', true)
+            .order('sort_order', { ascending: true }),
+          6000,
+          'Timeout while loading academy videos'
+        ),
+      ]);
 
-      if (modulesResult.error) {
-        // Tables don't exist yet, use default data
-        console.log('Academy tables not found, using default data');
+      if (modulesResult.error || videosResult.error) {
+        console.error('Academy data fetch failed', {
+          modulesError: modulesResult.error,
+          videosError: videosResult.error,
+        });
         setModules(DEFAULT_MODULES);
         setIsUsingDatabase(false);
-        setIsLoading(false);
         return;
       }
 
-      // If we got here, database tables exist
       setIsUsingDatabase(true);
-
-      const videosResult = await (supabase as any)
-        .from('academy_videos')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-
-      if (videosResult.error) {
-        setModules(DEFAULT_MODULES);
-        setIsUsingDatabase(false);
-        setIsLoading(false);
-        return;
-      }
 
       // Combine modules with their videos
       const modulesWithVideos: AcademyModule[] = (modulesResult.data || []).map((module: any) => ({
@@ -185,10 +188,14 @@ export function AcademyDataProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { data, error } = await (supabase as any)
-        .from('academy_progress')
-        .select('video_id')
-        .eq('user_id', user.id);
+      const { data, error } = await withTimeout(
+        (supabase as any)
+          .from('academy_progress')
+          .select('video_id')
+          .eq('user_id', user.id),
+        5000,
+        'Timeout while loading academy progress'
+      );
 
       if (error) {
         console.error('Error fetching progress:', error);

@@ -11,6 +11,7 @@ interface UserRoleContextType {
   isSuperAdmin: boolean;
   isLoading: boolean;
   colleagueId: string | null;
+  isColleagueLoading: boolean;
   canSeeFinancials: boolean;
   canEditAcademy: boolean;
   allowedPages: string[];
@@ -27,6 +28,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [colleagueId, setColleagueId] = useState<string | null>(null);
+  const [isColleagueLoading, setIsColleagueLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [canSeeFinancials, setCanSeeFinancials] = useState(false);
   const [canEditAcademy, setCanEditAcademy] = useState(false);
@@ -43,6 +45,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       setRole(null);
       setIsSuperAdmin(false);
       setColleagueId(null);
+      setIsColleagueLoading(false);
       setCanSeeFinancials(false);
       setCanEditAcademy(false);
       setAllowedPages([]);
@@ -58,6 +61,37 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
 
     const fetchUserRole = async () => {
       setIsLoading(true);
+      setIsColleagueLoading(true);
+      setColleagueId(null);
+
+      // Colleague link is not critical for most routes - load it in background.
+      const fetchColleagueLink = async () => {
+        try {
+          const { data: colleagueData, error: colleagueError } = await withTimeout(
+            supabase
+              .from('colleagues')
+              .select('id')
+              .eq('profile_id', userId)
+              .maybeSingle(),
+            5000,
+            'Timeout while loading colleague link'
+          );
+
+          if (colleagueError) {
+            console.error('Error fetching colleague:', colleagueError);
+          }
+
+          setColleagueId(colleagueData?.id || null);
+        } catch (error) {
+          console.error('Error fetching colleague:', error);
+          setColleagueId(null);
+        } finally {
+          setIsColleagueLoading(false);
+        }
+      };
+
+      void fetchColleagueLink();
+
       try {
         // Fetch user role - use raw query to handle both old and new schema
         const { data: roleData, error: roleError } = await withTimeout(
@@ -66,7 +100,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
             .select('*')
             .eq('user_id', userId)
             .maybeSingle(),
-          12000,
+          5000,
           'Timeout while loading user role'
         );
 
@@ -98,28 +132,11 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
           setAllowedPages([]);
         }
 
-        // Fetch linked colleague
-        const { data: colleagueData, error: colleagueError } = await withTimeout(
-          supabase
-            .from('colleagues')
-            .select('id')
-            .eq('profile_id', userId)
-            .maybeSingle(),
-          12000,
-          'Timeout while loading colleague link'
-        );
-
-        if (colleagueError) {
-          console.error('Error fetching colleague:', colleagueError);
-        }
-
-        setColleagueId(colleagueData?.id || null);
         setLastFetchedUserId(userId);
       } catch (error) {
         console.error('Error in fetchUserRole:', error);
         setRole(null);
         setIsSuperAdmin(false);
-        setColleagueId(null);
         setCanSeeFinancials(false);
         setCanEditAcademy(false);
         setAllowedPages([]);
@@ -157,6 +174,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       isSuperAdmin, 
       isLoading, 
       colleagueId,
+      isColleagueLoading,
       canSeeFinancials,
       canEditAcademy,
       allowedPages,
