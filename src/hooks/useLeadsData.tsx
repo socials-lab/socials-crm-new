@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logActivity } from '@/services/activityLogger';
 import type { Lead, LeadStage, LeadNote, LeadChangeType, LeadHistoryEntry, LeadNoteType } from '@/types/crm';
-import type { Lead, LeadStage, LeadNote, LeadChangeType, LeadHistoryEntry, LeadNoteType } from '@/types/crm';
 
 // Field labels for history display
 const LEAD_FIELD_LABELS: Record<string, string> = {
