@@ -153,13 +153,14 @@ serve(async (req) => {
     
     console.log(`Colleague created for ${email}`);
 
-    // Pre-assign role
+    // Pre-assign role with default access to "Můj přehled" only
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
       .insert({
         user_id: inviteData.user.id,
         role: role,
         is_super_admin: false,
+        allowed_pages: ['my-work'],
       });
 
     if (roleError) {
