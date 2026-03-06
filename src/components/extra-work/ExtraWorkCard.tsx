@@ -238,10 +238,29 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
               </div>
             </div>
 
-            {work.client_approved_at && (
-              <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
-                📧 Klient potvrdil: {format(new Date(work.client_approved_at), "d.M.yyyy 'v' H:mm")}
-                {work.client_approval_email && ` (${work.client_approval_email})`}
+            {(work.client_approved_at || work.client_approval_email) && (
+              <div className="text-xs bg-green-50 dark:bg-green-900/20 p-2 rounded-md space-y-1">
+                <div className="font-medium text-green-700 dark:text-green-400">
+                  📧 Potvrzení klienta
+                </div>
+                {work.client_approved_at ? (
+                  <div className="text-green-700 dark:text-green-400">
+                    Datum a čas: {format(new Date(work.client_approved_at), "d.M.yyyy 'v' H:mm")}
+                  </div>
+                ) : (
+                  <div className="text-destructive">
+                    Chyba dat: chybí datum a čas potvrzení klienta.
+                  </div>
+                )}
+                {work.client_approval_email ? (
+                  <div className="text-green-700 dark:text-green-400">
+                    Klientský email: {work.client_approval_email}
+                  </div>
+                ) : (
+                  <div className="text-destructive">
+                    Chyba dat: chybí klientský email v potvrzení.
+                  </div>
+                )}
               </div>
             )}
 

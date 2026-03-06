@@ -110,6 +110,7 @@ export function ModificationRequestCard({
   const isClientApproved = request.status === 'client_approved';
   const isApplied = request.status === 'applied';
   const hasUpgradeToken = !!request.upgrade_offer_token;
+  const hasClientConfirmation = !!request.client_approved_at || !!request.client_email;
   
   const handleApprove = async () => {
     if (onApprove) {
@@ -356,9 +357,29 @@ export function ModificationRequestCard({
               )}
               
               {/* Client acceptance info */}
-              {isClientApproved && request.client_approved_at && (
-                <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
-                  📧 Klient potvrdil: {format(new Date(request.client_approved_at), "d.M.yyyy 'v' H:mm")} ({request.client_email})
+              {hasClientConfirmation && (
+                <div className="text-xs bg-green-50 dark:bg-green-900/20 p-2 rounded-md space-y-1">
+                  <div className="font-medium text-green-700 dark:text-green-400">
+                    📧 Potvrzení klienta
+                  </div>
+                  {request.client_approved_at ? (
+                    <div className="text-green-700 dark:text-green-400">
+                      Datum a čas: {format(new Date(request.client_approved_at), "d.M.yyyy 'v' H:mm")}
+                    </div>
+                  ) : (
+                    <div className="text-destructive">
+                      Chyba dat: chybí datum a čas potvrzení klienta.
+                    </div>
+                  )}
+                  {request.client_email ? (
+                    <div className="text-green-700 dark:text-green-400">
+                      Klientský email: {request.client_email}
+                    </div>
+                  ) : (
+                    <div className="text-destructive">
+                      Chyba dat: chybí klientský email v potvrzení.
+                    </div>
+                  )}
                 </div>
               )}
 

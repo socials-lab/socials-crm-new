@@ -100,21 +100,29 @@ function AppliedHistoryCard({ entry }: { entry: AppliedModificationHistory }) {
           </div>
 
           {/* Client confirmation details */}
-          {entry.client_email && entry.client_approved_at && (
+          {(entry.client_email || entry.client_approved_at) && (
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3 text-sm">
               <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium mb-1">
                 <CheckCircle className="h-4 w-4" />
-                Potvrzeno klientem
+                Potvrzení klienta
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-green-600 dark:text-green-300">
-                <div className="flex items-center gap-1">
-                  <Mail className="h-3 w-3" />
-                  <span>{entry.client_email}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>{format(new Date(entry.client_approved_at), "d. M. yyyy 'v' H:mm", { locale: cs })}</span>
-                </div>
+              <div className="space-y-2">
+                {entry.client_approved_at ? (
+                  <div className="flex items-center gap-1 text-green-600 dark:text-green-300">
+                    <Calendar className="h-3 w-3" />
+                    <span>{format(new Date(entry.client_approved_at), "d. M. yyyy 'v' H:mm", { locale: cs })}</span>
+                  </div>
+                ) : (
+                  <div className="text-destructive">Chyba dat: chybí datum a čas potvrzení klienta.</div>
+                )}
+                {entry.client_email ? (
+                  <div className="flex items-center gap-1 text-green-600 dark:text-green-300">
+                    <Mail className="h-3 w-3" />
+                    <span>{entry.client_email}</span>
+                  </div>
+                ) : (
+                  <div className="text-destructive">Chyba dat: chybí klientský email v potvrzení.</div>
+                )}
               </div>
             </div>
           )}
