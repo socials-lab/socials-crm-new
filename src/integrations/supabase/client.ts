@@ -11,49 +11,6 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// In-memory promise-based mutex to serialize token refresh calls within one tab.
-// Browser LockManager (navigator.locks) should be preferred because it also coordinates
-// across tabs/windows. This in-memory fallback is used only when LockManager is unavailable.
-const locks = new Map<string, Promise<unknown>>();
-
-const inMemoryLock = async <R>(
-  name: string,
-  acquireTimeout: number,
-  fn: () => Promise<R>
-): Promise<R> => {
-  const existing = locks.get(name) ?? Promise.resolve();
-
-  let resolve: () => void;
-  const next = new Promise<void>((r) => { resolve = r; });
-  locks.set(name, next);
-
-  try {
-    // Wait for the previous holder to finish before running fn.
-    // Respect Supabase's acquire timeout to avoid indefinite waiting.
-    if (Number.isFinite(acquireTimeout) && acquireTimeout > 0) {
-      await Promise.race([
-        existing,
-        new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error(`Lock acquire timeout: ${name}`)), acquireTimeout);
-        }),
-      ]);
-    } else {
-      await existing;
-    }
-    return await fn();
-  } finally {
-    resolve!();
-    // Clean up if we're still the latest entry
-    if (locks.get(name) === next) {
-      locks.delete(name);
-    }
-  }
-};
-
-// Browser LockManager can deadlock in long-lived dev sessions with multiple tabs/clients.
-// Use the local mutex consistently to keep auth calls responsive.
-const authLock = inMemoryLock;
-
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -86,6 +43,5 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    ...(authLock ? { lock: authLock } : {}),
   }
 });

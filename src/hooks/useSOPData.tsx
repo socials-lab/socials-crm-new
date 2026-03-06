@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { createNotification, notifyAdmins } from '@/services/notificationService';
-import { withTimeout } from '@/utils/asyncUtils';
+import { withAbortTimeout } from '@/utils/asyncUtils';
 
 export interface SOPCategory {
   id: string;
@@ -102,18 +102,18 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const [catRes, artRes, sugRes] = await Promise.all([
-        withTimeout(
-          supabase.from('sop_categories').select('*').eq('is_active', true).order('sort_order'),
+        withAbortTimeout(
+          (signal) => supabase.from('sop_categories').select('*').eq('is_active', true).order('sort_order').abortSignal(signal),
           6000,
           'Timeout while loading SOP categories'
         ),
-        withTimeout(
-          supabase.from('sop_articles').select('*').order('sort_order'),
+        withAbortTimeout(
+          (signal) => supabase.from('sop_articles').select('*').order('sort_order').abortSignal(signal),
           6000,
           'Timeout while loading SOP articles'
         ),
-        withTimeout(
-          supabase.from('sop_update_suggestions').select('*, profiles:suggested_by(full_name)').order('created_at', { ascending: false }),
+        withAbortTimeout(
+          (signal) => supabase.from('sop_update_suggestions').select('*, profiles:suggested_by(full_name)').order('created_at', { ascending: false }).abortSignal(signal),
           6000,
           'Timeout while loading SOP suggestions'
         ),
@@ -136,7 +136,7 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
       if (sugRes.error) {
         console.error('Error fetching SOP suggestions:', sugRes.error);
       } else {
-        setSuggestions((sugRes.data || []).map((s: any) => ({
+        setSuggestions((sugRes.data || []).map((s: SOPSuggestion & { profiles?: { full_name?: string } }) => ({
           ...s,
           suggested_by_name: s.profiles?.full_name || undefined,
         })));
@@ -253,7 +253,7 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
   };
 
   const updateArticle = async (id: string, article: Partial<SOPArticle>) => {
-    const updates: any = { ...article, updated_by: user?.id };
+    const updates: Record<string, unknown> = { ...article, updated_by: user?.id };
     if (article.content !== undefined) {
       updates.search_text = stripHtml(article.content);
     }

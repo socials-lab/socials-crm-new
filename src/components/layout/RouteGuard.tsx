@@ -39,7 +39,7 @@ interface RouteGuardProps {
 export function RouteGuard({ children }: RouteGuardProps) {
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const { isLoading: roleLoading, isSuperAdmin, colleagueId, isColleagueLoading, role, canAccessPage } = useUserRole();
+  const { isLoading: roleLoading, isSuperAdmin, colleagueId, isColleagueLoading, role, canAccessPage, error: roleError, retry: retryRoleLoad } = useUserRole();
   const currentPath = location.pathname;
 
   // Track how long we've been loading
@@ -85,6 +85,20 @@ export function RouteGuard({ children }: RouteGuardProps) {
   // If not authenticated, redirect to auth page
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (roleError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4">
+        <p className="text-sm text-muted-foreground text-center max-w-md">
+          Failed to load your access profile. Please retry.
+        </p>
+        <Button variant="outline" size="sm" onClick={retryRoleLoad}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   // If authenticated but no role assigned, show approval pending page

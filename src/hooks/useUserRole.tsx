@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
-import { withTimeout } from '@/utils/asyncUtils';
+import { withAbortTimeout, withTimeout } from '@/utils/asyncUtils';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -10,6 +10,7 @@ interface UserRoleContextType {
   role: AppRole | null;
   isSuperAdmin: boolean;
   isLoading: boolean;
+  error: string | null;
   colleagueId: string | null;
   isColleagueLoading: boolean;
   canSeeFinancials: boolean;
@@ -17,6 +18,7 @@ interface UserRoleContextType {
   allowedPages: string[];
   canAccessPage: (page: string) => boolean;
   hasRole: (role: AppRole) => boolean;
+  retry: () => void;
 }
 
 const UserRoleContext = createContext<UserRoleContextType | undefined>(undefined);
@@ -33,7 +35,9 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const [canSeeFinancials, setCanSeeFinancials] = useState(false);
   const [canEditAcademy, setCanEditAcademy] = useState(false);
   const [allowedPages, setAllowedPages] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [lastFetchedUserId, setLastFetchedUserId] = useState<string | null>(null);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   // Use user.id as dependency instead of user object to prevent refetching on token refresh
   const userId = user?.id ?? null;
@@ -49,6 +53,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       setCanSeeFinancials(false);
       setCanEditAcademy(false);
       setAllowedPages([]);
+      setError(null);
       setIsLoading(false);
       setLastFetchedUserId(null);
       return;
@@ -60,20 +65,97 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     }
 
     const fetchUserRole = async () => {
+      function isTimeoutOrAuthError(error: unknown): boolean {
+        const message = String((error as { message?: string })?.message ?? '').toLowerCase();
+        return (
+          message.includes('timeout') ||
+          message.includes('abort') ||
+          message.includes('jwt') ||
+          message.includes('refresh token') ||
+          message.includes('session')
+        );
+      }
+
+      async function ensureSessionReady() {
+        const { data: sessionData, error: sessionError } = await withTimeout(
+          supabase.auth.getSession(),
+          4000,
+          'Timeout while checking auth session'
+        );
+
+        if (sessionError) {
+          throw sessionError;
+        }
+
+        if (!sessionData.session) {
+          const { data: refreshed, error: refreshError } = await withTimeout(
+            supabase.auth.refreshSession(),
+            6000,
+            'Timeout while refreshing auth session'
+          );
+          if (refreshError || !refreshed.session) {
+            throw refreshError || new Error('Session expired. Please sign in again.');
+          }
+          return;
+        }
+
+        const sessionExpiresAt = sessionData.session.expires_at ?? 0;
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (sessionExpiresAt - nowSec < 120) {
+          const { data: refreshed, error: refreshError } = await withTimeout(
+            supabase.auth.refreshSession(),
+            6000,
+            'Timeout while refreshing auth session'
+          );
+          if (refreshError || !refreshed.session) {
+            throw refreshError || new Error('Session refresh failed');
+          }
+        }
+      }
+
+      async function runWithSessionRecovery<T>(
+        queryFactory: (signal: AbortSignal) => Promise<{ data: T | null; error: unknown }>,
+        timeoutMs: number,
+        timeoutMessage: string
+      ): Promise<{ data: T | null; error: unknown }> {
+        try {
+          return await withAbortTimeout(
+            (signal) => queryFactory(signal),
+            timeoutMs,
+            timeoutMessage
+          );
+        } catch (error) {
+          if (!isTimeoutOrAuthError(error)) {
+            throw error;
+          }
+
+          await ensureSessionReady();
+
+          return withAbortTimeout(
+            (signal) => queryFactory(signal),
+            timeoutMs,
+            timeoutMessage
+          );
+        }
+      }
+
       setIsLoading(true);
+      setError(null);
       setIsColleagueLoading(true);
       setColleagueId(null);
 
       // Colleague link is not critical for most routes - load it in background.
       const fetchColleagueLink = async () => {
         try {
-          const { data: colleagueData, error: colleagueError } = await withTimeout(
-            supabase
-              .from('colleagues')
-              .select('id')
-              .eq('profile_id', userId)
-              .maybeSingle(),
-            5000,
+          const { data: colleagueData, error: colleagueError } = await runWithSessionRecovery(
+            (signal) =>
+              supabase
+                .from('colleagues')
+                .select('id')
+                .eq('profile_id', userId)
+                .maybeSingle()
+                .abortSignal(signal),
+            8000,
             'Timeout while loading colleague link'
           );
 
@@ -93,19 +175,25 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       void fetchColleagueLink();
 
       try {
+        await ensureSessionReady();
+
         // Fetch user role - use raw query to handle both old and new schema
-        const { data: roleData, error: roleError } = await withTimeout(
-          supabase
-            .from('user_roles')
-            .select('*')
-            .eq('user_id', userId)
-            .maybeSingle(),
-          5000,
+        const { data: roleData, error: roleError } = await runWithSessionRecovery(
+          (signal) =>
+            supabase
+              .from('user_roles')
+              .select('*')
+              .eq('user_id', userId)
+              .maybeSingle()
+              .abortSignal(signal),
+          8000,
           'Timeout while loading user role'
         );
 
         if (roleError) {
+          const message = (roleError as { message?: string })?.message || 'Failed to load role';
           console.error('Error fetching user role:', roleError);
+          setError(message);
         }
 
         if (roleData) {
@@ -135,6 +223,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         setLastFetchedUserId(userId);
       } catch (error) {
         console.error('Error in fetchUserRole:', error);
+        setError((error as { message?: string })?.message || 'Failed to load user role');
         setRole(null);
         setIsSuperAdmin(false);
         setCanSeeFinancials(false);
@@ -146,7 +235,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     };
 
     fetchUserRole();
-  }, [userId, authLoading, lastFetchedUserId]);
+  }, [userId, authLoading, lastFetchedUserId, reloadNonce]);
 
   const hasRole = (checkRole: AppRole): boolean => {
     if (isSuperAdmin) return true;
@@ -168,18 +257,25 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     return DEFAULT_PAGES_WITHOUT_EXPLICIT_PERMISSIONS.includes(page);
   };
 
+  const retry = () => {
+    setLastFetchedUserId(null);
+    setReloadNonce((prev) => prev + 1);
+  };
+
   return (
     <UserRoleContext.Provider value={{ 
       role, 
       isSuperAdmin, 
-      isLoading, 
+      isLoading,
+      error,
       colleagueId,
       isColleagueLoading,
       canSeeFinancials,
       canEditAcademy,
       allowedPages,
       canAccessPage,
-      hasRole 
+      hasRole,
+      retry
     }}>
       {children}
     </UserRoleContext.Provider>

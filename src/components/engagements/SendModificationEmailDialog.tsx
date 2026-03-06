@@ -47,6 +47,32 @@ const REQUEST_TYPE_SUBJECTS: Record<string, string> = {
   deactivate_service: 'Ukončení služby',
 };
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function isStandaloneUrl(value: string): boolean {
+  return /^https?:\/\/\S+$/i.test(value);
+}
+
+function renderInlineWithLinks(value: string): string {
+  return value
+    .split(/\s+/)
+    .map((part) => {
+      if (/^https?:\/\/\S+$/i.test(part)) {
+        const safeHref = escapeHtml(part);
+        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;word-break:break-all;">${safeHref}</a>`;
+      }
+      return escapeHtml(part);
+    })
+    .join(' ');
+}
+
 export function SendModificationEmailDialog({
   open,
   onOpenChange,
@@ -231,14 +257,23 @@ export function SendModificationEmailDialog({
             htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
             currentParagraph = [];
           }
+        } else if (isStandaloneUrl(trimmed)) {
+          if (currentParagraph.length > 0) {
+            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
+            currentParagraph = [];
+          }
+          const safeHref = escapeHtml(trimmed);
+          htmlParts.push(
+            `<p style="margin: 0 0 16px 0;"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;word-break:break-all;">${safeHref}</a></p>`
+          );
         } else if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.match(/^\d+\./)) {
           if (currentParagraph.length > 0) {
             htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
             currentParagraph = [];
           }
-          htmlParts.push(`<p style="margin: 0 0 8px 0; padding-left: 20px;">${trimmed}</p>`);
+          htmlParts.push(`<p style="margin: 0 0 8px 0; padding-left: 20px;">${renderInlineWithLinks(trimmed)}</p>`);
         } else {
-          currentParagraph.push(trimmed);
+          currentParagraph.push(renderInlineWithLinks(trimmed));
         }
       }
 
@@ -277,7 +312,7 @@ export function SendModificationEmailDialog({
         toast.success(`📧 Email odeslán na ${recipientEmail}`);
         onOpenChange(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to send modification email:', err);
     } finally {
       setIsSending(false);

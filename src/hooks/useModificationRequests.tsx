@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
+import { withAbortTimeout, withTimeout } from '@/utils/asyncUtils';
 import type {
   ModificationRequestType,
   ModificationProposedChanges,
@@ -162,6 +163,30 @@ export function useModificationRequests() {
     }) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Ensure we have a fresh session before write operations.
+      const { data: sessionData, error: sessionError } = await withTimeout(
+        supabase.auth.getSession(),
+        4000,
+        'Timeout while checking session'
+      );
+      if (sessionError) throw sessionError;
+      if (!sessionData.session) {
+        throw new Error('Session expired. Please sign in again.');
+      }
+
+      const sessionExpiresAt = sessionData.session.expires_at ?? 0;
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (sessionExpiresAt - nowSec < 120) {
+        const { data: refreshed, error: refreshError } = await withTimeout(
+          supabase.auth.refreshSession(),
+          6000,
+          'Timeout while refreshing session'
+        );
+        if (refreshError || !refreshed.session) {
+          throw refreshError || new Error('Session refresh failed');
+        }
+      }
+
       // Get engagement and client info
       const engagement = engagements.find(e => e.id === params.engagement_id);
       if (!engagement) throw new Error('Engagement not found');
@@ -173,32 +198,35 @@ export function useModificationRequests() {
         ? colleagues.find(c => c.id === params.upsold_by_id)
         : null;
 
-      const { data, error } = await supabase
-        .from('modification_requests')
-        .insert({
-          engagement_id: params.engagement_id,
-          request_type: params.request_type,
-          status: 'pending',
-          proposed_changes: params.proposed_changes as unknown as Record<string, unknown>,
-          engagement_service_id: params.engagement_service_id || null,
-          engagement_assignment_id: params.engagement_assignment_id || null,
-          effective_from: params.effective_from || null,
-          upsold_by_id: params.upsold_by_id || null,
-          upsold_by_name: upsoldByColleague?.full_name || null,
-          upsell_commission_percent: params.upsell_commission_percent ?? 10,
-          note: params.note || null,
-          requested_by: user.id,
-          // Denormalized fields
-          engagement_name: engagement.name,
-          client_id: client.id,
-          client_name: client.name,
-          client_brand_name: client.brand_name,
-        })
-        .select()
-        .single();
+      const { error } = await withAbortTimeout(
+        (signal) => supabase
+          .from('modification_requests')
+          .insert({
+            engagement_id: params.engagement_id,
+            request_type: params.request_type,
+            status: 'pending',
+            proposed_changes: params.proposed_changes as unknown as Record<string, unknown>,
+            engagement_service_id: params.engagement_service_id || null,
+            engagement_assignment_id: params.engagement_assignment_id || null,
+            effective_from: params.effective_from || null,
+            upsold_by_id: params.upsold_by_id || null,
+            upsold_by_name: upsoldByColleague?.full_name || null,
+            upsell_commission_percent: params.upsell_commission_percent ?? 10,
+            note: params.note || null,
+            requested_by: user.id,
+            // Denormalized fields
+            engagement_name: engagement.name,
+            client_id: client.id,
+            client_name: client.name,
+            client_brand_name: client.brand_name,
+          })
+          .abortSignal(signal),
+        8000,
+        'Timeout: uložení návrhu změny trvá příliš dlouho'
+      );
 
       if (error) throw error;
-      return data;
+      return null;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['modification_requests'] });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -21,11 +21,12 @@ export default function Auth() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
-  // Redirect if already logged in
-  if (user && !authLoading) {
-    navigate('/');
-    return null;
-  }
+  // Redirect if already logged in (must happen in effect, not during render)
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate('/', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const validateEmail = (email: string): boolean => {
     const result = emailSchema.safeParse(email);
@@ -88,6 +89,10 @@ export default function Auth() {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (user) {
+    return null;
   }
 
   return (
