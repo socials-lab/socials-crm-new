@@ -305,6 +305,8 @@ export interface EngagementService {
   upsell_commission_percent: number | null;
   // Effective date for modifications/upsells
   effective_from: string | null;
+  // Service is active until this date (exclusive). Example: end_date=2026-04-01 means inactive from 1.4.
+  end_date: string | null;
   created_at: string;
   updated_at: string;
 }

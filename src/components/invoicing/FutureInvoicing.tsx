@@ -22,6 +22,7 @@ import type { InvoiceLineItem, MonthlyEngagementInvoice } from '@/types/crm';
 import { getDaysInMonth, parseISO, startOfMonth, endOfMonth, format, isAfter, isBefore } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { isEngagementServiceActiveInPeriod } from '@/lib/engagementServiceLifecycle';
 
 export interface IssuedStats {
   totalCount: number;
@@ -211,7 +212,10 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
 
         // Get engagement services for this engagement from useCRMData
         const services = engagementServices.filter(
-          es => es.engagement_id === engagement.id && es.is_active && es.billing_type === 'monthly'
+          (service) =>
+            service.engagement_id === engagement.id &&
+            service.billing_type === 'monthly' &&
+            isEngagementServiceActiveInPeriod(service, periodStart, periodEnd)
         );
 
         // Add line item for each non-Creative Boost service

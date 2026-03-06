@@ -71,6 +71,7 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/sonner';
 import { normalizeUrlProtocol } from '@/lib/validation';
 import { getClientOptionLabel } from '@/lib/clientOptionLabel';
+import { isEngagementServiceActiveInMonth } from '@/lib/engagementServiceLifecycle';
 
 // Dynamic lookup for Creative Boost service ID
 const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
@@ -532,7 +533,7 @@ function EngagementsContent() {
           // Calculate total amount from all services
           const engagementServicesList = getEngagementServicesByEngagementId(engagement.id);
           const totalServicesAmount = engagementServicesList
-            .filter(s => s.is_active)
+            .filter((service) => isEngagementServiceActiveInMonth(service, filterYear, filterMonth))
             .reduce((sum, s) => {
               // For Creative Boost, calculate from USED credits for the FILTERED month only
               if (CREATIVE_BOOST_SERVICE_ID && s.service_id === CREATIVE_BOOST_SERVICE_ID) {
@@ -630,7 +631,7 @@ function EngagementsContent() {
                       {engagement.type === 'retainer' && '/měs'}
                       {engagementServicesList.length > 1 && (
                         <span className="text-xs font-normal text-muted-foreground">
-                          ({engagementServicesList.filter(s => s.is_active).length} pol.)
+                          ({engagementServicesList.filter((service) => isEngagementServiceActiveInMonth(service, filterYear, filterMonth)).length} pol.)
                         </span>
                       )}
                     </span>
@@ -786,8 +787,10 @@ function EngagementsContent() {
                     {/* Services section */}
                     {(() => {
                       const allEngServices = getEngagementServicesByEngagementId(engagement.id);
-                      // Only show active services
-                      const engServices = allEngServices.filter(s => s.is_active);
+                      // Show services that are active in the selected month (supports scheduled terminations).
+                      const engServices = allEngServices.filter((service) =>
+                        isEngagementServiceActiveInMonth(service, filterYear, filterMonth),
+                      );
                       const totalServicesPrice = engServices.reduce((sum, s) => sum + s.price, 0);
                       return (
                         <div className="space-y-3">
@@ -1084,7 +1087,7 @@ function EngagementsContent() {
 
                       // Calculate total revenue from services
                       const totalRevenue = engServices
-                        .filter(s => s.is_active)
+                        .filter((service) => isEngagementServiceActiveInMonth(service, filterYear, filterMonth))
                         .reduce((sum, s) => {
                           // For Creative Boost, use estimated invoice from filtered month
                           if (CREATIVE_BOOST_SERVICE_ID && s.service_id === CREATIVE_BOOST_SERVICE_ID) {
@@ -1127,7 +1130,7 @@ function EngagementsContent() {
                                 {totalRevenue.toLocaleString()} {engagement.currency}
                               </div>
                               <div className="text-[10px] text-muted-foreground">
-                                z {engServices.filter(s => s.is_active).length} služeb
+                                z {engServices.filter((service) => isEngagementServiceActiveInMonth(service, filterYear, filterMonth)).length} služeb
                               </div>
                             </div>
 
@@ -1656,7 +1659,7 @@ function EngagementsContent() {
           }}
           engagement={invoiceDialogEngagement}
           client={getClientById(invoiceDialogEngagement.client_id)!}
-          engagementServices={getEngagementServicesByEngagementId(invoiceDialogEngagement.id).filter(s => s.is_active)}
+          engagementServices={getEngagementServicesByEngagementId(invoiceDialogEngagement.id)}
           isLoading={isCreatingInvoice}
           onCreateInvoice={async (data) => {
             setIsCreatingInvoice(true);

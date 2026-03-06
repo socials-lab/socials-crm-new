@@ -21,10 +21,11 @@ import {
 import { Calculator, CalendarDays, FileText, Plus, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Engagement, Client, EngagementService } from '@/types/crm';
-import { format, subMonths, addMonths } from 'date-fns';
+import { format, subMonths, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
+import { isEngagementServiceActiveInPeriod } from '@/lib/engagementServiceLifecycle';
 
 interface InvoiceItemDraft {
   id: string;
@@ -144,13 +145,33 @@ export function CreateInvoiceFromEngagementDialog({
     return format(new Date(option.year, option.month - 1), 'LLLL yyyy', { locale: cs });
   }, [periodOptions]);
 
+  const activeServicesForSelectedPeriod = useMemo(() => {
+    const selectedOption = periodOptions.find((option) => option.value === selectedPeriod);
+    if (!selectedOption) return [];
+
+    const periodStart = startOfMonth(new Date(selectedOption.year, selectedOption.month - 1));
+    const periodEnd = endOfMonth(new Date(selectedOption.year, selectedOption.month - 1));
+
+    return engagementServices.filter((service) =>
+      isEngagementServiceActiveInPeriod(service, periodStart, periodEnd),
+    );
+  }, [engagementServices, periodOptions, selectedPeriod]);
+
   // Reset form and prefill items when dialog opens
   useEffect(() => {
     if (open) {
       setSelectedPeriod(defaultPeriod);
       
       const periodLabel = getPeriodLabel(defaultPeriod);
-      const activeServices = engagementServices.filter(s => s.is_active);
+      const selectedOption = periodOptions.find((option) => option.value === defaultPeriod);
+      if (!selectedOption) {
+        throw new Error(`Missing period option for ${defaultPeriod}`);
+      }
+      const defaultPeriodStart = startOfMonth(new Date(selectedOption.year, selectedOption.month - 1));
+      const defaultPeriodEnd = endOfMonth(new Date(selectedOption.year, selectedOption.month - 1));
+      const activeServices = engagementServices.filter((service) =>
+        isEngagementServiceActiveInPeriod(service, defaultPeriodStart, defaultPeriodEnd),
+      );
       
       if (activeServices.length > 0) {
         const prefilled = activeServices.map(s => ({
@@ -170,7 +191,7 @@ export function CreateInvoiceFromEngagementDialog({
         setItems([createEmptyItem(engagementCurrency)]);
       }
     }
-  }, [open, engagementServices, engagementCurrency, defaultPeriod, getPeriodLabel]);
+  }, [open, engagementServices, engagementCurrency, defaultPeriod, getPeriodLabel, periodOptions]);
 
   // Update descriptions when period changes
   useEffect(() => {
@@ -293,6 +314,9 @@ export function CreateInvoiceFromEngagementDialog({
                 Vytváříte fakturu za minulé období - toto je záložní možnost pro případ omylem smazané faktury.
               </p>
             )}
+            <p className="text-xs text-muted-foreground">
+              Automaticky načtené služby pro období: {activeServicesForSelectedPeriod.length}
+            </p>
           </div>
 
           <div className="space-y-2 flex-1 overflow-hidden flex flex-col">

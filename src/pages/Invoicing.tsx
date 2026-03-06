@@ -13,6 +13,7 @@ import { cs } from 'date-fns/locale';
 import { FileText, CheckCircle, Package, Briefcase, ChevronLeft, ChevronRight, Palette, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { isEngagementServiceActiveInPeriod } from '@/lib/engagementServiceLifecycle';
 
 function requireCurrency(value: string | null | undefined, context: string): string {
   if (!value) {
@@ -139,7 +140,11 @@ const Invoicing = () => {
           const isProrated = activeDays < totalDays;
 
           const services = engagementServices.filter(
-            es => es.engagement_id === engagement.id && es.is_active && es.billing_type === 'monthly' && !es.creative_boost_max_credits
+            (service) =>
+              service.engagement_id === engagement.id &&
+              service.billing_type === 'monthly' &&
+              !service.creative_boost_max_credits &&
+              isEngagementServiceActiveInPeriod(service, periodStart, periodEnd)
           );
           services.forEach(service => {
             const proratedAmount = isProrated ? Math.round((service.price / totalDays) * activeDays) : service.price;
