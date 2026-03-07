@@ -34,6 +34,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Colleague } from '@/types/crm';
+import { optionalIco, czechDic } from '@/lib/validation';
 import { 
   SERVICE_SLOT_LABELS, 
   SERVICE_SLOT_TYPES,
@@ -66,8 +67,8 @@ const colleagueSchema = z.object({
   role: z.enum(['admin', 'management', 'project_manager', 'specialist', 'finance'] as const).optional(),
   // New personal & billing fields
   personal_email: z.string().email('Neplatný email').optional().or(z.literal('')).nullable(),
-  ico: z.string().nullable(),
-  dic: z.string().nullable(),
+  ico: optionalIco,
+  dic: czechDic,
   company_name: z.string().nullable(),
   billing_street: z.string().nullable(),
   billing_city: z.string().nullable(),
@@ -544,7 +545,7 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
                   <FormLabel>DIČ</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="CZ12345678" 
+                      placeholder="CZ12345678 / SK1234567890" 
                       value={field.value || ''} 
                       onChange={(e) => field.onChange(e.target.value || null)}
                     />

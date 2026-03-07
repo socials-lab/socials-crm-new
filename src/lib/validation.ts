@@ -123,6 +123,19 @@ export const czechIco = z.string()
   .refine(val => validateIcoChecksum(val), 'Neplatné IČO - kontrolní součet nesouhlasí');
 
 /**
+ * Optional IČO for colleague/profile billing details
+ * - Supports CZ/SK format (8 digits)
+ * - Does not enforce checksum for profile data flexibility
+ */
+export const optionalIco = z.string()
+  .transform(val => val?.trim() || '')
+  .refine(
+    val => val === '' || /^\d{8}$/.test(val),
+    'IČO musí mít 8 číslic (CZ/SK)'
+  )
+  .transform(val => val === '' ? null : val);
+
+/**
  * Validates supported DIČ/VAT formats (optional)
  * - Czech VAT: CZ + 8-10 digits
  * - Slovak VAT: SK + 10 digits
@@ -133,7 +146,7 @@ function isSupportedDicFormat(value: string): boolean {
 }
 
 export const czechDic = z.string()
-  .transform(val => val?.trim() || '')
+  .transform(val => val?.trim().toUpperCase() || '')
   .refine(
     val => val === '' || isSupportedDicFormat(val),
     'DIČ musí být ve formátu CZ12345678, SK1234567890 nebo 10 číslic'

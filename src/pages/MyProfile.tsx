@@ -48,13 +48,14 @@ import { useAresLookup } from '@/hooks/useAresLookup';
 import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
 import type { CompanySearchResult } from '@/hooks/useAresSearch';
 import { toast } from 'sonner';
+import { optionalIco, czechDic } from '@/lib/validation';
 
 const profileSchema = z.object({
   phone: z.string().nullable(),
   birthday: z.date().nullable(),
   personal_email: z.string().email('Zadejte platný email').nullable().or(z.literal('')),
-  ico: z.string().nullable(),
-  dic: z.string().nullable(),
+  ico: optionalIco,
+  dic: czechDic,
   company_name: z.string().nullable(),
   billing_street: z.string().nullable(),
   billing_city: z.string().nullable(),
@@ -615,7 +616,7 @@ export default function MyProfile() {
                       <FormLabel>DIČ</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="CZ12345678"
+                            placeholder="CZ12345678 / SK1234567890"
                           {...field}
                           value={field.value || ''}
                           onChange={(e) => field.onChange(e.target.value || null)}
