@@ -10,11 +10,13 @@ interface FeedbackDataContextType {
   isLoading: boolean;
   addIdea: (data: { title: string; description: string; category: FeedbackCategory }) => Promise<FeedbackIdea>;
   updateIdeaStatus: (id: string, status: FeedbackStatus) => Promise<void>;
+  deleteIdea: (id: string) => Promise<void>;
   vote: (ideaId: string, voteType: 'up' | 'down') => Promise<void>;
   removeVote: (ideaId: string) => Promise<void>;
   getVoteCounts: (ideaId: string) => { up: number; down: number };
   getUserVote: (ideaId: string) => 'up' | 'down' | null;
   canManageStatus: boolean;
+  canDeleteIdeas: boolean;
 }
 
 const FeedbackDataContext = createContext<FeedbackDataContextType | undefined>(undefined);
@@ -73,6 +75,10 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     return isSuperAdmin || role === 'admin' || role === 'management';
   }, [isSuperAdmin, role]);
 
+  const canDeleteIdeas = useMemo(() => {
+    return isSuperAdmin || role === 'admin';
+  }, [isSuperAdmin, role]);
+
   // Mutations
   const addIdeaMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; category: FeedbackCategory }) => {
@@ -107,6 +113,31 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feedback_ideas'] });
+    },
+  });
+
+  const deleteIdeaMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!isSuperAdmin && role !== 'admin') {
+        throw new Error('Only admins can delete feedback ideas');
+      }
+
+      const { data: deletedIdea, error } = await supabase
+        .from('feedback_ideas')
+        .delete()
+        .eq('id', id)
+        .select('id')
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!deletedIdea) {
+        throw new Error('Feedback idea not found or permission denied');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feedback_ideas'] });
+      queryClient.invalidateQueries({ queryKey: ['feedback_votes'] });
     },
   });
 
@@ -186,6 +217,10 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     await voteMutation.mutateAsync({ ideaId, voteType });
   }, [voteMutation]);
 
+  const deleteIdea = useCallback(async (id: string): Promise<void> => {
+    await deleteIdeaMutation.mutateAsync(id);
+  }, [deleteIdeaMutation]);
+
   const removeVote = useCallback(async (ideaId: string): Promise<void> => {
     await removeVoteMutation.mutateAsync(ideaId);
   }, [removeVoteMutation]);
@@ -197,13 +232,15 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       isLoading,
       addIdea,
       updateIdeaStatus,
+      deleteIdea,
       vote,
       removeVote,
       getVoteCounts,
       getUserVote,
       canManageStatus,
+      canDeleteIdeas,
     }),
-    [ideas, votes, isLoading, addIdea, updateIdeaStatus, vote, removeVote, getVoteCounts, getUserVote, canManageStatus]
+    [ideas, votes, isLoading, addIdea, updateIdeaStatus, deleteIdea, vote, removeVote, getVoteCounts, getUserVote, canManageStatus, canDeleteIdeas]
   );
 
   return (

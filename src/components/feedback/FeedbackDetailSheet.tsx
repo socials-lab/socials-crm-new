@@ -1,4 +1,5 @@
-import { ThumbsUp, ThumbsDown } from 'lucide-react';
+import { useState } from 'react';
+import { ThumbsUp, ThumbsDown, Trash2 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -15,6 +16,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useFeedbackData } from '@/hooks/useFeedbackData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { 
@@ -34,8 +45,10 @@ interface FeedbackDetailSheetProps {
 }
 
 export function FeedbackDetailSheet({ idea, open, onOpenChange }: FeedbackDetailSheetProps) {
-  const { getVoteCounts, getUserVote, vote, removeVote, updateIdeaStatus, canManageStatus } = useFeedbackData();
+  const { getVoteCounts, getUserVote, vote, removeVote, updateIdeaStatus, deleteIdea, canManageStatus, canDeleteIdeas } = useFeedbackData();
   const { colleagues } = useCRMData();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   if (!idea) return null;
   
@@ -58,6 +71,19 @@ export function FeedbackDetailSheet({ idea, open, onOpenChange }: FeedbackDetail
   const handleStatusChange = (status: FeedbackStatus) => {
     updateIdeaStatus(idea.id, status);
   };
+
+  async function handleDeleteIdea() {
+    if (isDeleting) return;
+
+    try {
+      setIsDeleting(true);
+      await deleteIdea(idea.id);
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -139,8 +165,43 @@ export function FeedbackDetailSheet({ idea, open, onOpenChange }: FeedbackDetail
               </Select>
             </div>
           )}
+
+          {canDeleteIdeas && (
+            <div>
+              <Label className="mb-2 block">Admin akce</Label>
+              <Button
+                variant="destructive"
+                className="w-full gap-2"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Smazat feedback
+              </Button>
+            </div>
+          )}
         </div>
       </SheetContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat feedback?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tato akce je nevratná. Feedback nápad bude trvale smazán.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteIdea}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Mažu...' : 'Smazat'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }
