@@ -105,13 +105,20 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
 
   const updateIdeaStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: FeedbackStatus }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('feedback_ideas')
         .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', id);
+        .eq('id', id)
+        .select('*')
+        .single();
       if (error) throw error;
+      return transformIdea(data);
     },
-    onSuccess: () => {
+    onSuccess: (updatedIdea) => {
+      queryClient.setQueryData<FeedbackIdea[]>(['feedback_ideas'], (currentIdeas) => {
+        if (!currentIdeas) return currentIdeas;
+        return currentIdeas.map((idea) => (idea.id === updatedIdea.id ? updatedIdea : idea));
+      });
       queryClient.invalidateQueries({ queryKey: ['feedback_ideas'] });
     },
   });

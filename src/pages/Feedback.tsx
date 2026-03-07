@@ -42,6 +42,20 @@ export default function Feedback() {
     }, { replace: true });
   }, [ideas, searchParams, setSearchParams]);
 
+  useEffect(() => {
+    if (!selectedIdea) return;
+
+    const currentIdea = ideas.find((item) => item.id === selectedIdea.id);
+    if (!currentIdea) {
+      setSelectedIdea(null);
+      return;
+    }
+
+    if (currentIdea !== selectedIdea) {
+      setSelectedIdea(currentIdea);
+    }
+  }, [ideas, selectedIdea]);
+
   const filteredAndSortedIdeas = useMemo(() => {
     let result = [...ideas];
 
