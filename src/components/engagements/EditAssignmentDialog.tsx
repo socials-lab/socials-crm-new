@@ -22,6 +22,15 @@ import type { EngagementAssignment, CostModel } from '@/types/crm';
 
 // Default reward per credit when not configured
 const DEFAULT_REWARD_PER_CREDIT = 80;
+const PER_CREDIT_ROLES = ['Graphic Designer', 'Video Editor'] as const;
+const ASSIGNMENT_ROLE_OPTIONS = [
+  'Meta Ads Specialist',
+  'PPC Specialist',
+  'Graphic Designer',
+  'Video Editor',
+  'Sales Specialist',
+  'Account Manager',
+] as const;
 
 // Extended cost model including per_credit for Creative Boost
 type ExtendedCostModel = CostModel | 'per_credit';
@@ -55,7 +64,7 @@ export function EditAssignmentDialog({
   const hasPerCreditReward = assignment.reward_per_credit !== null || isCreativeBoostService;
 
   const [costModel, setCostModel] = useState<ExtendedCostModel>(
-    hasPerCreditReward && isCreativeBoostService ? 'per_credit' : assignment.cost_model
+    hasPerCreditReward ? 'per_credit' : assignment.cost_model
   );
   const [hourlyCost, setHourlyCost] = useState<string>(
     assignment.hourly_cost?.toString() || ''
@@ -78,13 +87,25 @@ export function EditAssignmentDialog({
     const reward = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
     const hasReward = assignment.reward_per_credit !== null || isCreativeBoostService;
 
-    setCostModel(hasReward && isCreativeBoostService ? 'per_credit' : assignment.cost_model);
+    setCostModel(hasReward ? 'per_credit' : assignment.cost_model);
     setHourlyCost(assignment.hourly_cost?.toString() || '');
     setMonthlyCost(assignment.monthly_cost?.toString() || '');
     setPercentageOfRevenue(assignment.percentage_of_revenue?.toString() || '');
     setPerCreditReward(reward.toString());
     setRoleOnEngagement(assignment.role_on_engagement || '');
   }, [assignment, isCreativeBoostService]);
+
+  useEffect(() => {
+    if (!roleOnEngagement) return;
+    const shouldUsePerCredit = PER_CREDIT_ROLES.includes(roleOnEngagement as typeof PER_CREDIT_ROLES[number]);
+    if (shouldUsePerCredit && costModel !== 'per_credit') {
+      setCostModel('per_credit');
+      return;
+    }
+    if (!shouldUsePerCredit && costModel === 'per_credit') {
+      setCostModel('fixed_monthly');
+    }
+  }, [roleOnEngagement, costModel]);
 
   const handleSave = () => {
     // If per_credit model, save reward_per_credit to DB
@@ -123,11 +144,23 @@ export function EditAssignmentDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>Role na zakázce</Label>
-            <Input
-              value={roleOnEngagement}
-              onChange={(e) => setRoleOnEngagement(e.target.value)}
-              placeholder="Account Manager, Specialist..."
-            />
+            <Select value={roleOnEngagement} onValueChange={setRoleOnEngagement}>
+              <SelectTrigger>
+                <SelectValue placeholder="Vyberte roli" />
+              </SelectTrigger>
+              <SelectContent>
+                {ASSIGNMENT_ROLE_OPTIONS.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role}
+                  </SelectItem>
+                ))}
+                {roleOnEngagement && !ASSIGNMENT_ROLE_OPTIONS.includes(roleOnEngagement as typeof ASSIGNMENT_ROLE_OPTIONS[number]) && (
+                  <SelectItem value={roleOnEngagement}>
+                    {roleOnEngagement}
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -140,14 +173,12 @@ export function EditAssignmentDialog({
                 <SelectItem value="fixed_monthly">Fixní měsíčně</SelectItem>
                 <SelectItem value="hourly">Hodinová sazba</SelectItem>
                 <SelectItem value="percentage">Procenta z revenue</SelectItem>
-                {isCreativeBoostService && (
-                  <SelectItem value="per_credit">
-                    <span className="flex items-center gap-2">
-                      <Palette className="h-3.5 w-3.5" />
-                      Odměna za kredit (Creative Boost)
-                    </span>
-                  </SelectItem>
-                )}
+                <SelectItem value="per_credit">
+                  <span className="flex items-center gap-2">
+                    <Palette className="h-3.5 w-3.5" />
+                    Odměna za kredit
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -196,7 +227,7 @@ export function EditAssignmentDialog({
             <div className="space-y-3 p-3 rounded-lg bg-muted/50 border">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Palette className="h-4 w-4 text-primary" />
-                Creative Boost odměna
+                Odměna za kredit
               </div>
               <div className="space-y-2">
                 <Label>Odměna za kredit (Kč)</Label>
@@ -208,7 +239,7 @@ export function EditAssignmentDialog({
                   placeholder="80"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Kolega dostane tuto částku za každý odpracovaný kredit. Doporučená hodnota: 80 Kč
+                  Pro roli Graphic Designer / Video Editor se odměna počítá za každý odpracovaný kredit.
                 </p>
               </div>
             </div>

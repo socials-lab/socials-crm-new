@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,13 +24,25 @@ import {
 import type { Colleague, EngagementAssignment } from '@/types/crm';
 import { toDateOnlyString } from '@/lib/dbNormalize';
 
+const DEFAULT_REWARD_PER_CREDIT = 80;
+const PER_CREDIT_ROLES = ['Graphic Designer', 'Video Editor'] as const;
+const ASSIGNMENT_ROLE_OPTIONS = [
+  'Meta Ads Specialist',
+  'PPC Specialist',
+  'Graphic Designer',
+  'Video Editor',
+  'Sales Specialist',
+  'Account Manager',
+] as const;
+
 const assignmentSchemaBase = z.object({
   colleague_id: z.string().min(1, 'Vyberte kolegu'),
   role_on_engagement: z.string().min(1, 'Role je povinná'),
-  cost_model: z.enum(['hourly', 'fixed_monthly', 'percentage'] as const),
+  cost_model: z.enum(['hourly', 'fixed_monthly', 'percentage', 'per_credit'] as const),
   hourly_cost: z.coerce.number().min(0).nullable(),
   monthly_cost: z.coerce.number().min(0).nullable(),
   percentage_of_revenue: z.coerce.number().min(0).max(100).nullable(),
+  reward_per_credit: z.coerce.number().min(0).nullable(),
   start_date: z.string().min(1, 'Datum je povinné'),
   notes: z.string(),
 });
@@ -92,6 +104,7 @@ export function AssignmentForm({
       hourly_cost: null,
       monthly_cost: null,
       percentage_of_revenue: null,
+      reward_per_credit: DEFAULT_REWARD_PER_CREDIT,
       start_date: defaultStartDate,
       notes: '',
     },
@@ -99,6 +112,7 @@ export function AssignmentForm({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const costModel = form.watch('cost_model');
+  const roleOnEngagement = form.watch('role_on_engagement');
 
   // Filter out already assigned colleagues
   const assignedColleagueIds = existingAssignments
@@ -114,8 +128,29 @@ export function AssignmentForm({
     if (!selectedColleague) {
       throw new Error(`Selected colleague ${colleagueId} is not available for assignment.`);
     }
-    form.setValue('role_on_engagement', selectedColleague.position, { shouldValidate: true, shouldDirty: true });
+    const position = selectedColleague.position.toLowerCase();
+    if (position.includes('video')) {
+      form.setValue('role_on_engagement', 'Video Editor', { shouldValidate: true, shouldDirty: true });
+      return;
+    }
+    if (position.includes('design') || position.includes('grafik')) {
+      form.setValue('role_on_engagement', 'Graphic Designer', { shouldValidate: true, shouldDirty: true });
+      return;
+    }
+    form.setValue('role_on_engagement', '', { shouldValidate: true, shouldDirty: true });
   }
+
+  useEffect(() => {
+    if (!roleOnEngagement) return;
+    const shouldUsePerCredit = PER_CREDIT_ROLES.includes(roleOnEngagement as typeof PER_CREDIT_ROLES[number]);
+    if (shouldUsePerCredit && costModel !== 'per_credit') {
+      form.setValue('cost_model', 'per_credit', { shouldValidate: true, shouldDirty: true });
+      return;
+    }
+    if (!shouldUsePerCredit && costModel === 'per_credit') {
+      form.setValue('cost_model', 'fixed_monthly', { shouldValidate: true, shouldDirty: true });
+    }
+  }, [roleOnEngagement, costModel, form]);
 
   const handleManualSubmit = async () => {
     const isValid = await form.trigger();
@@ -142,10 +177,11 @@ export function AssignmentForm({
           engagement_service_id: engagementServiceId || null,
           colleague_id: data.colleague_id,
           role_on_engagement: data.role_on_engagement,
-          cost_model: data.cost_model,
+          cost_model: data.cost_model === 'per_credit' ? 'fixed_monthly' : data.cost_model,
           hourly_cost: data.cost_model === 'hourly' ? data.hourly_cost : null,
           monthly_cost: data.cost_model === 'fixed_monthly' ? data.monthly_cost : null,
           percentage_of_revenue: data.cost_model === 'percentage' ? data.percentage_of_revenue : null,
+          reward_per_credit: data.cost_model === 'per_credit' ? (data.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT) : null,
           start_date: data.start_date,
           end_date: null,
           notes: data.notes,
@@ -198,9 +234,20 @@ export function AssignmentForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Role na zakázce</FormLabel>
-              <FormControl>
-                <Input placeholder="Account Manager, Specialist..." {...field} />
-              </FormControl>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vyberte roli" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {ASSIGNMENT_ROLE_OPTIONS.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -222,6 +269,7 @@ export function AssignmentForm({
                   <SelectItem value="fixed_monthly">Fixní měsíčně</SelectItem>
                   <SelectItem value="hourly">Hodinová sazba</SelectItem>
                   <SelectItem value="percentage">Procenta z revenue</SelectItem>
+                  <SelectItem value="per_credit">Odměna za kredit</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -287,6 +335,30 @@ export function AssignmentForm({
                     onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
                   />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {costModel === 'per_credit' && (
+          <FormField
+            control={form.control}
+            name="reward_per_credit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Odměna za kredit (Kč)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={field.value ?? ''}
+                    onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  Pro roli Graphic Designer / Video Editor se odměna počítá za každý odpracovaný kredit.
+                </p>
                 <FormMessage />
               </FormItem>
             )}
