@@ -21,20 +21,27 @@ export function getDefaultEmailSignature(
     return customSignature;
   }
 
-  const lines: string[] = [];
-  lines.push(colleague?.full_name?.trim() || options.fallbackName || 'Tým Socials');
-
-  if (options.includePosition && colleague?.position?.trim()) {
-    lines.push(colleague.position.trim());
-  }
+  const fullName = colleague?.full_name?.trim() || '';
+  const position = colleague?.position?.trim() || '';
+  const lines: string[] = [
+    fullName,
+    position,
+    '',
+    'Socials.cz',
+    '',
+    '🌐 www.socials.cz',
+    '🎙️ Poslechněte si Socials Podcast (link: https://www.youtube.com/@socials_cz/videos)',
+    '',
+    '💡 Pomáháme firmám získávat zákazníky díky výkonnostní reklamě.',
+  ];
 
   if (options.includeEmail && colleague?.email?.trim()) {
-    lines.push(colleague.email.trim());
+    lines.splice(2, 0, colleague.email.trim());
   }
 
   if (options.includePhone && colleague?.phone?.trim()) {
-    lines.push(colleague.phone.trim());
+    lines.splice(2, 0, colleague.phone.trim());
   }
 
-  return lines.join('\n');
+  return lines.join('\n').trim();
 }
