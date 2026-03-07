@@ -17,7 +17,6 @@ import { useAuth } from '@/hooks/useAuth';
 import type { ModificationRequestType, ServiceTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { SERVICE_DETAILS } from '@/constants/serviceDetails';
 
 interface ProposeModificationDialogProps {
   open: boolean;
@@ -154,23 +153,16 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
     }
   }, [open]);
 
-  // Auto-fill service name and description when selecting from catalog
+  // Auto-fill service details from the same source as offers ("Nabídka")
   useEffect(() => {
     if (selectedServiceId && selectedServiceId !== 'custom') {
       const service = services.find(s => s.id === selectedServiceId);
       if (service) {
         setServiceName(service.name);
-        
-        // Load service description from SERVICE_DETAILS or service.description
-        const details = SERVICE_DETAILS[service.code];
-        if (details) {
-          setServiceDescription(details.tagline || '');
-          // Use benefits as deliverables (first 4-5 items)
-          setServiceDeliverables(details.benefits?.slice(0, 5).join('\n') || '');
-        } else {
-          setServiceDescription(service.description || '');
-          setServiceDeliverables('');
-        }
+        setServiceCurrency(service.currency || '');
+        setServiceBillingType(service.billing_type);
+        setServiceDescription(service.offer_description || service.description || '');
+        setServiceDeliverables(service.default_deliverables?.join('\n') || '');
         
         if (service.code === CREATIVE_BOOST_CODE) {
           // Creative Boost: set defaults, price is calculated from credits
@@ -523,39 +515,68 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                     </div>
                   )}
 
-                  {/* Service description for client */}
-                  <div className="space-y-4 mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      <h5 className="font-medium text-sm text-blue-900 dark:text-blue-300">Popis služby pro klienta</h5>
+                  {/* Client-facing service info (shared with offers) */}
+                  {selectedServiceId !== 'custom' ? (
+                    <div className="space-y-4 mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <h5 className="font-medium text-sm text-blue-900 dark:text-blue-300">Popis služby pro klienta (z Nabídky)</h5>
+                      </div>
+
+                      {serviceDescription ? (
+                        <p className="text-sm text-blue-900 dark:text-blue-200">{serviceDescription}</p>
+                      ) : (
+                        <p className="text-sm text-destructive">
+                          Chybí popis služby v katalogu. Doplňte ho v nastavení služby.
+                        </p>
+                      )}
+
+                      {serviceDeliverables ? (
+                        <ul className="list-disc pl-5 space-y-1 text-sm text-blue-900 dark:text-blue-200">
+                          {serviceDeliverables.split('\n').filter(Boolean).map((item, index) => (
+                            <li key={`${item}-${index}`}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-destructive">
+                          Chybí "Co klient dostane" v katalogu služby. Doplňte výchozí deliverables.
+                        </p>
+                      )}
+
+                      <p className="text-xs text-muted-foreground">
+                        ⓘ Tato data se přebírají ze služby stejně jako v Nabídce
+                      </p>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-sm">Stručný popis</Label>
-                      <Textarea 
-                        value={serviceDescription}
-                        onChange={(e) => setServiceDescription(e.target.value)}
-                        placeholder="Např. Komplexní správa reklamních kampaní na Facebooku a Instagramu"
-                        rows={2}
-                        className="text-sm"
-                      />
+                  ) : (
+                    <div className="space-y-4 mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <h5 className="font-medium text-sm text-blue-900 dark:text-blue-300">Popis služby pro klienta</h5>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm">Stručný popis</Label>
+                        <Textarea
+                          value={serviceDescription}
+                          onChange={(e) => setServiceDescription(e.target.value)}
+                          placeholder="Např. Komplexní správa reklamních kampaní na Facebooku a Instagramu"
+                          rows={2}
+                          className="text-sm"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm">Co klient dostane (každý řádek = 1 bod)</Label>
+                        <Textarea
+                          value={serviceDeliverables}
+                          onChange={(e) => setServiceDeliverables(e.target.value)}
+                          placeholder="• Kompletní správa Meta Ads&#10;• Looker Studio reporting 24/7&#10;• Měsíční strategické konzultace"
+                          rows={4}
+                          className="text-sm font-mono"
+                        />
+                      </div>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-sm">Co klient dostane (každý řádek = 1 bod)</Label>
-                      <Textarea 
-                        value={serviceDeliverables}
-                        onChange={(e) => setServiceDeliverables(e.target.value)}
-                        placeholder="• Kompletní správa Meta Ads&#10;• Looker Studio reporting 24/7&#10;• Měsíční strategické konzultace"
-                        rows={4}
-                        className="text-sm font-mono"
-                      />
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground">
-                      ⓘ Pro služby z katalogu se popis načte automaticky - můžete ho upravit
-                    </p>
-                  </div>
+                  )}
                 </>
               )}
             </div>
