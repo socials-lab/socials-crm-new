@@ -46,3 +46,9 @@ verify_jwt = false
 
 [functions.submit-applicant-onboarding]
 verify_jwt = false
+
+[functions.send-broadcast]
+verify_jwt = false
+
+[functions.broadcast-track]
+verify_jwt = false

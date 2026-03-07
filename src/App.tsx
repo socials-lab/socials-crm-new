@@ -44,6 +44,7 @@ import PublicModificationPage from "./pages/PublicModificationPage";
 import ExtraWorkApproval from "./pages/ExtraWorkApproval";
 import PublicCreativeBoostPage from "./pages/PublicCreativeBoostPage";
 import Modifications from "./pages/Modifications";
+import Broadcasts from "./pages/Broadcasts";
 import Upsells from "./pages/Upsells";
 import Academy from "./pages/Academy";
 import SOP from "./pages/SOP";
@@ -136,6 +137,7 @@ const App = () => (
                             <Route path="/contacts" element={<Contacts />} />
                             <Route path="/engagements" element={<Engagements />} />
                             <Route path="/modifications" element={<Modifications />} />
+                            <Route path="/broadcasts" element={<Broadcasts />} />
                             <Route path="/extra-work" element={<ExtraWork />} />
                             <Route path="/invoicing" element={<Invoicing />} />
                             <Route path="/creative-boost" element={<CreativeBoost />} />

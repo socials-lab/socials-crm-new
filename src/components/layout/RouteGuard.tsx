@@ -15,6 +15,7 @@ const ROUTE_TO_PAGE: Record<string, string> = {
   '/contacts': 'contacts',
   '/engagements': 'engagements',
   '/modifications': 'modifications',
+  '/broadcasts': 'broadcasts',
   '/upsells': 'upsells',
   '/extra-work': 'extra-work',
   '/creative-boost': 'creative-boost',

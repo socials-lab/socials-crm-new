@@ -44,6 +44,7 @@ const navGroups: NavGroup[] = [
       { title: '📇 Kontakty', url: '/contacts', page: 'contacts' },
       { title: '📋 Zakázky', url: '/engagements', page: 'engagements' },
       { title: '📝 Návrhy změn', url: '/modifications', page: 'modifications' },
+      { title: '📨 Rozesílky', url: '/broadcasts', page: 'broadcasts' },
     ],
   },
   {
