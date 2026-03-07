@@ -60,7 +60,8 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
   // Creative Boost specific fields
   const [cbMaxCredits, setCbMaxCredits] = useState<number>(50);
   const [cbPricePerCredit, setCbPricePerCredit] = useState<number>(400);
-  const [cbColleagueReward, setCbColleagueReward] = useState<number>(80);
+  const [cbGraphicReward, setCbGraphicReward] = useState<number>(150);
+  const [cbVideoEditorReward, setCbVideoEditorReward] = useState<number>(100);
 
   // For update_service_price
   const [selectedEngagementServiceId, setSelectedEngagementServiceId] = useState<string>('');
@@ -137,7 +138,8 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
       setSelectedTier('none');
       setCbMaxCredits(50);
       setCbPricePerCredit(400);
-      setCbColleagueReward(80);
+      setCbGraphicReward(150);
+      setCbVideoEditorReward(100);
       setSelectedEngagementServiceId('');
       setNewPrice(0);
       setSelectedColleagueId('');
@@ -174,7 +176,8 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
           // Creative Boost: set defaults, price is calculated from credits
           setCbMaxCredits(50);
           setCbPricePerCredit(400);
-          setCbColleagueReward(80);
+          setCbGraphicReward(150);
+          setCbVideoEditorReward(100);
           setServicePrice(0); // Price is calculated
           setSelectedTier('none');
         } else if (service.service_type === 'core') {
@@ -228,7 +231,8 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
             selected_tier: null,
             creative_boost_max_credits: cbMaxCredits,
             creative_boost_price_per_credit: cbPricePerCredit,
-            creative_boost_reward_per_credit: cbColleagueReward,
+            creative_boost_graphic_reward_per_credit: cbGraphicReward,
+            creative_boost_video_editor_reward_per_credit: cbVideoEditorReward,
           };
         } else {
           proposed_changes = {
@@ -430,18 +434,26 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                       onChange={(e) => setCbPricePerCredit(e.target.value === '' ? 0 : Number(e.target.value))}
                       min={0}
                     />
-                    <p className="text-xs text-muted-foreground">Doporučeno: 400 Kč</p>
                   </div>
 
                   <div className="space-y-2">
                     <Label>🎨 Odměna za kredit pro grafika (CZK)</Label>
                     <Input
                       type="number"
-                      value={cbColleagueReward || ''}
-                      onChange={(e) => setCbColleagueReward(e.target.value === '' ? 0 : Number(e.target.value))}
+                      value={cbGraphicReward || ''}
+                      onChange={(e) => setCbGraphicReward(e.target.value === '' ? 0 : Number(e.target.value))}
                       min={0}
                     />
-                    <p className="text-xs text-muted-foreground">Doporučeno: 80 Kč</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>🎬 Odměna za kredit pro video editora (CZK)</Label>
+                    <Input
+                      type="number"
+                      value={cbVideoEditorReward || ''}
+                      onChange={(e) => setCbVideoEditorReward(e.target.value === '' ? 0 : Number(e.target.value))}
+                      min={0}
+                    />
                   </div>
 
                   <div className="pt-2 border-t space-y-1">
@@ -451,16 +463,6 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                     <p className="text-xs text-muted-foreground">
                       = {cbMaxCredits} kreditů × {cbPricePerCredit} Kč/kredit
                     </p>
-                    {cbColleagueReward > 0 && (
-                      <>
-                        <p className="text-sm font-medium mt-2">
-                          Odměna pro grafika: <span className="text-green-600">{(cbMaxCredits * cbColleagueReward).toLocaleString('cs-CZ')} CZK/měsíc</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          = {cbMaxCredits} kreditů × {cbColleagueReward} Kč/kredit
-                        </p>
-                      </>
-                    )}
                   </div>
                 </div>
               )}
