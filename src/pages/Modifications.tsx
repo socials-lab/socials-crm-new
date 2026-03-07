@@ -11,6 +11,7 @@ import { EditModificationRequestDialog } from '@/components/engagements/EditModi
 import { SendModificationEmailDialog } from '@/components/engagements/SendModificationEmailDialog';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -172,6 +173,8 @@ export default function Modifications() {
     deletingId,
     refresh
   } = useModificationRequests();
+  const { role, isSuperAdmin } = useUserRole();
+  const canReviewModificationRequests = isSuperAdmin || role === 'admin';
   const { addEngagementService, updateEngagementService } = useCRMData();
 
   // Get applied modifications history
@@ -356,6 +359,14 @@ export default function Modifications() {
         </Button>
       </div>
 
+      {!canReviewModificationRequests && (
+        <Card>
+          <CardContent className="py-4 text-sm text-muted-foreground">
+            Schválení, zamítnutí a aktivace návrhů změn je dostupná pouze pro administrátory.
+          </CardContent>
+        </Card>
+      )}
+
       <ProposeModificationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       
       {/* Send Email Dialog */}
@@ -451,8 +462,8 @@ export default function Modifications() {
                 <ModificationRequestCard
                   key={request.id}
                   request={request}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
+                  onApprove={canReviewModificationRequests ? handleApprove : undefined}
+                  onReject={canReviewModificationRequests ? handleReject : undefined}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   isApproving={approvingId === request.id}
@@ -506,7 +517,7 @@ export default function Modifications() {
                 <ModificationRequestCard
                   key={request.id}
                   request={request}
-                  onApply={handleApply}
+                  onApply={canReviewModificationRequests ? handleApply : undefined}
                   isApplying={applyingId === request.id}
                 />
               ))}

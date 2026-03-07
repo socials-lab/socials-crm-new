@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { ModificationRequestCard } from '@/components/engagements/ModificationRequestCard';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges } from '@/types/crm';
@@ -12,6 +13,9 @@ import { toDateOnlyString, toNullableNumber } from '@/lib/dbNormalize';
 import type { StoredModificationRequest } from '@/hooks/useModificationRequests';
 
 export function PendingModificationsSection() {
+  const { role, isSuperAdmin } = useUserRole();
+  const canReviewModificationRequests = isSuperAdmin || role === 'admin';
+
   const { 
     pendingRequests, 
     isLoadingPending,
@@ -145,6 +149,10 @@ export function PendingModificationsSection() {
   const handleReject = async (requestId: string, reason: string) => {
     await rejectRequest({ requestId, reason });
   };
+
+  if (!canReviewModificationRequests) {
+    return null;
+  }
 
   if (isLoadingPending) {
     return (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
 import { withAbortTimeout, withTimeout } from '@/utils/asyncUtils';
@@ -66,8 +67,10 @@ export interface StoredModificationRequest {
 
 export function useModificationRequests() {
   const { user } = useAuth();
+  const { role, isSuperAdmin } = useUserRole();
   const { engagements, clients, colleagues } = useCRMData();
   const queryClient = useQueryClient();
+  const canApproveModificationRequests = isSuperAdmin || role === 'admin';
 
   // Track which specific request is being processed (to avoid all cards showing loading)
   const [applyingId, setApplyingId] = useState<string | null>(null);
@@ -242,6 +245,9 @@ export function useModificationRequests() {
   const approveMutation = useMutation({
     mutationFn: async (requestId: string) => {
       if (!user) throw new Error('User not authenticated');
+      if (!canApproveModificationRequests) {
+        throw new Error('Pouze admin může schválit návrh změny');
+      }
 
       // Get request details first to know who to notify
       const request = pendingRequests.find(r => r.id === requestId);
@@ -347,6 +353,9 @@ export function useModificationRequests() {
   const applyMutation = useMutation({
     mutationFn: async (requestId: string) => {
       if (!user) throw new Error('User not authenticated');
+      if (!canApproveModificationRequests) {
+        throw new Error('Pouze admin může aktivovat schválenou změnu');
+      }
 
       const { data, error } = await supabase
         .rpc('apply_modification_request', {
