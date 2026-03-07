@@ -9,7 +9,9 @@ import type { Colleague } from '@/types/crm';
 interface ActivityReward {
   id: string;
   colleague_id: string;
+  category: 'marketing' | 'overhead' | 'client_work';
   description: string;
+  invoice_item_name: string;
   billing_type: 'fixed' | 'hourly';
   amount: number;
   hours: number | null;
@@ -54,7 +56,7 @@ export function useTeamEarnings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('activity_rewards')
-        .select('id, colleague_id, description, billing_type, amount, hours, hourly_rate, activity_date, created_at')
+        .select('id, colleague_id, category, description, invoice_item_name, billing_type, amount, hours, hourly_rate, activity_date, created_at')
         .order('activity_date', { ascending: false });
       if (error) throw error;
       return (data || []) as ActivityReward[];

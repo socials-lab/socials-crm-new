@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Plus, Users, Shield, Coins } from 'lucide-react';
+import { Search, Plus, Users, Shield, FileText } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,15 +28,15 @@ import type { ColleagueStatus, Colleague } from '@/types/crm';
 import { toast } from 'sonner';
 import { CreativeBoostProvider, useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { supabase } from '@/integrations/supabase/client';
-import { TeamEarningsOverview } from '@/components/colleagues/TeamEarningsOverview';
+import { TeamInvoicingOverview } from '@/components/colleagues/TeamInvoicingOverview';
 
-type ColleaguesTab = 'team' | 'earnings' | 'access';
+type ColleaguesTab = 'team' | 'invoicing' | 'access';
 
 function resolveTab(tabParam: string | null, isSuperAdmin: boolean): ColleaguesTab {
   if (!isSuperAdmin) {
     return 'team';
   }
-  if (tabParam === 'access' || tabParam === 'earnings' || tabParam === 'team') {
+  if (tabParam === 'access' || tabParam === 'invoicing' || tabParam === 'team') {
     return tabParam;
   }
   return 'team';
@@ -229,9 +229,9 @@ function ColleaguesContent() {
             <span className="sm:hidden">Tým</span>
           </TabsTrigger>
           {superAdmin && (
-            <TabsTrigger value="earnings" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-              <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Odměny
+            <TabsTrigger value="invoicing" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Odměny + výkazy
             </TabsTrigger>
           )}
           {superAdmin && (
@@ -333,8 +333,8 @@ function ColleaguesContent() {
         </TabsContent>
 
         {superAdmin && (
-          <TabsContent value="earnings" className="space-y-4">
-            <TeamEarningsOverview />
+          <TabsContent value="invoicing" className="space-y-4">
+            <TeamInvoicingOverview />
           </TabsContent>
         )}
 

@@ -53,6 +53,7 @@ function MyWorkContent() {
   const navigate = useNavigate();
   const { colleagueId } = useUserRole();
   const [showAddActivityDialog, setShowAddActivityDialog] = useState(false);
+  const [addActivityDefaultDate, setAddActivityDefaultDate] = useState<string | undefined>(undefined);
   const [editingReward, setEditingReward] = useState<ActivityReward | null>(null);
   
   const { 
@@ -609,7 +610,11 @@ function MyWorkContent() {
         internalRewards={activityRewards}
         getRewardsByMonth={getRewardsByMonth}
         getRewardsByCategory={getRewardsByCategory}
-        onAddInternalWork={() => setShowAddActivityDialog(true)}
+        onAddInternalWork={(year, month) => {
+          const defaultDate = `${year}-${String(month).padStart(2, '0')}-15`;
+          setAddActivityDefaultDate(defaultDate);
+          setShowAddActivityDialog(true);
+        }}
         onEditReward={(reward) => setEditingReward(reward)}
       />
 
@@ -617,10 +622,14 @@ function MyWorkContent() {
       {currentColleague && (
         <AddActivityRewardDialog
           open={showAddActivityDialog}
-          onOpenChange={setShowAddActivityDialog}
+          onOpenChange={(open) => {
+            setShowAddActivityDialog(open);
+            if (!open) setAddActivityDefaultDate(undefined);
+          }}
           onAdd={addReward}
           colleagueId={currentColleague.id}
           clientNames={clientNames}
+          defaultDate={addActivityDefaultDate}
         />
       )}
 

@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, Copy, Briefcase, Building2, Sparkles, 
-  CheckCircle, Megaphone, AlertCircle, Pencil
+  CheckCircle, Megaphone, AlertCircle, Pencil, Plus
 } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import { toast } from 'sonner';
@@ -67,7 +67,7 @@ interface InvoicingOverviewProps {
   getRewardsByMonth: (year: number, month: number) => ActivityReward[];
   getRewardsByCategory: (year: number, month: number) => { marketing: ActivityReward[]; overhead: ActivityReward[]; client_work: ActivityReward[] };
   // Actions
-  onAddInternalWork: () => void;
+  onAddInternalWork: (year: number, month: number) => void;
   onEditReward?: (reward: ActivityReward) => void;
 }
 
@@ -206,10 +206,13 @@ export function InvoicingOverview({
 
       // 4. Extra work (format: "Přímá služba – [klient] – [název práce]")
       extraWorkItems.forEach((ew, idx) => {
+        const hoursNote = ew.hours && ew.hourlyRate
+          ? ` (${ew.hours}h × ${ew.hourlyRate} Kč)`
+          : '';
         items.push({
           id: `extra-${idx}`,
           category: 'client',
-          invoiceName: `Přímá služba – ${ew.clientName} – ${ew.name}`,
+          invoiceName: `Přímá služba – ${ew.clientName} – ${ew.name}${hoursNote}`,
           amount: ew.amount,
         });
       });
@@ -243,7 +246,7 @@ export function InvoicingOverview({
       items.push({
         id: r.id,
         category: 'client_work',
-        invoiceName: `Přímá služba – ${r.invoice_item_name}`,
+        invoiceName: r.invoice_item_name,
         amount: r.amount,
         isEditable: true,
       });
@@ -266,12 +269,12 @@ export function InvoicingOverview({
 
   // Totals
   const clientTotal = useMemo(() => {
-    return [...groupedItems.client, ...groupedItems.creativeBoost, ...groupedItems.commission]
+    return [...groupedItems.client, ...groupedItems.client_work, ...groupedItems.creativeBoost, ...groupedItems.commission]
       .reduce((sum, i) => sum + i.amount, 0);
   }, [groupedItems]);
 
   const internalTotal = useMemo(() => {
-    return [...groupedItems.marketing, ...groupedItems.overhead, ...groupedItems.client_work]
+    return [...groupedItems.marketing, ...groupedItems.overhead]
       .reduce((sum, i) => sum + i.amount, 0);
   }, [groupedItems]);
 
@@ -286,8 +289,8 @@ export function InvoicingOverview({
     }
   };
 
-  const hasClientWork = groupedItems.client.length > 0 || groupedItems.creativeBoost.length > 0 || groupedItems.commission.length > 0;
-  const hasInternalWork = groupedItems.marketing.length > 0 || groupedItems.overhead.length > 0 || groupedItems.client_work.length > 0;
+  const hasClientWork = groupedItems.client.length > 0 || groupedItems.client_work.length > 0 || groupedItems.creativeBoost.length > 0 || groupedItems.commission.length > 0;
+  const hasInternalWork = groupedItems.marketing.length > 0 || groupedItems.overhead.length > 0;
 
   // Helper to find reward by ID for editing
   const getRewardById = (id: string): ActivityReward | undefined => {
@@ -364,6 +367,14 @@ export function InvoicingOverview({
                     {groupedItems.client.map((item) => (
                       <InvoiceLineItemRow key={item.id} item={item} onCopy={handleCopy} />
                     ))}
+                    {groupedItems.client_work.map((item) => (
+                      <InvoiceLineItemRow
+                        key={item.id}
+                        item={item}
+                        onCopy={handleCopy}
+                        onEdit={() => handleEditReward(item.id)}
+                      />
+                    ))}
                     {groupedItems.creativeBoost.map((item) => (
                       <InvoiceLineItemRow key={item.id} item={item} onCopy={handleCopy} />
                     ))}
@@ -383,11 +394,22 @@ export function InvoicingOverview({
               )}
 
               {/* INTERNAL WORK SECTION */}
-              {hasInternalWork && (
+              {(hasInternalWork || true) && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Interní práce</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Režijní položky</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 h-7 text-xs"
+                      onClick={() => onAddInternalWork(selectedYear, selectedMonth)}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Přidat položku
+                    </Button>
                   </div>
                   
                   {/* Marketing */}
@@ -426,23 +448,6 @@ export function InvoicingOverview({
                     </div>
                   )}
 
-                  {/* Client Work (manual) */}
-                  {groupedItems.client_work.length > 0 && (
-                    <div className="pl-2 border-l-2 border-primary/20">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 px-2">
-                        <Briefcase className="h-3 w-3" />
-                        {CATEGORY_LABELS.client_work}
-                      </div>
-                      {groupedItems.client_work.map((item) => (
-                        <InvoiceLineItemRow
-                          key={item.id}
-                          item={item}
-                          onCopy={handleCopy}
-                          onEdit={() => handleEditReward(item.id)}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
             </>

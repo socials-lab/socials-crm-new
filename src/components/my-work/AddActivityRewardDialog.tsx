@@ -29,6 +29,7 @@ interface AddActivityRewardDialogProps {
   onAdd: (reward: Omit<ActivityReward, 'id' | 'created_at' | 'invoice_item_name'>) => Promise<void> | void;
   colleagueId: string;
   clientNames?: string[];
+  defaultDate?: string;
 }
 
 export function AddActivityRewardDialog({
@@ -37,6 +38,7 @@ export function AddActivityRewardDialog({
   onAdd,
   colleagueId,
   clientNames = [],
+  defaultDate,
 }: AddActivityRewardDialogProps) {
   const [category, setCategory] = useState<ActivityCategory>('marketing');
   const [description, setDescription] = useState('');
@@ -45,7 +47,7 @@ export function AddActivityRewardDialog({
   const [amount, setAmount] = useState('');
   const [hours, setHours] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
-  const [activityDate, setActivityDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [activityDate, setActivityDate] = useState(defaultDate ?? format(new Date(), 'yyyy-MM-dd'));
   const [isAmountManual, setIsAmountManual] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -56,6 +58,11 @@ export function AddActivityRewardDialog({
       setAmount(calculated.toString());
     }
   }, [hours, hourlyRate, billingType, isAmountManual]);
+
+  useEffect(() => {
+    if (!open) return;
+    setActivityDate(defaultDate ?? format(new Date(), 'yyyy-MM-dd'));
+  }, [open, defaultDate]);
 
   const invoiceItemName = description ? generateInvoiceItemName(category, description, category === 'client_work' ? clientName : undefined) : '';
 
