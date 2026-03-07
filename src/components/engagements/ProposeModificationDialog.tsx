@@ -822,7 +822,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
           </div>
 
           {/* Proration Info */}
-          {prorationInfo && requestType === 'add_service' && effectiveFrom && effectiveFrom.getDate() > 1 && (
+          {prorationInfo && requestType === 'add_service' && !isCreativeBoost && effectiveFrom && effectiveFrom.getDate() > 1 && (
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
