@@ -72,6 +72,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
   const [settingsDialogClient, setSettingsDialogClient] = useState<string | null>(null);
   const [historyDialogClient, setHistoryDialogClient] = useState<string | null>(null);
   const [shareDialogClient, setShareDialogClient] = useState<string | null>(null);
+  const [draftNumbers, setDraftNumbers] = useState<Record<string, string>>({});
 
   // Auto-sync: Ensure Creative Boost records exist for all active engagements
   useEffect(() => {
@@ -153,6 +154,40 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     
     updateClientOutput(clientId, outputTypeId, year, month, updateData);
   };
+
+  function startNumberDraft(key: string, value: number) {
+    setDraftNumbers(prev => {
+      if (prev[key] !== undefined) return prev;
+      return { ...prev, [key]: String(value) };
+    });
+  }
+
+  function updateNumberDraft(key: string, value: string) {
+    setDraftNumbers(prev => ({ ...prev, [key]: value }));
+  }
+
+  function clearNumberDraft(key: string) {
+    setDraftNumbers(prev => {
+      if (prev[key] === undefined) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function getDraftOrValue(key: string, value: number) {
+    if (draftNumbers[key] !== undefined) {
+      return draftNumbers[key];
+    }
+    return String(value);
+  }
+
+  function toNonNegativeNumber(value: string) {
+    if (value.trim() === '') return 0;
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return 0;
+    return Math.max(0, parsed);
+  }
 
   const handleSettingsChange = async (clientId: string, field: 'maxCredits' | 'pricePerCredit' | 'status' | 'colleagueId', value: number | MonthStatus | string) => {
     const monthData = clientMonths.find(cm => cm.clientId === clientId && cm.year === year && cm.month === month);
@@ -413,8 +448,27 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                   <Input
                                     type="number"
                                     min="0"
-                                    value={normalCount}
-                                    onChange={(e) => handleOutputChange(summary.clientId, outputType.id, 'normalCount', parseInt(e.target.value) || 0)}
+                                    value={getDraftOrValue(`output-${summary.clientId}-${outputType.id}-normal`, normalCount)}
+                                    onFocus={() => startNumberDraft(`output-${summary.clientId}-${outputType.id}-normal`, normalCount)}
+                                    onChange={(e) => updateNumberDraft(`output-${summary.clientId}-${outputType.id}-normal`, e.target.value)}
+                                    onBlur={() => {
+                                      const key = `output-${summary.clientId}-${outputType.id}-normal`;
+                                      const value = toNonNegativeNumber(draftNumbers[key] ?? String(normalCount));
+                                      handleOutputChange(summary.clientId, outputType.id, 'normalCount', value);
+                                      clearNumberDraft(key);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      const key = `output-${summary.clientId}-${outputType.id}-normal`;
+                                      if (e.key === 'Enter') {
+                                        const value = toNonNegativeNumber(draftNumbers[key] ?? String(normalCount));
+                                        handleOutputChange(summary.clientId, outputType.id, 'normalCount', value);
+                                        clearNumberDraft(key);
+                                        (e.target as HTMLInputElement).blur();
+                                      } else if (e.key === 'Escape') {
+                                        clearNumberDraft(key);
+                                        (e.target as HTMLInputElement).blur();
+                                      }
+                                    }}
                                     className="w-20 h-8 text-center mx-auto"
                                   />
                                 </TableCell>
@@ -422,8 +476,27 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                   <Input
                                     type="number"
                                     min="0"
-                                    value={expressCount}
-                                    onChange={(e) => handleOutputChange(summary.clientId, outputType.id, 'expressCount', parseInt(e.target.value) || 0)}
+                                    value={getDraftOrValue(`output-${summary.clientId}-${outputType.id}-express`, expressCount)}
+                                    onFocus={() => startNumberDraft(`output-${summary.clientId}-${outputType.id}-express`, expressCount)}
+                                    onChange={(e) => updateNumberDraft(`output-${summary.clientId}-${outputType.id}-express`, e.target.value)}
+                                    onBlur={() => {
+                                      const key = `output-${summary.clientId}-${outputType.id}-express`;
+                                      const value = toNonNegativeNumber(draftNumbers[key] ?? String(expressCount));
+                                      handleOutputChange(summary.clientId, outputType.id, 'expressCount', value);
+                                      clearNumberDraft(key);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      const key = `output-${summary.clientId}-${outputType.id}-express`;
+                                      if (e.key === 'Enter') {
+                                        const value = toNonNegativeNumber(draftNumbers[key] ?? String(expressCount));
+                                        handleOutputChange(summary.clientId, outputType.id, 'expressCount', value);
+                                        clearNumberDraft(key);
+                                        (e.target as HTMLInputElement).blur();
+                                      } else if (e.key === 'Escape') {
+                                        clearNumberDraft(key);
+                                        (e.target as HTMLInputElement).blur();
+                                      }
+                                    }}
                                     className="w-20 h-8 text-center mx-auto"
                                   />
                                 </TableCell>
@@ -471,8 +544,27 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                   <Input
                                     type="number"
                                     min="0"
-                                    value={normalCount}
-                                    onChange={(e) => handleOutputChange(summary.clientId, outputType.id, 'normalCount', parseInt(e.target.value) || 0)}
+                                    value={getDraftOrValue(`output-${summary.clientId}-${outputType.id}-normal`, normalCount)}
+                                    onFocus={() => startNumberDraft(`output-${summary.clientId}-${outputType.id}-normal`, normalCount)}
+                                    onChange={(e) => updateNumberDraft(`output-${summary.clientId}-${outputType.id}-normal`, e.target.value)}
+                                    onBlur={() => {
+                                      const key = `output-${summary.clientId}-${outputType.id}-normal`;
+                                      const value = toNonNegativeNumber(draftNumbers[key] ?? String(normalCount));
+                                      handleOutputChange(summary.clientId, outputType.id, 'normalCount', value);
+                                      clearNumberDraft(key);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      const key = `output-${summary.clientId}-${outputType.id}-normal`;
+                                      if (e.key === 'Enter') {
+                                        const value = toNonNegativeNumber(draftNumbers[key] ?? String(normalCount));
+                                        handleOutputChange(summary.clientId, outputType.id, 'normalCount', value);
+                                        clearNumberDraft(key);
+                                        (e.target as HTMLInputElement).blur();
+                                      } else if (e.key === 'Escape') {
+                                        clearNumberDraft(key);
+                                        (e.target as HTMLInputElement).blur();
+                                      }
+                                    }}
                                     className="w-20 h-8 text-center mx-auto"
                                   />
                                 </TableCell>
@@ -480,8 +572,27 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                   <Input
                                     type="number"
                                     min="0"
-                                    value={expressCount}
-                                    onChange={(e) => handleOutputChange(summary.clientId, outputType.id, 'expressCount', parseInt(e.target.value) || 0)}
+                                    value={getDraftOrValue(`output-${summary.clientId}-${outputType.id}-express`, expressCount)}
+                                    onFocus={() => startNumberDraft(`output-${summary.clientId}-${outputType.id}-express`, expressCount)}
+                                    onChange={(e) => updateNumberDraft(`output-${summary.clientId}-${outputType.id}-express`, e.target.value)}
+                                    onBlur={() => {
+                                      const key = `output-${summary.clientId}-${outputType.id}-express`;
+                                      const value = toNonNegativeNumber(draftNumbers[key] ?? String(expressCount));
+                                      handleOutputChange(summary.clientId, outputType.id, 'expressCount', value);
+                                      clearNumberDraft(key);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      const key = `output-${summary.clientId}-${outputType.id}-express`;
+                                      if (e.key === 'Enter') {
+                                        const value = toNonNegativeNumber(draftNumbers[key] ?? String(expressCount));
+                                        handleOutputChange(summary.clientId, outputType.id, 'expressCount', value);
+                                        clearNumberDraft(key);
+                                        (e.target as HTMLInputElement).blur();
+                                      } else if (e.key === 'Escape') {
+                                        clearNumberDraft(key);
+                                        (e.target as HTMLInputElement).blur();
+                                      }
+                                    }}
                                     className="w-20 h-8 text-center mx-auto"
                                   />
                                 </TableCell>
@@ -534,8 +645,15 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                           <Input
                             type="number"
                             min="0"
-                            value={monthData?.maxCredits ?? 0}
-                            onChange={(e) => handleSettingsChange(summary.clientId, 'maxCredits', parseInt(e.target.value) || 0)}
+                            value={getDraftOrValue(`settings-${summary.clientId}-maxCredits`, monthData?.maxCredits ?? 0)}
+                            onFocus={() => startNumberDraft(`settings-${summary.clientId}-maxCredits`, monthData?.maxCredits ?? 0)}
+                            onChange={(e) => updateNumberDraft(`settings-${summary.clientId}-maxCredits`, e.target.value)}
+                            onBlur={() => {
+                              const key = `settings-${summary.clientId}-maxCredits`;
+                              const value = toNonNegativeNumber(draftNumbers[key] ?? String(monthData?.maxCredits ?? 0));
+                              handleSettingsChange(summary.clientId, 'maxCredits', value);
+                              clearNumberDraft(key);
+                            }}
                             className="w-20 h-7 text-center"
                           />
                         </div>
@@ -545,8 +663,15 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                             type="number"
                             min="0"
                             step="0.01"
-                            value={monthData?.pricePerCredit ?? 0}
-                            onChange={(e) => handleSettingsChange(summary.clientId, 'pricePerCredit', parseFloat(e.target.value) || 0)}
+                            value={getDraftOrValue(`settings-${summary.clientId}-pricePerCredit`, monthData?.pricePerCredit ?? 0)}
+                            onFocus={() => startNumberDraft(`settings-${summary.clientId}-pricePerCredit`, monthData?.pricePerCredit ?? 0)}
+                            onChange={(e) => updateNumberDraft(`settings-${summary.clientId}-pricePerCredit`, e.target.value)}
+                            onBlur={() => {
+                              const key = `settings-${summary.clientId}-pricePerCredit`;
+                              const value = toNonNegativeNumber(draftNumbers[key] ?? String(monthData?.pricePerCredit ?? 0));
+                              handleSettingsChange(summary.clientId, 'pricePerCredit', value);
+                              clearNumberDraft(key);
+                            }}
                             className="w-24 h-7 text-center"
                           />
                           <span className="text-muted-foreground">Kč</span>
@@ -583,8 +708,15 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                     <Input
                       type="number"
                       min="0"
-                      value={monthData.maxCredits}
-                      onChange={(e) => handleSettingsChange(summary.clientId, 'maxCredits', parseInt(e.target.value) || 0)}
+                      value={getDraftOrValue(`dialog-${summary.clientId}-maxCredits`, monthData.maxCredits)}
+                      onFocus={() => startNumberDraft(`dialog-${summary.clientId}-maxCredits`, monthData.maxCredits)}
+                      onChange={(e) => updateNumberDraft(`dialog-${summary.clientId}-maxCredits`, e.target.value)}
+                      onBlur={() => {
+                        const key = `dialog-${summary.clientId}-maxCredits`;
+                        const value = toNonNegativeNumber(draftNumbers[key] ?? String(monthData.maxCredits));
+                        handleSettingsChange(summary.clientId, 'maxCredits', value);
+                        clearNumberDraft(key);
+                      }}
                       className="w-24"
                     />
                     <span className="text-sm text-muted-foreground">kreditů</span>
@@ -613,8 +745,15 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                       type="number"
                       min="0"
                       step="0.01"
-                      value={monthData.pricePerCredit}
-                      onChange={(e) => handleSettingsChange(summary.clientId, 'pricePerCredit', parseFloat(e.target.value) || 0)}
+                      value={getDraftOrValue(`dialog-${summary.clientId}-pricePerCredit`, monthData.pricePerCredit)}
+                      onFocus={() => startNumberDraft(`dialog-${summary.clientId}-pricePerCredit`, monthData.pricePerCredit)}
+                      onChange={(e) => updateNumberDraft(`dialog-${summary.clientId}-pricePerCredit`, e.target.value)}
+                      onBlur={() => {
+                        const key = `dialog-${summary.clientId}-pricePerCredit`;
+                        const value = toNonNegativeNumber(draftNumbers[key] ?? String(monthData.pricePerCredit));
+                        handleSettingsChange(summary.clientId, 'pricePerCredit', value);
+                        clearNumberDraft(key);
+                      }}
                       className="w-32"
                     />
                     <span className="text-sm text-muted-foreground">Kč</span>
