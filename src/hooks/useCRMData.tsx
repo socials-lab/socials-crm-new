@@ -178,6 +178,7 @@ const transformEngagement = (row: Record<string, unknown>): Engagement => ({
   billing_model: row.billing_model || 'fixed_fee',
   status: row.status || 'active',
   platforms: row.platforms || [],
+  managed_countries: row.managed_countries || [],
   start_date: row.start_date || '',
   created_at: row.created_at || new Date().toISOString(),
   updated_at: row.updated_at || new Date().toISOString(),

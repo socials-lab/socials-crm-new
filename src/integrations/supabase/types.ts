@@ -1,6 +1,3 @@
-WARN: environment variable is unset: GOOGLE_CLIENT_ID
-WARN: environment variable is unset: GOOGLE_CLIENT_SECRET
-Initialising login role...
 export type Json =
   | string
   | number
@@ -1487,6 +1484,7 @@ export type Database = {
           end_date: string | null
           freelo_url: string | null
           id: string
+          managed_countries: string[] | null
           monthly_fee: number | null
           name: string
           notes: string | null
@@ -1513,6 +1511,7 @@ export type Database = {
           end_date?: string | null
           freelo_url?: string | null
           id?: string
+          managed_countries?: string[] | null
           monthly_fee?: number | null
           name: string
           notes?: string | null
@@ -1539,6 +1538,7 @@ export type Database = {
           end_date?: string | null
           freelo_url?: string | null
           id?: string
+          managed_countries?: string[] | null
           monthly_fee?: number | null
           name?: string
           notes?: string | null

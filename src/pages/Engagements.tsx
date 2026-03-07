@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isSameMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock, Loader2 } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock, Loader2, Globe } from 'lucide-react';
 import { getErrorMessage } from '@/lib/errorUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -61,6 +61,7 @@ import { EndEngagementDialog } from '@/components/engagements/EndEngagementDialo
 import { EngagementHistoryDialog } from '@/components/engagements/EngagementHistoryDialog';
 import { EditAssignmentDialog } from '@/components/engagements/EditAssignmentDialog';
 import { serviceTierConfigs } from '@/constants/services';
+import { MANAGED_COUNTRIES, getCountryFlag } from '@/constants/countries';
 
 // Default reward per credit when not configured in assignment
 const DEFAULT_REWARD_PER_CREDIT = 80;
@@ -593,6 +594,11 @@ function EngagementsContent() {
                       >
                         {clientLabel}
                       </button>
+                      {engagement.managed_countries?.length > 0 && (
+                        <span className="ml-1">
+                          {engagement.managed_countries.map((code) => getCountryFlag(code)).join(' ')}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -1160,6 +1166,70 @@ function EngagementsContent() {
                               {platform}
                             </Badge>
                           ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Managed countries section */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                        Spravované země ({engagement.managed_countries?.length || 0})
+                      </h4>
+                      <Popover>
+                        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="outline" className="w-full justify-between h-auto min-h-9 py-2">
+                            <span className="text-sm text-left truncate">
+                              {engagement.managed_countries?.length > 0
+                                ? engagement.managed_countries.map((code) => {
+                                    const country = MANAGED_COUNTRIES.find((item) => item.code === code);
+                                    if (!country) {
+                                      throw new Error(`Unknown managed country code: ${code}`);
+                                    }
+                                    return `${country.flag} ${country.name}`;
+                                  }).join(', ')
+                                : 'Vybrat země...'}
+                            </span>
+                            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-2 max-h-72 overflow-y-auto" align="start" onClick={(e) => e.stopPropagation()}>
+                          <div className="space-y-1">
+                            {MANAGED_COUNTRIES.map((country) => {
+                              const isSelected = engagement.managed_countries?.includes(country.code) || false;
+                              return (
+                                <div
+                                  key={country.code}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
+                                  onClick={() => {
+                                    const currentCountries = engagement.managed_countries || [];
+                                    const newCountries = isSelected
+                                      ? currentCountries.filter((code) => code !== country.code)
+                                      : [...currentCountries, country.code];
+                                    void safeUpdateEngagement(engagement.id, { managed_countries: newCountries }, 'Spravované země aktualizovány');
+                                  }}
+                                >
+                                  <Checkbox checked={isSelected} />
+                                  <span className="text-sm">{country.flag} {country.name}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      {engagement.managed_countries?.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {engagement.managed_countries.map((code) => {
+                            const country = MANAGED_COUNTRIES.find((item) => item.code === code);
+                            if (!country) {
+                              throw new Error(`Unknown managed country code: ${code}`);
+                            }
+                            return (
+                              <Badge key={code} variant="secondary" className="text-xs">
+                                {country.flag} {country.name}
+                              </Badge>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

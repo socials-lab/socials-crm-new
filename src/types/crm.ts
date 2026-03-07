@@ -262,6 +262,7 @@ export interface Engagement {
   notice_period_months: number | null;
   freelo_url: string | null;
   platforms: string[];
+  managed_countries: string[];
   notes: string;
   // Document links from lead conversion
   offer_url: string | null;
