@@ -19,18 +19,16 @@ import {
 } from '@/components/ui/select';
 import { Palette } from 'lucide-react';
 import type { EngagementAssignment, CostModel } from '@/types/crm';
+import {
+  ASSIGNMENT_ROLE_OPTIONS,
+  canUsePerCreditCostModel,
+  isPerCreditRole,
+} from '@/lib/assignmentRoles';
 
 // Default reward per credit when not configured
 const DEFAULT_REWARD_PER_CREDIT = 80;
-const PER_CREDIT_ROLES = ['Graphic Designer', 'Video Editor'] as const;
-const ASSIGNMENT_ROLE_OPTIONS = [
-  'Meta Ads Specialist',
-  'PPC Specialist',
-  'Graphic Designer',
-  'Video Editor',
-  'Sales Specialist',
-  'Account Manager',
-] as const;
+const DEFAULT_BANNER_REWARD_PER_CREDIT = 80;
+const DEFAULT_VIDEO_REWARD_PER_CREDIT = 80;
 
 // Extended cost model including per_credit for Creative Boost
 type ExtendedCostModel = CostModel | 'per_credit';
@@ -47,6 +45,8 @@ interface EditAssignmentDialogProps {
     monthly_cost: number | null;
     percentage_of_revenue: number | null;
     reward_per_credit: number | null;
+    reward_per_credit_banner: number | null;
+    reward_per_credit_video: number | null;
     role_on_engagement: string;
   }) => void;
 }
@@ -59,12 +59,15 @@ export function EditAssignmentDialog({
   isCreativeBoostService = false,
   onSave,
 }: EditAssignmentDialogProps) {
-  // Get reward from assignment (database) instead of mock data
   const existingPerCreditReward = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-  const hasPerCreditReward = assignment.reward_per_credit !== null || isCreativeBoostService;
+  const hasPersistedPerCreditReward = assignment.reward_per_credit !== null;
+  const roleEligibleForPerCredit = isPerCreditRole(assignment.role_on_engagement);
+  const canUsePerCreditForInitialRole = canUsePerCreditCostModel(assignment.role_on_engagement, isCreativeBoostService);
 
   const [costModel, setCostModel] = useState<ExtendedCostModel>(
-    hasPerCreditReward ? 'per_credit' : assignment.cost_model
+    hasPersistedPerCreditReward || (roleEligibleForPerCredit && canUsePerCreditForInitialRole)
+      ? 'per_credit'
+      : assignment.cost_model
   );
   const [hourlyCost, setHourlyCost] = useState<string>(
     assignment.hourly_cost?.toString() || ''
@@ -75,49 +78,74 @@ export function EditAssignmentDialog({
   const [percentageOfRevenue, setPercentageOfRevenue] = useState<string>(
     assignment.percentage_of_revenue?.toString() || ''
   );
-  const [perCreditReward, setPerCreditReward] = useState<string>(
-    existingPerCreditReward.toString()
+  const [perCreditReward, setPerCreditReward] = useState<string>(existingPerCreditReward.toString());
+  const [bannerPerCreditReward, setBannerPerCreditReward] = useState<string>(
+    (assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_BANNER_REWARD_PER_CREDIT).toString()
+  );
+  const [videoPerCreditReward, setVideoPerCreditReward] = useState<string>(
+    (assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_VIDEO_REWARD_PER_CREDIT).toString()
   );
   const [roleOnEngagement, setRoleOnEngagement] = useState<string>(
     assignment.role_on_engagement || ''
   );
+  const canUsePerCreditForSelectedRole = canUsePerCreditCostModel(roleOnEngagement, isCreativeBoostService);
+  const canShowPerCreditOption = hasPersistedPerCreditReward || canUsePerCreditForSelectedRole;
+
+  function handleRoleChange(role: string) {
+    setRoleOnEngagement(role);
+    if (canUsePerCreditCostModel(role, isCreativeBoostService)) {
+      setCostModel('per_credit');
+      return;
+    }
+    if (!isPerCreditRole(role) && costModel === 'per_credit' && assignment.reward_per_credit === null) {
+      setCostModel('fixed_monthly');
+    }
+  }
 
   // Reset form when assignment changes
   useEffect(() => {
     const reward = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-    const hasReward = assignment.reward_per_credit !== null || isCreativeBoostService;
+    const hasReward = assignment.reward_per_credit !== null;
+    const canUsePerCredit = canUsePerCreditCostModel(assignment.role_on_engagement, isCreativeBoostService);
+    const roleIsPerCredit = isPerCreditRole(assignment.role_on_engagement);
 
-    setCostModel(hasReward ? 'per_credit' : assignment.cost_model);
+    setCostModel(hasReward || (roleIsPerCredit && canUsePerCredit) ? 'per_credit' : assignment.cost_model);
     setHourlyCost(assignment.hourly_cost?.toString() || '');
     setMonthlyCost(assignment.monthly_cost?.toString() || '');
     setPercentageOfRevenue(assignment.percentage_of_revenue?.toString() || '');
     setPerCreditReward(reward.toString());
+    setBannerPerCreditReward(
+      (assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_BANNER_REWARD_PER_CREDIT).toString()
+    );
+    setVideoPerCreditReward(
+      (assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_VIDEO_REWARD_PER_CREDIT).toString()
+    );
     setRoleOnEngagement(assignment.role_on_engagement || '');
   }, [assignment, isCreativeBoostService]);
-
-  useEffect(() => {
-    if (!roleOnEngagement) return;
-    const shouldUsePerCredit = PER_CREDIT_ROLES.includes(roleOnEngagement as typeof PER_CREDIT_ROLES[number]);
-    if (shouldUsePerCredit && costModel !== 'per_credit') {
-      setCostModel('per_credit');
-      return;
-    }
-    if (!shouldUsePerCredit && costModel === 'per_credit') {
-      setCostModel('fixed_monthly');
-    }
-  }, [roleOnEngagement, costModel]);
 
   const handleSave = () => {
     // If per_credit model, save reward_per_credit to DB
     if (costModel === 'per_credit') {
-      const reward = toNullableNumber(perCreditReward) ?? DEFAULT_REWARD_PER_CREDIT;
+      if (!canShowPerCreditOption) {
+        throw new Error('Model "Odměna za kredit" je dostupný pouze pro Creative Boost a role Graphic Designer/Video Editor.');
+      }
+      const bannerReward = toNullableNumber(bannerPerCreditReward);
+      const videoReward = toNullableNumber(videoPerCreditReward);
+      if (bannerReward === null) {
+        throw new Error('Zadejte odměnu za kredit - Bannery.');
+      }
+      if (videoReward === null) {
+        throw new Error('Zadejte odměnu za kredit - Videa.');
+      }
 
       onSave({
         cost_model: 'fixed_monthly', // Store as fixed_monthly in DB
         hourly_cost: null,
         monthly_cost: null, // Will be calculated from credits * reward
         percentage_of_revenue: null,
-        reward_per_credit: reward,
+        reward_per_credit: bannerReward,
+        reward_per_credit_banner: bannerReward,
+        reward_per_credit_video: videoReward,
         role_on_engagement: roleOnEngagement,
       });
     } else {
@@ -127,6 +155,8 @@ export function EditAssignmentDialog({
         monthly_cost: costModel === 'fixed_monthly' ? toNullableNumber(monthlyCost) : null,
         percentage_of_revenue: costModel === 'percentage' ? toNullableNumber(percentageOfRevenue) : null,
         reward_per_credit: null,
+        reward_per_credit_banner: null,
+        reward_per_credit_video: null,
         role_on_engagement: roleOnEngagement,
       });
     }
@@ -144,7 +174,7 @@ export function EditAssignmentDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>Role na zakázce</Label>
-            <Select value={roleOnEngagement} onValueChange={setRoleOnEngagement}>
+            <Select value={roleOnEngagement} onValueChange={handleRoleChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Vyberte roli" />
               </SelectTrigger>
@@ -164,7 +194,7 @@ export function EditAssignmentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Model odměny</Label>
+            <Label>Model nákladů</Label>
             <Select value={costModel} onValueChange={(v) => setCostModel(v as ExtendedCostModel)}>
               <SelectTrigger>
                 <SelectValue />
@@ -173,14 +203,21 @@ export function EditAssignmentDialog({
                 <SelectItem value="fixed_monthly">Fixní měsíčně</SelectItem>
                 <SelectItem value="hourly">Hodinová sazba</SelectItem>
                 <SelectItem value="percentage">Procenta z revenue</SelectItem>
-                <SelectItem value="per_credit">
-                  <span className="flex items-center gap-2">
-                    <Palette className="h-3.5 w-3.5" />
-                    Odměna za kredit
-                  </span>
-                </SelectItem>
+                {canShowPerCreditOption && (
+                  <SelectItem value="per_credit">
+                    <span className="flex items-center gap-2">
+                      <Palette className="h-3.5 w-3.5" />
+                    Za kredit (Creative Boost)
+                    </span>
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
+            {!isCreativeBoostService && assignment.reward_per_credit === null && (
+              <p className="text-xs text-muted-foreground">
+                Model "Odměna za kredit" je dostupný jen u služby Creative Boost.
+              </p>
+            )}
           </div>
 
           {costModel === 'hourly' && (
@@ -224,23 +261,39 @@ export function EditAssignmentDialog({
           )}
 
           {costModel === 'per_credit' && (
-            <div className="space-y-3 p-3 rounded-lg bg-muted/50 border">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Palette className="h-4 w-4 text-primary" />
-                Odměna za kredit
+            <div className="space-y-3 rounded-lg border border-red-200 bg-red-50/30 p-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-red-500">
+                <Palette className="h-4 w-4" />
+                Odměna za kredit (Creative Boost)
               </div>
               <div className="space-y-2">
-                <Label>Odměna za kredit (Kč)</Label>
+                <Label>Odměna za kredit - Bannery (CZK)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={bannerPerCreditReward}
+                  onChange={(e) => setBannerPerCreditReward(e.target.value)}
+                  placeholder="80"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Odměna za kredit - Videa (CZK)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={videoPerCreditReward}
+                  onChange={(e) => setVideoPerCreditReward(e.target.value)}
+                  placeholder="80"
+                />
+              </div>
+              <div className="hidden">
+                <Label>Legacy reward_per_credit</Label>
                 <Input
                   type="number"
                   min={0}
                   value={perCreditReward}
                   onChange={(e) => setPerCreditReward(e.target.value)}
-                  placeholder="80"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Pro roli Graphic Designer / Video Editor se odměna počítá za každý odpracovaný kredit.
-                </p>
               </div>
             </div>
           )}

@@ -77,6 +77,24 @@ import { isEngagementServiceActiveInMonth } from '@/lib/engagementServiceLifecyc
 
 // Dynamic lookup for Creative Boost service ID
 const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
+function isCreativeBoostEngagementService(
+  engagementService: { service_id: string; name: string; creative_boost_price_per_credit: number | null; creative_boost_min_credits: number | null; creative_boost_max_credits: number | null; is_active: boolean },
+  creativeBoostServiceId: string | null
+): boolean {
+  if (!engagementService.is_active) {
+    return false;
+  }
+  if (creativeBoostServiceId && engagementService.service_id === creativeBoostServiceId) {
+    return true;
+  }
+  const lowerName = engagementService.name.toLowerCase();
+  return (
+    engagementService.creative_boost_price_per_credit !== null ||
+    engagementService.creative_boost_min_credits !== null ||
+    engagementService.creative_boost_max_credits !== null ||
+    lowerName.includes('creative boost')
+  );
+}
 
 function withPromiseTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   return Promise.race([
@@ -150,7 +168,11 @@ function EngagementsContent() {
 
   // Dynamic Creative Boost service ID lookup
   const CREATIVE_BOOST_SERVICE_ID = useMemo(() => {
-    const cbService = services.find((service) => service.code === CREATIVE_BOOST_SERVICE_CODE);
+    const cbService = services.find(
+      (service) =>
+        service.code?.toLowerCase() === CREATIVE_BOOST_SERVICE_CODE.toLowerCase() ||
+        service.name?.toLowerCase().includes('creative boost')
+    );
     return cbService?.id || null;
   }, [services]);
 
@@ -538,7 +560,7 @@ function EngagementsContent() {
             .filter((service) => isEngagementServiceActiveInMonth(service, filterYear, filterMonth))
             .reduce((sum, s) => {
               // For Creative Boost, calculate from USED credits for the FILTERED month only
-              if (CREATIVE_BOOST_SERVICE_ID && s.service_id === CREATIVE_BOOST_SERVICE_ID) {
+              if (isCreativeBoostEngagementService(s, CREATIVE_BOOST_SERVICE_ID)) {
                 const cbSummary = getClientMonthSummaryByEngagementServiceId(s.id, filterYear, filterMonth);
                 // If there's summary data for this month, use estimated invoice
                 if (cbSummary) {
@@ -707,7 +729,7 @@ function EngagementsContent() {
                     const totalRevenue = engServices
                       .filter((service) => isEngagementServiceActiveInMonth(service, filterYear, filterMonth))
                       .reduce((sum, s) => {
-                        if (CREATIVE_BOOST_SERVICE_ID && s.service_id === CREATIVE_BOOST_SERVICE_ID) {
+                        if (isCreativeBoostEngagementService(s, CREATIVE_BOOST_SERVICE_ID)) {
                           const cbSummary = getClientMonthSummaryByEngagementServiceId(s.id, filterYear, filterMonth);
                           return cbSummary ? sum + cbSummary.estimatedInvoice : sum;
                         }
@@ -853,7 +875,7 @@ function EngagementsContent() {
                             {engServices.length > 0 ? (
                               engServices.map(engService => {
                                 const service = services.find(s => s.id === engService.service_id);
-                                const isCreativeBoost = CREATIVE_BOOST_SERVICE_ID !== null && engService.service_id === CREATIVE_BOOST_SERVICE_ID;
+                                const isCreativeBoost = isCreativeBoostEngagementService(engService, CREATIVE_BOOST_SERVICE_ID);
                                 const cbSummary = isCreativeBoost 
                                   ? getClientMonthSummaryByEngagementServiceId(engService.id, filterYear, filterMonth)
                                   : null;
@@ -1065,13 +1087,26 @@ function EngagementsContent() {
                                       <span>
                                         {(() => {
                                           // Check if this is a Creative Boost assignment with per-credit reward
-                                          const perCreditReward = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-                                          const hasPerCreditReward = assignment.reward_per_credit !== null || (CREATIVE_BOOST_SERVICE_ID && assignment.engagement_service_id && engagementServices.find(es => es.id === assignment.engagement_service_id && es.service_id === CREATIVE_BOOST_SERVICE_ID));
+                                          const bannerReward = assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+                                          const videoReward = assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+                                          const hasPerCreditReward =
+                                            assignment.reward_per_credit !== null ||
+                                            !!(
+                                              assignment.engagement_service_id &&
+                                              engagementServices.find(
+                                                (engagementService) =>
+                                                  engagementService.id === assignment.engagement_service_id &&
+                                                  isCreativeBoostEngagementService(engagementService, CREATIVE_BOOST_SERVICE_ID)
+                                              )
+                                            );
 
                                           if (hasPerCreditReward && assignment.engagement_service_id) {
                                             const service = engagementServices.find(es => es.id === assignment.engagement_service_id);
-                                            if (CREATIVE_BOOST_SERVICE_ID && service?.service_id === CREATIVE_BOOST_SERVICE_ID) {
-                                              return `${perCreditReward} Kč/kredit`;
+                                            if (service && isCreativeBoostEngagementService(service, CREATIVE_BOOST_SERVICE_ID)) {
+                                              if (bannerReward === videoReward) {
+                                                return `${bannerReward} Kč/kredit`;
+                                              }
+                                              return `B ${bannerReward} / V ${videoReward} Kč/kredit`;
                                             }
                                           }
 
@@ -1550,11 +1585,14 @@ function EngagementsContent() {
           {assignmentEngagementId && (() => {
             const eng = engagements.find(e => e.id === assignmentEngagementId);
             if (!eng) return null;
+            const assignmentEngagementServices = getEngagementServicesByEngagementId(assignmentEngagementId);
             return (
               <AssignmentForm
                 engagementId={assignmentEngagementId}
                 engagementStartDate={eng.start_date}
                 engagementEndDate={eng.end_date}
+                engagementServices={assignmentEngagementServices}
+                creativeBoostServiceId={CREATIVE_BOOST_SERVICE_ID}
                 colleagues={colleagues}
                 existingAssignments={getAssignmentsByEngagementId(assignmentEngagementId)}
                 onSubmit={handleAssignmentSubmit}
@@ -1849,6 +1887,19 @@ function EngagementsContent() {
 
       {/* Edit Assignment Dialog */}
       {editingAssignment && (
+        (() => {
+          const hasCreativeBoostServiceOnEngagement = getEngagementServicesByEngagementId(editingAssignment.engagement_id).some(
+            (engagementService) => isCreativeBoostEngagementService(engagementService, CREATIVE_BOOST_SERVICE_ID)
+          );
+          const hasCreativeBoostOnAssignmentService =
+            !!editingAssignment.engagement_service_id &&
+            engagementServices.some(
+              (engagementService) =>
+                engagementService.id === editingAssignment.engagement_service_id &&
+                isCreativeBoostEngagementService(engagementService, CREATIVE_BOOST_SERVICE_ID)
+            );
+          const isCreativeBoostService = hasCreativeBoostOnAssignmentService || hasCreativeBoostServiceOnEngagement;
+          return (
         <EditAssignmentDialog
           open={isEditAssignmentDialogOpen}
           onOpenChange={(open) => {
@@ -1857,17 +1908,15 @@ function EngagementsContent() {
           }}
           assignment={editingAssignment}
           colleagueName={getColleagueById(editingAssignment.colleague_id)?.full_name || ''}
-          isCreativeBoostService={
-            CREATIVE_BOOST_SERVICE_ID && editingAssignment.engagement_service_id
-              ? engagementServices.find(es => es.id === editingAssignment.engagement_service_id)?.service_id === CREATIVE_BOOST_SERVICE_ID
-              : false
-          }
+          isCreativeBoostService={isCreativeBoostService}
           onSave={(data) => {
             updateAssignment(editingAssignment.id, data);
             toast.success('Odměna kolegy byla upravena');
             setEditingAssignment(null);
           }}
         />
+          );
+        })()
       )}
     </div>
   );

@@ -354,6 +354,8 @@ export interface EngagementAssignment {
   monthly_cost: number | null;
   percentage_of_revenue: number | null;
   reward_per_credit: number | null;
+  reward_per_credit_banner: number | null;
+  reward_per_credit_video: number | null;
   start_date: string;
   end_date: string | null;
   notes: string;

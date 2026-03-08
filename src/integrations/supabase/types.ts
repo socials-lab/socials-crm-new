@@ -1200,6 +1200,8 @@ export type Database = {
           notes: string | null
           percentage_of_revenue: number | null
           reward_per_credit: number | null
+          reward_per_credit_banner: number | null
+          reward_per_credit_video: number | null
           role_on_engagement: string | null
           start_date: string
           updated_at: string | null
@@ -1217,6 +1219,8 @@ export type Database = {
           notes?: string | null
           percentage_of_revenue?: number | null
           reward_per_credit?: number | null
+          reward_per_credit_banner?: number | null
+          reward_per_credit_video?: number | null
           role_on_engagement?: string | null
           start_date: string
           updated_at?: string | null
@@ -1234,6 +1238,8 @@ export type Database = {
           notes?: string | null
           percentage_of_revenue?: number | null
           reward_per_credit?: number | null
+          reward_per_credit_banner?: number | null
+          reward_per_credit_video?: number | null
           role_on_engagement?: string | null
           start_date?: string
           updated_at?: string | null

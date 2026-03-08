@@ -35,7 +35,11 @@ interface ColleagueClientRewardSummary {
   engagementId: string | null;
   engagementName: string;
   totalCredits: number;
+  bannerCredits: number;
+  videoCredits: number;
   rewardPerCredit: number;
+  bannerRewardPerCredit: number;
+  videoRewardPerCredit: number;
   totalReward: number;
 }
 
@@ -93,6 +97,8 @@ interface CreativeBoostContextType {
 }
 
 const CreativeBoostContext = createContext<CreativeBoostContextType | null>(null);
+const BANNER_OUTPUT_CATEGORIES: OutputCategory[] = ['banner', 'banner_translation', 'banner_revision', 'ai_photo'];
+const VIDEO_OUTPUT_CATEGORIES: OutputCategory[] = ['video', 'video_translation', 'video_revision'];
 
 // Transformer functions: snake_case DB -> camelCase TypeScript
 const transformOutputType = (row: Record<string, unknown>): OutputType => ({
@@ -610,14 +616,29 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       if (!clientData) return;
 
       let totalCredits = 0;
+      let bannerCredits = 0;
+      let videoCredits = 0;
       clientOutputs.forEach(output => {
         const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
+        const outputType = outputTypes.find((item) => item.id === output.outputTypeId);
+        if (!outputType) {
+          throw new Error(`Creative Boost output type ${output.outputTypeId} was not found.`);
+        }
+        if (BANNER_OUTPUT_CATEGORIES.includes(outputType.category)) {
+          bannerCredits += credits.totalCredits;
+        } else if (VIDEO_OUTPUT_CATEGORIES.includes(outputType.category)) {
+          videoCredits += credits.totalCredits;
+        } else {
+          throw new Error(`Unsupported Creative Boost output category "${outputType.category}".`);
+        }
         totalCredits += credits.totalCredits;
       });
 
       let engagementId: string | null = null;
       let engagementName = '';
       let rewardPerCredit = 80;
+      let bannerRewardPerCredit = DEFAULT_REWARD_PER_CREDIT;
+      let videoRewardPerCredit = DEFAULT_REWARD_PER_CREDIT;
 
       if (clientMonth?.engagementServiceId) {
         const engService = engagementServices.find(es => es.id === clientMonth.engagementServiceId);
@@ -631,6 +652,8 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           );
           if (assignment) {
             rewardPerCredit = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+            bannerRewardPerCredit = assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+            videoRewardPerCredit = assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
           }
         }
       } else if (clientMonth?.engagementId) {
@@ -643,8 +666,11 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         );
         if (assignment) {
           rewardPerCredit = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+          bannerRewardPerCredit = assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+          videoRewardPerCredit = assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
         }
       }
+      const totalReward = bannerCredits * bannerRewardPerCredit + videoCredits * videoRewardPerCredit;
 
       results.push({
         clientId,
@@ -653,13 +679,17 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         engagementId,
         engagementName,
         totalCredits,
+        bannerCredits,
+        videoCredits,
         rewardPerCredit,
-        totalReward: totalCredits * rewardPerCredit,
+        bannerRewardPerCredit,
+        videoRewardPerCredit,
+        totalReward,
       });
     });
 
     return results.sort((a, b) => b.totalReward - a.totalReward);
-  }, [outputs, clientMonths, engagementServices, engagements, assignments, getClientById, calculateOutputCredits]);
+  }, [outputs, clientMonths, engagementServices, engagements, assignments, getClientById, calculateOutputCredits, outputTypes]);
 
   const getClientMonthByEngagementServiceId = useCallback(
     (engagementServiceId: string, year: number, month: number) => {
