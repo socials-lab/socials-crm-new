@@ -57,7 +57,6 @@ function ColleaguesContent() {
     engagements,
     assignments,
     clients,
-    addColleague,
     updateColleague,
     updateAssignment,
   } = useCRMData();
@@ -142,50 +141,44 @@ function ColleaguesContent() {
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = async (data: Omit<Colleague, 'id' | 'created_at' | 'updated_at'> & { invite_to_crm?: boolean; role?: string }) => {
-    const { invite_to_crm, role, ...colleagueData } = data;
+  const handleFormSubmit = async (data: Omit<Colleague, 'id' | 'created_at' | 'updated_at'> & { role?: string }) => {
+    const { role, ...colleagueData } = data;
 
     try {
       if (editingColleague) {
         await updateColleague(editingColleague.id, colleagueData);
       } else {
-        // If invite_to_crm is checked, use edge function (creates colleague + user + sends email)
-        if (invite_to_crm && role) {
-          const nameParts = colleagueData.full_name.split(' ');
-          const firstName = nameParts[0] || '';
-          const lastName = nameParts.slice(1).join(' ') || '';
+        const nameParts = colleagueData.full_name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
 
-          const { data: responseData, error } = await supabase.functions.invoke('invite-user', {
-            body: {
-              email: colleagueData.email,
-              firstName,
-              lastName,
-              role,
-              position: colleagueData.position,
-              seniority: colleagueData.seniority,
-              phone: colleagueData.phone,
-              notes: colleagueData.notes,
-              is_freelancer: colleagueData.is_freelancer,
-              internal_hourly_cost: colleagueData.internal_hourly_cost,
-              monthly_fixed_cost: colleagueData.monthly_fixed_cost,
-              max_engagements: colleagueData.max_engagements,
-            },
-          });
+        const { data: responseData, error } = await supabase.functions.invoke('invite-user', {
+          body: {
+            email: colleagueData.email,
+            firstName,
+            lastName,
+            role: role || 'specialist',
+            position: colleagueData.position,
+            seniority: colleagueData.seniority,
+            phone: colleagueData.phone,
+            notes: colleagueData.notes,
+            is_freelancer: colleagueData.is_freelancer,
+            internal_hourly_cost: colleagueData.internal_hourly_cost,
+            monthly_fixed_cost: colleagueData.monthly_fixed_cost,
+            max_engagements: colleagueData.max_engagements,
+          },
+        });
 
-          if (error) {
-            const errorMessage = error.message || 'Nepodařilo se pozvat uživatele';
-            throw new Error(errorMessage);
-          }
-
-          if (responseData?.error) {
-            throw new Error(responseData.error);
-          }
-
-          toast.success(`Kolega vytvořen a pozvánka odeslána na ${colleagueData.email}`);
-        } else {
-          // No invite - just create colleague locally
-          await addColleague(colleagueData);
+        if (error) {
+          const errorMessage = error.message || 'Nepodařilo se pozvat uživatele';
+          throw new Error(errorMessage);
         }
+
+        if (responseData?.error) {
+          throw new Error(responseData.error);
+        }
+
+        toast.success(`Kolega vytvořen a pozvánka odeslána na ${colleagueData.email}`);
       }
 
       setIsFormOpen(false);

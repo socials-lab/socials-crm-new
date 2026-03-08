@@ -267,6 +267,14 @@ serve(async (req) => {
         role: roleNorm,
         is_super_admin: false,
         is_active: true,
+        can_see_financials: false,
+        page_permissions: [
+          {
+            page: 'my-work',
+            can_view: true,
+            can_edit: false,
+          },
+        ],
       });
 
     if (roleError) {
