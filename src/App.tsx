@@ -51,8 +51,9 @@ import PublicSOPPage from "./pages/PublicSOPPage";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
       <UserRoleProvider>
         <CRMDataProvider>
           <CreativeBoostProvider>
