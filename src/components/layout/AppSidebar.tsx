@@ -90,6 +90,8 @@ export function AppSidebar() {
   const location = useLocation();
   const { colleagueId, canAccessPage } = useUserRole();
   const { setOpenMobile } = useSidebar();
+  const { resolvedTheme } = useTheme();
+  const logo = resolvedTheme === 'dark' ? socialsLogoDark : socialsLogoLight;
   
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
