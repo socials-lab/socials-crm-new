@@ -19,7 +19,7 @@ import { Loader2, Building2, MapPin, CheckCircle2, AlertTriangle, Plus, X, PenLi
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { cn } from '@/lib/utils';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo.svg';
 import { LeadService } from '@/types/crm';
 
 type CompanyCountry = 'CZ' | 'SK' | 'other';

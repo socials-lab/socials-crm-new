@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { BookOpen, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo.svg';
 
 export interface SharedSOPData {
   id: string;
