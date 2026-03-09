@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { AuthProvider } from "@/hooks/useAuth";
 import { UserRoleProvider } from "@/hooks/useUserRole";
+import { CRMDataProvider } from "@/hooks/useCRMData";
 import { LeadsDataProvider } from "@/hooks/useLeadsData";
 import { CreativeBoostProvider } from "@/hooks/useCreativeBoostData";
 import { ApplicantsDataProvider } from "@/hooks/useApplicantsData";
