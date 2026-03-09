@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
         await hlidacRes.text(); // consume body
       }
     } catch (e) {
-      console.log('Hlídač státu scrape failed:', e.message);
+      console.log('Hlídač státu scrape failed:', (e as Error).message);
     }
 
     // Scrape kurzy.cz for additional data (základní kapitál, DIČ, etc.)
