@@ -6,33 +6,34 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
+    /* Socials Dark Theme — based on styleguide */
+    --background: 0 0% 2%;
+    --foreground: 0 0% 85%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 85%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 85%;
 
     --primary: 82 100% 45%;
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 0 0% 2%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 85%;
 
-    --muted: 0 0% 95%;
-    --muted-foreground: 0 0% 35%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 50%;
 
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 10%;
+    --accent: 0 0% 10%;
+    --accent-foreground: 0 0% 85%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 85%;
-    --input: 0 0% 85%;
-    --ring: 82 100% 45%;
+    --border: 0 0% 30%;
+    --input: 0 0% 30%;
+    --ring: 82 100% 55%;
 
     --radius: 1rem;
 
@@ -51,13 +52,13 @@
     --chart-5: 0 84% 60%;
 
     /* Sidebar */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 10%;
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 85%;
     --sidebar-primary: 82 100% 45%;
-    --sidebar-primary-foreground: 0 0% 7%;
-    --sidebar-accent: 0 0% 94%;
-    --sidebar-accent-foreground: 0 0% 10%;
-    --sidebar-border: 0 0% 90%;
+    --sidebar-primary-foreground: 0 0% 2%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 85%;
+    --sidebar-border: 0 0% 16%;
     --sidebar-ring: 82 100% 45%;
   }
 }
@@ -67,9 +68,9 @@
     @apply border-border;
   }
 
-  /* Override text-primary to use a darker, readable green for text */
+  /* Override text-primary to use a readable green for text on dark backgrounds */
   .text-primary {
-    color: hsl(82 100% 25%) !important;
+    color: hsl(82 100% 37%) !important;
   }
 
   /* Keep bright primary for backgrounds (buttons, badges, etc.) */
