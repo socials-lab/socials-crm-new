@@ -1,47 +1,84 @@
 
 
-## Plan: Kontrola přefakturace víceprací klientům
+## Plan: Redesign aplikace podle Socials styleguide (light mode only)
 
-### Problém
+Aplikace bude přepracována do light-mode verze inspirované Socials styleguide — lime zelená jako primary, Work Sans font, čisté zaoblení, bez dark mode.
 
-Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
+### 1. Odstranit dark mode
 
-### Řešení
+**`src/index.css`** — smazat celý `.dark { ... }` blok a přemapovat CSS proměnné na light-mode paletu odvozenou ze styleguide:
 
-Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
-- `expected` — vícepráce se má přefakturovat klientovi (default)
-- `reinvoiced` — přefakturováno klientovi
-- `not_expected` — nepředpokládá se přefakturace klientovi
-
-Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
-
-### Databázové změny
-
-```sql
-CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
-ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
-ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+```text
+Paleta (light mode adaptace styleguide):
+--background:        0 0% 100%        (#ffffff)
+--foreground:        0 0% 10%         (#1a1a1a)
+--card:              80 20% 97%       (#f8faf3 — lehce zelenkavý nádech)
+--primary:           82 100% 45%      (#94e700 — lime)
+--primary-foreground: 0 0% 7%        (#121212 — tmavý text na lime)
+--secondary:         0 0% 96%        (#f2f2f2)
+--muted:             0 0% 95%        (#f2f2f2)
+--muted-foreground:  0 0% 35%       (#808080 → tmavší)
+--border:            0 0% 85%        (#d8d8d8)
+--ring:              82 100% 45%     (lime)
+--destructive:       0 84% 60%      (beze změny)
 ```
 
-### UI změny
+**`src/App.tsx`** — odstranit `next-themes` ThemeProvider pokud existuje
 
-**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
-- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
-- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
+### 2. Typografie — Work Sans
 
-**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
-- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
-- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
+**`src/index.css`**:
+- Nahradit import Satoshi → Google Fonts Work Sans (300-800)
+- `body { font-family: 'Work Sans', system-ui, sans-serif; }`
 
-**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
-- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
-- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
+**`tailwind.config.ts`**:
+- `fontFamily.sans` → `['Work Sans', 'system-ui', 'sans-serif']`
 
-**4. `src/types/crm.ts`**
-- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
+### 3. Border radius tokeny
 
-### Technické detaily
-- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
-- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
-- Badge se zobrazí vedle existujícího status badge
+**`tailwind.config.ts`** a **`src/index.css`**:
+- `--radius: 1rem` (16px = large)
+- Přidat `--radius-md: 0.75rem` (12px)
+- `--radius-sm: 0.5rem` (8px)
+
+### 4. Komponenty
+
+**`src/components/ui/button.tsx`**:
+- `default`: lime bg (`bg-primary`), tmavý text, hover ztmavení
+- `secondary`: bílé pozadí, border `#d8d8d8`, hover light gray
+- `outline`: průhledné, border neutrální
+- Font weight 600 (semibold)
+
+**`src/components/ui/card.tsx`**:
+- Jemnější shadow, border `border-border`, radius 16px
+- Odebrat hover efekt `hover:border-primary/20` (příliš agresivní)
+
+**`src/components/ui/input.tsx`**:
+- Border `#d8d8d8`, radius 8px, focus ring lime
+
+### 5. Sidebar
+
+**`src/components/layout/AppSidebar.tsx`** + **`src/index.css`** sidebar proměnné:
+- `--sidebar-background`: bílá nebo `#f8f8f8`
+- `--sidebar-primary`: lime
+- Aktivní item: lime pozadí s tmavým textem
+- Čistý minimalistický look
+
+### 6. Header bar
+
+**`src/components/layout/AppLayout.tsx`**:
+- Bílé pozadí, jemný spodní border
+- Bez vizuálních změn v logice
+
+### 7. Build errors fix
+
+Opravit existující build chyby v edge functions (`.catch` → try/catch, `error as Error`).
+
+### Rozsah
+- `src/index.css` — kompletní přepis CSS proměnných + font import
+- `tailwind.config.ts` — font, radius
+- `src/components/ui/button.tsx` — styling tweaks
+- `src/components/ui/card.tsx` — jemnější hover
+- `src/components/ui/input.tsx` — border/radius
+- Edge functions — fix 9 build errors (type casting)
 
