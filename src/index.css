@@ -9,7 +9,7 @@
     --background: 0 0% 100%;
     --foreground: 0 0% 10%;
 
-    --card: 80 20% 97%;
+    --card: 0 0% 100%;
     --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
@@ -24,7 +24,7 @@
     --muted: 0 0% 95%;
     --muted-foreground: 0 0% 35%;
 
-    --accent: 82 60% 92%;
+    --accent: 0 0% 96%;
     --accent-foreground: 0 0% 10%;
 
     --destructive: 0 84% 60%;
@@ -55,7 +55,7 @@
     --sidebar-foreground: 0 0% 10%;
     --sidebar-primary: 82 100% 45%;
     --sidebar-primary-foreground: 0 0% 7%;
-    --sidebar-accent: 82 60% 92%;
+    --sidebar-accent: 0 0% 94%;
     --sidebar-accent-foreground: 0 0% 10%;
     --sidebar-border: 0 0% 90%;
     --sidebar-ring: 82 100% 45%;
