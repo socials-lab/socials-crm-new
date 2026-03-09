@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
         await hlidacRes.text(); // consume body
       }
     } catch (e) {
-      console.log('Hlídač státu scrape failed:', e.message);
+      console.log('Hlídač státu scrape failed:', (e as Error).message);
     }
 
     // Scrape kurzy.cz for additional data (základní kapitál, DIČ, etc.)
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
         await kurzyRes.text();
       }
     } catch (e) {
-      console.log('Kurzy.cz scrape failed:', e.message);
+      console.log('Kurzy.cz scrape failed:', (e as Error).message);
     }
 
     const result = {
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('Edge function error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
