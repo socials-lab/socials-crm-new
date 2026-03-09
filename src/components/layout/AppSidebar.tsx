@@ -33,7 +33,7 @@ const navGroups: NavGroup[] = [
     items: [
       { title: '🏠 Přehled', url: '/', page: 'dashboard' },
       { title: '👤 Můj přehled', url: '/my-work', page: 'my-work', requiresColleague: true },
-      { title: '📝 Můj profil', url: '/my-profile', page: 'my-profile', requiresColleague: true },
+      { title: '📝 Můj profil', url: '/my-profile', page: 'my-profile' },
     ],
   },
   {
@@ -105,10 +105,6 @@ export function AppSidebar() {
     items.filter(item => {
       if (item.requiresColleague && !hasColleagueId) return false;
 
-      // New users without explicit page permissions should only see "Můj přehled".
-      if (!isSuperAdmin && item.page === 'my-profile' && role && role !== 'admin' && role !== 'management' && allowedPages.length === 0) {
-        return false;
-      }
 
       if (item.page === 'my-profile') return true;
       return canAccessPage(item.page);
