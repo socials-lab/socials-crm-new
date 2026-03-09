@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle, CheckCircle2, XCircle, Loader2, User, Building2, Briefcase, Mail, Clock } from 'lucide-react';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo.svg';
 import { getApprovalByToken, getStoredExtraWorks, updateStoredExtraWorkStatus } from '@/components/extra-work/SendApprovalDialog';
 import type { ExtraWorkApprovalData } from '@/components/extra-work/SendApprovalDialog';
 import { notifyExtraWorkColleague } from '@/services/notificationService';

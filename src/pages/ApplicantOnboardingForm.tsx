@@ -28,7 +28,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo.svg';
 import { AvatarUpload } from '@/components/forms/AvatarUpload';
 
 const formSchema = z.object({

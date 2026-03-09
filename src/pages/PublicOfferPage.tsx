@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo.svg';
 import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
 
 // Portfolio icon by type
