@@ -67,6 +67,16 @@
     @apply border-border;
   }
 
+  /* Override text-primary to use a darker, readable green for text */
+  .text-primary {
+    color: hsl(82 100% 25%) !important;
+  }
+
+  /* Keep bright primary for backgrounds (buttons, badges, etc.) */
+  .bg-primary {
+    background-color: hsl(var(--primary)) !important;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Work Sans', system-ui, sans-serif;
