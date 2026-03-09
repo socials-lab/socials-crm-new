@@ -3,11 +3,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import {
   getFakturoidAccessToken,
   getAccountSlug,
-  searchSubjectByIco,
+  searchSubjects,
   createSubject,
   getCountryCode,
   type FakturoidSubject,
 } from "../_shared/fakturoid.ts";
+import {
+  normalizeCompanyName,
+  normalizeEmail,
+  normalizeIco,
+  normalizeVatNo,
+  resolveSubjectDedupMatch,
+} from "../_shared/fakturoid-subject-matching.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +36,35 @@ interface CreateSubjectRequest {
   email?: string;
   phone?: string;
   website?: string;
+}
+
+class HttpError extends Error {
+  status: number;
+  payload: Record<string, unknown>;
+
+  constructor(status: number, payload: Record<string, unknown>) {
+    super(typeof payload.error === "string" ? payload.error : "Request failed");
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+function deduplicateSubjectsById(subjects: FakturoidSubject[]): FakturoidSubject[] {
+  const map = new Map<number, FakturoidSubject>();
+  for (const subject of subjects) {
+    map.set(subject.id, subject);
+  }
+  return Array.from(map.values());
+}
+
+function getMinimalSubjects(matches: FakturoidSubject[]): Array<Record<string, unknown>> {
+  return matches.map((subject) => ({
+    id: subject.id,
+    name: subject.name,
+    registration_no: subject.registration_no || null,
+    vat_no: subject.vat_no || null,
+    email: subject.email || null,
+  }));
 }
 
 serve(async (req) => {
@@ -99,6 +135,10 @@ serve(async (req) => {
             fakturoid_subject_id: client.fakturoid_subject_id,
             message: "Klient již má Fakturoid ID",
             existing: true,
+            metadata: {
+              action: "linked_existing",
+              matchedBy: null,
+            },
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -155,11 +195,52 @@ serve(async (req) => {
     const accountSlug = getAccountSlug();
     const accessToken = await getFakturoidAccessToken();
 
-    // Search for existing subject by IČO (avoid duplicates in Fakturoid)
+    // Search for existing subject with prioritized exact matching to avoid duplicates.
     let fakturoidSubject: FakturoidSubject | null = null;
+    let dedupCriterion: "registration_no" | "vat_no" | "email" | "name" | null = null;
+    const dedupSearchQueries = new Set<string>();
+    const normalizedIco = normalizeIco(subjectIco);
+    const normalizedDic = normalizeVatNo(subjectDic);
+    const normalizedEmail = normalizeEmail(subjectEmail);
+    const normalizedName = normalizeCompanyName(subjectName);
 
-    if (subjectIco) {
-      fakturoidSubject = await searchSubjectByIco(accessToken, accountSlug, subjectIco);
+    if (normalizedIco) dedupSearchQueries.add(normalizedIco);
+    if (normalizedDic) dedupSearchQueries.add(normalizedDic);
+    if (normalizedEmail) dedupSearchQueries.add(normalizedEmail);
+    if (subjectName?.trim()) dedupSearchQueries.add(subjectName.trim());
+    if (normalizedName) dedupSearchQueries.add(normalizedName);
+
+    let candidateSubjects: FakturoidSubject[] = [];
+    if (dedupSearchQueries.size > 0) {
+      const subjectResults = await Promise.all(
+        Array.from(dedupSearchQueries).map((query) => searchSubjects(accessToken, accountSlug, query))
+      );
+      candidateSubjects = deduplicateSubjectsById(subjectResults.flat());
+    }
+
+    const dedupMatch = resolveSubjectDedupMatch(candidateSubjects, {
+      ico: subjectIco,
+      vatNo: subjectDic,
+      email: subjectEmail,
+      name: subjectName,
+    });
+
+    if (dedupMatch.status === "single" && dedupMatch.match) {
+      fakturoidSubject = dedupMatch.match;
+      dedupCriterion = dedupMatch.criterion || null;
+    } else if (dedupMatch.status === "multiple") {
+      throw new HttpError(409, {
+        success: false,
+        error: "Ambiguous subject match in Fakturoid. No subject was created.",
+        code: "ambiguous_matches",
+        message: "Nalezeno více možných kontaktů ve Fakturoid, proto nebyl vytvořen nový kontakt.",
+        ambiguous_matches: getMinimalSubjects(dedupMatch.matches || []),
+        details: {
+          criterion: dedupMatch.criterion,
+          normalized_value: dedupMatch.normalizedValue,
+          match_count: dedupMatch.matches?.length ?? 0,
+        },
+      });
     }
 
     if (fakturoidSubject) {
@@ -192,7 +273,11 @@ serve(async (req) => {
         action: "link_existing_subject",
         related_table: isDirectMode ? "leads" : "clients",
         related_record_id: clientId,
-        response_payload: { subject_id: fakturoidSubject.id, name: fakturoidSubject.name },
+        response_payload: {
+          subject_id: fakturoidSubject.id,
+          name: fakturoidSubject.name,
+          dedup_criterion: dedupCriterion,
+        },
         is_success: true,
         triggered_by: userId,
         duration_ms: durationMs,
@@ -204,6 +289,10 @@ serve(async (req) => {
           fakturoid_subject_id: fakturoidSubject.id,
           message: "Nalezen existující kontakt ve Fakturoid",
           existing: true,
+          metadata: {
+            action: "linked_existing",
+            matchedBy: dedupCriterion,
+          },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -245,6 +334,10 @@ serve(async (req) => {
             fakturoid_subject_id: clientRecheck.fakturoid_subject_id,
             message: "Klient již má Fakturoid ID (nastaveno jiným požadavkem)",
             existing: true,
+            metadata: {
+              action: "linked_existing",
+              matchedBy: null,
+            },
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -324,6 +417,10 @@ serve(async (req) => {
         fakturoid_subject_id: fakturoidSubject.id,
         message: "Kontakt vytvořen ve Fakturoid",
         existing: false,
+        metadata: {
+          action: "created_new",
+          matchedBy: null,
+        },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -347,6 +444,13 @@ serve(async (req) => {
     }
 
     console.error("Fakturoid create subject error:", error);
+    if (error instanceof HttpError) {
+      return new Response(
+        JSON.stringify(error.payload),
+        { status: error.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

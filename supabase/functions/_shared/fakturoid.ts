@@ -125,7 +125,22 @@ export async function searchSubjectByIco(
   accountSlug: string,
   ico: string
 ): Promise<FakturoidSubject | null> {
-  const url = `https://app.fakturoid.cz/api/v3/accounts/${accountSlug}/subjects/search.json?query=${encodeURIComponent(ico)}`;
+  try {
+    const subjects = await searchSubjects(accessToken, accountSlug, ico);
+    const normalizedIco = ico.replace(/\D/g, "");
+    const match = subjects.find((subject) => (subject.registration_no || "").replace(/\D/g, "") === normalizedIco);
+    return match || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function searchSubjects(
+  accessToken: string,
+  accountSlug: string,
+  query: string
+): Promise<FakturoidSubject[]> {
+  const url = `https://app.fakturoid.cz/api/v3/accounts/${accountSlug}/subjects/search.json?query=${encodeURIComponent(query)}`;
 
   const response = await fakturoidFetch(url, {
     method: "GET",
@@ -137,14 +152,12 @@ export async function searchSubjectByIco(
   });
 
   if (!response.ok) {
-    return null;
+    const errorText = await response.text();
+    throw new Error(`Fakturoid search subjects failed: ${errorText}`);
   }
 
   const subjects: FakturoidSubject[] = await response.json();
-
-  // Find exact match by IČO
-  const match = subjects.find((s) => s.registration_no === ico);
-  return match || null;
+  return subjects;
 }
 
 export async function createSubject(
