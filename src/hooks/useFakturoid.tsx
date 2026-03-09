@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
@@ -29,6 +30,7 @@ export interface BidirectionalSyncResult {
 
 export function useFakturoid() {
   // Separate loading states for each operation
+  const queryClient = useQueryClient();
   const [isCreatingSubject, setIsCreatingSubject] = useState(false);
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
   const [isSyncingSubject, setIsSyncingSubject] = useState(false);
@@ -57,6 +59,8 @@ export function useFakturoid() {
       }
 
       toast.success('Klient byl vytvořen ve Fakturoid');
+      // Refresh clients list immediately so fakturoid_subject_id badge updates without page reload
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
       return data;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Chyba při vytváření kontaktu';
@@ -121,6 +125,7 @@ export function useFakturoid() {
       }
 
       toast.success('Klient byl synchronizován ve Fakturoid');
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
       return data;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Chyba při synchronizaci kontaktu';
