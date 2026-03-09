@@ -889,7 +889,9 @@ export default function Clients() {
                                   try {
                                     const result = await createSubjectInFakturoid(client.id);
                                     if (result?.fakturoid_subject_id) {
-                                      await updateClient(client.id, { fakturoid_subject_id: result.fakturoid_subject_id });
+                                      // Edge function already writes fakturoid_subject_id with service role.
+                                      // Do NOT call updateClient here - non-admin roles cannot update clients via RLS.
+                                      // Realtime subscription on clients table will refresh UI after the backend update.
                                     }
                                   } catch (error) {
                                     console.error('Failed to create Fakturoid subject:', error);
