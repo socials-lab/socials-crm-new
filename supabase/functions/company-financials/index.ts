@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
         await kurzyRes.text();
       }
     } catch (e) {
-      console.log('Kurzy.cz scrape failed:', e.message);
+      console.log('Kurzy.cz scrape failed:', (e as Error).message);
     }
 
     const result = {
