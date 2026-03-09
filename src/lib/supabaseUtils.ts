@@ -123,7 +123,24 @@ export async function invokeWithTimeout<T = unknown>(
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
       });
-      return await normalizeResultError(retriedAfterRefresh);
+      if (!isInvalidJwtError(retriedAfterRefresh.error)) {
+        return await normalizeResultError(retriedAfterRefresh);
+      }
+      result = retriedAfterRefresh;
+    }
+
+    // Final fallback: invoke with anon token explicitly (works even when user session JWT is broken).
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (anonKey) {
+      const retriedWithAnon = await invokeOnce({
+        ...options,
+        headers: {
+          ...(options?.headers || {}),
+          Authorization: `Bearer ${anonKey}`,
+          apikey: anonKey,
+        },
+      });
+      return await normalizeResultError(retriedWithAnon);
     }
 
     return await normalizeResultError(result);
