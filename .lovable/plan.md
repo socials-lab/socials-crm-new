@@ -1,47 +1,49 @@
 
 
-## Plan: Kontrola přefakturace víceprací klientům
+## Dark Mode -- celá aplikace podle Socials styleguide
 
-### Problém
+Aplikace bude natrvalo v tmavém režimu. Barvy jsou mapovány přesně podle styleguide.
 
-Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
+### Mapování barev ze styleguide
 
-### Řešení
+| Styleguide token | Hex | Použití v aplikaci |
+|---|---|---|
+| Neutral Darkest | `#040404` | `--background` |
+| Neutral Darker | `#1a1a1a` | `--card`, `--popover`, `--sidebar-background` |
+| Neutral Dark | `#4d4d4d` | `--border`, `--input` |
+| Neutral | `#808080` | `--muted-foreground` |
+| Neutral Light | `#b2b2b2` | -- |
+| Neutral Lighter | `#d8d8d8` | `--foreground`, `--card-foreground` |
+| White | `#ffffff` | `--primary-foreground` |
+| Primary | `#94e700` | `--primary` (tlačítka, CTA) |
+| Primary Light | `#b4ee4c` | `--ring`, text-primary override |
+| Primary Dark | `#76b800` | text-primary pro malé texty |
 
-Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
-- `expected` — vícepráce se má přefakturovat klientovi (default)
-- `reinvoiced` — přefakturováno klientovi
-- `not_expected` — nepředpokládá se přefakturace klientovi
+### Co se změní
 
-Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
+**1. `src/index.css` -- nové dark-first CSS proměnné**
+- Celý `:root` blok přepsat na tmavé barvy podle tabulky výše
+- `--background`: near-black `#040404`
+- `--foreground`: světlá `#d8d8d8`
+- `--card` / `--popover`: `#1a1a1a`
+- `--muted`: `#1a1a1a`, `--muted-foreground`: `#808080`
+- `--accent` / `--secondary`: tmavé odstíny (`#1a1a1a` / `#2a2a2a`)
+- `--border` / `--input`: `#4d4d4d`
+- `--sidebar-*`: tmavé varianty (background `#0a0a0a`, border `#2a2a2a`, accent `#1a1a1a`)
+- `.text-primary` override: `hsl(82 100% 37%)` (~`#76b800`) pro čitelnost na tmavém pozadí
+- `--primary-foreground`: `#040404` (tmavý text na zelených tlačítkách)
+- Scrollbar thumb barvy aktualizovat pro dark
 
-### Databázové změny
+**2. `src/assets/socials-logo.svg` -- bílá verze loga**
+- Přepsat text paths z `#1a1a1a` na `#ffffff` (bílý text)
+- Zelený dot zůstane `#94e700`
+- Filtr glow stroke změnit na bílý
 
-```sql
-CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
-ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
-ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
-```
+**3. `src/components/layout/MobileBottomNav.tsx` -- ověřit kompatibilitu**
+- Zkontrolovat a případně upravit hardcoded barvy
 
-### UI změny
+**4. `src/pages/Auth.tsx` a další public stránky**
+- Zkontrolovat hardcoded barvy (gradient backgrounds apod.) a nahradit tmavými variantami
 
-**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
-- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
-- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
-
-**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
-- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
-- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
-
-**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
-- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
-- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
-
-**4. `src/types/crm.ts`**
-- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
-
-### Technické detaily
-- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
-- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
-- Badge se zobrazí vedle existujícího status badge
+Celkem se změní cca 3-5 souborů. Hlavní změna je v `index.css` (proměnné) a `socials-logo.svg` (bílá verze). Zbytek aplikace by měl automaticky přejít na dark díky CSS custom properties.
 
