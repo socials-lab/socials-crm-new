@@ -133,7 +133,7 @@ export function AppSidebar() {
     <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
-          <img src={socialsLogo} alt="Socials" className="h-8 w-auto max-w-[120px] object-contain" />
+          <img src={logo} alt="Socials" className="h-8 w-auto max-w-[120px] object-contain" />
           <span className="text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">CRM</span>
         </div>
       </SidebarHeader>

@@ -123,6 +123,7 @@ const App = () => (
       </UserRoleProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
