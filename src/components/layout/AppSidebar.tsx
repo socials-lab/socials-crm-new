@@ -13,7 +13,9 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useUserRole } from '@/hooks/useUserRole';
-import socialsLogo from '@/assets/socials-logo.svg';
+import { useTheme } from 'next-themes';
+import socialsLogoLight from '@/assets/socials-logo-dark.svg';
+import socialsLogoDark from '@/assets/socials-logo.svg';
 
 interface NavItem {
   title: string;
@@ -88,6 +90,8 @@ export function AppSidebar() {
   const location = useLocation();
   const { colleagueId, canAccessPage } = useUserRole();
   const { setOpenMobile } = useSidebar();
+  const { resolvedTheme } = useTheme();
+  const logo = resolvedTheme === 'dark' ? socialsLogoDark : socialsLogoLight;
   
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -129,7 +133,7 @@ export function AppSidebar() {
     <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
-          <img src={socialsLogo} alt="Socials" className="h-8 w-auto max-w-[120px] object-contain" />
+          <img src={logo} alt="Socials" className="h-8 w-auto max-w-[120px] object-contain" />
           <span className="text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">CRM</span>
         </div>
       </SidebarHeader>
