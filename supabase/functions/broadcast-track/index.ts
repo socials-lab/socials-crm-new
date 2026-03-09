@@ -48,18 +48,7 @@ Deno.serve(async (req) => {
           .update({ opened_at: new Date().toISOString() })
           .eq('id', recipient.id);
 
-        await supabase.rpc('increment_broadcast_counter', {
-          _broadcast_id: recipient.broadcast_id,
-          _column: 'open_count',
-        }).catch(() => {
-          // Fallback: direct update
-          return supabase
-            .from('broadcasts')
-            .update({ open_count: supabase.rpc ? undefined : 0 })
-            .eq('id', recipient.broadcast_id);
-        });
-
-        // Direct SQL increment via raw update
+        // Increment open_count
         await supabase
           .from('broadcasts')
           .select('open_count')
