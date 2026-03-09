@@ -13,7 +13,9 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useUserRole } from '@/hooks/useUserRole';
-import socialsLogo from '@/assets/socials-logo.svg';
+import { useTheme } from 'next-themes';
+import socialsLogoLight from '@/assets/socials-logo-dark.svg';
+import socialsLogoDark from '@/assets/socials-logo.svg';
 
 interface NavItem {
   title: string;
