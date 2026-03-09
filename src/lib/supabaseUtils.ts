@@ -66,6 +66,17 @@ export async function invokeWithTimeout<T = unknown>(
     return result as { data: T | null; error: Error | null };
   };
 
+
+  const normalizeResultError = async (
+    result: { data: T | null; error: Error | null }
+  ): Promise<{ data: T | null; error: Error | null }> => {
+    if (!result.error) return result;
+    return {
+      data: result.data,
+      error: await normalizeInvokeError(result.error),
+    };
+  };
+
   const isInvalidJwtError = (err: Error | null | undefined) => {
     if (!err) return false;
     const msg = (err.message || '').toLowerCase();
@@ -76,7 +87,7 @@ export async function invokeWithTimeout<T = unknown>(
     let result = await invokeOnce(options);
 
     if (!isInvalidJwtError(result.error)) {
-      return result;
+      return await normalizeResultError(result);
     }
 
     // Try with explicit auth headers from current session.
@@ -94,7 +105,7 @@ export async function invokeWithTimeout<T = unknown>(
       });
 
       if (!isInvalidJwtError(retriedWithSession.error)) {
-        return retriedWithSession;
+        return await normalizeResultError(retriedWithSession);
       }
 
       result = retriedWithSession;
@@ -112,10 +123,10 @@ export async function invokeWithTimeout<T = unknown>(
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
       });
-      return retriedAfterRefresh;
+      return await normalizeResultError(retriedAfterRefresh);
     }
 
-    return result;
+    return await normalizeResultError(result);
   } catch (error) {
     return {
       data: null,
