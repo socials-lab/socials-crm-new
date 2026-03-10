@@ -56,9 +56,18 @@ export function SendMeetingRequestDialog({
   const [newToEmail, setNewToEmail] = useState('');
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [bccEmails, setBccEmails] = useState<string[]>(DEFAULT_BCC);
-  const [emailSubject, setEmailSubject] = useState(() => getDefaults().subject);
-  const [emailContent, setEmailContent] = useState(() => getDefaults().body);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailContent, setEmailContent] = useState('');
+  const [initialized, setInitialized] = useState(false);
   const [isSending, setIsSending] = useState(false);
+
+  // Initialize content when dialog opens and template/meetingUrl are ready
+  if (open && !initialized && fillTemplate) {
+    const defaults = getDefaults();
+    setEmailSubject(defaults.subject);
+    setEmailContent(defaults.body);
+    setInitialized(true);
+  }
 
   const addEmail = (
     email: string,
