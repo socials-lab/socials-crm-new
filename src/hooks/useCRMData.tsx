@@ -1058,21 +1058,32 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
 
   const updateColleagueMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Colleague> }) => {
+      const normalizedData = Object.fromEntries(
+        Object.entries(data).flatMap(([key, value]) => {
+          if (value === undefined) {
+            return [];
+          }
+
+          if (key === 'birthday' && value instanceof Date) {
+            return [[key, toDateOnlyString(value)]];
+          }
+
+          return [[key, value]];
+        }),
+      );
+
       const { error } = await supabase.rpc('update_colleague_details', {
         p_colleague_id: id,
-        p_payload: data,
+        p_payload: normalizedData,
       });
 
-      if (!error) {
-        return;
+      if (error) {
+        const { error: fallbackError } = await supabase
+          .from('colleagues')
+          .update(normalizedData)
+          .eq('id', id);
+        if (fallbackError) throw fallbackError;
       }
-
-      if (error.code !== '42883') {
-        throw error;
-      }
-
-      const { error: fallbackError } = await supabase.from('colleagues').update(data).eq('id', id);
-      if (fallbackError) throw fallbackError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['colleagues'] });
