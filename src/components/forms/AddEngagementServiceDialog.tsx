@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { Service, EngagementService, ServiceTier } from '@/types/crm';
 import { serviceTierConfigs } from '@/constants/services';
+import { convertCurrencyAmount, getExchangeRate } from '@/lib/currency';
 
 const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
 
@@ -51,6 +52,15 @@ const engagementServiceSchema = z.object({
 });
 
 type EngagementServiceFormData = z.infer<typeof engagementServiceSchema>;
+
+interface PriceConversionMeta {
+  sourceAmount: number;
+  sourceCurrency: string;
+  targetAmount: number;
+  targetCurrency: string;
+  rate: number;
+  providerDate: string;
+}
 
 interface AddEngagementServiceDialogProps {
   open: boolean;
@@ -96,6 +106,11 @@ export function AddEngagementServiceDialog({
   const { colleagues } = useCRMData();
   const [upsoldById, setUpsoldById] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConvertingPrice, setIsConvertingPrice] = useState(false);
+  const [conversionError, setConversionError] = useState<string | null>(null);
+  const [priceConversionMeta, setPriceConversionMeta] = useState<PriceConversionMeta | null>(null);
+  const [serviceToEngagementRate, setServiceToEngagementRate] = useState<number | null>(null);
+  const latestConversionRequestRef = useRef(0);
   
   const activeColleagues = colleagues.filter(c => c.status === 'active');
 
@@ -154,8 +169,85 @@ export function AddEngagementServiceDialog({
   const isCreativeBoost = isCreativeBoostService(selectedService);
   const isCoreService = selectedService?.service_type === 'core';
 
+  useEffect(() => {
+    setConversionError(null);
+    setPriceConversionMeta(null);
+    setServiceToEngagementRate(null);
+    setIsConvertingPrice(false);
+  }, [selectedServiceId]);
+
+  useEffect(() => {
+    const serviceCurrency = selectedService?.currency;
+    if (!serviceCurrency || serviceCurrency === engagementCurrency) {
+      setServiceToEngagementRate(1);
+      return;
+    }
+
+    let cancelled = false;
+    getExchangeRate(serviceCurrency, engagementCurrency)
+      .then(({ rate }) => {
+        if (cancelled) return;
+        setServiceToEngagementRate(rate);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : 'Nepodařilo se načíst kurz';
+        setConversionError(message);
+        setServiceToEngagementRate(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedService?.currency, engagementCurrency]);
+
+  async function applyPriceFromService(
+    sourceAmount: number,
+    sourceCurrency: string,
+  ): Promise<void> {
+    setConversionError(null);
+    setPriceConversionMeta(null);
+
+    if (sourceCurrency === engagementCurrency) {
+      form.setValue('price', sourceAmount);
+      return;
+    }
+
+    const requestId = latestConversionRequestRef.current + 1;
+    latestConversionRequestRef.current = requestId;
+    setIsConvertingPrice(true);
+
+    try {
+      const conversion = await convertCurrencyAmount(sourceAmount, sourceCurrency, engagementCurrency);
+      if (latestConversionRequestRef.current !== requestId) {
+        return;
+      }
+
+      form.setValue('price', conversion.amount);
+      setPriceConversionMeta({
+        sourceAmount,
+        sourceCurrency,
+        targetAmount: conversion.amount,
+        targetCurrency: engagementCurrency,
+        rate: conversion.rate,
+        providerDate: conversion.providerDate,
+      });
+    } catch (error) {
+      if (latestConversionRequestRef.current !== requestId) {
+        return;
+      }
+      const message = error instanceof Error ? error.message : 'Nepodařilo se převést cenu';
+      setConversionError(message);
+      throw error;
+    } finally {
+      if (latestConversionRequestRef.current === requestId) {
+        setIsConvertingPrice(false);
+      }
+    }
+  }
+
   // Auto-fill name and price when service is selected
-  const handleServiceChange = (serviceId: string) => {
+  const handleServiceChange = async (serviceId: string) => {
     form.setValue('service_id', serviceId);
     const service = services.find(s => s.id === serviceId);
     if (service) {
@@ -177,7 +269,15 @@ export function AddEngagementServiceDialog({
         form.setValue('selected_tier', 'growth'); // Default to GROWTH
         // Auto-fill price from GROWTH tier
         const growthPrice = getTierPrice(service, 'growth');
-        form.setValue('price', growthPrice ?? 0);
+        if (growthPrice === null) {
+          form.setValue('price', 0);
+        } else {
+          try {
+            await applyPriceFromService(growthPrice, service.currency);
+          } catch (error) {
+            console.error('Price conversion error:', error);
+          }
+        }
         form.setValue('currency', engagementCurrency);
       } else {
         // Add-on service
@@ -185,19 +285,27 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_max_credits', null);
         form.setValue('creative_boost_price_per_credit', null);
         form.setValue('selected_tier', null);
-        form.setValue('price', service.base_price);
+        try {
+          await applyPriceFromService(service.base_price, service.currency);
+        } catch (error) {
+          console.error('Price conversion error:', error);
+        }
         form.setValue('currency', engagementCurrency);
       }
     }
   };
 
   // Handle tier change for Core services
-  const handleTierChange = (tier: string) => {
+  const handleTierChange = async (tier: string) => {
     form.setValue('selected_tier', tier);
 
     const tierPrice = getTierPrice(selectedService, tier as ServiceTier);
     if (tierPrice !== null) {
-      form.setValue('price', tierPrice);
+      try {
+        await applyPriceFromService(tierPrice, selectedService?.currency ?? engagementCurrency);
+      } catch (error) {
+        console.error('Tier conversion error:', error);
+      }
     } else {
       // Individuální kalkulace - set to 0, user must enter manually
       form.setValue('price', 0);
@@ -440,7 +548,11 @@ export function AddEngagementServiceDialog({
                           {serviceTierConfigs.map((config) => {
                             const tierPrice = getTierPrice(selectedService, config.tier);
                             const priceLabel = tierPrice !== null
-                              ? `${tierPrice.toLocaleString('cs-CZ')} ${engagementCurrency}`
+                              ? (
+                                selectedService?.currency !== engagementCurrency && serviceToEngagementRate
+                                  ? `${tierPrice.toLocaleString('cs-CZ')} ${selectedService?.currency} (~ ${(tierPrice * serviceToEngagementRate).toLocaleString('cs-CZ', { maximumFractionDigits: engagementCurrency === 'CZK' ? 0 : 2 })} ${engagementCurrency})`
+                                  : `${tierPrice.toLocaleString('cs-CZ')} ${selectedService?.currency ?? engagementCurrency}`
+                              )
                               : 'Individuální kalkulace';
                             const spendLabel = config.max_spend 
                               ? `do ${(config.max_spend/1000).toFixed(0)}K Kč`
@@ -485,6 +597,23 @@ export function AddEngagementServiceDialog({
                       <FormControl>
                         <Input type="number" min={0} {...field} />
                       </FormControl>
+                      {isConvertingPrice && (
+                        <FormDescription className="text-xs">
+                          Přepočítávám cenu podle aktuálního kurzu...
+                        </FormDescription>
+                      )}
+                      {priceConversionMeta && (
+                        <FormDescription className="text-xs">
+                          Cena přepočtena z {priceConversionMeta.sourceAmount.toLocaleString('cs-CZ')} {priceConversionMeta.sourceCurrency}
+                          {' '}na {priceConversionMeta.targetAmount.toLocaleString('cs-CZ')} {priceConversionMeta.targetCurrency}
+                          {' '}kurzem {priceConversionMeta.rate.toFixed(4)} (datum kurzu {priceConversionMeta.providerDate}).
+                        </FormDescription>
+                      )}
+                      {conversionError && (
+                        <FormDescription className="text-xs text-destructive">
+                          Nepodařilo se načíst kurz nebo přepočítat cenu: {conversionError}
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

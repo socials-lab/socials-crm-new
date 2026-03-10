@@ -1,5 +1,7 @@
+import { useEffect, useMemo, useState } from 'react';
 import { DollarSign, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import type { EngagementAssignment } from '@/types/crm';
+import { convertCurrencyAmount } from '@/lib/currency';
 
 interface EngagementFinancialOverviewProps {
   revenue: number;
@@ -12,9 +14,81 @@ export function EngagementFinancialOverview({
   assignments,
   currency,
 }: EngagementFinancialOverviewProps) {
-  const totalCost = assignments.reduce((sum, assignment) => sum + (assignment.monthly_cost || 0), 0);
-  const margin = revenue - totalCost;
-  const marginPercent = revenue > 0 ? (margin / revenue) * 100 : 0;
+  const [normalizedRevenueCZK, setNormalizedRevenueCZK] = useState<number>(0);
+  const [conversionRate, setConversionRate] = useState<number | null>(null);
+  const [conversionDate, setConversionDate] = useState<string | null>(null);
+  const [conversionError, setConversionError] = useState<string | null>(null);
+  const [isLoadingConversion, setIsLoadingConversion] = useState<boolean>(false);
+
+  const totalCostCZK = useMemo(
+    () => assignments.reduce((sum, assignment) => sum + (assignment.monthly_cost || 0), 0),
+    [assignments],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setConversionError(null);
+    setIsLoadingConversion(currency !== 'CZK');
+
+    async function normalizeRevenue() {
+      if (currency === 'CZK') {
+        if (cancelled) return;
+        setNormalizedRevenueCZK(revenue);
+        setConversionRate(1);
+        setConversionDate(null);
+        setIsLoadingConversion(false);
+        return;
+      }
+
+      const conversion = await convertCurrencyAmount(revenue, currency, 'CZK');
+      if (cancelled) return;
+      setNormalizedRevenueCZK(conversion.amount);
+      setConversionRate(conversion.rate);
+      setConversionDate(conversion.providerDate);
+      setIsLoadingConversion(false);
+    }
+
+    normalizeRevenue().catch((error) => {
+      if (cancelled) return;
+      const message = error instanceof Error ? error.message : 'Nepodařilo se přepočítat tržby do CZK';
+      setConversionError(message);
+      setIsLoadingConversion(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [revenue, currency]);
+
+  if (conversionError) {
+    return (
+      <div className="mb-6 p-4 rounded-lg border bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
+        <h4 className="font-medium text-sm flex items-center gap-2 mb-1">
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          Finanční přehled
+        </h4>
+        <p className="text-sm text-destructive">
+          Přepočet měny selhal: {conversionError}
+        </p>
+      </div>
+    );
+  }
+
+  if (isLoadingConversion) {
+    return (
+      <div className="mb-6 p-4 rounded-lg border bg-muted/30">
+        <h4 className="font-medium text-sm flex items-center gap-2 mb-1">
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          Finanční přehled
+        </h4>
+        <p className="text-sm text-muted-foreground">Načítám kurz pro přepočet do CZK...</p>
+      </div>
+    );
+  }
+
+  const totalCost = totalCostCZK;
+  const margin = normalizedRevenueCZK - totalCost;
+  const marginPercent = normalizedRevenueCZK > 0 ? (margin / normalizedRevenueCZK) * 100 : 0;
 
   function getMarginColor(percent: number): string {
     if (percent >= 40) return 'text-green-600 dark:text-green-400';
@@ -38,22 +112,27 @@ export function EngagementFinancialOverview({
       </h4>
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <p className="text-xs text-muted-foreground mb-1">Fakturace</p>
+          <p className="text-xs text-muted-foreground mb-1">Fakturace (vizuálně CZK)</p>
           <p className="text-sm font-semibold">
-            {revenue.toLocaleString()} {currency}
+            {normalizedRevenueCZK.toLocaleString()} CZK
+          </p>
+          {currency !== 'CZK' && conversionRate && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Právní měna: {revenue.toLocaleString()} {currency} (kurz {conversionRate.toFixed(4)}{conversionDate ? `, ${conversionDate}` : ''})
+            </p>
+          )}
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Náklady (CZK)</p>
+          <p className="text-sm font-semibold">
+            {totalCost.toLocaleString()} CZK
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground mb-1">Náklady</p>
-          <p className="text-sm font-semibold">
-            {totalCost.toLocaleString()} {currency}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">Marže</p>
+          <p className="text-xs text-muted-foreground mb-1">Marže (CZK)</p>
           <p className={`text-sm font-semibold flex items-center gap-1 ${getMarginColor(marginPercent)}`}>
             <MarginIcon className="h-3.5 w-3.5" />
-            {margin.toLocaleString()} {currency}
+            {margin.toLocaleString()} CZK
             <span className="text-xs font-normal">({marginPercent.toFixed(0)}%)</span>
           </p>
         </div>
