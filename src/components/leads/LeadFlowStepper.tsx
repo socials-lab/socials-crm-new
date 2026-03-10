@@ -99,6 +99,7 @@ function ServicesInlineList({
 
 export function LeadFlowStepper({
   lead,
+  onSendMeetingRequest,
   onRequestAccess,
   onMarkAccessReceived,
   onAddService,
