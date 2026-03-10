@@ -44,10 +44,11 @@ export function SendMeetingRequestDialog({
   const { meetingUrl } = useMeetingScheduleUrl();
 
   const getDefaults = () => {
+    const urlValue = meetingUrl || '[DOPLŇTE ODKAZ NA SJEDNÁNÍ SCHŮZKY]';
     return fillTemplate('meeting_request', {
       company: companyName,
       name: contactName,
-      meeting_url: meetingUrl || '',
+      meeting_url: urlValue,
     });
   };
 
