@@ -119,6 +119,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
+  const [isMeetingRequestOpen, setIsMeetingRequestOpen] = useState(false);
   const [isOnboardingFormOpen, setIsOnboardingFormOpen] = useState(false);
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
