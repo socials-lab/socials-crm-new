@@ -631,6 +631,38 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                 💬 Komunikace s klientem
               </h4>
               
+              {/* Meeting Request */}
+              <div className={cn(
+                "p-3 rounded-lg border",
+                lead.meeting_request_sent_at ? "border-green-500/30 bg-green-500/5" : "bg-card"
+              )}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">Žádost o schůzku</p>
+                        {lead.meeting_request_sent_at && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                      </div>
+                      {lead.meeting_request_sent_at ? (
+                        <p className="text-xs text-green-700">
+                          ✓ Odesláno {new Date(lead.meeting_request_sent_at).toLocaleDateString('cs-CZ')}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Zatím neodesláno</p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsMeetingRequestOpen(true)}
+                  >
+                    {lead.meeting_request_sent_at ? 'Znovu odeslat' : 'Odeslat'}
+                  </Button>
+                </div>
+              </div>
+
               {/* Access Request */}
               <div className={cn(
                 "p-3 rounded-lg border",
