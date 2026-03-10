@@ -43,6 +43,37 @@ export default function Settings() {
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {/* Meeting Schedule URL - visible to all users */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calendar className="h-4 w-4" />
+              URL pro sjednání schůzky
+            </CardTitle>
+            <CardDescription>
+              Odkaz na Váš Calendly, Cal.com nebo jiný plánovač schůzek. Automaticky se vloží do emailu se žádostí o schůzku.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              value={meetingUrlValue}
+              onChange={(e) => handleMeetingUrlChange(e.target.value)}
+              placeholder="https://calendly.com/vas-profil"
+            />
+            <Button
+              onClick={() => {
+                saveMeetingUrl(meetingUrlValue);
+                setIsMeetingUrlDirty(false);
+              }}
+              disabled={!isMeetingUrlDirty || isSaving}
+              size="sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? 'Ukládám...' : 'Uložit URL'}
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Email Signature - visible to all users */}
         <EmailSignatureEditor />
 

@@ -111,6 +111,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const [isCreatingOffer, setIsCreatingOffer] = useState(false);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
+  const [isMeetingRequestOpen, setIsMeetingRequestOpen] = useState(false);
   const [isOnboardingFormOpen, setIsOnboardingFormOpen] = useState(false);
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
