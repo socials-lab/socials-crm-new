@@ -427,6 +427,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                   <h4 className="text-sm font-medium text-muted-foreground mb-3">Proces</h4>
                   <LeadFlowStepper
                     lead={lead}
+                    onSendMeetingRequest={() => setIsMeetingRequestOpen(true)}
                     onRequestAccess={() => setIsRequestAccessOpen(true)}
                     onMarkAccessReceived={() => {
                       updateLead(lead.id, { 
