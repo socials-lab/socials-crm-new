@@ -41,7 +41,7 @@ import { calculateProratedReward, type ProratedRewardResult } from '@/utils/pror
 import { CATEGORY_LABELS } from '@/hooks/useActivityRewards';
 
 interface ClientRewardItem {
-  clientName: string;
+  engagementName: string;
   engagementId: string;
   role: string;
   fullMonthlyAmount: number;
@@ -142,7 +142,7 @@ function MyWorkContent() {
           });
           
           clientRewards.push({
-            clientName: client.brand_name || client.name,
+            engagementName: engagement.name,
             engagementId: engagement.id,
             role: assignment.role_on_engagement || 'Specialista',
             fullMonthlyAmount: monthlyAmount,
@@ -207,7 +207,7 @@ function MyWorkContent() {
 
   // Prepare data for invoicing overview
   const clientRewardsForInvoice = myWorkData.clientRewards.map((cr) => ({
-    clientName: cr.clientName,
+    clientName: cr.engagementName,
     engagementId: cr.engagementId,
     amount: cr.prorated.proratedAmount,
     isProrated: cr.prorated.isProrated,
@@ -299,7 +299,7 @@ function MyWorkContent() {
                     {(client.brand_name || client.name).charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{client.brand_name || client.name}</p>
+                    <p className="text-sm font-medium truncate">{engagement.name}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="truncate">{assignment.role_on_engagement}</span>
                       {startDate && (
@@ -338,7 +338,7 @@ function MyWorkContent() {
                 {myWorkData.clientRewards.map((item) => (
                   <div key={item.engagementId} className="flex items-center justify-between py-1.5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className="text-sm truncate">{item.clientName}</span>
+                      <span className="text-sm truncate">{item.engagementName}</span>
                       {item.prorated.isProrated && item.prorated.startDay && (
                         <Badge variant="secondary" className="text-xs shrink-0 flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" />
