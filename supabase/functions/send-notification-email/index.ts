@@ -146,101 +146,75 @@ serve(async (req) => {
 
     const body: NotificationPayload = await req.json();
 
-    let notification: NotificationRecord | null = null;
+    if (!body.notification_id) {
+      return new Response(
+        JSON.stringify({ error: "notification_id is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
-    if (body.notification_id) {
-      notificationIdForError = body.notification_id;
-      const { data, error } = await supabaseAdmin
-        .from("notifications")
-        .select("id,user_id,type,title,message,link")
-        .eq("id", body.notification_id)
-        .maybeSingle();
+    notificationIdForError = body.notification_id;
 
-      if (error || !data) {
-        console.error("Notification not found for email send", {
-          notification_id: body.notification_id,
-          error,
-        });
-        return new Response(
-          JSON.stringify({ error: "Notification not found" }),
-          {
-            status: 404,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
+    const { data, error } = await supabaseAdmin
+      .from("notifications")
+      .select("id,user_id,type,title,message,link")
+      .eq("id", body.notification_id)
+      .maybeSingle();
 
-      notification = data as NotificationRecord;
+    if (error || !data) {
+      console.error("Notification not found for email send", {
+        notification_id: body.notification_id,
+        error,
+      });
+      return new Response(
+        JSON.stringify({ error: "Notification not found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
-      if (body.user_id && body.user_id !== notification.user_id) {
-        return new Response(
-          JSON.stringify({ error: "User mismatch for notification" }),
-          {
-            status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
+    const notification = data as NotificationRecord;
 
-      const { data: inserted, error: insertDeliveryError } = await supabaseAdmin
-        .from("notification_email_deliveries")
-        .insert({
-          notification_id: notification.id,
-          status: "pending",
-        })
-        .select("id")
-        .maybeSingle();
+    if (body.user_id && body.user_id !== notification.user_id) {
+      return new Response(
+        JSON.stringify({ error: "User mismatch for notification" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
-      if (insertDeliveryError) {
-        const msg = String(insertDeliveryError.message || "");
-        if (msg.toLowerCase().includes("duplicate") || msg.includes("unique")) {
-          return new Response(
-            JSON.stringify({ skipped: true, reason: "already_processed" }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
-        console.error("Failed to initialize delivery record", insertDeliveryError);
-      }
+    const { data: inserted, error: insertDeliveryError } = await supabaseAdmin
+      .from("notification_email_deliveries")
+      .insert({
+        notification_id: notification.id,
+        status: "pending",
+      })
+      .select("id")
+      .maybeSingle();
 
-      if (!inserted && !insertDeliveryError) {
+    if (insertDeliveryError) {
+      const msg = String(insertDeliveryError.message || "");
+      if (msg.toLowerCase().includes("duplicate") || msg.includes("unique")) {
         return new Response(
           JSON.stringify({ skipped: true, reason: "already_processed" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-    } else {
-      const {
-        user_id,
-        type,
-        title,
-        message,
-        link,
-      }: {
-        user_id?: string;
-        type?: string;
-        title?: string;
-        message?: string;
-        link?: string | null;
-      } = body;
+      console.error("Failed to initialize delivery record", insertDeliveryError);
+    }
 
-      if (!user_id || !type || !title || !message) {
-        return new Response(
-          JSON.stringify({ error: "Missing required fields" }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      notification = {
-        id: "manual",
-        user_id,
-        type,
-        title,
-        message,
-        link: link ?? null,
-      };
+    if (!inserted && !insertDeliveryError) {
+      return new Response(
+        JSON.stringify({ skipped: true, reason: "already_processed" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const user_id = notification.user_id;
