@@ -941,6 +941,23 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         onSubmit={handleAddService}
       />
 
+      <SendMeetingRequestDialog
+        open={isMeetingRequestOpen}
+        onOpenChange={setIsMeetingRequestOpen}
+        contactName={lead.contact_name}
+        contactEmail={lead.contact_email}
+        companyName={lead.company_name}
+        leadId={lead.id}
+        onSent={(emailData) => {
+          updateLead(lead.id, {
+            meeting_request_sent_at: new Date().toISOString(),
+          });
+          if (emailData) {
+            addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
+          }
+        }}
+      />
+
       <RequestAccessDialog
         open={isRequestAccessOpen}
         onOpenChange={setIsRequestAccessOpen}
