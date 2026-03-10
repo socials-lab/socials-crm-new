@@ -130,6 +130,9 @@ export function SendMeetingRequestDialog({
       const defaults = getDefaults();
       setEmailSubject(defaults.subject);
       setEmailContent(defaults.body);
+      setInitialized(true);
+    } else {
+      setInitialized(false);
     }
     onOpenChange(newOpen);
   };
