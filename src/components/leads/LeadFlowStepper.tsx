@@ -35,6 +35,7 @@ interface FlowStep {
 
 interface LeadFlowStepperProps {
   lead: Lead;
+  onSendMeetingRequest: () => void;
   onRequestAccess: () => void;
   onMarkAccessReceived: () => void;
   onAddService: () => void;
