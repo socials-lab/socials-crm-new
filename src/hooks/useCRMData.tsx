@@ -1058,8 +1058,21 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
 
   const updateColleagueMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Colleague> }) => {
-      const { error } = await supabase.from('colleagues').update(data).eq('id', id);
-      if (error) throw error;
+      const { error } = await supabase.rpc('update_colleague_details', {
+        p_colleague_id: id,
+        p_payload: data,
+      });
+
+      if (!error) {
+        return;
+      }
+
+      if (error.code !== '42883') {
+        throw error;
+      }
+
+      const { error: fallbackError } = await supabase.from('colleagues').update(data).eq('id', id);
+      if (fallbackError) throw fallbackError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['colleagues'] });
