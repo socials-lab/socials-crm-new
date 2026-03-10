@@ -871,12 +871,27 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
         // Continue with deletion even if logging fails
       }
 
-      // Soft delete by setting deleted_at
-      const { error } = await supabase
-        .from('engagements')
-        .update({ deleted_at: new Date().toISOString(), status: 'cancelled' })
-        .eq('id', id);
-      if (error) throw error;
+      const directSoftDelete = async () => {
+        const { error } = await supabase
+          .from('engagements')
+          .update({ deleted_at: new Date().toISOString(), status: 'cancelled' })
+          .eq('id', id);
+        if (error) throw error;
+      };
+
+      const { error } = await supabase.rpc(
+        'soft_delete_engagement' as never,
+        { p_engagement_id: id } as never,
+      );
+
+      if (!error) return;
+
+      if (error.code === '42883') {
+        await directSoftDelete();
+        return;
+      }
+
+      throw error;
     },
     onSuccess: () => {
       // Cascade invalidation for related entities
