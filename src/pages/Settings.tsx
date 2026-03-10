@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { User, Building, Bell, Shield } from 'lucide-react';
+import { useMeetingScheduleUrl } from '@/hooks/useMeetingScheduleUrl';
+import { User, Building, Bell, Shield, Calendar, Save } from 'lucide-react';
 import { EmailTemplatesManager } from '@/components/settings/EmailTemplatesManager';
 import { EmailSignatureEditor } from '@/components/settings/EmailSignatureEditor';
 
