@@ -8,11 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Notification type configuration for email formatting
-const NOTIFICATION_EMAIL_CONFIG: Record<
-  string,
-  { emoji: string; color: string }
-> = {
+const NOTIFICATION_EMAIL_CONFIG: Record<string, { emoji: string; color: string }> = {
   new_lead: { emoji: "🎯", color: "#3b82f6" },
   form_completed: { emoji: "📋", color: "#10b981" },
   contract_signed: { emoji: "✍️", color: "#8b5cf6" },
@@ -23,12 +19,32 @@ const NOTIFICATION_EMAIL_CONFIG: Record<
   new_feedback_idea: { emoji: "💡", color: "#eab308" },
 };
 
+const IMPORTANT_TYPES = ["contract_signed", "lead_converted", "form_completed"];
+
+type NotificationPayload = {
+  notification_id?: string;
+  user_id?: string;
+  type?: string;
+  title?: string;
+  message?: string;
+  link?: string | null;
+};
+
+type NotificationRecord = {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  message: string;
+  link: string | null;
+};
+
 function buildEmailHtml(
   title: string,
   message: string,
   type: string,
   link: string | null,
-  appUrl: string
+  appUrl: string,
 ): string {
   const config = NOTIFICATION_EMAIL_CONFIG[type] || {
     emoji: "🔔",
@@ -48,14 +64,12 @@ function buildEmailHtml(
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-          <!-- Header bar -->
           <tr>
             <td style="background-color:${config.color};padding:16px 24px;">
               <span style="font-size:24px;">${config.emoji}</span>
               <span style="color:#ffffff;font-size:16px;font-weight:600;margin-left:8px;vertical-align:middle;">${title}</span>
             </td>
           </tr>
-          <!-- Body -->
           <tr>
             <td style="padding:24px;">
               <p style="margin:0 0 20px;color:#27272a;font-size:15px;line-height:1.6;">
@@ -66,7 +80,6 @@ function buildEmailHtml(
               </a>
             </td>
           </tr>
-          <!-- Footer -->
           <tr>
             <td style="padding:16px 24px;border-top:1px solid #e4e4e7;">
               <p style="margin:0;color:#a1a1aa;font-size:12px;">
@@ -82,10 +95,34 @@ function buildEmailHtml(
 </html>`;
 }
 
+async function markDelivery(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  notificationId: string,
+  status: "sent" | "skipped" | "failed",
+  reason?: string,
+  errorMessage?: string,
+) {
+  const patch: Record<string, string | null> = {
+    status,
+    reason: reason ?? null,
+    error_message: errorMessage ?? null,
+  };
+  if (status === "sent") {
+    patch.sent_at = new Date().toISOString();
+  }
+
+  await supabaseAdmin
+    .from("notification_email_deliveries")
+    .update(patch)
+    .eq("notification_id", notificationId);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  let notificationIdForError: string | undefined;
 
   try {
     const SMTP_USER = Deno.env.get("SMTP_USER");
@@ -98,61 +135,144 @@ serve(async (req) => {
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Accept the notification record from the trigger
-    const body = await req.json();
+    const body: NotificationPayload = await req.json();
 
-    // pg_net sends the body as-is from the trigger
-    const {
-      user_id,
-      type,
-      title,
-      message,
-      link,
-    }: {
-      user_id: string;
-      type: string;
-      title: string;
-      message: string;
-      link: string | null;
-    } = body;
+    let notification: NotificationRecord | null = null;
 
-    if (!user_id || !type || !title || !message) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (body.notification_id) {
+      notificationIdForError = body.notification_id;
+      const { data, error } = await supabaseAdmin
+        .from("notifications")
+        .select("id,user_id,type,title,message,link")
+        .eq("id", body.notification_id)
+        .maybeSingle();
+
+      if (error || !data) {
+        console.error("Notification not found for email send", {
+          notification_id: body.notification_id,
+          error,
+        });
+        return new Response(
+          JSON.stringify({ error: "Notification not found" }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      notification = data as NotificationRecord;
+
+      if (body.user_id && body.user_id !== notification.user_id) {
+        return new Response(
+          JSON.stringify({ error: "User mismatch for notification" }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const { data: inserted, error: insertDeliveryError } = await supabaseAdmin
+        .from("notification_email_deliveries")
+        .insert({
+          notification_id: notification.id,
+          status: "pending",
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (insertDeliveryError) {
+        const msg = String(insertDeliveryError.message || "");
+        if (msg.toLowerCase().includes("duplicate") || msg.includes("unique")) {
+          return new Response(
+            JSON.stringify({ skipped: true, reason: "already_processed" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
         }
-      );
+        console.error("Failed to initialize delivery record", insertDeliveryError);
+      }
+
+      if (!inserted && !insertDeliveryError) {
+        return new Response(
+          JSON.stringify({ skipped: true, reason: "already_processed" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else {
+      const {
+        user_id,
+        type,
+        title,
+        message,
+        link,
+      }: {
+        user_id?: string;
+        type?: string;
+        title?: string;
+        message?: string;
+        link?: string | null;
+      } = body;
+
+      if (!user_id || !type || !title || !message) {
+        return new Response(
+          JSON.stringify({ error: "Missing required fields" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      notification = {
+        id: "manual",
+        user_id,
+        type,
+        title,
+        message,
+        link: link ?? null,
+      };
     }
 
-    // Look up user email
+    const user_id = notification.user_id;
+    const type = notification.type;
+    const title = notification.title;
+    const message = notification.message;
+    const link = notification.link;
+
     const {
       data: { user },
       error: userError,
     } = await supabaseAdmin.auth.admin.getUserById(user_id);
 
     if (userError || !user?.email) {
-      console.error("Could not find user email:", userError);
+      if (body.notification_id) {
+        await markDelivery(
+          supabaseAdmin,
+          body.notification_id,
+          "failed",
+          "user_not_found",
+          userError?.message || "User email not found",
+        );
+      }
       return new Response(
         JSON.stringify({ error: "User email not found" }),
         {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
-    // Check user's email notification preference
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("email_notification_level")
@@ -160,32 +280,36 @@ serve(async (req) => {
       .single();
 
     const level = profile?.email_notification_level || "none";
-    const IMPORTANT_TYPES = ["contract_signed", "lead_converted", "form_completed"];
 
     if (level === "none") {
-      console.log(`Email notifications disabled for user ${user_id}, skipping`);
+      if (body.notification_id) {
+        await markDelivery(supabaseAdmin, body.notification_id, "skipped", "disabled");
+      }
       return new Response(
         JSON.stringify({ skipped: true, reason: "disabled" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     if (level === "important" && !IMPORTANT_TYPES.includes(type)) {
-      console.log(`Notification type ${type} not important, skipping for user ${user_id}`);
+      if (body.notification_id) {
+        await markDelivery(
+          supabaseAdmin,
+          body.notification_id,
+          "skipped",
+          "not_important",
+        );
+      }
       return new Response(
         JSON.stringify({ skipped: true, reason: "not_important" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Build email
-    const appUrl =
-      Deno.env.get("APP_URL") ||
-      "https://empndmpeyrdycjdesoxr.lovable.app";
+    const appUrl = Deno.env.get("APP_URL") || "https://crm.socials.cz";
     const html = buildEmailHtml(title, message, type, link, appUrl);
     const subject = `${NOTIFICATION_EMAIL_CONFIG[type]?.emoji || "🔔"} ${title}`;
 
-    // Send via SMTP
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 587,
@@ -203,20 +327,42 @@ serve(async (req) => {
       html,
     });
 
+    if (body.notification_id) {
+      await markDelivery(supabaseAdmin, body.notification_id, "sent");
+    }
+
     console.log(
-      `Notification email sent to ${user.email}: ${info.messageId} (type: ${type})`
+      `Notification email sent to ${user.email}: ${info.messageId} (type: ${type})`,
     );
 
     return new Response(
       JSON.stringify({ success: true, messageId: info.messageId }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   } catch (error) {
     console.error("Send notification email error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+    if (notificationIdForError) {
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        await markDelivery(
+          supabaseAdmin,
+          notificationIdForError,
+          "failed",
+          "send_error",
+          errorMessage,
+        );
+      } catch {
+        // noop - avoid masking original error response
+      }
+    }
+
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
