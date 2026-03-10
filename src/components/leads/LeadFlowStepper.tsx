@@ -124,6 +124,18 @@ export function LeadFlowStepper({
       completedAt: lead.created_at,
     },
     {
+      id: 'meeting-request',
+      label: 'Žádost o schůzku',
+      icon: <Calendar className="h-3.5 w-3.5" />,
+      isComplete: !!lead.meeting_request_sent_at,
+      completedAt: lead.meeting_request_sent_at,
+      action: !lead.meeting_request_sent_at ? {
+        label: 'Odeslat',
+        onClick: onSendMeetingRequest,
+        variant: 'outline',
+      } : undefined,
+    },
+    {
       id: 'access-sent',
       label: 'Žádost o přístupy',
       icon: <KeyRound className="h-3.5 w-3.5" />,
