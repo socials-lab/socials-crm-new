@@ -11,6 +11,7 @@ import {
   ExternalLink,
   X,
   Check,
+  Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +35,7 @@ interface FlowStep {
 
 interface LeadFlowStepperProps {
   lead: Lead;
+  onSendMeetingRequest: () => void;
   onRequestAccess: () => void;
   onMarkAccessReceived: () => void;
   onAddService: () => void;
@@ -97,6 +99,7 @@ function ServicesInlineList({
 
 export function LeadFlowStepper({
   lead,
+  onSendMeetingRequest,
   onRequestAccess,
   onMarkAccessReceived,
   onAddService,
@@ -119,6 +122,18 @@ export function LeadFlowStepper({
       icon: <Plus className="h-3.5 w-3.5" />,
       isComplete: true,
       completedAt: lead.created_at,
+    },
+    {
+      id: 'meeting-request',
+      label: 'Žádost o schůzku',
+      icon: <Calendar className="h-3.5 w-3.5" />,
+      isComplete: !!lead.meeting_request_sent_at,
+      completedAt: lead.meeting_request_sent_at,
+      action: !lead.meeting_request_sent_at ? {
+        label: 'Odeslat',
+        onClick: onSendMeetingRequest,
+        variant: 'outline',
+      } : undefined,
     },
     {
       id: 'access-sent',

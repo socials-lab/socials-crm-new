@@ -56,6 +56,7 @@ import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
 import { RequestAccessDialog } from './RequestAccessDialog';
+import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
@@ -119,6 +120,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
+  const [isMeetingRequestOpen, setIsMeetingRequestOpen] = useState(false);
   const [isOnboardingFormOpen, setIsOnboardingFormOpen] = useState(false);
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
@@ -426,6 +428,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                   <h4 className="text-sm font-medium text-muted-foreground mb-3">Proces</h4>
                   <LeadFlowStepper
                     lead={lead}
+                    onSendMeetingRequest={() => setIsMeetingRequestOpen(true)}
                     onRequestAccess={() => setIsRequestAccessOpen(true)}
                     onMarkAccessReceived={() => {
                       updateLead(lead.id, { 
@@ -936,6 +939,23 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         onOpenChange={setIsAddServiceOpen}
         services={services}
         onSubmit={handleAddService}
+      />
+
+      <SendMeetingRequestDialog
+        open={isMeetingRequestOpen}
+        onOpenChange={setIsMeetingRequestOpen}
+        contactName={lead.contact_name}
+        contactEmail={lead.contact_email}
+        companyName={lead.company_name}
+        leadId={lead.id}
+        onSent={(emailData) => {
+          updateLead(lead.id, {
+            meeting_request_sent_at: new Date().toISOString(),
+          });
+          if (emailData) {
+            addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
+          }
+        }}
       />
 
       <RequestAccessDialog

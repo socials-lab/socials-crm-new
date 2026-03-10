@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,13 +8,28 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { User, Building, Bell, Shield } from 'lucide-react';
+import { useMeetingScheduleUrl } from '@/hooks/useMeetingScheduleUrl';
+import { User, Building, Bell, Shield, Calendar, Save } from 'lucide-react';
 import { EmailTemplatesManager } from '@/components/settings/EmailTemplatesManager';
 import { EmailSignatureEditor } from '@/components/settings/EmailSignatureEditor';
 
 export default function Settings() {
   const { user } = useAuth();
   const { role, isSuperAdmin } = useUserRole();
+  const { meetingUrl, isLoading: isMeetingUrlLoading, saveMeetingUrl, isSaving } = useMeetingScheduleUrl();
+  const [meetingUrlValue, setMeetingUrlValue] = useState('');
+  const [isMeetingUrlDirty, setIsMeetingUrlDirty] = useState(false);
+  
+  useEffect(() => {
+    if (!isMeetingUrlLoading) {
+      setMeetingUrlValue(meetingUrl);
+    }
+  }, [meetingUrl, isMeetingUrlLoading]);
+
+  const handleMeetingUrlChange = (v: string) => {
+    setMeetingUrlValue(v);
+    setIsMeetingUrlDirty(v !== meetingUrl);
+  };
   
   const canSeeSettings = isSuperAdmin || role === 'admin' || role === 'management';
 
@@ -27,6 +43,37 @@ export default function Settings() {
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {/* Meeting Schedule URL - visible to all users */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calendar className="h-4 w-4" />
+              URL pro sjednání schůzky
+            </CardTitle>
+            <CardDescription>
+              Odkaz na Váš Calendly, Cal.com nebo jiný plánovač schůzek. Automaticky se vloží do emailu se žádostí o schůzku.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              value={meetingUrlValue}
+              onChange={(e) => handleMeetingUrlChange(e.target.value)}
+              placeholder="https://calendly.com/vas-profil"
+            />
+            <Button
+              onClick={() => {
+                saveMeetingUrl(meetingUrlValue);
+                setIsMeetingUrlDirty(false);
+              }}
+              disabled={!isMeetingUrlDirty || isSaving}
+              size="sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? 'Ukládám...' : 'Uložit URL'}
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Email Signature - visible to all users */}
         <EmailSignatureEditor />
 

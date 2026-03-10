@@ -1,52 +1,47 @@
 
 
-## Žádost o schůzku v lead flow + URL na sjednání meetingu v profilu
+## Plan: Kontrola přefakturace víceprací klientům
 
-### Co se změní
+### Problém
 
-**1. DB migrace -- `profiles` tabulka + `leads` tabulka**
-- Přidat sloupec `meeting_schedule_url TEXT` do `profiles` (URL na Calendly/Cal.com každého uživatele)
-- Přidat sloupec `meeting_request_sent_at TIMESTAMPTZ` do `leads` (tracking odeslání žádosti o schůzku)
+Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
 
-**2. `src/types/crm.ts` -- Lead interface**
-- Přidat `meeting_request_sent_at: string | null` do `Lead` interface
+### Řešení
 
-**3. `src/pages/Settings.tsx` -- Pole pro meeting URL v profilu**
-- Přidat input pole "URL pro sjednání schůzky" (placeholder: `https://calendly.com/...`) do sekce Profil
-- Uložení do `profiles.meeting_schedule_url` přes Supabase
+Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
+- `expected` — vícepráce se má přefakturovat klientovi (default)
+- `reinvoiced` — přefakturováno klientovi
+- `not_expected` — nepředpokládá se přefakturace klientovi
 
-**4. `src/components/leads/LeadFlowStepper.tsx` -- Nový krok**
-- Přidat krok "Žádost o schůzku" (ikona `Calendar`) jako **2. krok** (mezi "Lead vytvořen" a "Žádost o přístupy")
-- `isComplete` = `!!lead.meeting_request_sent_at`
-- Action button otevře nový dialog `SendMeetingRequestDialog`
-- Přidat `onSendMeetingRequest` do props
+Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
 
-**5. Nový `src/components/leads/SendMeetingRequestDialog.tsx`**
-- Dialog na odeslání emailu s žádostí o online schůzku
-- Předvyplněný email template s proměnnou `{meeting_url}` (URL z profilu aktuálního uživatele)
-- Načte `meeting_schedule_url` z `profiles` pro přihlášeného uživatele
-- Standardní email pole: To, CC, BCC, Subject, Body (stejný vzor jako `RequestAccessDialog`)
-- Po odeslání: uloží `meeting_request_sent_at` na lead
+### Databázové změny
 
-**6. Nový email template `meeting_request`**
-- Přidat do `useEmailTemplates` hook defaultní šablonu pro žádost o schůzku
-- Proměnné: `{company}`, `{name}`, `{meeting_url}`, `{signature}`
+```sql
+CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
+ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
+ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+```
 
-**7. `src/components/leads/LeadDetailDialog.tsx` + `LeadDetailSheet.tsx`**
-- Přidat state `isMeetingRequestOpen` a handler
-- Propojit `onSendMeetingRequest` callback na `LeadFlowStepper`
+### UI změny
 
-**8. `src/hooks/useLeadsData.tsx`**
-- Zajistit mapování nového sloupce `meeting_request_sent_at`
+**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
+- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
+- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
 
-### Soubory k úpravě
-- DB migrace (profiles + leads)
-- `src/types/crm.ts`
-- `src/pages/Settings.tsx`
-- `src/components/leads/LeadFlowStepper.tsx`
-- `src/components/leads/LeadDetailDialog.tsx`
-- `src/components/leads/LeadDetailSheet.tsx`
-- `src/components/leads/SendMeetingRequestDialog.tsx` (nový)
-- `src/hooks/useEmailTemplates.tsx`
-- `src/hooks/useLeadsData.tsx`
+**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
+- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
+- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
+
+**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
+- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
+- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
+
+**4. `src/types/crm.ts`**
+- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
+
+### Technické detaily
+- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
+- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
+- Badge se zobrazí vedle existujícího status badge
 

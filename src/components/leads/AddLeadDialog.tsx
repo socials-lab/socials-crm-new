@@ -270,6 +270,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       ares_nace: aresNace,
       court_registration: null,
       vat_payer_status: null,
+      meeting_request_sent_at: null,
       created_by: user?.id || null,
       updated_by: user?.id || null,
     };
