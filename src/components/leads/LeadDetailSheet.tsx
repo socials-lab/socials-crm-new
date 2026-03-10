@@ -1293,6 +1293,20 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         onSubmit={handleAddService}
       />
 
+      <SendMeetingRequestDialog
+        open={isMeetingRequestOpen}
+        onOpenChange={setIsMeetingRequestOpen}
+        contactName={lead.contact_name}
+        contactEmail={lead.contact_email}
+        companyName={lead.company_name}
+        leadId={lead.id}
+        onSent={(emailData) => {
+          updateLead(lead.id, {
+            meeting_request_sent_at: new Date().toISOString(),
+          });
+        }}
+      />
+
       <RequestAccessDialog
         open={isRequestAccessOpen}
         onOpenChange={setIsRequestAccessOpen}
