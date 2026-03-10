@@ -16,6 +16,20 @@ import { EmailSignatureEditor } from '@/components/settings/EmailSignatureEditor
 export default function Settings() {
   const { user } = useAuth();
   const { role, isSuperAdmin } = useUserRole();
+  const { meetingUrl, isLoading: isMeetingUrlLoading, saveMeetingUrl, isSaving } = useMeetingScheduleUrl();
+  const [meetingUrlValue, setMeetingUrlValue] = useState('');
+  const [isMeetingUrlDirty, setIsMeetingUrlDirty] = useState(false);
+  
+  useEffect(() => {
+    if (!isMeetingUrlLoading) {
+      setMeetingUrlValue(meetingUrl);
+    }
+  }, [meetingUrl, isMeetingUrlLoading]);
+
+  const handleMeetingUrlChange = (v: string) => {
+    setMeetingUrlValue(v);
+    setIsMeetingUrlDirty(v !== meetingUrl);
+  };
   
   const canSeeSettings = isSuperAdmin || role === 'admin' || role === 'management';
 
