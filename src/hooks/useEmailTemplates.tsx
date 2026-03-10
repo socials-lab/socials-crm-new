@@ -77,7 +77,7 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
     template_key: 'meeting_request',
     name: 'Žádost o schůzku',
     subject_template: 'Schůzka ohledně spolupráce – {company} / Socials',
-    body_template: 'Dobrý den {name},\n\nděkuji za Váš zájem o spolupráci.\n\nRád/a bych si s Vámi domluvil/a krátký online call, kde bychom probrali Vaše potřeby a možnosti spolupráce.\n\n{meeting_url}\n\nBudu se těšit na náš rozhovor.\n\n{signature}',
+    body_template: 'Dobrý den {name},\n\nděkuji za Váš zájem o spolupráci.\n\nRádi bychom si s Vámi domluvili krátký telefonát, abychom zjistili, jak Vám můžeme nejlépe pomoci.\n\nSjednejte si se mnou hovor kliknutím na odkaz níže:\n👉 {meeting_url}\n\nDěkuji a budu se těšit na náš rozhovor.\n\n{signature}',
     description: 'Žádost o online schůzku s potenciálním klientem',
     available_variables: ['name', 'company', 'meeting_url', 'signature'],
   },
