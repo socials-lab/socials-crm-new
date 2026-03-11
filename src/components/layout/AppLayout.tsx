@@ -4,7 +4,7 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { Outlet } from 'react-router-dom';
 import { Menu, LogOut } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
+
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -92,7 +92,7 @@ export function AppLayout() {
               <MobileMenuButton />
             </div>
             <div className="flex items-center gap-2">
-              <ThemeToggle />
+              
               <NotificationsDropdown />
               <UserMenu />
             </div>

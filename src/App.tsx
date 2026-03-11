@@ -52,7 +52,7 @@ import PublicSOPPage from "./pages/PublicSOPPage";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true}>
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
       <UserRoleProvider>
