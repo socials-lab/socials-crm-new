@@ -144,7 +144,7 @@ export function AppSidebar() {
             className={cn(
               'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-all touch-manipulation',
               isActive(item.url)
-                ? 'bg-primary/15 text-primary font-medium'
+                ? 'bg-white/10 font-medium [&>svg]:text-[hsl(82,100%,45%)] text-white'
                 : 'text-white/60 hover:bg-white/5 hover:text-white/90'
             )}
           >
