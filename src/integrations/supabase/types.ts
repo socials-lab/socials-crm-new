@@ -3687,6 +3687,26 @@ export type Database = {
         Args: { article_id: string }
         Returns: undefined
       }
+      list_all_contacts_for_authenticated: {
+        Args: never
+        Returns: {
+          client_brand_name: string | null
+          client_id: string
+          client_name: string | null
+          client_status: Database["public"]["Enums"]["client_status"] | null
+          created_at: string
+          deleted_at: string | null
+          email: string | null
+          id: string
+          is_decision_maker: boolean
+          is_primary: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          position: string | null
+          updated_at: string
+        }[]
+      }
       is_admin_or_management: { Args: { _user_id: string }; Returns: boolean }
       is_assigned_to_client: {
         Args: { _client_id: string; _user_id: string }

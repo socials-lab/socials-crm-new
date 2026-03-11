@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Plus, Search, Pencil, Trash2, Star, Key, Phone, Mail, Copy, Check, Loader2, ChevronLeft, ChevronRight, StickyNote, X, Filter } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'; // Issue #23: Import shared hook
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -40,6 +41,17 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUserRole } from '@/hooks/useUserRole';
 import { getClientOptionLabel } from '@/lib/clientOptionLabel';
+import { supabase } from '@/integrations/supabase/client';
+import type { ClientStatus } from '@/types/crm';
+
+type ContactsPageContact = ClientContact & {
+  client: {
+    id: string;
+    name: string | null;
+    brand_name: string | null;
+    status: ClientStatus | null;
+  };
+};
 
 // Copy button component
 function CopyButton({ value, className }: { value: string; className?: string }) {
@@ -73,14 +85,41 @@ const CONTACTS_PER_PAGE = 50;
 
 export default function Contacts() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
   const highlightedRef = useRef<HTMLDivElement>(null);
 
-  const { clients, clientContacts, addContact, updateContact, deleteContact, canDeleteContact, isLoading } = useCRMData();
+  const { clients, addContact, updateContact, deleteContact, canDeleteContact, isLoading } = useCRMData();
 
-  // Pre-build a Map for O(1) client lookups instead of O(n) per contact
-  const clientsMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
+  const { data: contactsPageContacts = [], isLoading: contactsPageLoading } = useQuery({
+    queryKey: ['contacts-page-all-contacts'],
+    queryFn: async (): Promise<ContactsPageContact[]> => {
+      const { data, error } = await supabase.rpc('list_all_contacts_for_authenticated');
+      if (error) throw error;
+
+      return (data || []).map((contact) => ({
+        id: contact.id,
+        client_id: contact.client_id,
+        name: contact.name,
+        position: contact.position,
+        email: contact.email,
+        phone: contact.phone,
+        is_primary: contact.is_primary,
+        is_decision_maker: contact.is_decision_maker,
+        notes: contact.notes ?? '',
+        created_at: contact.created_at,
+        updated_at: contact.updated_at,
+        deleted_at: contact.deleted_at,
+        client: {
+          id: contact.client_id,
+          name: contact.client_name,
+          brand_name: contact.client_brand_name,
+          status: contact.client_status,
+        },
+      }));
+    },
+  });
 
   // Issue #18: Filter clients to only show active ones (not lost/paused) in dropdown
   const activeClients = useMemo(() =>
@@ -114,20 +153,24 @@ export default function Contacts() {
   // Get contact to delete for showing name in dialog
   const contactToDelete = useMemo(() => {
     if (!deleteContactId) return null;
-    return clientContacts.find(c => c.id === deleteContactId);
-  }, [deleteContactId, clientContacts]);
+    return contactsPageContacts.find(c => c.id === deleteContactId);
+  }, [deleteContactId, contactsPageContacts]);
 
-  // Enrich contacts with client info using O(1) Map lookup
-  const enrichedContacts = useMemo(() => {
-    return clientContacts.map(contact => ({
-      ...contact,
-      client: clientsMap.get(contact.client_id),
-    }));
-  }, [clientContacts, clientsMap]);
+  const contactsFilterClients = useMemo(() => {
+    const uniqueClients = new Map<string, ContactsPageContact['client']>();
+
+    contactsPageContacts.forEach((contact) => {
+      uniqueClients.set(contact.client_id, contact.client);
+    });
+
+    return Array.from(uniqueClients.values())
+      .filter((client) => !['lost', 'paused'].includes(client.status || ''))
+      .sort((left, right) => getClientOptionLabel(left).localeCompare(getClientOptionLabel(right), 'cs'));
+  }, [contactsPageContacts]);
 
   // Filter contacts
   const filteredContacts = useMemo(() => {
-    return enrichedContacts.filter(contact => {
+    return contactsPageContacts.filter(contact => {
       // Text search
       if (debouncedSearch) {
         const query = debouncedSearch.toLowerCase();
@@ -162,7 +205,7 @@ export default function Contacts() {
 
       return true;
     });
-  }, [enrichedContacts, debouncedSearch, filters]);
+  }, [contactsPageContacts, debouncedSearch, filters]);
 
   // Issue #11: Handle highlight from URL - navigate to correct page first
   useEffect(() => {
@@ -219,6 +262,7 @@ export default function Contacts() {
   const handleAddContact = async (data: Omit<ClientContact, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       await addContact(data);
+      await queryClient.invalidateQueries({ queryKey: ['contacts-page-all-contacts'] });
       setIsAddDialogOpen(false);
     } catch (error) {
       console.error('Failed to add contact:', error);
@@ -229,6 +273,7 @@ export default function Contacts() {
     if (editingContact) {
       try {
         await updateContact(editingContact.id, data);
+        await queryClient.invalidateQueries({ queryKey: ['contacts-page-all-contacts'] });
         setEditingContact(null);
       } catch (error) {
         console.error('Failed to update contact:', error);
@@ -251,6 +296,7 @@ export default function Contacts() {
 
     try {
       await deleteContact(deleteContactId);
+      await queryClient.invalidateQueries({ queryKey: ['contacts-page-all-contacts'] });
       setDeleteContactId(null);
     } catch (error) {
       console.error('Failed to delete contact:', error);
@@ -267,7 +313,7 @@ export default function Contacts() {
   };
 
   // Loading state
-  if (isLoading) {
+  if (isLoading || contactsPageLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -326,7 +372,7 @@ export default function Contacts() {
             <SelectContent>
               <SelectItem value="all">Všichni klienti</SelectItem>
               {/* Issue #18: Only show active clients in filter dropdown */}
-              {activeClients.map(client => (
+              {contactsFilterClients.map(client => (
                 <SelectItem key={client.id} value={client.id}>
                   {getClientOptionLabel(client)}
                 </SelectItem>
