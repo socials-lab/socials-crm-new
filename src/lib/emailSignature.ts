@@ -30,7 +30,7 @@ export function getDefaultEmailSignature(
     'Socials.cz',
     '',
     '🌐 www.socials.cz',
-    '🎙️ Poslechněte si Socials Podcast (link: https://www.youtube.com/@socials_cz/videos)',
+    '🎙️ Poslechněte si [Socials Podcast](https://www.youtube.com/@socials_cz/videos)',
     '',
     '💡 Pomáháme firmám získávat zákazníky díky výkonnostní reklamě.',
   ];
@@ -44,4 +44,84 @@ export function getDefaultEmailSignature(
   }
 
   return lines.join('\n').trim();
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function toSafeHref(url: string): string {
+  return escapeHtml(url);
+}
+
+function renderInlineWithLinks(line: string): string {
+  const tokenRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/g;
+  let result = '';
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = tokenRegex.exec(line)) !== null) {
+    const [fullMatch, markdownText, markdownUrl, plainUrl] = match;
+    result += escapeHtml(line.slice(lastIndex, match.index));
+
+    if (markdownText && markdownUrl) {
+      const href = toSafeHref(markdownUrl);
+      const text = escapeHtml(markdownText);
+      result += `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">${text}</a>`;
+    } else if (plainUrl) {
+      const href = toSafeHref(plainUrl);
+      result += `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;word-break:break-all;">${href}</a>`;
+    } else {
+      result += escapeHtml(fullMatch);
+    }
+
+    lastIndex = match.index + fullMatch.length;
+  }
+
+  result += escapeHtml(line.slice(lastIndex));
+  return result;
+}
+
+function isListItem(line: string): boolean {
+  return line.startsWith('•') || line.startsWith('-') || /^\d+\./.test(line);
+}
+
+export function formatEmailTextToHtml(content: string): string {
+  const lines = content.split('\n');
+  const htmlParts: string[] = [];
+  let currentParagraph: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed === '') {
+      if (currentParagraph.length > 0) {
+        htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
+        currentParagraph = [];
+      }
+      continue;
+    }
+
+    if (isListItem(trimmed)) {
+      if (currentParagraph.length > 0) {
+        htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
+        currentParagraph = [];
+      }
+      htmlParts.push(`<p style="margin: 0 0 8px 0; padding-left: 20px;">${renderInlineWithLinks(trimmed)}</p>`);
+      continue;
+    }
+
+    currentParagraph.push(renderInlineWithLinks(trimmed));
+  }
+
+  if (currentParagraph.length > 0) {
+    htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
+  }
+
+  return htmlParts.join('');
 }

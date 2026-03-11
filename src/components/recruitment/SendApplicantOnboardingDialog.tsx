@@ -20,7 +20,7 @@ import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
-import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 interface SendApplicantOnboardingDialogProps {
@@ -142,15 +142,7 @@ export function SendApplicantOnboardingDialog({
     setIsSending(true);
 
     try {
-      const htmlContent = message
-        .split('\n')
-        .map(line => {
-          if (line.startsWith('http')) {
-            return `<p><a href="${line}" style="color: #2563eb; text-decoration: underline;">${line}</a></p>`;
-          }
-          return line.trim() ? `<p>${line}</p>` : '<br>';
-        })
-        .join('');
+      const htmlContent = formatEmailTextToHtml(message);
 
       const finalCcEmails = mergeEmails(ccEmails, newCcEmail);
       const finalBccEmails = mergeEmails(bccEmails, newBccEmail);

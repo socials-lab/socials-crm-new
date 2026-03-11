@@ -12,7 +12,7 @@ import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
-import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 interface SendInterviewInviteDialogProps {
@@ -122,11 +122,7 @@ export function SendInterviewInviteDialog({
     setIsSending(true);
 
     try {
-      // Convert plain text to HTML
-      const htmlContent = message
-        .split('\n')
-        .map(line => line.trim() ? `<p>${line}</p>` : '<br>')
-        .join('');
+      const htmlContent = formatEmailTextToHtml(message);
 
       const finalCcEmails = mergeEmails(ccEmails, newCcEmail);
       const finalBccEmails = mergeEmails(bccEmails, newBccEmail);

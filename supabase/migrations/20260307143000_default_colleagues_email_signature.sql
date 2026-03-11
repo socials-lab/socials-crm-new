@@ -4,7 +4,7 @@ LANGUAGE sql
 IMMUTABLE
 AS $$
   SELECT format(
-    '%s\n%s\n\nSocials.cz\n\n🌐 www.socials.cz\n🎙️ Poslechněte si Socials Podcast (link: https://www.youtube.com/@socials_cz/videos)\n\n💡 Pomáháme firmám získávat zákazníky díky výkonnostní reklamě.',
+    '%s\n%s\n\nSocials.cz\n\n🌐 www.socials.cz\n🎙️ Poslechněte si [Socials Podcast](https://www.youtube.com/@socials_cz/videos)\n\n💡 Pomáháme firmám získávat zákazníky díky výkonnostní reklamě.',
     COALESCE(trim(signature_name), ''),
     COALESCE(trim(signature_position), '')
   );

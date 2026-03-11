@@ -17,7 +17,7 @@ import { toast } from '@/components/ui/sonner';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
-import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Lead } from '@/types/crm';
 
@@ -204,46 +204,11 @@ export function SendOnboardingFormDialog({
     setIsSending(true);
     
     try {
-      // Convert plain text to HTML with better formatting
-      const lines = emailContent.split('\n');
-      const htmlParts: string[] = [];
-      let currentParagraph: string[] = [];
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        
-        if (trimmed === '') {
-          // Empty line - end current paragraph
-          if (currentParagraph.length > 0) {
-            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-            currentParagraph = [];
-          }
-        } else if (trimmed.includes('👉')) {
-          // Special emoji line - flush paragraph first
-          if (currentParagraph.length > 0) {
-            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-            currentParagraph = [];
-          }
-          // Convert URLs to clickable links
-          const withLinks = trimmed.replace(
-            /(https?:\/\/[^\s]+)/g,
-            '<a href="$1" style="color: #0066cc; text-decoration: underline;">$1</a>'
-          );
-          htmlParts.push(`<p style="margin: 16px 0; font-weight: bold;">${withLinks}</p>`);
-        } else {
-          // Regular line - add to current paragraph
-          currentParagraph.push(trimmed);
-        }
-      }
-      
-      // Flush remaining paragraph
-      if (currentParagraph.length > 0) {
-        htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-      }
+      const htmlContent = formatEmailTextToHtml(emailContent);
 
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6; color: #333;">
-          ${htmlParts.join('')}
+          ${htmlContent}
         </div>
       `;
 

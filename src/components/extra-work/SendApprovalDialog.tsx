@@ -19,7 +19,7 @@ import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar'
 import { toast } from 'sonner';
 import type { ExtraWork } from '@/types/crm';
 import { Copy, Mail, CheckCircle2, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
-import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 interface SendApprovalDialogProps {
@@ -228,13 +228,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
       const token = await ensureApprovalToken();
       const approvalUrl = `${window.location.origin}/extra-work-approval/${token}`;
       const bodyWithUrl = emailBody.includes('http') ? emailBody : `${emailBody}\n\n${approvalUrl}`;
-      // Convert plain text to HTML
-      const htmlBody = bodyWithUrl
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>')
-        .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
+      const htmlBody = formatEmailTextToHtml(bodyWithUrl);
 
       const result = await sendEmail(targetEmail, emailSubject, `<div style="font-family: sans-serif;">${htmlBody}</div>`, {
         cc: ccEmails.join(', '),

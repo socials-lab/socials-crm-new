@@ -17,7 +17,7 @@ import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useCRMData } from '@/hooks/useCRMData';
-import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Lead } from '@/types/crm';
 
@@ -127,41 +127,11 @@ export function SendOfferDialog({
     setIsSending(true);
     
     try {
-      // Convert plain text to HTML with better formatting
-      const lines = emailContent.split('\n');
-      const htmlParts: string[] = [];
-      let currentParagraph: string[] = [];
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        
-        if (trimmed === '') {
-          // Empty line - end current paragraph
-          if (currentParagraph.length > 0) {
-            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-            currentParagraph = [];
-          }
-        } else if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.match(/^\d+\./)) {
-          // List item - flush paragraph first
-          if (currentParagraph.length > 0) {
-            htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-            currentParagraph = [];
-          }
-          htmlParts.push(`<p style="margin: 0 0 8px 0; padding-left: 20px;">${trimmed}</p>`);
-        } else {
-          // Regular line - add to current paragraph
-          currentParagraph.push(trimmed);
-        }
-      }
-      
-      // Flush remaining paragraph
-      if (currentParagraph.length > 0) {
-        htmlParts.push(`<p style="margin: 0 0 16px 0;">${currentParagraph.join('<br>')}</p>`);
-      }
+      const htmlContent = formatEmailTextToHtml(emailContent);
 
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6; color: #333;">
-          ${htmlParts.join('')}
+          ${htmlContent}
         </div>
       `;
 

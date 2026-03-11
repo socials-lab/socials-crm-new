@@ -7,7 +7,7 @@ AS $$
     COALESCE(trim(signature_name), '')
     || E'\n'
     || COALESCE(trim(signature_position), '')
-    || E'\n\nSocials.cz\n\n🌐 www.socials.cz\n🎙️ Poslechněte si Socials Podcast (link: https://www.youtube.com/@socials_cz/videos)\n\n💡 Pomáháme firmám získávat zákazníky díky výkonnostní reklamě.';
+    || E'\n\nSocials.cz\n\n🌐 www.socials.cz\n🎙️ Poslechněte si [Socials Podcast](https://www.youtube.com/@socials_cz/videos)\n\n💡 Pomáháme firmám získávat zákazníky díky výkonnostní reklamě.';
 $$;
 
 UPDATE public.colleagues
