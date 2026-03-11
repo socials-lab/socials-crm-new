@@ -51,14 +51,14 @@
     --chart-4: 262 83% 58%;
     --chart-5: 0 84% 60%;
 
-    /* Sidebar */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 10%;
+    /* Sidebar - always dark */
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 82 100% 45%;
     --sidebar-primary-foreground: 0 0% 7%;
-    --sidebar-accent: 0 0% 94%;
-    --sidebar-accent-foreground: 0 0% 10%;
-    --sidebar-border: 0 0% 90%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 16%;
     --sidebar-ring: 82 100% 45%;
   }
 
