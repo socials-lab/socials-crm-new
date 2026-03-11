@@ -8,7 +8,7 @@ RETURNS TABLE (
   id UUID,
   client_id UUID,
   name TEXT,
-  position TEXT,
+  "position" TEXT,
   email TEXT,
   phone TEXT,
   is_primary BOOLEAN,
