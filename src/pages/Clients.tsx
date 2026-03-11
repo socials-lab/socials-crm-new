@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, ExternalLink, ChevronDown, ChevronUp, Mail, Phone, Calendar, Users, Pencil, Building2, FileText, UserPlus, Star, Key, Trash2, StickyNote, Crown, Database, Briefcase, Check, X, Loader2, FilterX, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, ExternalLink, ChevronDown, ChevronUp, Mail, Phone, Calendar, Users, Pencil, Building2, FileText, UserPlus, Star, Key, Trash2, StickyNote, Crown, Database, Briefcase, Check, X, Loader2, FilterX } from 'lucide-react';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -85,8 +85,6 @@ function TierBadgeWithTooltip({ tier, compact = false }: { tier: ClientTier; com
   );
 }
 
-const ITEMS_PER_PAGE = 20;
-
 export default function Clients() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -127,8 +125,6 @@ export default function Clients() {
   const [tierFilter, setTierFilter] = useState<ClientTier | 'all'>(
     (searchParams.get('tier') as ClientTier | 'all') || 'all'
   );
-  const [page, setPage] = useState(1);
-
   // Debounce search input
   const searchQuery = useDebouncedValue(searchInput, 300);
 
@@ -158,13 +154,11 @@ export default function Clients() {
   // Update URL when filters change
   const handleStatusChange = (value: ClientStatus | 'all') => {
     setStatusFilter(value);
-    setPage(1);
     updateUrlParams({ status: value === 'all' ? null : value });
   };
 
   const handleTierChange = (value: ClientTier | 'all') => {
     setTierFilter(value);
-    setPage(1);
     updateUrlParams({ tier: value === 'all' ? null : value });
   };
 
@@ -175,7 +169,6 @@ export default function Clients() {
     setSearchInput('');
     setStatusFilter('all');
     setTierFilter('all');
-    setPage(1);
     setSearchParams(prev => {
       const newParams = new URLSearchParams();
       // Preserve only highlight param
@@ -236,22 +229,6 @@ export default function Clients() {
     });
   }, [clients, searchQuery, statusFilter, tierFilter]);
 
-  // Reset to page 1 when debounced search changes (status/tier already reset in handlers)
-  const prevSearchQuery = useRef(searchQuery);
-  useEffect(() => {
-    if (prevSearchQuery.current !== searchQuery) {
-      setPage(1);
-      prevSearchQuery.current = searchQuery;
-    }
-  }, [searchQuery]);
-
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredClients.length / ITEMS_PER_PAGE);
-  const paginatedClients = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE;
-    return filteredClients.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredClients, page]);
-
   // Memoize client details for all visible clients to prevent recalculation on every render
   const clientDetailsMap = useMemo(() => {
     const map = new Map<string, {
@@ -282,7 +259,7 @@ export default function Clients() {
     const serviceMap = new Map(services.map(s => [s.id, s]));
     const colleagueMap = new Map(colleagues.map(c => [c.id, c]));
 
-    paginatedClients.forEach(client => {
+    filteredClients.forEach(client => {
       const clientEngagements = engagementsByClient.get(client.id) || [];
       const activeEngagements = clientEngagements.filter(e => e.status === 'active');
       const totalMonthlyFee = activeEngagements.reduce((sum, e) => sum + e.monthly_fee, 0);
@@ -324,7 +301,7 @@ export default function Clients() {
     });
 
     return map;
-  }, [paginatedClients, engagements, engagementServices, assignments, services, colleagues, getContactsByClientId]);
+  }, [filteredClients, engagements, engagementServices, assignments, services, colleagues, getContactsByClientId]);
 
   const getClientDetails = (clientId: string) => {
     return clientDetailsMap.get(clientId) || {
@@ -533,7 +510,7 @@ export default function Clients() {
       </div>
 
       <div className="space-y-3">
-        {paginatedClients.map((client) => {
+        {filteredClients.map((client) => {
           const details = getClientDetails(client.id);
           const isExpanded = expandedClientId === client.id;
 
@@ -1060,36 +1037,6 @@ export default function Clients() {
       {filteredClients.length === 0 && (
         <div className="py-12 text-center text-muted-foreground">
           Žádní klienti neodpovídají vašim kritériím
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-            aria-label="Předchozí stránka"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Předchozí
-          </Button>
-          <span className="flex items-center px-3 text-sm text-muted-foreground">
-            Stránka {page} z {totalPages}
-            <span className="ml-2 text-xs">({filteredClients.length} klientů)</span>
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            aria-label="Další stránka"
-          >
-            Další
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
         </div>
       )}
 
