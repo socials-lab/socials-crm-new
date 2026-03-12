@@ -26,6 +26,7 @@ const ROUTE_TO_PAGE: Record<string, string> = {
   '/recruitment': 'recruitment',
   '/feedback': 'feedback',
   '/academy': 'academy',
+  '/sop': 'sop',
   '/analytics': 'analytics',
   '/settings': 'settings',
 };
@@ -132,8 +133,10 @@ export function RouteGuard({ children }: RouteGuardProps) {
     }
   }
 
-  // Check page access based on allowed_pages
-  const pageId = ROUTE_TO_PAGE[currentPath];
+  // Check page access based on allowed_pages.
+  // SOP detail routes use /sop/:articleId, so normalize by prefix.
+  const normalizedPath = currentPath.startsWith('/sop/') ? '/sop' : currentPath;
+  const pageId = ROUTE_TO_PAGE[normalizedPath];
   if (pageId && !canAccessPage(pageId)) {
     // Prefer redirect to my-work for restricted users, fallback to profile.
     if (canAccessPage('my-work')) {
