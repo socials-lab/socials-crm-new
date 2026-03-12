@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useCRMData } from '@/hooks/useCRMData';
@@ -18,6 +18,7 @@ import { SettingsHistoryDialog } from './SettingsHistoryDialog';
 import { ShareCreativeBoostDialog } from './ShareCreativeBoostDialog';
 import type { MonthStatus, ClientMonthOutput, OutputCategory } from '@/types/creativeBoost';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 // Category colors for output types
 const categoryColors: Record<OutputCategory, string> = {
@@ -51,6 +52,9 @@ const statusColors: Record<MonthStatus, string> = {
   inactive: 'bg-gray-100 text-gray-600 border-gray-200',
 };
 
+type SettingsField = 'maxCredits' | 'pricePerCredit' | 'rewardBannerPerCredit' | 'rewardVideoPerCredit' | 'status' | 'colleagueId';
+const UNASSIGNED_COLLEAGUE_VALUE = '__unassigned__';
+
 export function ClientsOverview({ year, month }: ClientsOverviewProps) {
   const navigate = useNavigate();
   const { 
@@ -64,7 +68,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     getSettingsHistory,
     ensureClientMonthsForActiveEngagements,
   } = useCreativeBoostData();
-  const { colleagues, engagements, getClientById, updateEngagementService } = useCRMData();
+  const { colleagues, engagements, engagementServices, getClientById, updateEngagementService } = useCRMData();
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<MonthStatus | 'all'>('all');
@@ -73,11 +77,20 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
   const [historyDialogClient, setHistoryDialogClient] = useState<string | null>(null);
   const [shareDialogClient, setShareDialogClient] = useState<string | null>(null);
   const [draftNumbers, setDraftNumbers] = useState<Record<string, string>>({});
+  const lastEnsureKeyRef = useRef<string>('');
 
   // Auto-sync: Ensure Creative Boost records exist for all active engagements
   useEffect(() => {
-    ensureClientMonthsForActiveEngagements(year, month);
-  }, [year, month, ensureClientMonthsForActiveEngagements]);
+    const ensureKey = `${year}-${month}-${engagements.length}-${engagementServices.length}`;
+    if (lastEnsureKeyRef.current === ensureKey) {
+      return;
+    }
+    lastEnsureKeyRef.current = ensureKey;
+    ensureClientMonthsForActiveEngagements(year, month).catch((error) => {
+      console.error('Failed to ensure Creative Boost client months:', error);
+      toast.error('Nepodarilo se automaticky synchronizovat Creative Boost mesicni zaznamy.');
+    });
+  }, [year, month, engagements.length, engagementServices.length, ensureClientMonthsForActiveEngagements]);
 
   const summaries = useMemo(() => {
     // Only show clients with linked engagements
@@ -189,22 +202,30 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     return Math.max(0, parsed);
   }
 
-  const handleSettingsChange = async (clientId: string, field: 'maxCredits' | 'pricePerCredit' | 'status' | 'colleagueId', value: number | MonthStatus | string) => {
+  const handleSettingsChange = async (clientId: string, field: SettingsField, value: number | MonthStatus | string) => {
     const monthData = clientMonths.find(cm => cm.clientId === clientId && cm.year === year && cm.month === month);
     if (monthData) {
       // Build list of updates to execute together
       const updates: Promise<unknown>[] = [];
 
-      // Always update client month record
-      updates.push(updateClientMonth(monthData.id, { [field]: value }));
+      if (field === 'maxCredits' || field === 'pricePerCredit' || field === 'status' || field === 'colleagueId') {
+        updates.push(updateClientMonth(monthData.id, { [field]: value }));
+      }
 
       // Also update the source engagement_services record to keep them in sync
-      if (monthData.engagementServiceId && (field === 'maxCredits' || field === 'pricePerCredit')) {
+      if (field === 'maxCredits' || field === 'pricePerCredit' || field === 'rewardBannerPerCredit' || field === 'rewardVideoPerCredit') {
+        if (!monthData.engagementServiceId) {
+          throw new Error(`Missing engagementServiceId for Creative Boost month ${monthData.id}.`);
+        }
         const serviceUpdate: Record<string, unknown> = {};
         if (field === 'maxCredits') {
           serviceUpdate.creative_boost_max_credits = value as number;
         } else if (field === 'pricePerCredit') {
           serviceUpdate.creative_boost_price_per_credit = value as number;
+        } else if (field === 'rewardBannerPerCredit') {
+          serviceUpdate.creative_boost_reward_per_credit_banner = value as number;
+        } else if (field === 'rewardVideoPerCredit') {
+          serviceUpdate.creative_boost_reward_per_credit_video = value as number;
         }
         updates.push(updateEngagementService(monthData.engagementServiceId, serviceUpdate));
       }
@@ -214,7 +235,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
         await Promise.all(updates);
       } catch (error) {
         console.error('Failed to sync settings:', error);
-        // Both mutations have their own error handling, but log here for visibility
+        toast.error('Nepodarilo se ulozit zmeny Creative Boost nastaveni.');
       }
     }
   };
@@ -275,12 +296,21 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
           const isOverMax = summary.usedCredits > summary.maxCredits;
           const clientOutputs = getClientOutputs(summary.clientId, year, month);
           const monthData = clientMonths.find(cm => cm.clientId === summary.clientId && cm.year === year && cm.month === month);
+          const linkedEngagementService = monthData?.engagementServiceId
+            ? engagementServices.find(es => es.id === monthData.engagementServiceId)
+            : null;
           const assignedColleague = monthData?.colleagueId 
             ? designerColleagues.find(c => c.id === monthData.colleagueId)
             : null;
           const linkedEngagement = monthData?.engagementId 
             ? engagements.find(e => e.id === monthData.engagementId)
             : null;
+
+          const hasMissingEngagementService = !!monthData?.engagementServiceId && !linkedEngagementService;
+          const hasMissingServiceRewards =
+            !!linkedEngagementService &&
+            (linkedEngagementService.creative_boost_reward_per_credit_banner === null ||
+              linkedEngagementService.creative_boost_reward_per_credit_video === null);
 
           return (
             <Collapsible key={summary.clientId} open={isExpanded} onOpenChange={() => toggleExpand(summary.clientId)}>
@@ -414,12 +444,13 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                               </div>
                             </TableHead>
                             <TableHead className="text-center w-[80px]">Celkem</TableHead>
+                            <TableHead className="w-[150px]">Grafik / Video editor</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {/* Banner section */}
                           <TableRow className="bg-blue-50/50 hover:bg-blue-50/50">
-                            <TableCell colSpan={5} className="py-1.5">
+                            <TableCell colSpan={6} className="py-1.5">
                               <div className="flex items-center gap-1.5 font-semibold text-blue-700 text-xs">
                                 <Image className="h-3.5 w-3.5" />
                                 BANNERY
@@ -509,13 +540,36 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                     <span className="text-muted-foreground">-</span>
                                   )}
                                 </TableCell>
+                                <TableCell>
+                                  {totalCount > 0 && (
+                                    <Select
+                                      value={output?.colleagueId || UNASSIGNED_COLLEAGUE_VALUE}
+                                      onValueChange={(val) => handleOutputChange(
+                                        summary.clientId,
+                                        outputType.id,
+                                        'colleagueId',
+                                        val === UNASSIGNED_COLLEAGUE_VALUE ? '' : val
+                                      )}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue placeholder="Vybrat..." />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-popover">
+                                        <SelectItem value={UNASSIGNED_COLLEAGUE_VALUE}>Bez kolegy</SelectItem>
+                                        {designerColleagues.map((c) => (
+                                          <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                </TableCell>
                               </TableRow>
                             );
                           })}
                           
                           {/* Video section */}
                           <TableRow className="bg-purple-50/50 hover:bg-purple-50/50">
-                            <TableCell colSpan={5} className="py-1.5">
+                            <TableCell colSpan={6} className="py-1.5">
                               <div className="flex items-center gap-1.5 font-semibold text-purple-700 text-xs">
                                 <Video className="h-3.5 w-3.5" />
                                 VIDEA
@@ -605,6 +659,29 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                                     <span className="text-muted-foreground">-</span>
                                   )}
                                 </TableCell>
+                                <TableCell>
+                                  {totalCount > 0 && (
+                                    <Select
+                                      value={output?.colleagueId || UNASSIGNED_COLLEAGUE_VALUE}
+                                      onValueChange={(val) => handleOutputChange(
+                                        summary.clientId,
+                                        outputType.id,
+                                        'colleagueId',
+                                        val === UNASSIGNED_COLLEAGUE_VALUE ? '' : val
+                                      )}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue placeholder="Vybrat..." />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-popover">
+                                        <SelectItem value={UNASSIGNED_COLLEAGUE_VALUE}>Bez kolegy</SelectItem>
+                                        {designerColleagues.map((c) => (
+                                          <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                </TableCell>
                               </TableRow>
                             );
                           })}
@@ -676,6 +753,58 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                           />
                           <span className="text-muted-foreground">Kč</span>
                         </div>
+                        {linkedEngagementService && !hasMissingServiceRewards && (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Odměna B:</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={getDraftOrValue(`settings-${summary.clientId}-rewardBannerPerCredit`, linkedEngagementService.creative_boost_reward_per_credit_banner as number)}
+                                onFocus={() => startNumberDraft(`settings-${summary.clientId}-rewardBannerPerCredit`, linkedEngagementService.creative_boost_reward_per_credit_banner as number)}
+                                onChange={(e) => updateNumberDraft(`settings-${summary.clientId}-rewardBannerPerCredit`, e.target.value)}
+                                onBlur={() => {
+                                  const key = `settings-${summary.clientId}-rewardBannerPerCredit`;
+                                  const value = toNonNegativeNumber(draftNumbers[key] ?? String(linkedEngagementService.creative_boost_reward_per_credit_banner as number));
+                                  handleSettingsChange(summary.clientId, 'rewardBannerPerCredit', value);
+                                  clearNumberDraft(key);
+                                }}
+                                className="w-24 h-7 text-center"
+                              />
+                              <span className="text-muted-foreground">Kč</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Odměna V:</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={getDraftOrValue(`settings-${summary.clientId}-rewardVideoPerCredit`, linkedEngagementService.creative_boost_reward_per_credit_video as number)}
+                                onFocus={() => startNumberDraft(`settings-${summary.clientId}-rewardVideoPerCredit`, linkedEngagementService.creative_boost_reward_per_credit_video as number)}
+                                onChange={(e) => updateNumberDraft(`settings-${summary.clientId}-rewardVideoPerCredit`, e.target.value)}
+                                onBlur={() => {
+                                  const key = `settings-${summary.clientId}-rewardVideoPerCredit`;
+                                  const value = toNonNegativeNumber(draftNumbers[key] ?? String(linkedEngagementService.creative_boost_reward_per_credit_video as number));
+                                  handleSettingsChange(summary.clientId, 'rewardVideoPerCredit', value);
+                                  clearNumberDraft(key);
+                                }}
+                                className="w-24 h-7 text-center"
+                              />
+                              <span className="text-muted-foreground">Kč</span>
+                            </div>
+                          </>
+                        )}
+                        {hasMissingEngagementService && (
+                          <p className="text-xs text-destructive">
+                            Chyba: chybí Creative Boost služba ({monthData?.engagementServiceId}) pro tento měsíc.
+                          </p>
+                        )}
+                        {hasMissingServiceRewards && (
+                          <p className="text-xs text-destructive">
+                            Chyba: na Creative Boost službě chybí odměna za kredit (B/V).
+                          </p>
+                        )}
                       </div>
                     </div>
                   </CardContent>

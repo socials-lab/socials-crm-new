@@ -39,6 +39,9 @@ interface EditAssignmentDialogProps {
   assignment: EngagementAssignment;
   colleagueName: string;
   isCreativeBoostService?: boolean;
+  creativeBoostServiceId?: string | null;
+  creativeBoostRewardBanner?: number | null;
+  creativeBoostRewardVideo?: number | null;
   onSave: (data: {
     cost_model: CostModel;
     hourly_cost: number | null;
@@ -48,7 +51,12 @@ interface EditAssignmentDialogProps {
     reward_per_credit_banner: number | null;
     reward_per_credit_video: number | null;
     role_on_engagement: string;
-  }) => void;
+    _creativeBoostServiceRewards?: {
+      engagementServiceId: string;
+      bannerRewardPerCredit: number;
+      videoRewardPerCredit: number;
+    };
+  }) => void | Promise<void>;
 }
 
 export function EditAssignmentDialog({
@@ -57,15 +65,18 @@ export function EditAssignmentDialog({
   assignment,
   colleagueName,
   isCreativeBoostService = false,
+  creativeBoostServiceId = null,
+  creativeBoostRewardBanner = null,
+  creativeBoostRewardVideo = null,
   onSave,
 }: EditAssignmentDialogProps) {
-  const existingPerCreditReward = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-  const hasPersistedPerCreditReward = assignment.reward_per_credit !== null;
+  const existingBannerReward = creativeBoostRewardBanner ?? assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_BANNER_REWARD_PER_CREDIT;
+  const existingVideoReward = creativeBoostRewardVideo ?? assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_VIDEO_REWARD_PER_CREDIT;
   const roleEligibleForPerCredit = isPerCreditRole(assignment.role_on_engagement);
   const canUsePerCreditForInitialRole = canUsePerCreditCostModel(assignment.role_on_engagement, isCreativeBoostService);
 
   const [costModel, setCostModel] = useState<ExtendedCostModel>(
-    hasPersistedPerCreditReward || (roleEligibleForPerCredit && canUsePerCreditForInitialRole)
+    roleEligibleForPerCredit && canUsePerCreditForInitialRole
       ? 'per_credit'
       : assignment.cost_model
   );
@@ -78,18 +89,17 @@ export function EditAssignmentDialog({
   const [percentageOfRevenue, setPercentageOfRevenue] = useState<string>(
     assignment.percentage_of_revenue?.toString() || ''
   );
-  const [perCreditReward, setPerCreditReward] = useState<string>(existingPerCreditReward.toString());
+  const [perCreditReward, setPerCreditReward] = useState<string>(existingBannerReward.toString());
   const [bannerPerCreditReward, setBannerPerCreditReward] = useState<string>(
-    (assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_BANNER_REWARD_PER_CREDIT).toString()
+    existingBannerReward.toString()
   );
   const [videoPerCreditReward, setVideoPerCreditReward] = useState<string>(
-    (assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_VIDEO_REWARD_PER_CREDIT).toString()
+    existingVideoReward.toString()
   );
   const [roleOnEngagement, setRoleOnEngagement] = useState<string>(
     assignment.role_on_engagement || ''
   );
   const canUsePerCreditForSelectedRole = canUsePerCreditCostModel(roleOnEngagement, isCreativeBoostService);
-  const canShowPerCreditOption = hasPersistedPerCreditReward || canUsePerCreditForSelectedRole;
 
   function handleRoleChange(role: string) {
     setRoleOnEngagement(role);
@@ -97,36 +107,33 @@ export function EditAssignmentDialog({
       setCostModel('per_credit');
       return;
     }
-    if (!isPerCreditRole(role) && costModel === 'per_credit' && assignment.reward_per_credit === null) {
+    if (!isPerCreditRole(role) && costModel === 'per_credit') {
       setCostModel('fixed_monthly');
     }
   }
 
   // Reset form when assignment changes
   useEffect(() => {
-    const reward = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-    const hasReward = assignment.reward_per_credit !== null;
+    const reward = creativeBoostRewardBanner ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+    const bannerReward = creativeBoostRewardBanner ?? assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_BANNER_REWARD_PER_CREDIT;
+    const videoReward = creativeBoostRewardVideo ?? assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_VIDEO_REWARD_PER_CREDIT;
     const canUsePerCredit = canUsePerCreditCostModel(assignment.role_on_engagement, isCreativeBoostService);
     const roleIsPerCredit = isPerCreditRole(assignment.role_on_engagement);
 
-    setCostModel(hasReward || (roleIsPerCredit && canUsePerCredit) ? 'per_credit' : assignment.cost_model);
+    setCostModel(roleIsPerCredit && canUsePerCredit ? 'per_credit' : assignment.cost_model);
     setHourlyCost(assignment.hourly_cost?.toString() || '');
     setMonthlyCost(assignment.monthly_cost?.toString() || '');
     setPercentageOfRevenue(assignment.percentage_of_revenue?.toString() || '');
     setPerCreditReward(reward.toString());
-    setBannerPerCreditReward(
-      (assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_BANNER_REWARD_PER_CREDIT).toString()
-    );
-    setVideoPerCreditReward(
-      (assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_VIDEO_REWARD_PER_CREDIT).toString()
-    );
+    setBannerPerCreditReward(bannerReward.toString());
+    setVideoPerCreditReward(videoReward.toString());
     setRoleOnEngagement(assignment.role_on_engagement || '');
-  }, [assignment, isCreativeBoostService]);
+  }, [assignment, isCreativeBoostService, creativeBoostRewardBanner, creativeBoostRewardVideo]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // If per_credit model, save reward_per_credit to DB
     if (costModel === 'per_credit') {
-      if (!canShowPerCreditOption) {
+      if (!canUsePerCreditForSelectedRole) {
         throw new Error('Model "Odměna za kredit" je dostupný pouze pro Creative Boost a role Graphic Designer/Video Editor.');
       }
       const bannerReward = toNullableNumber(bannerPerCreditReward);
@@ -138,18 +145,28 @@ export function EditAssignmentDialog({
         throw new Error('Zadejte odměnu za kredit - Videa.');
       }
 
-      onSave({
+      await onSave({
         cost_model: 'fixed_monthly', // Store as fixed_monthly in DB
         hourly_cost: null,
         monthly_cost: null, // Will be calculated from credits * reward
         percentage_of_revenue: null,
-        reward_per_credit: bannerReward,
-        reward_per_credit_banner: bannerReward,
-        reward_per_credit_video: videoReward,
+        reward_per_credit: null,
+        reward_per_credit_banner: null,
+        reward_per_credit_video: null,
         role_on_engagement: roleOnEngagement,
+        _creativeBoostServiceRewards: (() => {
+          if (!creativeBoostServiceId) {
+            throw new Error('Creative Boost služba nebyla nalezena pro uložení odměny za kredit.');
+          }
+          return {
+            engagementServiceId: creativeBoostServiceId,
+            bannerRewardPerCredit: bannerReward,
+            videoRewardPerCredit: videoReward,
+          };
+        })(),
       });
     } else {
-      onSave({
+      await onSave({
         cost_model: costModel as CostModel,
         hourly_cost: costModel === 'hourly' ? toNullableNumber(hourlyCost) : null,
         monthly_cost: costModel === 'fixed_monthly' ? toNullableNumber(monthlyCost) : null,
@@ -160,7 +177,6 @@ export function EditAssignmentDialog({
         role_on_engagement: roleOnEngagement,
       });
     }
-    onOpenChange(false);
   };
 
   return (
@@ -203,17 +219,15 @@ export function EditAssignmentDialog({
                 <SelectItem value="fixed_monthly">Fixní měsíčně</SelectItem>
                 <SelectItem value="hourly">Hodinová sazba</SelectItem>
                 <SelectItem value="percentage">Procenta z revenue</SelectItem>
-                {canShowPerCreditOption && (
-                  <SelectItem value="per_credit">
+                <SelectItem value="per_credit" disabled={!canUsePerCreditForSelectedRole}>
                     <span className="flex items-center gap-2">
                       <Palette className="h-3.5 w-3.5" />
                     Za kredit (Creative Boost)
                     </span>
                   </SelectItem>
-                )}
               </SelectContent>
             </Select>
-            {!isCreativeBoostService && assignment.reward_per_credit === null && (
+            {!canUsePerCreditForSelectedRole && (
               <p className="text-xs text-muted-foreground">
                 Model "Odměna za kredit" je dostupný jen u služby Creative Boost.
               </p>

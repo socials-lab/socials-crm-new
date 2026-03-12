@@ -49,6 +49,8 @@ const engagementServiceSchema = z.object({
   creative_boost_min_credits: z.coerce.number().nullable(),
   creative_boost_max_credits: z.coerce.number().nullable(),
   creative_boost_price_per_credit: z.coerce.number().nullable(),
+  creative_boost_reward_per_credit_banner: z.coerce.number().nullable(),
+  creative_boost_reward_per_credit_video: z.coerce.number().nullable(),
 });
 
 type EngagementServiceFormData = z.infer<typeof engagementServiceSchema>;
@@ -126,6 +128,8 @@ export function AddEngagementServiceDialog({
       creative_boost_min_credits: null,
       creative_boost_max_credits: null,
       creative_boost_price_per_credit: null,
+      creative_boost_reward_per_credit_banner: null,
+      creative_boost_reward_per_credit_video: null,
     },
   });
 
@@ -146,6 +150,8 @@ export function AddEngagementServiceDialog({
         creative_boost_min_credits: existingService.creative_boost_min_credits,
         creative_boost_max_credits: existingService.creative_boost_max_credits,
         creative_boost_price_per_credit: existingService.creative_boost_price_per_credit,
+        creative_boost_reward_per_credit_banner: existingService.creative_boost_reward_per_credit_banner,
+        creative_boost_reward_per_credit_video: existingService.creative_boost_reward_per_credit_video,
       });
       setUpsoldById(existingService.upsold_by_id);
       return;
@@ -161,6 +167,8 @@ export function AddEngagementServiceDialog({
       creative_boost_min_credits: null,
       creative_boost_max_credits: null,
       creative_boost_price_per_credit: null,
+      creative_boost_reward_per_credit_banner: null,
+      creative_boost_reward_per_credit_video: null,
     });
     setUpsoldById(null);
   }, [open, engagementCurrency, existingService, form]);
@@ -259,6 +267,8 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_min_credits', 0);
         form.setValue('creative_boost_max_credits', 50);
         form.setValue('creative_boost_price_per_credit', 400);
+        form.setValue('creative_boost_reward_per_credit_banner', 80);
+        form.setValue('creative_boost_reward_per_credit_video', 80);
         form.setValue('price', 0);
         form.setValue('selected_tier', null);
       } else if (service.service_type === 'core') {
@@ -266,6 +276,8 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_min_credits', null);
         form.setValue('creative_boost_max_credits', null);
         form.setValue('creative_boost_price_per_credit', null);
+        form.setValue('creative_boost_reward_per_credit_banner', null);
+        form.setValue('creative_boost_reward_per_credit_video', null);
         form.setValue('selected_tier', 'growth'); // Default to GROWTH
         // Auto-fill price from GROWTH tier
         const growthPrice = getTierPrice(service, 'growth');
@@ -284,6 +296,8 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_min_credits', null);
         form.setValue('creative_boost_max_credits', null);
         form.setValue('creative_boost_price_per_credit', null);
+        form.setValue('creative_boost_reward_per_credit_banner', null);
+        form.setValue('creative_boost_reward_per_credit_video', null);
         form.setValue('selected_tier', null);
         try {
           await applyPriceFromService(service.base_price, service.currency);
@@ -367,6 +381,8 @@ export function AddEngagementServiceDialog({
           creative_boost_min_credits: data.creative_boost_min_credits,
           creative_boost_max_credits: data.creative_boost_max_credits,
           creative_boost_price_per_credit: data.creative_boost_price_per_credit,
+          creative_boost_reward_per_credit_banner: data.creative_boost_reward_per_credit_banner,
+          creative_boost_reward_per_credit_video: data.creative_boost_reward_per_credit_video,
           // One-off invoicing tracking
           invoicing_status: existingService ? existingService.invoicing_status : (isOneOff ? 'pending' : 'not_applicable'),
           invoiced_at: existingService ? existingService.invoiced_at : null,
@@ -519,7 +535,7 @@ export function AddEngagementServiceDialog({
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground border-t pt-2 mt-2">
-                    💡 Odměnu za kredit pro grafika/video editora nastavíte v přiřazení kolegy k zakázce
+                    💡 Odměna za kredit je globální pro celou zakázku (Creative Boost službu) a lze ji upravit i v přiřazení kolegy.
                   </p>
                 </div>
               </div>

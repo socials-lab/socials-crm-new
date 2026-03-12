@@ -24,16 +24,17 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { useTeamEarnings } from '@/hooks/useTeamEarnings';
+import { usePayoutMonthSnapshots } from '@/hooks/usePayoutMonthSnapshots';
 import { buildColleagueInvoiceData, type ColleagueInvoiceData } from './TeamInvoicingOverview';
 
 const MONTHS = [
-  'Leden', 'Unor', 'Brezen', 'Duben', 'Kveten', 'Cerven',
-  'Cervenec', 'Srpen', 'Zari', 'Rijen', 'Listopad', 'Prosinec',
+  'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
+  'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec',
 ];
 
 const MONTHS_SHORT = [
-  'Led', 'Uno', 'Bre', 'Dub', 'Kve', 'Cvn',
-  'Cvc', 'Srp', 'Zar', 'Rij', 'Lis', 'Pro',
+  'Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čvn',
+  'Čvc', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro',
 ];
 
 interface ColleagueInvoiceSheetProps {
@@ -63,7 +64,7 @@ function LineItem({ name, amount, note }: { name: string; amount: number; note?:
     <div className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50">
       <span className="text-sm flex-1 min-w-0 truncate">{name}</span>
       {note && <Badge variant="secondary" className="text-xs shrink-0">{note}</Badge>}
-      <span className="font-medium text-sm whitespace-nowrap">{amount.toLocaleString('cs-CZ')} Kc</span>
+      <span className="font-medium text-sm whitespace-nowrap">{amount.toLocaleString('cs-CZ')} Kč</span>
     </div>
   );
 }
@@ -75,22 +76,42 @@ export function ColleagueInvoiceSheet({
   initialYear,
   initialMonth,
 }: ColleagueInvoiceSheetProps) {
+  const colleagueId = colleague?.id ?? null;
   const [selectedYear, setSelectedYear] = useState(initialYear);
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
 
   useEffect(() => {
-    if (!colleague) return;
+    if (!colleagueId) return;
     setSelectedYear(initialYear);
     setSelectedMonth(initialMonth);
-  }, [colleague?.id, initialYear, initialMonth]);
+  }, [colleagueId, initialYear, initialMonth]);
 
   const { engagements, assignments, clients, extraWorks } = useCRMData();
   const { getColleagueCreditsByClient } = useCreativeBoostData();
   const { getApprovedCommissionsForColleague } = useUpsellApprovals();
   const { getColleagueMonthlyHistory, getColleagueActivities } = useTeamEarnings();
+  const { isMonthClosed, getSnapshotForMonth, getSnapshotsForColleague } = usePayoutMonthSnapshots();
 
   const data = useMemo<ColleagueInvoiceData | null>(() => {
     if (!colleague) return null;
+    const snapshot = getSnapshotForMonth(colleague.id, selectedYear, selectedMonth);
+    if (isMonthClosed(selectedYear, selectedMonth)) {
+      if (!snapshot) {
+        throw new Error(`Closed payout month ${selectedYear}-${selectedMonth} is missing snapshot for colleague ${colleague.id}.`);
+      }
+      return {
+        colleague,
+        clientItems: snapshot.lineItems.clientItems || [],
+        creativeBoostItems: snapshot.lineItems.creativeBoostItems || [],
+        commissionItems: snapshot.lineItems.commissionItems || [],
+        extraWorkItems: snapshot.lineItems.extraWorkItems || [],
+        manualItems: snapshot.lineItems.manualItems || [],
+        clientTotal: snapshot.clientTotal,
+        marketingTotal: snapshot.marketingTotal,
+        internalTotal: snapshot.internalTotal,
+        grandTotal: snapshot.grandTotal,
+      };
+    }
     const activities = getColleagueActivities(colleague.id, selectedYear, selectedMonth);
     return buildColleagueInvoiceData(
       colleague,
@@ -115,17 +136,47 @@ export function ColleagueInvoiceSheet({
     getColleagueActivities,
     getColleagueCreditsByClient,
     getApprovedCommissionsForColleague,
+    isMonthClosed,
+    getSnapshotForMonth,
   ]);
 
   const monthlyHistory = useMemo(() => {
     if (!colleague) return [];
-    return getColleagueMonthlyHistory(colleague.id, 12);
-  }, [colleague, getColleagueMonthlyHistory]);
+    const baseHistory = getColleagueMonthlyHistory(colleague.id, 12);
+    const snapshotHistory = getSnapshotsForColleague(colleague.id).map((snapshot) => ({
+      year: snapshot.year,
+      month: snapshot.month,
+      fixedEarnings: 0,
+      creativeBoostReward: 0,
+      creativeBoostCredits: 0,
+      commissionsReward: 0,
+      activitiesReward: 0,
+      activitiesCount: 0,
+      totalEarnings: snapshot.grandTotal,
+      activities: [],
+    }));
+
+    const byKey = new Map<string, (typeof baseHistory)[number]>();
+    baseHistory.forEach((entry) => {
+      byKey.set(`${entry.year}-${entry.month}`, entry);
+    });
+    snapshotHistory.forEach((entry) => {
+      byKey.set(`${entry.year}-${entry.month}`, entry);
+    });
+
+    return Array.from(byKey.values()).sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.month - a.month;
+    });
+  }, [colleague, getColleagueMonthlyHistory, getSnapshotsForColleague]);
 
   const activities = useMemo(() => {
     if (!colleague) return [];
+    if (isMonthClosed(selectedYear, selectedMonth)) {
+      return [];
+    }
     return getColleagueActivities(colleague.id, selectedYear, selectedMonth);
-  }, [colleague, selectedYear, selectedMonth, getColleagueActivities]);
+  }, [colleague, selectedYear, selectedMonth, getColleagueActivities, isMonthClosed]);
 
   if (!colleague || !data) return null;
 
@@ -191,14 +242,14 @@ export function ColleagueInvoiceSheet({
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-muted-foreground">{MONTHS[selectedMonth - 1]} {selectedYear}</span>
-                <span className="text-2xl font-bold text-primary">{data.grandTotal.toLocaleString('cs-CZ')} Kc</span>
+                <span className="text-2xl font-bold text-primary">{data.grandTotal.toLocaleString('cs-CZ')} Kč</span>
               </div>
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 {data.clientTotal > 0 && (
-                  <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> Klientska: {data.clientTotal.toLocaleString('cs-CZ')} Kc</span>
+                  <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> Klientská: {data.clientTotal.toLocaleString('cs-CZ')} Kč</span>
                 )}
                 {data.internalTotal > 0 && (
-                  <span className="flex items-center gap-1"><Building2 className="h-3 w-3" /> Rezie: {data.internalTotal.toLocaleString('cs-CZ')} Kc</span>
+                  <span className="flex items-center gap-1"><Building2 className="h-3 w-3" /> Režie: {data.internalTotal.toLocaleString('cs-CZ')} Kč</span>
                 )}
               </div>
             </CardContent>
@@ -207,7 +258,7 @@ export function ColleagueInvoiceSheet({
           {(hasClient || hasInternal) ? (
             <div className="space-y-5">
               {hasClient && (
-                <Section icon={Briefcase} title="Klientska prace">
+                <Section icon={Briefcase} title="Klientská práce">
                   {data.clientItems.map((item, index) => (
                     <LineItem key={`client-${index}`} name={item.name} amount={item.amount} note={item.note} />
                   ))}
@@ -222,7 +273,7 @@ export function ColleagueInvoiceSheet({
                       key={`extra-${index}`}
                       name={item.name}
                       amount={item.amount}
-                      note={item.hours && item.rate ? `${item.hours}h x ${item.rate} Kc` : undefined}
+                      note={item.hours && item.rate ? `${item.hours}h x ${item.rate} Kč` : undefined}
                     />
                   ))}
                   {clientWorkItems.map((item, index) => (
@@ -232,7 +283,7 @@ export function ColleagueInvoiceSheet({
               )}
 
               {hasInternal && (
-                <Section icon={Building2} title="Rezijni polozky">
+                <Section icon={Building2} title="Režijní položky">
                   {marketingItems.length > 0 && (
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2">
@@ -246,7 +297,7 @@ export function ColleagueInvoiceSheet({
                   {overheadItems.length > 0 && (
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2">
-                        <Building2 className="h-3 w-3" /> Interni prace
+                        <Building2 className="h-3 w-3" /> Interní práce
                       </div>
                       {overheadItems.map((item, index) => (
                         <LineItem key={`overhead-${index}`} name={item.name} amount={item.amount} />
@@ -258,7 +309,7 @@ export function ColleagueInvoiceSheet({
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Zadne polozky za {MONTHS[selectedMonth - 1]} {selectedYear}
+              Žádné položky za {MONTHS[selectedMonth - 1]} {selectedYear}
             </p>
           )}
 
@@ -268,7 +319,7 @@ export function ColleagueInvoiceSheet({
               <div className="space-y-3">
                 <h4 className="text-sm font-medium flex items-center gap-2">
                   <ListTodo className="h-4 w-4 text-muted-foreground" />
-                  Detail manualnich polozek
+                  Detail manuálních položek
                 </h4>
                 <div className="space-y-2">
                   {activities.map((activity) => (
@@ -285,7 +336,7 @@ export function ColleagueInvoiceSheet({
                               {activity.billing_type === 'hourly' ? (
                                 <span className="flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {activity.hours}h x {activity.hourly_rate} Kc
+                                  {activity.hours}h x {activity.hourly_rate} Kč
                                 </span>
                               ) : (
                                 <span className="flex items-center gap-1">
@@ -297,7 +348,7 @@ export function ColleagueInvoiceSheet({
                           </div>
                         </div>
                         <span className="font-semibold text-sm whitespace-nowrap">
-                          {activity.amount.toLocaleString('cs-CZ')} Kc
+                          {activity.amount.toLocaleString('cs-CZ')} Kč
                         </span>
                       </div>
                     </div>

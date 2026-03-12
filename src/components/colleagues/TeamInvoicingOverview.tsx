@@ -18,19 +18,22 @@ import {
   ChevronRight,
   Sparkles,
   Wrench,
+  Lock,
 } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { useTeamEarnings } from '@/hooks/useTeamEarnings';
+import { usePayoutMonthSnapshots } from '@/hooks/usePayoutMonthSnapshots';
 import { calculateProratedReward } from '@/utils/proratedRewardUtils';
 import { ColleagueInvoiceSheet } from './ColleagueInvoiceSheet';
 import type { Colleague, Client, Engagement, EngagementAssignment, ExtraWork } from '@/types/crm';
 import type { ActivityReward } from '@/hooks/useActivityRewards';
+import { toast } from 'sonner';
 
 const MONTHS = [
-  'Leden', 'Unor', 'Brezen', 'Duben', 'Kveten', 'Cerven',
-  'Cervenec', 'Srpen', 'Zari', 'Rijen', 'Listopad', 'Prosinec',
+  'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
+  'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec',
 ];
 
 interface CreditClientSummary {
@@ -176,9 +179,10 @@ export function buildColleagueInvoiceData(
 }
 
 export function TeamInvoicingOverview() {
-  const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const nowYear = new Date().getFullYear();
+  const nowMonth = new Date().getMonth() + 1;
+  const [selectedYear, setSelectedYear] = useState(nowYear);
+  const [selectedMonth, setSelectedMonth] = useState(nowMonth);
   const [selectedColleague, setSelectedColleague] = useState<Colleague | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -186,14 +190,15 @@ export function TeamInvoicingOverview() {
   const { getColleagueCreditsByClient } = useCreativeBoostData();
   const { getApprovedCommissionsForColleague } = useUpsellApprovals();
   const { getColleagueActivities } = useTeamEarnings();
+  const { isMonthClosed, snapshots, closeMonth, isClosingMonth } = usePayoutMonthSnapshots();
 
   const availableYears = useMemo(() => {
     const years: number[] = [];
     for (let i = 0; i < 3; i += 1) {
-      years.push(now.getFullYear() - i);
+      years.push(nowYear - i);
     }
     return years;
-  }, [now]);
+  }, [nowYear]);
 
   const colleagueInvoices = useMemo(() => {
     const activeColleagues = colleagues.filter((colleague) => colleague.status === 'active');
@@ -228,14 +233,85 @@ export function TeamInvoicingOverview() {
     getApprovedCommissionsForColleague,
   ]);
 
+  const monthIsClosed = useMemo(
+    () => isMonthClosed(selectedYear, selectedMonth),
+    [isMonthClosed, selectedYear, selectedMonth]
+  );
+
+  const closedMonthInvoices = useMemo(() => {
+    if (!monthIsClosed) {
+      return [];
+    }
+
+    const monthSnapshots = snapshots.filter(
+      (snapshot) => snapshot.year === selectedYear && snapshot.month === selectedMonth
+    );
+
+    return monthSnapshots
+      .map((snapshot) => {
+        const colleague = colleagues.find((item) => item.id === snapshot.colleagueId);
+        if (!colleague) {
+          console.error(`Missing colleague ${snapshot.colleagueId} for closed snapshot ${snapshot.id}.`);
+          return null;
+        }
+        return {
+          colleague,
+          clientItems: snapshot.lineItems.clientItems || [],
+          creativeBoostItems: snapshot.lineItems.creativeBoostItems || [],
+          commissionItems: snapshot.lineItems.commissionItems || [],
+          extraWorkItems: snapshot.lineItems.extraWorkItems || [],
+          manualItems: snapshot.lineItems.manualItems || [],
+          clientTotal: snapshot.clientTotal,
+          marketingTotal: snapshot.marketingTotal,
+          internalTotal: snapshot.internalTotal,
+          grandTotal: snapshot.grandTotal,
+          itemCount: snapshot.itemCount,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .sort((a, b) => b.grandTotal - a.grandTotal);
+  }, [monthIsClosed, snapshots, selectedYear, selectedMonth, colleagues]);
+
+  const displayedInvoices = monthIsClosed ? closedMonthInvoices : colleagueInvoices;
+
   const teamTotal = useMemo(
-    () => colleagueInvoices.reduce((sum, item) => sum + item.grandTotal, 0),
-    [colleagueInvoices],
+    () => displayedInvoices.reduce((sum, item) => sum + item.grandTotal, 0),
+    [displayedInvoices],
   );
   const maxAmount = useMemo(
-    () => Math.max(...colleagueInvoices.map((item) => item.grandTotal), 1),
-    [colleagueInvoices],
+    () => Math.max(...displayedInvoices.map((item) => item.grandTotal), 1),
+    [displayedInvoices],
   );
+
+  const canCloseSelectedMonth = useMemo(() => {
+    const currentMonthStart = new Date(nowYear, nowMonth - 1, 1);
+    const selectedMonthStart = new Date(selectedYear, selectedMonth - 1, 1);
+    return selectedMonthStart < currentMonthStart && !monthIsClosed;
+  }, [nowYear, nowMonth, selectedYear, selectedMonth, monthIsClosed]);
+
+  const handleCloseMonth = async () => {
+    if (!canCloseSelectedMonth) {
+      throw new Error('Selected month cannot be closed.');
+    }
+    const snapshotsPayload = colleagueInvoices.map((item) => ({
+      colleague_id: item.colleague.id,
+      client_total: item.clientTotal,
+      marketing_total: item.marketingTotal,
+      internal_total: item.internalTotal,
+      grand_total: item.grandTotal,
+      item_count: item.itemCount,
+      line_items: {
+        clientItems: item.clientItems,
+        creativeBoostItems: item.creativeBoostItems,
+        commissionItems: item.commissionItems,
+        extraWorkItems: item.extraWorkItems,
+        manualItems: item.manualItems,
+      },
+    }));
+
+    await closeMonth(selectedYear, selectedMonth, snapshotsPayload);
+    toast.success(`Měsíc ${MONTHS[selectedMonth - 1]} ${selectedYear} byl uzavřen.`);
+  };
 
   const handleViewDetail = function handleViewDetail(colleague: Colleague) {
     setSelectedColleague(colleague);
@@ -250,7 +326,7 @@ export function TeamInvoicingOverview() {
           <SelectContent>
             {MONTHS.map((month, index) => {
               const monthNumber = index + 1;
-              const isFuture = selectedYear === now.getFullYear() && monthNumber > now.getMonth() + 1;
+              const isFuture = selectedYear === nowYear && monthNumber > nowMonth;
               if (isFuture) return null;
               return <SelectItem key={monthNumber} value={monthNumber.toString()}>{month}</SelectItem>;
             })}
@@ -261,8 +337,8 @@ export function TeamInvoicingOverview() {
           onValueChange={(value) => {
             const newYear = Number(value);
             setSelectedYear(newYear);
-            if (newYear === now.getFullYear() && selectedMonth > now.getMonth() + 1) {
-              setSelectedMonth(now.getMonth() + 1);
+            if (newYear === nowYear && selectedMonth > nowMonth) {
+              setSelectedMonth(nowMonth);
             }
           }}
         >
@@ -273,6 +349,24 @@ export function TeamInvoicingOverview() {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant={monthIsClosed ? 'secondary' : 'outline'}
+          size="sm"
+          disabled={!canCloseSelectedMonth || isClosingMonth}
+          onClick={async () => {
+            try {
+              await handleCloseMonth();
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Nepodařilo se uzavřít měsíc.';
+              toast.error(message);
+            }
+          }}
+          className="gap-2"
+          title={monthIsClosed ? 'Měsíc je už uzavřen.' : 'Uzavřít měsíc a zafixovat odměny.'}
+        >
+          <Lock className="h-4 w-4" />
+          {monthIsClosed ? 'Uzavřeno' : 'Uzavřít měsíc'}
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -284,7 +378,7 @@ export function TeamInvoicingOverview() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Celkem k fakturaci</p>
-                <p className="text-2xl font-bold text-primary">{(teamTotal / 1000).toFixed(0)}k Kc</p>
+                <p className="text-2xl font-bold text-primary">{(teamTotal / 1000).toFixed(0)}k Kč</p>
               </div>
             </div>
           </CardContent>
@@ -297,8 +391,8 @@ export function TeamInvoicingOverview() {
                 <Users className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Kolegu s vykazy</p>
-                <p className="text-2xl font-bold">{colleagueInvoices.length}</p>
+                <p className="text-xs text-muted-foreground">Kolegů s výkazy</p>
+                <p className="text-2xl font-bold">{displayedInvoices.length}</p>
               </div>
             </div>
           </CardContent>
@@ -309,7 +403,7 @@ export function TeamInvoicingOverview() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />
-            Vykazy a odmeny - {MONTHS[selectedMonth - 1]} {selectedYear}
+            Výkazy a odměny - {MONTHS[selectedMonth - 1]} {selectedYear}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -324,7 +418,7 @@ export function TeamInvoicingOverview() {
           </div>
 
           <div className="divide-y">
-            {colleagueInvoices.map((data) => (
+            {displayedInvoices.map((data) => (
               <div
                 key={data.colleague.id}
                 className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
@@ -345,17 +439,17 @@ export function TeamInvoicingOverview() {
                     <Badge variant="secondary" className="text-xs">{data.itemCount}</Badge>
                   </div>
                   <div className="hidden md:block text-right text-sm">
-                    {data.clientTotal > 0 ? `${data.clientTotal.toLocaleString('cs-CZ')} Kc` : '-'}
+                    {data.clientTotal > 0 ? `${data.clientTotal.toLocaleString('cs-CZ')} Kč` : '-'}
                   </div>
                   <div className="hidden md:block text-right text-sm text-muted-foreground">
-                    {data.marketingTotal > 0 ? `${data.marketingTotal.toLocaleString('cs-CZ')} Kc` : '-'}
+                    {data.marketingTotal > 0 ? `${data.marketingTotal.toLocaleString('cs-CZ')} Kč` : '-'}
                   </div>
                   <div className="hidden md:block text-right text-sm text-muted-foreground">
-                    {data.internalTotal > 0 ? `${data.internalTotal.toLocaleString('cs-CZ')} Kc` : '-'}
+                    {data.internalTotal > 0 ? `${data.internalTotal.toLocaleString('cs-CZ')} Kč` : '-'}
                   </div>
                   <div className="hidden md:block text-right">
                     <span className="text-sm font-bold text-primary">
-                      {data.grandTotal.toLocaleString('cs-CZ')} Kc
+                      {data.grandTotal.toLocaleString('cs-CZ')} Kč
                     </span>
                   </div>
                   <div className="hidden md:flex justify-end">
@@ -367,7 +461,7 @@ export function TeamInvoicingOverview() {
 
                   <div className="flex items-center justify-between mt-2 md:hidden">
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-xs">{data.itemCount} polozek</Badge>
+                      <Badge variant="secondary" className="text-xs">{data.itemCount} položek</Badge>
                       {data.creativeBoostItems.length > 0 && (
                         <Badge variant="outline" className="text-xs gap-1">
                           <Sparkles className="h-3 w-3" />
@@ -381,7 +475,7 @@ export function TeamInvoicingOverview() {
                         </Badge>
                       )}
                     </div>
-                    <span className="font-bold text-primary">{data.grandTotal.toLocaleString('cs-CZ')} Kc</span>
+                    <span className="font-bold text-primary">{data.grandTotal.toLocaleString('cs-CZ')} Kč</span>
                   </div>
                 </div>
 
@@ -391,9 +485,9 @@ export function TeamInvoicingOverview() {
               </div>
             ))}
 
-            {colleagueInvoices.length === 0 && (
+            {displayedInvoices.length === 0 && (
               <div className="p-8 text-center text-muted-foreground">
-                Zadne vykazy za {MONTHS[selectedMonth - 1]} {selectedYear}
+                Žádné výkazy za {MONTHS[selectedMonth - 1]} {selectedYear}
               </div>
             )}
           </div>

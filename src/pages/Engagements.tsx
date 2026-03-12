@@ -51,7 +51,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { EngagementForm } from '@/components/forms/EngagementForm';
-import { AssignmentForm } from '@/components/forms/AssignmentForm';
+import { AssignmentForm, type AssignmentFormSubmitData } from '@/components/forms/AssignmentForm';
 import { AddEngagementServiceDialog } from '@/components/forms/AddEngagementServiceDialog';
 import { CreativeBoostCreditOverview } from '@/components/engagements/CreativeBoostCreditOverview';
 import { CreateInvoiceFromEngagementDialog } from '@/components/engagements/CreateInvoiceFromEngagementDialog';
@@ -396,9 +396,38 @@ function EngagementsContent() {
     setIsAssignmentFormOpen(true);
   };
 
-  const handleAssignmentSubmit = async (data: Omit<EngagementAssignment, 'id' | 'created_at' | 'updated_at'>) => {
+  const invalidateAssignmentAndServiceQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] }),
+      queryClient.invalidateQueries({ queryKey: ['engagement_services'] }),
+      queryClient.invalidateQueries({ queryKey: ['engagement_history'] }),
+    ]);
+  };
+
+  const handleAssignmentSubmit = async (data: AssignmentFormSubmitData) => {
     try {
-      await addAssignment(data);
+      const { _creativeBoostRewards, ...assignmentData } = data;
+      const { error } = await supabase.rpc('create_assignment_with_cb_rewards' as never, {
+        p_engagement_id: assignmentData.engagement_id,
+        p_engagement_service_id: assignmentData.engagement_service_id,
+        p_colleague_id: assignmentData.colleague_id,
+        p_role_on_engagement: assignmentData.role_on_engagement,
+        p_cost_model: assignmentData.cost_model,
+        p_hourly_cost: assignmentData.hourly_cost,
+        p_monthly_cost: assignmentData.monthly_cost,
+        p_percentage_of_revenue: assignmentData.percentage_of_revenue,
+        p_reward_per_credit: assignmentData.reward_per_credit,
+        p_reward_per_credit_banner: assignmentData.reward_per_credit_banner,
+        p_reward_per_credit_video: assignmentData.reward_per_credit_video,
+        p_start_date: assignmentData.start_date,
+        p_end_date: assignmentData.end_date,
+        p_notes: assignmentData.notes,
+        p_cb_service_id: _creativeBoostRewards?.engagementServiceId ?? null,
+        p_cb_reward_banner: _creativeBoostRewards?.bannerRewardPerCredit ?? null,
+        p_cb_reward_video: _creativeBoostRewards?.videoRewardPerCredit ?? null,
+      } as never);
+      if (error) throw error;
+      await invalidateAssignmentAndServiceQueries();
       toast.success('Kolega byl přiřazen');
       setIsAssignmentFormOpen(false);
       setAssignmentEngagementId(null);
@@ -1086,28 +1115,16 @@ function EngagementsContent() {
                                     >
                                       <span>
                                         {(() => {
-                                          // Check if this is a Creative Boost assignment with per-credit reward
-                                          const bannerReward = assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-                                          const videoReward = assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-                                          const hasPerCreditReward =
-                                            assignment.reward_per_credit !== null ||
-                                            !!(
-                                              assignment.engagement_service_id &&
-                                              engagementServices.find(
-                                                (engagementService) =>
-                                                  engagementService.id === assignment.engagement_service_id &&
-                                                  isCreativeBoostEngagementService(engagementService, CREATIVE_BOOST_SERVICE_ID)
-                                              )
-                                            );
-
-                                          if (hasPerCreditReward && assignment.engagement_service_id) {
-                                            const service = engagementServices.find(es => es.id === assignment.engagement_service_id);
-                                            if (service && isCreativeBoostEngagementService(service, CREATIVE_BOOST_SERVICE_ID)) {
-                                              if (bannerReward === videoReward) {
-                                                return `${bannerReward} Kč/kredit`;
-                                              }
-                                              return `B ${bannerReward} / V ${videoReward} Kč/kredit`;
+                                          const service = assignment.engagement_service_id
+                                            ? engagementServices.find(es => es.id === assignment.engagement_service_id)
+                                            : null;
+                                          if (service && isCreativeBoostEngagementService(service, CREATIVE_BOOST_SERVICE_ID)) {
+                                            const bannerReward = service.creative_boost_reward_per_credit_banner ?? DEFAULT_REWARD_PER_CREDIT;
+                                            const videoReward = service.creative_boost_reward_per_credit_video ?? DEFAULT_REWARD_PER_CREDIT;
+                                            if (bannerReward === videoReward) {
+                                              return `${bannerReward} Kč/kredit`;
                                             }
+                                            return `B ${bannerReward} / V ${videoReward} Kč/kredit`;
                                           }
 
                                           if (assignment.cost_model === 'fixed_monthly' && assignment.monthly_cost) {
@@ -1654,6 +1671,8 @@ function EngagementsContent() {
                 creative_boost_min_credits: data.creative_boost_min_credits,
                 creative_boost_max_credits: data.creative_boost_max_credits,
                 creative_boost_price_per_credit: data.creative_boost_price_per_credit,
+                creative_boost_reward_per_credit_banner: data.creative_boost_reward_per_credit_banner,
+                creative_boost_reward_per_credit_video: data.creative_boost_reward_per_credit_video,
                 upsold_by_id: data.upsold_by_id,
                 upsell_commission_percent: data.upsell_commission_percent,
               });
@@ -1899,6 +1918,18 @@ function EngagementsContent() {
                 isCreativeBoostEngagementService(engagementService, CREATIVE_BOOST_SERVICE_ID)
             );
           const isCreativeBoostService = hasCreativeBoostOnAssignmentService || hasCreativeBoostServiceOnEngagement;
+          const creativeBoostService =
+            (editingAssignment.engagement_service_id
+              ? engagementServices.find(
+                  (engagementService) =>
+                    engagementService.id === editingAssignment.engagement_service_id &&
+                    isCreativeBoostEngagementService(engagementService, CREATIVE_BOOST_SERVICE_ID)
+                )
+              : null) ??
+            getEngagementServicesByEngagementId(editingAssignment.engagement_id).find(
+              (engagementService) => isCreativeBoostEngagementService(engagementService, CREATIVE_BOOST_SERVICE_ID)
+            ) ??
+            null;
           return (
         <EditAssignmentDialog
           open={isEditAssignmentDialogOpen}
@@ -1909,10 +1940,35 @@ function EngagementsContent() {
           assignment={editingAssignment}
           colleagueName={getColleagueById(editingAssignment.colleague_id)?.full_name || ''}
           isCreativeBoostService={isCreativeBoostService}
-          onSave={(data) => {
-            updateAssignment(editingAssignment.id, data);
-            toast.success('Odměna kolegy byla upravena');
-            setEditingAssignment(null);
+          creativeBoostServiceId={creativeBoostService?.id ?? null}
+          creativeBoostRewardBanner={creativeBoostService?.creative_boost_reward_per_credit_banner ?? null}
+          creativeBoostRewardVideo={creativeBoostService?.creative_boost_reward_per_credit_video ?? null}
+          onSave={async (data) => {
+            const { _creativeBoostServiceRewards, ...assignmentData } = data;
+            try {
+              const { error } = await supabase.rpc('update_assignment_with_cb_rewards' as never, {
+                p_assignment_id: editingAssignment.id,
+                p_role_on_engagement: assignmentData.role_on_engagement,
+                p_cost_model: assignmentData.cost_model,
+                p_hourly_cost: assignmentData.hourly_cost,
+                p_monthly_cost: assignmentData.monthly_cost,
+                p_percentage_of_revenue: assignmentData.percentage_of_revenue,
+                p_reward_per_credit: assignmentData.reward_per_credit,
+                p_reward_per_credit_banner: assignmentData.reward_per_credit_banner,
+                p_reward_per_credit_video: assignmentData.reward_per_credit_video,
+                p_notes: editingAssignment.notes,
+                p_cb_service_id: _creativeBoostServiceRewards?.engagementServiceId ?? null,
+                p_cb_reward_banner: _creativeBoostServiceRewards?.bannerRewardPerCredit ?? null,
+                p_cb_reward_video: _creativeBoostServiceRewards?.videoRewardPerCredit ?? null,
+              } as never);
+              if (error) throw error;
+              await invalidateAssignmentAndServiceQueries();
+              toast.success('Odměna kolegy byla upravena');
+              setEditingAssignment(null);
+            } catch (error) {
+              console.error('Failed to save assignment rewards:', error);
+              toast.error(getErrorMessage(error, 'Nepodařilo se uložit odměnu'));
+            }
           }}
         />
           );

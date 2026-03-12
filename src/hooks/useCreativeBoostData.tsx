@@ -596,6 +596,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
   const getColleagueCreditsByClient = useCallback((colleagueId: string, year: number, month: number): ColleagueClientRewardSummary[] => {
     // Group outputs by client
     const clientOutputsMap = new Map<string, { outputs: typeof outputs, clientMonth: CreativeBoostClientMonth | undefined }>();
+    const dataIssues: string[] = [];
 
     outputs
       .filter(o => o.colleagueId === colleagueId && o.year === year && o.month === month)
@@ -622,14 +623,16 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
         const outputType = outputTypes.find((item) => item.id === output.outputTypeId);
         if (!outputType) {
-          throw new Error(`Creative Boost output type ${output.outputTypeId} was not found.`);
+          dataIssues.push(`Creative Boost output type ${output.outputTypeId} was not found.`);
+          return;
         }
         if (BANNER_OUTPUT_CATEGORIES.includes(outputType.category)) {
           bannerCredits += credits.totalCredits;
         } else if (VIDEO_OUTPUT_CATEGORIES.includes(outputType.category)) {
           videoCredits += credits.totalCredits;
         } else {
-          throw new Error(`Unsupported Creative Boost output category "${outputType.category}".`);
+          dataIssues.push(`Unsupported Creative Boost output category "${outputType.category}".`);
+          return;
         }
         totalCredits += credits.totalCredits;
       });
@@ -642,33 +645,42 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
 
       if (clientMonth?.engagementServiceId) {
         const engService = engagementServices.find(es => es.id === clientMonth.engagementServiceId);
-        if (engService) {
-          engagementId = engService.engagement_id;
-          const engagement = engagements.find(e => e.id === engService.engagement_id);
-          engagementName = engagement?.name ?? '';
-
-          const assignment = assignments.find(
-            a => a.colleague_id === colleagueId && a.engagement_service_id === clientMonth.engagementServiceId
-          );
-          if (assignment) {
-            rewardPerCredit = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-            bannerRewardPerCredit = assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-            videoRewardPerCredit = assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-          }
+        if (!engService) {
+          dataIssues.push(`Creative Boost engagement service ${clientMonth.engagementServiceId} was not found.`);
+          return;
         }
+        engagementId = engService.engagement_id;
+        const engagement = engagements.find(e => e.id === engService.engagement_id);
+        engagementName = engagement?.name ?? '';
+
+        if (engService.creative_boost_reward_per_credit_banner === null || engService.creative_boost_reward_per_credit_video === null) {
+          dataIssues.push(`Creative Boost rewards are not configured on service ${engService.id}.`);
+          return;
+        }
+        bannerRewardPerCredit = engService.creative_boost_reward_per_credit_banner;
+        videoRewardPerCredit = engService.creative_boost_reward_per_credit_video;
+        rewardPerCredit = bannerRewardPerCredit;
       } else if (clientMonth?.engagementId) {
         engagementId = clientMonth.engagementId;
         const engagement = engagements.find(e => e.id === clientMonth.engagementId);
         engagementName = engagement?.name ?? '';
 
-        const assignment = assignments.find(
-          a => a.colleague_id === colleagueId && a.engagement_id === clientMonth.engagementId
-        );
-        if (assignment) {
-          rewardPerCredit = assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-          bannerRewardPerCredit = assignment.reward_per_credit_banner ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
-          videoRewardPerCredit = assignment.reward_per_credit_video ?? assignment.reward_per_credit ?? DEFAULT_REWARD_PER_CREDIT;
+        const creativeBoostService = engagementServices.find((service) => (
+          service.engagement_id === clientMonth.engagementId &&
+          service.is_active &&
+          service.creative_boost_price_per_credit !== null
+        ));
+        if (!creativeBoostService) {
+          dataIssues.push(`Creative Boost service for engagement ${clientMonth.engagementId} was not found.`);
+          return;
         }
+        if (creativeBoostService.creative_boost_reward_per_credit_banner === null || creativeBoostService.creative_boost_reward_per_credit_video === null) {
+          dataIssues.push(`Creative Boost rewards are not configured on service ${creativeBoostService.id}.`);
+          return;
+        }
+        bannerRewardPerCredit = creativeBoostService.creative_boost_reward_per_credit_banner;
+        videoRewardPerCredit = creativeBoostService.creative_boost_reward_per_credit_video;
+        rewardPerCredit = bannerRewardPerCredit;
       }
       const totalReward = bannerCredits * bannerRewardPerCredit + videoCredits * videoRewardPerCredit;
 
@@ -688,8 +700,12 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       });
     });
 
+    if (dataIssues.length > 0) {
+      console.error('Creative Boost data issues detected while calculating colleague rewards:', dataIssues);
+    }
+
     return results.sort((a, b) => b.totalReward - a.totalReward);
-  }, [outputs, clientMonths, engagementServices, engagements, assignments, getClientById, calculateOutputCredits, outputTypes]);
+  }, [outputs, clientMonths, engagementServices, engagements, getClientById, calculateOutputCredits, outputTypes]);
 
   const getClientMonthByEngagementServiceId = useCallback(
     (engagementServiceId: string, year: number, month: number) => {
