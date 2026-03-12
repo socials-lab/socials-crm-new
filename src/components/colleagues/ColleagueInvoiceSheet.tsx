@@ -180,20 +180,28 @@ export function ColleagueInvoiceSheet({
 
   if (!colleague || !data) return null;
 
-  const hasClient =
-    data.clientItems.length > 0 ||
-    data.creativeBoostItems.length > 0 ||
-    data.commissionItems.length > 0 ||
-    data.extraWorkItems.length > 0 ||
-    data.manualItems.some((item) => item.category === 'client_work');
-
-  const hasInternal = data.manualItems.some(
-    (item) => item.category === 'marketing' || item.category === 'overhead',
+  const visibleClientItems = data.clientItems.filter((item) => item.amount !== 0);
+  const visibleCreativeBoostItems = data.creativeBoostItems.filter((item) => item.amount !== 0);
+  const visibleCommissionItems = data.commissionItems.filter((item) => item.amount !== 0);
+  const visibleExtraWorkItems = data.extraWorkItems.filter((item) => item.amount !== 0);
+  const marketingItems = data.manualItems.filter(
+    (item) => item.category === 'marketing' && item.amount !== 0,
+  );
+  const overheadItems = data.manualItems.filter(
+    (item) => item.category === 'overhead' && item.amount !== 0,
+  );
+  const clientWorkItems = data.manualItems.filter(
+    (item) => item.category === 'client_work' && item.amount !== 0,
   );
 
-  const marketingItems = data.manualItems.filter((item) => item.category === 'marketing');
-  const overheadItems = data.manualItems.filter((item) => item.category === 'overhead');
-  const clientWorkItems = data.manualItems.filter((item) => item.category === 'client_work');
+  const hasClient =
+    visibleClientItems.length > 0 ||
+    visibleCreativeBoostItems.length > 0 ||
+    visibleCommissionItems.length > 0 ||
+    visibleExtraWorkItems.length > 0 ||
+    clientWorkItems.length > 0;
+
+  const hasInternal = marketingItems.length > 0 || overheadItems.length > 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -259,16 +267,16 @@ export function ColleagueInvoiceSheet({
             <div className="space-y-5">
               {hasClient && (
                 <Section icon={Briefcase} title="Klientská práce">
-                  {data.clientItems.map((item, index) => (
+                  {visibleClientItems.map((item, index) => (
                     <LineItem key={`client-${index}`} name={item.name} amount={item.amount} note={item.note} />
                   ))}
-                  {data.creativeBoostItems.map((item, index) => (
+                  {visibleCreativeBoostItems.map((item, index) => (
                     <LineItem key={`cb-${index}`} name={`${item.name} - Creative Boost (${item.credits} kr.)`} amount={item.amount} />
                   ))}
-                  {data.commissionItems.map((item, index) => (
+                  {visibleCommissionItems.map((item, index) => (
                     <LineItem key={`commission-${index}`} name={item.name} amount={item.amount} />
                   ))}
-                  {data.extraWorkItems.map((item, index) => (
+                  {visibleExtraWorkItems.map((item, index) => (
                     <LineItem
                       key={`extra-${index}`}
                       name={item.name}
