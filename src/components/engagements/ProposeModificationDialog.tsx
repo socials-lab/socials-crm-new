@@ -523,24 +523,16 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                         <h5 className="font-medium text-sm text-blue-900 dark:text-blue-300">Popis služby pro klienta (z Nabídky)</h5>
                       </div>
 
-                      {serviceDescription ? (
+                      {serviceDescription && (
                         <p className="text-sm text-blue-900 dark:text-blue-200">{serviceDescription}</p>
-                      ) : (
-                        <p className="text-sm text-destructive">
-                          Chybí popis služby v katalogu. Doplňte ho v nastavení služby.
-                        </p>
                       )}
 
-                      {serviceDeliverables ? (
+                      {serviceDeliverables && (
                         <ul className="list-disc pl-5 space-y-1 text-sm text-blue-900 dark:text-blue-200">
                           {serviceDeliverables.split('\n').filter(Boolean).map((item, index) => (
                             <li key={`${item}-${index}`}>{item}</li>
                           ))}
                         </ul>
-                      ) : (
-                        <p className="text-sm text-destructive">
-                          Chybí "Co klient dostane" v katalogu služby. Doplňte výchozí deliverables.
-                        </p>
                       )}
 
                       <p className="text-xs text-muted-foreground">
