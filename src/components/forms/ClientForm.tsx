@@ -21,9 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2, Search } from 'lucide-react';
 import type { Client, ClientStatus, LeadSource } from '@/types/crm';
 import { useAuth } from '@/hooks/useAuth';
+import { useAresLookup } from '@/hooks/useAresLookup';
+import type { CompanySearchResult } from '@/hooks/useAresSearch';
+import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
 import { toast } from 'sonner';
 import { getAvailableClientStatuses, CLIENT_STATUS_LABELS } from '@/lib/statusTransitions';
 import { optionalEmail, czechIco, czechDic, isValidUrlInput, normalizeUrlProtocol } from '@/lib/validation';
@@ -122,6 +125,7 @@ interface ClientFormProps {
 
 export function ClientForm({ client, hasActiveEngagements = false, hasEngagements = false, isSuperAdmin = false, onSubmit, onCancel }: ClientFormProps) {
   const { user } = useAuth();
+  const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get available status options based on current status and user role
@@ -161,6 +165,70 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
     resolver: zodResolver(clientSchema),
     defaultValues: getDefaultValues(client),
   });
+
+  function setCzechCompanyDefaults() {
+    form.setValue('country', 'Czech Republic', { shouldDirty: true, shouldValidate: true });
+    form.setValue('billing_country', 'Czech Republic', { shouldDirty: true });
+  }
+
+  function applyAddressFromLookup(address: string) {
+    if (!address) return;
+    const addressParts = address.split(',');
+
+    if (addressParts.length >= 2) {
+      form.setValue('billing_street', addressParts[0].trim(), { shouldDirty: true });
+      const cityZip = addressParts[addressParts.length - 1].trim().split(' ');
+      if (cityZip.length >= 2) {
+        form.setValue('billing_zip', cityZip[0], { shouldDirty: true });
+        form.setValue('billing_city', cityZip.slice(1).join(' '), { shouldDirty: true });
+      } else {
+        form.setValue('billing_city', cityZip[0], { shouldDirty: true });
+      }
+      return;
+    }
+
+    form.setValue('billing_street', address, { shouldDirty: true });
+  }
+
+  function handleCompanySelect(company: CompanySearchResult) {
+    form.setValue('name', company.name, { shouldDirty: true, shouldValidate: true });
+    form.setValue('ico', company.ico, { shouldDirty: true, shouldValidate: true });
+    form.setValue('dic', company.dic || '', { shouldDirty: true, shouldValidate: true });
+    form.setValue('billing_street', company.billing_street || '', { shouldDirty: true });
+    form.setValue('billing_city', company.billing_city || '', { shouldDirty: true });
+    form.setValue('billing_zip', company.billing_zip || '', { shouldDirty: true });
+    setCzechCompanyDefaults();
+
+    if (!form.getValues('brand_name').trim()) {
+      form.setValue('brand_name', company.name, { shouldDirty: true, shouldValidate: true });
+    }
+
+    toast.success('Údaje načteny z ARES');
+  }
+
+  async function handleAresLookup() {
+    const ico = form.getValues('ico').trim();
+    if (!/^\d{7,8}$/.test(ico)) {
+      toast.error('Zadejte platné IČO (7 nebo 8 číslic)');
+      return;
+    }
+
+    const normalizedIco = ico.padStart(8, '0');
+    const result = await lookupCompany(normalizedIco);
+    if (!result) return;
+
+    form.setValue('name', result.name || '', { shouldDirty: true, shouldValidate: true });
+    form.setValue('ico', result.ico || normalizedIco, { shouldDirty: true, shouldValidate: true });
+    form.setValue('dic', result.dic || '', { shouldDirty: true, shouldValidate: true });
+    applyAddressFromLookup(result.address || '');
+    setCzechCompanyDefaults();
+
+    if (!form.getValues('brand_name').trim() && result.name) {
+      form.setValue('brand_name', result.name, { shouldDirty: true, shouldValidate: true });
+    }
+
+    toast.success('Údaje načteny z ARES');
+  }
 
   // Reset form when client prop changes (switching between edit targets)
   useEffect(() => {
@@ -204,7 +272,12 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
                 <FormItem>
                   <FormLabel>Název firmy *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Firma s.r.o." {...field} />
+                    <CompanySearchInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      onSelect={handleCompanySelect}
+                      placeholder="Zadejte název firmy (min. 3 znaky)..."
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -232,9 +305,26 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>IČO *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="12345678" {...field} />
-                  </FormControl>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input placeholder="12345678" {...field} />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAresLookup}
+                      disabled={isLoadingAres}
+                      className="shrink-0"
+                    >
+                      {isLoadingAres ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Search className="h-4 w-4" />
+                      )}
+                      <span className="ml-1 hidden sm:inline">ARES</span>
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
