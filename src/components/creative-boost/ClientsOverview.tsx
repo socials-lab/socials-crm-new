@@ -159,12 +159,12 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     });
   };
 
-  const handleOutputChange = (
+  async function handleOutputChange(
     clientId: string, 
     outputTypeId: string, 
     field: keyof Pick<ClientMonthOutput, 'normalCount' | 'expressCount' | 'colleagueId'>,
     value: number | string
-  ) => {
+  ) {
     const currentOutputs = getClientOutputs(clientId, year, month);
     const existing = currentOutputs.find(o => o.outputTypeId === outputTypeId);
     
@@ -180,8 +180,13 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
       updateData[field] = value as string;
     }
     
-    updateClientOutput(clientId, outputTypeId, year, month, updateData);
-  };
+    try {
+      await updateClientOutput(clientId, outputTypeId, year, month, updateData);
+    } catch (error) {
+      console.error('Failed to update Creative Boost output:', error);
+      toast.error('Nepodařilo se uložit počet výstupů.');
+    }
+  }
 
   function startNumberDraft(key: string, value: number) {
     setDraftNumbers(prev => {
