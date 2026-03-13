@@ -67,8 +67,11 @@ async function handleAuthError(error: unknown) {
   if (window.location.pathname.startsWith('/auth')) return;
   authErrorRedirecting = true;
   try {
-    toast.error('Session expired. Please sign in again.');
-    await supabase.auth.signOut({ scope: 'local' });
+    const { data, error: refreshError } = await supabase.auth.refreshSession();
+    if (!refreshError && data.session) {
+      return;
+    }
+    toast.error('Session refresh failed. Please sign in again.');
   } finally {
     authErrorRedirecting = false;
   }
@@ -157,6 +160,7 @@ const App = () => (
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </BrowserRouter>
+                      <Toaster />
                       <Sonner />
                     </TooltipProvider>
                     </SOPDataProvider>

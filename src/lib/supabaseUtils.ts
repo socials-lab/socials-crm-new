@@ -49,7 +49,8 @@ export async function invokeWithTimeout<T = unknown>(
   timeoutMs: number = 30000
 ): Promise<{ data: T | null; error: Error | null }> {
   const invokeOnce = async (
-    invokeOptions?: { body?: unknown; headers?: Record<string, string> }
+    invokeOptions?: { body?: unknown; headers?: Record<string, string> },
+    accessToken?: string | null
   ): Promise<{ data: T | null; error: Error | null }> => {
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
@@ -58,12 +59,58 @@ export async function invokeWithTimeout<T = unknown>(
       }, timeoutMs);
     });
 
-    const result = await Promise.race([
-      supabase.functions.invoke(functionName, invokeOptions),
-      timeoutPromise,
-    ]);
+    const invokePromise = (async (): Promise<{ data: T | null; error: Error | null }> => {
+      if (!accessToken) {
+        return {
+          data: null,
+          error: new Error(`Neplatná relace uživatele (${functionName}). Přihlaste se prosím znovu.`),
+        };
+      }
 
-    return result as { data: T | null; error: Error | null };
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        ...(invokeOptions?.headers || {}),
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: invokeOptions?.body !== undefined ? JSON.stringify(invokeOptions.body) : undefined,
+      });
+
+      const bodyText = await response.text();
+      let parsedBody: unknown = null;
+      if (bodyText) {
+        try {
+          parsedBody = JSON.parse(bodyText);
+        } catch {
+          parsedBody = bodyText;
+        }
+      }
+
+      if (!response.ok) {
+        const payload = parsedBody as { error?: string; message?: string } | string | null;
+        const apiError =
+          typeof payload === 'string'
+            ? payload
+            : payload?.error || payload?.message || `Edge function error (${response.status})`;
+        return {
+          data: null,
+          error: new Error(`${apiError} [HTTP ${response.status}]`),
+        };
+      }
+
+      return {
+        data: (parsedBody as T) ?? null,
+        error: null,
+      };
+    })();
+
+    return await Promise.race([invokePromise, timeoutPromise]);
   };
 
 
@@ -80,67 +127,68 @@ export async function invokeWithTimeout<T = unknown>(
   const isInvalidJwtError = (err: Error | null | undefined) => {
     if (!err) return false;
     const msg = (err.message || '').toLowerCase();
-    return msg.includes('invalid jwt') || msg.includes('401') || msg.includes('non-2xx');
+    return (
+      msg.includes('invalid jwt') ||
+      msg.includes('neplatná autorizace') ||
+      msg.includes('neplatná relace') ||
+      msg.includes('401') ||
+      msg.includes('http 401') ||
+      msg.includes('non-2xx')
+    );
+  };
+
+  const getFreshAccessToken = async (forceRefresh = false): Promise<string | null> => {
+    if (forceRefresh) {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session?.access_token) {
+        return null;
+      }
+      return refreshData.session.access_token;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData.session;
+    if (!session?.access_token) {
+      return null;
+    }
+
+    const expiresAtMs = session.expires_at ? session.expires_at * 1000 : null;
+    const isNearExpiry = !!expiresAtMs && expiresAtMs - Date.now() < 2 * 60 * 1000;
+    if (isNearExpiry) {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (!refreshError && refreshData.session?.access_token) {
+        return refreshData.session.access_token;
+      }
+    }
+
+    return session.access_token;
   };
 
   try {
-    let result = await invokeOnce(options);
+    const initialAccessToken = await getFreshAccessToken(false);
+    let result = await invokeOnce(options, initialAccessToken);
 
     if (!isInvalidJwtError(result.error)) {
       return await normalizeResultError(result);
     }
 
-    // Try with explicit auth headers from current session.
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-
-    if (accessToken) {
-      const retriedWithSession = await invokeOnce({
-        ...options,
-        headers: {
-          ...(options?.headers || {}),
-          Authorization: `Bearer ${accessToken}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-      });
-
-      if (!isInvalidJwtError(retriedWithSession.error)) {
-        return await normalizeResultError(retriedWithSession);
-      }
-
-      result = retriedWithSession;
-    }
-
-    // One last attempt after session refresh.
-    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-    if (!refreshError && refreshData.session?.access_token) {
-      const refreshedToken = refreshData.session.access_token;
-      const retriedAfterRefresh = await invokeOnce({
-        ...options,
-        headers: {
-          ...(options?.headers || {}),
-          Authorization: `Bearer ${refreshedToken}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-      });
+    // Retry exactly once with a forced session refresh and explicit fresh token.
+    const refreshedAccessToken = await getFreshAccessToken(true);
+    if (refreshedAccessToken) {
+      const retriedAfterRefresh = await invokeOnce(options, refreshedAccessToken);
       if (!isInvalidJwtError(retriedAfterRefresh.error)) {
         return await normalizeResultError(retriedAfterRefresh);
       }
       result = retriedAfterRefresh;
     }
 
-    // Final fallback: invoke with anon token explicitly (works even when user session JWT is broken).
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    if (anonKey) {
-      const retriedWithAnon = await invokeOnce({
-        ...options,
-        headers: {
-          ...(options?.headers || {}),
-          Authorization: `Bearer ${anonKey}`,
-          apikey: anonKey,
-        },
-      });
-      return await normalizeResultError(retriedWithAnon);
+    // Do not fall back to anon token for edge functions.
+    // If user JWT is invalid even after refresh, fail loudly with actionable message.
+    if (isInvalidJwtError(result.error)) {
+      return {
+        data: result.data,
+        error: new Error(`Neplatná relace uživatele (${functionName}). Přihlaste se prosím znovu.`),
+      };
     }
 
     return await normalizeResultError(result);

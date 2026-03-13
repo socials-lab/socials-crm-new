@@ -10,12 +10,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Send, CheckCircle2, ExternalLink, AlertTriangle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { MonthlyEngagementInvoice, IssuedInvoice } from '@/types/crm';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface IssueInvoicesDialogProps {
   open: boolean;
@@ -78,7 +80,7 @@ export function IssueInvoicesDialog({
   month,
   onIssueSuccess,
 }: IssueInvoicesDialogProps) {
-  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { createInvoiceWithLineItems, getClientById } = useCRMData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -124,19 +126,15 @@ export function IssueInvoicesDialog({
       return inv.line_items.some(item => requireCurrency(item.currency, `line item ${item.id}`) !== invCurrency);
     });
     if (hasMixedCurrency) {
-      toast({
-        title: 'Smíšené měny',
+      toast.error('Smíšené měny', {
         description: 'Každá faktura musí mít všechny položky ve stejné měně. Sjednoťte měny před vystavením.',
-        variant: 'destructive',
       });
       return;
     }
 
     if (missingFakturoidClients.length > 0) {
-      toast({
-        title: 'Chybí propojení klienta s Fakturoid',
+      toast.error('Chybí propojení klienta s Fakturoid', {
         description: `Nelze vystavit faktury, protože klient nemá fakturoid_subject_id: ${missingFakturoidClients.join(', ')}.`,
-        variant: 'destructive',
       });
       return;
     }
@@ -223,19 +221,23 @@ export function IssueInvoicesDialog({
 
       const isFakturoidFailure = !!fakturoidError || !!fakturoidResult?.error || !fakturoidResult?.success;
       if (isFakturoidFailure) {
-        // Roll back local invoice to keep "issued" state strictly tied to successful export.
-        const { data: rollbackResult, error: rollbackError } = await invokeWithTimeout<{
-          success?: boolean;
-          error?: string;
-        }>(
-          'rollback-issued-invoice',
-          { body: { invoice_id: createdInvoice.id, reason: 'fakturoid_export_failed' } },
+        // Roll back local invoice directly in DB to avoid "issued" mismatch when edge rollback is unavailable.
+        const rollbackResponse = await withPromiseTimeout(
+          (async () =>
+            await supabase
+              .from('issued_invoices')
+              .delete()
+              .eq('id', createdInvoice.id)
+              .select('id'))(),
           30000,
+          'localInvoiceRollback',
         );
+        const rollbackError = rollbackResponse.error;
+        const rollbackSucceeded = !rollbackError && Array.isArray(rollbackResponse.data) && rollbackResponse.data.length > 0;
 
         const fakturoidDetail = fakturoidResult?.error || fakturoidError?.message || 'Neznámá chyba';
-        if (rollbackError || rollbackResult?.error || !rollbackResult?.success) {
-          const rollbackDetail = rollbackResult?.error || rollbackError?.message || 'Neznámá chyba rollbacku';
+        if (!rollbackSucceeded) {
+          const rollbackDetail = rollbackError?.message || 'Neznámá chyba rollbacku';
           throw new Error(
             `Fakturoid export selhal u faktury ${createdInvoice.invoice_number} (${fakturoidDetail}) a rollback také selhal (${rollbackDetail}).`,
           );
@@ -264,22 +266,22 @@ export function IssueInvoicesDialog({
       const isDuplicateKey = errorMessage.includes('duplicate key') || errorMessage.includes('23505');
 
       if (isDuplicateKey) {
-        toast({
-          title: 'Duplicitní číslo faktury',
+        toast.error('Duplicitní číslo faktury', {
           description: 'Číslo faktury již existuje. Obnovte stránku a zkuste to znovu.',
-          variant: 'destructive',
         });
       } else {
-        toast({
-          title: 'Chyba při vystavování faktur',
+        toast.error('Chyba při vystavování faktur', {
           description: errorMessage || 'Nepodařilo se vystavit faktury.',
-          variant: 'destructive',
         });
       }
       return;
     }
 
     setIsSubmitting(false);
+
+    // Ensure delivery state (fakturoid_id/url) is refreshed immediately in UI cards.
+    await queryClient.invalidateQueries({ queryKey: ['issued_invoices'] });
+    await queryClient.refetchQueries({ queryKey: ['issued_invoices'], type: 'active' });
 
     // Store data for success screen
     setSuccessData({ count, totalsByCurrency, issuedInvoices: issuedInvoiceInfos });
@@ -290,8 +292,7 @@ export function IssueInvoicesDialog({
       onIssueSuccess(successfullyIssuedDraftIds);
     }
 
-    toast({
-      title: 'Faktury vystaveny',
+    toast.success('Faktury vystaveny', {
       description: `Úspěšně vystaveno ${count} faktur do Fakturoid.`,
     });
   };

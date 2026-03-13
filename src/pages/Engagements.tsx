@@ -74,6 +74,7 @@ import { toast } from '@/components/ui/sonner';
 import { normalizeUrlProtocol } from '@/lib/validation';
 import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 import { isEngagementServiceActiveInMonth } from '@/lib/engagementServiceLifecycle';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 // Dynamic lookup for Creative Boost service ID
 const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
@@ -1770,7 +1771,7 @@ function EngagementsContent() {
               const periodEnd = new Date(data.year, data.month, 0); // Last day of month
               const totalDaysInMonth = periodEnd.getDate();
 
-              // Build invoice data (without status - not a DB column)
+              // Build invoice data
               const invoice = {
                 engagement_id: invoiceDialogEngagement.id,
                 engagement_name: invoiceDialogEngagement.name,
@@ -1782,6 +1783,8 @@ function EngagementsContent() {
                 fakturoid_url: null,
                 line_items: [],
                 total_amount: data.items.reduce((sum, item) => sum + item.amount, 0),
+                status: 'draft',
+                paid_at: null,
                 currency: (() => {
                   if (!invoiceDialogEngagement.currency) {
                     throw new Error(`Missing engagement currency for ${invoiceDialogEngagement.id}`);
@@ -1818,6 +1821,7 @@ function EngagementsContent() {
                 hourly_rate: item.hourly_rate,
                 currency: item.currency,
                 is_reverse_charge: item.is_reverse_charge,
+                vat_rate: 21,
               }));
 
               const createdInvoice = await withPromiseTimeout(
@@ -1826,18 +1830,30 @@ function EngagementsContent() {
                 'createInvoiceWithLineItems',
               );
 
-              const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
+              const { data: fakturoidResult, error: fakturoidError } = await invokeWithTimeout<{
+                success?: boolean;
+                error?: string;
+              }>(
                 'fakturoid-create-invoice',
-                { body: { invoice_id: createdInvoice.id } }
+                { body: { invoice_id: createdInvoice.id } },
+                30000,
               );
 
               if (fakturoidError || fakturoidResult?.error || !fakturoidResult?.success) {
                 const errorDetail = fakturoidResult?.error || fakturoidError?.message || 'Neznámá chyba';
-                const { data: rollbackResult, error: rollbackError } = await supabase.functions.invoke(
-                  'rollback-issued-invoice',
-                  { body: { invoice_id: createdInvoice.id, reason: 'fakturoid_export_failed' } }
+                const rollbackResponse = await withPromiseTimeout(
+                  (async () =>
+                    await supabase
+                      .from('issued_invoices')
+                      .delete()
+                      .eq('id', createdInvoice.id)
+                      .select('id'))(),
+                  30000,
+                  'localInvoiceRollback',
                 );
-                if (rollbackError || rollbackResult?.error || !rollbackResult?.success) {
+                const rollbackError = rollbackResponse.error;
+                const rollbackSucceeded = !rollbackError && Array.isArray(rollbackResponse.data) && rollbackResponse.data.length > 0;
+                if (!rollbackSucceeded) {
                   throw new Error(`Fakturoid export selhal (${errorDetail}) a rollback selhal. Kontaktujte administrátora.`);
                 }
                 throw new Error(`Fakturoid export selhal (${errorDetail}). Lokální vystavení bylo vráceno zpět.`);

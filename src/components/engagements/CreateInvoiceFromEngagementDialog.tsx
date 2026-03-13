@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Calculator, CalendarDays, FileText, Plus, Trash2, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import type { Engagement, Client, EngagementService } from '@/types/crm';
 import { format, subMonths, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -85,7 +84,6 @@ export function CreateInvoiceFromEngagementDialog({
   isLoading = false,
   onCreateInvoice,
 }: CreateInvoiceFromEngagementDialogProps) {
-  const { toast } = useToast();
   if (!engagement.currency) {
     throw new Error(`Missing engagement currency for ${engagement.id}`);
   }

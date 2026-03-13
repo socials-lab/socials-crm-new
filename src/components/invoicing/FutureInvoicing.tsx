@@ -864,6 +864,11 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
 
       return next;
     });
+    setIssuedInvoiceDeliveryByGeneratedId(prev => {
+      const next = new Map(prev);
+      invoiceIds.forEach(id => next.set(id, true));
+      return next;
+    });
     // Clear selection for issued invoices
     setSelectedInvoiceIds(prev => {
       const next = new Set(prev);

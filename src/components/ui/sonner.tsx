@@ -14,36 +14,57 @@ const createCopyAction = (message: string) => ({
   },
 });
 
+function getCopyText(message: string | React.ReactNode, description: ExternalToast['description']) {
+  const title =
+    typeof message === 'string'
+      ? message.trim()
+      : typeof message === 'number'
+        ? String(message)
+        : '';
+
+  const detail =
+    typeof description === 'string'
+      ? description.trim()
+      : typeof description === 'number'
+        ? String(description)
+        : '';
+
+  if (title && detail) {
+    return `${title}\n${detail}`;
+  }
+  return title || detail;
+}
+
 // Wrapper that adds copy button to all toasts
 const toast = Object.assign(
   (message: string | React.ReactNode, data?: ExternalToast) => {
-    const msg = typeof message === 'string' ? message : '';
-    return sonnerToast(message, { ...data, action: msg ? createCopyAction(msg) : undefined });
+    const copyText = getCopyText(message, data?.description);
+    return sonnerToast(message, { ...data, action: copyText ? createCopyAction(copyText) : undefined });
   },
   {
     success: (message: string | React.ReactNode, data?: ExternalToast) => {
-      const msg = typeof message === 'string' ? message : '';
-      return sonnerToast.success(message, { ...data, action: msg ? createCopyAction(msg) : undefined });
+      const copyText = getCopyText(message, data?.description);
+      return sonnerToast.success(message, { ...data, action: copyText ? createCopyAction(copyText) : undefined });
     },
     error: (message: string | React.ReactNode, data?: ExternalToast) => {
-      const msg = typeof message === 'string' ? message : '';
-      return sonnerToast.error(message, { ...data, action: msg ? createCopyAction(msg) : undefined });
+      const copyText = getCopyText(message, data?.description);
+      return sonnerToast.error(message, { ...data, action: copyText ? createCopyAction(copyText) : undefined });
     },
     info: (message: string | React.ReactNode, data?: ExternalToast) => {
-      const msg = typeof message === 'string' ? message : '';
-      return sonnerToast.info(message, { ...data, action: msg ? createCopyAction(msg) : undefined });
+      const copyText = getCopyText(message, data?.description);
+      return sonnerToast.info(message, { ...data, action: copyText ? createCopyAction(copyText) : undefined });
     },
     warning: (message: string | React.ReactNode, data?: ExternalToast) => {
-      const msg = typeof message === 'string' ? message : '';
-      return sonnerToast.warning(message, { ...data, action: msg ? createCopyAction(msg) : undefined });
+      const copyText = getCopyText(message, data?.description);
+      return sonnerToast.warning(message, { ...data, action: copyText ? createCopyAction(copyText) : undefined });
     },
     loading: (message: string | React.ReactNode, data?: ExternalToast) => {
-      const msg = typeof message === 'string' ? message : '';
-      return sonnerToast.loading(message, { ...data, action: msg ? createCopyAction(msg) : undefined });
+      const copyText = getCopyText(message, data?.description);
+      return sonnerToast.loading(message, { ...data, action: copyText ? createCopyAction(copyText) : undefined });
     },
     message: (message: string | React.ReactNode, data?: ExternalToast) => {
-      const msg = typeof message === 'string' ? message : '';
-      return sonnerToast.message(message, { ...data, action: msg ? createCopyAction(msg) : undefined });
+      const copyText = getCopyText(message, data?.description);
+      return sonnerToast.message(message, { ...data, action: copyText ? createCopyAction(copyText) : undefined });
     },
     // Pass through methods that don't need copy button
     promise: sonnerToast.promise,

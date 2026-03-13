@@ -193,12 +193,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void syncSession(true);
     };
 
+    const refreshIfNearExpiry = async () => {
+      if (!mountedRef.current) return;
+      const currentSession = sessionRef.current;
+      if (!currentSession?.expires_at) return;
+
+      const expiresInMs = currentSession.expires_at * 1000 - Date.now();
+      if (expiresInMs > 5 * 60 * 1000) return;
+
+      try {
+        const { data, error } = await withTimeout(
+          supabase.auth.refreshSession(),
+          8000,
+          'Timeout while proactively refreshing auth session'
+        );
+        if (!error && data.session) {
+          setAuthState(data.session);
+          sessionLossToastShownRef.current = false;
+        }
+      } catch (error) {
+        // Keep auth UX stable; regular syncSession/onAuthStateChange handles hard failures.
+        console.warn('Proactive auth refresh failed:', error);
+      }
+    };
+
+    const proactiveRefreshInterval = window.setInterval(() => {
+      void refreshIfNearExpiry();
+    }, 60 * 1000);
+
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       mountedRef.current = false;
       subscription.unsubscribe();
+      window.clearInterval(proactiveRefreshInterval);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };

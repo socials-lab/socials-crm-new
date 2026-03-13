@@ -12,8 +12,11 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 // import { supabase } from "@/integrations/supabase/client";
 
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const requestUrl = typeof input === 'string' ? input : input.toString();
+  const isAuthRequest = requestUrl.includes('/auth/v1/');
+  const timeoutMs = isAuthRequest ? 30000 : 15000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const originalSignal = init?.signal;
 
   if (originalSignal) {
