@@ -488,6 +488,32 @@ function EngagementsContent() {
     }
   };
 
+  const safeUpdateEngagementPlatformsAndCountries = async (
+    id: string,
+    platforms: string[],
+    managedCountries: string[],
+    successMessage: string,
+  ) => {
+    try {
+      const { error } = await supabase.rpc('update_engagement_platforms_and_countries', {
+        p_engagement_id: id,
+        p_platforms: platforms,
+        p_managed_countries: managedCountries,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['engagements'] });
+      queryClient.invalidateQueries({ queryKey: ['engagement_history'] });
+      toast.success(successMessage);
+    } catch (error) {
+      console.error('Failed to update engagement platforms/managed countries:', error);
+      toast.error(getErrorMessage(error, 'Nepodařilo se uložit změnu'));
+    }
+  };
+
   const safeUpdateService = async (id: string, data: Partial<EngagementService>, successMessage: string) => {
     try {
       await updateEngagementService(id, data);
@@ -1200,7 +1226,12 @@ function EngagementsContent() {
                                     const newPlatforms = isSelected
                                       ? currentPlatforms.filter(p => p !== platform)
                                       : [...currentPlatforms, platform];
-                                    safeUpdateEngagement(engagement.id, { platforms: newPlatforms }, 'Platformy aktualizovány');
+                                    void safeUpdateEngagementPlatformsAndCountries(
+                                      engagement.id,
+                                      newPlatforms,
+                                      engagement.managed_countries || [],
+                                      'Platformy aktualizovány',
+                                    );
                                   }}
                                 >
                                   <Checkbox checked={isSelected} />
@@ -1258,7 +1289,12 @@ function EngagementsContent() {
                                     const newCountries = isSelected
                                       ? currentCountries.filter((code) => code !== country.code)
                                       : [...currentCountries, country.code];
-                                    void safeUpdateEngagement(engagement.id, { managed_countries: newCountries }, 'Spravované země aktualizovány');
+                                    void safeUpdateEngagementPlatformsAndCountries(
+                                      engagement.id,
+                                      engagement.platforms || [],
+                                      newCountries,
+                                      'Spravované země aktualizovány',
+                                    );
                                   }}
                                 >
                                   <Checkbox checked={isSelected} />
