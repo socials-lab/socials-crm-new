@@ -1,3 +1,0 @@
--- Intentional no-op placeholder migration.
--- This file aligns local migration history with remote version 20260312190000.
--- No schema or data changes are applied here.
