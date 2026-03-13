@@ -42,6 +42,16 @@ const ACQUISITION_OPTIONS: { value: LeadSource; label: string }[] = [
   { value: 'other', label: 'Jiný' },
 ];
 
+const INDUSTRY_OPTIONS = [
+  { value: 'Ecommerce', label: 'Ecommerce' },
+  { value: 'LeadGen', label: 'LeadGen' },
+] as const;
+
+function isValidIndustryValue(value: string | undefined): value is typeof INDUSTRY_OPTIONS[number]['value'] {
+  if (!value) return false;
+  return INDUSTRY_OPTIONS.some((option) => option.value === value);
+}
+
 // Acquisition channel enum matching lead sources
 const acquisitionChannels = [
   'referral', 'inbound', 'cold_outreach', 'event',
@@ -72,7 +82,10 @@ const clientSchema = z.object({
     .max(100, 'Název země je příliš dlouhý'),
   industry: z.string()
     .min(1, 'Odvětví je povinné')
-    .max(100, 'Název odvětví je příliš dlouhý'),
+    .refine(
+      (value) => INDUSTRY_OPTIONS.some((option) => option.value === value),
+      'Vyberte odvětví'
+    ),
   status: z.enum(['lead', 'active', 'paused', 'lost', 'potential'] as const),
   currency: z.enum(['CZK', 'EUR', 'USD']),
   // Billing - transform empty strings to null for clean database storage
@@ -148,7 +161,7 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
     dic: c?.dic || '',
     website: c?.website || '',
     country: c?.country || 'Czech Republic',
-    industry: c?.industry || '',
+    industry: isValidIndustryValue(c?.industry) ? c.industry : '',
     status: c?.status || 'lead',
     currency: normalizeClientCurrency(c?.currency),
     billing_email: c?.billing_email || '',
@@ -234,6 +247,13 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
   useEffect(() => {
     form.reset(getDefaultValues(client));
   }, [client?.id, form]);
+
+  useEffect(() => {
+    if (!client?.id || !client.industry) return;
+    if (!isValidIndustryValue(client.industry)) {
+      toast.error(`Neplatné odvětví klienta: ${client.industry}. Vyberte Ecommerce nebo LeadGen.`);
+    }
+  }, [client?.id, client?.industry]);
 
   const handleSubmit = (data: ClientFormData) => {
     onSubmit({
@@ -378,9 +398,20 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Odvětví *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="E-commerce" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte odvětví" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {INDUSTRY_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
