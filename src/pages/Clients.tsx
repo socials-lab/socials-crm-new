@@ -99,6 +99,7 @@ export default function Clients() {
     services,
     addClient,
     updateClient,
+    softDeleteClient,
     getContactsByClientId,
     addContact,
     updateContact,
@@ -180,6 +181,8 @@ export default function Clients() {
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [deleteClientId, setDeleteClientId] = useState<string | null>(null);
+  const [isDeletingClient, setIsDeletingClient] = useState(false);
   
   // Contact dialog state
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -443,6 +446,36 @@ export default function Clients() {
     }
   };
 
+  const handleDeleteClient = async () => {
+    if (!deleteClientId) return;
+
+    const clientEngagements = getEngagementsByClientId(deleteClientId);
+    const blockingEngagements = clientEngagements.filter((engagement) =>
+      ['active', 'paused', 'planned'].includes(engagement.status)
+    );
+
+    if (blockingEngagements.length > 0) {
+      toast.error(
+        `Klienta nelze odstranit, dokud má ${blockingEngagements.length} aktivní/pozastavené/plánované zakázky. Nejprve je ukončete nebo zrušte.`
+      );
+      setDeleteClientId(null);
+      return;
+    }
+
+    try {
+      setIsDeletingClient(true);
+      await softDeleteClient(deleteClientId);
+      if (expandedClientId === deleteClientId) {
+        setExpandedClientId(null);
+      }
+    } catch (error) {
+      console.error('Failed to remove client:', error);
+    } finally {
+      setIsDeletingClient(false);
+      setDeleteClientId(null);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       <PageHeader 
@@ -576,15 +609,29 @@ export default function Clients() {
                   <TierBadgeWithTooltip tier={client.tier} compact />
                   <StatusBadge status={client.status} />
                   {superAdmin && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={(e) => handleEditClient(client, e)}
-                      aria-label={`Upravit klienta ${client.brand_name}`}
-                    >
-                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    </Button>
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(e) => handleEditClient(client, e)}
+                        aria-label={`Upravit klienta ${client.brand_name}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteClientId(client.id);
+                        }}
+                        aria-label={`Odstranit klienta ${client.brand_name}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Button>
+                    </>
                   )}
                   <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={isExpanded ? 'Sbalit detail' : 'Rozbalit detail'}>
                     {isExpanded ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -1088,6 +1135,39 @@ export default function Clients() {
             <AlertDialogCancel>Zrušit</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteContact} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!deleteClientId}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingClient) setDeleteClientId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Odstranit klienta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tato akce klienta archivuje a skryje ze seznamu. Historie dat zůstane zachovaná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingClient}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteClient}
+              disabled={isDeletingClient}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingClient ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Odstraňuji...
+                </>
+              ) : (
+                'Odstranit'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
