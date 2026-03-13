@@ -47,11 +47,12 @@ import {
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useFakturoid, type FakturoidSubjectData } from '@/hooks/useFakturoid';
+import { isEngagementServiceActiveInMonth } from '@/lib/engagementServiceLifecycle';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { AddContactDialog } from '@/components/clients/AddContactDialog';
 import { LeadOriginSection } from '@/components/clients/LeadOriginSection';
 import { useUserRole } from '@/hooks/useUserRole';
-import type { ClientStatus, Client, ClientContact, ClientTier } from '@/types/crm';
+import type { ClientStatus, Client, ClientContact, ClientTier, Engagement } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/sonner';
 
@@ -305,6 +306,40 @@ export default function Clients() {
 
     return map;
   }, [filteredClients, engagements, engagementServices, assignments, services, colleagues, getContactsByClientId]);
+
+  const engagementMonthlyServiceTotals = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const totals = new Map<string, { total: number; count: number }>();
+
+    engagementServices
+      .filter((service) => service.billing_type === 'monthly')
+      .forEach((service) => {
+        if (!isEngagementServiceActiveInMonth(service, year, month)) return;
+
+        const current = totals.get(service.engagement_id) ?? { total: 0, count: 0 };
+        totals.set(service.engagement_id, {
+          total: current.total + service.price,
+          count: current.count + 1,
+        });
+      });
+
+    return totals;
+  }, [engagementServices]);
+
+  function getEngagementDisplayPrice(engagement: Engagement): number {
+    if (engagement.type !== 'retainer') {
+      return engagement.one_off_fee;
+    }
+
+    const monthlyServiceTotals = engagementMonthlyServiceTotals.get(engagement.id);
+    if (!monthlyServiceTotals?.count) {
+      return engagement.monthly_fee;
+    }
+
+    return monthlyServiceTotals.total;
+  }
 
   const getClientDetails = (clientId: string) => {
     return clientDetailsMap.get(clientId) || {
@@ -1040,7 +1075,9 @@ export default function Clients() {
                     <div className="mt-6 pt-4 border-t">
                       <h4 className="font-medium text-sm mb-3">Zakázky ({details.engagements.length})</h4>
                       <div className="space-y-2">
-                        {details.engagements.map(eng => (
+                        {details.engagements.map(eng => {
+                          const displayPrice = getEngagementDisplayPrice(eng);
+                          return (
                           <div 
                             key={eng.id} 
                             className="flex items-center justify-between p-3 rounded-lg bg-background border hover:bg-muted/50 cursor-pointer transition-colors"
@@ -1060,9 +1097,9 @@ export default function Clients() {
                             </div>
                             <div className="text-right">
                               <p className="font-semibold text-sm">
-                                {eng.type === 'retainer' 
-                                  ? `${eng.monthly_fee.toLocaleString()} ${eng.currency}/měs`
-                                  : `${eng.one_off_fee.toLocaleString()} ${eng.currency}`
+                                {eng.type === 'retainer'
+                                  ? `${displayPrice.toLocaleString()} ${eng.currency}/měs`
+                                  : `${displayPrice.toLocaleString()} ${eng.currency}`
                                 }
                               </p>
                               <p className="text-xs text-muted-foreground">
@@ -1070,7 +1107,8 @@ export default function Clients() {
                               </p>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
