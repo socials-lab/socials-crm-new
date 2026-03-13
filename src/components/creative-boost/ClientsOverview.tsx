@@ -93,12 +93,27 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
   }, [year, month, engagements.length, engagementServices.length, ensureClientMonthsForActiveEngagements]);
 
   const summaries = useMemo(() => {
-    // Only show clients with linked engagements
-    return getClientMonthSummaries(year, month).filter(s => {
-      const monthData = clientMonths.find(cm => cm.clientId === s.clientId && cm.year === year && cm.month === month);
-      return monthData?.engagementId != null;
+    return getClientMonthSummaries(year, month).filter((summary) => {
+      const monthData = clientMonths.find(
+        (cm) => cm.clientId === summary.clientId && cm.year === year && cm.month === month
+      );
+      if (!monthData?.engagementId) {
+        return false;
+      }
+
+      // Hide orphaned months (for example after service deletion with ON DELETE SET NULL).
+      if (!monthData.engagementServiceId) {
+        return false;
+      }
+
+      const linkedService = engagementServices.find((service) => service.id === monthData.engagementServiceId);
+      return Boolean(
+        linkedService &&
+        linkedService.is_active &&
+        linkedService.creative_boost_price_per_credit !== null
+      );
     });
-  }, [getClientMonthSummaries, year, month, clientMonths]);
+  }, [getClientMonthSummaries, year, month, clientMonths, engagementServices]);
 
   const filteredSummaries = useMemo(() => {
     return summaries.filter(s => {
