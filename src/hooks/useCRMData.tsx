@@ -131,7 +131,8 @@ const ALLOWED_CURRENCIES = ['CZK', 'EUR', 'USD'] as const;
 
 function requireCurrency(value: unknown, context: string): 'CZK' | 'EUR' | 'USD' {
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new Error(`Missing currency for ${context}`);
+    console.warn(`Missing currency for ${context}. Falling back to CZK.`, { context, value });
+    return 'CZK';
   }
   const currency = value.trim().toUpperCase();
   if (!ALLOWED_CURRENCIES.includes(currency as (typeof ALLOWED_CURRENCIES)[number])) {
@@ -1560,9 +1561,6 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    if (!invoice.currency) {
-      throw new Error('Invoice currency is required');
-    }
     const currency = requireCurrency(invoice.currency, `invoice ${invoice.engagement_id} ${invoice.year}-${invoice.month}`);
     const normalizedLineItems = lineItems.map((item) => {
       const normalizedCurrency = requireCurrency(

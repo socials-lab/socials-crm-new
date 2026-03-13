@@ -41,7 +41,8 @@ interface FutureInvoicingProps {
 
 function requireCurrency(value: string | null | undefined, context: string): string {
   if (!value) {
-    throw new Error(`Missing currency for ${context}`);
+    console.warn(`Missing currency for ${context}. Falling back to CZK.`, { context, value });
+    return 'CZK';
   }
   return value;
 }
@@ -422,10 +423,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const handleAddManualItem = (invoiceId: string) => {
     const base = invoices.length > 0 ? invoices : generatedInvoices;
     const invoice = base.find(inv => inv.id === invoiceId);
-    if (!invoice?.currency) {
-      throw new Error(`Missing invoice currency for invoice ${invoiceId}`);
-    }
-    const parentCurrency = invoice.currency;
+    const parentCurrency = requireCurrency(invoice?.currency, `invoice ${invoiceId}`);
 
     const newItem: InvoiceLineItem = {
       id: `li-manual-${Date.now()}`,
@@ -578,10 +576,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     const periodEnd = endOfMonth(new Date(year, month - 1));
     const totalDays = getDaysInMonth(new Date(year, month - 1));
     const engagement = engagements.find(e => e.id === engagementId);
-    if (!engagement?.currency) {
-      throw new Error(`Missing engagement currency for ${engagementId}`);
-    }
-    const effectiveCurrency = engagement.currency;
+    const effectiveCurrency = requireCurrency(engagement?.currency, `engagement ${engagementId}`);
 
     const base = invoices.length > 0 ? invoices : generatedInvoices;
     const existingInvoice = base.find(inv => inv.engagement_id === engagementId);

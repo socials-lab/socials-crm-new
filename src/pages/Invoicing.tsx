@@ -17,7 +17,8 @@ import { isEngagementServiceActiveInPeriod } from '@/lib/engagementServiceLifecy
 
 function requireCurrency(value: string | null | undefined, context: string): string {
   if (!value) {
-    throw new Error(`Missing currency for ${context}`);
+    console.warn(`Missing currency for ${context}. Falling back to CZK.`, { context, value });
+    return 'CZK';
   }
   return value;
 }
