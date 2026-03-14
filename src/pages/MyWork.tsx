@@ -289,7 +289,7 @@ function MyWorkContent() {
             {myWorkData.clientData.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">Nemáte aktivní zakázky</p>
             ) : (
-              myWorkData.clientData.slice(0, 5).map(({ client, engagement, assignment, startDate }) => (
+              myWorkData.clientData.map(({ client, engagement, assignment, startDate }) => (
                 <button
                   key={assignment.id}
                   onClick={() => navigate(`/engagements?highlight=${engagement.id}`)}
