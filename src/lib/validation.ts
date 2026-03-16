@@ -127,13 +127,16 @@ export const czechIco = z.string()
  * - Supports CZ/SK format (8 digits)
  * - Does not enforce checksum for profile data flexibility
  */
-export const optionalIco = z.string()
-  .transform(val => val?.trim() || '')
+export const optionalIco = z.preprocess(
+  (value) => (value == null ? '' : value),
+  z.string()
+    .transform(val => val?.trim() || '')
   .refine(
     val => val === '' || /^\d{8}$/.test(val),
     'IČO musí mít 8 číslic (CZ/SK)'
   )
-  .transform(val => val === '' ? null : val);
+    .transform(val => val === '' ? null : val)
+);
 
 /**
  * Validates supported DIČ/VAT formats (optional)
@@ -145,13 +148,16 @@ function isSupportedDicFormat(value: string): boolean {
   return /^CZ\d{8,10}$/.test(value) || /^SK\d{10}$/.test(value) || /^\d{10}$/.test(value);
 }
 
-export const czechDic = z.string()
-  .transform(val => val?.trim().toUpperCase() || '')
+export const czechDic = z.preprocess(
+  (value) => (value == null ? '' : value),
+  z.string()
+    .transform(val => val?.trim().toUpperCase() || '')
   .refine(
     val => val === '' || isSupportedDicFormat(val),
     'DIČ musí být ve formátu CZ12345678, SK1234567890 nebo 10 číslic'
   )
-  .transform(val => val === '' ? null : val);
+    .transform(val => val === '' ? null : val)
+);
 
 /**
  * Shared schema for client contact validation
