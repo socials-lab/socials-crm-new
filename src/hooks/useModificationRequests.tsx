@@ -17,6 +17,7 @@ import type {
   ModificationRequestType,
   ModificationProposedChanges,
 } from '@/types/crm';
+import type { PricingSnapshot } from '@/utils/pricingEngine';
 
 export function useModificationRequests() {
   const { user } = useAuth();
