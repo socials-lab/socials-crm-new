@@ -41,7 +41,7 @@ import { calculateProratedReward, type ProratedRewardResult } from '@/utils/pror
 import { CATEGORY_LABELS } from '@/hooks/useActivityRewards';
 
 interface ClientRewardItem {
-  engagementName: string;
+  companyName: string;
   engagementId: string;
   role: string;
   fullMonthlyAmount: number;
@@ -142,7 +142,7 @@ function MyWorkContent() {
           });
           
           clientRewards.push({
-            engagementName: engagement.name,
+            companyName: client.name,
             engagementId: engagement.id,
             role: assignment.role_on_engagement || 'Specialista',
             fullMonthlyAmount: monthlyAmount,
@@ -207,7 +207,7 @@ function MyWorkContent() {
 
   // Prepare data for invoicing overview
   const clientRewardsForInvoice = myWorkData.clientRewards.map((cr) => ({
-    clientName: cr.engagementName,
+    clientName: cr.companyName,
     engagementId: cr.engagementId,
     amount: cr.prorated.proratedAmount,
     isProrated: cr.prorated.isProrated,
@@ -229,7 +229,7 @@ function MyWorkContent() {
     const client = clients.find(c => c.id === ew.client_id);
     const colleagueAmount = getColleagueExtraWorkAmount(ew);
     return {
-      clientName: client?.brand_name || client?.name || 'Neznámý klient',
+      clientName: client?.name || 'Neznámý klient',
       name: ew.name,
       amount: colleagueAmount,
       hours: ew.hours_worked,
@@ -338,7 +338,7 @@ function MyWorkContent() {
                 {myWorkData.clientRewards.map((item) => (
                   <div key={item.engagementId} className="flex items-center justify-between py-1.5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className="text-sm truncate">{item.engagementName}</span>
+                      <span className="text-sm truncate">{item.companyName}</span>
                       {item.prorated.isProrated && item.prorated.startDay && (
                         <Badge variant="secondary" className="text-xs shrink-0 flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" />
@@ -387,7 +387,7 @@ function MyWorkContent() {
                   return (
                     <div key={ew.id} className="flex items-center justify-between py-1">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <span className="text-sm truncate">{client?.brand_name || client?.name} – {ew.name}</span>
+                        <span className="text-sm truncate">{client?.name || 'Neznámý klient'} – {ew.name}</span>
                         {ew.hours_worked && currentColleague?.internal_hourly_cost && (
                           <Badge variant="secondary" className="text-xs shrink-0">
                             {ew.hours_worked}h × {currentColleague.internal_hourly_cost} Kč
