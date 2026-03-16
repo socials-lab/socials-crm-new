@@ -120,6 +120,8 @@ export function createModificationRequest(params: {
     updated_at: new Date().toISOString(),
     // Email history
     emails_sent: [],
+    // Pricing engine snapshot
+    pricing_snapshot: params.pricing_snapshot || null,
     // Denormalized
     engagement_name: params.engagement_name,
     client_id: params.client_id,
