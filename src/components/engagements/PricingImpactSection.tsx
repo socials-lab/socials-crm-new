@@ -116,6 +116,38 @@ export function PricingImpactSection({
     }
   }, [isAddonService]);
 
+  // Look up recommended rewards when service/tier/scenario/multiplier changes
+  const selectedCatalogService = useMemo(
+    () => services?.find(s => s.id === selectedServiceId),
+    [services, selectedServiceId]
+  );
+
+  useEffect(() => {
+    if (!selectedCatalogService) {
+      setColleagueRewards([]);
+      return;
+    }
+    const tierFromService = (selectedCatalogService as any).selected_tier;
+    const recommended = getServiceRewardRecommendation(
+      selectedCatalogService.name,
+      tierFromService
+    );
+    if (recommended) {
+      const isExp = scenario === 'expand_country' || scenario === 'expand_shop';
+      const roles = isExp ? applyMultiplierToRewards(recommended, multiplier) : recommended;
+      setColleagueRewards(
+        roles.map(r => ({
+          role: r.role,
+          hours: r.hours,
+          reward: r.reward,
+          reward_type: r.rewardType,
+        }))
+      );
+    } else {
+      setColleagueRewards([]);
+    }
+  }, [selectedCatalogService, scenario, multiplier]);
+
   // Update multiplier when scenario changes + reset new client
   useEffect(() => {
     const defaultMult = getDefaultMultiplier(scenario);
