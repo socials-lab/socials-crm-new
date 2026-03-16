@@ -18,6 +18,8 @@ import {
   Pencil,
   Trash2,
   Mail,
+  AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +44,7 @@ import type {
   RemoveAssignmentProposedChanges,
 } from '@/types/crm';
 import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
+import { formatCZK } from '@/utils/pricingEngine';
 
 interface ModificationRequestCardProps {
   request: StoredModificationRequest;
