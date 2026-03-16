@@ -103,11 +103,19 @@ export function PricingImpactSection({
     }
   }, [isAddonService]);
 
-  // Update multiplier when scenario changes
+  // Update multiplier when scenario changes + reset new client
   useEffect(() => {
     const defaultMult = getDefaultMultiplier(scenario);
     if (defaultMult !== undefined) {
       setMultiplier(defaultMult);
+    }
+    if (scenario !== 'expand_shop') {
+      setRequiresNewClient(false);
+      setNewClientName('');
+      setNewClientBrand('');
+      setNewClientIco('');
+      setNewClientDic('');
+      setNewClientNote('');
     }
   }, [scenario]);
 
