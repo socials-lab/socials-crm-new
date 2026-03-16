@@ -240,9 +240,10 @@ export function PricingImpactSection({
       justification: justification || undefined,
       requires_new_client: requiresNewClient && scenario === 'expand_shop' ? true : undefined,
       new_client_data: newClientData,
+      colleague_rewards: colleagueRewards.length > 0 ? colleagueRewards : undefined,
     };
     onSnapshotChange(snapshot);
-  }, [scenario, referenceService, multiplier, deltaRevenue, deltaInternalCost, clientEconomics, impact, justification, requiresNewClient, newClientName, newClientBrand, newClientIco, newClientDic, newClientNote]);
+  }, [scenario, referenceService, multiplier, deltaRevenue, deltaInternalCost, clientEconomics, impact, justification, requiresNewClient, newClientName, newClientBrand, newClientIco, newClientDic, newClientNote, colleagueRewards]);
 
   const isExpansion = scenario === 'expand_country' || scenario === 'expand_shop';
   const defaultMult = getDefaultMultiplier(scenario);
