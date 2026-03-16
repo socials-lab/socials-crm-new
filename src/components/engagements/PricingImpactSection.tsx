@@ -24,6 +24,7 @@ import {
   type ColleagueRewardEntry,
 } from '@/utils/pricingEngine';
 import {
+  getRewardsFromServiceConfig,
   getServiceRewardRecommendation,
   applyMultiplierToRewards,
   type RoleReward,
