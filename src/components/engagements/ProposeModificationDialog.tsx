@@ -155,6 +155,9 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
       setSelectedAssignmentId('');
       setServiceDescription('');
       setServiceDeliverables('');
+      setPricingSnapshot(null);
+      setPricingInternalCost(0);
+      setRequiresAdminApproval(false);
     }
   }, [open]);
 
