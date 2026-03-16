@@ -117,13 +117,22 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
 
   const filteredSummaries = useMemo(() => {
     return summaries.filter(s => {
+      const monthData = clientMonths.find(
+        (cm) => cm.clientId === s.clientId && cm.year === year && cm.month === month
+      );
+      const linkedEngagement = monthData?.engagementId
+        ? engagements.find((e) => e.id === monthData.engagementId)
+        : null;
+      const engagementName = linkedEngagement?.name;
+
       const matchesSearch = search === '' ||
         s.clientName.toLowerCase().includes(search.toLowerCase()) ||
-        s.brandName.toLowerCase().includes(search.toLowerCase());
+        s.brandName.toLowerCase().includes(search.toLowerCase()) ||
+        Boolean(engagementName && engagementName.toLowerCase().includes(search.toLowerCase()));
       const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [summaries, search, statusFilter]);
+  }, [summaries, search, statusFilter, clientMonths, engagements, year, month]);
 
   const activeOutputTypes = useMemo(() => getActiveOutputTypes(), [getActiveOutputTypes]);
   
@@ -288,7 +297,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Hledat klienta..."
+            placeholder="Hledat klienta nebo zakázku..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -337,52 +346,88 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
               <Card className="overflow-hidden">
                 {/* Compact Header */}
                 <div className="flex items-center gap-3 p-3">
-                  {/* Avatar */}
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary font-semibold text-sm shrink-0">
-                    {summary.brandName.charAt(0)}
-                  </div>
+                  {linkedEngagement?.name ? (
+                    <>
+                      {/* Avatar */}
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary font-semibold text-sm shrink-0">
+                        {linkedEngagement.name.charAt(0)}
+                      </div>
 
-                  {/* Main info - clickable to expand */}
-                  <CollapsibleTrigger asChild>
-                    <div className="flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm truncate">{summary.brandName}</span>
-                          {assignedColleague && (
-                            <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                              {assignedColleague.full_name}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/clients?highlight=${summary.clientId}`);
-                            }}
-                            className="text-primary hover:underline"
-                          >
-                            {summary.clientName}
-                          </button>
-                          {linkedEngagement && (
-                            <>
-                              <span className="text-muted-foreground">•</span>
+                      {/* Main info - clickable to expand */}
+                      <CollapsibleTrigger asChild>
+                        <div className="flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-sm truncate">{linkedEngagement.name}</span>
+                              {assignedColleague && (
+                                <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                                  {assignedColleague.full_name}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/engagements?highlight=${linkedEngagement.id}`);
                                 }}
-                                className="text-muted-foreground hover:text-foreground hover:underline flex items-center gap-0.5"
+                                className="text-primary hover:underline flex items-center gap-0.5"
                               >
                                 Zakázka
                                 <ExternalLink className="h-3 w-3" />
                               </button>
-                            </>
-                          )}
+                              <span className="text-muted-foreground">•</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/clients?highlight=${summary.clientId}`);
+                                }}
+                                className="text-muted-foreground hover:text-foreground hover:underline"
+                              >
+                                {summary.clientName}
+                              </button>
+                            </div>
+                          </div>
                         </div>
+                      </CollapsibleTrigger>
+                    </>
+                  ) : (
+                    <>
+                      {/* Avatar */}
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive/10 text-destructive font-semibold text-sm shrink-0">
+                        !
                       </div>
-                    </div>
-                  </CollapsibleTrigger>
+
+                      {/* Main info - clickable to expand */}
+                      <CollapsibleTrigger asChild>
+                        <div className="flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-sm text-destructive truncate">
+                                Chyba: chybí navázaná zakázka.
+                              </span>
+                              {assignedColleague && (
+                                <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                                  {assignedColleague.full_name}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/clients?highlight=${summary.clientId}`);
+                                }}
+                                className="text-muted-foreground hover:text-foreground hover:underline"
+                              >
+                                {summary.clientName}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </CollapsibleTrigger>
+                    </>
+                  )}
 
                   {/* Credits progress - inline */}
                   <div className="hidden sm:flex items-center gap-2 shrink-0">
