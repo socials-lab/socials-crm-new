@@ -81,6 +81,7 @@ export function useModificationRequests() {
         upsell_commission_percent: params.upsell_commission_percent,
         note: params.note,
         requested_by: user.id,
+        pricing_snapshot: params.pricing_snapshot,
       });
       
       toast.success('Požadavek na úpravu byl odeslán ke schválení');
