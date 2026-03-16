@@ -50,6 +50,17 @@ export interface PricingSnapshot {
   /** When expand_shop scenario requires a new legal entity (SRO) */
   new_client_data?: NewClientData;
   requires_new_client?: boolean;
+  /** Colleague reward breakdown for this amendment */
+  colleague_rewards?: ColleagueRewardEntry[];
+}
+
+export interface ColleagueRewardEntry {
+  role: string;
+  colleague_id?: string;
+  colleague_name?: string;
+  hours: number;
+  reward: number;
+  reward_type: 'fixed_monthly' | 'per_credit' | 'hourly';
 }
 
 export interface PricingScenarioResult {

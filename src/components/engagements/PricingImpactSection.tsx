@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Calculator, ShieldAlert, Building } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Calculator, ShieldAlert, Building, Users } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import {
   calculateClientEconomics,
@@ -22,7 +22,13 @@ import {
   type ClientEconomics,
   type PricingScenarioResult,
   type NewClientData,
+  type ColleagueRewardEntry,
 } from '@/utils/pricingEngine';
+import {
+  getServiceRewardRecommendation,
+  applyMultiplierToRewards,
+  type RoleReward,
+} from '@/constants/serviceRewards';
 
 interface PricingImpactSectionProps {
   clientId: string;
@@ -61,7 +67,7 @@ export function PricingImpactSection({
   onSnapshotChange,
   onRequiresAdminApproval,
 }: PricingImpactSectionProps) {
-  const { engagements, engagementServices, assignments, services } = useCRMData();
+  const { engagements, engagementServices, assignments, services, colleagues } = useCRMData();
 
   // Local state
   const [scenario, setScenario] = useState<PricingScenario>(
@@ -80,6 +86,13 @@ export function PricingImpactSection({
   const [newClientDic, setNewClientDic] = useState('');
   const [newClientNote, setNewClientNote] = useState('');
 
+  // Colleague rewards state
+  const [colleagueRewards, setColleagueRewards] = useState<ColleagueRewardEntry[]>([]);
+
+  const activeColleagues = useMemo(
+    () => (colleagues || []).filter(c => c.status === 'active'),
+    [colleagues]
+  );
   // Calculate current client economics
   const clientEconomics: ClientEconomics = useMemo(
     () => calculateClientEconomics(clientId, engagements, engagementServices, assignments),
@@ -103,6 +116,38 @@ export function PricingImpactSection({
     }
   }, [isAddonService]);
 
+  // Look up recommended rewards when service/tier/scenario/multiplier changes
+  const selectedCatalogService = useMemo(
+    () => services?.find(s => s.id === selectedServiceId),
+    [services, selectedServiceId]
+  );
+
+  useEffect(() => {
+    if (!selectedCatalogService) {
+      setColleagueRewards([]);
+      return;
+    }
+    const tierFromService = (selectedCatalogService as any).selected_tier;
+    const recommended = getServiceRewardRecommendation(
+      selectedCatalogService.name,
+      tierFromService
+    );
+    if (recommended) {
+      const isExp = scenario === 'expand_country' || scenario === 'expand_shop';
+      const roles = isExp ? applyMultiplierToRewards(recommended, multiplier) : recommended;
+      setColleagueRewards(
+        roles.map(r => ({
+          role: r.role,
+          hours: r.hours,
+          reward: r.reward,
+          reward_type: r.rewardType,
+        }))
+      );
+    } else {
+      setColleagueRewards([]);
+    }
+  }, [selectedCatalogService, scenario, multiplier]);
+
   // Update multiplier when scenario changes + reset new client
   useEffect(() => {
     const defaultMult = getDefaultMultiplier(scenario);
@@ -119,20 +164,28 @@ export function PricingImpactSection({
     }
   }, [scenario]);
 
+  // Total colleague rewards = internal cost
+  const totalColleagueRewards = useMemo(
+    () => colleagueRewards.reduce((sum, r) => sum + r.reward, 0),
+    [colleagueRewards]
+  );
+
   // Calculate delta revenue and internal cost based on scenario
   const { deltaRevenue, deltaInternalCost } = useMemo(() => {
+    // Use colleague rewards total as internal cost when available
+    const internalCost = colleagueRewards.length > 0 ? totalColleagueRewards : manualInternalCost;
+
     if (scenario === 'expand_country' || scenario === 'expand_shop') {
       if (!referenceService) return { deltaRevenue: 0, deltaInternalCost: 0 };
       const price = calculateExpansionPrice(referenceService.price, multiplier);
-      const cost = calculateExpansionInternalCost(referenceService.internalCost, multiplier);
-      return { deltaRevenue: price, deltaInternalCost: cost };
+      return { deltaRevenue: price, deltaInternalCost: internalCost };
     }
     if (scenario === 'add_addon') {
-      return { deltaRevenue: proposedPrice, deltaInternalCost: manualInternalCost };
+      return { deltaRevenue: proposedPrice, deltaInternalCost: internalCost };
     }
     // custom_manual
-    return { deltaRevenue: proposedPrice, deltaInternalCost: manualInternalCost };
-  }, [scenario, referenceService, multiplier, proposedPrice, manualInternalCost]);
+    return { deltaRevenue: proposedPrice, deltaInternalCost: internalCost };
+  }, [scenario, referenceService, multiplier, proposedPrice, manualInternalCost, colleagueRewards, totalColleagueRewards]);
 
   // Update parent price for expansion scenarios
   useEffect(() => {
@@ -187,9 +240,10 @@ export function PricingImpactSection({
       justification: justification || undefined,
       requires_new_client: requiresNewClient && scenario === 'expand_shop' ? true : undefined,
       new_client_data: newClientData,
+      colleague_rewards: colleagueRewards.length > 0 ? colleagueRewards : undefined,
     };
     onSnapshotChange(snapshot);
-  }, [scenario, referenceService, multiplier, deltaRevenue, deltaInternalCost, clientEconomics, impact, justification, requiresNewClient, newClientName, newClientBrand, newClientIco, newClientDic, newClientNote]);
+  }, [scenario, referenceService, multiplier, deltaRevenue, deltaInternalCost, clientEconomics, impact, justification, requiresNewClient, newClientName, newClientBrand, newClientIco, newClientDic, newClientNote, colleagueRewards]);
 
   const isExpansion = scenario === 'expand_country' || scenario === 'expand_shop';
   const defaultMult = getDefaultMultiplier(scenario);
@@ -407,8 +461,8 @@ export function PricingImpactSection({
           </div>
         )}
 
-        {/* Internal cost for addon / custom */}
-        {!isExpansion && (
+        {/* Internal cost for addon / custom — only show manual input when no rewards recommended */}
+        {!isExpansion && colleagueRewards.length === 0 && (
           <div className="space-y-2">
             <Label className="text-xs">Interní náklady na tuto službu (CZK/měs)</Label>
             <Input
@@ -418,6 +472,94 @@ export function PricingImpactSection({
               className="h-9"
               placeholder="Náklady na kolegu/y"
             />
+          </div>
+        )}
+
+        {/* Colleague Rewards Table */}
+        {colleagueRewards.length > 0 && (
+          <div className="space-y-2 p-3 rounded-md border bg-background">
+            <div className="flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 text-primary" />
+              <h6 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Odměny kolegů za tuto službu
+              </h6>
+            </div>
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-xs">
+                    <TableHead className="h-8 text-xs">Role</TableHead>
+                    <TableHead className="h-8 text-xs">Kolega</TableHead>
+                    <TableHead className="h-8 text-xs text-right">Hodiny</TableHead>
+                    <TableHead className="h-8 text-xs text-right">Odměna</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {colleagueRewards.map((reward, idx) => (
+                    <TableRow key={idx} className="text-xs">
+                      <TableCell className="py-1.5 font-medium">{reward.role}</TableCell>
+                      <TableCell className="py-1.5">
+                        <Select
+                          value={reward.colleague_id || ''}
+                          onValueChange={(val) => {
+                            const col = activeColleagues.find(c => c.id === val);
+                            setColleagueRewards(prev => prev.map((r, i) =>
+                              i === idx ? { ...r, colleague_id: val, colleague_name: col?.full_name } : r
+                            ));
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-[180px]">
+                            <SelectValue placeholder="Vybrat kolegu" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {activeColleagues.map(c => (
+                              <SelectItem key={c.id} value={c.id} className="text-xs">
+                                {c.full_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right">
+                        <Input
+                          type="number"
+                          value={reward.hours}
+                          onChange={(e) => {
+                            setColleagueRewards(prev => prev.map((r, i) =>
+                              i === idx ? { ...r, hours: Number(e.target.value) } : r
+                            ));
+                          }}
+                          className="h-7 w-16 text-xs text-right ml-auto"
+                          step="0.5"
+                        />
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Input
+                            type="number"
+                            value={reward.reward}
+                            onChange={(e) => {
+                              setColleagueRewards(prev => prev.map((r, i) =>
+                                i === idx ? { ...r, reward: Number(e.target.value) } : r
+                              ));
+                            }}
+                            className="h-7 w-20 text-xs text-right"
+                            step="100"
+                          />
+                          <span className="text-muted-foreground text-[10px] shrink-0">
+                            {reward.reward_type === 'per_credit' ? 'Kč/kredit' : 'Kč'}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex justify-between items-center text-xs pt-1">
+              <span className="text-muted-foreground">Celkové interní náklady:</span>
+              <span className="font-semibold">{formatCZK(totalColleagueRewards)}</span>
+            </div>
           </div>
         )}
 
