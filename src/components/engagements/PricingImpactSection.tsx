@@ -164,20 +164,28 @@ export function PricingImpactSection({
     }
   }, [scenario]);
 
+  // Total colleague rewards = internal cost
+  const totalColleagueRewards = useMemo(
+    () => colleagueRewards.reduce((sum, r) => sum + r.reward, 0),
+    [colleagueRewards]
+  );
+
   // Calculate delta revenue and internal cost based on scenario
   const { deltaRevenue, deltaInternalCost } = useMemo(() => {
+    // Use colleague rewards total as internal cost when available
+    const internalCost = colleagueRewards.length > 0 ? totalColleagueRewards : manualInternalCost;
+
     if (scenario === 'expand_country' || scenario === 'expand_shop') {
       if (!referenceService) return { deltaRevenue: 0, deltaInternalCost: 0 };
       const price = calculateExpansionPrice(referenceService.price, multiplier);
-      const cost = calculateExpansionInternalCost(referenceService.internalCost, multiplier);
-      return { deltaRevenue: price, deltaInternalCost: cost };
+      return { deltaRevenue: price, deltaInternalCost: internalCost };
     }
     if (scenario === 'add_addon') {
-      return { deltaRevenue: proposedPrice, deltaInternalCost: manualInternalCost };
+      return { deltaRevenue: proposedPrice, deltaInternalCost: internalCost };
     }
     // custom_manual
-    return { deltaRevenue: proposedPrice, deltaInternalCost: manualInternalCost };
-  }, [scenario, referenceService, multiplier, proposedPrice, manualInternalCost]);
+    return { deltaRevenue: proposedPrice, deltaInternalCost: internalCost };
+  }, [scenario, referenceService, multiplier, proposedPrice, manualInternalCost, colleagueRewards, totalColleagueRewards]);
 
   // Update parent price for expansion scenarios
   useEffect(() => {
