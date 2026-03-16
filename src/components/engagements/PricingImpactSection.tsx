@@ -86,6 +86,13 @@ export function PricingImpactSection({
   const [newClientDic, setNewClientDic] = useState('');
   const [newClientNote, setNewClientNote] = useState('');
 
+  // Colleague rewards state
+  const [colleagueRewards, setColleagueRewards] = useState<ColleagueRewardEntry[]>([]);
+
+  const activeColleagues = useMemo(
+    () => (colleagues || []).filter(c => c.status === 'active'),
+    [colleagues]
+  );
   // Calculate current client economics
   const clientEconomics: ClientEconomics = useMemo(
     () => calculateClientEconomics(clientId, engagements, engagementServices, assignments),
