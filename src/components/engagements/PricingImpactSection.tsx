@@ -326,6 +326,87 @@ export function PricingImpactSection({
           </>
         )}
 
+        {/* New client (different SRO) option for expand_shop */}
+        {scenario === 'expand_shop' && (
+          <div className="space-y-3 p-3 rounded-md border bg-background">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="requires-new-client"
+                checked={requiresNewClient}
+                onCheckedChange={(checked) => setRequiresNewClient(checked === true)}
+              />
+              <Label htmlFor="requires-new-client" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
+                <Building className="h-3.5 w-3.5 text-muted-foreground" />
+                Nový shop je pod jiným SRO (nový klient)
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">
+              Pokud je nový e-shop provozován jinou právnickou osobou, bude potřeba založit nového klienta a novou zakázku.
+            </p>
+
+            {requiresNewClient && (
+              <div className="space-y-3 ml-6 pt-2 border-t">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Název společnosti (SRO) *</Label>
+                    <Input
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                      placeholder="Např. NovýShop s.r.o."
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Název značky / e-shopu</Label>
+                    <Input
+                      value={newClientBrand}
+                      onChange={(e) => setNewClientBrand(e.target.value)}
+                      placeholder="Např. NovýShop.cz"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">IČO</Label>
+                    <Input
+                      value={newClientIco}
+                      onChange={(e) => setNewClientIco(e.target.value)}
+                      placeholder="12345678"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">DIČ</Label>
+                    <Input
+                      value={newClientDic}
+                      onChange={(e) => setNewClientDic(e.target.value)}
+                      placeholder="CZ12345678"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Poznámka k novému klientovi</Label>
+                  <Input
+                    value={newClientNote}
+                    onChange={(e) => setNewClientNote(e.target.value)}
+                    placeholder="Např. Sesterská firma stávajícího klienta XY"
+                    className="h-9"
+                  />
+                </div>
+
+                <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800">
+                  <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <AlertDescription className="text-xs text-blue-800 dark:text-blue-300">
+                    Po schválení návrhu bude automaticky vytvořen nový klient a nová zakázka. Ekonomický dopad se počítá vůči stávajícímu klientovi pro referenci.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Internal cost for addon / custom */}
         {!isExpansion && (
           <div className="space-y-2">
