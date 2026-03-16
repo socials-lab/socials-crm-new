@@ -300,6 +300,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
         effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
         upsold_by_id: upsoldById === 'none' ? null : upsoldById,
         note: note || null,
+        pricing_snapshot: pricingSnapshot,
       });
       
       // Just close the dialog - upgrade offer will be created at approval time
