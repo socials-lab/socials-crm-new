@@ -297,12 +297,14 @@ export default function Modifications() {
     return '';
   };
 
+  const totalActive = pending.length + waitingForClient.length + clientApproved.length;
+
   if (isLoadingPending) {
     return (
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader 
           title="Návrhy změn" 
-          description="Přidání nových služeb, změny cen, deaktivace služeb a další úpravy zakázek"
+          description="Připravte nabídku na rozšíření spolupráce se stávajícím klientem"
         />
         <div className="flex items-center justify-center py-12">
           <p className="text-muted-foreground">Načítání...</p>
@@ -312,17 +314,11 @@ export default function Modifications() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader 
-          title="Návrhy změn" 
-          description="Přidání nových služeb, změny cen, deaktivace služeb a další úpravy zakázek"
-        />
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Navrhnout úpravu
-        </Button>
-      </div>
+    <div className="p-4 md:p-6 space-y-5 md:space-y-6">
+      <PageHeader 
+        title="Návrhy změn" 
+        description="Připravte nabídku na rozšíření spolupráce se stávajícím klientem"
+      />
 
       <ProposeModificationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       
@@ -336,34 +332,72 @@ export default function Modifications() {
         />
       )}
 
-      {/* Stats cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Čeká na schválení</CardTitle>
-            <Clock className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pending.length}</div>
-          </CardContent>
+      {/* Hero CTA card */}
+      <Card className="border-primary/30 bg-primary/[0.03]">
+        <CardContent className="p-5 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1.5">
+              <h2 className="text-base font-semibold flex items-center gap-2">
+                <FileEdit className="h-5 w-5 text-primary" />
+                Nový návrh na úpravu zakázky
+              </h2>
+              <p className="text-sm text-muted-foreground max-w-lg">
+                Přidejte novou službu, rozšiřte stávající službu o další zemi nebo e-shop, upravte cenu — systém automaticky spočítá dopad na marži a připraví nabídku pro klienta.
+              </p>
+            </div>
+            <Button onClick={() => setDialogOpen(true)} size="lg" className="shrink-0">
+              <Plus className="h-4 w-4 mr-2" />
+              Navrhnout úpravu
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pipeline summary */}
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+        <Card className="p-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-amber-100 dark:bg-amber-900/30">
+              <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-xl font-bold leading-none">{pending.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Ke schválení</p>
+            </div>
+          </div>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Schváleno</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{approved.length}</div>
-          </CardContent>
+        <Card className="p-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-blue-100 dark:bg-blue-900/30">
+              <Send className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-xl font-bold leading-none">{waitingForClient.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">U klienta</p>
+            </div>
+          </div>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Zamítnuto</CardTitle>
-            <XCircle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{rejected.length}</div>
-          </CardContent>
+        <Card className="p-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-green-100 dark:bg-green-900/30">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="text-xl font-bold leading-none">{clientApproved.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">K aktivaci</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-muted">
+              <PackageCheck className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-xl font-bold leading-none">{applied.length + filteredHistory.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Aktivováno</p>
+            </div>
+          </div>
         </Card>
       </div>
 
