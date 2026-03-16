@@ -91,6 +91,7 @@ export function createModificationRequest(params: {
   upsell_commission_percent?: number;
   note?: string | null;
   requested_by: string;
+  pricing_snapshot?: PricingSnapshot | null;
 }): StoredModificationRequest {
   const requests = getModificationRequests();
   
