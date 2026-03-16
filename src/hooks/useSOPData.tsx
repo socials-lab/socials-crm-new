@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { createNotification, notifyAdmins } from '@/services/notificationService';
 import { withAbortTimeout } from '@/utils/asyncUtils';
 
@@ -77,9 +77,31 @@ function stripHtml(html: string): string {
   return doc.body.textContent || '';
 }
 
+function isAbortLikeError(error: unknown): boolean {
+  if (!error) return false;
+
+  if (error instanceof DOMException) {
+    return error.name === 'AbortError' || error.message.toLowerCase().includes('aborted');
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return error.name === 'AbortError' || message.includes('aborterror') || message.includes('aborted') || message.includes('cancel') || message.includes('timeout');
+  }
+
+  if (typeof error === 'object') {
+    const maybeError = error as { name?: unknown; message?: unknown; code?: unknown };
+    const name = typeof maybeError.name === 'string' ? maybeError.name.toLowerCase() : '';
+    const message = typeof maybeError.message === 'string' ? maybeError.message.toLowerCase() : '';
+    const code = typeof maybeError.code === 'string' ? maybeError.code.toLowerCase() : '';
+    return name.includes('abort') || message.includes('aborterror') || message.includes('aborted') || message.includes('cancel') || message.includes('timeout') || code.includes('abort') || code.includes('timeout');
+  }
+
+  return false;
+}
+
 export function SOPDataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [categories, setCategories] = useState<SOPCategory[]>([]);
   const [articles, setArticles] = useState<SOPArticle[]>([]);
   const [suggestions, setSuggestions] = useState<SOPSuggestion[]>([]);
@@ -104,37 +126,50 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
       const [catRes, artRes, sugRes] = await Promise.all([
         withAbortTimeout(
           (signal) => supabase.from('sop_categories').select('*').eq('is_active', true).order('sort_order').abortSignal(signal),
-          6000,
+          12000,
           'Timeout while loading SOP categories'
         ),
         withAbortTimeout(
           (signal) => supabase.from('sop_articles').select('*').order('sort_order').abortSignal(signal),
-          6000,
+          12000,
           'Timeout while loading SOP articles'
         ),
         withAbortTimeout(
           (signal) => supabase.from('sop_update_suggestions').select('*, profiles:suggested_by(full_name)').order('created_at', { ascending: false }).abortSignal(signal),
-          6000,
+          12000,
           'Timeout while loading SOP suggestions'
         ),
       ]);
 
       if (catRes.error) {
-        console.error('Error fetching SOP categories:', catRes.error);
-        toast({ title: 'Chyba', description: 'Nepodařilo se načíst kategorie SOP', variant: 'destructive' });
+        if (isAbortLikeError(catRes.error)) {
+          console.warn('SOP categories fetch aborted:', catRes.error);
+        } else {
+          console.error('Error fetching SOP categories:', catRes.error);
+          toast.error('Nepodařilo se načíst kategorie SOP.');
+        }
       } else {
         setCategories(catRes.data || []);
       }
 
       if (artRes.error) {
-        console.error('Error fetching SOP articles:', artRes.error);
-        toast({ title: 'Chyba', description: 'Nepodařilo se načíst články SOP', variant: 'destructive' });
+        if (isAbortLikeError(artRes.error)) {
+          console.warn('SOP articles fetch aborted:', artRes.error);
+        } else {
+          console.error('Error fetching SOP articles:', artRes.error);
+          toast.error('Nepodařilo se načíst články SOP.');
+        }
       } else {
         setArticles(artRes.data || []);
       }
 
       if (sugRes.error) {
-        console.error('Error fetching SOP suggestions:', sugRes.error);
+        if (isAbortLikeError(sugRes.error)) {
+          console.warn('SOP suggestions fetch aborted:', sugRes.error);
+        } else {
+          console.error('Error fetching SOP suggestions:', sugRes.error);
+          toast.error('Nepodařilo se načíst návrhy úprav SOP.');
+        }
       } else {
         setSuggestions((sugRes.data || []).map((s: SOPSuggestion & { profiles?: { full_name?: string } }) => ({
           ...s,
@@ -142,12 +177,16 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
         })));
       }
     } catch (e) {
-      console.error('Error fetching SOP data:', e);
-      toast({ title: 'Chyba', description: 'Nepodařilo se načíst SOP data', variant: 'destructive' });
+      if (isAbortLikeError(e)) {
+        console.warn('SOP data fetch aborted:', e);
+      } else {
+        console.error('Error fetching SOP data:', e);
+        toast.error('Nepodařilo se načíst SOP data.');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -188,12 +227,12 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       console.error('Error creating category:', error);
-      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      toast.error('Chyba', { description: error.message });
       return undefined;
     }
 
     await fetchData();
-    toast({ title: 'Kategorie vytvořena' });
+    toast.success('Kategorie vytvořena');
     return data?.id;
   };
 
@@ -201,22 +240,22 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.from('sop_categories').update(cat).eq('id', id);
     if (error) {
       console.error('Error updating category:', error);
-      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      toast.error('Chyba', { description: error.message });
       return;
     }
     await fetchData();
-    toast({ title: 'Kategorie aktualizována' });
+    toast.success('Kategorie aktualizována');
   };
 
   const deleteCategory = async (id: string) => {
     const { error } = await supabase.from('sop_categories').delete().eq('id', id);
     if (error) {
       console.error('Error deleting category:', error);
-      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      toast.error('Chyba', { description: error.message });
       return;
     }
     await fetchData();
-    toast({ title: 'Kategorie smazána' });
+    toast.success('Kategorie smazána');
   };
 
   const addArticle = async (article: Partial<SOPArticle>) => {
@@ -239,13 +278,13 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Error creating article:', error);
-        toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+        toast.error('Chyba', { description: error.message });
         throw new Error(error.message);
       }
 
       // Don't wait for fetchData - do it in background
       fetchData().catch(console.error);
-      toast({ title: 'Článek vytvořen' });
+      toast.success('Článek vytvořen');
     } catch (err) {
       console.error('Exception creating article:', err);
       throw err;
@@ -262,13 +301,13 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('sop_articles').update(updates).eq('id', id);
       if (error) {
         console.error('Error updating article:', error);
-        toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+        toast.error('Chyba', { description: error.message });
         throw new Error(error.message);
       }
 
       // Don't wait for fetchData - do it in background
       fetchData().catch(console.error);
-      toast({ title: 'Článek uložen' });
+      toast.success('Článek uložen');
     } catch (err) {
       console.error('Exception updating article:', err);
       throw err;
@@ -279,11 +318,11 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.from('sop_articles').delete().eq('id', id);
     if (error) {
       console.error('Error deleting article:', error);
-      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      toast.error('Chyba', { description: error.message });
       return;
     }
     await fetchData();
-    toast({ title: 'Článek smazán' });
+    toast.success('Článek smazán');
   };
 
   const suggestUpdate = async (articleId: string, reason: string) => {
@@ -298,7 +337,7 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       console.error('Error creating suggestion:', error);
-      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      toast.error('Chyba', { description: error.message });
       return;
     }
 
@@ -328,7 +367,7 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    toast({ title: 'Návrh odeslán', description: 'Správce bude informován.' });
+    toast.success('Návrh odeslán', { description: 'Správce bude informován.' });
   };
 
   const resolveSuggestion = async (id: string, status: 'accepted' | 'dismissed') => {
@@ -340,12 +379,12 @@ export function SOPDataProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       console.error('Error resolving suggestion:', error);
-      toast({ title: 'Chyba', description: error.message, variant: 'destructive' });
+      toast.error('Chyba', { description: error.message });
       return;
     }
 
     await fetchData();
-    toast({ title: status === 'accepted' ? 'Návrh přijat' : 'Návrh zamítnut' });
+    toast.success(status === 'accepted' ? 'Návrh přijat' : 'Návrh zamítnut');
   };
 
   const incrementViewCount = async (articleId: string) => {
