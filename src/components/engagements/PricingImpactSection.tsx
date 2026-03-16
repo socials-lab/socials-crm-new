@@ -72,6 +72,14 @@ export function PricingImpactSection({
   const [manualInternalCost, setManualInternalCost] = useState<number>(0);
   const [justification, setJustification] = useState('');
 
+  // New client (different SRO) state for expand_shop
+  const [requiresNewClient, setRequiresNewClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientBrand, setNewClientBrand] = useState('');
+  const [newClientIco, setNewClientIco] = useState('');
+  const [newClientDic, setNewClientDic] = useState('');
+  const [newClientNote, setNewClientNote] = useState('');
+
   // Calculate current client economics
   const clientEconomics: ClientEconomics = useMemo(
     () => calculateClientEconomics(clientId, engagements, engagementServices, assignments),
