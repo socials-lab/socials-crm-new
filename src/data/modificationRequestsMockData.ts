@@ -43,6 +43,8 @@ export interface StoredModificationRequest {
   updated_at: string;
   // Email history
   emails_sent: EmailSentRecord[];
+  // Pricing engine snapshot
+  pricing_snapshot: PricingSnapshot | null;
   // Denormalized data for display
   engagement_name: string;
   client_id: string;
