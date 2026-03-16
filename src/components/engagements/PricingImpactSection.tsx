@@ -160,6 +160,14 @@ export function PricingImpactSection({
       return;
     }
 
+    const newClientData: NewClientData | undefined = (requiresNewClient && scenario === 'expand_shop') ? {
+      company_name: newClientName,
+      brand_name: newClientBrand || undefined,
+      ico: newClientIco || undefined,
+      dic: newClientDic || undefined,
+      note: newClientNote || undefined,
+    } : undefined;
+
     const snapshot: PricingSnapshot = {
       scenario,
       reference_service_id: referenceService?.id,
@@ -177,9 +185,11 @@ export function PricingImpactSection({
       validation_status: impact.validationStatus,
       requires_admin_approval: impact.requiresAdminApproval,
       justification: justification || undefined,
+      requires_new_client: requiresNewClient && scenario === 'expand_shop' ? true : undefined,
+      new_client_data: newClientData,
     };
     onSnapshotChange(snapshot);
-  }, [scenario, referenceService, multiplier, deltaRevenue, deltaInternalCost, clientEconomics, impact, justification]);
+  }, [scenario, referenceService, multiplier, deltaRevenue, deltaInternalCost, clientEconomics, impact, justification, requiresNewClient, newClientName, newClientBrand, newClientIco, newClientDic, newClientNote]);
 
   const isExpansion = scenario === 'expand_country' || scenario === 'expand_shop';
   const defaultMult = getDefaultMultiplier(scenario);
