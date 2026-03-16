@@ -816,6 +816,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                     proposedPrice={requestType === 'add_service' ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice) : newPrice}
                     selectedServiceId={selectedServiceId}
                     isAddonService={isAddon}
+                    selectedTier={selectedTier === 'none' ? null : selectedTier}
                     onPriceChange={(price) => {
                       if (requestType === 'add_service') setServicePrice(price);
                       else setNewPrice(price);

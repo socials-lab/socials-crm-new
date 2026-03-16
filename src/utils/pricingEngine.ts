@@ -37,6 +37,10 @@ export interface PricingSnapshot {
   reference_price?: number;
   reference_internal_cost?: number;
   multiplier?: number;
+  /** Price calculated from reference × multiplier */
+  recommended_price?: number;
+  /** User-edited final price (if different from recommended) */
+  final_edited_price?: number;
   delta_revenue: number;
   delta_internal_cost: number;
   current_total_revenue: number;
