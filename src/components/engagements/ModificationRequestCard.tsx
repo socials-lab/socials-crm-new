@@ -405,6 +405,23 @@ export function ModificationRequestCard({
                       )}
                     </div>
                   )}
+                  {request.pricing_snapshot.colleague_rewards && request.pricing_snapshot.colleague_rewards.length > 0 && (
+                    <div className="mt-1 space-y-1">
+                      <span className="font-medium">👥 Odměny kolegů:</span>
+                      {request.pricing_snapshot.colleague_rewards.map((cr, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-muted-foreground">{cr.role}:</span>
+                          {cr.colleague_name && <span>{cr.colleague_name}</span>}
+                          <span className="font-medium">
+                            {cr.reward.toLocaleString('cs-CZ')} {cr.reward_type === 'per_credit' ? 'Kč/kredit' : 'Kč'}
+                          </span>
+                          {cr.hours > 0 && (
+                            <span className="text-muted-foreground">({cr.hours}h)</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
                
