@@ -90,8 +90,36 @@ const ADDON_SERVICE_REWARDS: ServiceRewardConfig[] = [
 const ALL_REWARDS = [...CORE_SERVICE_REWARDS, ...ADDON_SERVICE_REWARDS];
 
 /**
+ * Look up recommended colleague rewards from a service's reward_config (DB).
+ * Falls back to hardcoded lookup if reward_config is not set.
+ */
+export function getRewardsFromServiceConfig(
+  rewardConfig: { tier?: string; roles: RoleReward[] }[] | null | undefined,
+  tier?: string | null
+): RoleReward[] | null {
+  if (!rewardConfig || rewardConfig.length === 0) return null;
+
+  // For tier-based configs (core services)
+  if (tier) {
+    const tierLower = tier.toLowerCase();
+    const match = rewardConfig.find(rc => rc.tier?.toLowerCase() === tierLower);
+    if (match && match.roles.length > 0) return match.roles;
+  }
+
+  // Fallback: config without tier (addons)
+  const noTierMatch = rewardConfig.find(rc => !rc.tier);
+  if (noTierMatch && noTierMatch.roles.length > 0) return noTierMatch.roles;
+
+  // If only tiered configs exist and no tier specified, return first
+  if (rewardConfig[0]?.roles.length > 0) return rewardConfig[0].roles;
+
+  return null;
+}
+
+/**
  * Look up recommended colleague rewards for a service name + optional tier.
  * Matches by keyword in service name (case-insensitive).
+ * This is the FALLBACK when service.reward_config is not set in DB.
  */
 export function getServiceRewardRecommendation(
   serviceName: string,
