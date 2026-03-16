@@ -333,10 +333,16 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Engagement Selection */}
+          {/* ===== STEP 1: Engagement Selection ===== */}
           <div className="space-y-2">
-            <Label>Zakázka *</Label>
-            <Select value={selectedEngagementId} onValueChange={setSelectedEngagementId}>
+            <Label className="text-sm font-medium">1. Zakázka *</Label>
+            <Select value={selectedEngagementId} onValueChange={(v) => {
+              setSelectedEngagementId(v);
+              // Reset dependent selections
+              setSelectedServiceId('');
+              setSelectedEngagementServiceId('');
+              setSelectedAssignmentId('');
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="Vyberte zakázku" />
               </SelectTrigger>
@@ -350,532 +356,551 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
             </Select>
           </div>
 
-          {/* Request Type */}
-          <div className="space-y-2">
-            <Label>Typ úpravy *</Label>
-            <Select value={requestType} onValueChange={(v) => setRequestType(v as ModificationRequestType)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(REQUEST_TYPE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* ===== STEP 2: Request Type (only after engagement selected) ===== */}
+          {selectedEngagementId && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">2. Typ úpravy *</Label>
+              <Select value={requestType} onValueChange={(v) => {
+                setRequestType(v as ModificationRequestType);
+                // Reset type-dependent selections
+                setSelectedServiceId('');
+                setSelectedEngagementServiceId('');
+                setSelectedAssignmentId('');
+                setSelectedColleagueId('');
+              }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(REQUEST_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-          {/* ADD SERVICE FIELDS */}
-          {requestType === 'add_service' && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-              <h4 className="font-medium">Nová služba</h4>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Služba z katalogu</Label>
-                  <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Vyberte službu" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="custom">Vlastní služba</SelectItem>
-                      {services.filter(s => s.is_active).map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          {service.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Název služby *</Label>
-                  <Input 
-                    value={serviceName} 
-                    onChange={(e) => setServiceName(e.target.value)}
-                    placeholder="Např. Meta Ads SK"
-                  />
-                </div>
-              </div>
-
-              {/* Creative Boost specific fields */}
-              {isCreativeBoost && (
-                <div className="space-y-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
-                  <h5 className="font-medium text-sm flex items-center gap-2">🎨 Nastavení Creative Boost</h5>
+          {/* ===== STEP 3: Type-specific fields (only after type selected) ===== */}
+          {selectedEngagementId && requestType && (
+            <>
+              {/* ADD SERVICE FIELDS */}
+              {requestType === 'add_service' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-medium">3. Nová služba</h4>
                   
-                  <div className="space-y-2">
-                    <Label>Měsíční kreditový balíček</Label>
-                    <Input 
-                      type="number" 
-                      value={cbMaxCredits} 
-                      onChange={(e) => setCbMaxCredits(Number(e.target.value))}
-                      min={0}
-                    />
-                    <p className="text-xs text-muted-foreground">Kolik kreditů má klient k dispozici měsíčně</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Služba z katalogu</Label>
+                      <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Vyberte službu" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="custom">Vlastní služba</SelectItem>
+                          {services.filter(s => s.is_active).map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Název služby *</Label>
+                      <Input 
+                        value={serviceName} 
+                        onChange={(e) => setServiceName(e.target.value)}
+                        placeholder="Např. Meta Ads SK"
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>💰 Cena za kredit pro klienta (CZK)</Label>
-                    <Input 
-                      type="number" 
-                      value={cbPricePerCredit} 
-                      onChange={(e) => setCbPricePerCredit(Number(e.target.value))}
-                      min={0}
-                    />
-                    <p className="text-xs text-muted-foreground">Doporučeno: 400 Kč</p>
-                  </div>
+                  {/* Creative Boost specific fields */}
+                  {isCreativeBoost && (
+                    <div className="space-y-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                      <h5 className="font-medium text-sm flex items-center gap-2">🎨 Nastavení Creative Boost</h5>
+                      
+                      <div className="space-y-2">
+                        <Label>Měsíční kreditový balíček</Label>
+                        <Input 
+                          type="number" 
+                          value={cbMaxCredits} 
+                          onChange={(e) => setCbMaxCredits(Number(e.target.value))}
+                          min={0}
+                        />
+                        <p className="text-xs text-muted-foreground">Kolik kreditů má klient k dispozici měsíčně</p>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label>🎨 Odměna za kredit pro grafika (CZK)</Label>
-                    <Input 
-                      type="number" 
-                      value={cbColleagueReward} 
-                      onChange={(e) => setCbColleagueReward(Number(e.target.value))}
-                      min={0}
-                    />
-                    <p className="text-xs text-muted-foreground">Doporučeno: 80 Kč</p>
-                  </div>
+                      <div className="space-y-2">
+                        <Label>💰 Cena za kredit pro klienta (CZK)</Label>
+                        <Input 
+                          type="number" 
+                          value={cbPricePerCredit} 
+                          onChange={(e) => setCbPricePerCredit(Number(e.target.value))}
+                          min={0}
+                        />
+                        <p className="text-xs text-muted-foreground">Doporučeno: 400 Kč</p>
+                      </div>
 
-                  <div className="pt-2 border-t space-y-1">
-                    <p className="text-sm font-medium">
-                      Měsíční fakturace: <span className="text-primary">{(cbMaxCredits * cbPricePerCredit).toLocaleString('cs-CZ')} CZK</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      = {cbMaxCredits} kreditů × {cbPricePerCredit} Kč/kredit
-                    </p>
-                    {cbColleagueReward > 0 && (
-                      <>
-                        <p className="text-sm font-medium mt-2">
-                          Odměna pro grafika: <span className="text-green-600">{(cbMaxCredits * cbColleagueReward).toLocaleString('cs-CZ')} CZK/měsíc</span>
+                      <div className="space-y-2">
+                        <Label>🎨 Odměna za kredit pro grafika (CZK)</Label>
+                        <Input 
+                          type="number" 
+                          value={cbColleagueReward} 
+                          onChange={(e) => setCbColleagueReward(Number(e.target.value))}
+                          min={0}
+                        />
+                        <p className="text-xs text-muted-foreground">Doporučeno: 80 Kč</p>
+                      </div>
+
+                      <div className="pt-2 border-t space-y-1">
+                        <p className="text-sm font-medium">
+                          Měsíční fakturace: <span className="text-primary">{(cbMaxCredits * cbPricePerCredit).toLocaleString('cs-CZ')} CZK</span>
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          = {cbMaxCredits} kreditů × {cbColleagueReward} Kč/kredit
+                          = {cbMaxCredits} kreditů × {cbPricePerCredit} Kč/kredit
                         </p>
-                      </>
+                        {cbColleagueReward > 0 && (
+                          <>
+                            <p className="text-sm font-medium mt-2">
+                              Odměna pro grafika: <span className="text-green-600">{(cbMaxCredits * cbColleagueReward).toLocaleString('cs-CZ')} CZK/měsíc</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              = {cbMaxCredits} kreditů × {cbColleagueReward} Kč/kredit
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Standard service fields (non-Creative Boost) */}
+                  {!isCreativeBoost && (
+                    <>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>Cena *</Label>
+                          <Input 
+                            type="number" 
+                            value={servicePrice} 
+                            onChange={(e) => setServicePrice(Number(e.target.value))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Měna</Label>
+                          <Select value={serviceCurrency} onValueChange={setServiceCurrency}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="CZK">CZK</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Fakturace</Label>
+                          <Select value={serviceBillingType} onValueChange={(v) => setServiceBillingType(v as 'monthly' | 'one_off')}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="monthly">Měsíční</SelectItem>
+                              <SelectItem value="one_off">Jednorázová</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Tier selector only for core services */}
+                      {isCoreService && (
+                        <div className="space-y-2">
+                          <Label>Tier</Label>
+                          <Select value={selectedTier} onValueChange={(v) => setSelectedTier(v as ServiceTier | 'none')}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Vyberte tier" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Žádný</SelectItem>
+                              <SelectItem value="growth">GROWTH</SelectItem>
+                              <SelectItem value="pro">PRO</SelectItem>
+                              <SelectItem value="elite">ELITE</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {/* Service description for client */}
+                      <div className="space-y-4 mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <h5 className="font-medium text-sm text-blue-900 dark:text-blue-300">Popis služby pro klienta</h5>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-sm">Stručný popis</Label>
+                          <Textarea 
+                            value={serviceDescription}
+                            onChange={(e) => setServiceDescription(e.target.value)}
+                            placeholder="Např. Komplexní správa reklamních kampaní na Facebooku a Instagramu"
+                            rows={2}
+                            className="text-sm"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-sm">Co klient dostane (každý řádek = 1 bod)</Label>
+                          <Textarea 
+                            value={serviceDeliverables}
+                            onChange={(e) => setServiceDeliverables(e.target.value)}
+                            placeholder="• Kompletní správa Meta Ads&#10;• Looker Studio reporting 24/7&#10;• Měsíční strategické konzultace"
+                            rows={4}
+                            className="text-sm font-mono"
+                          />
+                        </div>
+                        
+                        <p className="text-xs text-muted-foreground">
+                          ⓘ Pro služby z katalogu se popis načte automaticky - můžete ho upravit
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* UPDATE SERVICE PRICE FIELDS */}
+              {requestType === 'update_service_price' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-medium">3. Změna ceny</h4>
+                  
+                  <div className="space-y-2">
+                    <Label>Služba *</Label>
+                    <Select value={selectedEngagementServiceId} onValueChange={setSelectedEngagementServiceId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte službu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentEngagementServices.filter(es => es.is_active).map((es) => (
+                          <SelectItem key={es.id} value={es.id}>
+                            {es.name} ({es.price.toLocaleString()} {es.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Nová cena *</Label>
+                    <Input 
+                      type="number" 
+                      value={newPrice} 
+                      onChange={(e) => setNewPrice(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* DEACTIVATE SERVICE FIELDS */}
+              {requestType === 'deactivate_service' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-medium">3. Deaktivace služby</h4>
+                  
+                  <div className="space-y-2">
+                    <Label>Služba k deaktivaci *</Label>
+                    <Select value={selectedEngagementServiceId} onValueChange={setSelectedEngagementServiceId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte službu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentEngagementServices.filter(es => es.is_active).map((es) => (
+                          <SelectItem key={es.id} value={es.id}>
+                            {es.name} ({es.price.toLocaleString()} {es.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* ADD ASSIGNMENT FIELDS */}
+              {requestType === 'add_assignment' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-medium">3. Přiřazení kolegy</h4>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Kolega *</Label>
+                      <Select value={selectedColleagueId} onValueChange={setSelectedColleagueId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Vyberte kolegu" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {colleagues.filter(c => c.status === 'active').map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.full_name} ({c.position})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Role na projektu</Label>
+                      <Input 
+                        value={roleOnEngagement} 
+                        onChange={(e) => setRoleOnEngagement(e.target.value)}
+                        placeholder="Např. Specialist"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Model odměny</Label>
+                      <Select value={costModel} onValueChange={(v) => setCostModel(v as 'hourly' | 'fixed_monthly' | 'percentage')}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="fixed_monthly">Fixní měsíční</SelectItem>
+                          <SelectItem value="hourly">Hodinová</SelectItem>
+                          <SelectItem value="percentage">% z revenue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {costModel === 'fixed_monthly' && (
+                      <div className="space-y-2">
+                        <Label>Měsíční odměna (CZK)</Label>
+                        <Input 
+                          type="number" 
+                          value={monthlyCost} 
+                          onChange={(e) => setMonthlyCost(Number(e.target.value))}
+                        />
+                      </div>
+                    )}
+
+                    {costModel === 'hourly' && (
+                      <div className="space-y-2">
+                        <Label>Hodinová sazba (CZK)</Label>
+                        <Input 
+                          type="number" 
+                          value={hourlyCost} 
+                          onChange={(e) => setHourlyCost(Number(e.target.value))}
+                        />
+                      </div>
+                    )}
+
+                    {costModel === 'percentage' && (
+                      <div className="space-y-2">
+                        <Label>% z revenue</Label>
+                        <Input 
+                          type="number" 
+                          value={percentageOfRevenue} 
+                          onChange={(e) => setPercentageOfRevenue(Number(e.target.value))}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Standard service fields (non-Creative Boost) */}
-              {!isCreativeBoost && (
-                <>
-                  <div className="grid grid-cols-3 gap-4">
+              {/* UPDATE ASSIGNMENT FIELDS */}
+              {requestType === 'update_assignment' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-medium">3. Změna odměny kolegy</h4>
+                  
+                  <div className="space-y-2">
+                    <Label>Kolega *</Label>
+                    <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte přiřazení" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentAssignments.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {getColleagueName(a.colleague_id)} ({a.role_on_engagement || 'bez role'})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Cena *</Label>
-                      <Input 
-                        type="number" 
-                        value={servicePrice} 
-                        onChange={(e) => setServicePrice(Number(e.target.value))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Měna</Label>
-                      <Select value={serviceCurrency} onValueChange={setServiceCurrency}>
+                      <Label>Nový model odměny</Label>
+                      <Select value={costModel} onValueChange={(v) => setCostModel(v as 'hourly' | 'fixed_monthly' | 'percentage')}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="CZK">CZK</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
+                          <SelectItem value="fixed_monthly">Fixní měsíční</SelectItem>
+                          <SelectItem value="hourly">Hodinová</SelectItem>
+                          <SelectItem value="percentage">% z revenue</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Fakturace</Label>
-                      <Select value={serviceBillingType} onValueChange={(v) => setServiceBillingType(v as 'monthly' | 'one_off')}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="monthly">Měsíční</SelectItem>
-                          <SelectItem value="one_off">Jednorázová</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
 
-                  {/* Tier selector only for core services */}
-                  {isCoreService && (
-                    <div className="space-y-2">
-                      <Label>Tier</Label>
-                      <Select value={selectedTier} onValueChange={(v) => setSelectedTier(v as ServiceTier | 'none')}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Vyberte tier" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Žádný</SelectItem>
-                          <SelectItem value="growth">GROWTH</SelectItem>
-                          <SelectItem value="pro">PRO</SelectItem>
-                          <SelectItem value="elite">ELITE</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                    {costModel === 'fixed_monthly' && (
+                      <div className="space-y-2">
+                        <Label>Nová měsíční odměna (CZK)</Label>
+                        <Input 
+                          type="number" 
+                          value={monthlyCost} 
+                          onChange={(e) => setMonthlyCost(Number(e.target.value))}
+                        />
+                      </div>
+                    )}
 
-                  {/* Service description for client */}
-                  <div className="space-y-4 mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      <h5 className="font-medium text-sm text-blue-900 dark:text-blue-300">Popis služby pro klienta</h5>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-sm">Stručný popis</Label>
-                      <Textarea 
-                        value={serviceDescription}
-                        onChange={(e) => setServiceDescription(e.target.value)}
-                        placeholder="Např. Komplexní správa reklamních kampaní na Facebooku a Instagramu"
-                        rows={2}
-                        className="text-sm"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-sm">Co klient dostane (každý řádek = 1 bod)</Label>
-                      <Textarea 
-                        value={serviceDeliverables}
-                        onChange={(e) => setServiceDeliverables(e.target.value)}
-                        placeholder="• Kompletní správa Meta Ads&#10;• Looker Studio reporting 24/7&#10;• Měsíční strategické konzultace"
-                        rows={4}
-                        className="text-sm font-mono"
-                      />
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground">
-                      ⓘ Pro služby z katalogu se popis načte automaticky - můžete ho upravit
-                    </p>
+                    {costModel === 'hourly' && (
+                      <div className="space-y-2">
+                        <Label>Nová hodinová sazba (CZK)</Label>
+                        <Input 
+                          type="number" 
+                          value={hourlyCost} 
+                          onChange={(e) => setHourlyCost(Number(e.target.value))}
+                        />
+                      </div>
+                    )}
+
+                    {costModel === 'percentage' && (
+                      <div className="space-y-2">
+                        <Label>Nové % z revenue</Label>
+                        <Input 
+                          type="number" 
+                          value={percentageOfRevenue} 
+                          onChange={(e) => setPercentageOfRevenue(Number(e.target.value))}
+                        />
+                      </div>
+                    )}
                   </div>
-                </>
+                </div>
               )}
-             </div>
-          )}
 
-          {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
-          {selectedEngagementId && (requestType === 'add_service' || requestType === 'update_service_price') && (() => {
-            const selectedEng = engagements.find(e => e.id === selectedEngagementId);
-            if (!selectedEng) return null;
-            const isAddon = selectedService?.service_type === 'addon';
-            return (
-              <PricingImpactSection
-                clientId={selectedEng.client_id}
-                engagementId={selectedEngagementId}
-                proposedPrice={requestType === 'add_service' ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice) : newPrice}
-                selectedServiceId={selectedServiceId}
-                isAddonService={isAddon}
-                onPriceChange={(price) => {
-                  if (requestType === 'add_service') setServicePrice(price);
-                  else setNewPrice(price);
-                }}
-                onInternalCostChange={setPricingInternalCost}
-                onSnapshotChange={setPricingSnapshot}
-                onRequiresAdminApproval={setRequiresAdminApproval}
-              />
-            );
-          })()}
-
-          {/* UPDATE SERVICE PRICE FIELDS */}
-          {requestType === 'update_service_price' && selectedEngagementId && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-              <h4 className="font-medium">Změna ceny</h4>
-              
-              <div className="space-y-2">
-                <Label>Služba *</Label>
-                <Select value={selectedEngagementServiceId} onValueChange={setSelectedEngagementServiceId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Vyberte službu" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currentEngagementServices.filter(es => es.is_active).map((es) => (
-                      <SelectItem key={es.id} value={es.id}>
-                        {es.name} ({es.price.toLocaleString()} {es.currency})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Nová cena *</Label>
-                <Input 
-                  type="number" 
-                  value={newPrice} 
-                  onChange={(e) => setNewPrice(Number(e.target.value))}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* DEACTIVATE SERVICE FIELDS */}
-          {requestType === 'deactivate_service' && selectedEngagementId && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-              <h4 className="font-medium">Deaktivace služby</h4>
-              
-              <div className="space-y-2">
-                <Label>Služba k deaktivaci *</Label>
-                <Select value={selectedEngagementServiceId} onValueChange={setSelectedEngagementServiceId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Vyberte službu" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currentEngagementServices.filter(es => es.is_active).map((es) => (
-                      <SelectItem key={es.id} value={es.id}>
-                        {es.name} ({es.price.toLocaleString()} {es.currency})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          {/* ADD ASSIGNMENT FIELDS */}
-          {requestType === 'add_assignment' && selectedEngagementId && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-              <h4 className="font-medium">Přiřazení kolegy</h4>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Kolega *</Label>
-                  <Select value={selectedColleagueId} onValueChange={setSelectedColleagueId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Vyberte kolegu" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {colleagues.filter(c => c.status === 'active').map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.full_name} ({c.position})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* REMOVE ASSIGNMENT FIELDS */}
+              {requestType === 'remove_assignment' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-medium">3. Odebrání kolegy</h4>
+                  
+                  <div className="space-y-2">
+                    <Label>Kolega k odebrání *</Label>
+                    <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte přiřazení" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentAssignments.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {getColleagueName(a.colleague_id)} ({a.role_on_engagement || 'bez role'})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <Label>Role na projektu</Label>
-                  <Input 
-                    value={roleOnEngagement} 
-                    onChange={(e) => setRoleOnEngagement(e.target.value)}
-                    placeholder="Např. Specialist"
+              {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
+              {(requestType === 'add_service' || requestType === 'update_service_price') && (() => {
+                const selectedEng = engagements.find(e => e.id === selectedEngagementId);
+                if (!selectedEng) return null;
+                const isAddon = selectedService?.service_type === 'addon';
+                return (
+                  <PricingImpactSection
+                    clientId={selectedEng.client_id}
+                    engagementId={selectedEngagementId}
+                    proposedPrice={requestType === 'add_service' ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice) : newPrice}
+                    selectedServiceId={selectedServiceId}
+                    isAddonService={isAddon}
+                    onPriceChange={(price) => {
+                      if (requestType === 'add_service') setServicePrice(price);
+                      else setNewPrice(price);
+                    }}
+                    onInternalCostChange={setPricingInternalCost}
+                    onSnapshotChange={setPricingSnapshot}
+                    onRequiresAdminApproval={setRequiresAdminApproval}
                   />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Model odměny</Label>
-                  <Select value={costModel} onValueChange={(v) => setCostModel(v as 'hourly' | 'fixed_monthly' | 'percentage')}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed_monthly">Fixní měsíční</SelectItem>
-                      <SelectItem value="hourly">Hodinová</SelectItem>
-                      <SelectItem value="percentage">% z revenue</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {costModel === 'fixed_monthly' && (
-                  <div className="space-y-2">
-                    <Label>Měsíční odměna (CZK)</Label>
-                    <Input 
-                      type="number" 
-                      value={monthlyCost} 
-                      onChange={(e) => setMonthlyCost(Number(e.target.value))}
-                    />
-                  </div>
-                )}
-
-                {costModel === 'hourly' && (
-                  <div className="space-y-2">
-                    <Label>Hodinová sazba (CZK)</Label>
-                    <Input 
-                      type="number" 
-                      value={hourlyCost} 
-                      onChange={(e) => setHourlyCost(Number(e.target.value))}
-                    />
-                  </div>
-                )}
-
-                {costModel === 'percentage' && (
-                  <div className="space-y-2">
-                    <Label>% z revenue</Label>
-                    <Input 
-                      type="number" 
-                      value={percentageOfRevenue} 
-                      onChange={(e) => setPercentageOfRevenue(Number(e.target.value))}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+                );
+              })()}
+            </>
           )}
 
-          {/* UPDATE ASSIGNMENT FIELDS */}
-          {requestType === 'update_assignment' && selectedEngagementId && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-              <h4 className="font-medium">Změna odměny kolegy</h4>
-              
+          {/* ===== STEP 4: Details (only after engagement + type selected) ===== */}
+          {selectedEngagementId && requestType && (
+            <div className="space-y-4 pt-2 border-t">
+              {/* Effective From */}
               <div className="space-y-2">
-                <Label>Kolega *</Label>
-                <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
+                <Label>Platnost od</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !effectiveFrom && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {effectiveFrom ? format(effectiveFrom, 'd. MMMM yyyy', { locale: cs }) : 'Vyberte datum'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={effectiveFrom}
+                      onSelect={setEffectiveFrom}
+                      locale={cs}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Proration Info */}
+              {prorationInfo && requestType === 'add_service' && effectiveFrom && effectiveFrom.getDate() > 1 && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Poměrná fakturace:</strong> Služba začíná {format(effectiveFrom, 'd.M.', { locale: cs })} 
+                    → fakturace za {format(effectiveFrom, 'MMMM', { locale: cs })}: <strong>{prorationInfo.proratedAmount.toLocaleString()} {serviceCurrency}</strong>
+                    {' '}({prorationInfo.remainingDays} z {prorationInfo.daysInMonth} dní)
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Upsold By (commission tracking) */}
+              <div className="space-y-2">
+                <Label>Kdo dohodl (pro provizi)</Label>
+                <Select value={upsoldById} onValueChange={setUpsoldById}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Vyberte přiřazení" />
+                    <SelectValue placeholder="Vyberte kolegu" />
                   </SelectTrigger>
                   <SelectContent>
-                    {currentAssignments.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {getColleagueName(a.colleague_id)} ({a.role_on_engagement || 'bez role'})
+                    <SelectItem value="none">Nikdo (bez provize)</SelectItem>
+                    {colleagues.filter(c => c.status === 'active').map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.full_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nový model odměny</Label>
-                  <Select value={costModel} onValueChange={(v) => setCostModel(v as 'hourly' | 'fixed_monthly' | 'percentage')}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed_monthly">Fixní měsíční</SelectItem>
-                      <SelectItem value="hourly">Hodinová</SelectItem>
-                      <SelectItem value="percentage">% z revenue</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {costModel === 'fixed_monthly' && (
-                  <div className="space-y-2">
-                    <Label>Nová měsíční odměna (CZK)</Label>
-                    <Input 
-                      type="number" 
-                      value={monthlyCost} 
-                      onChange={(e) => setMonthlyCost(Number(e.target.value))}
-                    />
-                  </div>
-                )}
-
-                {costModel === 'hourly' && (
-                  <div className="space-y-2">
-                    <Label>Nová hodinová sazba (CZK)</Label>
-                    <Input 
-                      type="number" 
-                      value={hourlyCost} 
-                      onChange={(e) => setHourlyCost(Number(e.target.value))}
-                    />
-                  </div>
-                )}
-
-                {costModel === 'percentage' && (
-                  <div className="space-y-2">
-                    <Label>Nové % z revenue</Label>
-                    <Input 
-                      type="number" 
-                      value={percentageOfRevenue} 
-                      onChange={(e) => setPercentageOfRevenue(Number(e.target.value))}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* REMOVE ASSIGNMENT FIELDS */}
-          {requestType === 'remove_assignment' && selectedEngagementId && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-              <h4 className="font-medium">Odebrání kolegy</h4>
-              
+              {/* Note */}
               <div className="space-y-2">
-                <Label>Kolega k odebrání *</Label>
-                <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Vyberte přiřazení" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currentAssignments.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {getColleagueName(a.colleague_id)} ({a.role_on_engagement || 'bez role'})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          {/* Effective From */}
-          <div className="space-y-2">
-            <Label>Platnost od</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !effectiveFrom && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {effectiveFrom ? format(effectiveFrom, 'd. MMMM yyyy', { locale: cs }) : 'Vyberte datum'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={effectiveFrom}
-                  onSelect={setEffectiveFrom}
-                  locale={cs}
+                <Label>Poznámka</Label>
+                <Textarea 
+                  value={note} 
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Např. Klient požádal o rozšíření služeb po meetingu..."
+                  rows={3}
                 />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Proration Info */}
-          {prorationInfo && requestType === 'add_service' && effectiveFrom && effectiveFrom.getDate() > 1 && (
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Poměrná fakturace:</strong> Služba začíná {format(effectiveFrom, 'd.M.', { locale: cs })} 
-                → fakturace za {format(effectiveFrom, 'MMMM', { locale: cs })}: <strong>{prorationInfo.proratedAmount.toLocaleString()} {serviceCurrency}</strong>
-                {' '}({prorationInfo.remainingDays} z {prorationInfo.daysInMonth} dní)
-              </AlertDescription>
-            </Alert>
+              </div>
+            </div>
           )}
-
-          {/* Upsold By (commission tracking) */}
-          <div className="space-y-2">
-            <Label>Kdo dohodl (pro provizi)</Label>
-            <Select value={upsoldById} onValueChange={setUpsoldById}>
-              <SelectTrigger>
-                <SelectValue placeholder="Vyberte kolegu" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nikdo (bez provize)</SelectItem>
-                {colleagues.filter(c => c.status === 'active').map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Note */}
-          <div className="space-y-2">
-            <Label>Poznámka</Label>
-            <Textarea 
-              value={note} 
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Např. Klient požádal o rozšíření služeb po meetingu..."
-              rows={3}
-            />
-          </div>
         </div>
 
         <DialogFooter>
