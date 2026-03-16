@@ -24,6 +24,7 @@ import {
   type ColleagueRewardEntry,
 } from '@/utils/pricingEngine';
 import {
+  getRewardsFromServiceConfig,
   getServiceRewardRecommendation,
   applyMultiplierToRewards,
   type RoleReward,
@@ -149,7 +150,11 @@ export function PricingImpactSection({
     }
     // Use tier from prop (parent), not from catalog service
     const tier = selectedTierProp || null;
-    const recommended = getServiceRewardRecommendation(
+    // Try DB reward_config first, then fall back to hardcoded lookup
+    const recommended = getRewardsFromServiceConfig(
+      selectedCatalogService.reward_config as any,
+      tier
+    ) || getServiceRewardRecommendation(
       selectedCatalogService.name,
       tier
     );

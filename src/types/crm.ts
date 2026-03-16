@@ -136,6 +136,18 @@ export interface ServiceTierConfig {
   max_spend: number | null;
 }
 
+export interface ServiceRewardRole {
+  role: string;
+  hours: number;
+  reward: number;
+  reward_type: 'fixed_monthly' | 'per_credit' | 'hourly';
+}
+
+export interface ServiceRewardTierConfig {
+  tier?: string;
+  roles: ServiceRewardRole[];
+}
+
 export interface Service {
   id: string;
   code: string;
@@ -151,7 +163,9 @@ export interface Service {
   created_at: string;
   updated_at: string;
   // Default values for offer generation
-  default_deliverables: string[] | null;     // Co klient dostane
+  default_deliverables?: string[] | null;
+  // Colleague reward configuration per tier
+  reward_config?: ServiceRewardTierConfig[] | null;
 }
 
 export interface ClientService {
