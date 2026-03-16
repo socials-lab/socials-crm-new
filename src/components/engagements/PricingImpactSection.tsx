@@ -461,8 +461,8 @@ export function PricingImpactSection({
           </div>
         )}
 
-        {/* Internal cost for addon / custom */}
-        {!isExpansion && (
+        {/* Internal cost for addon / custom — only show manual input when no rewards recommended */}
+        {!isExpansion && colleagueRewards.length === 0 && (
           <div className="space-y-2">
             <Label className="text-xs">Interní náklady na tuto službu (CZK/měs)</Label>
             <Input
@@ -472,6 +472,94 @@ export function PricingImpactSection({
               className="h-9"
               placeholder="Náklady na kolegu/y"
             />
+          </div>
+        )}
+
+        {/* Colleague Rewards Table */}
+        {colleagueRewards.length > 0 && (
+          <div className="space-y-2 p-3 rounded-md border bg-background">
+            <div className="flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 text-primary" />
+              <h6 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Odměny kolegů za tuto službu
+              </h6>
+            </div>
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-xs">
+                    <TableHead className="h-8 text-xs">Role</TableHead>
+                    <TableHead className="h-8 text-xs">Kolega</TableHead>
+                    <TableHead className="h-8 text-xs text-right">Hodiny</TableHead>
+                    <TableHead className="h-8 text-xs text-right">Odměna</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {colleagueRewards.map((reward, idx) => (
+                    <TableRow key={idx} className="text-xs">
+                      <TableCell className="py-1.5 font-medium">{reward.role}</TableCell>
+                      <TableCell className="py-1.5">
+                        <Select
+                          value={reward.colleague_id || ''}
+                          onValueChange={(val) => {
+                            const col = activeColleagues.find(c => c.id === val);
+                            setColleagueRewards(prev => prev.map((r, i) =>
+                              i === idx ? { ...r, colleague_id: val, colleague_name: col?.full_name } : r
+                            ));
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-[180px]">
+                            <SelectValue placeholder="Vybrat kolegu" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {activeColleagues.map(c => (
+                              <SelectItem key={c.id} value={c.id} className="text-xs">
+                                {c.full_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right">
+                        <Input
+                          type="number"
+                          value={reward.hours}
+                          onChange={(e) => {
+                            setColleagueRewards(prev => prev.map((r, i) =>
+                              i === idx ? { ...r, hours: Number(e.target.value) } : r
+                            ));
+                          }}
+                          className="h-7 w-16 text-xs text-right ml-auto"
+                          step="0.5"
+                        />
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Input
+                            type="number"
+                            value={reward.reward}
+                            onChange={(e) => {
+                              setColleagueRewards(prev => prev.map((r, i) =>
+                                i === idx ? { ...r, reward: Number(e.target.value) } : r
+                              ));
+                            }}
+                            className="h-7 w-20 text-xs text-right"
+                            step="100"
+                          />
+                          <span className="text-muted-foreground text-[10px] shrink-0">
+                            {reward.reward_type === 'per_credit' ? 'Kč/kredit' : 'Kč'}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex justify-between items-center text-xs pt-1">
+              <span className="text-muted-foreground">Celkové interní náklady:</span>
+              <span className="font-semibold">{formatCZK(totalColleagueRewards)}</span>
+            </div>
           </div>
         )}
 
