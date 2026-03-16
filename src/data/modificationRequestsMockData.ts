@@ -4,6 +4,7 @@ import type {
   ModificationProposedChanges,
 } from '@/types/crm';
 import type { Notification } from '@/types/notifications';
+import type { PricingSnapshot } from '@/utils/pricingEngine';
 
 const STORAGE_KEY = 'modification_requests';
 const NOTIFICATIONS_STORAGE_KEY = 'crm_notifications';
@@ -42,6 +43,8 @@ export interface StoredModificationRequest {
   updated_at: string;
   // Email history
   emails_sent: EmailSentRecord[];
+  // Pricing engine snapshot
+  pricing_snapshot: PricingSnapshot | null;
   // Denormalized data for display
   engagement_name: string;
   client_id: string;
@@ -88,6 +91,7 @@ export function createModificationRequest(params: {
   upsell_commission_percent?: number;
   note?: string | null;
   requested_by: string;
+  pricing_snapshot?: PricingSnapshot | null;
 }): StoredModificationRequest {
   const requests = getModificationRequests();
   
@@ -116,6 +120,8 @@ export function createModificationRequest(params: {
     updated_at: new Date().toISOString(),
     // Email history
     emails_sent: [],
+    // Pricing engine snapshot
+    pricing_snapshot: params.pricing_snapshot || null,
     // Denormalized
     engagement_name: params.engagement_name,
     client_id: params.client_id,

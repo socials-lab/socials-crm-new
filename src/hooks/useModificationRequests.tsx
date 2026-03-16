@@ -17,6 +17,7 @@ import type {
   ModificationRequestType,
   ModificationProposedChanges,
 } from '@/types/crm';
+import type { PricingSnapshot } from '@/utils/pricingEngine';
 
 export function useModificationRequests() {
   const { user } = useAuth();
@@ -47,6 +48,7 @@ export function useModificationRequests() {
     upsold_by_id?: string | null;
     upsell_commission_percent?: number;
     note?: string | null;
+    pricing_snapshot?: PricingSnapshot | null;
   }) => {
     if (!user) throw new Error('User not authenticated');
     
@@ -79,6 +81,7 @@ export function useModificationRequests() {
         upsell_commission_percent: params.upsell_commission_percent,
         note: params.note,
         requested_by: user.id,
+        pricing_snapshot: params.pricing_snapshot,
       });
       
       toast.success('Požadavek na úpravu byl odeslán ke schválení');

@@ -18,6 +18,8 @@ import type { ModificationRequestType, ServiceTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SERVICE_DETAILS } from '@/constants/serviceDetails';
+import { PricingImpactSection } from '@/components/engagements/PricingImpactSection';
+import type { PricingSnapshot } from '@/utils/pricingEngine';
 
 interface ProposeModificationDialogProps {
   open: boolean;
@@ -79,6 +81,11 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
   // Service description fields for client-facing offer
   const [serviceDescription, setServiceDescription] = useState('');
   const [serviceDeliverables, setServiceDeliverables] = useState('');
+
+  // Pricing engine state
+  const [pricingSnapshot, setPricingSnapshot] = useState<PricingSnapshot | null>(null);
+  const [pricingInternalCost, setPricingInternalCost] = useState<number>(0);
+  const [requiresAdminApproval, setRequiresAdminApproval] = useState(false);
 
   // Detect Creative Boost
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
@@ -148,6 +155,9 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
       setSelectedAssignmentId('');
       setServiceDescription('');
       setServiceDeliverables('');
+      setPricingSnapshot(null);
+      setPricingInternalCost(0);
+      setRequiresAdminApproval(false);
     }
   }, [open]);
 
@@ -290,6 +300,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
         effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
         upsold_by_id: upsoldById === 'none' ? null : upsoldById,
         note: note || null,
+        pricing_snapshot: pricingSnapshot,
       });
       
       // Just close the dialog - upgrade offer will be created at approval time
@@ -539,8 +550,31 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                   </div>
                 </>
               )}
-            </div>
+             </div>
           )}
+
+          {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
+          {selectedEngagementId && (requestType === 'add_service' || requestType === 'update_service_price') && (() => {
+            const selectedEng = engagements.find(e => e.id === selectedEngagementId);
+            if (!selectedEng) return null;
+            const isAddon = selectedService?.service_type === 'addon';
+            return (
+              <PricingImpactSection
+                clientId={selectedEng.client_id}
+                engagementId={selectedEngagementId}
+                proposedPrice={requestType === 'add_service' ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice) : newPrice}
+                selectedServiceId={selectedServiceId}
+                isAddonService={isAddon}
+                onPriceChange={(price) => {
+                  if (requestType === 'add_service') setServicePrice(price);
+                  else setNewPrice(price);
+                }}
+                onInternalCostChange={setPricingInternalCost}
+                onSnapshotChange={setPricingSnapshot}
+                onRequiresAdminApproval={setRequiresAdminApproval}
+              />
+            );
+          })()}
 
           {/* UPDATE SERVICE PRICE FIELDS */}
           {requestType === 'update_service_price' && selectedEngagementId && (

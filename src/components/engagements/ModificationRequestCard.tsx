@@ -18,6 +18,8 @@ import {
   Pencil,
   Trash2,
   Mail,
+  AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +44,7 @@ import type {
   RemoveAssignmentProposedChanges,
 } from '@/types/crm';
 import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
+import { formatCZK } from '@/utils/pricingEngine';
 
 interface ModificationRequestCardProps {
   request: StoredModificationRequest;
@@ -334,8 +337,65 @@ export function ModificationRequestCard({
               {/* Changes */}
               <div className="bg-muted/50 rounded-md p-3">
                 {renderChanges()}
-              </div>
-              
+               </div>
+
+              {/* Pricing Snapshot */}
+              {request.pricing_snapshot && (
+                <div className="rounded-md border p-3 space-y-2 text-xs">
+                  <div className="flex items-center gap-2 font-medium text-sm">
+                    📊 Dopad na marži
+                    {request.pricing_snapshot.validation_status === 'green' && (
+                      <Badge className="bg-green-100 text-green-700 text-xs px-1.5 py-0">
+                        <CheckCircle2 className="h-3 w-3 mr-0.5" />OK
+                      </Badge>
+                    )}
+                    {request.pricing_snapshot.validation_status === 'orange' && (
+                      <Badge className="bg-amber-100 text-amber-700 text-xs px-1.5 py-0">
+                        <AlertTriangle className="h-3 w-3 mr-0.5" />Varování
+                      </Badge>
+                    )}
+                    {request.pricing_snapshot.validation_status === 'red' && (
+                      <Badge className="bg-red-100 text-red-700 text-xs px-1.5 py-0">
+                        <ShieldAlert className="h-3 w-3 mr-0.5" />Pod hranicí
+                      </Badge>
+                    )}
+                    {request.pricing_snapshot.requires_admin_approval && (
+                      <Badge variant="outline" className="text-xs px-1.5 py-0 border-destructive text-destructive">
+                        Vyžaduje admin schválení
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <span className="text-muted-foreground">Před:</span>{' '}
+                      {formatCZK(request.pricing_snapshot.current_total_revenue)}
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">+ změna:</span>{' '}
+                      {formatCZK(request.pricing_snapshot.delta_revenue)}
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Po:</span>{' '}
+                      {formatCZK(request.pricing_snapshot.new_total_revenue)}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Nová marže:</span>{' '}
+                    <span className="font-medium">{request.pricing_snapshot.new_margin_percent.toFixed(1)}%</span>
+                    {request.pricing_snapshot.multiplier && (
+                      <span className="ml-2 text-muted-foreground">
+                        (multiplikátor: {request.pricing_snapshot.multiplier})
+                      </span>
+                    )}
+                  </div>
+                  {request.pricing_snapshot.justification && (
+                    <p className="text-muted-foreground italic">
+                      Zdůvodnění: {request.pricing_snapshot.justification}
+                    </p>
+                  )}
+                </div>
+              )}
+               
               {/* Note */}
               {request.note && (
                 <p className="text-xs text-muted-foreground italic">
