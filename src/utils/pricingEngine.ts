@@ -22,6 +22,14 @@ export interface ClientEconomics {
   services: ServiceEconomics[];
 }
 
+export interface NewClientData {
+  company_name: string;
+  brand_name?: string;
+  ico?: string;
+  dic?: string;
+  note?: string;
+}
+
 export interface PricingSnapshot {
   scenario: PricingScenario;
   reference_service_id?: string;
@@ -39,6 +47,9 @@ export interface PricingSnapshot {
   validation_status: MarginValidationStatus;
   requires_admin_approval: boolean;
   justification?: string;
+  /** When expand_shop scenario requires a new legal entity (SRO) */
+  new_client_data?: NewClientData;
+  requires_new_client?: boolean;
 }
 
 export interface PricingScenarioResult {
