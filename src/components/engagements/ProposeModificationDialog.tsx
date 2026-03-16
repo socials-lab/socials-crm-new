@@ -18,6 +18,8 @@ import type { ModificationRequestType, ServiceTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SERVICE_DETAILS } from '@/constants/serviceDetails';
+import { PricingImpactSection } from '@/components/engagements/PricingImpactSection';
+import type { PricingSnapshot } from '@/utils/pricingEngine';
 
 interface ProposeModificationDialogProps {
   open: boolean;
