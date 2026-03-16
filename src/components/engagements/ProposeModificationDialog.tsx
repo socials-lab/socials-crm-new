@@ -550,8 +550,31 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                   </div>
                 </>
               )}
-            </div>
+             </div>
           )}
+
+          {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
+          {selectedEngagementId && (requestType === 'add_service' || requestType === 'update_service_price') && (() => {
+            const selectedEng = engagements.find(e => e.id === selectedEngagementId);
+            if (!selectedEng) return null;
+            const isAddon = selectedService?.service_type === 'addon';
+            return (
+              <PricingImpactSection
+                clientId={selectedEng.client_id}
+                engagementId={selectedEngagementId}
+                proposedPrice={requestType === 'add_service' ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice) : newPrice}
+                selectedServiceId={selectedServiceId}
+                isAddonService={isAddon}
+                onPriceChange={(price) => {
+                  if (requestType === 'add_service') setServicePrice(price);
+                  else setNewPrice(price);
+                }}
+                onInternalCostChange={setPricingInternalCost}
+                onSnapshotChange={setPricingSnapshot}
+                onRequiresAdminApproval={setRequiresAdminApproval}
+              />
+            );
+          })()}
 
           {/* UPDATE SERVICE PRICE FIELDS */}
           {requestType === 'update_service_price' && selectedEngagementId && (
