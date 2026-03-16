@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Calculator, ShieldAlert, Building } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Calculator, ShieldAlert, Building, Users } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import {
   calculateClientEconomics,
@@ -22,7 +22,13 @@ import {
   type ClientEconomics,
   type PricingScenarioResult,
   type NewClientData,
+  type ColleagueRewardEntry,
 } from '@/utils/pricingEngine';
+import {
+  getServiceRewardRecommendation,
+  applyMultiplierToRewards,
+  type RoleReward,
+} from '@/constants/serviceRewards';
 
 interface PricingImpactSectionProps {
   clientId: string;
