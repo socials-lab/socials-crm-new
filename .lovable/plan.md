@@ -1,47 +1,83 @@
 
+# Add Colleague Compensation Recommendations to Pricing Engine
 
-## Plan: Kontrola přefakturace víceprací klientům
+## What the user wants
 
-### Problém
+When proposing a contract amendment, after selecting the service, the system should recommend **colleague compensation** (internal cost) based on a hardcoded reward table — broken down by **role** (Meta Ads specialist, PPC specialist, Graphic Designer). The user should be able to select which colleague(s) will work on this service and see the recommended reward.
 
-Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
+## Reward Table (from user input)
 
-### Řešení
+**Core services (monthly fixed rewards by role):**
 
-Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
-- `expected` — vícepráce se má přefakturovat klientovi (default)
-- `reinvoiced` — přefakturováno klientovi
-- `not_expected` — nepředpokládá se přefakturace klientovi
+| Service + Tier | Meta Ads hours | Meta Ads reward | PPC hours | PPC reward |
+|---|---|---|---|---|
+| Socials Boost GROWTH | 13 | 9,100 | 0 | 0 |
+| Socials Boost PRO | 17 | 11,900 | 0 | 0 |
+| Socials Boost ELITE | 22 | 15,400 | 0 | 0 |
+| PPC Boost GROWTH | 0 | 0 | 10 | 7,000 |
+| PPC Boost PRO | 0 | 0 | 15 | 10,500 |
+| PPC Boost ELITE | 0 | 0 | 20 | 14,000 |
+| Performance Boost GROWTH | 13 | 9,100 | 8 | 5,600 |
+| Performance Boost PRO | 17 | 11,900 | 12 | 8,400 |
+| Performance Boost ELITE | 22 | 15,400 | 16 | 11,200 |
 
-Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
+**Addon services (fixed rewards):**
 
-### Databázové změny
+| Service | Hours | Reward |
+|---|---|---|
+| Creative Boost | — | 150 Kč/kredit |
+| TikTok Ads | 7 | 4,900 |
+| Heureka & Zboží.cz | 4 | 2,800 |
+| Glami | 2 | 1,400 |
+| Favi | 2 | 1,400 |
 
-```sql
-CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
-ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
-ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+## Implementation Plan
+
+### 1. New constants file: `src/constants/serviceRewards.ts`
+
+Hardcoded reward lookup table mapping `service_code + tier` → array of role-based compensations. Each entry has: `role` (Meta Ads Specialist / PPC Specialist / Graphic Designer), `hours`, `reward`, `rewardType` (fixed_monthly / per_credit / hourly).
+
+For expansion scenarios (new country/shop), rewards are multiplied by the same multiplier as the price.
+
+### 2. Extend `PricingImpactSection.tsx`
+
+Add a new sub-section within "Navrhovaná změna" block:
+
+**"Odměny kolegů za tuto službu"** — Shows a table of recommended colleague roles and their compensation based on the selected service + tier. Each row:
+- Role (e.g. "Meta Ads Specialist")
+- Colleague picker (select from active colleagues)
+- Recommended hours
+- Recommended reward (auto-calculated, editable)
+- For expansion scenarios: reward × multiplier shown
+
+The total of all colleague rewards feeds into `deltaInternalCost` (replacing the simple manual input for core/expansion scenarios).
+
+### 3. Extend `PricingSnapshot` in `pricingEngine.ts`
+
+Add a `colleague_rewards` array to the snapshot:
+```typescript
+colleague_rewards?: {
+  role: string;
+  colleague_id?: string;
+  colleague_name?: string;
+  hours: number;
+  reward: number;
+}[];
 ```
 
-### UI změny
+### 4. Update internal cost calculation
 
-**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
-- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
-- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
+Instead of calculating `deltaInternalCost` from `referenceService.internalCost * multiplier` alone, sum up the individual colleague reward entries. For addon/custom, sum the reward rows instead of using a single manual input.
 
-**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
-- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
-- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
+### Files to create
+- `src/constants/serviceRewards.ts` — reward lookup table
 
-**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
-- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
-- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
+### Files to modify
+- `src/components/engagements/PricingImpactSection.tsx` — add colleague reward picker/table within the proposed change block, wire total rewards into deltaInternalCost
+- `src/utils/pricingEngine.ts` — extend PricingSnapshot with colleague_rewards
+- `src/components/engagements/ModificationRequestCard.tsx` — display colleague rewards from snapshot in review
 
-**4. `src/types/crm.ts`**
-- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
-
-### Technické detaily
-- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
-- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
-- Badge se zobrazí vedle existujícího status badge
-
+### What stays unchanged
+- The approval → offer → email flow
+- Commission tracking ("Kdo dohodl")
+- ProposeModificationDialog structure (PricingImpactSection handles this internally)
