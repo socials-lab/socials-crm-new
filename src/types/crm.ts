@@ -163,9 +163,9 @@ export interface Service {
   created_at: string;
   updated_at: string;
   // Default values for offer generation
-  default_deliverables: string[] | null;
+  default_deliverables?: string[] | null;
   // Colleague reward configuration per tier
-  reward_config: ServiceRewardTierConfig[] | null;
+  reward_config?: ServiceRewardTierConfig[] | null;
 }
 
 export interface ClientService {
