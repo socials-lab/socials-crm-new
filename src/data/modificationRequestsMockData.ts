@@ -4,6 +4,7 @@ import type {
   ModificationProposedChanges,
 } from '@/types/crm';
 import type { Notification } from '@/types/notifications';
+import type { PricingSnapshot } from '@/utils/pricingEngine';
 
 const STORAGE_KEY = 'modification_requests';
 const NOTIFICATIONS_STORAGE_KEY = 'crm_notifications';
