@@ -619,7 +619,7 @@ function MyWorkContent() {
       />
 
       {/* Add Activity Reward Dialog */}
-      {currentColleague && (
+      {colleagueId && (
         <AddActivityRewardDialog
           open={showAddActivityDialog}
           onOpenChange={(open) => {
@@ -627,7 +627,7 @@ function MyWorkContent() {
             if (!open) setAddActivityDefaultDate(undefined);
           }}
           onAdd={addReward}
-          colleagueId={currentColleague.id}
+          colleagueId={colleagueId}
           clientNames={clientNames}
           defaultDate={addActivityDefaultDate}
         />

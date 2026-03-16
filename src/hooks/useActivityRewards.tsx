@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { getErrorMessage } from '@/lib/errorUtils';
 
 export type ActivityCategory = 'marketing' | 'overhead' | 'client_work';
 
@@ -67,13 +68,10 @@ export function useActivityRewards(colleagueId: string | null) {
 
   const addMutation = useMutation({
     mutationFn: async (reward: Omit<ActivityReward, 'id' | 'created_at'>) => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('activity_rewards')
-        .insert(reward)
-        .select()
-        .single();
+        .insert(reward);
       if (error) throw error;
-      return data as ActivityReward;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activity_rewards', colleagueId] });
@@ -81,7 +79,7 @@ export function useActivityRewards(colleagueId: string | null) {
     },
     onError: (error) => {
       console.error('Failed to add activity reward:', error);
-      toast.error('Nepodařilo se přidat položku');
+      toast.error(getErrorMessage(error, 'Nepodařilo se přidat položku'));
     },
   });
 
