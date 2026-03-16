@@ -48,6 +48,7 @@ export function useModificationRequests() {
     upsold_by_id?: string | null;
     upsell_commission_percent?: number;
     note?: string | null;
+    pricing_snapshot?: PricingSnapshot | null;
   }) => {
     if (!user) throw new Error('User not authenticated');
     
