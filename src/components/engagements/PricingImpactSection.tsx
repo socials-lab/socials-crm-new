@@ -67,7 +67,7 @@ export function PricingImpactSection({
   onSnapshotChange,
   onRequiresAdminApproval,
 }: PricingImpactSectionProps) {
-  const { engagements, engagementServices, assignments, services } = useCRMData();
+  const { engagements, engagementServices, assignments, services, colleagues } = useCRMData();
 
   // Local state
   const [scenario, setScenario] = useState<PricingScenario>(
