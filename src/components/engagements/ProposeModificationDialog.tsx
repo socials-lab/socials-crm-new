@@ -82,6 +82,11 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
   const [serviceDescription, setServiceDescription] = useState('');
   const [serviceDeliverables, setServiceDeliverables] = useState('');
 
+  // Pricing engine state
+  const [pricingSnapshot, setPricingSnapshot] = useState<PricingSnapshot | null>(null);
+  const [pricingInternalCost, setPricingInternalCost] = useState<number>(0);
+  const [requiresAdminApproval, setRequiresAdminApproval] = useState(false);
+
   // Detect Creative Boost
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const selectedService = services.find(s => s.id === selectedServiceId);
