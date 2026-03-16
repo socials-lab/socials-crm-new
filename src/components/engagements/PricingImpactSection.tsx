@@ -3,10 +3,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Calculator, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Calculator, ShieldAlert, Building } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import {
   calculateClientEconomics,
@@ -20,6 +21,7 @@ import {
   type PricingSnapshot,
   type ClientEconomics,
   type PricingScenarioResult,
+  type NewClientData,
 } from '@/utils/pricingEngine';
 
 interface PricingImpactSectionProps {
@@ -70,6 +72,14 @@ export function PricingImpactSection({
   const [manualInternalCost, setManualInternalCost] = useState<number>(0);
   const [justification, setJustification] = useState('');
 
+  // New client (different SRO) state for expand_shop
+  const [requiresNewClient, setRequiresNewClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientBrand, setNewClientBrand] = useState('');
+  const [newClientIco, setNewClientIco] = useState('');
+  const [newClientDic, setNewClientDic] = useState('');
+  const [newClientNote, setNewClientNote] = useState('');
+
   // Calculate current client economics
   const clientEconomics: ClientEconomics = useMemo(
     () => calculateClientEconomics(clientId, engagements, engagementServices, assignments),
@@ -93,11 +103,19 @@ export function PricingImpactSection({
     }
   }, [isAddonService]);
 
-  // Update multiplier when scenario changes
+  // Update multiplier when scenario changes + reset new client
   useEffect(() => {
     const defaultMult = getDefaultMultiplier(scenario);
     if (defaultMult !== undefined) {
       setMultiplier(defaultMult);
+    }
+    if (scenario !== 'expand_shop') {
+      setRequiresNewClient(false);
+      setNewClientName('');
+      setNewClientBrand('');
+      setNewClientIco('');
+      setNewClientDic('');
+      setNewClientNote('');
     }
   }, [scenario]);
 
@@ -142,6 +160,14 @@ export function PricingImpactSection({
       return;
     }
 
+    const newClientData: NewClientData | undefined = (requiresNewClient && scenario === 'expand_shop') ? {
+      company_name: newClientName,
+      brand_name: newClientBrand || undefined,
+      ico: newClientIco || undefined,
+      dic: newClientDic || undefined,
+      note: newClientNote || undefined,
+    } : undefined;
+
     const snapshot: PricingSnapshot = {
       scenario,
       reference_service_id: referenceService?.id,
@@ -159,9 +185,11 @@ export function PricingImpactSection({
       validation_status: impact.validationStatus,
       requires_admin_approval: impact.requiresAdminApproval,
       justification: justification || undefined,
+      requires_new_client: requiresNewClient && scenario === 'expand_shop' ? true : undefined,
+      new_client_data: newClientData,
     };
     onSnapshotChange(snapshot);
-  }, [scenario, referenceService, multiplier, deltaRevenue, deltaInternalCost, clientEconomics, impact, justification]);
+  }, [scenario, referenceService, multiplier, deltaRevenue, deltaInternalCost, clientEconomics, impact, justification, requiresNewClient, newClientName, newClientBrand, newClientIco, newClientDic, newClientNote]);
 
   const isExpansion = scenario === 'expand_country' || scenario === 'expand_shop';
   const defaultMult = getDefaultMultiplier(scenario);
@@ -296,6 +324,87 @@ export function PricingImpactSection({
               </div>
             )}
           </>
+        )}
+
+        {/* New client (different SRO) option for expand_shop */}
+        {scenario === 'expand_shop' && (
+          <div className="space-y-3 p-3 rounded-md border bg-background">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="requires-new-client"
+                checked={requiresNewClient}
+                onCheckedChange={(checked) => setRequiresNewClient(checked === true)}
+              />
+              <Label htmlFor="requires-new-client" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
+                <Building className="h-3.5 w-3.5 text-muted-foreground" />
+                Nový shop je pod jiným SRO (nový klient)
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">
+              Pokud je nový e-shop provozován jinou právnickou osobou, bude potřeba založit nového klienta a novou zakázku.
+            </p>
+
+            {requiresNewClient && (
+              <div className="space-y-3 ml-6 pt-2 border-t">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Název společnosti (SRO) *</Label>
+                    <Input
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                      placeholder="Např. NovýShop s.r.o."
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Název značky / e-shopu</Label>
+                    <Input
+                      value={newClientBrand}
+                      onChange={(e) => setNewClientBrand(e.target.value)}
+                      placeholder="Např. NovýShop.cz"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">IČO</Label>
+                    <Input
+                      value={newClientIco}
+                      onChange={(e) => setNewClientIco(e.target.value)}
+                      placeholder="12345678"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">DIČ</Label>
+                    <Input
+                      value={newClientDic}
+                      onChange={(e) => setNewClientDic(e.target.value)}
+                      placeholder="CZ12345678"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Poznámka k novému klientovi</Label>
+                  <Input
+                    value={newClientNote}
+                    onChange={(e) => setNewClientNote(e.target.value)}
+                    placeholder="Např. Sesterská firma stávajícího klienta XY"
+                    className="h-9"
+                  />
+                </div>
+
+                <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800">
+                  <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <AlertDescription className="text-xs text-blue-800 dark:text-blue-300">
+                    Po schválení návrhu bude automaticky vytvořen nový klient a nová zakázka. Ekonomický dopad se počítá vůči stávajícímu klientovi pro referenci.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Internal cost for addon / custom */}

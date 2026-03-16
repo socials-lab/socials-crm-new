@@ -393,6 +393,18 @@ export function ModificationRequestCard({
                       Zdůvodnění: {request.pricing_snapshot.justification}
                     </p>
                   )}
+                  {request.pricing_snapshot.requires_new_client && request.pricing_snapshot.new_client_data && (
+                    <div className="mt-1 p-2 rounded bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                      <span className="font-medium text-blue-800 dark:text-blue-300">🏢 Nový klient (jiné SRO):</span>{' '}
+                      <span>{request.pricing_snapshot.new_client_data.company_name}</span>
+                      {request.pricing_snapshot.new_client_data.brand_name && (
+                        <span className="text-muted-foreground"> ({request.pricing_snapshot.new_client_data.brand_name})</span>
+                      )}
+                      {request.pricing_snapshot.new_client_data.ico && (
+                        <span className="text-muted-foreground ml-1">IČO: {request.pricing_snapshot.new_client_data.ico}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
                
