@@ -365,6 +365,19 @@ export function ModificationRequestCard({
                       </Badge>
                     )}
                   </div>
+                  {/* Recommended vs final price */}
+                  {request.pricing_snapshot.recommended_price != null && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Doporučená cena:</span>
+                      <span>{formatCZK(request.pricing_snapshot.recommended_price)}</span>
+                      {request.pricing_snapshot.final_edited_price != null && request.pricing_snapshot.final_edited_price !== request.pricing_snapshot.recommended_price && (
+                        <>
+                          <span className="text-muted-foreground">→ Finální:</span>
+                          <span className="font-medium text-primary">{formatCZK(request.pricing_snapshot.final_edited_price)}</span>
+                        </>
+                      )}
+                    </div>
+                  )}
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <span className="text-muted-foreground">Před:</span>{' '}
@@ -379,12 +392,17 @@ export function ModificationRequestCard({
                       {formatCZK(request.pricing_snapshot.new_total_revenue)}
                     </div>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Nová marže:</span>{' '}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-muted-foreground">Nová marže:</span>
                     <span className="font-medium">{request.pricing_snapshot.new_margin_percent.toFixed(1)}%</span>
                     {request.pricing_snapshot.multiplier && (
-                      <span className="ml-2 text-muted-foreground">
+                      <span className="text-muted-foreground">
                         (multiplikátor: {request.pricing_snapshot.multiplier})
+                      </span>
+                    )}
+                    {request.pricing_snapshot.delta_internal_cost > 0 && (
+                      <span className="text-muted-foreground">
+                        | interní: {formatCZK(request.pricing_snapshot.delta_internal_cost)}
                       </span>
                     )}
                   </div>
