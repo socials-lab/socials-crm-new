@@ -21,6 +21,7 @@ import {
   type PricingSnapshot,
   type ClientEconomics,
   type PricingScenarioResult,
+  type NewClientData,
 } from '@/utils/pricingEngine';
 
 interface PricingImpactSectionProps {
