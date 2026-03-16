@@ -19,6 +19,26 @@ interface AresResponse {
   }>;
 }
 
+function parseCzechAddress(address: string): { street: string; city: string; zip: string } {
+  const trimmed = address.trim();
+  if (!trimmed) {
+    return { street: "", city: "", zip: "" };
+  }
+
+  // Preferred format: "Street ..., 110 00 Praha" (or without comma)
+  const match = trimmed.match(/^(.*?)[,\s]+(\d{3}\s?\d{2})\s+(.+)$/);
+  if (match) {
+    return {
+      street: match[1].trim(),
+      zip: match[2].replace(/\s/g, ""),
+      city: match[3].trim(),
+    };
+  }
+
+  // Fallback: keep full address in street when structured parse fails
+  return { street: trimmed, city: "", zip: "" };
+}
+
 // Map court codes to full names
 const COURT_NAMES: Record<string, string> = {
   MSPH: "Městský soud v Praze",
@@ -147,15 +167,24 @@ serve(async (req) => {
       }
     }
     
+    const fullAddress = data.sidlo?.textovaAdresa || "";
+    const parsedAddress = parseCzechAddress(fullAddress);
+
     return new Response(
       JSON.stringify({
         ico: data.ico,
         name: data.obchodniJmeno,
-        address: data.sidlo?.textovaAdresa || '',
+        companyName: data.obchodniJmeno,
+        address: fullAddress,
+        street: parsedAddress.street,
+        city: parsedAddress.city,
+        zip: parsedAddress.zip,
         dic: data.dic || null,
         legal_form: data.pravniForma || null,
+        legalForm: data.pravniForma || null,
         court_name: courtName,
         court_file_number: courtFileNumber,
+        spisovaZnacka: courtFileNumber,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
