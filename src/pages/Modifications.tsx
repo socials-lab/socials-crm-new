@@ -11,14 +11,14 @@ import { EditModificationRequestDialog } from '@/components/engagements/EditModi
 import { SendModificationEmailDialog } from '@/components/engagements/SendModificationEmailDialog';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
-import type { OnboardingData } from '@/data/modificationRequestsMockData';
+import { type OnboardingData, type StoredModificationRequest, seedDemoModificationStatuses } from '@/data/modificationRequestsMockData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2, FileText, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, ModificationProposedChanges } from '@/types/crm';
-import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
+// StoredModificationRequest already imported above
 import { getAppliedModificationsHistory, type AppliedModificationHistory } from '@/data/appliedModificationsHistory';
 
 // Helper to get month label
@@ -164,6 +164,9 @@ export default function Modifications() {
     refresh
   } = useModificationRequests();
   const { addEngagementService, updateEngagementService, addClient, addEngagement, addContact } = useCRMData();
+
+  // Seed demo data for client_approved and applied tabs
+  useState(() => { seedDemoModificationStatuses(); });
 
   // Get applied modifications history
   const appliedHistory = useMemo(() => getAppliedModificationsHistory(), [pendingRequests]);
@@ -753,7 +756,7 @@ export default function Modifications() {
             )}
           </div>
 
-          {filteredHistory.length === 0 && applied.length === 0 ? (
+          {applied.length === 0 && filteredHistory.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <PackageCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
@@ -766,20 +769,20 @@ export default function Modifications() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {/* Show history entries with client confirmation details */}
-              {filteredHistory.map((historyEntry) => (
-                <AppliedHistoryCard key={historyEntry.id} entry={historyEntry} />
-              ))}
-              
-              {/* Also show applied requests that might not be in history yet */}
-              {selectedMonth === 'all' && applied.filter(r => 
-                !filteredHistory.some(h => h.modification_request_id === r.id)
-              ).map((request) => (
+              {/* Show applied requests with full ModificationRequestCard for details */}
+              {applied.map((request) => (
                 <ModificationRequestCard
                   key={request.id}
                   request={request}
                 />
               ))}
+              
+              {/* Also show history entries that are no longer in localStorage */}
+              {filteredHistory
+                .filter(h => !applied.some(r => r.id === h.modification_request_id))
+                .map((historyEntry) => (
+                  <AppliedHistoryCard key={historyEntry.id} entry={historyEntry} />
+                ))}
             </div>
           )}
         </TabsContent>

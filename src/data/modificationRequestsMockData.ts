@@ -557,3 +557,163 @@ export function seedNewEngagementDemo(): StoredModificationRequest {
   saveRequests(requests);
   return demo;
 }
+
+// Seed demo data for client_approved and applied statuses
+export function seedDemoModificationStatuses(): { clientApproved: StoredModificationRequest; applied: StoredModificationRequest } {
+  const requests = getModificationRequests();
+  const now = new Date().toISOString();
+  const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString();
+  const fiveDaysAgo = new Date(Date.now() - 5 * 86400000).toISOString();
+  const tenDaysAgo = new Date(Date.now() - 10 * 86400000).toISOString();
+
+  // Check if we already have these demos
+  const existingClientApproved = requests.find(r => r.id === 'demo-client-approved-001');
+  const existingApplied = requests.find(r => r.id === 'demo-applied-001');
+  
+  if (existingClientApproved && existingApplied) {
+    return { clientApproved: existingClientApproved, applied: existingApplied };
+  }
+
+  // 1) Client Approved — bundle with add_service + expand_country
+  const clientApprovedRequest: StoredModificationRequest = {
+    id: 'demo-client-approved-001',
+    engagement_id: 'e0000000-0000-0000-0000-000000000001',
+    request_type: 'add_service',
+    status: 'client_approved',
+    proposed_changes: {
+      name: 'Socials Boost PRO',
+      price: 22000,
+      currency: 'CZK',
+      billing_type: 'monthly',
+      service_id: null,
+      selected_tier: 'pro',
+    } as any,
+    engagement_service_id: null,
+    engagement_assignment_id: null,
+    effective_from: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+    upsold_by_id: null,
+    upsell_commission_percent: 10,
+    requested_by: 'demo-user',
+    requested_at: fiveDaysAgo,
+    note: 'Klient chce rozšířit spolupráci o správu sociálních sítí.',
+    reviewed_by: 'admin',
+    reviewed_at: fiveDaysAgo,
+    rejection_reason: null,
+    upgrade_offer_token: 'demo-token-client-approved',
+    upgrade_offer_valid_until: new Date(Date.now() + 30 * 86400000).toISOString(),
+    client_email: 'jan.novak@testbrand.cz',
+    client_approved_at: threeDaysAgo,
+    created_at: fiveDaysAgo,
+    updated_at: threeDaysAgo,
+    emails_sent: [{
+      sent_at: fiveDaysAgo,
+      sent_to: 'jan.novak@testbrand.cz',
+      sent_by_id: 'admin',
+      sent_by_name: 'Marek Admin',
+    }],
+    pricing_snapshot: null,
+    items: [
+      {
+        id: 'demo-item-ca-001',
+        request_type: 'add_service',
+        proposed_changes: {
+          name: 'Socials Boost PRO',
+          price: 22000,
+          currency: 'CZK',
+          billing_type: 'monthly',
+          service_id: null,
+          selected_tier: 'pro',
+          description: 'Kompletní správa Meta Ads kampaní s pokročilou optimalizací.',
+          deliverables: ['Správa Meta Ads', 'A/B testing kreativ', 'Měsíční reporting'],
+          colleague_rewards: [
+            { role: 'Meta Ads Specialist', colleague_id: 'c1', colleague_name: 'Tereza Nováková', cost_model: 'fixed_monthly', monthly_cost: 7500 },
+          ],
+        } as any,
+        engagement_service_id: null,
+      },
+      {
+        id: 'demo-item-ca-002',
+        request_type: 'expand_country',
+        proposed_changes: {
+          reference_service_name: 'PPC Boost PRO',
+          service_name: 'PPC Boost PRO SK',
+          new_country_code: 'SK',
+          multiplier: 0.5,
+          price: 10000,
+          currency: 'CZK',
+          billing_type: 'monthly',
+        } as any,
+        engagement_service_id: null,
+      },
+    ],
+    bundle_discount_percent: 5,
+    client_chosen_effective_from: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+    engagement_name: 'Test Client - Retainer 2025',
+    client_id: 'c0000000-0000-0000-0000-000000000001',
+    client_name: 'Test Client s.r.o.',
+    client_brand_name: 'TestBrand',
+    upsold_by_name: null,
+    onboarding_data: null,
+  };
+
+  // 2) Applied — simple update_service_price
+  const appliedRequest: StoredModificationRequest = {
+    id: 'demo-applied-001',
+    engagement_id: 'e0000000-0000-0000-0000-000000000001',
+    request_type: 'update_service_price',
+    status: 'applied',
+    proposed_changes: {
+      engagement_service_id: 'es-demo-001',
+      service_name: 'PPC Boost PRO',
+      old_price: 18000,
+      new_price: 21000,
+      currency: 'CZK',
+      changed_assignments: [
+        {
+          assignment_id: 'a-demo-001',
+          colleague_name: 'Jan Procházka',
+          role: 'PPC Specialist',
+          old_value: 7000,
+          new_value: 8500,
+        },
+      ],
+    } as any,
+    engagement_service_id: 'es-demo-001',
+    engagement_assignment_id: null,
+    effective_from: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
+    upsold_by_id: null,
+    upsell_commission_percent: 10,
+    requested_by: 'demo-user',
+    requested_at: tenDaysAgo,
+    note: 'Navýšení ceny z důvodu rozšíření scope kampaní.',
+    reviewed_by: 'admin',
+    reviewed_at: tenDaysAgo,
+    rejection_reason: null,
+    upgrade_offer_token: 'demo-token-applied',
+    upgrade_offer_valid_until: new Date(Date.now() + 20 * 86400000).toISOString(),
+    client_email: 'jan.novak@testbrand.cz',
+    client_approved_at: fiveDaysAgo,
+    created_at: tenDaysAgo,
+    updated_at: threeDaysAgo,
+    emails_sent: [{
+      sent_at: tenDaysAgo,
+      sent_to: 'jan.novak@testbrand.cz',
+      sent_by_id: 'admin',
+      sent_by_name: 'Marek Admin',
+    }],
+    pricing_snapshot: null,
+    client_chosen_effective_from: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
+    engagement_name: 'Test Client - Retainer 2025',
+    client_id: 'c0000000-0000-0000-0000-000000000001',
+    client_name: 'Test Client s.r.o.',
+    client_brand_name: 'TestBrand',
+    upsold_by_name: null,
+  };
+
+  // Remove existing demos if any, then add
+  const filtered = requests.filter(r => r.id !== 'demo-client-approved-001' && r.id !== 'demo-applied-001');
+  filtered.push(clientApprovedRequest, appliedRequest);
+  saveRequests(filtered);
+
+  return { clientApproved: clientApprovedRequest, applied: appliedRequest };
+}
