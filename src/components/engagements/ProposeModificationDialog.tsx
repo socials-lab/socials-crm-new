@@ -309,6 +309,17 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setExpandNewClientBrand('');
       setExpandNewClientIco('');
       setExpandNewClientDic('');
+      // New engagement reset
+      setNewEngClientName('');
+      setNewEngClientBrand('');
+      setNewEngClientIco('');
+      setNewEngClientDic('');
+      setNewEngName('');
+      setNewEngServices([]);
+      setNewEngContactName('');
+      setNewEngContactEmail('');
+      setNewEngContactPhone('');
+      setNewEngCopyContact(false);
     }
   }, [open]);
 
