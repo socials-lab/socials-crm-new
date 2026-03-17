@@ -242,7 +242,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           // Creative Boost: set defaults, price is calculated from credits
           setCbMaxCredits(50);
           setCbPricePerCredit(400);
-          setCbColleagueReward(80);
+          setCbColleagueReward(150);
           setCbEditorReward(100);
           setServicePrice(0); // Price is calculated
           setSelectedTier('none');
