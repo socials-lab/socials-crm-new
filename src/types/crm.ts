@@ -911,6 +911,8 @@ export interface NewEngagementProposedChanges {
     currency: string;
     billing_type: 'monthly' | 'one_off';
     selected_tier?: ServiceTier | null;
+    description?: string;
+    deliverables?: string[];
   }>;
   total_monthly_price: number;
   currency: string;

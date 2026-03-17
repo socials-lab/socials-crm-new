@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown, Globe, Building2, Trash2 } from 'lucide-react';
+import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown, Globe, Building2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { MANAGED_COUNTRIES, getCountryName, getCountryFlag } from '@/constants/countries';
 import { Checkbox } from '@/components/ui/checkbox';
 import { calculateExpansionPrice, getDefaultMultiplier, formatCZK } from '@/utils/pricingEngine';
