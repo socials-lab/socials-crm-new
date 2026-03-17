@@ -337,7 +337,7 @@ export default function Modifications() {
           setDialogOpen(open);
           if (!open) setEditingRequest(null);
         }}
-        editingRequest={editingRequest?.status === 'pending' ? editingRequest : null}
+        editingRequest={editingRequest?.status === 'pending' || editingRequest?.status === 'draft' ? editingRequest : null}
       />
       
       {/* Send Email Dialog */}
