@@ -1864,11 +1864,12 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
               {/* NEW ENGAGEMENT FIELDS */}
               {requestType === 'new_engagement' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
                     3. Nová zakázka
                   </h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
 
                   {/* Same vs different SRO toggle */}
                   <div className="flex items-center gap-2 p-3 rounded-md border bg-background">
