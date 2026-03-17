@@ -346,6 +346,7 @@ export function updateModificationRequest(
     upsold_by_name: updates.upsold_by_name !== undefined ? updates.upsold_by_name : request.upsold_by_name,
     pricing_snapshot: updates.pricing_snapshot !== undefined ? updates.pricing_snapshot : request.pricing_snapshot,
     items: updates.items !== undefined ? updates.items : request.items,
+    bundle_discount_percent: updates.bundle_discount_percent !== undefined ? updates.bundle_discount_percent : request.bundle_discount_percent,
     updated_at: new Date().toISOString(),
   };
   
