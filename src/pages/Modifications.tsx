@@ -693,6 +693,7 @@ export default function Modifications() {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onSendEmail={handleSendEmail}
+                  onInlineUpdate={handleInlineUpdate}
                   isDeleting={isDeleting}
                 />
               ))}
