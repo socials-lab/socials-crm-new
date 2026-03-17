@@ -85,6 +85,15 @@ const ADDON_SERVICE_REWARDS: ServiceRewardConfig[] = [
   { serviceKey: 'favi', roles: [
     { role: 'PPC Specialist', hours: 2, reward: 1400, rewardType: 'fixed_monthly' },
   ]},
+  { serviceKey: 'ai seo', roles: [
+    { role: 'SEO Specialist', hours: 10, reward: 6000, rewardType: 'fixed_monthly' },
+  ]},
+  { serviceKey: 'úvodní nastavení', roles: [
+    { role: 'PPC Specialist', hours: 4, reward: 2800, rewardType: 'fixed_monthly' },
+  ]},
+  { serviceKey: 'analytické měření', roles: [
+    { role: 'PPC Specialist', hours: 0, reward: 700, rewardType: 'hourly' },
+  ]},
 ];
 
 const ALL_REWARDS = [...CORE_SERVICE_REWARDS, ...ADDON_SERVICE_REWARDS];

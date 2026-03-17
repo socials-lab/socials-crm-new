@@ -60,3 +60,18 @@ UPDATE public.services SET reward_config = '[
 UPDATE public.services SET reward_config = '[
   {"roles": [{"role": "PPC Specialist", "hours": 2, "reward": 1400, "reward_type": "fixed_monthly"}]}
 ]'::jsonb WHERE code = 'FAVI';
+
+-- AI SEO
+UPDATE public.services SET reward_config = '[
+  {"roles": [{"role": "SEO Specialist", "hours": 10, "reward": 6000, "reward_type": "fixed_monthly"}]}
+]'::jsonb WHERE code = 'AI_SEO';
+
+-- Úvodní nastavení zbožových srovnávačů
+UPDATE public.services SET reward_config = '[
+  {"roles": [{"role": "PPC Specialist", "hours": 4, "reward": 2800, "reward_type": "fixed_monthly"}]}
+]'::jsonb WHERE code = 'COMPARATOR_SETUP';
+
+-- Analytické měření
+UPDATE public.services SET reward_config = '[
+  {"roles": [{"role": "PPC Specialist", "hours": 0, "reward": 700, "reward_type": "hourly"}]}
+]'::jsonb WHERE code = 'ANALYTICS_MEASUREMENT';
