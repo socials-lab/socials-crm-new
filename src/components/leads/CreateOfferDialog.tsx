@@ -445,6 +445,50 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                       )}
                     </div>
                   )}
+
+                  {/* Profitability / Internal costs */}
+                  {editableServices.length > 0 && totals.totalInternalCost > 0 && (
+                    <div className="p-3 rounded-lg border border-dashed space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>Interní ekonomika (odhad)</span>
+                      </div>
+                      
+                      {totals.serviceCosts.map((sc, idx) => (
+                        <div key={idx} className="text-xs space-y-0.5">
+                          <div className="flex items-center justify-between text-muted-foreground">
+                            <span>{sc.name}</span>
+                            <span>{sc.cost.toLocaleString('cs-CZ')} Kč</span>
+                          </div>
+                          {sc.roles.map((r, ri) => (
+                            <div key={ri} className="flex items-center justify-between pl-3 text-muted-foreground/70">
+                              <span>{r.role}</span>
+                              <span>{r.reward.toLocaleString('cs-CZ')} Kč</span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                      
+                      <Separator />
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Interní náklady celkem:</span>
+                        <span className="font-medium">{totals.totalInternalCost.toLocaleString('cs-CZ')} Kč/měs</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Odhadovaná marže:</span>
+                        <span className={`font-bold ${
+                          totals.margin >= 66 ? 'text-green-600' : 
+                          totals.margin >= 50 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {totals.margin.toFixed(1)} %
+                          <span className="font-normal text-xs ml-1">
+                            ({Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč)
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <Separator />
