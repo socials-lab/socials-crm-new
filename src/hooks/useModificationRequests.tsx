@@ -273,6 +273,3 @@ export function useModificationRequests() {
     refresh,
   };
 }
-    refresh,
-  };
-}
