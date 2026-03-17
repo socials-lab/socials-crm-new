@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown, Globe, Building2, Trash2 } from 'lucide-react';
+import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown, Globe, Building2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { MANAGED_COUNTRIES, getCountryName, getCountryFlag } from '@/constants/countries';
 import { Checkbox } from '@/components/ui/checkbox';
 import { calculateExpansionPrice, getDefaultMultiplier, formatCZK } from '@/utils/pricingEngine';
@@ -22,6 +22,7 @@ import type { ModificationRequestType, ServiceTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SERVICE_DETAILS } from '@/constants/serviceDetails';
+import { getServiceDefaults } from '@/constants/serviceDefaults';
 import { PricingImpactSection } from '@/components/engagements/PricingImpactSection';
 import type { PricingSnapshot } from '@/utils/pricingEngine';
 import { getServiceRewardRecommendation, getRewardsFromServiceConfig } from '@/constants/serviceRewards';
@@ -158,7 +159,10 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     currency: string;
     billing_type: 'monthly' | 'one_off';
     selected_tier?: string | null;
+    description?: string;
+    deliverables?: string[];
   }>>([]);
+  const [expandedNewEngServiceIdx, setExpandedNewEngServiceIdx] = useState<number | null>(null);
 
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
@@ -1732,6 +1736,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                       const defaultPrice = service.service_type === 'core'
                                         ? (service.tier_pricing?.find((p: any) => p.tier === 'growth')?.price ?? service.base_price ?? 0)
                                         : (service.base_price || 0);
+                                      const defaults = getServiceDefaults(service.name);
+                                      const detail = SERVICE_DETAILS[service.code];
                                       setNewEngServices(prev => [...prev, {
                                         service_id: service.id,
                                         name: service.name,
@@ -1739,6 +1745,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                         currency: service.currency || 'CZK',
                                         billing_type: 'monthly',
                                         selected_tier: service.service_type === 'core' ? 'growth' : null,
+                                        description: detail?.tagline || service.description || '',
+                                        deliverables: defaults.deliverables?.length ? defaults.deliverables : [],
                                       }]);
                                     }}
                                   >
@@ -1769,73 +1777,169 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     {newEngServices.map((svc, idx) => {
                       const catalogSvc = svc.service_id ? services.find(s => s.id === svc.service_id) : null;
                       const isCoreType = catalogSvc?.service_type === 'core';
+                      const isExpanded = expandedNewEngServiceIdx === idx;
                       return (
-                        <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-end p-2 rounded border bg-muted/30">
-                          <div className="space-y-1">
-                            <Label className="text-xs">{svc.name}</Label>
-                            {isCoreType && (
+                        <div key={idx} className="rounded border bg-muted/30 overflow-hidden">
+                          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-end p-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">{svc.name}</Label>
+                              {isCoreType && (
+                                <Select
+                                  value={svc.selected_tier || 'growth'}
+                                  onValueChange={(v) => {
+                                    const updated = [...newEngServices];
+                                    updated[idx] = { ...updated[idx], selected_tier: v };
+                                    const tierPrice = catalogSvc?.tier_pricing?.find((p: any) => p.tier === v)?.price;
+                                    if (tierPrice != null) updated[idx].price = tierPrice;
+                                    setNewEngServices(updated);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-7 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="growth">Growth</SelectItem>
+                                    <SelectItem value="pro">Pro</SelectItem>
+                                    <SelectItem value="elite">Elite</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Cena</Label>
+                              <Input
+                                type="number"
+                                value={svc.price}
+                                onChange={(e) => {
+                                  const updated = [...newEngServices];
+                                  updated[idx] = { ...updated[idx], price: Number(e.target.value) };
+                                  setNewEngServices(updated);
+                                }}
+                                className="h-7 w-24 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Typ</Label>
                               <Select
-                                value={svc.selected_tier || 'growth'}
+                                value={svc.billing_type}
                                 onValueChange={(v) => {
                                   const updated = [...newEngServices];
-                                  updated[idx] = { ...updated[idx], selected_tier: v };
-                                  const tierPrice = catalogSvc?.tier_pricing?.find((p: any) => p.tier === v)?.price;
-                                  if (tierPrice != null) updated[idx].price = tierPrice;
+                                  updated[idx] = { ...updated[idx], billing_type: v as 'monthly' | 'one_off' };
                                   setNewEngServices(updated);
                                 }}
                               >
-                                <SelectTrigger className="h-7 text-xs">
+                                <SelectTrigger className="h-7 w-24 text-xs">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="growth">Growth</SelectItem>
-                                  <SelectItem value="pro">Pro</SelectItem>
-                                  <SelectItem value="elite">Elite</SelectItem>
+                                  <SelectItem value="monthly">Měsíčně</SelectItem>
+                                  <SelectItem value="one_off">Jednorázově</SelectItem>
                                 </SelectContent>
                               </Select>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Cena</Label>
-                            <Input
-                              type="number"
-                              value={svc.price}
-                              onChange={(e) => {
-                                const updated = [...newEngServices];
-                                updated[idx] = { ...updated[idx], price: Number(e.target.value) };
-                                setNewEngServices(updated);
-                              }}
-                              className="h-7 w-24 text-xs"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Typ</Label>
-                            <Select
-                              value={svc.billing_type}
-                              onValueChange={(v) => {
-                                const updated = [...newEngServices];
-                                updated[idx] = { ...updated[idx], billing_type: v as 'monthly' | 'one_off' };
-                                setNewEngServices(updated);
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => setExpandedNewEngServiceIdx(isExpanded ? null : idx)}
+                              title="Upravit popis a deliverables"
+                            >
+                              {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setNewEngServices(prev => prev.filter((_, i) => i !== idx));
+                                if (expandedNewEngServiceIdx === idx) setExpandedNewEngServiceIdx(null);
+                                else if (expandedNewEngServiceIdx !== null && expandedNewEngServiceIdx > idx) {
+                                  setExpandedNewEngServiceIdx(expandedNewEngServiceIdx - 1);
+                                }
                               }}
                             >
-                              <SelectTrigger className="h-7 w-24 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="monthly">Měsíčně</SelectItem>
-                                <SelectItem value="one_off">Jednorázově</SelectItem>
-                              </SelectContent>
-                            </Select>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                            onClick={() => setNewEngServices(prev => prev.filter((_, i) => i !== idx))}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          
+                          {/* Expandable description & deliverables */}
+                          {isExpanded && (
+                            <div className="px-2 pb-3 pt-1 space-y-3 border-t">
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium">Popis služby</Label>
+                                <Textarea
+                                  value={svc.description || ''}
+                                  onChange={(e) => {
+                                    const updated = [...newEngServices];
+                                    updated[idx] = { ...updated[idx], description: e.target.value };
+                                    setNewEngServices(updated);
+                                  }}
+                                  placeholder="Krátký popis služby pro klienta..."
+                                  rows={2}
+                                  className="text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-xs font-medium">Co v rámci služby děláme (deliverables)</Label>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 text-xs gap-1"
+                                    onClick={() => {
+                                      const updated = [...newEngServices];
+                                      updated[idx] = { 
+                                        ...updated[idx], 
+                                        deliverables: [...(updated[idx].deliverables || []), ''] 
+                                      };
+                                      setNewEngServices(updated);
+                                    }}
+                                  >
+                                    <Plus className="h-3 w-3" /> Přidat bod
+                                  </Button>
+                                </div>
+                                <div className="space-y-1.5">
+                                  {(svc.deliverables || []).map((item, dIdx) => (
+                                    <div key={dIdx} className="flex items-center gap-1.5">
+                                      <span className="text-xs text-muted-foreground shrink-0">{dIdx + 1}.</span>
+                                      <Input
+                                        value={item}
+                                        onChange={(e) => {
+                                          const updated = [...newEngServices];
+                                          const newDeliverables = [...(updated[idx].deliverables || [])];
+                                          newDeliverables[dIdx] = e.target.value;
+                                          updated[idx] = { ...updated[idx], deliverables: newDeliverables };
+                                          setNewEngServices(updated);
+                                        }}
+                                        className="h-7 text-xs"
+                                        placeholder="Deliverable..."
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0 shrink-0 text-destructive hover:text-destructive"
+                                        onClick={() => {
+                                          const updated = [...newEngServices];
+                                          const newDeliverables = (updated[idx].deliverables || []).filter((_, i) => i !== dIdx);
+                                          updated[idx] = { ...updated[idx], deliverables: newDeliverables };
+                                          setNewEngServices(updated);
+                                        }}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                  {(!svc.deliverables || svc.deliverables.length === 0) && (
+                                    <p className="text-xs text-muted-foreground italic">Žádné deliverables. Klikněte na "Přidat bod".</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
