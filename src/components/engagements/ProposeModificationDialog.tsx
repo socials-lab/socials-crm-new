@@ -2900,7 +2900,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => { clearDraft(); onOpenChange(false); }}>
             Zrušit
           </Button>
           <Button 
