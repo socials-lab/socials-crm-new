@@ -160,6 +160,12 @@ export function PricingImpactSection({
     setFinalPriceOverride(null);
   }, [recommendedPrice]);
 
+  // Stable key for assignments to avoid infinite re-renders
+  const assignmentsKey = useMemo(
+    () => (assignments || []).map(a => `${a.id}-${a.colleague_id}-${a.role_on_engagement}`).join(','),
+    [assignments]
+  );
+
   // Look up recommended rewards when service/tier/scenario/multiplier changes
   useEffect(() => {
     // For expansion scenarios, use the reference engagement service to find catalog service
@@ -175,7 +181,6 @@ export function PricingImpactSection({
     }
 
     if (!catalogSvc) {
-      if (colleagueRewards.length === 0) return;
       return;
     }
     const tier = tierForLookup;
@@ -214,15 +219,9 @@ export function PricingImpactSection({
           };
         })
       );
-    } else {
-      // No recommendation — keep existing manual rows or show empty
-      if (colleagueRewards.every(r => !r.role && r.reward === 0)) {
-        // All empty, keep as-is
-      }
-      // Don't clear manually added rows
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCatalogService?.id, selectedTierProp, scenario, multiplier, engagementId, assignments, referenceServiceId, engagementServices, services]);
+  }, [selectedCatalogService?.id, selectedTierProp, scenario, multiplier, engagementId, assignmentsKey, referenceServiceId]);
 
   // Update multiplier when scenario changes + reset new client
   useEffect(() => {
