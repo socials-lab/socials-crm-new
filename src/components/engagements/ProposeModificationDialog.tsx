@@ -40,7 +40,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Deaktivace služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
-  new_engagement: 'Nová zakázka (jiné SRO)',
+  new_engagement: 'Nová zakázka',
 };
 
 const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
@@ -50,7 +50,7 @@ const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Ukončení poskytování služby v rámci zakázky od zvoleného data',
   add_assignment: 'Přiřazení nového kolegy k vybrané službě s definicí jeho odměny',
   update_assignment: 'Změna odměny přiřazeného kolegy',
-  new_engagement: 'Klient chce novou zakázku pod jiným SRO — odešle se mu onboarding formulář k vyplnění',
+  new_engagement: 'Nová zakázka pro stávajícího klienta — pod stejným nebo jiným SRO',
 };
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
@@ -147,7 +147,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [expandNewClientIco, setExpandNewClientIco] = useState('');
   const [expandNewClientDic, setExpandNewClientDic] = useState('');
 
-  // New engagement (new SRO) state
+  // New engagement state
+  const [newEngIsDifferentSro, setNewEngIsDifferentSro] = useState(false);
   const [newEngClientName, setNewEngClientName] = useState('');
   const [newEngClientBrand, setNewEngClientBrand] = useState('');
   const [newEngName, setNewEngName] = useState('');
@@ -328,6 +329,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setExpandNewClientIco('');
       setExpandNewClientDic('');
       // New engagement reset
+      setNewEngIsDifferentSro(false);
       setNewEngClientName('');
       setNewEngClientBrand('');
       setNewEngName('');
@@ -640,7 +642,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'new_engagement': {
         const totalMonthly = newEngServices.reduce((sum, s) => sum + (s.billing_type === 'monthly' ? s.price : 0), 0);
         proposed_changes = {
-          new_client_data: newEngClientName ? {
+          is_different_sro: newEngIsDifferentSro,
+          new_client_data: newEngIsDifferentSro && newEngClientName ? {
             company_name: newEngClientName,
             brand_name: newEngClientBrand || undefined,
           } : undefined,
@@ -648,8 +651,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           services: newEngServices,
           total_monthly_price: totalMonthly,
           currency: 'CZK',
-          onboarding_email: newEngOnboardingEmail,
-          send_onboarding_form: true,
+          onboarding_email: newEngIsDifferentSro ? newEngOnboardingEmail : undefined,
+          send_onboarding_form: newEngIsDifferentSro,
         };
         break;
       }
@@ -1659,52 +1662,68 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 </div>
               )}
 
-              {/* NEW ENGAGEMENT (DIFFERENT SRO) FIELDS */}
+              {/* NEW ENGAGEMENT FIELDS */}
               {requestType === 'new_engagement' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   <h4 className="font-medium flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
-                    3. Nová zakázka (jiné SRO)
+                    3. Nová zakázka
                   </h4>
-                  
-                  {/* Hint: client name / brand (optional) */}
-                  <div className="space-y-3 p-3 rounded-md border bg-background">
-                    <h5 className="text-sm font-medium">🏢 Nový klient (orientační)</h5>
-                    <p className="text-xs text-muted-foreground">Klient doplní vše sám přes onboarding formulář (IČO, DIČ, fakturační údaje).</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Název společnosti</Label>
-                        <Input
-                          value={newEngClientName}
-                          onChange={(e) => setNewEngClientName(e.target.value)}
-                          placeholder="Např. NovýEshop s.r.o."
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Název značky</Label>
-                        <Input
-                          value={newEngClientBrand}
-                          onChange={(e) => setNewEngClientBrand(e.target.value)}
-                          placeholder="Např. NovýEshop.cz"
-                          className="h-9"
-                        />
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Onboarding email */}
-                  <div className="space-y-1">
-                    <Label className="text-xs">E-mail pro onboarding formulář *</Label>
-                    <Input
-                      type="email"
-                      value={newEngOnboardingEmail}
-                      onChange={(e) => setNewEngOnboardingEmail(e.target.value)}
-                      placeholder="klient@firma.cz"
-                      className="h-9"
+                  {/* Same vs different SRO toggle */}
+                  <div className="flex items-center gap-2 p-3 rounded-md border bg-background">
+                    <Checkbox
+                      id="different-sro"
+                      checked={newEngIsDifferentSro}
+                      onCheckedChange={(checked) => setNewEngIsDifferentSro(checked === true)}
                     />
-                    <p className="text-xs text-muted-foreground">Na tento e-mail bude odeslán onboarding formulář + nabídka. Klient vyplní údaje firmy a po schválení se vytvoří smlouva.</p>
+                    <Label htmlFor="different-sro" className="text-sm cursor-pointer">
+                      Zakázka je pod jiným SRO (nová firma)
+                    </Label>
                   </div>
+                  
+                  {/* New SRO fields - only shown when different SRO */}
+                  {newEngIsDifferentSro && (
+                    <>
+                      <div className="space-y-3 p-3 rounded-md border bg-background">
+                        <h5 className="text-sm font-medium">🏢 Nový klient (orientační)</h5>
+                        <p className="text-xs text-muted-foreground">Klient doplní vše sám přes onboarding formulář (IČO, DIČ, fakturační údaje).</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Název společnosti</Label>
+                            <Input
+                              value={newEngClientName}
+                              onChange={(e) => setNewEngClientName(e.target.value)}
+                              placeholder="Např. NovýEshop s.r.o."
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Název značky</Label>
+                            <Input
+                              value={newEngClientBrand}
+                              onChange={(e) => setNewEngClientBrand(e.target.value)}
+                              placeholder="Např. NovýEshop.cz"
+                              className="h-9"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Onboarding email */}
+                      <div className="space-y-1">
+                        <Label className="text-xs">E-mail pro onboarding formulář *</Label>
+                        <Input
+                          type="email"
+                          value={newEngOnboardingEmail}
+                          onChange={(e) => setNewEngOnboardingEmail(e.target.value)}
+                          placeholder="klient@firma.cz"
+                          className="h-9"
+                        />
+                        <p className="text-xs text-muted-foreground">Na tento e-mail bude odeslán onboarding formulář + nabídka.</p>
+                      </div>
+                    </>
+                  )}
 
                   {/* Engagement name */}
                   <div className="space-y-1">
@@ -2108,14 +2127,24 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     )}
                   </div>
 
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      Po schválení se klientovi odešle onboarding formulář na <strong>{newEngOnboardingEmail || '...'}</strong>. 
-                      Klient vyplní fakturační údaje (IČO, DIČ, adresa) a kontaktní osobu. 
-                      Následně se automaticky vytvoří smlouva — stejný proces jako u nového klienta.
-                    </AlertDescription>
-                  </Alert>
+                  {newEngIsDifferentSro ? (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Po schválení se klientovi odešle onboarding formulář na <strong>{newEngOnboardingEmail || '...'}</strong>. 
+                        Klient vyplní fakturační údaje (IČO, DIČ, adresa) a kontaktní osobu. 
+                        Následně se automaticky vytvoří smlouva — stejný proces jako u nového klienta.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Nová zakázka bude navázána na stávajícího klienta a jeho SRO. 
+                        Po schválení se vytvoří zakázka s vybranými službami.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               )}
   
