@@ -34,7 +34,16 @@ interface ProposeModificationDialogProps {
   editingRequest?: import('@/data/modificationRequestsMockData').StoredModificationRequest | null;
 }
 
-const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+const InfoTip = ({ text }: { text: string }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Info className="h-3.5 w-3.5 ml-1 inline-block text-muted-foreground cursor-help shrink-0" />
+    </TooltipTrigger>
+    <TooltipContent className="max-w-[300px] text-xs">{text}</TooltipContent>
+  </Tooltip>
+);
+
+
   expand_country: 'Přidání nové země',
   add_service: 'Přidání nové služby',
   update_service_price: 'Úprava služby (cena + odměny)',
