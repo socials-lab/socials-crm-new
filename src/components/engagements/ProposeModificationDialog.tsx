@@ -130,7 +130,59 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
   const prorationInfo = calculateProratedAmount();
 
-  // Reset form when dialog closes
+  // Pre-fill from editingRequest when opening in edit mode
+  useEffect(() => {
+    if (open && editingRequest) {
+      setSelectedEngagementId(editingRequest.engagement_id);
+      setRequestType(editingRequest.request_type);
+      setRequestTypeConfirmed(true);
+      setEffectiveFrom(editingRequest.effective_from ? new Date(editingRequest.effective_from) : undefined);
+      setUpsoldById(editingRequest.upsold_by_id || 'none');
+      setNote(editingRequest.note || '');
+      setPricingSnapshot(editingRequest.pricing_snapshot || null);
+
+      const changes = editingRequest.proposed_changes as any;
+
+      if (editingRequest.request_type === 'add_service') {
+        setSelectedServiceId(changes.service_id || 'custom');
+        setServiceName(changes.name || '');
+        setServicePrice(changes.price || 0);
+        setServiceCurrency(changes.currency || 'CZK');
+        setServiceBillingType(changes.billing_type || 'monthly');
+        setSelectedTier(changes.selected_tier || 'none');
+        setServiceDescription(changes.description || '');
+        setServiceDeliverables(changes.deliverables?.join('\n') || '');
+        if (changes.creative_boost_max_credits) {
+          setCbMaxCredits(changes.creative_boost_max_credits);
+          setCbPricePerCredit(changes.creative_boost_price_per_credit || 400);
+          setCbColleagueReward(changes.creative_boost_reward_per_credit || 80);
+        }
+      } else if (editingRequest.request_type === 'update_service_price') {
+        setSelectedEngagementServiceId(changes.engagement_service_id || editingRequest.engagement_service_id || '');
+        setNewPrice(changes.new_price || 0);
+      } else if (editingRequest.request_type === 'deactivate_service') {
+        setSelectedEngagementServiceId(changes.engagement_service_id || editingRequest.engagement_service_id || '');
+      } else if (editingRequest.request_type === 'add_assignment') {
+        setSelectedColleagueId(changes.colleague_id || '');
+        setRoleOnEngagement(changes.role_on_engagement || '');
+        setCostModel(changes.cost_model || 'fixed_monthly');
+        setHourlyCost(changes.hourly_cost || 0);
+        setMonthlyCost(changes.monthly_cost || 0);
+        setPercentageOfRevenue(changes.percentage_of_revenue || 0);
+      } else if (editingRequest.request_type === 'update_assignment' || editingRequest.request_type === 'remove_assignment') {
+        setSelectedAssignmentId(changes.engagement_assignment_id || editingRequest.engagement_assignment_id || '');
+        if (editingRequest.request_type === 'update_assignment') {
+          setCostModel(changes.cost_model || 'fixed_monthly');
+          setHourlyCost(changes.hourly_cost || 0);
+          setMonthlyCost(changes.monthly_cost || 0);
+          setPercentageOfRevenue(changes.percentage_of_revenue || 0);
+        }
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editingRequest?.id]);
+
+  // Reset form when dialog closes (only when not in edit mode, or always on close)
   useEffect(() => {
     if (!open) {
       setSelectedEngagementId('');
