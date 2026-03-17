@@ -540,15 +540,27 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                         <p className="text-xs text-muted-foreground">Doporučeno: 400 Kč</p>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>🎨 Odměna za kredit pro grafika (CZK)</Label>
-                        <Input 
-                          type="number" 
-                          value={cbColleagueReward} 
-                          onChange={(e) => setCbColleagueReward(Number(e.target.value))}
-                          min={0}
-                        />
-                        <p className="text-xs text-muted-foreground">Doporučeno: 80 Kč</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>🎨 Odměna za kredit — Grafik (CZK)</Label>
+                          <Input 
+                            type="number" 
+                            value={cbColleagueReward} 
+                            onChange={(e) => setCbColleagueReward(Number(e.target.value))}
+                            min={0}
+                          />
+                          <p className="text-xs text-muted-foreground">Doporučeno: 80 Kč</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>🎬 Odměna za kredit — Editor (CZK)</Label>
+                          <Input 
+                            type="number" 
+                            value={cbEditorReward} 
+                            onChange={(e) => setCbEditorReward(Number(e.target.value))}
+                            min={0}
+                          />
+                          <p className="text-xs text-muted-foreground">Doporučeno: 100 Kč</p>
+                        </div>
                       </div>
 
                       <div className="pt-2 border-t space-y-1">
@@ -558,15 +570,29 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                         <p className="text-xs text-muted-foreground">
                           = {cbMaxCredits} kreditů × {cbPricePerCredit} Kč/kredit
                         </p>
-                        {cbColleagueReward > 0 && (
-                          <>
-                            <p className="text-sm font-medium mt-2">
-                              Odměna pro grafika: <span className="text-green-600">{(cbMaxCredits * cbColleagueReward).toLocaleString('cs-CZ')} CZK/měsíc</span>
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              = {cbMaxCredits} kreditů × {cbColleagueReward} Kč/kredit
-                            </p>
-                          </>
+                        {(cbColleagueReward > 0 || cbEditorReward > 0) && (
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            {cbColleagueReward > 0 && (
+                              <div>
+                                <p className="text-sm font-medium">
+                                  Odměna grafik: <span className="text-green-600">{(cbMaxCredits * cbColleagueReward).toLocaleString('cs-CZ')} Kč/měs</span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  = {cbMaxCredits} kr. × {cbColleagueReward} Kč
+                                </p>
+                              </div>
+                            )}
+                            {cbEditorReward > 0 && (
+                              <div>
+                                <p className="text-sm font-medium">
+                                  Odměna editor: <span className="text-green-600">{(cbMaxCredits * cbEditorReward).toLocaleString('cs-CZ')} Kč/měs</span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  = {cbMaxCredits} kr. × {cbEditorReward} Kč
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
