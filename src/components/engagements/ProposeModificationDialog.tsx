@@ -812,6 +812,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           note: note || null,
           pricing_snapshot: primaryItem.pricing_snapshot || pricingSnapshot,
           items: isBundled ? allItems : undefined,
+          bundle_discount_percent: isBundled && bundleDiscountPercent > 0 ? bundleDiscountPercent : undefined,
         });
       }
       
