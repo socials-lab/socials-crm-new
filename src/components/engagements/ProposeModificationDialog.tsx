@@ -1737,8 +1737,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
               {/* ADD ASSIGNMENT FIELDS */}
               {requestType === 'add_assignment' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium">3. Přiřazení kolegy ke službě</h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   
                   {/* Service selection */}
                   <div className="space-y-2">
