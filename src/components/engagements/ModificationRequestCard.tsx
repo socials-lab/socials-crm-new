@@ -262,7 +262,8 @@ export function ModificationRequestCard({
         const c = changes as NewEngagementProposedChanges;
         return (
           <div className="space-y-1 text-sm">
-            {c.new_client_data?.company_name && (
+            <p><span className="text-muted-foreground">Typ:</span> {c.is_different_sro ? 'Jiné SRO (nová firma)' : 'Stejné SRO'}</p>
+            {c.is_different_sro && c.new_client_data?.company_name && (
               <p><span className="text-muted-foreground">Nový klient:</span> {c.new_client_data.company_name}
                 {c.new_client_data.brand_name && <span className="text-muted-foreground"> ({c.new_client_data.brand_name})</span>}
               </p>
@@ -284,7 +285,9 @@ export function ModificationRequestCard({
               </div>
             ))}
             <p className="font-medium"><span className="text-muted-foreground">Celkem:</span> {c.total_monthly_price.toLocaleString('cs-CZ')} {c.currency}/měs</p>
-            <p className="text-xs text-muted-foreground mt-1">📋 Klient vyplní údaje přes onboarding formulář ({c.onboarding_email})</p>
+            {c.is_different_sro && c.onboarding_email && (
+              <p className="text-xs text-muted-foreground mt-1">📋 Klient vyplní údaje přes onboarding formulář ({c.onboarding_email})</p>
+            )}
           </div>
         );
       }
