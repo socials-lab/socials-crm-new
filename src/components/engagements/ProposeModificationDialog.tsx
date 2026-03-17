@@ -2374,6 +2374,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       </AlertDescription>
                     </Alert>
                   )}
+                  </div>
                 </div>
               )}
   
