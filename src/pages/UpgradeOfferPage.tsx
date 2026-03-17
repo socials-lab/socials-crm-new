@@ -49,6 +49,9 @@ export default function UpgradeOfferPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
+    // Seed demo data for new_engagement showcase
+    seedNewEngagementDemo();
+
     if (!token) {
       setIsLoading(false);
       return;
@@ -59,7 +62,6 @@ export default function UpgradeOfferPage() {
     if (request?.effective_from) {
       setSelectedDate(new Date(request.effective_from));
     } else {
-      // Default: 1st of next month
       setSelectedDate(startOfMonth(addMonths(new Date(), 1)));
     }
     setIsLoading(false);
