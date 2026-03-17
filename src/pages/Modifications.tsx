@@ -163,7 +163,7 @@ export default function Modifications() {
     isDeleting,
     refresh
   } = useModificationRequests();
-  const { addEngagementService, updateEngagementService } = useCRMData();
+  const { addEngagementService, updateEngagementService, addClient, addEngagement, addContact } = useCRMData();
 
   // Get applied modifications history
   const appliedHistory = useMemo(() => getAppliedModificationsHistory(), [pendingRequests]);
