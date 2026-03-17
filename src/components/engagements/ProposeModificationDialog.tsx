@@ -514,6 +514,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           proposed_changes: proposed_changes as any,
           engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
             ? selectedEngagementServiceId 
+            : requestType === 'add_assignment' ? (assignmentServiceId || null)
             : null,
           engagement_assignment_id: ['update_assignment'].includes(requestType)
             ? selectedAssignmentId
