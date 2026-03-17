@@ -848,7 +848,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
               )}
 
               {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
-              {(requestType === 'add_service' || requestType === 'update_service_price') && (() => {
+              {((requestType === 'add_service' && selectedServiceId) || (requestType === 'update_service_price' && selectedEngagementServiceId)) && (() => {
                 const selectedEng = engagements.find(e => e.id === selectedEngagementId);
                 if (!selectedEng) return null;
                 const isAddon = selectedService?.service_type === 'addon';
