@@ -38,6 +38,12 @@ interface PricingImpactSectionProps {
   isAddonService: boolean;
   /** Tier selected in parent (growth/pro/elite) */
   selectedTier?: string | null;
+  /** When set to 'expand_country' or 'add_service', hides internal scenario selector */
+  requestType?: 'expand_country' | 'add_service' | string;
+  /** Multiplier from parent for expand_country */
+  expandMultiplier?: number;
+  /** Reference engagement_service_id from parent for expand_country */
+  expandRefServiceId?: string;
   onPriceChange: (price: number) => void;
   onInternalCostChange: (cost: number) => void;
   onSnapshotChange: (snapshot: PricingSnapshot | null) => void;
