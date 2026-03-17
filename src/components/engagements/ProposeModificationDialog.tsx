@@ -139,9 +139,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   // New engagement (new SRO) state
   const [newEngClientName, setNewEngClientName] = useState('');
   const [newEngClientBrand, setNewEngClientBrand] = useState('');
-  const [newEngClientIco, setNewEngClientIco] = useState('');
-  const [newEngClientDic, setNewEngClientDic] = useState('');
   const [newEngName, setNewEngName] = useState('');
+  const [newEngOnboardingEmail, setNewEngOnboardingEmail] = useState('');
   const [newEngServices, setNewEngServices] = useState<Array<{
     service_id: string | null;
     name: string;
@@ -150,10 +149,6 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     billing_type: 'monthly' | 'one_off';
     selected_tier?: string | null;
   }>>([]);
-  const [newEngContactName, setNewEngContactName] = useState('');
-  const [newEngContactEmail, setNewEngContactEmail] = useState('');
-  const [newEngContactPhone, setNewEngContactPhone] = useState('');
-  const [newEngCopyContact, setNewEngCopyContact] = useState(false);
 
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
@@ -312,14 +307,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       // New engagement reset
       setNewEngClientName('');
       setNewEngClientBrand('');
-      setNewEngClientIco('');
-      setNewEngClientDic('');
       setNewEngName('');
+      setNewEngOnboardingEmail('');
       setNewEngServices([]);
-      setNewEngContactName('');
-      setNewEngContactEmail('');
-      setNewEngContactPhone('');
-      setNewEngCopyContact(false);
     }
   }, [open]);
 
@@ -616,22 +606,16 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'new_engagement': {
         const totalMonthly = newEngServices.reduce((sum, s) => sum + (s.billing_type === 'monthly' ? s.price : 0), 0);
         proposed_changes = {
-          new_client_data: {
+          new_client_data: newEngClientName ? {
             company_name: newEngClientName,
             brand_name: newEngClientBrand || undefined,
-            ico: newEngClientIco || undefined,
-            dic: newEngClientDic || undefined,
-          },
+          } : undefined,
           engagement_name: newEngName,
           services: newEngServices,
           total_monthly_price: totalMonthly,
           currency: 'CZK',
-          contact_person: newEngContactName ? {
-            name: newEngContactName,
-            email: newEngContactEmail || undefined,
-            phone: newEngContactPhone || undefined,
-            copied_from_reference: newEngCopyContact,
-          } : undefined,
+          onboarding_email: newEngOnboardingEmail,
+          send_onboarding_form: true,
         };
         break;
       }
@@ -1646,12 +1630,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     3. Nová zakázka (jiné SRO)
                   </h4>
                   
-                  {/* New client / SRO data */}
+                  {/* Hint: client name / brand (optional) */}
                   <div className="space-y-3 p-3 rounded-md border bg-background">
-                    <h5 className="text-sm font-medium">🏢 Údaje nového klienta</h5>
+                    <h5 className="text-sm font-medium">🏢 Nový klient (orientační)</h5>
+                    <p className="text-xs text-muted-foreground">Klient doplní vše sám přes onboarding formulář (IČO, DIČ, fakturační údaje).</p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Název společnosti *</Label>
+                        <Label className="text-xs">Název společnosti</Label>
                         <Input
                           value={newEngClientName}
                           onChange={(e) => setNewEngClientName(e.target.value)}
@@ -1669,26 +1654,19 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">IČO</Label>
-                        <Input
-                          value={newEngClientIco}
-                          onChange={(e) => setNewEngClientIco(e.target.value)}
-                          placeholder="12345678"
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">DIČ</Label>
-                        <Input
-                          value={newEngClientDic}
-                          onChange={(e) => setNewEngClientDic(e.target.value)}
-                          placeholder="CZ12345678"
-                          className="h-9"
-                        />
-                      </div>
-                    </div>
+                  </div>
+
+                  {/* Onboarding email */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">E-mail pro onboarding formulář *</Label>
+                    <Input
+                      type="email"
+                      value={newEngOnboardingEmail}
+                      onChange={(e) => setNewEngOnboardingEmail(e.target.value)}
+                      placeholder="klient@firma.cz"
+                      className="h-9"
+                    />
+                    <p className="text-xs text-muted-foreground">Na tento e-mail bude odeslán onboarding formulář + nabídka. Klient vyplní údaje firmy a po schválení se vytvoří smlouva.</p>
                   </div>
 
                   {/* Engagement name */}
@@ -1727,7 +1705,6 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                     key={service.id}
                                     value={service.name}
                                     onSelect={() => {
-                                      // Add service to list
                                       const defaultPrice = service.service_type === 'core'
                                         ? (service.tier_pricing?.find((p: any) => p.tier === 'growth')?.price ?? service.base_price ?? 0)
                                         : (service.base_price || 0);
@@ -1853,62 +1830,14 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     )}
                   </div>
 
-                  {/* Contact person */}
-                  <div className="space-y-3 p-3 rounded-md border bg-background">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-sm font-medium">👤 Kontaktní osoba</h5>
-                      {selectedEngagementId && (() => {
-                        const eng = engagements.find(e => e.id === selectedEngagementId);
-                        const client = eng ? clients.find(c => c.id === eng.client_id) : null;
-                        if (!client?.main_contact_name) return null;
-                        return (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => {
-                              setNewEngContactName(client.main_contact_name);
-                              setNewEngContactEmail(client.main_contact_email || '');
-                              setNewEngContactPhone(client.main_contact_phone || '');
-                              setNewEngCopyContact(true);
-                            }}
-                          >
-                            Zkopírovat z ref. zakázky
-                          </Button>
-                        );
-                      })()}
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Jméno</Label>
-                        <Input
-                          value={newEngContactName}
-                          onChange={(e) => setNewEngContactName(e.target.value)}
-                          placeholder="Jan Novák"
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">E-mail</Label>
-                        <Input
-                          value={newEngContactEmail}
-                          onChange={(e) => setNewEngContactEmail(e.target.value)}
-                          placeholder="jan@example.com"
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Telefon</Label>
-                        <Input
-                          value={newEngContactPhone}
-                          onChange={(e) => setNewEngContactPhone(e.target.value)}
-                          placeholder="+420..."
-                          className="h-9"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Po schválení se klientovi odešle onboarding formulář na <strong>{newEngOnboardingEmail || '...'}</strong>. 
+                      Klient vyplní fakturační údaje (IČO, DIČ, adresa) a kontaktní osobu. 
+                      Následně se automaticky vytvoří smlouva — stejný proces jako u nového klienta.
+                    </AlertDescription>
+                  </Alert>
                 </div>
               )}
   

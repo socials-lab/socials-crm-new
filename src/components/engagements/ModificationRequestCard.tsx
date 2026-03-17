@@ -261,11 +261,10 @@ export function ModificationRequestCard({
         const c = changes as NewEngagementProposedChanges;
         return (
           <div className="space-y-1 text-sm">
-            <p><span className="text-muted-foreground">Nový klient:</span> {c.new_client_data.company_name}
-              {c.new_client_data.brand_name && <span className="text-muted-foreground"> ({c.new_client_data.brand_name})</span>}
-            </p>
-            {c.new_client_data.ico && (
-              <p><span className="text-muted-foreground">IČO:</span> {c.new_client_data.ico}</p>
+            {c.new_client_data?.company_name && (
+              <p><span className="text-muted-foreground">Nový klient:</span> {c.new_client_data.company_name}
+                {c.new_client_data.brand_name && <span className="text-muted-foreground"> ({c.new_client_data.brand_name})</span>}
+              </p>
             )}
             <p><span className="text-muted-foreground">Zakázka:</span> {c.engagement_name}</p>
             <p><span className="text-muted-foreground">Služby:</span> {c.services.length}×</p>
@@ -273,6 +272,7 @@ export function ModificationRequestCard({
               <p key={i} className="ml-3">• {s.name} — {s.price.toLocaleString('cs-CZ')} {s.currency}/{s.billing_type === 'monthly' ? 'měs' : 'jednorázově'}</p>
             ))}
             <p className="font-medium"><span className="text-muted-foreground">Celkem:</span> {c.total_monthly_price.toLocaleString('cs-CZ')} {c.currency}/měs</p>
+            <p className="text-xs text-muted-foreground mt-1">📋 Klient vyplní údaje přes onboarding formulář ({c.onboarding_email})</p>
           </div>
         );
       }
