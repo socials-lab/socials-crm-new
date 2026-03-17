@@ -392,8 +392,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Navrhnout úpravu zakázky
+            {isEditMode ? <FileText className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+            {isEditMode ? 'Upravit návrh změny' : 'Navrhnout úpravu zakázky'}
           </DialogTitle>
         </DialogHeader>
 
