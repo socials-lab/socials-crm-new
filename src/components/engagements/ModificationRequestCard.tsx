@@ -269,7 +269,18 @@ export function ModificationRequestCard({
             <p><span className="text-muted-foreground">Zakázka:</span> {c.engagement_name}</p>
             <p><span className="text-muted-foreground">Služby:</span> {c.services.length}×</p>
             {c.services.map((s, i) => (
-              <p key={i} className="ml-3">• {s.name} — {s.price.toLocaleString('cs-CZ')} {s.currency}/{s.billing_type === 'monthly' ? 'měs' : 'jednorázově'}</p>
+              <div key={i} className="ml-3">
+                <p>• {s.name} — {s.price.toLocaleString('cs-CZ')} {s.currency}/{s.billing_type === 'monthly' ? 'měs' : 'jednorázově'}</p>
+                {s.assignments && s.assignments.length > 0 && (
+                  <div className="ml-4 text-xs text-muted-foreground">
+                    {s.assignments.map((a, aIdx) => (
+                      <p key={aIdx}>
+                        👤 {a.colleague_name} ({a.role || 'bez role'}) — {a.cost_model === 'hourly' ? `${a.hourly_cost?.toLocaleString('cs-CZ')} Kč/hod` : a.cost_model === 'percentage' ? `${a.percentage_of_revenue}%` : `${a.monthly_cost?.toLocaleString('cs-CZ')} Kč/měs`}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
             <p className="font-medium"><span className="text-muted-foreground">Celkem:</span> {c.total_monthly_price.toLocaleString('cs-CZ')} {c.currency}/měs</p>
             <p className="text-xs text-muted-foreground mt-1">📋 Klient vyplní údaje přes onboarding formulář ({c.onboarding_email})</p>
