@@ -2586,11 +2586,11 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  className="w-full"
+                  size="lg"
+                  className="w-full border-2 border-dashed border-primary/40 hover:border-primary hover:bg-primary/5 text-primary font-medium"
                   onClick={handleAddAnotherItem}
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Uložit položku a přidat další
                 </Button>
               )}
