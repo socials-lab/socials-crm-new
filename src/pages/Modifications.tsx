@@ -915,8 +915,6 @@ export default function Modifications() {
               </div>
             );
           })()}
-            </div>
-          )}
         </TabsContent>
 
         <TabsContent value="rejected" className="space-y-4">
