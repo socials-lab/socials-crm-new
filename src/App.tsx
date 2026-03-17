@@ -38,6 +38,7 @@ import Broadcasts from "./pages/Broadcasts";
 import ApplicantOnboardingForm from "./pages/ApplicantOnboardingForm";
 import NotFound from "./pages/NotFound";
 import OnboardingForm from "./pages/OnboardingForm";
+import ModificationOnboardingForm from "./pages/ModificationOnboardingForm";
 import Notifications from "./pages/Notifications";
 import Feedback from "./pages/Feedback";
 import Academy from "./pages/Academy";
