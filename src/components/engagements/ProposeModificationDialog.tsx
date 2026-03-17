@@ -36,10 +36,11 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   remove_assignment: 'Odebrání kolegy',
 };
 
-export function ProposeModificationDialog({ open, onOpenChange }: ProposeModificationDialogProps) {
+export function ProposeModificationDialog({ open, onOpenChange, editingRequest }: ProposeModificationDialogProps) {
   const { engagements, clients, services, colleagues, engagementServices, assignments, getEngagementServicesByEngagementId, getAssignmentsByEngagementId } = useCRMData();
-  const { createRequest, isCreating } = useModificationRequests();
+  const { createRequest, updateRequest, isCreating, isUpdating } = useModificationRequests();
   const { user } = useAuth();
+  const isEditMode = !!editingRequest;
   
   // Find colleague record for current user
   const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
