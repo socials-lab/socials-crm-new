@@ -105,6 +105,7 @@ export default function UpgradeOfferPage() {
   const isAccepted = offer.status === 'client_approved' || offer.status === 'applied';
   const isExpired = offer.upgrade_offer_valid_until && new Date(offer.upgrade_offer_valid_until) < new Date() && !isAccepted;
   const clientName = offer.client_brand_name || offer.client_name;
+  const isBundled = offer.items && offer.items.length > 1;
 
   // Get change-specific icon and label
   const getChangeIcon = () => {
