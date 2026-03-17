@@ -127,12 +127,18 @@ export function PricingImpactSection({
     return activeClientServices.find(s => s.id === referenceServiceId);
   }, [activeClientServices, referenceServiceId]);
 
-  // Auto-select scenario based on service type
+  // Sync parent-controlled props
   useEffect(() => {
-    if (isAddonService) {
+    if (parentRequestType === 'expand_country') {
+      setScenario('expand_country');
+      if (parentExpandRefServiceId) setReferenceServiceId(parentExpandRefServiceId);
+      if (parentExpandMultiplier !== undefined) setMultiplier(parentExpandMultiplier);
+    } else if (parentRequestType === 'add_service') {
+      setScenario('add_addon'); // Direct pricing, no scenario picker
+    } else if (isAddonService) {
       setScenario('add_addon');
     }
-  }, [isAddonService]);
+  }, [isAddonService, parentRequestType, parentExpandRefServiceId, parentExpandMultiplier]);
 
   // Catalog service lookup
   const selectedCatalogService = useMemo(
