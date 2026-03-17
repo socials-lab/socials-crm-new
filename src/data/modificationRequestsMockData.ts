@@ -98,6 +98,7 @@ export function createModificationRequest(params: {
   requested_by: string;
   pricing_snapshot?: PricingSnapshot | null;
   items?: ModificationRequestItem[];
+  bundle_discount_percent?: number;
 }): StoredModificationRequest {
   const requests = getModificationRequests();
   
