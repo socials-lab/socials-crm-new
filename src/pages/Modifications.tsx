@@ -287,6 +287,113 @@ export default function Modifications() {
     setEmailDialogOpen(true);
   };
 
+  const handleCreateClientFromOnboarding = async (request: StoredModificationRequest) => {
+    if (!request.onboarding_data) {
+      toast.error('Klient ještě nevyplnil fakturační údaje');
+      return;
+    }
+    
+    const d = request.onboarding_data;
+    const changes = request.proposed_changes as any;
+    
+    try {
+      // 1. Create new client
+      const newClient = await addClient({
+        name: d.company_name,
+        brand_name: changes.new_client_data?.brand_name || d.company_name,
+        ico: d.ico || '',
+        dic: d.dic || null,
+        website: d.website || '',
+        country: d.billing_country || 'CZ',
+        industry: d.industry || '',
+        status: 'active',
+        tier: 'standard',
+        billing_street: d.billing_street || null,
+        billing_city: d.billing_city || null,
+        billing_zip: d.billing_zip || null,
+        billing_country: d.billing_country || null,
+        billing_email: d.billing_email || null,
+        main_contact_name: d.contact_name,
+        main_contact_email: d.contact_email,
+        main_contact_phone: d.contact_phone || '',
+        acquisition_channel: '',
+        sales_representative_id: null,
+        start_date: request.client_chosen_effective_from || request.effective_from || new Date().toISOString().split('T')[0],
+        created_by: null,
+        end_date: null,
+        notes: `Vytvořeno z návrhu změny: ${request.engagement_name}`,
+        pinned_notes: '',
+      });
+
+      // 2. Create contact person
+      await addContact({
+        client_id: newClient.id,
+        name: d.contact_name,
+        email: d.contact_email,
+        phone: d.contact_phone || null,
+        position: d.contact_position || null,
+        is_primary: true,
+        is_decision_maker: true,
+        notes: '',
+      });
+
+      // 3. Create engagement
+      const totalMonthly = changes.total_monthly_price || 0;
+      const newEngagement = await addEngagement({
+        client_id: newClient.id,
+        name: changes.engagement_name,
+        type: 'retainer',
+        billing_model: 'fixed_fee',
+        monthly_fee: totalMonthly,
+        one_off_fee: 0,
+        currency: changes.currency || 'CZK',
+        status: 'active',
+        start_date: request.client_chosen_effective_from || request.effective_from || new Date().toISOString().split('T')[0],
+        end_date: null,
+        notes: '',
+        platforms: [],
+        freelo_url: null,
+        offer_url: null,
+        contract_url: null,
+        contact_person_id: null,
+        notice_period_months: null,
+      });
+
+      // 4. Create engagement services
+      for (const svc of changes.services || []) {
+        await addEngagementService({
+          engagement_id: newEngagement.id,
+          service_id: svc.service_id || null,
+          name: svc.name,
+          price: svc.price,
+          currency: svc.currency || 'CZK',
+          billing_type: svc.billing_type || 'monthly',
+          is_active: true,
+          notes: '',
+          selected_tier: svc.selected_tier || null,
+          creative_boost_min_credits: null,
+          creative_boost_max_credits: null,
+          creative_boost_price_per_credit: null,
+          invoicing_status: 'not_applicable',
+          invoiced_at: null,
+          invoiced_in_period: null,
+          invoice_id: null,
+        });
+      }
+
+      // 5. Mark modification as applied
+      await applyRequest(request.id);
+
+      toast.success(`Klient "${d.company_name}" a zakázka "${changes.engagement_name}" byly úspěšně vytvořeny!`, {
+        duration: 5000,
+      });
+      refresh();
+    } catch (error) {
+      console.error('Error creating client from onboarding:', error);
+      toast.error('Nepodařilo se vytvořit klienta. Zkuste to prosím znovu.');
+    }
+  };
+
   const getUpgradeLink = (token: string | null) => {
     if (!token) return '';
     return `${window.location.origin}/upgrade/${token}`;
