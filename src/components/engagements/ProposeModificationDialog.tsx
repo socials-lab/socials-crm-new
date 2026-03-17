@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { SERVICE_DETAILS } from '@/constants/serviceDetails';
 import { PricingImpactSection } from '@/components/engagements/PricingImpactSection';
 import type { PricingSnapshot } from '@/utils/pricingEngine';
+import { getServiceRewardRecommendation, getRewardsFromServiceConfig } from '@/constants/serviceRewards';
 
 interface ProposeModificationDialogProps {
   open: boolean;
@@ -100,6 +101,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [hourlyCost, setHourlyCost] = useState<number>(0);
   const [monthlyCost, setMonthlyCost] = useState<number>(0);
   const [percentageOfRevenue, setPercentageOfRevenue] = useState<number>(0);
+  const [assignmentServiceId, setAssignmentServiceId] = useState<string>('');
 
   // For update_assignment / remove_assignment
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
@@ -331,6 +333,77 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
   }, [selectedEngagementServiceId, currentEngagementServices, currentAssignments, colleagues]);
 
+  // Auto-detect role from colleague position for add_assignment
+  useEffect(() => {
+    if (requestType !== 'add_assignment' || !selectedColleagueId) return;
+    const colleague = colleagues.find(c => c.id === selectedColleagueId);
+    if (!colleague) return;
+    const pos = colleague.position.toLowerCase();
+    if (pos.includes('video')) {
+      setRoleOnEngagement('Video Editor');
+    } else if (pos.includes('design') || pos.includes('grafik')) {
+      setRoleOnEngagement('Graphic Designer');
+    } else if (pos.includes('ppc') || pos.includes('google')) {
+      setRoleOnEngagement('PPC Specialist');
+    } else if (pos.includes('meta') || pos.includes('facebook') || pos.includes('social')) {
+      setRoleOnEngagement('Meta Ads Specialist');
+    } else if (pos.includes('seo')) {
+      setRoleOnEngagement('SEO Specialist');
+    } else if (pos.includes('sales') || pos.includes('obchod')) {
+      setRoleOnEngagement('Sales Specialist');
+    } else if (pos.includes('account') || pos.includes('pm') || pos.includes('project')) {
+      setRoleOnEngagement('Account Manager');
+    }
+  }, [selectedColleagueId, requestType, colleagues]);
+
+  // Auto-fill reward from service config when service or colleague changes for add_assignment
+  useEffect(() => {
+    if (requestType !== 'add_assignment' || !assignmentServiceId) return;
+    const engService = currentEngagementServices.find(es => es.id === assignmentServiceId);
+    if (!engService) return;
+
+    // Find matching service in catalog
+    const catalogService = services.find(s => s.id === engService.service_id);
+    const tier = engService.selected_tier || null;
+    
+    // Try DB reward_config first, then fallback to hardcoded
+    let recommended = catalogService?.reward_config 
+      ? getRewardsFromServiceConfig(catalogService.reward_config as any, tier)
+      : null;
+    if (!recommended) {
+      recommended = getServiceRewardRecommendation(engService.name, tier);
+    }
+
+    if (recommended && recommended.length > 0) {
+      // Find match by role if colleague is already selected
+      const colleague = colleagues.find(c => c.id === selectedColleagueId);
+      const pos = colleague?.position?.toLowerCase() || '';
+      
+      // Try to match role to colleague position
+      let matchedReward = recommended[0]; // default to first
+      for (const r of recommended) {
+        const roleLower = r.role.toLowerCase();
+        if (
+          (roleLower.includes('meta') && (pos.includes('meta') || pos.includes('social') || pos.includes('facebook'))) ||
+          (roleLower.includes('ppc') && (pos.includes('ppc') || pos.includes('google'))) ||
+          (roleLower.includes('graphic') && (pos.includes('design') || pos.includes('grafik'))) ||
+          (roleLower.includes('seo') && pos.includes('seo')) ||
+          (roleLower.includes('video') && pos.includes('video'))
+        ) {
+          matchedReward = r;
+          break;
+        }
+      }
+
+      setCostModel(matchedReward.rewardType === 'hourly' ? 'hourly' : matchedReward.rewardType === 'per_credit' ? 'fixed_monthly' : 'fixed_monthly');
+      if (matchedReward.rewardType === 'hourly') {
+        setHourlyCost(matchedReward.reward);
+      } else {
+        setMonthlyCost(matchedReward.reward);
+      }
+    }
+  }, [assignmentServiceId, requestType, selectedColleagueId, currentEngagementServices, services, colleagues]);
+
   const handleSubmit = async () => {
     if (!selectedEngagementId || !requestType) return;
 
@@ -406,6 +479,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'add_assignment':
         proposed_changes = {
           colleague_id: selectedColleagueId,
+          engagement_service_id: assignmentServiceId || null,
           role_on_engagement: roleOnEngagement,
           cost_model: costModel,
           hourly_cost: costModel === 'hourly' ? hourlyCost : null,
@@ -440,6 +514,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           proposed_changes: proposed_changes as any,
           engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
             ? selectedEngagementServiceId 
+            : requestType === 'add_assignment' ? (assignmentServiceId || null)
             : null,
           engagement_assignment_id: ['update_assignment'].includes(requestType)
             ? selectedAssignmentId
@@ -1006,83 +1081,113 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
               {/* ADD ASSIGNMENT FIELDS */}
               {requestType === 'add_assignment' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                  <h4 className="font-medium">3. Přiřazení kolegy</h4>
+                  <h4 className="font-medium">3. Přiřazení kolegy ke službě</h4>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Kolega *</Label>
-                      <Select value={selectedColleagueId} onValueChange={setSelectedColleagueId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Vyberte kolegu" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {colleagues.filter(c => c.status === 'active').map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.full_name} ({c.position})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Role na projektu</Label>
-                      <Input 
-                        value={roleOnEngagement} 
-                        onChange={(e) => setRoleOnEngagement(e.target.value)}
-                        placeholder="Např. Specialist"
-                      />
-                    </div>
+                  {/* Service selection */}
+                  <div className="space-y-2">
+                    <Label>Služba na zakázce *</Label>
+                    <Select value={assignmentServiceId} onValueChange={setAssignmentServiceId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte službu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentEngagementServices.filter(es => es.is_active).map((es) => (
+                          <SelectItem key={es.id} value={es.id}>
+                            {es.name} ({es.price?.toLocaleString()} {es.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Model odměny</Label>
-                      <Select value={costModel} onValueChange={(v) => setCostModel(v as 'hourly' | 'fixed_monthly' | 'percentage')}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="fixed_monthly">Fixní měsíční</SelectItem>
-                          <SelectItem value="hourly">Hodinová</SelectItem>
-                          <SelectItem value="percentage">% z revenue</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  {assignmentServiceId && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Kolega *</Label>
+                          <Select value={selectedColleagueId} onValueChange={setSelectedColleagueId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Vyberte kolegu" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {colleagues.filter(c => c.status === 'active').map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.full_name} ({c.position})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                    {costModel === 'fixed_monthly' && (
-                      <div className="space-y-2">
-                        <Label>Měsíční odměna (CZK)</Label>
-                        <Input 
-                          type="number" 
-                          value={monthlyCost} 
-                          onChange={(e) => setMonthlyCost(Number(e.target.value))}
-                        />
+                        <div className="space-y-2">
+                          <Label>Role na projektu</Label>
+                          <Input 
+                            value={roleOnEngagement} 
+                            onChange={(e) => setRoleOnEngagement(e.target.value)}
+                            placeholder="Např. Specialist"
+                          />
+                        </div>
                       </div>
-                    )}
 
-                    {costModel === 'hourly' && (
-                      <div className="space-y-2">
-                        <Label>Hodinová sazba (CZK)</Label>
-                        <Input 
-                          type="number" 
-                          value={hourlyCost} 
-                          onChange={(e) => setHourlyCost(Number(e.target.value))}
-                        />
-                      </div>
-                    )}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Model odměny</Label>
+                          <Select value={costModel} onValueChange={(v) => setCostModel(v as 'hourly' | 'fixed_monthly' | 'percentage')}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="fixed_monthly">Fixní měsíční</SelectItem>
+                              <SelectItem value="hourly">Hodinová</SelectItem>
+                              <SelectItem value="percentage">% z revenue</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                    {costModel === 'percentage' && (
-                      <div className="space-y-2">
-                        <Label>% z revenue</Label>
-                        <Input 
-                          type="number" 
-                          value={percentageOfRevenue} 
-                          onChange={(e) => setPercentageOfRevenue(Number(e.target.value))}
-                        />
+                        {costModel === 'fixed_monthly' && (
+                          <div className="space-y-2">
+                            <Label>Měsíční odměna (CZK)</Label>
+                            <Input 
+                              type="number" 
+                              value={monthlyCost} 
+                              onChange={(e) => setMonthlyCost(Number(e.target.value))}
+                            />
+                          </div>
+                        )}
+
+                        {costModel === 'hourly' && (
+                          <div className="space-y-2">
+                            <Label>Hodinová sazba (CZK)</Label>
+                            <Input 
+                              type="number" 
+                              value={hourlyCost} 
+                              onChange={(e) => setHourlyCost(Number(e.target.value))}
+                            />
+                          </div>
+                        )}
+
+                        {costModel === 'percentage' && (
+                          <div className="space-y-2">
+                            <Label>% z revenue</Label>
+                            <Input 
+                              type="number" 
+                              value={percentageOfRevenue} 
+                              onChange={(e) => setPercentageOfRevenue(Number(e.target.value))}
+                            />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+
+                      {(monthlyCost > 0 || hourlyCost > 0) && (
+                        <Alert>
+                          <Info className="h-4 w-4" />
+                          <AlertDescription>
+                            Odměna byla předvyplněna dle konfigurace služby. Můžete ji upravit.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
