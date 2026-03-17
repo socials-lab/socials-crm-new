@@ -16,6 +16,7 @@ import { addAppliedModificationToHistory } from '@/data/appliedModificationsHist
 import type { 
   ModificationRequestType,
   ModificationProposedChanges,
+  ModificationRequestItem,
 } from '@/types/crm';
 import type { PricingSnapshot } from '@/utils/pricingEngine';
 
