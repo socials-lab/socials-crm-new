@@ -1293,7 +1293,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice)
                     : requestType === 'update_service_price'
                       ? Math.max(0, newPrice - (currentEngagementServices.find(es => es.id === selectedEngagementServiceId)?.price || 0))
-                      : 0;
+                      : requestType === 'add_assignment'
+                        ? (costModel === 'fixed_monthly' ? monthlyCost : costModel === 'hourly' ? hourlyCost : 0)
+                        : 0;
                   const commission = Math.round(commissionBase * 0.1);
                   const upsoldColleague = colleagues.find(c => c.id === upsoldById);
                   if (commissionBase <= 0) return null;
