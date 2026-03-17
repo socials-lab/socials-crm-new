@@ -811,6 +811,7 @@ export type ModificationRequestType =
 
 // Status for modification requests
 export type ModificationRequestStatus = 
+  | 'draft'            // Rozpracovaný návrh (viditelný pro všechny)
   | 'pending'          // Čeká na interní schválení
   | 'approved'         // Interně schváleno, čeká na klienta (pro client-facing změny)
   | 'client_approved'  // Klient potvrdil, připraveno k aplikaci
@@ -830,6 +831,7 @@ export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, s
 
 // Status labels
 export const MODIFICATION_REQUEST_STATUS_LABELS: Record<ModificationRequestStatus, string> = {
+  draft: 'Rozpracováno',
   pending: 'Čeká na schválení',
   approved: 'Čeká na klienta',
   client_approved: 'Klient potvrdil',

@@ -363,8 +363,8 @@ export function deleteModificationRequest(requestId: string): boolean {
   
   const request = requests[index];
   
-  // Only allow deleting pending, approved (waiting for client), or rejected requests
-  if (!['pending', 'approved', 'rejected'].includes(request.status)) {
+  // Only allow deleting draft, pending, approved (waiting for client), or rejected requests
+  if (!['draft', 'pending', 'approved', 'rejected'].includes(request.status)) {
     return false;
   }
   
