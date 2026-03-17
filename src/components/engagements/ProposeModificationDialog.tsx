@@ -199,7 +199,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setServiceCurrency('CZK');
       setServiceBillingType('monthly');
       setSelectedTier('none');
-      setCbMaxCredits(50);
+      setCbMaxCredits(30);
       setCbPricePerCredit(400);
       setCbColleagueReward(150);
       setCbEditorReward(100);
