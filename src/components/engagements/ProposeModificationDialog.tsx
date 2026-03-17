@@ -64,7 +64,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   // Creative Boost specific fields
   const [cbMaxCredits, setCbMaxCredits] = useState<number>(50);
   const [cbPricePerCredit, setCbPricePerCredit] = useState<number>(400);
-  const [cbColleagueReward, setCbColleagueReward] = useState<number>(80);
+  const [cbColleagueReward, setCbColleagueReward] = useState<number>(150);
   const [cbEditorReward, setCbEditorReward] = useState<number>(100);
 
   // For update_service_price
