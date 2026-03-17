@@ -231,6 +231,7 @@ export default function UpgradeOfferPage() {
                 Fakturace za první měsíc: {prorationInfo.proratedAmount.toLocaleString('cs-CZ')} {c.currency} ({prorationInfo.remainingDays}/{prorationInfo.daysInMonth} dní)
               </p>
             )}
+            {renderTeamSection()}
           </div>
         );
       }
