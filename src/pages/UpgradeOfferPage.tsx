@@ -199,7 +199,7 @@ export default function UpgradeOfferPage() {
   };
 
   // Render change details for a specific type and changes (used for bundled items)
-  const renderChangeDetailsForItem = (itemType: ModificationRequestType, changes: any) => {
+  const renderChangeDetailsForItem = (itemType: ModificationRequestType, changes: any, itemRewards?: import('@/utils/pricingEngine').ColleagueRewardEntry[] | null) => {
     switch (itemType) {
       case 'add_service': {
         const c = changes as unknown as AddServiceProposedChanges;
