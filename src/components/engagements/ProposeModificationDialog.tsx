@@ -314,6 +314,15 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
       if (engService) {
         setNewPrice(engService.price);
+        
+        // Pre-populate Creative Boost fields from existing service
+        const catalogSvc = engService.service_id ? services.find(s => s.id === engService.service_id) : null;
+        if (catalogSvc?.code === CREATIVE_BOOST_CODE) {
+          setCbMaxCredits(engService.creative_boost_max_credits ?? 30);
+          setCbPricePerCredit(engService.creative_boost_price_per_credit ?? 400);
+          setCbColleagueReward(150); // defaults, could be stored in assignments
+          setCbEditorReward(100);
+        }
       }
       // Load assignments linked to this service (or all for the engagement)
       const serviceAssignments = currentAssignments.filter(
@@ -338,7 +347,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         })
       );
     }
-  }, [selectedEngagementServiceId, currentEngagementServices, currentAssignments, colleagues]);
+  }, [selectedEngagementServiceId, currentEngagementServices, currentAssignments, colleagues, services]);
 
   // Auto-detect role from colleague position for add_assignment
   useEffect(() => {
