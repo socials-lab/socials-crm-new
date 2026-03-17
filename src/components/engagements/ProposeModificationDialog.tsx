@@ -522,6 +522,244 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
   }, [requestType, selectedEngagementId, engagements, clients]);
 
+  // Build proposed_changes from current form state
+  const buildCurrentProposedChanges = (): { proposed_changes: Record<string, unknown>; engagement_service_id?: string | null; engagement_assignment_id?: string | null } | null => {
+    if (!requestType) return null;
+
+    let proposed_changes: Record<string, unknown> = {};
+    let eng_service_id: string | null = null;
+    let eng_assignment_id: string | null = null;
+
+    switch (requestType) {
+      case 'expand_country': {
+        const refEngService = currentEngagementServices.find(es => es.id === expandRefServiceId);
+        const refCatalogSvc = refEngService?.service_id ? services.find(s => s.id === refEngService.service_id) : null;
+        const refPrice = refEngService?.price || 0;
+        const calcPrice = expandFinalPrice !== null ? expandFinalPrice : Math.round(refPrice * expandMultiplier);
+        proposed_changes = {
+          reference_service_id: expandRefServiceId,
+          reference_service_name: refEngService?.name,
+          reference_price: refPrice,
+          new_country_code: expandCountryCode,
+          new_country_name: getCountryName(expandCountryCode),
+          service_name: expandServiceName,
+          price: calcPrice,
+          multiplier: expandMultiplier,
+          currency: refEngService?.currency || 'CZK',
+          billing_type: 'monthly',
+          service_id: refCatalogSvc?.id || null,
+          selected_tier: refEngService?.selected_tier || null,
+          requires_new_client: expandIsNewShop || undefined,
+          new_client_data: expandIsNewShop ? {
+            company_name: expandNewClientName,
+            brand_name: expandNewClientBrand || undefined,
+            ico: expandNewClientIco || undefined,
+            dic: expandNewClientDic || undefined,
+          } : undefined,
+        };
+        break;
+      }
+      case 'add_service':
+        if (isCreativeBoost) {
+          proposed_changes = {
+            service_id: selectedServiceId,
+            name: serviceName,
+            price: cbMaxCredits * cbPricePerCredit,
+            currency: serviceCurrency,
+            billing_type: 'monthly',
+            selected_tier: null,
+            creative_boost_max_credits: cbMaxCredits,
+            creative_boost_price_per_credit: cbPricePerCredit,
+            creative_boost_reward_per_credit: cbColleagueReward,
+            creative_boost_editor_reward_per_credit: cbEditorReward,
+          };
+        } else if (isAiSeo) {
+          proposed_changes = {
+            service_id: selectedServiceId,
+            name: serviceName,
+            price: servicePrice,
+            currency: serviceCurrency,
+            billing_type: serviceBillingType,
+            selected_tier: null,
+            description: serviceDescription || undefined,
+            deliverables: serviceDeliverables ? serviceDeliverables.split('\n').filter(Boolean) : undefined,
+            ai_seo_colleague_name: aiSeoColleagueName,
+            ai_seo_hourly_rate: aiSeoHourlyRate,
+            ai_seo_hours: aiSeoHours,
+            ai_seo_total_reward: aiSeoHourlyRate * aiSeoHours,
+          };
+        } else {
+          proposed_changes = {
+            service_id: selectedServiceId === 'custom' ? null : selectedServiceId,
+            name: serviceName,
+            price: servicePrice,
+            currency: serviceCurrency,
+            billing_type: serviceBillingType,
+            selected_tier: selectedTier === 'none' ? null : selectedTier,
+            description: serviceDescription || undefined,
+            deliverables: serviceDeliverables ? serviceDeliverables.split('\n').filter(Boolean) : undefined,
+          };
+        }
+        break;
+      case 'update_service_price': {
+        const oldService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+        const changedAssignments = serviceAssignmentEdits.filter(a => a.new_value !== a.old_value);
+        const cbNewPrice = isUpdateCreativeBoost ? cbMaxCredits * cbPricePerCredit : newPrice;
+        proposed_changes = {
+          engagement_service_id: selectedEngagementServiceId,
+          service_name: oldService?.name || '',
+          old_price: oldService?.price || 0,
+          new_price: cbNewPrice,
+          currency: oldService?.currency || 'CZK',
+          ...(isUpdateCreativeBoost ? {
+            creative_boost_max_credits: cbMaxCredits,
+            creative_boost_price_per_credit: cbPricePerCredit,
+            creative_boost_reward_per_credit: cbColleagueReward,
+            creative_boost_editor_reward_per_credit: cbEditorReward,
+          } : {}),
+          assignment_changes: changedAssignments.length > 0 ? changedAssignments.map(a => ({
+            assignment_id: a.assignment_id,
+            colleague_name: a.colleague_name,
+            role: a.role,
+            cost_model: a.cost_model,
+            old_value: a.old_value,
+            new_value: a.new_value,
+          })) : undefined,
+        };
+        eng_service_id = selectedEngagementServiceId;
+        break;
+      }
+      case 'deactivate_service':
+        proposed_changes = { engagement_service_id: selectedEngagementServiceId };
+        eng_service_id = selectedEngagementServiceId;
+        break;
+      case 'add_assignment':
+        proposed_changes = {
+          colleague_id: selectedColleagueId,
+          colleague_name: getColleagueName(selectedColleagueId),
+          engagement_service_id: assignmentServiceId || null,
+          role_on_engagement: roleOnEngagement,
+          cost_model: costModel,
+          hourly_cost: costModel === 'hourly' ? hourlyCost : null,
+          monthly_cost: costModel === 'fixed_monthly' ? monthlyCost : null,
+          percentage_of_revenue: costModel === 'percentage' ? percentageOfRevenue : null,
+        };
+        break;
+      case 'update_assignment':
+        proposed_changes = {
+          engagement_assignment_id: selectedAssignmentId,
+          cost_model: costModel,
+          hourly_cost: costModel === 'hourly' ? hourlyCost : null,
+          monthly_cost: costModel === 'fixed_monthly' ? monthlyCost : null,
+          percentage_of_revenue: costModel === 'percentage' ? percentageOfRevenue : null,
+        };
+        eng_assignment_id = selectedAssignmentId;
+        break;
+      case 'new_engagement': {
+        const totalMonthly = newEngServices.reduce((sum, s) => sum + (s.billing_type === 'monthly' ? s.price : 0), 0);
+        proposed_changes = {
+          is_different_sro: newEngIsDifferentSro,
+          new_client_data: newEngIsDifferentSro && newEngClientName ? {
+            company_name: newEngClientName,
+            brand_name: newEngClientBrand || undefined,
+          } : undefined,
+          engagement_name: newEngName,
+          services: newEngServices,
+          total_monthly_price: totalMonthly,
+          currency: 'CZK',
+          onboarding_email: newEngIsDifferentSro ? newEngOnboardingEmail : undefined,
+          send_onboarding_form: newEngIsDifferentSro,
+        };
+        break;
+      }
+    }
+
+    return { proposed_changes, engagement_service_id: eng_service_id, engagement_assignment_id: eng_assignment_id };
+  };
+
+  // Get a label for a bundled item
+  const getItemLabel = (item: ModificationRequestItem): string => {
+    const c = item.proposed_changes as any;
+    switch (item.request_type) {
+      case 'expand_country': return `🌍 ${c.service_name || c.reference_service_name || 'Nová země'} ${c.new_country_code || ''}`;
+      case 'add_service': return `📦 ${c.name || 'Nová služba'}`;
+      case 'update_service_price': return `💰 ${c.service_name || 'Změna ceny'}`;
+      case 'deactivate_service': return `❌ ${c.service_name || 'Deaktivace'}`;
+      case 'add_assignment': return `👤 ${c.colleague_name || 'Přiřazení kolegy'}`;
+      case 'update_assignment': return `⚙️ ${c.colleague_name || 'Změna odměny'}`;
+      case 'new_engagement': return `🏢 ${c.engagement_name || 'Nová zakázka'}`;
+      default: return 'Položka';
+    }
+  };
+
+  const getItemPrice = (item: ModificationRequestItem): number | null => {
+    const c = item.proposed_changes as any;
+    switch (item.request_type) {
+      case 'expand_country': return c.price || null;
+      case 'add_service': return c.price || null;
+      case 'update_service_price': return c.new_price ? (c.new_price - (c.old_price || 0)) : null;
+      case 'deactivate_service': return c.price ? -(c.price) : null;
+      default: return null;
+    }
+  };
+
+  // Save current item to bundle and reset for next item
+  const handleAddAnotherItem = () => {
+    const built = buildCurrentProposedChanges();
+    if (!built || !requestType) return;
+
+    const newItem: ModificationRequestItem = {
+      id: crypto.randomUUID(),
+      request_type: requestType as ModificationRequestType,
+      proposed_changes: built.proposed_changes as ModificationProposedChanges,
+      engagement_service_id: built.engagement_service_id,
+      engagement_assignment_id: built.engagement_assignment_id,
+      pricing_snapshot: pricingSnapshot,
+    };
+
+    setBundledItems(prev => [...prev, newItem]);
+
+    // Reset type-specific fields but keep engagement and step 4 fields
+    setRequestType('');
+    setRequestTypeConfirmed(false);
+    setSelectedServiceId('');
+    setSelectedEngagementServiceId('');
+    setSelectedAssignmentId('');
+    setSelectedColleagueId('');
+    setServiceName('');
+    setServicePrice(0);
+    setServiceDescription('');
+    setServiceDeliverables('');
+    setPricingSnapshot(null);
+    setPricingInternalCost(0);
+    setRequiresAdminApproval(false);
+    setExpandRefServiceId('');
+    setExpandCountryCode('');
+    setExpandServiceName('');
+    setExpandMultiplier(0.5);
+    setExpandFinalPrice(null);
+    setExpandIsNewShop(false);
+    setExpandNewClientName('');
+    setExpandNewClientBrand('');
+    setExpandNewClientIco('');
+    setExpandNewClientDic('');
+    setNewEngIsDifferentSro(false);
+    setNewEngClientName('');
+    setNewEngClientBrand('');
+    setNewEngName('');
+    setNewEngOnboardingEmail('');
+    setNewEngServices([]);
+    setServiceAssignmentEdits([]);
+    setNewPrice(0);
+    setRoleOnEngagement('');
+    setCostModel('fixed_monthly');
+    setHourlyCost(0);
+    setMonthlyCost(0);
+    setPercentageOfRevenue(0);
+
+    toast.success('Položka přidána do nabídky');
+  };
+
   const handleSubmit = async () => {
     if (!selectedEngagementId || !requestType) return;
 
