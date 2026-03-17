@@ -393,7 +393,7 @@ export function PricingImpactSection({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {SCENARIO_OPTIONS.map((opt) => (
+              {(isAddonService ? ADDON_SCENARIO_OPTIONS : CORE_SCENARIO_OPTIONS).map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
               ))}
             </SelectContent>
