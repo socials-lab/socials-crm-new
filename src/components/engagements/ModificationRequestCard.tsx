@@ -58,6 +58,7 @@ interface ModificationRequestCardProps {
   onEdit?: (request: StoredModificationRequest) => void;
   onDelete?: (requestId: string) => Promise<void>;
   onSendEmail?: (request: StoredModificationRequest) => void;
+  onCreateClient?: (request: StoredModificationRequest) => void;
   isApproving?: boolean;
   isRejecting?: boolean;
   isApplying?: boolean;
