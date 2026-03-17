@@ -3,6 +3,7 @@ import { AppSidebar } from './AppSidebar';
 import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { Outlet } from 'react-router-dom';
+import { BugReportFAB } from '@/components/bug-reports/BugReportFAB';
 import { Menu, LogOut } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
