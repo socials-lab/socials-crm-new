@@ -64,7 +64,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   // Creative Boost specific fields
   const [cbMaxCredits, setCbMaxCredits] = useState<number>(50);
   const [cbPricePerCredit, setCbPricePerCredit] = useState<number>(400);
-  const [cbColleagueReward, setCbColleagueReward] = useState<number>(80);
+  const [cbColleagueReward, setCbColleagueReward] = useState<number>(150);
   const [cbEditorReward, setCbEditorReward] = useState<number>(100);
 
   // For update_service_price
@@ -156,7 +156,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         if (changes.creative_boost_max_credits) {
           setCbMaxCredits(changes.creative_boost_max_credits);
           setCbPricePerCredit(changes.creative_boost_price_per_credit || 400);
-          setCbColleagueReward(changes.creative_boost_reward_per_credit || 80);
+          setCbColleagueReward(changes.creative_boost_reward_per_credit || 150);
           setCbEditorReward(changes.creative_boost_editor_reward_per_credit || 100);
         }
       } else if (editingRequest.request_type === 'update_service_price') {
@@ -201,7 +201,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setSelectedTier('none');
       setCbMaxCredits(50);
       setCbPricePerCredit(400);
-      setCbColleagueReward(80);
+      setCbColleagueReward(150);
       setCbEditorReward(100);
       setSelectedEngagementServiceId('');
       setNewPrice(0);
@@ -242,7 +242,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           // Creative Boost: set defaults, price is calculated from credits
           setCbMaxCredits(50);
           setCbPricePerCredit(400);
-          setCbColleagueReward(80);
+          setCbColleagueReward(150);
           setCbEditorReward(100);
           setServicePrice(0); // Price is calculated
           setSelectedTier('none');
@@ -549,7 +549,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             onChange={(e) => setCbColleagueReward(Number(e.target.value))}
                             min={0}
                           />
-                          <p className="text-xs text-muted-foreground">Doporučeno: 80 Kč</p>
+                          <p className="text-xs text-muted-foreground">Doporučeno: 150 Kč</p>
                         </div>
                         <div className="space-y-2">
                           <Label>🎬 Odměna za kredit — Editor (CZK)</Label>
