@@ -195,6 +195,12 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       } else if (editingRequest.request_type === 'update_service_price') {
         setSelectedEngagementServiceId(changes.engagement_service_id || editingRequest.engagement_service_id || '');
         setNewPrice(changes.new_price || 0);
+        if (changes.creative_boost_max_credits) {
+          setCbMaxCredits(changes.creative_boost_max_credits);
+          setCbPricePerCredit(changes.creative_boost_price_per_credit || 400);
+          setCbColleagueReward(changes.creative_boost_reward_per_credit || 150);
+          setCbEditorReward(changes.creative_boost_editor_reward_per_credit || 100);
+        }
       } else if (editingRequest.request_type === 'deactivate_service') {
         setSelectedEngagementServiceId(changes.engagement_service_id || editingRequest.engagement_service_id || '');
       } else if (editingRequest.request_type === 'add_assignment') {
