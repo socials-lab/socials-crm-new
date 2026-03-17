@@ -1489,7 +1489,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                           <h5 className="font-medium text-sm flex items-center gap-2">🎨 Úprava Creative Boost</h5>
                           
                           <div className="space-y-2">
-                            <Label>Měsíční kreditový balíček</Label>
+                            <Label>Měsíční kreditový balíček<InfoTip text="Maximální počet kreditů, které klient může měsíčně využít. 1 kredit = 1 grafický výstup (post, story, reel cover)." /></Label>
                             <Input 
                               type="number" 
                               value={cbMaxCredits} 
