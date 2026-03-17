@@ -40,7 +40,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Deaktivace služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
-  new_engagement: 'Nová zakázka (jiné SRO)',
+  new_engagement: 'Nová zakázka',
 };
 
 const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
@@ -50,7 +50,7 @@ const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Ukončení poskytování služby v rámci zakázky od zvoleného data',
   add_assignment: 'Přiřazení nového kolegy k vybrané službě s definicí jeho odměny',
   update_assignment: 'Změna odměny přiřazeného kolegy',
-  new_engagement: 'Klient chce novou zakázku pod jiným SRO — odešle se mu onboarding formulář k vyplnění',
+  new_engagement: 'Nová zakázka pro stávajícího klienta — pod stejným nebo jiným SRO',
 };
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
