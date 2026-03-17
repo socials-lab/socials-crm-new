@@ -1040,9 +1040,11 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={isCreating || !selectedEngagementId}
+            disabled={(isCreating || isUpdating) || !selectedEngagementId}
           >
-            {isCreating ? 'Odesílám...' : 'Odeslat ke schválení'}
+            {isEditMode
+              ? (isUpdating ? 'Ukládám...' : 'Uložit změny')
+              : (isCreating ? 'Odesílám...' : 'Odeslat ke schválení')}
           </Button>
         </DialogFooter>
       </DialogContent>
