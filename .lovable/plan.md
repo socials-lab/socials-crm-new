@@ -1,47 +1,55 @@
 
 
-## Plan: Kontrola přefakturace víceprací klientům
+## Plan: Multi-item modification requests (bundled offers)
 
-### Problém
+### Problem
+Currently each modification request supports only one change (one service, one country expansion, one price change). Clients often need multiple changes at once (e.g., expand to 3 countries + add a new service), and these should arrive as a single offer document.
 
-Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
+### Approach
+Add an `items` array to the modification request model. Each modification request becomes a "bundle" that can contain multiple line items, each with its own `request_type` and `proposed_changes`. The client-facing offer page renders all items together with a combined total.
 
-### Řešení
+### Changes
 
-Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
-- `expected` — vícepráce se má přefakturovat klientovi (default)
-- `reinvoiced` — přefakturováno klientovi
-- `not_expected` — nepředpokládá se přefakturace klientovi
+**1. Data model (`src/types/crm.ts`)**
+- Add `ModificationRequestItem` interface with `request_type`, `proposed_changes`, `engagement_service_id`, and item-level metadata
+- Add optional `items: ModificationRequestItem[]` to `ModificationRequest`
+- Keep backward compatibility: if `items` is empty/undefined, fall back to the existing single `request_type` + `proposed_changes`
 
-Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
+**2. ProposeModificationDialog (`src/components/engagements/ProposeModificationDialog.tsx`)**
+- After configuring the first item (Step 3), add a "Přidat další položku" (Add another item) button
+- This loops back to Step 2 (type selection) for the next item while preserving already-added items
+- Show a summary list of all added items with ability to remove individual ones
+- Each item goes through the same configuration flow (service selection, pricing, colleague assignment)
 
-### Databázové změny
+**3. ModificationRequestCard (`src/components/engagements/ModificationRequestCard.tsx`)**
+- Render each item as a sub-card within the request card
+- Show combined total price across all items
 
-```sql
-CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
-ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
-ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+**4. UpgradeOfferPage (`src/pages/UpgradeOfferPage.tsx`)**
+- Loop through `items` array, rendering each change detail card
+- Add a "Celkem" (Total) summary section at the bottom showing combined monthly price
+- Single confirmation form covers all items at once
+
+**5. Mock data layer (`src/data/modificationRequestsMockData.ts`)**
+- Update `createModificationRequest` to accept `items` array
+- Update storage/retrieval to handle the new structure
+
+**6. Hook (`src/hooks/useModificationRequests.tsx`)**
+- Update `createRequest` params to accept items array
+- Update `updateRequest` to support editing individual items within a bundle
+
+### UI Flow
+```text
+Step 1: Select engagement
+Step 2: Select change type (for current item)
+Step 3: Configure item (service, price, colleagues)
+       ┌─────────────────────────────┐
+       │ ✅ Item 1: Socials Boost UK │ [×]
+       │ ✅ Item 2: PPC Boost DE     │ [×]
+       └─────────────────────────────┘
+       [ + Přidat další položku ]
+Step 4: Summary + effective date + commission
 ```
 
-### UI změny
-
-**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
-- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
-- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
-
-**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
-- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
-- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
-
-**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
-- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
-- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
-
-**4. `src/types/crm.ts`**
-- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
-
-### Technické detaily
-- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
-- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
-- Badge se zobrazí vedle existujícího status badge
+The client sees one offer page with all items listed and a single "Potvrdit" button.
 
