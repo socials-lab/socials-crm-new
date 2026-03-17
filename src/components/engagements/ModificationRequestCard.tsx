@@ -115,6 +115,9 @@ export function ModificationRequestCard({
   const colorClass = REQUEST_TYPE_COLORS[request.request_type];
   const typeLabel = REQUEST_TYPE_LABELS[request.request_type];
   
+  // Check if this is a bundled (multi-item) request
+  const isBundled = request.items && request.items.length > 1;
+  
   // Check if client has approved
   const isClientApproved = request.status === 'client_approved';
   const isApplied = request.status === 'applied';
