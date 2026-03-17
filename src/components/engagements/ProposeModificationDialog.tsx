@@ -62,10 +62,16 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [selectedTier, setSelectedTier] = useState<ServiceTier | 'none'>('none');
 
   // Creative Boost specific fields
+  // Creative Boost specific fields
   const [cbMaxCredits, setCbMaxCredits] = useState<number>(30);
   const [cbPricePerCredit, setCbPricePerCredit] = useState<number>(400);
   const [cbColleagueReward, setCbColleagueReward] = useState<number>(150);
   const [cbEditorReward, setCbEditorReward] = useState<number>(100);
+
+  // AI SEO specific fields
+  const [aiSeoColleagueName, setAiSeoColleagueName] = useState<string>('Martin Tomčík');
+  const [aiSeoHourlyRate, setAiSeoHourlyRate] = useState<number>(600);
+  const [aiSeoHours, setAiSeoHours] = useState<number>(10);
 
   // For update_service_price
   const [selectedEngagementServiceId, setSelectedEngagementServiceId] = useState<string>('');
