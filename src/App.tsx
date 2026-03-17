@@ -16,6 +16,7 @@ import { MeetingsDataProvider } from "@/hooks/useMeetingsData";
 import { FeedbackProvider } from "@/hooks/useFeedbackData";
 import { AcademyDataProvider } from "@/hooks/useAcademyData";
 import { SOPDataProvider } from "@/hooks/useSOPData";
+import { BugReportsProvider } from "@/hooks/useBugReports";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Contacts from "./pages/Contacts";
