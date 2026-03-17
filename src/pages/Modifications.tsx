@@ -169,6 +169,7 @@ export default function Modifications() {
   const availableMonths = useMemo(() => generateAvailableMonths(), []);
 
   // Filter requests by status
+  const drafts = pendingRequests?.filter(r => r.status === 'draft') || [];
   const pending = pendingRequests?.filter(r => r.status === 'pending') || [];
   const waitingForClient = pendingRequests?.filter(r => r.status === 'approved' && r.upgrade_offer_token && !r.client_approved_at) || [];
   const clientApproved = pendingRequests?.filter(r => r.status === 'client_approved') || [];
