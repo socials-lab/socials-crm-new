@@ -1662,52 +1662,68 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 </div>
               )}
 
-              {/* NEW ENGAGEMENT (DIFFERENT SRO) FIELDS */}
+              {/* NEW ENGAGEMENT FIELDS */}
               {requestType === 'new_engagement' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   <h4 className="font-medium flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
-                    3. Nová zakázka (jiné SRO)
+                    3. Nová zakázka
                   </h4>
-                  
-                  {/* Hint: client name / brand (optional) */}
-                  <div className="space-y-3 p-3 rounded-md border bg-background">
-                    <h5 className="text-sm font-medium">🏢 Nový klient (orientační)</h5>
-                    <p className="text-xs text-muted-foreground">Klient doplní vše sám přes onboarding formulář (IČO, DIČ, fakturační údaje).</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Název společnosti</Label>
-                        <Input
-                          value={newEngClientName}
-                          onChange={(e) => setNewEngClientName(e.target.value)}
-                          placeholder="Např. NovýEshop s.r.o."
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Název značky</Label>
-                        <Input
-                          value={newEngClientBrand}
-                          onChange={(e) => setNewEngClientBrand(e.target.value)}
-                          placeholder="Např. NovýEshop.cz"
-                          className="h-9"
-                        />
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Onboarding email */}
-                  <div className="space-y-1">
-                    <Label className="text-xs">E-mail pro onboarding formulář *</Label>
-                    <Input
-                      type="email"
-                      value={newEngOnboardingEmail}
-                      onChange={(e) => setNewEngOnboardingEmail(e.target.value)}
-                      placeholder="klient@firma.cz"
-                      className="h-9"
+                  {/* Same vs different SRO toggle */}
+                  <div className="flex items-center gap-2 p-3 rounded-md border bg-background">
+                    <Checkbox
+                      id="different-sro"
+                      checked={newEngIsDifferentSro}
+                      onCheckedChange={(checked) => setNewEngIsDifferentSro(checked === true)}
                     />
-                    <p className="text-xs text-muted-foreground">Na tento e-mail bude odeslán onboarding formulář + nabídka. Klient vyplní údaje firmy a po schválení se vytvoří smlouva.</p>
+                    <Label htmlFor="different-sro" className="text-sm cursor-pointer">
+                      Zakázka je pod jiným SRO (nová firma)
+                    </Label>
                   </div>
+                  
+                  {/* New SRO fields - only shown when different SRO */}
+                  {newEngIsDifferentSro && (
+                    <>
+                      <div className="space-y-3 p-3 rounded-md border bg-background">
+                        <h5 className="text-sm font-medium">🏢 Nový klient (orientační)</h5>
+                        <p className="text-xs text-muted-foreground">Klient doplní vše sám přes onboarding formulář (IČO, DIČ, fakturační údaje).</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Název společnosti</Label>
+                            <Input
+                              value={newEngClientName}
+                              onChange={(e) => setNewEngClientName(e.target.value)}
+                              placeholder="Např. NovýEshop s.r.o."
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Název značky</Label>
+                            <Input
+                              value={newEngClientBrand}
+                              onChange={(e) => setNewEngClientBrand(e.target.value)}
+                              placeholder="Např. NovýEshop.cz"
+                              className="h-9"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Onboarding email */}
+                      <div className="space-y-1">
+                        <Label className="text-xs">E-mail pro onboarding formulář *</Label>
+                        <Input
+                          type="email"
+                          value={newEngOnboardingEmail}
+                          onChange={(e) => setNewEngOnboardingEmail(e.target.value)}
+                          placeholder="klient@firma.cz"
+                          className="h-9"
+                        />
+                        <p className="text-xs text-muted-foreground">Na tento e-mail bude odeslán onboarding formulář + nabídka.</p>
+                      </div>
+                    </>
+                  )}
 
                   {/* Engagement name */}
                   <div className="space-y-1">
