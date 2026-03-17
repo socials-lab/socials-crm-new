@@ -711,7 +711,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     const newItem: ModificationRequestItem = {
       id: crypto.randomUUID(),
       request_type: requestType as ModificationRequestType,
-      proposed_changes: built.proposed_changes as ModificationProposedChanges,
+      proposed_changes: built.proposed_changes as unknown as ModificationProposedChanges,
       engagement_service_id: built.engagement_service_id,
       engagement_assignment_id: built.engagement_assignment_id,
       pricing_snapshot: pricingSnapshot,
