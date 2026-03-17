@@ -91,10 +91,12 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [pricingInternalCost, setPricingInternalCost] = useState<number>(0);
   const [requiresAdminApproval, setRequiresAdminApproval] = useState(false);
 
-  // Detect Creative Boost
+  // Detect Creative Boost & AI SEO
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
+  const AI_SEO_CODE = 'AI_SEO';
   const selectedService = services.find(s => s.id === selectedServiceId);
   const isCreativeBoost = selectedService?.code === CREATIVE_BOOST_CODE;
+  const isAiSeo = selectedService?.code === AI_SEO_CODE;
   const isCoreService = selectedService?.service_type === 'core' && !isCreativeBoost;
 
   // Get engagement-specific services and assignments
