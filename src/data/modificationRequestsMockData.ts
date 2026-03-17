@@ -50,6 +50,8 @@ export interface StoredModificationRequest {
   items?: ModificationRequestItem[];
   // Bundle discount
   bundle_discount_percent?: number;
+  // Client-chosen effective date
+  client_chosen_effective_from: string | null;
   // Denormalized data for display
   engagement_name: string;
   client_id: string;
@@ -138,6 +140,7 @@ export function createModificationRequest(params: {
     client_name: params.client_name,
     client_brand_name: params.client_brand_name || null,
     upsold_by_name: params.upsold_by_name || null,
+    client_chosen_effective_from: null,
   };
   
   requests.push(newRequest);
@@ -213,7 +216,7 @@ export function getModificationRequestByToken(token: string): StoredModification
 }
 
 // Client accepts the offer
-export function clientAcceptOffer(token: string, email: string): StoredModificationRequest | null {
+export function clientAcceptOffer(token: string, email: string, chosenEffectiveFrom?: string): StoredModificationRequest | null {
   const requests = getModificationRequests();
   const index = requests.findIndex(r => r.upgrade_offer_token === token);
   
@@ -226,6 +229,7 @@ export function clientAcceptOffer(token: string, email: string): StoredModificat
     status: 'client_approved',
     client_email: email,
     client_approved_at: new Date().toISOString(),
+    client_chosen_effective_from: chosenEffectiveFrom || request.effective_from || null,
     updated_at: new Date().toISOString(),
   };
   

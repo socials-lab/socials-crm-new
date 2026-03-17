@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { format, getDaysInMonth } from 'date-fns';
+import { format, getDaysInMonth, startOfMonth, addMonths, getDate } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Check, Clock, AlertCircle, Package, DollarSign, X as XIcon, CheckCircle2, Calendar, Info, Building2 } from 'lucide-react';
+import { Check, Clock, AlertCircle, Package, DollarSign, X as XIcon, CheckCircle2, Calendar as CalendarIcon, Info, Building2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { 
   getModificationRequestByToken, 
@@ -42,6 +45,7 @@ export default function UpgradeOfferPage() {
   const [email, setEmail] = useState('');
   const [agreedToChange, setAgreedToChange] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (!token) {
@@ -49,24 +53,66 @@ export default function UpgradeOfferPage() {
       return;
     }
 
-    // Fetch from localStorage
     const request = getModificationRequestByToken(token);
     setOffer(request);
+    if (request?.effective_from) {
+      setSelectedDate(new Date(request.effective_from));
+    } else {
+      // Default: 1st of next month
+      setSelectedDate(startOfMonth(addMonths(new Date(), 1)));
+    }
     setIsLoading(false);
   }, [token]);
 
+  // Get total monthly price from offer
+  const totalMonthlyPrice = useMemo(() => {
+    if (!offer) return 0;
+    if (offer.items && offer.items.length > 0) {
+      let total = 0;
+      for (const item of offer.items) {
+        const c = item.proposed_changes as any;
+        if (item.request_type === 'add_service' || item.request_type === 'expand_country') total += c.price || 0;
+        else if (item.request_type === 'update_service_price') total += c.new_price || 0;
+      }
+      const discountPercent = offer.bundle_discount_percent || 0;
+      return Math.round(total * (1 - discountPercent / 100));
+    }
+    const c = offer.proposed_changes as any;
+    if (offer.request_type === 'add_service' || offer.request_type === 'expand_country') return c.price || 0;
+    if (offer.request_type === 'update_service_price') return c.new_price || 0;
+    return 0;
+  }, [offer]);
+
+  // Live prorated calculation
+  const prorationCalc = useMemo(() => {
+    if (!selectedDate || !totalMonthlyPrice) return null;
+    const daysInMonth = getDaysInMonth(selectedDate);
+    const startDay = getDate(selectedDate);
+    const remainingDays = daysInMonth - startDay + 1;
+    const proratedAmount = Math.round((totalMonthlyPrice / daysInMonth) * remainingDays);
+    return {
+      proratedAmount,
+      remainingDays,
+      daysInMonth,
+      monthName: format(selectedDate, 'LLLL yyyy', { locale: cs }),
+      isFullMonth: startDay === 1,
+    };
+  }, [selectedDate, totalMonthlyPrice]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!offer || !email || !agreedToChange || !token) return;
+    if (!offer || !email || !agreedToChange || !token || !selectedDate) return;
 
     setIsSubmitting(true);
     
     try {
-      const updatedOffer = clientAcceptOffer(token, email);
+      const updatedOffer = clientAcceptOffer(token, email, selectedDate.toISOString());
       
       if (updatedOffer) {
         setOffer(updatedOffer);
-        toast.success('Změna byla úspěšně potvrzena');
+        toast.success('Změna byla úspěšně potvrzena. Na váš email jsme odeslali potvrzení.', {
+          duration: 6000,
+        });
       } else {
         throw new Error('Failed to accept offer');
       }
@@ -399,27 +445,68 @@ export default function UpgradeOfferPage() {
                   Děkujeme za potvrzení! 🎉
                 </h2>
                 <p className="text-green-600">
-                  Vaše potvrzení bylo úspěšně zaznamenáno. Budeme vás informovat o dalších krocích.
+                  Vaše potvrzení bylo úspěšně zaznamenáno. Na váš email jsme odeslali souhrn.
                 </p>
               </div>
               
-              <div className="p-4 rounded-lg bg-white/60 border border-green-200">
-                <p className="text-xs font-semibold text-green-800 mb-3 uppercase tracking-wide">
-                  📋 Detail potvrzení
+              <div className="p-4 rounded-lg bg-white/60 border border-green-200 space-y-4">
+                <p className="text-xs font-semibold text-green-800 uppercase tracking-wide">
+                  📋 Souhrn potvrzené změny
                 </p>
-                <div className="space-y-2 text-sm text-green-700">
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Zakázka:</span>
+                    <span className="font-medium">{offer.engagement_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Typ změny:</span>
+                    <span className="font-medium">{getChangeLabel()}</span>
+                  </div>
+                  {totalMonthlyPrice > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Měsíční cena:</span>
+                      <span className="font-semibold">{totalMonthlyPrice.toLocaleString('cs-CZ')} CZK</span>
+                    </div>
+                  )}
+                  {offer.client_chosen_effective_from && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Začátek platnosti:</span>
+                        <span className="font-medium">
+                          {format(new Date(offer.client_chosen_effective_from), 'd. MMMM yyyy', { locale: cs })}
+                        </span>
+                      </div>
+                      {totalMonthlyPrice > 0 && (() => {
+                        const d = new Date(offer.client_chosen_effective_from);
+                        const dim = getDaysInMonth(d);
+                        const rd = dim - getDate(d) + 1;
+                        const pro = Math.round((totalMonthlyPrice / dim) * rd);
+                        if (rd < dim) {
+                          return (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Fakturace za {format(d, 'LLLL', { locale: cs })}:</span>
+                              <span className="font-medium">{pro.toLocaleString('cs-CZ')} CZK ({rd}/{dim} dní)</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </>
+                  )}
+                </div>
+
+                <div className="border-t border-green-200 pt-3 space-y-2 text-sm text-green-700">
                   {offer.client_email && (
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Email:</span>
-                      <span className="font-medium">{offer.client_email}</span>
+                      <Mail className="h-3.5 w-3.5" />
+                      <span>Potvrzení odesláno na: <strong>{offer.client_email}</strong></span>
                     </div>
                   )}
                   {offer.client_approved_at && (
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Potvrzeno:</span>
-                      <span className="font-medium">
-                        {format(new Date(offer.client_approved_at), "d. MMMM yyyy 'v' HH:mm:ss", { locale: cs })}
-                      </span>
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>Potvrzeno: {format(new Date(offer.client_approved_at), "d. MMMM yyyy 'v' HH:mm", { locale: cs })}</span>
                     </div>
                   )}
                 </div>
@@ -530,9 +617,65 @@ export default function UpgradeOfferPage() {
                 Potvrzení změny
               </h2>
               
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Date picker */}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Váš email</Label>
+                  <Label>Požadovaný začátek platnosti</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, 'd. MMMM yyyy', { locale: cs }) : 'Vyberte datum'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Prorated calculation */}
+                {prorationCalc && totalMonthlyPrice > 0 && (
+                  <Alert className="bg-primary/5 border-primary/20">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="space-y-1">
+                      {prorationCalc.isFullMonth ? (
+                        <p>
+                          <strong>Fakturace za {prorationCalc.monthName}:</strong>{' '}
+                          {totalMonthlyPrice.toLocaleString('cs-CZ')} CZK (celý měsíc)
+                        </p>
+                      ) : (
+                        <>
+                          <p>
+                            <strong>Fakturace za {prorationCalc.monthName}:</strong>{' '}
+                            {prorationCalc.proratedAmount.toLocaleString('cs-CZ')} CZK{' '}
+                            ({prorationCalc.remainingDays} dní z {prorationCalc.daysInMonth})
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Od dalšího měsíce: plná měsíční cena {totalMonthlyPrice.toLocaleString('cs-CZ')} CZK
+                          </p>
+                        </>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Email */}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Váš email (pro zaslání potvrzení)</Label>
                   <Input
                     id="email"
                     type="email"
@@ -558,7 +701,7 @@ export default function UpgradeOfferPage() {
                   type="submit" 
                   className="w-full" 
                   size="lg"
-                  disabled={!email || !agreedToChange || isSubmitting}
+                  disabled={!email || !agreedToChange || isSubmitting || !selectedDate}
                 >
                   {isSubmitting ? 'Potvrzuji...' : 'Potvrdit změnu'}
                 </Button>
