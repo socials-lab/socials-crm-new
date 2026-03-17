@@ -613,6 +613,28 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           percentage_of_revenue: costModel === 'percentage' ? percentageOfRevenue : null,
         };
         break;
+      case 'new_engagement': {
+        const totalMonthly = newEngServices.reduce((sum, s) => sum + (s.billing_type === 'monthly' ? s.price : 0), 0);
+        proposed_changes = {
+          new_client_data: {
+            company_name: newEngClientName,
+            brand_name: newEngClientBrand || undefined,
+            ico: newEngClientIco || undefined,
+            dic: newEngClientDic || undefined,
+          },
+          engagement_name: newEngName,
+          services: newEngServices,
+          total_monthly_price: totalMonthly,
+          currency: 'CZK',
+          contact_person: newEngContactName ? {
+            name: newEngContactName,
+            email: newEngContactEmail || undefined,
+            phone: newEngContactPhone || undefined,
+            copied_from_reference: newEngCopyContact,
+          } : undefined,
+        };
+        break;
+      }
     }
 
     try {
