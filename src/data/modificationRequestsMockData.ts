@@ -140,6 +140,7 @@ export function createModificationRequest(params: {
     client_name: params.client_name,
     client_brand_name: params.client_brand_name || null,
     upsold_by_name: params.upsold_by_name || null,
+    client_chosen_effective_from: null,
   };
   
   requests.push(newRequest);
