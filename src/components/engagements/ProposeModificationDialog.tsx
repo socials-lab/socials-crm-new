@@ -45,7 +45,8 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
 
   // Form state
   const [selectedEngagementId, setSelectedEngagementId] = useState<string>('');
-  const [requestType, setRequestType] = useState<ModificationRequestType>('add_service');
+  const [requestType, setRequestType] = useState<ModificationRequestType | ''>('');
+  const [requestTypeConfirmed, setRequestTypeConfirmed] = useState(false);
   const [effectiveFrom, setEffectiveFrom] = useState<Date | undefined>(new Date());
   const [upsoldById, setUpsoldById] = useState<string>('none');
   const [note, setNote] = useState('');
@@ -131,7 +132,8 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
   useEffect(() => {
     if (!open) {
       setSelectedEngagementId('');
-      setRequestType('add_service');
+      setRequestType('');
+      setRequestTypeConfirmed(false);
       setEffectiveFrom(new Date());
       setUpsoldById('none');
       setNote('');
@@ -215,7 +217,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
   }, [selectedEngagementServiceId, currentEngagementServices]);
 
   const handleSubmit = async () => {
-    if (!selectedEngagementId) return;
+    if (!selectedEngagementId || !requestType) return;
 
     let proposed_changes: Record<string, unknown> = {};
 
@@ -289,7 +291,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
     try {
       await createRequest({
         engagement_id: selectedEngagementId,
-        request_type: requestType,
+        request_type: requestType as ModificationRequestType,
         proposed_changes: proposed_changes as any,
         engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
           ? selectedEngagementServiceId 
@@ -360,8 +362,9 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
           {selectedEngagementId && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">2. Typ úpravy *</Label>
-              <Select value={requestType} onValueChange={(v) => {
+              <Select value={requestType || undefined} onValueChange={(v) => {
                 setRequestType(v as ModificationRequestType);
+                setRequestTypeConfirmed(true);
                 // Reset type-dependent selections
                 setSelectedServiceId('');
                 setSelectedEngagementServiceId('');
@@ -369,7 +372,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                 setSelectedColleagueId('');
               }}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Vyberte typ úpravy" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(REQUEST_TYPE_LABELS).map(([value, label]) => (
@@ -383,7 +386,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
           )}
 
           {/* ===== STEP 3: Type-specific fields (only after type selected) ===== */}
-          {selectedEngagementId && requestType && (
+          {selectedEngagementId && requestTypeConfirmed && requestType && (
             <>
               {/* ADD SERVICE FIELDS */}
               {requestType === 'add_service' && (
