@@ -1021,19 +1021,6 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="target_margin_percent"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cílová marže (%)</FormLabel>
-                      <FormControl>
-                        <Input type="number" min={0} max={100} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               {/* Services from offer */}
