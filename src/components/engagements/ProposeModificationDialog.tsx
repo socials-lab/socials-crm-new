@@ -931,6 +931,30 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                     ))}
                   </SelectContent>
                 </Select>
+
+                {/* Commission calculation */}
+                {upsoldById !== 'none' && (() => {
+                  const commissionBase = requestType === 'add_service'
+                    ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice)
+                    : requestType === 'update_service_price'
+                      ? Math.max(0, newPrice - (currentEngagementServices.find(es => es.id === selectedEngagementServiceId)?.price || 0))
+                      : 0;
+                  const commission = Math.round(commissionBase * 0.1);
+                  const upsoldColleague = colleagues.find(c => c.id === upsoldById);
+                  if (commissionBase <= 0) return null;
+                  return (
+                    <div className="rounded-md border bg-muted/30 p-3 space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Provize za upsell (10 %)</p>
+                      <p className="text-sm font-semibold">
+                        {commission.toLocaleString('cs-CZ')} CZK / měsíc
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        = 10 % z {commissionBase.toLocaleString('cs-CZ')} CZK měsíčního fee
+                        {upsoldColleague && <> → <span className="font-medium text-foreground">{upsoldColleague.full_name}</span></>}
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Note */}
