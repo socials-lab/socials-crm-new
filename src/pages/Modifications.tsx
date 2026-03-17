@@ -14,7 +14,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2 } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2, FileText, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, ModificationProposedChanges } from '@/types/crm';
 import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
@@ -154,6 +154,7 @@ export default function Modifications() {
     applyRequest,
     updateRequest,
     deleteRequest,
+    submitDraft,
     isApproving,
     isRejecting,
     isApplying,
@@ -168,6 +169,7 @@ export default function Modifications() {
   const availableMonths = useMemo(() => generateAvailableMonths(), []);
 
   // Filter requests by status
+  const drafts = pendingRequests?.filter(r => r.status === 'draft') || [];
   const pending = pendingRequests?.filter(r => r.status === 'pending') || [];
   const waitingForClient = pendingRequests?.filter(r => r.status === 'approved' && r.upgrade_offer_token && !r.client_approved_at) || [];
   const clientApproved = pendingRequests?.filter(r => r.status === 'client_approved') || [];
@@ -252,8 +254,8 @@ export default function Modifications() {
   };
 
   const handleEdit = (request: StoredModificationRequest) => {
-    if (request.status === 'pending') {
-      // For pending requests, open the full creation dialog pre-filled
+    if (request.status === 'pending' || request.status === 'draft') {
+      // For pending/draft requests, open the full creation dialog pre-filled
       setEditingRequest(request);
       setDialogOpen(true);
     } else {
@@ -276,6 +278,9 @@ export default function Modifications() {
     await deleteRequest(requestId);
   };
 
+  const handleSubmitDraft = async (requestId: string) => {
+    await submitDraft(requestId);
+  };
   const handleSendEmail = (request: StoredModificationRequest) => {
     setEmailRequest(request);
     setEmailDialogOpen(true);
@@ -303,7 +308,7 @@ export default function Modifications() {
     return '';
   };
 
-  const totalActive = pending.length + waitingForClient.length + clientApproved.length;
+  const totalActive = drafts.length + pending.length + waitingForClient.length + clientApproved.length;
 
   if (isLoadingPending) {
     return (
@@ -332,7 +337,7 @@ export default function Modifications() {
           setDialogOpen(open);
           if (!open) setEditingRequest(null);
         }}
-        editingRequest={editingRequest?.status === 'pending' ? editingRequest : null}
+        editingRequest={editingRequest?.status === 'pending' || editingRequest?.status === 'draft' ? editingRequest : null}
       />
       
       {/* Send Email Dialog */}
@@ -414,8 +419,15 @@ export default function Modifications() {
         </Card>
       </div>
 
-      <Tabs defaultValue="pending" className="space-y-4">
+      <Tabs defaultValue={drafts.length > 0 ? "drafts" : "pending"} className="space-y-4">
         <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="drafts" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Drafty
+            {drafts.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{drafts.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="pending" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Čekající
@@ -449,6 +461,71 @@ export default function Modifications() {
             Zamítnuté
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="drafts" className="space-y-4">
+          {drafts.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground text-center">
+                  Žádné rozpracované návrhy
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {drafts.map((request) => (
+                <Card key={request.id} className="border-l-4 border-l-muted-foreground/30">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="text-muted-foreground">
+                            <FileText className="h-3 w-3 mr-1" />
+                            Draft
+                          </Badge>
+                        </div>
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          {request.client_brand_name || request.client_name}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">{request.engagement_name}</p>
+                        {request.note && (
+                          <p className="text-sm text-muted-foreground mt-1 italic">„{request.note}"</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(request)}
+                        >
+                          <FileEdit className="h-3.5 w-3.5 mr-1" />
+                          Upravit
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSubmitDraft(request.id)}
+                        >
+                          <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                          Odeslat ke schválení
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(request.id)}
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
         <TabsContent value="pending" className="space-y-4">
           {pending.length === 0 ? (

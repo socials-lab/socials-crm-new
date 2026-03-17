@@ -926,7 +926,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     toast.success('Položka přidána do nabídky');
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (asDraft = false) => {
     if (!selectedEngagementId) return;
 
     // Collect all items: bundled items + current item (if any)
@@ -946,8 +946,17 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       }
     }
 
-    // Must have at least one item
-    if (allItems.length === 0) return;
+    // Must have at least one item (for drafts, allow saving with engagement only)
+    if (allItems.length === 0 && !asDraft) return;
+
+    // For drafts with no items yet, create a placeholder
+    if (allItems.length === 0 && asDraft) {
+      allItems.push({
+        id: crypto.randomUUID(),
+        request_type: 'add_service' as ModificationRequestType,
+        proposed_changes: { name: '(rozpracováno)', price: 0, currency: 'CZK', billing_type: 'monthly' } as unknown as ModificationProposedChanges,
+      });
+    }
 
     // Use the first item's type/changes as the "primary" for backward compat
     const primaryItem = allItems[0];
@@ -976,6 +985,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           pricing_snapshot: primaryItem.pricing_snapshot || pricingSnapshot,
           items: isBundled ? allItems : undefined,
           bundle_discount_percent: isBundled && bundleDiscountPercent > 0 ? bundleDiscountPercent : undefined,
+          status: asDraft ? 'draft' : 'pending',
         });
       }
       
@@ -2910,12 +2920,22 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={() => { clearDraft(); onOpenChange(false); }}>
             Zrušit
           </Button>
+          {!isEditMode && (
+            <Button 
+              variant="secondary"
+              onClick={() => handleSubmit(true)} 
+              disabled={isCreating || !selectedEngagementId}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              {isCreating ? 'Ukládám...' : 'Uložit jako draft'}
+            </Button>
+          )}
           <Button 
-            onClick={handleSubmit} 
+            onClick={() => handleSubmit(false)} 
             disabled={(isCreating || isUpdating) || !selectedEngagementId || (!requestType && bundledItems.length === 0)}
           >
             {isEditMode

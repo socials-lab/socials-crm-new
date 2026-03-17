@@ -10,6 +10,7 @@ import {
   applyModificationRequest,
   updateModificationRequest,
   deleteModificationRequest,
+  submitDraftRequest,
   type StoredModificationRequest,
 } from '@/data/modificationRequestsMockData';
 import { addAppliedModificationToHistory } from '@/data/appliedModificationsHistory';
@@ -52,6 +53,7 @@ export function useModificationRequests() {
     pricing_snapshot?: PricingSnapshot | null;
     items?: ModificationRequestItem[];
     bundle_discount_percent?: number;
+    status?: 'pending' | 'draft';
   }) => {
     if (!user) throw new Error('User not authenticated');
     
@@ -87,9 +89,12 @@ export function useModificationRequests() {
         pricing_snapshot: params.pricing_snapshot,
         items: params.items,
         bundle_discount_percent: params.bundle_discount_percent,
-      });
+        status: params.status || 'pending',
+      } as any);
       
-      toast.success('Požadavek na úpravu byl odeslán ke schválení');
+      toast.success(params.status === 'draft' 
+        ? 'Návrh byl uložen jako draft' 
+        : 'Požadavek na úpravu byl odeslán ke schválení');
       refresh();
       return result;
     } catch (error) {
@@ -231,6 +236,24 @@ export function useModificationRequests() {
     }
   }, [user, refresh]);
 
+  // Submit a draft to pending
+  const submitDraft = useCallback(async (requestId: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    try {
+      const result = submitDraftRequest(requestId);
+      if (!result) throw new Error('Draft not found or already submitted');
+      
+      toast.success('Návrh byl odeslán ke schválení');
+      refresh();
+      return result;
+    } catch (error) {
+      console.error('Error submitting draft:', error);
+      toast.error('Nepodařilo se odeslat návrh');
+      throw error;
+    }
+  }, [user, refresh]);
+
   return {
     pendingRequests,
     isLoadingPending: false,
@@ -246,6 +269,7 @@ export function useModificationRequests() {
     isUpdating,
     deleteRequest,
     isDeleting,
+    submitDraft,
     refresh,
   };
 }

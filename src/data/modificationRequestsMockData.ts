@@ -106,7 +106,7 @@ export function createModificationRequest(params: {
     id: crypto.randomUUID(),
     engagement_id: params.engagement_id,
     request_type: params.request_type,
-    status: 'pending',
+    status: (params as any).status === 'draft' ? 'draft' : 'pending',
     proposed_changes: params.proposed_changes,
     engagement_service_id: params.engagement_service_id || null,
     engagement_assignment_id: params.engagement_assignment_id || null,
@@ -309,7 +309,26 @@ export function applyModificationRequest(requestId: string): StoredModificationR
   return requests[index];
 }
 
-// Update modification request (for editing before final approval)
+// Submit a draft (move from draft → pending)
+export function submitDraftRequest(requestId: string): StoredModificationRequest | null {
+  const requests = getModificationRequests();
+  const index = requests.findIndex(r => r.id === requestId);
+  
+  if (index === -1) return null;
+  if (requests[index].status !== 'draft') return null;
+  
+  requests[index] = {
+    ...requests[index],
+    status: 'pending',
+    requested_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  
+  saveRequests(requests);
+  return requests[index];
+}
+
+
 export function updateModificationRequest(
   requestId: string,
   updates: {
@@ -331,8 +350,8 @@ export function updateModificationRequest(
   
   const request = requests[index];
   
-  // Only allow editing pending or approved (waiting for client) requests
-  if (!['pending', 'approved'].includes(request.status)) {
+  // Only allow editing draft, pending or approved (waiting for client) requests
+  if (!['draft', 'pending', 'approved'].includes(request.status)) {
     return null;
   }
   
@@ -363,8 +382,8 @@ export function deleteModificationRequest(requestId: string): boolean {
   
   const request = requests[index];
   
-  // Only allow deleting pending, approved (waiting for client), or rejected requests
-  if (!['pending', 'approved', 'rejected'].includes(request.status)) {
+  // Only allow deleting draft, pending, approved (waiting for client), or rejected requests
+  if (!['draft', 'pending', 'approved', 'rejected'].includes(request.status)) {
     return false;
   }
   
