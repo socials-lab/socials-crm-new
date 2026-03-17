@@ -42,6 +42,16 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   new_engagement: 'Nová zakázka (jiné SRO)',
 };
 
+const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
+  expand_country: 'Rozšíření stávající služby do další země (např. SK, DE) s multiplikátorem ceny',
+  add_service: 'Přidání zcela nové služby z katalogu ke stávající zakázce',
+  update_service_price: 'Změna měsíční ceny služby pro klienta a/nebo úprava odměn přiřazeným kolegům',
+  deactivate_service: 'Ukončení poskytování služby v rámci zakázky od zvoleného data',
+  add_assignment: 'Přiřazení nového kolegy k vybrané službě s definicí jeho odměny',
+  update_assignment: 'Změna odměny přiřazeného kolegy',
+  new_engagement: 'Klient chce novou zakázku pod jiným SRO — odešle se mu onboarding formulář k vyplnění',
+};
+
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
 const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
   'expand_country',
@@ -746,7 +756,10 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 <SelectContent>
                   {VISIBLE_REQUEST_TYPES.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {REQUEST_TYPE_LABELS[value]}
+                      <div className="flex flex-col gap-0.5 py-0.5">
+                        <span className="font-medium">{REQUEST_TYPE_LABELS[value]}</span>
+                        <span className="text-xs text-muted-foreground leading-tight">{REQUEST_TYPE_DESCRIPTIONS[value]}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
