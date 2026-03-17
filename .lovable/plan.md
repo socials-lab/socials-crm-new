@@ -1,47 +1,69 @@
 
 
-## Plan: Kontrola přefakturace víceprací klientům
+## Plán: Nová zakázka pro stávajícího klienta (jiné SRO)
 
-### Problém
+### Současný stav
+V `expand_country` flow existuje checkbox "Nový shop je pod jiným SRO" s poli pro název, IČO, DIČ. To ale řeší jen přidání země ke stávající službě pod jinou entitu — **ne** vytvoření kompletně nové zakázky s vlastním portfoliem služeb.
 
-Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
+Pro úplně novou zakázku (eshop B pod jiným SRO) je potřeba flow, který:
+- Vezme existujícího klienta jako referenci
+- Umožní zadat údaje nového SRO (nový klient v systému)
+- Vytvoří novou nabídku s vlastním výběrem služeb a cen
+- Po schválení vytvoří nového klienta + novou zakázku
 
-### Řešení
+### Navrhované řešení
 
-Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
-- `expected` — vícepráce se má přefakturovat klientovi (default)
-- `reinvoiced` — přefakturováno klientovi
-- `not_expected` — nepředpokládá se přefakturace klientovi
+**Nový typ úpravy: `new_engagement`** — "Nová zakázka (jiné SRO)"
 
-Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
+Přidá se jako 6. typ do dropdown v `ProposeModificationDialog`. Tento typ je specifický tím, že výsledkem není úprava stávající zakázky, ale vytvoření nové.
 
-### Databázové změny
+### Změny
 
-```sql
-CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
-ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
-ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+**1. `src/types/crm.ts`**
+- Přidat `'new_engagement'` do `ModificationRequestType`
+- Label: "Nová zakázka (jiné SRO)"
+- Přidat do `isClientFacingRequestType`
+
+**2. `src/components/engagements/ProposeModificationDialog.tsx`**
+- Přidat `new_engagement` do `VISIBLE_REQUEST_TYPES` a `REQUEST_TYPE_LABELS`
+- Nový flow pro `requestType === 'new_engagement'`:
+  1. **Údaje nového klienta/SRO** — název společnosti, brand, IČO, DIČ (povinné pole: název)
+  2. **Výběr služeb** — multi-select z katalogu služeb (stejný jako u `add_service`, ale lze přidat více najednou), každá s cenou a tierem
+  3. **Celková měsíční cena** — součet všech služeb (auto-kalkulace)
+  4. **Kontaktní osoba** — možnost zkopírovat z referenční zakázky nebo zadat novou
+- `proposed_changes` bude obsahovat: `new_client_data`, `services[]` (pole služeb s cenami), `engagement_name`, `contact_person`
+
+**3. `src/components/engagements/ModificationRequestCard.tsx`**
+- Přidat ikonu a barvu pro `new_engagement` (např. `Building2`, indigo)
+
+**4. `src/data/modificationRequestsMockData.ts`**
+- Přidat `new_engagement` do validních typů
+
+**5. `src/types/upgradeOffer.ts`**
+- Přidat `'new_engagement'` do `UpgradeOfferChangeType`
+
+### Flow v dialogu
+
+```text
+Krok 1: Vyber referenční zakázku (stávající klient)
+Krok 2: Typ úpravy → "Nová zakázka (jiné SRO)"
+Krok 3: Údaje nového SRO + výběr služeb s cenami
+Krok 4: Datum, kdo dohodl, poznámka
+→ Submit → Návrh ke schválení
 ```
 
-### UI změny
+### Výsledný seznam typů v dropdown
+1. Přidání nové země
+2. Přidání nové služby  
+3. Úprava služby (cena + odměny)
+4. Deaktivace služby
+5. Přiřazení kolegy
+6. **Nová zakázka (jiné SRO)** ← nový
 
-**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
-- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
-- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
-
-**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
-- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
-- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
-
-**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
-- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
-- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
-
-**4. `src/types/crm.ts`**
-- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
-
-### Technické detaily
-- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
-- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
-- Badge se zobrazí vedle existujícího status badge
+### Dotčené soubory
+- `src/types/crm.ts`
+- `src/types/upgradeOffer.ts`
+- `src/components/engagements/ProposeModificationDialog.tsx`
+- `src/components/engagements/ModificationRequestCard.tsx`
+- `src/data/modificationRequestsMockData.ts`
 
