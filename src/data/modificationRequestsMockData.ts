@@ -632,6 +632,7 @@ export function seedDemoModificationStatuses(): { clientApproved: StoredModifica
         engagement_service_id: null,
       },
       {
+        id: 'demo-item-ca-002',
         request_type: 'expand_country',
         proposed_changes: {
           reference_service_name: 'PPC Boost PRO',
