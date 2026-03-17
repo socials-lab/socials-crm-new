@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -608,20 +608,51 @@ export function ModificationRequestCard({
                   )}
 
                   {request.pricing_snapshot.colleague_rewards && request.pricing_snapshot.colleague_rewards.length > 0 && (
-                    <div className="space-y-1 text-xs">
+                    <div className="space-y-2 text-xs">
                       <span className="font-medium">👥 Odměny kolegů:</span>
-                      {request.pricing_snapshot.colleague_rewards.map((cr, i) => (
-                        <div key={i} className="flex items-center gap-2 ml-4">
-                          <span className="text-muted-foreground">{cr.role}:</span>
-                          {cr.colleague_name && <span>{cr.colleague_name}</span>}
-                          <span className="font-medium">
-                            {cr.reward.toLocaleString('cs-CZ')} {cr.reward_type === 'per_credit' ? 'Kč/kredit' : 'Kč'}
-                          </span>
-                          {cr.hours > 0 && (
-                            <span className="text-muted-foreground">({cr.hours}h)</span>
-                          )}
-                        </div>
-                      ))}
+                      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 gap-y-1 items-center ml-2">
+                        {/* Header */}
+                        <span className="text-muted-foreground font-medium">Role / Kolega</span>
+                        <span className="text-muted-foreground font-medium text-right">Před</span>
+                        <span className="text-muted-foreground text-center">→</span>
+                        <span className="text-muted-foreground font-medium text-right">Po změně</span>
+                        
+                        {/* Rows */}
+                        {request.pricing_snapshot.colleague_rewards.map((cr, i) => {
+                          const unit = cr.reward_type === 'per_credit' ? 'Kč/kredit' : cr.reward_type === 'hourly' ? 'Kč/h' : 'Kč';
+                          // Find matching current reward
+                          const currentRewards = request.pricing_snapshot?.current_colleague_rewards || [];
+                          const currentMatch = currentRewards.find(
+                            cur => (cur.colleague_id && cur.colleague_id === cr.colleague_id) || 
+                                   cur.role.toLowerCase() === cr.role.toLowerCase()
+                          );
+                          const currentReward = currentMatch?.reward || 0;
+                          const currentUnit = currentMatch 
+                            ? (currentMatch.reward_type === 'per_credit' ? 'Kč/kredit' : currentMatch.reward_type === 'hourly' ? 'Kč/h' : 'Kč')
+                            : unit;
+                          const hasChanged = currentReward !== cr.reward;
+                          
+                          return (
+                            <React.Fragment key={i}>
+                              <span className="truncate">
+                                <span className="text-muted-foreground">{cr.role}</span>
+                                {cr.colleague_name && <span className="ml-1 font-medium">{cr.colleague_name}</span>}
+                              </span>
+                              <span className="text-right text-muted-foreground">
+                                {currentReward > 0 ? `${currentReward.toLocaleString('cs-CZ')} ${currentUnit}` : '—'}
+                              </span>
+                              <span className="text-center text-muted-foreground">→</span>
+                              <span className={cn(
+                                "text-right font-medium",
+                                hasChanged && cr.reward > currentReward ? "text-green-600 dark:text-green-400" :
+                                hasChanged && cr.reward < currentReward ? "text-destructive" : ""
+                              )}>
+                                {cr.reward.toLocaleString('cs-CZ')} {unit}
+                              </span>
+                            </React.Fragment>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>

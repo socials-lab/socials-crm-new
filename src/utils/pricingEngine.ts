@@ -56,6 +56,8 @@ export interface PricingSnapshot {
   requires_new_client?: boolean;
   /** Colleague reward breakdown for this amendment */
   colleague_rewards?: ColleagueRewardEntry[];
+  /** Current colleague rewards before the amendment */
+  current_colleague_rewards?: ColleagueRewardEntry[];
 }
 
 export interface ColleagueRewardEntry {
