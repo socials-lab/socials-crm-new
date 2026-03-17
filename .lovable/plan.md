@@ -1,47 +1,40 @@
 
 
-## Plan: Kontrola přefakturace víceprací klientům
+## Plan: Datum začátku platnosti + poměrná cena + potvrzovací email
 
-### Problém
+### Co se změní
 
-Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
+**1. Datum začátku platnosti (editovatelné klientem)**
 
-### Řešení
+Na stránce `/upgrade/:token` (UpgradeOfferPage.tsx) přidám do potvrzovacího formuláře pole s datem začátku spolupráce:
+- Předvyplněné z `offer.effective_from` (nebo 1. den příštího měsíce pokud chybí)
+- Klient může datum upravit přes DatePicker (kalendář)
+- Při změně data se automaticky přepočítá poměrná cena za první měsíc
+- Datum se uloží při potvrzení nabídky
 
-Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
-- `expected` — vícepráce se má přefakturovat klientovi (default)
-- `reinvoiced` — přefakturováno klientovi
-- `not_expected` — nepředpokládá se přefakturace klientovi
+**2. Poměrná cena za první měsíc**
 
-Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
+Pod datepickerem se dynamicky zobrazí kalkulace:
+- Měsíční cena × zbývající dny / dny v měsíci = poměrná cena
+- Formát: "Fakturace za [měsíc]: X Kč (Y dní z Z)"
+- Přepočítává se live při změně data
 
-### Databázové změny
+**3. Uložení klientem zvoleného data**
 
-```sql
-CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
-ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
-ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
-```
+- Do `StoredModificationRequest` přidám pole `client_chosen_effective_from`
+- Funkce `clientAcceptOffer` bude přijímat i datum a uloží ho
 
-### UI změny
+**4. Potvrzovací email klientovi**
 
-**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
-- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
-- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
+Po úspěšném potvrzení nabídky klientem se zobrazí na success stránce souhrn toho, co klient odsouhlasil. Zároveň se simuluje odeslání potvrzovacího emailu (toast notifikace). Email bude obsahovat:
+- Název zakázky a klienta
+- Typ změny a detail (služba, cena)
+- Zvolené datum začátku
+- Poměrnou cenu za první měsíc
+- Datum a čas potvrzení
 
-**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
-- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
-- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
+### Soubory k úpravě
 
-**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
-- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
-- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
-
-**4. `src/types/crm.ts`**
-- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
-
-### Technické detaily
-- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
-- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
-- Badge se zobrazí vedle existujícího status badge
+- `src/pages/UpgradeOfferPage.tsx` — datepicker, live prorated kalkulace, rozšíření formuláře, success screen se souhrnem emailu
+- `src/data/modificationRequestsMockData.ts` — rozšíření `clientAcceptOffer` o datum, přidání pole `client_chosen_effective_from`
 
