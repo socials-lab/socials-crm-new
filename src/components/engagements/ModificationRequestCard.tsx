@@ -185,6 +185,7 @@ export function ModificationRequestCard({
   onDelete,
   onSendEmail,
   onCreateClient,
+  onInlineUpdate,
   isApproving,
   isRejecting,
   isApplying,
