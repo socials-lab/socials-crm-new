@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -187,6 +187,152 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   // Bundled items for multi-item requests
   const [bundledItems, setBundledItems] = useState<ModificationRequestItem[]>([]);
   const [bundleDiscountPercent, setBundleDiscountPercent] = useState<number>(0);
+
+  // Draft auto-save key
+  const DRAFT_KEY = 'modification_dialog_draft';
+  const draftRestoredRef = useRef(false);
+
+  // Build draft object from current state
+  const buildDraft = useCallback(() => ({
+    selectedEngagementId,
+    requestType,
+    requestTypeConfirmed,
+    effectiveFrom: effectiveFrom?.toISOString(),
+    upsoldById,
+    note,
+    selectedServiceId,
+    serviceName,
+    servicePrice,
+    serviceCurrency,
+    serviceBillingType,
+    selectedTier,
+    cbMaxCredits,
+    cbPricePerCredit,
+    cbColleagueReward,
+    cbEditorReward,
+    aiSeoColleagueName,
+    aiSeoHourlyRate,
+    aiSeoHours,
+    selectedEngagementServiceId,
+    newPrice,
+    selectedColleagueId,
+    roleOnEngagement,
+    costModel,
+    hourlyCost,
+    monthlyCost,
+    percentageOfRevenue,
+    assignmentServiceId,
+    serviceDescription,
+    serviceDeliverables,
+    expandRefServiceId,
+    expandCountryCode,
+    expandServiceName,
+    expandMultiplier,
+    expandFinalPrice,
+    expandIsNewShop,
+    expandNewClientName,
+    expandNewClientBrand,
+    expandNewClientIco,
+    expandNewClientDic,
+    bundledItems,
+    bundleDiscountPercent,
+    _savedAt: Date.now(),
+  }), [
+    selectedEngagementId, requestType, requestTypeConfirmed, effectiveFrom, upsoldById, note,
+    selectedServiceId, serviceName, servicePrice, serviceCurrency, serviceBillingType, selectedTier,
+    cbMaxCredits, cbPricePerCredit, cbColleagueReward, cbEditorReward,
+    aiSeoColleagueName, aiSeoHourlyRate, aiSeoHours,
+    selectedEngagementServiceId, newPrice, selectedColleagueId, roleOnEngagement,
+    costModel, hourlyCost, monthlyCost, percentageOfRevenue, assignmentServiceId,
+    serviceDescription, serviceDeliverables,
+    expandRefServiceId, expandCountryCode, expandServiceName, expandMultiplier, expandFinalPrice,
+    expandIsNewShop, expandNewClientName, expandNewClientBrand, expandNewClientIco, expandNewClientDic,
+    bundledItems, bundleDiscountPercent,
+  ]);
+
+  // Auto-save draft to localStorage (debounced via effect)
+  useEffect(() => {
+    if (!open || isEditMode || draftRestoredRef.current) {
+      draftRestoredRef.current = false;
+      return;
+    }
+    // Only save if there's meaningful data
+    if (!selectedEngagementId) return;
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(buildDraft()));
+      } catch { /* quota exceeded — ignore */ }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [open, isEditMode, selectedEngagementId, buildDraft]);
+
+  // Restore draft on dialog open (only if not editing)
+  useEffect(() => {
+    if (!open || isEditMode) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      // Discard drafts older than 24h
+      if (draft._savedAt && Date.now() - draft._savedAt > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      if (!draft.selectedEngagementId) return;
+      
+      draftRestoredRef.current = true;
+      setSelectedEngagementId(draft.selectedEngagementId);
+      setRequestType(draft.requestType || '');
+      setRequestTypeConfirmed(draft.requestTypeConfirmed || false);
+      setEffectiveFrom(draft.effectiveFrom ? new Date(draft.effectiveFrom) : new Date());
+      setUpsoldById(draft.upsoldById || 'none');
+      setNote(draft.note || '');
+      setSelectedServiceId(draft.selectedServiceId || '');
+      setServiceName(draft.serviceName || '');
+      setServicePrice(draft.servicePrice || 0);
+      setServiceCurrency(draft.serviceCurrency || 'CZK');
+      setServiceBillingType(draft.serviceBillingType || 'monthly');
+      setSelectedTier(draft.selectedTier || 'none');
+      setCbMaxCredits(draft.cbMaxCredits ?? 30);
+      setCbPricePerCredit(draft.cbPricePerCredit ?? 400);
+      setCbColleagueReward(draft.cbColleagueReward ?? 150);
+      setCbEditorReward(draft.cbEditorReward ?? 100);
+      setAiSeoColleagueName(draft.aiSeoColleagueName || 'Martin Tomčík');
+      setAiSeoHourlyRate(draft.aiSeoHourlyRate ?? 600);
+      setAiSeoHours(draft.aiSeoHours ?? 10);
+      setSelectedEngagementServiceId(draft.selectedEngagementServiceId || '');
+      setNewPrice(draft.newPrice || 0);
+      setSelectedColleagueId(draft.selectedColleagueId || '');
+      setRoleOnEngagement(draft.roleOnEngagement || '');
+      setCostModel(draft.costModel || 'fixed_monthly');
+      setHourlyCost(draft.hourlyCost || 0);
+      setMonthlyCost(draft.monthlyCost || 0);
+      setPercentageOfRevenue(draft.percentageOfRevenue || 0);
+      setAssignmentServiceId(draft.assignmentServiceId || '');
+      setServiceDescription(draft.serviceDescription || '');
+      setServiceDeliverables(draft.serviceDeliverables || '');
+      setExpandRefServiceId(draft.expandRefServiceId || '');
+      setExpandCountryCode(draft.expandCountryCode || '');
+      setExpandServiceName(draft.expandServiceName || '');
+      setExpandMultiplier(draft.expandMultiplier ?? 0.5);
+      setExpandFinalPrice(draft.expandFinalPrice ?? null);
+      setExpandIsNewShop(draft.expandIsNewShop || false);
+      setExpandNewClientName(draft.expandNewClientName || '');
+      setExpandNewClientBrand(draft.expandNewClientBrand || '');
+      setExpandNewClientIco(draft.expandNewClientIco || '');
+      setExpandNewClientDic(draft.expandNewClientDic || '');
+      setBundledItems(draft.bundledItems || []);
+      setBundleDiscountPercent(draft.bundleDiscountPercent || 0);
+      
+      toast.info('Rozpracovaný návrh byl obnoven z draftu', { duration: 3000 });
+    } catch { /* corrupted draft — ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isEditMode]);
+
+  // Clear draft helper
+  const clearDraft = useCallback(() => {
+    try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+  }, []);
 
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
@@ -833,6 +979,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         });
       }
       
+      clearDraft();
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to save modification request:', error);
@@ -852,8 +999,19 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        // Don't close on outside click/escape if there's meaningful data — draft is auto-saved
+        if (!isOpen && selectedEngagementId) {
+          // Just close — draft is already saved to localStorage
+        }
+        onOpenChange(isOpen);
+      }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => {
+        // Prevent closing on outside click if form has data
+        if (selectedEngagementId) {
+          e.preventDefault();
+        }
+      }}>
        <TooltipProvider delayDuration={200}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -2753,7 +2911,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => { clearDraft(); onOpenChange(false); }}>
             Zrušit
           </Button>
           <Button 
