@@ -947,11 +947,12 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
             <>
               {/* EXPAND COUNTRY FIELDS */}
               {requestType === 'expand_country' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium flex items-center gap-2">
                     <Globe className="h-4 w-4" />
                     3. Přidání nové země
                   </h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   
                   {/* Reference service */}
                   <div className="space-y-2">
