@@ -208,6 +208,9 @@ export function ModificationRequestCard({
   const isApplied = request.status === 'applied';
   const hasUpgradeToken = !!request.upgrade_offer_token;
   
+  // Can inline edit if editable status and handler provided
+  const canInlineEdit = !!onInlineUpdate && ['pending', 'approved', 'draft'].includes(request.status);
+  
   const handleApprove = async () => {
     if (onApprove) {
       await onApprove(request.id);
