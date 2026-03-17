@@ -1080,83 +1080,113 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
               {/* ADD ASSIGNMENT FIELDS */}
               {requestType === 'add_assignment' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                  <h4 className="font-medium">3. Přiřazení kolegy</h4>
+                  <h4 className="font-medium">3. Přiřazení kolegy ke službě</h4>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Kolega *</Label>
-                      <Select value={selectedColleagueId} onValueChange={setSelectedColleagueId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Vyberte kolegu" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {colleagues.filter(c => c.status === 'active').map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.full_name} ({c.position})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Role na projektu</Label>
-                      <Input 
-                        value={roleOnEngagement} 
-                        onChange={(e) => setRoleOnEngagement(e.target.value)}
-                        placeholder="Např. Specialist"
-                      />
-                    </div>
+                  {/* Service selection */}
+                  <div className="space-y-2">
+                    <Label>Služba na zakázce *</Label>
+                    <Select value={assignmentServiceId} onValueChange={setAssignmentServiceId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte službu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentEngagementServices.filter(es => es.is_active).map((es) => (
+                          <SelectItem key={es.id} value={es.id}>
+                            {es.name} ({es.price?.toLocaleString()} {es.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Model odměny</Label>
-                      <Select value={costModel} onValueChange={(v) => setCostModel(v as 'hourly' | 'fixed_monthly' | 'percentage')}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="fixed_monthly">Fixní měsíční</SelectItem>
-                          <SelectItem value="hourly">Hodinová</SelectItem>
-                          <SelectItem value="percentage">% z revenue</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  {assignmentServiceId && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Kolega *</Label>
+                          <Select value={selectedColleagueId} onValueChange={setSelectedColleagueId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Vyberte kolegu" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {colleagues.filter(c => c.status === 'active').map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.full_name} ({c.position})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                    {costModel === 'fixed_monthly' && (
-                      <div className="space-y-2">
-                        <Label>Měsíční odměna (CZK)</Label>
-                        <Input 
-                          type="number" 
-                          value={monthlyCost} 
-                          onChange={(e) => setMonthlyCost(Number(e.target.value))}
-                        />
+                        <div className="space-y-2">
+                          <Label>Role na projektu</Label>
+                          <Input 
+                            value={roleOnEngagement} 
+                            onChange={(e) => setRoleOnEngagement(e.target.value)}
+                            placeholder="Např. Specialist"
+                          />
+                        </div>
                       </div>
-                    )}
 
-                    {costModel === 'hourly' && (
-                      <div className="space-y-2">
-                        <Label>Hodinová sazba (CZK)</Label>
-                        <Input 
-                          type="number" 
-                          value={hourlyCost} 
-                          onChange={(e) => setHourlyCost(Number(e.target.value))}
-                        />
-                      </div>
-                    )}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Model odměny</Label>
+                          <Select value={costModel} onValueChange={(v) => setCostModel(v as 'hourly' | 'fixed_monthly' | 'percentage')}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="fixed_monthly">Fixní měsíční</SelectItem>
+                              <SelectItem value="hourly">Hodinová</SelectItem>
+                              <SelectItem value="percentage">% z revenue</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                    {costModel === 'percentage' && (
-                      <div className="space-y-2">
-                        <Label>% z revenue</Label>
-                        <Input 
-                          type="number" 
-                          value={percentageOfRevenue} 
-                          onChange={(e) => setPercentageOfRevenue(Number(e.target.value))}
-                        />
+                        {costModel === 'fixed_monthly' && (
+                          <div className="space-y-2">
+                            <Label>Měsíční odměna (CZK)</Label>
+                            <Input 
+                              type="number" 
+                              value={monthlyCost} 
+                              onChange={(e) => setMonthlyCost(Number(e.target.value))}
+                            />
+                          </div>
+                        )}
+
+                        {costModel === 'hourly' && (
+                          <div className="space-y-2">
+                            <Label>Hodinová sazba (CZK)</Label>
+                            <Input 
+                              type="number" 
+                              value={hourlyCost} 
+                              onChange={(e) => setHourlyCost(Number(e.target.value))}
+                            />
+                          </div>
+                        )}
+
+                        {costModel === 'percentage' && (
+                          <div className="space-y-2">
+                            <Label>% z revenue</Label>
+                            <Input 
+                              type="number" 
+                              value={percentageOfRevenue} 
+                              onChange={(e) => setPercentageOfRevenue(Number(e.target.value))}
+                            />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+
+                      {(monthlyCost > 0 || hourlyCost > 0) && (
+                        <Alert>
+                          <Info className="h-4 w-4" />
+                          <AlertDescription>
+                            Odměna byla předvyplněna dle konfigurace služby. Můžete ji upravit.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
