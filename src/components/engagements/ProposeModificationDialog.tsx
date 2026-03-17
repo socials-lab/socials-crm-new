@@ -300,15 +300,37 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
   }, [selectedServiceId, services]);
 
-  // Auto-fill price when selecting engagement service for update
+  // Auto-fill price and assignments when selecting engagement service for update
   useEffect(() => {
     if (selectedEngagementServiceId) {
       const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
       if (engService) {
         setNewPrice(engService.price);
       }
+      // Load assignments linked to this service (or all for the engagement)
+      const serviceAssignments = currentAssignments.filter(
+        a => a.engagement_service_id === selectedEngagementServiceId || !a.engagement_service_id
+      );
+      setServiceAssignmentEdits(
+        serviceAssignments.map(a => {
+          const colleague = colleagues.find(c => c.id === a.colleague_id);
+          const currentValue = a.cost_model === 'hourly' 
+            ? (a.hourly_cost || 0) 
+            : a.cost_model === 'percentage' 
+              ? (a.percentage_of_revenue || 0) 
+              : (a.monthly_cost || 0);
+          return {
+            assignment_id: a.id,
+            colleague_name: colleague?.full_name || 'Neznámý',
+            role: a.role_on_engagement || '',
+            cost_model: a.cost_model || 'fixed_monthly',
+            old_value: currentValue,
+            new_value: currentValue,
+          };
+        })
+      );
     }
-  }, [selectedEngagementServiceId, currentEngagementServices]);
+  }, [selectedEngagementServiceId, currentEngagementServices, currentAssignments, colleagues]);
 
   const handleSubmit = async () => {
     if (!selectedEngagementId || !requestType) return;
