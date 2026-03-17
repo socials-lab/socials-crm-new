@@ -163,6 +163,7 @@ export default function UpgradeOfferPage() {
       case 'add_service': return <Package className="h-5 w-5" />;
       case 'update_service_price': return <DollarSign className="h-5 w-5" />;
       case 'deactivate_service': return <XIcon className="h-5 w-5" />;
+      case 'new_engagement': return <Building2 className="h-5 w-5" />;
       default: return <Package className="h-5 w-5" />;
     }
   };
