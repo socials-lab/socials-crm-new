@@ -2688,6 +2688,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   : 'Odeslat ke schválení administrátorovi'))}
           </Button>
         </DialogFooter>
+       </TooltipProvider>
       </DialogContent>
     </Dialog>
   );
