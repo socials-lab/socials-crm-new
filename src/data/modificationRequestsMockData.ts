@@ -438,3 +438,101 @@ export function recordEmailSent(
   saveRequests(requests);
   return requests[index];
 }
+
+// Seed a demo "new_engagement" request for testing the client-facing page
+export function seedNewEngagementDemo(): StoredModificationRequest {
+  const DEMO_TOKEN = 'demo-new-engagement-sro';
+  const requests = getModificationRequests();
+  const existing = requests.find(r => r.upgrade_offer_token === DEMO_TOKEN);
+  if (existing) return existing;
+
+  const now = new Date().toISOString();
+  const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const effectiveFrom = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+  const demo: StoredModificationRequest = {
+    id: crypto.randomUUID(),
+    engagement_id: 'demo-eng-001',
+    request_type: 'new_engagement',
+    status: 'approved',
+    proposed_changes: {
+      is_different_sro: true,
+      new_client_data: {
+        company_name: 'NovaBrand s.r.o.',
+        brand_name: 'NovaBrand',
+      },
+      engagement_name: 'NovaBrand – Performance Marketing',
+      services: [
+        {
+          service_id: null,
+          name: 'Socials Boost PRO',
+          price: 25000,
+          currency: 'CZK',
+          billing_type: 'monthly',
+          selected_tier: 'pro',
+          description: 'Kompletní správa sociálních sítí včetně strategie, tvorby obsahu a community managementu.',
+          deliverables: [
+            'Správa Meta Ads kampaní',
+            'Tvorba kreativ a copywritingu',
+            'Měsíční reporting a optimalizace',
+            'Community management',
+          ],
+          assignments: [
+            { colleague_id: 'c1', colleague_name: 'Tereza Nováková', role: 'Meta Ads Specialist', cost_model: 'fixed_monthly', monthly_cost: 8000 },
+            { colleague_id: 'c2', colleague_name: 'Martin Dvořák', role: 'Content Creator', cost_model: 'fixed_monthly', monthly_cost: 6000 },
+          ],
+        },
+        {
+          service_id: null,
+          name: 'PPC Boost PRO',
+          price: 20000,
+          currency: 'CZK',
+          billing_type: 'monthly',
+          selected_tier: 'pro',
+          description: 'Správa PPC kampaní na Google Ads s pokročilou optimalizací.',
+          deliverables: [
+            'Správa Google Ads kampaní',
+            'A/B testing reklam',
+            'Měsíční reporting s doporučeními',
+          ],
+          assignments: [
+            { colleague_id: 'c3', colleague_name: 'Jan Procházka', role: 'PPC Specialist', cost_model: 'fixed_monthly', monthly_cost: 9000 },
+          ],
+        },
+      ],
+      total_monthly_price: 45000,
+      currency: 'CZK',
+      onboarding_email: 'novabrand@example.com',
+      send_onboarding_form: true,
+    } as any,
+    engagement_service_id: null,
+    engagement_assignment_id: null,
+    effective_from: effectiveFrom,
+    upsold_by_id: null,
+    upsell_commission_percent: 10,
+    requested_by: 'demo-user',
+    requested_at: now,
+    note: 'Demo: nová zakázka pod jiným SRO – klient vyplní onboarding formulář.',
+    reviewed_by: 'admin',
+    reviewed_at: now,
+    rejection_reason: null,
+    upgrade_offer_token: DEMO_TOKEN,
+    upgrade_offer_valid_until: validUntil,
+    client_email: null,
+    client_approved_at: null,
+    created_at: now,
+    updated_at: now,
+    emails_sent: [],
+    pricing_snapshot: null,
+    client_chosen_effective_from: null,
+    engagement_name: 'NovaBrand – Performance Marketing',
+    client_id: 'demo-client-001',
+    client_name: 'TestBrand s.r.o.',
+    client_brand_name: 'TestBrand',
+    upsold_by_name: null,
+  };
+
+  requests.push(demo);
+  saveRequests(requests);
+  return demo;
+}
