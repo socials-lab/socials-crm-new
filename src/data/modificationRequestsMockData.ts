@@ -48,6 +48,8 @@ export interface StoredModificationRequest {
   pricing_snapshot: PricingSnapshot | null;
   // Multi-item bundle support
   items?: ModificationRequestItem[];
+  // Bundle discount
+  bundle_discount_percent?: number;
   // Denormalized data for display
   engagement_name: string;
   client_id: string;

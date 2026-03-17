@@ -176,6 +176,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
   // Bundled items for multi-item requests
   const [bundledItems, setBundledItems] = useState<ModificationRequestItem[]>([]);
+  const [bundleDiscountPercent, setBundleDiscountPercent] = useState<number>(0);
 
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
