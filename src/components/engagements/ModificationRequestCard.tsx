@@ -460,7 +460,7 @@ export function ModificationRequestCard({
                   {idx + 1}. {itemLabel}
                 </Badge>
               </div>
-              {renderChangesForItem(item.request_type, item.proposed_changes)}
+              {renderChangesForItem(item.request_type, item.proposed_changes, item.id)}
             </div>
           );
         })}
