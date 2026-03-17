@@ -460,6 +460,34 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     let proposed_changes: Record<string, unknown> = {};
 
     switch (requestType) {
+      case 'expand_country': {
+        const refEngService = currentEngagementServices.find(es => es.id === expandRefServiceId);
+        const refCatalogSvc = refEngService?.service_id ? services.find(s => s.id === refEngService.service_id) : null;
+        const refPrice = refEngService?.price || 0;
+        const calcPrice = expandFinalPrice !== null ? expandFinalPrice : Math.round(refPrice * expandMultiplier);
+        proposed_changes = {
+          reference_service_id: expandRefServiceId,
+          reference_service_name: refEngService?.name,
+          reference_price: refPrice,
+          new_country_code: expandCountryCode,
+          new_country_name: getCountryName(expandCountryCode),
+          service_name: expandServiceName,
+          price: calcPrice,
+          multiplier: expandMultiplier,
+          currency: refEngService?.currency || 'CZK',
+          billing_type: 'monthly',
+          service_id: refCatalogSvc?.id || null,
+          selected_tier: refEngService?.selected_tier || null,
+          requires_new_client: expandIsNewShop || undefined,
+          new_client_data: expandIsNewShop ? {
+            company_name: expandNewClientName,
+            brand_name: expandNewClientBrand || undefined,
+            ico: expandNewClientIco || undefined,
+            dic: expandNewClientDic || undefined,
+          } : undefined,
+        };
+        break;
+      }
       case 'add_service':
         if (isCreativeBoost) {
           // Creative Boost: credit-based pricing
