@@ -72,7 +72,6 @@ const convertSchema = z.object({
   currency: z.string().min(1, 'Měna je povinná'),
   monthly_fee: z.coerce.number().min(0),
   one_off_fee: z.coerce.number().min(0),
-  target_margin_percent: z.coerce.number().min(0).max(100),
   start_date: z.string().min(1, 'Datum je povinné'),
   end_date: z.string().optional(),
   notice_period_months: z.coerce.number().optional(),
