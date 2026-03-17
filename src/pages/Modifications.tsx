@@ -253,8 +253,15 @@ export default function Modifications() {
   };
 
   const handleEdit = (request: StoredModificationRequest) => {
-    setEditingRequest(request);
-    setEditDialogOpen(true);
+    if (request.status === 'pending') {
+      // For pending requests, open the full creation dialog pre-filled
+      setEditingRequest(request);
+      setDialogOpen(true);
+    } else {
+      // For other statuses, use the simpler edit dialog
+      setEditingRequest(request);
+      setEditDialogOpen(true);
+    }
   };
 
   const handleSaveEdit = async (requestId: string, updates: {
