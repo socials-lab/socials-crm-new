@@ -821,6 +821,7 @@ export function PricingImpactSection({
           </Alert>
         )}
       </div>
+      )}
 
       {/* ===== BLOCK 4: Result — New State After Change ===== */}
       {deltaRevenue > 0 && (
