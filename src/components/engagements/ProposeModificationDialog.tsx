@@ -473,10 +473,17 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'update_service_price':
         const oldService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
         const changedAssignments = serviceAssignmentEdits.filter(a => a.new_value !== a.old_value);
+        const cbNewPrice = isUpdateCreativeBoost ? cbMaxCredits * cbPricePerCredit : newPrice;
         proposed_changes = {
           engagement_service_id: selectedEngagementServiceId,
           old_price: oldService?.price || 0,
-          new_price: newPrice,
+          new_price: cbNewPrice,
+          ...(isUpdateCreativeBoost ? {
+            creative_boost_max_credits: cbMaxCredits,
+            creative_boost_price_per_credit: cbPricePerCredit,
+            creative_boost_reward_per_credit: cbColleagueReward,
+            creative_boost_editor_reward_per_credit: cbEditorReward,
+          } : {}),
           assignment_changes: changedAssignments.length > 0 ? changedAssignments.map(a => ({
             assignment_id: a.assignment_id,
             colleague_name: a.colleague_name,
