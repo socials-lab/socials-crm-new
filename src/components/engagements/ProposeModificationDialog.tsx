@@ -1736,6 +1736,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                       const defaultPrice = service.service_type === 'core'
                                         ? (service.tier_pricing?.find((p: any) => p.tier === 'growth')?.price ?? service.base_price ?? 0)
                                         : (service.base_price || 0);
+                                      const defaults = getServiceDefaults(service.name);
+                                      const detail = SERVICE_DETAILS[service.code];
                                       setNewEngServices(prev => [...prev, {
                                         service_id: service.id,
                                         name: service.name,
@@ -1743,6 +1745,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                         currency: service.currency || 'CZK',
                                         billing_type: 'monthly',
                                         selected_tier: service.service_type === 'core' ? 'growth' : null,
+                                        description: detail?.tagline || service.description || '',
+                                        deliverables: defaults.deliverables?.length ? defaults.deliverables : [],
                                       }]);
                                     }}
                                   >
