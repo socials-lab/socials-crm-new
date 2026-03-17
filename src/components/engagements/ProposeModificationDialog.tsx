@@ -1699,7 +1699,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
                 {/* Commission calculation */}
                 {upsoldById !== 'none' && (() => {
-                  const commissionBase = requestType === 'add_service'
+                  const commissionBase = requestType === 'expand_country'
+                    ? (() => {
+                        const refSvc = currentEngagementServices.find(es => es.id === expandRefServiceId);
+                        const refPrice = refSvc?.price || 0;
+                        return expandFinalPrice !== null ? expandFinalPrice : Math.round(refPrice * expandMultiplier);
+                      })()
+                    : requestType === 'add_service'
                     ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice)
                     : requestType === 'update_service_price'
                       ? Math.max(0, newPrice - (currentEngagementServices.find(es => es.id === selectedEngagementServiceId)?.price || 0))
