@@ -1857,7 +1857,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   <p className="text-sm text-muted-foreground">
                     Pro úpravu odměn kolegů použijte typ „Úprava služby (cena + odměny)" – kde uvidíte i marži.
-                  </p>
+                   </p>
+                  </div>
                 </div>
               )}
 
