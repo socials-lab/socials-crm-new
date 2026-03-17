@@ -441,8 +441,8 @@ export function ModificationRequestCard({
               
               {/* Changes */}
               <div className="bg-muted/50 rounded-md p-3">
-                {renderChanges()}
-               </div>
+                {isBundled ? renderBundledItems() : renderChanges()}
+              </div>
 
               {/* Pricing Snapshot */}
               {request.pricing_snapshot && (
