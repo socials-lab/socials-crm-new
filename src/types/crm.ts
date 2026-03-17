@@ -898,11 +898,10 @@ export interface RemoveAssignmentProposedChanges {
 }
 
 export interface NewEngagementProposedChanges {
-  new_client_data: {
-    company_name: string;
+  /** Optional hint – client fills in full details via onboarding form */
+  new_client_data?: {
+    company_name?: string;
     brand_name?: string;
-    ico?: string;
-    dic?: string;
   };
   engagement_name: string;
   services: Array<{
@@ -915,12 +914,10 @@ export interface NewEngagementProposedChanges {
   }>;
   total_monthly_price: number;
   currency: string;
-  contact_person?: {
-    name: string;
-    email?: string;
-    phone?: string;
-    copied_from_reference?: boolean;
-  };
+  /** Email where the onboarding form + offer will be sent */
+  onboarding_email: string;
+  /** Client fills in IČO, DIČ, billing via onboarding form (same as new client) */
+  send_onboarding_form: true;
 }
 
 export type ModificationProposedChanges = 

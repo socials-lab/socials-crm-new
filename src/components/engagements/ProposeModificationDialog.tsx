@@ -139,9 +139,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   // New engagement (new SRO) state
   const [newEngClientName, setNewEngClientName] = useState('');
   const [newEngClientBrand, setNewEngClientBrand] = useState('');
-  const [newEngClientIco, setNewEngClientIco] = useState('');
-  const [newEngClientDic, setNewEngClientDic] = useState('');
   const [newEngName, setNewEngName] = useState('');
+  const [newEngOnboardingEmail, setNewEngOnboardingEmail] = useState('');
   const [newEngServices, setNewEngServices] = useState<Array<{
     service_id: string | null;
     name: string;
@@ -150,10 +149,6 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     billing_type: 'monthly' | 'one_off';
     selected_tier?: string | null;
   }>>([]);
-  const [newEngContactName, setNewEngContactName] = useState('');
-  const [newEngContactEmail, setNewEngContactEmail] = useState('');
-  const [newEngContactPhone, setNewEngContactPhone] = useState('');
-  const [newEngCopyContact, setNewEngCopyContact] = useState(false);
 
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
