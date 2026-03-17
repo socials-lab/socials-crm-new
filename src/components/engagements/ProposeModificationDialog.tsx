@@ -45,7 +45,8 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
 
   // Form state
   const [selectedEngagementId, setSelectedEngagementId] = useState<string>('');
-  const [requestType, setRequestType] = useState<ModificationRequestType>('add_service');
+  const [requestType, setRequestType] = useState<ModificationRequestType | ''>('');
+  const [requestTypeConfirmed, setRequestTypeConfirmed] = useState(false);
   const [effectiveFrom, setEffectiveFrom] = useState<Date | undefined>(new Date());
   const [upsoldById, setUpsoldById] = useState<string>('none');
   const [note, setNote] = useState('');
