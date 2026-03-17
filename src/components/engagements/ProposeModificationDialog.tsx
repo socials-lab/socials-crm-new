@@ -2920,12 +2920,22 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={() => { clearDraft(); onOpenChange(false); }}>
             Zrušit
           </Button>
+          {!isEditMode && (
+            <Button 
+              variant="secondary"
+              onClick={() => handleSubmit(true)} 
+              disabled={isCreating || !selectedEngagementId}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              {isCreating ? 'Ukládám...' : 'Uložit jako draft'}
+            </Button>
+          )}
           <Button 
-            onClick={handleSubmit} 
+            onClick={() => handleSubmit(false)} 
             disabled={(isCreating || isUpdating) || !selectedEngagementId || (!requestType && bundledItems.length === 0)}
           >
             {isEditMode
