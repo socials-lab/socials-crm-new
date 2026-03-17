@@ -199,14 +199,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         
         if (!rewardConfig || rewardConfig.length === 0) return;
         
-        // Use getRewardsFromServiceConfig to find matching tier rewards
-        const roles = getRewardsFromServiceConfig(
-          rewardConfig as { tier?: string; roles: ServiceRewardRole[] }[],
-          offerSvc.selected_tier
-        );
+        // Match tier to get roles
+        const tierLower = offerSvc.selected_tier?.toLowerCase();
+        const tierMatch = tierLower
+          ? rewardConfig.find(rc => rc.tier?.toLowerCase() === tierLower)
+          : rewardConfig.find(rc => !rc.tier) || rewardConfig[0];
         
-        if (roles) {
-          roles.forEach(role => {
+        if (tierMatch && tierMatch.roles.length > 0) {
+          tierMatch.roles.forEach(role => {
             const costModel: CostModel = role.reward_type === 'hourly' ? 'hourly' : 'fixed_monthly';
             suggestedTeam.push({
               colleague_id: '',
