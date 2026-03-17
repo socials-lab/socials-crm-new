@@ -2611,7 +2611,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
               {/* Upsold By (commission tracking) */}
               <div className="space-y-2">
-                <Label>Kdo dohodl (pro provizi)</Label>
+                <Label>Kdo dohodl (pro provizi)<InfoTip text="Kolega, který dohodl upsell s klientem. Dostane 10 % z nového měsíčního fee jako měsíční provizi." /></Label>
                 <Select value={upsoldById} onValueChange={setUpsoldById}>
                   <SelectTrigger>
                     <SelectValue placeholder="Vyberte kolegu" />
