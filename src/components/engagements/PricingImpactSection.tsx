@@ -607,8 +607,7 @@ export function PricingImpactSection({
                   <TableRow className="text-xs">
                     <TableHead className="h-8 text-xs w-[30%]">Role</TableHead>
                     <TableHead className="h-8 text-xs w-[30%]">Kolega</TableHead>
-                    <TableHead className="h-8 text-xs text-right w-[12%]">Hodiny</TableHead>
-                    <TableHead className="h-8 text-xs text-right w-[20%]">Odměna</TableHead>
+                    <TableHead className="h-8 text-xs text-right w-[32%]">Odměna</TableHead>
                     <TableHead className="h-8 text-xs w-[8%]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -673,20 +672,6 @@ export function PricingImpactSection({
                             ))}
                           </SelectContent>
                         </Select>
-                      </TableCell>
-                      <TableCell className="py-1.5 text-right">
-                        <Input
-                          type="number"
-                          value={reward.hours || ''}
-                          onChange={(e) => {
-                            setColleagueRewards(prev => prev.map((r, i) =>
-                              i === idx ? { ...r, hours: Number(e.target.value) } : r
-                            ));
-                          }}
-                          className="h-7 w-full text-xs text-right ml-auto"
-                          step="0.5"
-                          placeholder="0"
-                        />
                       </TableCell>
                       <TableCell className="py-1.5 text-right">
                         <div className="flex items-center gap-1 justify-end">
