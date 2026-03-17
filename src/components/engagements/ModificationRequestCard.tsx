@@ -42,6 +42,7 @@ import type {
   AddAssignmentProposedChanges,
   UpdateAssignmentProposedChanges,
   RemoveAssignmentProposedChanges,
+  NewEngagementProposedChanges,
 } from '@/types/crm';
 import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
 import { formatCZK } from '@/utils/pricingEngine';
