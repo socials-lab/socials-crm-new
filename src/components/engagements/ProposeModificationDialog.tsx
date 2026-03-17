@@ -1096,28 +1096,6 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 </div>
               )}
 
-              {/* REMOVE ASSIGNMENT FIELDS */}
-              {requestType === 'remove_assignment' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                  <h4 className="font-medium">3. Odebrání kolegy</h4>
-                  
-                  <div className="space-y-2">
-                    <Label>Kolega k odebrání *</Label>
-                    <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Vyberte přiřazení" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currentAssignments.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {getColleagueName(a.colleague_id)} ({a.role_on_engagement || 'bez role'})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
 
               {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
               {((requestType === 'add_service' && selectedServiceId) || (requestType === 'update_service_price' && selectedEngagementServiceId)) && (() => {

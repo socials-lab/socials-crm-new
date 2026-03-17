@@ -32,7 +32,6 @@ const REQUEST_TYPE_LABELS: Record<string, string> = {
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny',
-  remove_assignment: 'Odebrání kolegy',
 };
 
 const REQUEST_TYPE_ICONS: Record<string, typeof Package> = {

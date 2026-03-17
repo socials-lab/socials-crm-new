@@ -250,15 +250,6 @@ export function ModificationRequestCard({
         );
       }
       
-      case 'remove_assignment': {
-        const c = changes as RemoveAssignmentProposedChanges;
-        return (
-          <div className="space-y-1 text-sm">
-            <p><span className="text-muted-foreground">Kolega:</span> {c.colleague_name}</p>
-            <p><span className="text-muted-foreground">Role:</span> {c.role_on_engagement}</p>
-          </div>
-        );
-      }
       
       default:
         return null;
