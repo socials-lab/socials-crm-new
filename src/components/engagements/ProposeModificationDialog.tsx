@@ -719,6 +719,198 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           {/* ===== STEP 3: Type-specific fields (only after type selected) ===== */}
           {selectedEngagementId && requestTypeConfirmed && requestType && (
             <>
+              {/* EXPAND COUNTRY FIELDS */}
+              {requestType === 'expand_country' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    3. Přidání nové země
+                  </h4>
+                  
+                  {/* Reference service */}
+                  <div className="space-y-2">
+                    <Label>Referenční služba (základ pro výpočet ceny) *</Label>
+                    <Select value={expandRefServiceId} onValueChange={(v) => {
+                      setExpandRefServiceId(v);
+                      // Auto-generate name
+                      const refSvc = currentEngagementServices.find(es => es.id === v);
+                      if (refSvc && expandCountryCode) {
+                        setExpandServiceName(`${refSvc.name} ${expandCountryCode}`);
+                      }
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte stávající službu klienta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentEngagementServices.filter(es => es.is_active && es.billing_type === 'monthly').map((es) => (
+                          <SelectItem key={es.id} value={es.id}>
+                            {es.name} ({es.price?.toLocaleString('cs-CZ')} {es.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Country selector */}
+                  <div className="space-y-2">
+                    <Label>Nová země *</Label>
+                    <Select value={expandCountryCode} onValueChange={(v) => {
+                      setExpandCountryCode(v);
+                      // Auto-generate name
+                      const refSvc = currentEngagementServices.find(es => es.id === expandRefServiceId);
+                      if (refSvc) {
+                        setExpandServiceName(`${refSvc.name} ${v}`);
+                      }
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte zemi" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MANAGED_COUNTRIES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.flag} {c.name} ({c.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Service name (auto-generated, editable) */}
+                  {expandRefServiceId && expandCountryCode && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Název nové služby</Label>
+                        <Input 
+                          value={expandServiceName}
+                          onChange={(e) => setExpandServiceName(e.target.value)}
+                          placeholder="Např. Socials Boost SK"
+                        />
+                      </div>
+
+                      {/* Multiplier + price calculation */}
+                      {(() => {
+                        const refSvc = currentEngagementServices.find(es => es.id === expandRefServiceId);
+                        if (!refSvc) return null;
+                        const recommendedPrice = Math.round(refSvc.price * expandMultiplier);
+                        const effectivePrice = expandFinalPrice !== null ? expandFinalPrice : recommendedPrice;
+                        
+                        return (
+                          <div className="space-y-3 p-3 rounded-md border bg-background">
+                            <p className="text-xs font-medium text-muted-foreground">Cenová kalkulace</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs">
+                                  Multiplikátor
+                                  <span className="text-muted-foreground ml-1">(doporučeno: 0.5)</span>
+                                </Label>
+                                <Input
+                                  type="number"
+                                  step="0.05"
+                                  min="0.1"
+                                  max="2"
+                                  value={expandMultiplier}
+                                  onChange={(e) => {
+                                    setExpandMultiplier(Number(e.target.value));
+                                    setExpandFinalPrice(null);
+                                  }}
+                                  className="h-9"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Finální cena</Label>
+                                <Input
+                                  type="number"
+                                  value={expandFinalPrice !== null ? expandFinalPrice : recommendedPrice}
+                                  onChange={(e) => setExpandFinalPrice(Number(e.target.value))}
+                                  className="h-9"
+                                  step="100"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>
+                                Doporučená cena: {formatCZK(recommendedPrice)}
+                                {' '}({formatCZK(refSvc.price)} × {expandMultiplier})
+                              </span>
+                              {expandFinalPrice !== null && expandFinalPrice !== recommendedPrice && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 px-1.5 text-xs text-primary"
+                                  onClick={() => setExpandFinalPrice(null)}
+                                >
+                                  Použít doporučenou
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* New shop / different SRO checkbox */}
+                      <div className="space-y-3 p-3 rounded-md border bg-background">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="expand-new-shop"
+                            checked={expandIsNewShop}
+                            onCheckedChange={(checked) => setExpandIsNewShop(checked === true)}
+                          />
+                          <Label htmlFor="expand-new-shop" className="text-sm cursor-pointer">
+                            Nový shop je pod jiným SRO (nový klient)
+                          </Label>
+                        </div>
+
+                        {expandIsNewShop && (
+                          <div className="space-y-3 ml-6 pt-2 border-t">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs">Název společnosti *</Label>
+                                <Input
+                                  value={expandNewClientName}
+                                  onChange={(e) => setExpandNewClientName(e.target.value)}
+                                  placeholder="Např. NovýShop s.r.o."
+                                  className="h-9"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Název značky</Label>
+                                <Input
+                                  value={expandNewClientBrand}
+                                  onChange={(e) => setExpandNewClientBrand(e.target.value)}
+                                  placeholder="Např. NovýShop.cz"
+                                  className="h-9"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs">IČO</Label>
+                                <Input
+                                  value={expandNewClientIco}
+                                  onChange={(e) => setExpandNewClientIco(e.target.value)}
+                                  placeholder="12345678"
+                                  className="h-9"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">DIČ</Label>
+                                <Input
+                                  value={expandNewClientDic}
+                                  onChange={(e) => setExpandNewClientDic(e.target.value)}
+                                  placeholder="CZ12345678"
+                                  className="h-9"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* ADD SERVICE FIELDS */}
               {requestType === 'add_service' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
