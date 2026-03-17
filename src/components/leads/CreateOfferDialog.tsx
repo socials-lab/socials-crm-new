@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Copy, ExternalLink, Check } from 'lucide-react';
+import { Loader2, Copy, ExternalLink, Check, TrendingUp } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
@@ -21,6 +21,8 @@ import { addPublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { getServiceDetail } from '@/constants/serviceDetails';
+import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
+import { getRewardsFromServiceConfig } from '@/constants/serviceRewards';
 
 interface CreateOfferDialogProps {
   open: boolean;
