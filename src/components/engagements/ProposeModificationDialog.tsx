@@ -131,6 +131,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     ? getAssignmentsByEngagementId(selectedEngagementId)
     : [];
 
+  // Detect Creative Boost in update mode
+  const selectedUpdateEngService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+  const selectedUpdateCatalogService = selectedUpdateEngService?.service_id 
+    ? services.find(s => s.id === selectedUpdateEngService.service_id) 
+    : null;
+  const isUpdateCreativeBoost = selectedUpdateCatalogService?.code === CREATIVE_BOOST_CODE;
+
   // Calculate prorated amount
   const calculateProratedAmount = () => {
     if (!effectiveFrom) return null;
@@ -188,6 +195,12 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       } else if (editingRequest.request_type === 'update_service_price') {
         setSelectedEngagementServiceId(changes.engagement_service_id || editingRequest.engagement_service_id || '');
         setNewPrice(changes.new_price || 0);
+        if (changes.creative_boost_max_credits) {
+          setCbMaxCredits(changes.creative_boost_max_credits);
+          setCbPricePerCredit(changes.creative_boost_price_per_credit || 400);
+          setCbColleagueReward(changes.creative_boost_reward_per_credit || 150);
+          setCbEditorReward(changes.creative_boost_editor_reward_per_credit || 100);
+        }
       } else if (editingRequest.request_type === 'deactivate_service') {
         setSelectedEngagementServiceId(changes.engagement_service_id || editingRequest.engagement_service_id || '');
       } else if (editingRequest.request_type === 'add_assignment') {
@@ -307,6 +320,15 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
       if (engService) {
         setNewPrice(engService.price);
+        
+        // Pre-populate Creative Boost fields from existing service
+        const catalogSvc = engService.service_id ? services.find(s => s.id === engService.service_id) : null;
+        if (catalogSvc?.code === CREATIVE_BOOST_CODE) {
+          setCbMaxCredits(engService.creative_boost_max_credits ?? 30);
+          setCbPricePerCredit(engService.creative_boost_price_per_credit ?? 400);
+          setCbColleagueReward(150); // defaults, could be stored in assignments
+          setCbEditorReward(100);
+        }
       }
       // Load assignments linked to this service (or all for the engagement)
       const serviceAssignments = currentAssignments.filter(
@@ -331,7 +353,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         })
       );
     }
-  }, [selectedEngagementServiceId, currentEngagementServices, currentAssignments, colleagues]);
+  }, [selectedEngagementServiceId, currentEngagementServices, currentAssignments, colleagues, services]);
 
   // Auto-detect role from colleague position for add_assignment
   useEffect(() => {
@@ -457,10 +479,17 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'update_service_price':
         const oldService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
         const changedAssignments = serviceAssignmentEdits.filter(a => a.new_value !== a.old_value);
+        const cbNewPrice = isUpdateCreativeBoost ? cbMaxCredits * cbPricePerCredit : newPrice;
         proposed_changes = {
           engagement_service_id: selectedEngagementServiceId,
           old_price: oldService?.price || 0,
-          new_price: newPrice,
+          new_price: cbNewPrice,
+          ...(isUpdateCreativeBoost ? {
+            creative_boost_max_credits: cbMaxCredits,
+            creative_boost_price_per_credit: cbPricePerCredit,
+            creative_boost_reward_per_credit: cbColleagueReward,
+            creative_boost_editor_reward_per_credit: cbEditorReward,
+          } : {}),
           assignment_changes: changedAssignments.length > 0 ? changedAssignments.map(a => ({
             assignment_id: a.assignment_id,
             colleague_name: a.colleague_name,
@@ -954,30 +983,113 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
                   {selectedEngagementServiceId && (
                     <>
-                      {/* Price edit */}
-                      <div className="space-y-2">
-                        <Label>Nová cena (CZK) *</Label>
-                        <Input 
-                          type="number" 
-                          value={newPrice} 
-                          onChange={(e) => setNewPrice(Number(e.target.value))}
-                        />
-                        {(() => {
-                          const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
-                          if (engService && newPrice !== engService.price) {
-                            const diff = newPrice - engService.price;
-                            return (
-                              <p className={cn("text-xs font-medium", diff > 0 ? "text-green-600" : "text-destructive")}>
-                                {diff > 0 ? '+' : ''}{diff.toLocaleString('cs-CZ')} Kč ({diff > 0 ? '+' : ''}{((diff / engService.price) * 100).toFixed(1)}%)
-                              </p>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
+                      {/* Creative Boost credit fields for update */}
+                      {isUpdateCreativeBoost ? (
+                        <div className="space-y-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                          <h5 className="font-medium text-sm flex items-center gap-2">🎨 Úprava Creative Boost</h5>
+                          
+                          <div className="space-y-2">
+                            <Label>Měsíční kreditový balíček</Label>
+                            <Input 
+                              type="number" 
+                              value={cbMaxCredits} 
+                              onChange={(e) => {
+                                setCbMaxCredits(Number(e.target.value));
+                                setNewPrice(Number(e.target.value) * cbPricePerCredit);
+                              }}
+                              min={0}
+                            />
+                            <p className="text-xs text-muted-foreground">Kolik kreditů má klient k dispozici měsíčně</p>
+                          </div>
 
-                      {/* Colleague assignments for this service */}
-                      {serviceAssignmentEdits.length > 0 && (
+                          <div className="space-y-2">
+                            <Label>💰 Cena za kredit pro klienta (CZK)</Label>
+                            <Input 
+                              type="number" 
+                              value={cbPricePerCredit} 
+                              onChange={(e) => {
+                                setCbPricePerCredit(Number(e.target.value));
+                                setNewPrice(cbMaxCredits * Number(e.target.value));
+                              }}
+                              min={0}
+                            />
+                            <p className="text-xs text-muted-foreground">Doporučeno: 400 Kč</p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>🎨 Odměna za kredit — Grafik (CZK)</Label>
+                              <Input 
+                                type="number" 
+                                value={cbColleagueReward} 
+                                onChange={(e) => setCbColleagueReward(Number(e.target.value))}
+                                min={0}
+                              />
+                              <p className="text-xs text-muted-foreground">Doporučeno: 150 Kč</p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>🎬 Odměna za kredit — Editor (CZK)</Label>
+                              <Input 
+                                type="number" 
+                                value={cbEditorReward} 
+                                onChange={(e) => setCbEditorReward(Number(e.target.value))}
+                                min={0}
+                              />
+                              <p className="text-xs text-muted-foreground">Doporučeno: 100 Kč</p>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t space-y-1">
+                            <p className="text-sm font-medium">
+                              Nová měsíční fakturace: <span className="text-primary">{(cbMaxCredits * cbPricePerCredit).toLocaleString('cs-CZ')} CZK</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              = {cbMaxCredits} kreditů × {cbPricePerCredit} Kč/kredit
+                            </p>
+                            {(() => {
+                              const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+                              const oldPrice = engService?.price || 0;
+                              const newCbPrice = cbMaxCredits * cbPricePerCredit;
+                              if (newCbPrice !== oldPrice) {
+                                const diff = newCbPrice - oldPrice;
+                                return (
+                                  <p className={cn("text-xs font-medium", diff > 0 ? "text-green-600" : "text-destructive")}>
+                                    {diff > 0 ? '+' : ''}{diff.toLocaleString('cs-CZ')} Kč ({diff > 0 ? '+' : ''}{((diff / oldPrice) * 100).toFixed(1)}%)
+                                  </p>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Standard price edit */}
+                          <div className="space-y-2">
+                            <Label>Nová cena (CZK) *</Label>
+                            <Input 
+                              type="number" 
+                              value={newPrice} 
+                              onChange={(e) => setNewPrice(Number(e.target.value))}
+                            />
+                            {(() => {
+                              const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+                              if (engService && newPrice !== engService.price) {
+                                const diff = newPrice - engService.price;
+                                return (
+                                  <p className={cn("text-xs font-medium", diff > 0 ? "text-green-600" : "text-destructive")}>
+                                    {diff > 0 ? '+' : ''}{diff.toLocaleString('cs-CZ')} Kč ({diff > 0 ? '+' : ''}{((diff / engService.price) * 100).toFixed(1)}%)
+                                  </p>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        </>
+                      )}
+
+                      {/* Colleague assignments for this service (hidden for Creative Boost — rewards are per-credit) */}
+                      {!isUpdateCreativeBoost && serviceAssignmentEdits.length > 0 && (
                         <div className="space-y-3 pt-2 border-t">
                           <h5 className="text-sm font-medium flex items-center gap-2">
                             👥 Odměny kolegů na této službě
