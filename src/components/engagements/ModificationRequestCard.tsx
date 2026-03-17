@@ -535,12 +535,17 @@ export function ModificationRequestCard({
                   <div className="flex items-center gap-3 rounded-md bg-muted/40 px-3 py-2">
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-muted-foreground">Marže:</span>
-                      {request.pricing_snapshot.current_margin_percent != null && (
-                        <>
-                          <span className="font-medium">{request.pricing_snapshot.current_margin_percent.toFixed(1)}%</span>
-                          <span className="text-muted-foreground">→</span>
-                        </>
-                      )}
+                      {request.pricing_snapshot.current_total_revenue > 0 && (() => {
+                        const currentMargin = request.pricing_snapshot.current_total_revenue > 0
+                          ? ((request.pricing_snapshot.current_total_revenue - request.pricing_snapshot.current_total_internal_cost) / request.pricing_snapshot.current_total_revenue * 100)
+                          : 0;
+                        return (
+                          <>
+                            <span className="font-medium">{currentMargin.toFixed(1)}%</span>
+                            <span className="text-muted-foreground">→</span>
+                          </>
+                        );
+                      })()}
                       <span className={cn(
                         "font-bold text-base",
                         request.pricing_snapshot.new_margin_percent >= 66 ? "text-green-600 dark:text-green-400" : 
