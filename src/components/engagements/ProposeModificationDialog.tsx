@@ -2355,8 +2355,76 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
             </>
           )}
 
-          {/* ===== STEP 4: Details (only after engagement + type selected) ===== */}
-          {selectedEngagementId && requestType && (
+          {/* ===== BUNDLED ITEMS SUMMARY + ADD ANOTHER ===== */}
+          {selectedEngagementId && (bundledItems.length > 0 || requestType) && (
+            <div className="space-y-3">
+              {bundledItems.length > 0 && (
+                <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    📋 Položky v nabídce ({bundledItems.length})
+                  </p>
+                  {bundledItems.map((item, idx) => {
+                    const price = getItemPrice(item);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between gap-2 p-2 rounded border bg-background">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs font-medium text-muted-foreground">{idx + 1}.</span>
+                          <span className="text-sm truncate">{getItemLabel(item)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {price !== null && (
+                            <span className={cn("text-xs font-medium", price >= 0 ? "text-green-600" : "text-destructive")}>
+                              {price >= 0 ? '+' : ''}{price.toLocaleString('cs-CZ')} Kč
+                            </span>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                            onClick={() => setBundledItems(prev => prev.filter((_, i) => i !== idx))}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {(() => {
+                    const totalPrice = bundledItems.reduce((sum, item) => sum + (getItemPrice(item) || 0), 0);
+                    if (totalPrice !== 0) {
+                      return (
+                        <div className="flex items-center justify-between pt-1 border-t text-sm">
+                          <span className="font-medium">Celkem za uložené položky:</span>
+                          <span className={cn("font-semibold", totalPrice >= 0 ? "text-green-600" : "text-destructive")}>
+                            {totalPrice >= 0 ? '+' : ''}{totalPrice.toLocaleString('cs-CZ')} Kč/měs
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
+
+              {/* Add another item button — shown when current item is configured */}
+              {requestType && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleAddAnotherItem}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Uložit položku a přidat další
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* ===== STEP 4: Details (only after engagement + type selected OR bundled items exist) ===== */}
+          {selectedEngagementId && (requestType || bundledItems.length > 0) && (
             <div className="space-y-4 pt-2 border-t">
               {/* Effective From */}
               <div className="space-y-2">
