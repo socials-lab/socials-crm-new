@@ -715,14 +715,19 @@ export default function Modifications() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               {clientApproved.map((request) => (
-                <ModificationRequestCard
+                <CollapsibleModificationCard
                   key={request.id}
                   request={request}
-                  onApply={handleApply}
-                  onCreateClient={handleCreateClientFromOnboarding}
-                  isApplying={isApplying}
+                  cardContent={
+                    <ModificationRequestCard
+                      request={request}
+                      onApply={handleApply}
+                      onCreateClient={handleCreateClientFromOnboarding}
+                      isApplying={isApplying}
+                    />
+                  }
                 />
               ))}
             </div>
