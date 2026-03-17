@@ -427,7 +427,7 @@ export function PricingImpactSection({
       </div>
 
       {/* ===== BLOCK 2: Proposed Change (interactive, prominent) ===== */}
-      <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-4">
+      {!isUpdateServicePrice && <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-4">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-primary" />
           <h4 className="text-sm font-semibold">Navrhovaná změna</h4>
