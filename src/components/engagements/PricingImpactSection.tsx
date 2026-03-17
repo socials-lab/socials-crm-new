@@ -607,8 +607,7 @@ export function PricingImpactSection({
                   <TableRow className="text-xs">
                     <TableHead className="h-8 text-xs w-[30%]">Role</TableHead>
                     <TableHead className="h-8 text-xs w-[30%]">Kolega</TableHead>
-                    <TableHead className="h-8 text-xs text-right w-[12%]">Hodiny</TableHead>
-                    <TableHead className="h-8 text-xs text-right w-[20%]">Odměna</TableHead>
+                    <TableHead className="h-8 text-xs text-right w-[32%]">Odměna</TableHead>
                     <TableHead className="h-8 text-xs w-[8%]"></TableHead>
                   </TableRow>
                 </TableHeader>
