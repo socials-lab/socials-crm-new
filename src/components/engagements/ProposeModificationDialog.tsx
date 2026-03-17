@@ -486,6 +486,17 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
   }, [assignmentServiceId, requestType, selectedColleagueId, currentEngagementServices, services, colleagues]);
 
+  // Auto-fill onboarding email from engagement's client contact for new_engagement
+  useEffect(() => {
+    if (requestType !== 'new_engagement' || !selectedEngagementId) return;
+    const engagement = engagements.find(e => e.id === selectedEngagementId);
+    if (!engagement) return;
+    const client = clients.find(c => c.id === engagement.client_id);
+    if (client?.main_contact_email) {
+      setNewEngOnboardingEmail(client.main_contact_email);
+    }
+  }, [requestType, selectedEngagementId, engagements, clients]);
+
   const handleSubmit = async () => {
     if (!selectedEngagementId || !requestType) return;
 
