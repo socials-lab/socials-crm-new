@@ -403,20 +403,22 @@ export function PricingImpactSection({
           <h4 className="text-sm font-semibold">Navrhovaná změna</h4>
         </div>
 
-        {/* Scenario type */}
-        <div className="space-y-2">
-          <Label className="text-xs font-medium">Typ scénáře</Label>
-          <Select value={scenario} onValueChange={(v) => setScenario(v as PricingScenario)}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(isAddonService ? ADDON_SCENARIO_OPTIONS : CORE_SCENARIO_OPTIONS).map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Scenario type — hidden when parent controls the flow */}
+        {!isParentControlled && (
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Typ scénáře</Label>
+            <Select value={scenario} onValueChange={(v) => setScenario(v as PricingScenario)}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(isAddonService ? ADDON_SCENARIO_OPTIONS : CORE_SCENARIO_OPTIONS).map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Reference service picker for expansion scenarios */}
         {isExpansion && (
