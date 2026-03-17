@@ -66,8 +66,8 @@ const App = () => (
                   <FeedbackProvider>
                     <AcademyDataProvider>
                       <SOPDataProvider>
-                      <BugReportsProvider>
-                      <TooltipProvider>
+                        <BugReportsProvider>
+                          <TooltipProvider>
                         <Toaster />
                         <Sonner />
                         <BrowserRouter>
@@ -116,8 +116,8 @@ const App = () => (
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </BrowserRouter>
-                      </TooltipProvider>
-                      </BugReportsProvider>
+                          </TooltipProvider>
+                        </BugReportsProvider>
                       </SOPDataProvider>
                     </AcademyDataProvider>
                   </FeedbackProvider>
