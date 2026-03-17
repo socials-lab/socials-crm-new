@@ -466,7 +466,25 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       <Label>Služba z katalogu</Label>
                       <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Vyberte službu" />
+                          <SelectValue placeholder="Vyberte službu">
+                            {selectedServiceId === 'custom' ? 'Vlastní služba' : (() => {
+                              const s = services.find(sv => sv.id === selectedServiceId);
+                              if (!s) return 'Vyberte službu';
+                              return (
+                                <span className="flex items-center gap-2">
+                                  {s.name}
+                                  <span className={cn(
+                                    "text-[10px] font-medium uppercase px-1.5 py-0.5 rounded",
+                                    s.service_type === 'core'
+                                      ? "bg-primary/10 text-primary"
+                                      : "bg-muted text-muted-foreground"
+                                  )}>
+                                    {s.service_type === 'core' ? 'Core' : 'Addon'}
+                                  </span>
+                                </span>
+                              );
+                            })()}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="custom">Vlastní služba</SelectItem>
