@@ -595,7 +595,7 @@ export function PricingImpactSection({
                                 i === idx ? { ...r, role: e.target.value } : r
                               ));
                             }}
-                            className="h-7 text-xs w-[140px]"
+                            className="h-7 text-xs w-full"
                             placeholder="Role"
                           />
                         </TableCell>
