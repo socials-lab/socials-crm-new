@@ -992,10 +992,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                               <div className="space-y-1">
                                 <Label className="text-xs">Aktuální</Label>
                                 <p className="text-sm text-muted-foreground">
-                                  {assignment.old_value.toLocaleString('cs-CZ')} Kč
-                                  <span className="text-[10px] ml-1">
-                                    {assignment.cost_model === 'hourly' ? '/h' : assignment.cost_model === 'percentage' ? '%' : '/měs'}
-                                  </span>
+                                  {assignment.old_value.toLocaleString('cs-CZ')} Kč /měs
                                 </p>
                               </div>
                               <div className="space-y-1">
