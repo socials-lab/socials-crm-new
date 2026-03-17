@@ -549,7 +549,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             onChange={(e) => setCbColleagueReward(Number(e.target.value))}
                             min={0}
                           />
-                          <p className="text-xs text-muted-foreground">Doporučeno: 80 Kč</p>
+                          <p className="text-xs text-muted-foreground">Doporučeno: 150 Kč</p>
                         </div>
                         <div className="space-y-2">
                           <Label>🎬 Odměna za kredit — Editor (CZK)</Label>
