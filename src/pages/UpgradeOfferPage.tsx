@@ -617,9 +617,65 @@ export default function UpgradeOfferPage() {
                 Potvrzení změny
               </h2>
               
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Date picker */}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Váš email</Label>
+                  <Label>Požadovaný začátek platnosti</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, 'd. MMMM yyyy', { locale: cs }) : 'Vyberte datum'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Prorated calculation */}
+                {prorationCalc && totalMonthlyPrice > 0 && (
+                  <Alert className="bg-primary/5 border-primary/20">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="space-y-1">
+                      {prorationCalc.isFullMonth ? (
+                        <p>
+                          <strong>Fakturace za {prorationCalc.monthName}:</strong>{' '}
+                          {totalMonthlyPrice.toLocaleString('cs-CZ')} CZK (celý měsíc)
+                        </p>
+                      ) : (
+                        <>
+                          <p>
+                            <strong>Fakturace za {prorationCalc.monthName}:</strong>{' '}
+                            {prorationCalc.proratedAmount.toLocaleString('cs-CZ')} CZK{' '}
+                            ({prorationCalc.remainingDays} dní z {prorationCalc.daysInMonth})
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Od dalšího měsíce: plná měsíční cena {totalMonthlyPrice.toLocaleString('cs-CZ')} CZK
+                          </p>
+                        </>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Email */}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Váš email (pro zaslání potvrzení)</Label>
                   <Input
                     id="email"
                     type="email"
@@ -645,7 +701,7 @@ export default function UpgradeOfferPage() {
                   type="submit" 
                   className="w-full" 
                   size="lg"
-                  disabled={!email || !agreedToChange || isSubmitting}
+                  disabled={!email || !agreedToChange || isSubmitting || !selectedDate}
                 >
                   {isSubmitting ? 'Potvrzuji...' : 'Potvrdit změnu'}
                 </Button>
