@@ -58,6 +58,13 @@ export interface ServiceDetailData {
 interface ServiceDetailViewProps {
   data: ServiceDetailData;
   onCreditPricingUpdate?: (outputTypes: { name: string; credits: number; description: string; category?: string }[]) => void;
+  // Tier prices inline editing
+  serviceType?: 'core' | 'addon';
+  tierPricing?: { tier: string; price: number | null }[] | null;
+  onTierPricingUpdate?: (tierPricing: { tier: string; price: number | null }[]) => void;
+  // Reward config inline editing
+  rewardConfig?: ServiceRewardTierConfig[] | null;
+  onRewardConfigUpdate?: (rewardConfig: ServiceRewardTierConfig[]) => void;
 }
 
 export function ServiceDetailView({ data, onCreditPricingUpdate }: ServiceDetailViewProps) {
