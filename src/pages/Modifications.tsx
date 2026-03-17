@@ -756,7 +756,7 @@ export default function Modifications() {
             )}
           </div>
 
-          {filteredHistory.length === 0 && applied.length === 0 ? (
+          {applied.length === 0 && filteredHistory.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <PackageCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
@@ -769,20 +769,20 @@ export default function Modifications() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {/* Show history entries with client confirmation details */}
-              {filteredHistory.map((historyEntry) => (
-                <AppliedHistoryCard key={historyEntry.id} entry={historyEntry} />
-              ))}
-              
-              {/* Also show applied requests that might not be in history yet */}
-              {selectedMonth === 'all' && applied.filter(r => 
-                !filteredHistory.some(h => h.modification_request_id === r.id)
-              ).map((request) => (
+              {/* Show applied requests with full ModificationRequestCard for details */}
+              {applied.map((request) => (
                 <ModificationRequestCard
                   key={request.id}
                   request={request}
                 />
               ))}
+              
+              {/* Also show history entries that are no longer in localStorage */}
+              {filteredHistory
+                .filter(h => !applied.some(r => r.id === h.modification_request_id))
+                .map((historyEntry) => (
+                  <AppliedHistoryCard key={historyEntry.id} entry={historyEntry} />
+                ))}
             </div>
           )}
         </TabsContent>
