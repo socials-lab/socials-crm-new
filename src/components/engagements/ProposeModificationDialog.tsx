@@ -343,26 +343,35 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
 
     try {
-      await createRequest({
-        engagement_id: selectedEngagementId,
-        request_type: requestType as ModificationRequestType,
-        proposed_changes: proposed_changes as any,
-        engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
-          ? selectedEngagementServiceId 
-          : null,
-        engagement_assignment_id: ['update_assignment', 'remove_assignment'].includes(requestType)
-          ? selectedAssignmentId
-          : null,
-        effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
-        upsold_by_id: upsoldById === 'none' ? null : upsoldById,
-        note: note || null,
-        pricing_snapshot: pricingSnapshot,
-      });
+      if (isEditMode && editingRequest) {
+        // Update existing request
+        await updateRequest(editingRequest.id, {
+          proposed_changes: proposed_changes as any,
+          effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
+          note: note || null,
+          upsell_commission_percent: upsoldById === 'none' ? 0 : 10,
+        });
+      } else {
+        await createRequest({
+          engagement_id: selectedEngagementId,
+          request_type: requestType as ModificationRequestType,
+          proposed_changes: proposed_changes as any,
+          engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
+            ? selectedEngagementServiceId 
+            : null,
+          engagement_assignment_id: ['update_assignment', 'remove_assignment'].includes(requestType)
+            ? selectedAssignmentId
+            : null,
+          effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
+          upsold_by_id: upsoldById === 'none' ? null : upsoldById,
+          note: note || null,
+          pricing_snapshot: pricingSnapshot,
+        });
+      }
       
-      // Just close the dialog - upgrade offer will be created at approval time
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to create modification request:', error);
+      console.error('Failed to save modification request:', error);
     }
   };
 
