@@ -149,7 +149,7 @@ export function approveModificationRequest(
   const request = requests[index];
   
   // Generate token for client-facing request types
-  const isClientFacing = ['add_service', 'update_service_price', 'deactivate_service'].includes(request.request_type);
+  const isClientFacing = ['add_service', 'update_service_price', 'deactivate_service', 'new_engagement'].includes(request.request_type);
   
   requests[index] = {
     ...request,
