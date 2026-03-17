@@ -390,7 +390,7 @@ export function ModificationRequestCard({
                 <div>
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Badge variant="outline">
-                      {typeLabel}
+                      {isBundled ? `Nabídka (${request.items!.length} položek)` : typeLabel}
                     </Badge>
                     {/* Client confirmation badge */}
                     {isClientApproved && (
