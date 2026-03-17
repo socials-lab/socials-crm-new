@@ -84,6 +84,7 @@ export function useModificationRequests() {
         note: params.note,
         requested_by: user.id,
         pricing_snapshot: params.pricing_snapshot,
+        items: params.items,
       });
       
       toast.success('Požadavek na úpravu byl odeslán ke schválení');
