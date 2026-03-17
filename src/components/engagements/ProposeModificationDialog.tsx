@@ -404,7 +404,17 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                           <SelectItem value="custom">Vlastní služba</SelectItem>
                           {services.filter(s => s.is_active).map((service) => (
                             <SelectItem key={service.id} value={service.id}>
-                              {service.name}
+                              <span className="flex items-center gap-2">
+                                {service.name}
+                                <span className={cn(
+                                  "text-[10px] font-medium uppercase px-1.5 py-0.5 rounded",
+                                  service.service_type === 'core'
+                                    ? "bg-primary/10 text-primary"
+                                    : "bg-muted text-muted-foreground"
+                                )}>
+                                  {service.service_type === 'core' ? 'Core' : 'Addon'}
+                                </span>
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>
