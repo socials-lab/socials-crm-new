@@ -1997,7 +1997,19 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                               else if (pos.includes('sales') || pos.includes('obchod')) autoRole = 'Sales Specialist';
                                               else if (pos.includes('account') || pos.includes('pm') || pos.includes('project')) autoRole = 'Account Manager';
                                               
-                                              const isCreativeRole = autoRole === 'Graphic Designer' || autoRole === 'Video Editor';
+                                              // Look up default reward from service config
+                                              const rewardRoles = catalogSvc 
+                                                ? (getRewardsFromServiceConfig((catalogSvc as any).reward_config, svc.selected_tier) 
+                                                  ?? getServiceRewardRecommendation(svc.name, svc.selected_tier))
+                                                : getServiceRewardRecommendation(svc.name, svc.selected_tier);
+                                              const matchedReward = rewardRoles?.find(r => r.role === autoRole);
+                                              
+                                              const defaultCostModel = matchedReward 
+                                                ? (matchedReward.rewardType === 'per_credit' ? 'fixed_monthly' : matchedReward.rewardType === 'hourly' ? 'hourly' : 'fixed_monthly')
+                                                : 'fixed_monthly';
+                                              const defaultMonthlyCost = matchedReward && matchedReward.rewardType === 'fixed_monthly' ? matchedReward.reward : 0;
+                                              const defaultHourlyCost = matchedReward && matchedReward.rewardType === 'hourly' ? matchedReward.reward : 0;
+
                                               return (
                                                 <CommandItem
                                                   key={col.id}
@@ -2008,15 +2020,17 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                                       colleague_id: col.id,
                                                       colleague_name: col.full_name,
                                                       role: autoRole,
-                                                      cost_model: (isCreativeRole ? 'fixed_monthly' : 'fixed_monthly') as 'hourly' | 'fixed_monthly' | 'percentage',
-                                                      monthly_cost: 0,
-                                                      hourly_cost: 0,
+                                                      cost_model: defaultCostModel as 'hourly' | 'fixed_monthly' | 'percentage',
+                                                      monthly_cost: defaultMonthlyCost,
+                                                      hourly_cost: defaultHourlyCost,
                                                     };
                                                     updated[idx] = {
                                                       ...updated[idx],
                                                       assignments: [...(updated[idx].assignments || []), newAssignment],
                                                     };
                                                     setNewEngServices(updated);
+                                                    // Auto-expand service to show the assignment
+                                                    setExpandedNewEngServiceIdx(idx);
                                                   }}
                                                 >
                                                   <span className="text-xs">{col.full_name}</span>
