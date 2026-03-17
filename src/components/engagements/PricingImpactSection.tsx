@@ -142,20 +142,29 @@ export function PricingImpactSection({
 
   // Look up recommended rewards when service/tier/scenario/multiplier changes
   useEffect(() => {
-    if (!selectedCatalogService) {
-      // Don't clear if user has manually added rows
+    // For expansion scenarios, use the reference engagement service to find catalog service
+    let catalogSvc = selectedCatalogService;
+    let tierForLookup = selectedTierProp || null;
+    
+    if ((scenario === 'expand_country' || scenario === 'expand_shop') && referenceServiceId) {
+      const refEngService = engagementServices?.find(es => es.id === referenceServiceId);
+      if (refEngService) {
+        catalogSvc = services?.find(s => s.id === refEngService.service_id) || null;
+        tierForLookup = refEngService.selected_tier || tierForLookup;
+      }
+    }
+
+    if (!catalogSvc) {
       if (colleagueRewards.length === 0) return;
-      // Only clear if no catalog service selected at all
       return;
     }
-    // Use tier from prop (parent), not from catalog service
-    const tier = selectedTierProp || null;
+    const tier = tierForLookup;
     // Try DB reward_config first, then fall back to hardcoded lookup
     const recommended = getRewardsFromServiceConfig(
-      selectedCatalogService.reward_config as any,
+      catalogSvc.reward_config as any,
       tier
     ) || getServiceRewardRecommendation(
-      selectedCatalogService.name,
+      catalogSvc.name,
       tier
     );
     if (recommended) {
@@ -193,7 +202,7 @@ export function PricingImpactSection({
       // Don't clear manually added rows
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCatalogService?.id, selectedTierProp, scenario, multiplier, engagementId, assignments]);
+  }, [selectedCatalogService?.id, selectedTierProp, scenario, multiplier, engagementId, assignments, referenceServiceId, engagementServices, services]);
 
   // Update multiplier when scenario changes + reset new client
   useEffect(() => {
