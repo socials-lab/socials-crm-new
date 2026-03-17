@@ -1083,7 +1083,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             onCheckedChange={(checked) => setExpandIsNewShop(checked === true)}
                           />
                           <Label htmlFor="expand-new-shop" className="text-sm cursor-pointer">
-                            Nový shop je pod jiným SRO (nový klient)
+                            Nový shop je pod jiným SRO (nový klient)<InfoTip text="Zaškrtněte, pokud nová země běží pod jinou právní entitou (jiné IČO). Klientovi se odešle onboarding formulář pro vyplnění fakturačních údajů." />
                           </Label>
                         </div>
 
