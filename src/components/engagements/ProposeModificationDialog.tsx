@@ -1074,7 +1074,6 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                           </div>
                         </>
                       )}
-                      </div>
 
                       {/* Colleague assignments for this service */}
                       {serviceAssignmentEdits.length > 0 && (
