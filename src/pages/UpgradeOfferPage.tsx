@@ -437,6 +437,109 @@ export default function UpgradeOfferPage() {
         );
       }
       
+      case 'new_engagement': {
+        const c = changes as unknown as NewEngagementProposedChanges;
+        return (
+          <div className="space-y-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">{c.engagement_name}</h3>
+                {c.is_different_sro && c.new_client_data?.company_name && (
+                  <p className="text-sm text-muted-foreground">
+                    Nová entita: {c.new_client_data.company_name}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Services list */}
+            {c.services.map((svc, idx) => (
+              <div key={idx} className="p-4 rounded-lg border bg-card space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold">{svc.name}</h4>
+                  {svc.selected_tier && (
+                    <Badge variant="outline">{String(svc.selected_tier).toUpperCase()}</Badge>
+                  )}
+                </div>
+                {svc.description && (
+                  <p className="text-sm text-muted-foreground">{svc.description}</p>
+                )}
+                {svc.deliverables && svc.deliverables.length > 0 && (
+                  <ul className="space-y-1">
+                    {svc.deliverables.map((d, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+                        <span>{d}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-muted-foreground text-sm">Měsíční cena:</span>
+                  <span className="font-semibold">{svc.price.toLocaleString('cs-CZ')} {svc.currency}</span>
+                </div>
+                {/* Per-service team */}
+                {svc.assignments && svc.assignments.length > 0 && (
+                  <div className="pt-2 border-t border-border/50">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5" />
+                      Váš tým
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {svc.assignments.map((a, i) => (
+                        <div key={i} className="inline-flex items-center gap-1.5 bg-muted rounded-full px-3 py-1 text-sm">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="font-medium">{a.colleague_name}</span>
+                          <span className="text-muted-foreground">— {a.role}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Total */}
+            <div className="flex justify-between items-center pt-2 border-t">
+              <span className="font-semibold text-lg">Celkem měsíčně:</span>
+              <span className="font-bold text-xl text-primary">
+                {c.total_monthly_price.toLocaleString('cs-CZ')} {c.currency}/měs
+              </span>
+            </div>
+
+            {/* Onboarding form notice */}
+            {c.send_onboarding_form && c.is_different_sro && (
+              <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
+                <Info className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-300">
+                  <strong>Prosím vyplňte fakturační údaje</strong>
+                  <br />
+                  <span className="text-sm">
+                    Pro novou právní entitu potřebujeme fakturační údaje (IČO, DIČ, adresa) a kontaktní osobu.
+                    Po potvrzení nabídky vám bude zaslán onboarding formulář k vyplnění.
+                  </span>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {offer.effective_from && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <CalendarIcon className="h-4 w-4" />
+                  Navrhovaný začátek:
+                </span>
+                <span className="font-medium">
+                  {format(new Date(offer.effective_from), 'd. MMMM yyyy', { locale: cs })}
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      }
+      
       default:
         return <p>Detaily změny nejsou k dispozici</p>;
     }
