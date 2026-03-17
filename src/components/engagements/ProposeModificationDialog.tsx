@@ -2564,7 +2564,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
               {(bundledItems.length > 0 || (bundledItems.length === 0 && requestType)) && (bundledItems.length + (requestType ? 1 : 0)) > 1 && (
                 <div className="space-y-2 p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5">
                   <Label className="flex items-center gap-2">
-                    🏷️ Sleva za balíček
+                    🏷️ Sleva za balíček<InfoTip text="Procentuální sleva z celkové ceny, pokud klient přijme všechny položky najednou. Maximum 50 %." />
                   </Label>
                   <div className="flex items-center gap-3">
                     <Input
