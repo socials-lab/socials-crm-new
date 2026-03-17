@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import {
   Form,
   FormControl,
@@ -33,7 +34,8 @@ import {
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
-import type { Lead, CostModel, ClientTier, BillingModel, LeadSource } from '@/types/crm';
+import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
+import type { Lead, CostModel, ClientTier, BillingModel, LeadSource, LeadService, ServiceRewardTierConfig } from '@/types/crm';
 import { toast } from 'sonner';
 
 const convertSchema = z.object({
@@ -87,6 +89,18 @@ interface TeamMember {
   monthly_cost: number;
   hourly_cost: number;
   percentage_of_revenue: number;
+  /** Links this member to a specific service from the offer */
+  _serviceIndex?: number;
+}
+
+/** Local editable service from the lead's offer */
+interface OfferServiceEntry {
+  service_id: string;
+  name: string;
+  selected_tier: string | null;
+  price: number;
+  currency: string;
+  billing_type: 'monthly' | 'one_off';
 }
 
 interface ConvertLeadDialogProps {
@@ -98,9 +112,10 @@ interface ConvertLeadDialogProps {
 
 export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: ConvertLeadDialogProps) {
   const { markLeadAsConverted } = useLeadsData();
-  const { addClient, addContact, addEngagement, addAssignment, colleagues, services } = useCRMData();
+  const { addClient, addContact, addEngagement, addEngagementService, addAssignment, colleagues, services } = useCRMData();
   const { user } = useAuth();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [offerServices, setOfferServices] = useState<OfferServiceEntry[]>([]);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   const activeServices = services.filter(s => s.is_active);
@@ -146,9 +161,66 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
     },
   });
 
-  // Reset form when lead changes
+  // Reset form when lead changes — auto-populate services and team from offer
   useEffect(() => {
     if (lead && open) {
+      // Parse lead's potential_services
+      const leadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
+      
+      // Build editable offer services
+      const offerSvcs: OfferServiceEntry[] = leadServices.map(ls => ({
+        service_id: ls.service_id,
+        name: ls.name,
+        selected_tier: ls.selected_tier,
+        price: ls.price || 0,
+        currency: ls.currency || lead.currency || 'CZK',
+        billing_type: ls.billing_type || 'monthly',
+      }));
+      setOfferServices(offerSvcs);
+
+      // Calculate monthly_fee from offer services
+      const monthlyTotal = offerSvcs
+        .filter(s => s.billing_type === 'monthly')
+        .reduce((sum, s) => sum + s.price, 0);
+      const oneOffTotal = offerSvcs
+        .filter(s => s.billing_type === 'one_off')
+        .reduce((sum, s) => sum + s.price, 0);
+
+      // Auto-suggest team members from reward configs
+      const suggestedTeam: TeamMember[] = [];
+      offerSvcs.forEach((offerSvc, svcIndex) => {
+        // Find the catalog service to get reward_config
+        const catalogService = services.find(s => s.id === offerSvc.service_id);
+        if (!catalogService) return;
+        
+        const enriched = enrichServiceWithDemoRewards(catalogService);
+        const rewardConfig = enriched.reward_config;
+        
+        if (!rewardConfig || rewardConfig.length === 0) return;
+        
+        // Match tier to get roles
+        const tierLower = offerSvc.selected_tier?.toLowerCase();
+        const tierMatch = tierLower
+          ? rewardConfig.find(rc => rc.tier?.toLowerCase() === tierLower)
+          : rewardConfig.find(rc => !rc.tier) || rewardConfig[0];
+        
+        if (tierMatch && tierMatch.roles.length > 0) {
+          tierMatch.roles.forEach(role => {
+            const costModel: CostModel = role.reward_type === 'hourly' ? 'hourly' : 'fixed_monthly';
+            suggestedTeam.push({
+              colleague_id: '',
+              role: role.role,
+              cost_model: costModel,
+              monthly_cost: costModel === 'fixed_monthly' ? role.reward : 0,
+              hourly_cost: costModel === 'hourly' ? role.reward : 0,
+              percentage_of_revenue: 0,
+              _serviceIndex: svcIndex,
+            });
+          });
+        }
+      });
+      setTeamMembers(suggestedTeam);
+
       form.reset({
         client_name: lead.company_name,
         brand_name: lead.company_name,
@@ -177,8 +249,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         engagement_type: lead.offer_type,
         billing_model: 'fixed_fee',
         currency: lead.currency,
-        monthly_fee: lead.offer_type === 'retainer' ? lead.estimated_price : 0,
-        one_off_fee: lead.offer_type === 'one_off' ? lead.estimated_price : 0,
+        monthly_fee: monthlyTotal || (lead.offer_type === 'retainer' ? lead.estimated_price : 0),
+        one_off_fee: oneOffTotal || (lead.offer_type === 'one_off' ? lead.estimated_price : 0),
         target_margin_percent: 40,
         start_date: new Date().toISOString().split('T')[0],
         end_date: '',
@@ -186,9 +258,20 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         primary_service_id: '',
         engagement_notes: lead.summary,
       });
-      setTeamMembers([]);
     }
-  }, [lead, open, form]);
+  }, [lead, open, form, services]);
+
+  const updateOfferServicePrice = (index: number, price: number) => {
+    setOfferServices(prev => {
+      const updated = prev.map((s, i) => i === index ? { ...s, price } : s);
+      // Recalculate monthly_fee
+      const monthlyTotal = updated
+        .filter(s => s.billing_type === 'monthly')
+        .reduce((sum, s) => sum + s.price, 0);
+      form.setValue('monthly_fee', monthlyTotal);
+      return updated;
+    });
+  };
 
   const addTeamMember = () => {
     setTeamMembers(prev => [...prev, {
@@ -273,17 +356,52 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         platforms: [],
         managed_countries: [],
         notes: data.engagement_notes || '',
-        // Copy document links from lead
         offer_url: lead.offer_url || null,
         contract_url: lead.contract_url || null,
         pinned_notes: null,
       });
 
-      // 4. Create Assignments for team members
+      // 4. Create Engagement Services from offer
+      const createdServiceIds: (string | null)[] = [];
+      for (const offerSvc of offerServices) {
+        try {
+          const created = await addEngagementService({
+            engagement_id: newEngagement.id,
+            service_id: offerSvc.service_id || null,
+            name: offerSvc.name,
+            price: offerSvc.price,
+            currency: offerSvc.currency,
+            billing_type: offerSvc.billing_type,
+            selected_tier: offerSvc.selected_tier as any || null,
+            is_active: true,
+            notes: '',
+            invoicing_status: 'not_applicable',
+            invoiced_at: null,
+            invoice_id: null,
+            invoiced_in_period: null,
+            creative_boost_min_credits: null,
+            creative_boost_max_credits: null,
+            creative_boost_price_per_credit: null,
+            upsold_by_id: null,
+            upsell_commission_percent: null,
+            effective_from: null,
+          });
+          createdServiceIds.push(created.id);
+        } catch (e) {
+          console.error('Error creating engagement service:', e);
+          createdServiceIds.push(null);
+        }
+      }
+
+      // 5. Create Assignments for team members, linking to engagement_service where possible
       for (const member of teamMembers.filter(m => m.colleague_id && m.role)) {
+        const engagementServiceId = member._serviceIndex != null 
+          ? createdServiceIds[member._serviceIndex] || null
+          : null;
+        
         await addAssignment({
           engagement_id: newEngagement.id,
-          engagement_service_id: null,
+          engagement_service_id: engagementServiceId,
           colleague_id: member.colleague_id,
           role_on_engagement: member.role,
           cost_model: member.cost_model,
@@ -296,7 +414,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         });
       }
 
-      // 5. Mark lead as converted
+      // 6. Mark lead as converted
       await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
 
       toast.success('Lead byl úspěšně převeden na zakázku');
@@ -315,6 +433,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   if (!lead) return null;
 
   const watchCostModel = (index: number) => teamMembers[index]?.cost_model || 'fixed_monthly';
+
+  const tierLabel = (tier: string | null) => {
+    if (!tier) return null;
+    const labels: Record<string, string> = { growth: 'GROWTH', pro: 'PRO', elite: 'ELITE' };
+    return labels[tier] || tier.toUpperCase();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -915,6 +1039,53 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 />
               </div>
 
+              {/* Services from offer */}
+              {offerServices.length > 0 && (
+                <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
+                  <h5 className="text-sm font-medium flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    Služby z nabídky
+                  </h5>
+                  <div className="space-y-2">
+                    {offerServices.map((svc, index) => (
+                      <div key={index} className="flex items-center gap-3 p-2 rounded-md bg-background border">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium truncate">{svc.name}</span>
+                            {svc.selected_tier && (
+                              <Badge variant="secondary" className="text-xs shrink-0">
+                                {tierLabel(svc.selected_tier)}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Input
+                            type="number"
+                            className="w-28 text-right"
+                            value={svc.price}
+                            onChange={(e) => updateOfferServicePrice(index, Number(e.target.value))}
+                          />
+                          <span className="text-xs text-muted-foreground w-16">
+                            {svc.currency} /{svc.billing_type === 'monthly' ? 'měs' : 'jednor.'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="text-sm text-muted-foreground">Celkem měsíčně</span>
+                    <span className="text-sm font-semibold">
+                      {offerServices
+                        .filter(s => s.billing_type === 'monthly')
+                        .reduce((sum, s) => sum + s.price, 0)
+                        .toLocaleString('cs-CZ')}{' '}
+                      {form.watch('currency')}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-4 sm:grid-cols-2">
                 {form.watch('engagement_type') === 'retainer' ? (
                   <FormField
@@ -964,7 +1135,15 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             {/* Team Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
-                <h4 className="font-medium text-sm">Tým na zakázce</h4>
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  Tým na zakázce
+                  {teamMembers.length > 0 && offerServices.length > 0 && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      Navrženo automaticky
+                    </Badge>
+                  )}
+                </h4>
                 <Button type="button" variant="outline" size="sm" onClick={addTeamMember}>
                   <Plus className="h-4 w-4 mr-1" />
                   Přidat člena
