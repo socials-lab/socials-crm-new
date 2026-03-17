@@ -16,7 +16,7 @@ import {
   clientAcceptOffer,
   type StoredModificationRequest 
 } from '@/data/modificationRequestsMockData';
-import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, DeactivateServiceProposedChanges } from '@/types/crm';
+import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, DeactivateServiceProposedChanges, ModificationRequestType } from '@/types/crm';
 import socialsLogo from '@/assets/socials-logo.svg';
 
 // Helper to calculate prorated amount
