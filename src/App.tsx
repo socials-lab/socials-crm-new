@@ -81,6 +81,7 @@ const App = () => (
                             <Route path="/offer/:token" element={<PublicOfferPage />} />
                             <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
                             <Route path="/upgrade/:token" element={<UpgradeOfferPage />} />
+                            <Route path="/modification-onboarding/:requestId" element={<ModificationOnboardingForm />} />
                             <Route path="/extra-work-approval/:token" element={<ExtraWorkApproval />} />
                             <Route path="/extra-work-approval-test" element={<ExtraWorkApproval testMode />} />
                             <Route path="/creative-boost-share/:token" element={<PublicCreativeBoostPage />} />
