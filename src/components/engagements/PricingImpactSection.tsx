@@ -633,11 +633,20 @@ export function PricingImpactSection({
                 </TableHeader>
                 <TableBody>
                   {colleagueRewards.map((reward, idx) => {
-                    // Find current assignment for this colleague on the reference service
-                    const currentAssignment = isExpansion && reward.colleague_id && referenceServiceId
-                      ? assignments?.find(a => 
-                          a.colleague_id === reward.colleague_id && 
-                          a.engagement_service_id === referenceServiceId
+                    // Find current assignment for this colleague on the reference service (or engagement-level)
+                    const currentAssignment = isExpansion && reward.colleague_id
+                      ? (
+                          // First try: match by engagement_service_id
+                          (referenceServiceId && assignments?.find(a => 
+                            a.colleague_id === reward.colleague_id && 
+                            a.engagement_service_id === referenceServiceId
+                          )) ||
+                          // Fallback: match by engagement_id + same role (for assignments without service link)
+                          assignments?.find(a => 
+                            a.colleague_id === reward.colleague_id && 
+                            a.engagement_id === engagementId &&
+                            (!a.engagement_service_id || a.engagement_service_id === referenceServiceId)
+                          )
                         )
                       : null;
                     const currentReward = currentAssignment
