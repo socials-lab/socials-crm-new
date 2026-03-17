@@ -1310,7 +1310,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   </p>
                 </div>
               )}
-
+  const [engagementComboOpen, setEngagementComboOpen] = useState(false);
 
               {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
               {((requestType === 'add_service' && selectedServiceId) || (requestType === 'update_service_price' && selectedEngagementServiceId)) && (() => {
