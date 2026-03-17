@@ -456,3 +456,220 @@ function CreditPricingSection({ creditPricing, onUpdate }: CreditPricingSectionP
     </div>
   );
 }
+
+// ---- Tier Pricing Inline Edit ----
+
+const TIER_META: { tier: string; emoji: string; label: string; color: string }[] = [
+  { tier: 'growth', emoji: '🚀', label: 'GROWTH', color: 'chart-1' },
+  { tier: 'pro', emoji: '💪', label: 'PRO', color: 'chart-2' },
+  { tier: 'elite', emoji: '🏆', label: 'ELITE', color: 'chart-4' },
+];
+
+interface TierPricingEditSectionProps {
+  tierPricing: { tier: string; price: number | null }[];
+  onUpdate: (tierPricing: { tier: string; price: number | null }[]) => void;
+}
+
+function TierPricingEditSection({ tierPricing, onUpdate }: TierPricingEditSectionProps) {
+  const [local, setLocal] = useState(tierPricing);
+
+  const handleChange = (tier: string, value: string) => {
+    const updated = local.map(tp =>
+      tp.tier === tier ? { ...tp, price: value === '' ? null : Number(value) } : tp
+    );
+    setLocal(updated);
+  };
+
+  const handleBlur = () => {
+    onUpdate(local);
+  };
+
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        💰 Ceník dle tieru
+      </h4>
+      <div className="grid grid-cols-3 gap-2">
+        {TIER_META.map(({ tier, emoji, label }) => {
+          const tp = local.find(t => t.tier === tier);
+          return (
+            <div key={tier} className="space-y-1">
+              <Label className="text-xs font-medium">{emoji} {label}</Label>
+              <Input
+                type="number"
+                min={0}
+                value={tp?.price ?? ''}
+                onChange={(e) => handleChange(tier, e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+                className="h-8 text-xs"
+                placeholder="Individ."
+              />
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-muted-foreground">Prázdné pole = individuální kalkulace</p>
+    </div>
+  );
+}
+
+// ---- Reward Config Inline Edit ----
+
+const ROLE_OPTIONS = [
+  'Meta Ads Specialist',
+  'PPC Specialist',
+  'Graphic Designer',
+  'Video Editor',
+  'Sales Specialist',
+  'Account Manager',
+];
+
+const REWARD_TYPE_OPTIONS: { value: ServiceRewardRole['reward_type']; label: string }[] = [
+  { value: 'fixed_monthly', label: 'Fixní měs.' },
+  { value: 'per_credit', label: 'Za kredit' },
+  { value: 'hourly', label: 'Hodinová' },
+];
+
+interface RewardConfigEditSectionProps {
+  rewardConfig: ServiceRewardTierConfig[];
+  onUpdate: (config: ServiceRewardTierConfig[]) => void;
+  serviceType?: 'core' | 'addon';
+}
+
+function RewardConfigEditSection({ rewardConfig, onUpdate, serviceType }: RewardConfigEditSectionProps) {
+  const [local, setLocal] = useState<ServiceRewardTierConfig[]>(rewardConfig);
+
+  const save = (updated: ServiceRewardTierConfig[]) => {
+    setLocal(updated);
+    onUpdate(updated);
+  };
+
+  const scaffoldCore = () => {
+    const tiers = ['growth', 'pro', 'elite'];
+    const newConfig = tiers.map(tier => {
+      const existing = local.find(rc => rc.tier === tier);
+      return existing || { tier, roles: [{ role: '', hours: 0, reward: 0, reward_type: 'fixed_monthly' as const }] };
+    });
+    save(newConfig);
+  };
+
+  const addAddonConfig = () => {
+    save([...local, { roles: [{ role: '', hours: 0, reward: 0, reward_type: 'fixed_monthly' as const }] }]);
+  };
+
+  const removeTierConfig = (idx: number) => {
+    save(local.filter((_, i) => i !== idx));
+  };
+
+  const addRole = (tierIdx: number) => {
+    const updated = local.map((tc, i) =>
+      i === tierIdx
+        ? { ...tc, roles: [...tc.roles, { role: '', hours: 0, reward: 0, reward_type: 'fixed_monthly' as const }] }
+        : tc
+    );
+    save(updated);
+  };
+
+  const removeRole = (tierIdx: number, roleIdx: number) => {
+    const updated = local.map((tc, i) =>
+      i === tierIdx ? { ...tc, roles: tc.roles.filter((_, ri) => ri !== roleIdx) } : tc
+    );
+    save(updated);
+  };
+
+  const updateRole = (tierIdx: number, roleIdx: number, field: keyof ServiceRewardRole, value: string | number) => {
+    const updated = local.map((tc, i) =>
+      i === tierIdx
+        ? {
+            ...tc,
+            roles: tc.roles.map((r, ri) =>
+              ri === roleIdx ? { ...r, [field]: field === 'hours' || field === 'reward' ? Number(value) : value } : r
+            ),
+          }
+        : tc
+    );
+    setLocal(updated);
+  };
+
+  const handleBlur = () => {
+    onUpdate(local);
+  };
+
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        <Users className="h-4 w-4 text-chart-2" />
+        Odměny kolegů dle pozice
+      </h4>
+
+      {local.length === 0 && (
+        <div className="flex gap-2">
+          {serviceType === 'core' ? (
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={scaffoldCore}>
+              <Plus className="h-3 w-3" />
+              Přidat odměny pro Growth / Pro / Elite
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addAddonConfig}>
+              <Plus className="h-3 w-3" />
+              Přidat odměny
+            </Button>
+          )}
+        </div>
+      )}
+
+      {local.map((tierConfig, tierIdx) => (
+        <div key={tierIdx} className="space-y-2 p-3 rounded-md border bg-muted/30">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold uppercase tracking-wider">
+              {tierConfig.tier ? tierConfig.tier.toUpperCase() : 'Odměny'}
+            </Label>
+            <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-destructive" onClick={() => removeTierConfig(tierIdx)}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+
+          {tierConfig.roles.map((role, roleIdx) => (
+            <div key={roleIdx} className="grid grid-cols-[1fr_55px_75px_90px_24px] gap-1.5 items-end">
+              <div className="space-y-0.5">
+                {roleIdx === 0 && <Label className="text-[10px] text-muted-foreground">Pozice</Label>}
+                <Select value={role.role} onValueChange={(v) => { updateRole(tierIdx, roleIdx, 'role', v); onUpdate(local.map((tc, i) => i === tierIdx ? { ...tc, roles: tc.roles.map((r, ri) => ri === roleIdx ? { ...r, role: v } : r) } : tc)); }}>
+                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Pozice" /></SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(r => (<SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-0.5">
+                {roleIdx === 0 && <Label className="text-[10px] text-muted-foreground">Hod.</Label>}
+                <Input type="number" value={role.hours} onChange={(e) => updateRole(tierIdx, roleIdx, 'hours', e.target.value)} onBlur={handleBlur} className="h-7 text-xs" step="0.5" />
+              </div>
+              <div className="space-y-0.5">
+                {roleIdx === 0 && <Label className="text-[10px] text-muted-foreground">Odměna</Label>}
+                <Input type="number" value={role.reward} onChange={(e) => updateRole(tierIdx, roleIdx, 'reward', e.target.value)} onBlur={handleBlur} className="h-7 text-xs" step="100" />
+              </div>
+              <div className="space-y-0.5">
+                {roleIdx === 0 && <Label className="text-[10px] text-muted-foreground">Typ</Label>}
+                <Select value={role.reward_type} onValueChange={(v) => { updateRole(tierIdx, roleIdx, 'reward_type', v); onUpdate(local.map((tc, i) => i === tierIdx ? { ...tc, roles: tc.roles.map((r, ri) => ri === roleIdx ? { ...r, reward_type: v as ServiceRewardRole['reward_type'] } : r) } : tc)); }}>
+                  <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {REWARD_TYPE_OPTIONS.map(rt => (<SelectItem key={rt.value} value={rt.value} className="text-xs">{rt.label}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-6 text-muted-foreground hover:text-destructive" onClick={() => removeRole(tierIdx, roleIdx)}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+
+          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => addRole(tierIdx)}>
+            <Plus className="h-3 w-3" />
+            Přidat pozici
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
