@@ -650,6 +650,10 @@ export default function Modifications() {
             <XCircle className="h-4 w-4" />
             Zamítnuté
           </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Log změn
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="drafts" className="space-y-4">
