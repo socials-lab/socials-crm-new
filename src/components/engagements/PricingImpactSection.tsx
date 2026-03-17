@@ -84,7 +84,8 @@ export function PricingImpactSection({
   const { engagements, engagementServices, assignments, services, colleagues } = useCRMData();
 
   // When parent controls the scenario, override local state
-  const isParentControlled = parentRequestType === 'expand_country' || parentRequestType === 'add_service';
+  const isParentControlled = parentRequestType === 'expand_country' || parentRequestType === 'add_service' || parentRequestType === 'update_service_price';
+  const isUpdateServicePrice = parentRequestType === 'update_service_price';
 
   // Local state
   const [scenario, setScenario] = useState<PricingScenario>(
