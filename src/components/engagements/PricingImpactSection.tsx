@@ -298,7 +298,7 @@ export function PricingImpactSection({
   const showInternalCostWarning = deltaRevenue > 0 && deltaInternalCost === 0 && colleagueRewards.length === 0;
 
   return (
-    <div className="space-y-4 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5">
+    <div className="space-y-4 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 overflow-hidden min-w-0">
       <div className="flex items-center gap-2">
         <Calculator className="h-4 w-4 text-primary" />
         <h4 className="font-semibold text-sm">Dopad na spolupráci</h4>
@@ -574,14 +574,14 @@ export function PricingImpactSection({
           {colleagueRewards.length > 0 ? (
             <>
               <div className="rounded-md border overflow-hidden">
-                <Table>
+                <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow className="text-xs">
-                      <TableHead className="h-8 text-xs">Role</TableHead>
-                      <TableHead className="h-8 text-xs">Kolega</TableHead>
-                      <TableHead className="h-8 text-xs text-right">Hodiny</TableHead>
-                      <TableHead className="h-8 text-xs text-right">Odměna</TableHead>
-                      <TableHead className="h-8 text-xs w-8"></TableHead>
+                      <TableHead className="h-8 text-xs w-[30%]">Role</TableHead>
+                      <TableHead className="h-8 text-xs w-[30%]">Kolega</TableHead>
+                      <TableHead className="h-8 text-xs text-right w-[12%]">Hodiny</TableHead>
+                      <TableHead className="h-8 text-xs text-right w-[20%]">Odměna</TableHead>
+                      <TableHead className="h-8 text-xs w-[8%]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -595,7 +595,7 @@ export function PricingImpactSection({
                                 i === idx ? { ...r, role: e.target.value } : r
                               ));
                             }}
-                            className="h-7 text-xs w-[140px]"
+                            className="h-7 text-xs w-full"
                             placeholder="Role"
                           />
                         </TableCell>
@@ -609,7 +609,7 @@ export function PricingImpactSection({
                               ));
                             }}
                           >
-                            <SelectTrigger className="h-7 text-xs w-[180px]">
+                            <SelectTrigger className="h-7 text-xs w-full">
                               <SelectValue placeholder="Vybrat kolegu" />
                             </SelectTrigger>
                             <SelectContent>
@@ -630,7 +630,7 @@ export function PricingImpactSection({
                                 i === idx ? { ...r, hours: Number(e.target.value) } : r
                               ));
                             }}
-                            className="h-7 w-16 text-xs text-right ml-auto"
+                            className="h-7 w-full text-xs text-right ml-auto"
                             step="0.5"
                           />
                         </TableCell>
@@ -644,7 +644,7 @@ export function PricingImpactSection({
                                   i === idx ? { ...r, reward: Number(e.target.value) } : r
                                 ));
                               }}
-                              className="h-7 w-20 text-xs text-right"
+                              className="h-7 w-full text-xs text-right"
                               step="100"
                             />
                             <span className="text-muted-foreground text-[10px] shrink-0">
