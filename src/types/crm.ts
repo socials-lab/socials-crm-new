@@ -806,7 +806,8 @@ export type ModificationRequestType =
   | 'update_service_price'
   | 'deactivate_service'
   | 'add_assignment'
-  | 'update_assignment';
+  | 'update_assignment'
+  | 'new_engagement';
 
 // Status for modification requests
 export type ModificationRequestStatus = 
@@ -824,6 +825,7 @@ export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, s
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
+  new_engagement: 'Nová zakázka (jiné SRO)',
 };
 
 // Status labels
@@ -895,13 +897,40 @@ export interface RemoveAssignmentProposedChanges {
   role_on_engagement: string;
 }
 
+export interface NewEngagementProposedChanges {
+  new_client_data: {
+    company_name: string;
+    brand_name?: string;
+    ico?: string;
+    dic?: string;
+  };
+  engagement_name: string;
+  services: Array<{
+    service_id: string | null;
+    name: string;
+    price: number;
+    currency: string;
+    billing_type: 'monthly' | 'one_off';
+    selected_tier?: ServiceTier | null;
+  }>;
+  total_monthly_price: number;
+  currency: string;
+  contact_person?: {
+    name: string;
+    email?: string;
+    phone?: string;
+    copied_from_reference?: boolean;
+  };
+}
+
 export type ModificationProposedChanges = 
   | AddServiceProposedChanges
   | UpdateServicePriceProposedChanges
   | DeactivateServiceProposedChanges
   | AddAssignmentProposedChanges
   | UpdateAssignmentProposedChanges
-  | RemoveAssignmentProposedChanges;
+  | RemoveAssignmentProposedChanges
+  | NewEngagementProposedChanges;
 
 // Main modification request interface
 export interface ModificationRequest {
@@ -941,5 +970,5 @@ export interface ModificationRequestWithDetails extends ModificationRequest {
 
 // Helper to check if a request type is client-facing
 export function isClientFacingRequestType(type: ModificationRequestType): boolean {
-  return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service'].includes(type);
+  return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service', 'new_engagement'].includes(type);
 }

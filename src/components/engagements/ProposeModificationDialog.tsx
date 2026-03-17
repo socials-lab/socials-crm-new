@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown, Globe } from 'lucide-react';
+import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown, Globe, Building2, Trash2 } from 'lucide-react';
 import { MANAGED_COUNTRIES, getCountryName, getCountryFlag } from '@/constants/countries';
 import { Checkbox } from '@/components/ui/checkbox';
 import { calculateExpansionPrice, getDefaultMultiplier, formatCZK } from '@/utils/pricingEngine';
@@ -39,6 +39,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Deaktivace služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
+  new_engagement: 'Nová zakázka (jiné SRO)',
 };
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
@@ -48,6 +49,7 @@ const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
   'update_service_price',
   'deactivate_service',
   'add_assignment',
+  'new_engagement',
 ];
 
 export function ProposeModificationDialog({ open, onOpenChange, editingRequest }: ProposeModificationDialogProps) {
@@ -133,6 +135,25 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [expandNewClientBrand, setExpandNewClientBrand] = useState('');
   const [expandNewClientIco, setExpandNewClientIco] = useState('');
   const [expandNewClientDic, setExpandNewClientDic] = useState('');
+
+  // New engagement (new SRO) state
+  const [newEngClientName, setNewEngClientName] = useState('');
+  const [newEngClientBrand, setNewEngClientBrand] = useState('');
+  const [newEngClientIco, setNewEngClientIco] = useState('');
+  const [newEngClientDic, setNewEngClientDic] = useState('');
+  const [newEngName, setNewEngName] = useState('');
+  const [newEngServices, setNewEngServices] = useState<Array<{
+    service_id: string | null;
+    name: string;
+    price: number;
+    currency: string;
+    billing_type: 'monthly' | 'one_off';
+    selected_tier?: string | null;
+  }>>([]);
+  const [newEngContactName, setNewEngContactName] = useState('');
+  const [newEngContactEmail, setNewEngContactEmail] = useState('');
+  const [newEngContactPhone, setNewEngContactPhone] = useState('');
+  const [newEngCopyContact, setNewEngCopyContact] = useState(false);
 
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
@@ -288,6 +309,17 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setExpandNewClientBrand('');
       setExpandNewClientIco('');
       setExpandNewClientDic('');
+      // New engagement reset
+      setNewEngClientName('');
+      setNewEngClientBrand('');
+      setNewEngClientIco('');
+      setNewEngClientDic('');
+      setNewEngName('');
+      setNewEngServices([]);
+      setNewEngContactName('');
+      setNewEngContactEmail('');
+      setNewEngContactPhone('');
+      setNewEngCopyContact(false);
     }
   }, [open]);
 
@@ -581,6 +613,28 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           percentage_of_revenue: costModel === 'percentage' ? percentageOfRevenue : null,
         };
         break;
+      case 'new_engagement': {
+        const totalMonthly = newEngServices.reduce((sum, s) => sum + (s.billing_type === 'monthly' ? s.price : 0), 0);
+        proposed_changes = {
+          new_client_data: {
+            company_name: newEngClientName,
+            brand_name: newEngClientBrand || undefined,
+            ico: newEngClientIco || undefined,
+            dic: newEngClientDic || undefined,
+          },
+          engagement_name: newEngName,
+          services: newEngServices,
+          total_monthly_price: totalMonthly,
+          currency: 'CZK',
+          contact_person: newEngContactName ? {
+            name: newEngContactName,
+            email: newEngContactEmail || undefined,
+            phone: newEngContactPhone || undefined,
+            copied_from_reference: newEngCopyContact,
+          } : undefined,
+        };
+        break;
+      }
     }
 
     try {
@@ -1574,13 +1628,287 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 </div>
               )}
 
-              {/* UPDATE ASSIGNMENT FIELDS (legacy - hidden from dropdown but kept for backward compat) */}
+               {/* UPDATE ASSIGNMENT FIELDS (legacy - hidden from dropdown but kept for backward compat) */}
               {requestType === 'update_assignment' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   <h4 className="font-medium">3. Změna odměny kolegy</h4>
                   <p className="text-sm text-muted-foreground">
                     Pro úpravu odměn kolegů použijte typ „Úprava služby (cena + odměny)" – kde uvidíte i marži.
                   </p>
+                </div>
+              )}
+
+              {/* NEW ENGAGEMENT (DIFFERENT SRO) FIELDS */}
+              {requestType === 'new_engagement' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    3. Nová zakázka (jiné SRO)
+                  </h4>
+                  
+                  {/* New client / SRO data */}
+                  <div className="space-y-3 p-3 rounded-md border bg-background">
+                    <h5 className="text-sm font-medium">🏢 Údaje nového klienta</h5>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Název společnosti *</Label>
+                        <Input
+                          value={newEngClientName}
+                          onChange={(e) => setNewEngClientName(e.target.value)}
+                          placeholder="Např. NovýEshop s.r.o."
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Název značky</Label>
+                        <Input
+                          value={newEngClientBrand}
+                          onChange={(e) => setNewEngClientBrand(e.target.value)}
+                          placeholder="Např. NovýEshop.cz"
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">IČO</Label>
+                        <Input
+                          value={newEngClientIco}
+                          onChange={(e) => setNewEngClientIco(e.target.value)}
+                          placeholder="12345678"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">DIČ</Label>
+                        <Input
+                          value={newEngClientDic}
+                          onChange={(e) => setNewEngClientDic(e.target.value)}
+                          placeholder="CZ12345678"
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Engagement name */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">Název zakázky *</Label>
+                    <Input
+                      value={newEngName}
+                      onChange={(e) => setNewEngName(e.target.value)}
+                      placeholder="Např. NovýEshop.cz – Správa reklamy"
+                      className="h-9"
+                    />
+                  </div>
+
+                  {/* Services selection */}
+                  <div className="space-y-3 p-3 rounded-md border bg-background">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-sm font-medium">📦 Služby</h5>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" size="sm" className="h-7 text-xs">
+                            <Plus className="h-3 w-3 mr-1" />
+                            Přidat službu
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0" align="end">
+                          <Command>
+                            <CommandInput placeholder="Hledat službu..." />
+                            <CommandList>
+                              <CommandEmpty>Žádná služba nenalezena.</CommandEmpty>
+                              <CommandGroup>
+                                {[...services.filter(s => s.is_active)].sort((a, b) => {
+                                  if (a.service_type === b.service_type) return a.name.localeCompare(b.name);
+                                  return a.service_type === 'core' ? -1 : 1;
+                                }).map((service) => (
+                                  <CommandItem
+                                    key={service.id}
+                                    value={service.name}
+                                    onSelect={() => {
+                                      // Add service to list
+                                      const defaultPrice = service.service_type === 'core'
+                                        ? (service.tier_pricing?.find((p: any) => p.tier === 'growth')?.price ?? service.base_price ?? 0)
+                                        : (service.base_price || 0);
+                                      setNewEngServices(prev => [...prev, {
+                                        service_id: service.id,
+                                        name: service.name,
+                                        price: defaultPrice,
+                                        currency: service.currency || 'CZK',
+                                        billing_type: 'monthly',
+                                        selected_tier: service.service_type === 'core' ? 'growth' : null,
+                                      }]);
+                                    }}
+                                  >
+                                    <span className="flex items-center gap-2">
+                                      {service.name}
+                                      <span className={cn(
+                                        "text-[10px] font-medium uppercase px-1.5 py-0.5 rounded",
+                                        service.service_type === 'core'
+                                          ? "bg-primary/10 text-primary"
+                                          : "bg-muted text-muted-foreground"
+                                      )}>
+                                        {service.service_type === 'core' ? 'Core' : 'Addon'}
+                                      </span>
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {newEngServices.length === 0 && (
+                      <p className="text-xs text-muted-foreground italic">Zatím nepřidána žádná služba.</p>
+                    )}
+
+                    {newEngServices.map((svc, idx) => {
+                      const catalogSvc = svc.service_id ? services.find(s => s.id === svc.service_id) : null;
+                      const isCoreType = catalogSvc?.service_type === 'core';
+                      return (
+                        <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-end p-2 rounded border bg-muted/30">
+                          <div className="space-y-1">
+                            <Label className="text-xs">{svc.name}</Label>
+                            {isCoreType && (
+                              <Select
+                                value={svc.selected_tier || 'growth'}
+                                onValueChange={(v) => {
+                                  const updated = [...newEngServices];
+                                  updated[idx] = { ...updated[idx], selected_tier: v };
+                                  const tierPrice = catalogSvc?.tier_pricing?.find((p: any) => p.tier === v)?.price;
+                                  if (tierPrice != null) updated[idx].price = tierPrice;
+                                  setNewEngServices(updated);
+                                }}
+                              >
+                                <SelectTrigger className="h-7 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="growth">Growth</SelectItem>
+                                  <SelectItem value="pro">Pro</SelectItem>
+                                  <SelectItem value="elite">Elite</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Cena</Label>
+                            <Input
+                              type="number"
+                              value={svc.price}
+                              onChange={(e) => {
+                                const updated = [...newEngServices];
+                                updated[idx] = { ...updated[idx], price: Number(e.target.value) };
+                                setNewEngServices(updated);
+                              }}
+                              className="h-7 w-24 text-xs"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Typ</Label>
+                            <Select
+                              value={svc.billing_type}
+                              onValueChange={(v) => {
+                                const updated = [...newEngServices];
+                                updated[idx] = { ...updated[idx], billing_type: v as 'monthly' | 'one_off' };
+                                setNewEngServices(updated);
+                              }}
+                            >
+                              <SelectTrigger className="h-7 w-24 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="monthly">Měsíčně</SelectItem>
+                                <SelectItem value="one_off">Jednorázově</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            onClick={() => setNewEngServices(prev => prev.filter((_, i) => i !== idx))}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+
+                    {/* Total */}
+                    {newEngServices.length > 0 && (
+                      <div className="pt-2 border-t flex items-center justify-between">
+                        <span className="text-sm font-medium">Celkem měsíčně:</span>
+                        <span className="text-sm font-semibold text-primary">
+                          {newEngServices
+                            .filter(s => s.billing_type === 'monthly')
+                            .reduce((sum, s) => sum + s.price, 0)
+                            .toLocaleString('cs-CZ')} CZK
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contact person */}
+                  <div className="space-y-3 p-3 rounded-md border bg-background">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-sm font-medium">👤 Kontaktní osoba</h5>
+                      {selectedEngagementId && (() => {
+                        const eng = engagements.find(e => e.id === selectedEngagementId);
+                        const client = eng ? clients.find(c => c.id === eng.client_id) : null;
+                        if (!client?.main_contact_name) return null;
+                        return (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              setNewEngContactName(client.main_contact_name);
+                              setNewEngContactEmail(client.main_contact_email || '');
+                              setNewEngContactPhone(client.main_contact_phone || '');
+                              setNewEngCopyContact(true);
+                            }}
+                          >
+                            Zkopírovat z ref. zakázky
+                          </Button>
+                        );
+                      })()}
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Jméno</Label>
+                        <Input
+                          value={newEngContactName}
+                          onChange={(e) => setNewEngContactName(e.target.value)}
+                          placeholder="Jan Novák"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">E-mail</Label>
+                        <Input
+                          value={newEngContactEmail}
+                          onChange={(e) => setNewEngContactEmail(e.target.value)}
+                          placeholder="jan@example.com"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Telefon</Label>
+                        <Input
+                          value={newEngContactPhone}
+                          onChange={(e) => setNewEngContactPhone(e.target.value)}
+                          placeholder="+420..."
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
   

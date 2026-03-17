@@ -42,6 +42,7 @@ import type {
   AddAssignmentProposedChanges,
   UpdateAssignmentProposedChanges,
   RemoveAssignmentProposedChanges,
+  NewEngagementProposedChanges,
 } from '@/types/crm';
 import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
 import { formatCZK } from '@/utils/pricingEngine';
@@ -67,6 +68,7 @@ const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
   deactivate_service: X,
   add_assignment: UserPlus,
   update_assignment: Settings,
+  new_engagement: Building2,
 };
 
 const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
@@ -76,6 +78,7 @@ const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
   deactivate_service: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   add_assignment: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   update_assignment: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  new_engagement: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
 };
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
@@ -85,6 +88,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny',
+  new_engagement: 'Nová zakázka',
 };
 
 export function ModificationRequestCard({
@@ -253,6 +257,25 @@ export function ModificationRequestCard({
         );
       }
       
+      case 'new_engagement': {
+        const c = changes as NewEngagementProposedChanges;
+        return (
+          <div className="space-y-1 text-sm">
+            <p><span className="text-muted-foreground">Nový klient:</span> {c.new_client_data.company_name}
+              {c.new_client_data.brand_name && <span className="text-muted-foreground"> ({c.new_client_data.brand_name})</span>}
+            </p>
+            {c.new_client_data.ico && (
+              <p><span className="text-muted-foreground">IČO:</span> {c.new_client_data.ico}</p>
+            )}
+            <p><span className="text-muted-foreground">Zakázka:</span> {c.engagement_name}</p>
+            <p><span className="text-muted-foreground">Služby:</span> {c.services.length}×</p>
+            {c.services.map((s, i) => (
+              <p key={i} className="ml-3">• {s.name} — {s.price.toLocaleString('cs-CZ')} {s.currency}/{s.billing_type === 'monthly' ? 'měs' : 'jednorázově'}</p>
+            ))}
+            <p className="font-medium"><span className="text-muted-foreground">Celkem:</span> {c.total_monthly_price.toLocaleString('cs-CZ')} {c.currency}/měs</p>
+          </div>
+        );
+      }
       
       default:
         return null;
