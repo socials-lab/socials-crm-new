@@ -35,7 +35,6 @@ import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
-import { getRewardsFromServiceConfig } from '@/constants/serviceRewards';
 import type { Lead, CostModel, ClientTier, BillingModel, LeadSource, LeadService, ServiceRewardTierConfig } from '@/types/crm';
 import { toast } from 'sonner';
 
