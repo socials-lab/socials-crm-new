@@ -468,21 +468,32 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                           {[...services.filter(s => s.is_active)].sort((a, b) => {
                             if (a.service_type === b.service_type) return a.name.localeCompare(b.name);
                             return a.service_type === 'core' ? -1 : 1;
-                          }).map((service) => (
-                            <SelectItem key={service.id} value={service.id}>
-                              <span className="flex items-center gap-2">
-                                {service.name}
-                                <span className={cn(
-                                  "text-[10px] font-medium uppercase px-1.5 py-0.5 rounded",
-                                  service.service_type === 'core'
-                                    ? "bg-primary/10 text-primary"
-                                    : "bg-muted text-muted-foreground"
-                                )}>
-                                  {service.service_type === 'core' ? 'Core' : 'Addon'}
-                                </span>
-                              </span>
-                            </SelectItem>
-                          ))}
+                          }).map((service) => {
+                            const details = SERVICE_DETAILS[service.code];
+                            const platforms = details?.platforms || [];
+                            return (
+                              <SelectItem key={service.id} value={service.id}>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="flex items-center gap-2">
+                                    {service.name}
+                                    <span className={cn(
+                                      "text-[10px] font-medium uppercase px-1.5 py-0.5 rounded",
+                                      service.service_type === 'core'
+                                        ? "bg-primary/10 text-primary"
+                                        : "bg-muted text-muted-foreground"
+                                    )}>
+                                      {service.service_type === 'core' ? 'Core' : 'Addon'}
+                                    </span>
+                                  </span>
+                                  {platforms.length > 0 && (
+                                    <span className="text-[10px] text-muted-foreground leading-tight">
+                                      {platforms.join(' · ')}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
