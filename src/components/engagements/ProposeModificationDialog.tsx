@@ -101,6 +101,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [hourlyCost, setHourlyCost] = useState<number>(0);
   const [monthlyCost, setMonthlyCost] = useState<number>(0);
   const [percentageOfRevenue, setPercentageOfRevenue] = useState<number>(0);
+  const [assignmentServiceId, setAssignmentServiceId] = useState<string>('');
 
   // For update_assignment / remove_assignment
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
