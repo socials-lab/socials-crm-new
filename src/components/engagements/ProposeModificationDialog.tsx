@@ -65,6 +65,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [cbMaxCredits, setCbMaxCredits] = useState<number>(50);
   const [cbPricePerCredit, setCbPricePerCredit] = useState<number>(400);
   const [cbColleagueReward, setCbColleagueReward] = useState<number>(80);
+  const [cbEditorReward, setCbEditorReward] = useState<number>(100);
 
   // For update_service_price
   const [selectedEngagementServiceId, setSelectedEngagementServiceId] = useState<string>('');
