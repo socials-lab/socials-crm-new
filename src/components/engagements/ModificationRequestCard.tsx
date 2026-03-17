@@ -66,7 +66,6 @@ const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
   deactivate_service: X,
   add_assignment: UserPlus,
   update_assignment: Settings,
-  remove_assignment: UserMinus,
 };
 
 const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
