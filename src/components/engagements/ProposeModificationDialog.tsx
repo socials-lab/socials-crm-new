@@ -233,6 +233,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setAiSeoHourlyRate(600);
       setAiSeoHours(10);
       setSelectedEngagementServiceId('');
+      setServiceAssignmentEdits([]);
       setNewPrice(0);
       setSelectedColleagueId('');
       setRoleOnEngagement('');
