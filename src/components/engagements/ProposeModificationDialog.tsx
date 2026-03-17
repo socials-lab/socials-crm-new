@@ -854,6 +854,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+       <TooltipProvider delayDuration={200}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEditMode ? <FileText className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
