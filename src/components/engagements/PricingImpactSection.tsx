@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -632,99 +632,128 @@ export function PricingImpactSection({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {colleagueRewards.map((reward, idx) => (
-                    <TableRow key={idx} className="text-xs">
-                      <TableCell className="py-1.5">
-                        <Input
-                          value={reward.role}
-                          onChange={(e) => {
-                            const newRole = e.target.value;
-                            const tier = selectedTierProp || null;
-                            const recommended = getRewardsFromServiceConfig(
-                              selectedCatalogService?.reward_config as any,
-                              tier
-                            ) || getServiceRewardRecommendation(
-                              selectedCatalogService?.name || '',
-                              tier
-                            );
-                            const matchingReward = recommended?.find(
-                              r => r.role.toLowerCase() === newRole.toLowerCase()
-                            );
-                            const isExp = scenario === 'expand_country' || scenario === 'expand_shop';
-                            const rewardAmount = matchingReward
-                              ? (isExp ? Math.round(matchingReward.reward * multiplier) : matchingReward.reward)
-                              : undefined;
-                            const rewardHours = matchingReward?.hours;
-                            const rewardType = matchingReward?.rewardType;
+                  {colleagueRewards.map((reward, idx) => {
+                    // Find current assignment for this colleague on the reference service
+                    const currentAssignment = isExpansion && reward.colleague_id && referenceServiceId
+                      ? assignments?.find(a => 
+                          a.colleague_id === reward.colleague_id && 
+                          a.engagement_service_id === referenceServiceId
+                        )
+                      : null;
+                    const currentReward = currentAssignment
+                      ? (currentAssignment.cost_model === 'fixed_monthly' ? currentAssignment.monthly_cost : currentAssignment.hourly_cost) || 0
+                      : 0;
+                    const newTotalForColleague = currentReward + reward.reward;
 
-                            setColleagueRewards(prev => prev.map((r, i) =>
-                              i === idx ? {
-                                ...r,
-                                role: newRole,
-                                ...(rewardAmount !== undefined && r.reward === 0 ? { reward: rewardAmount } : {}),
-                                ...(rewardHours !== undefined && r.hours === 0 ? { hours: rewardHours } : {}),
-                                ...(rewardType ? { reward_type: rewardType } : {}),
-                              } : r
-                            ));
-                          }}
-                          className="h-7 text-xs w-full"
-                          placeholder="Role"
-                        />
-                      </TableCell>
-                      <TableCell className="py-1.5">
-                        <Select
-                          value={reward.colleague_id || ''}
-                          onValueChange={(val) => {
-                            const col = activeColleagues.find(c => c.id === val);
-                            setColleagueRewards(prev => prev.map((r, i) =>
-                              i === idx ? { ...r, colleague_id: val, colleague_name: col?.full_name } : r
-                            ));
-                          }}
-                        >
-                          <SelectTrigger className="h-7 text-xs w-full">
-                            <SelectValue placeholder="Vybrat kolegu" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {activeColleagues.map(c => (
-                              <SelectItem key={c.id} value={c.id} className="text-xs">
-                                {c.full_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="py-1.5 text-right">
-                        <div className="flex items-center gap-1 justify-end">
-                          <Input
-                            type="number"
-                            value={reward.reward || ''}
-                            onChange={(e) => {
-                              setColleagueRewards(prev => prev.map((r, i) =>
-                                i === idx ? { ...r, reward: Number(e.target.value) } : r
-                              ));
-                            }}
-                            className="h-7 w-full text-xs text-right"
-                            step="100"
-                            placeholder="0"
-                          />
-                          <span className="text-muted-foreground text-[10px] shrink-0">
-                            {reward.reward_type === 'per_credit' ? 'Kč/kredit' : 'Kč'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-1.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                          onClick={() => removeRewardRow(idx)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                    return (
+                      <React.Fragment key={idx}>
+                        <TableRow className="text-xs">
+                          <TableCell className="py-1.5">
+                            <Input
+                              value={reward.role}
+                              onChange={(e) => {
+                                const newRole = e.target.value;
+                                const tier = selectedTierProp || null;
+                                const recommended = getRewardsFromServiceConfig(
+                                  selectedCatalogService?.reward_config as any,
+                                  tier
+                                ) || getServiceRewardRecommendation(
+                                  selectedCatalogService?.name || '',
+                                  tier
+                                );
+                                const matchingReward = recommended?.find(
+                                  r => r.role.toLowerCase() === newRole.toLowerCase()
+                                );
+                                const isExp = scenario === 'expand_country' || scenario === 'expand_shop';
+                                const rewardAmount = matchingReward
+                                  ? (isExp ? Math.round(matchingReward.reward * multiplier) : matchingReward.reward)
+                                  : undefined;
+                                const rewardHours = matchingReward?.hours;
+                                const rewardType = matchingReward?.rewardType;
+
+                                setColleagueRewards(prev => prev.map((r, i) =>
+                                  i === idx ? {
+                                    ...r,
+                                    role: newRole,
+                                    ...(rewardAmount !== undefined && r.reward === 0 ? { reward: rewardAmount } : {}),
+                                    ...(rewardHours !== undefined && r.hours === 0 ? { hours: rewardHours } : {}),
+                                    ...(rewardType ? { reward_type: rewardType } : {}),
+                                  } : r
+                                ));
+                              }}
+                              className="h-7 text-xs w-full"
+                              placeholder="Role"
+                            />
+                          </TableCell>
+                          <TableCell className="py-1.5">
+                            <Select
+                              value={reward.colleague_id || ''}
+                              onValueChange={(val) => {
+                                const col = activeColleagues.find(c => c.id === val);
+                                setColleagueRewards(prev => prev.map((r, i) =>
+                                  i === idx ? { ...r, colleague_id: val, colleague_name: col?.full_name } : r
+                                ));
+                              }}
+                            >
+                              <SelectTrigger className="h-7 text-xs w-full">
+                                <SelectValue placeholder="Vybrat kolegu" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {activeColleagues.map(c => (
+                                  <SelectItem key={c.id} value={c.id} className="text-xs">
+                                    {c.full_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="py-1.5 text-right">
+                            <div className="flex items-center gap-1 justify-end">
+                              <Input
+                                type="number"
+                                value={reward.reward || ''}
+                                onChange={(e) => {
+                                  setColleagueRewards(prev => prev.map((r, i) =>
+                                    i === idx ? { ...r, reward: Number(e.target.value) } : r
+                                  ));
+                                }}
+                                className="h-7 w-full text-xs text-right"
+                                step="100"
+                                placeholder="0"
+                              />
+                              <span className="text-muted-foreground text-[10px] shrink-0">
+                                {reward.reward_type === 'per_credit' ? 'Kč/kredit' : 'Kč'}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-1.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => removeRewardRow(idx)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                        {isExpansion && currentAssignment && currentReward > 0 && (
+                          <TableRow className="border-0">
+                            <TableCell colSpan={4} className="py-0.5 pb-2">
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground pl-1">
+                                <span>Aktuální odměna: <span className="font-medium text-foreground">{formatCZK(currentReward)}/měs</span></span>
+                                <span>→</span>
+                                <span>Navýšení: <span className="font-medium text-primary">+{formatCZK(reward.reward)}</span></span>
+                                <span>→</span>
+                                <span>Celkem: <span className="font-semibold text-foreground">{formatCZK(newTotalForColleague)}/měs</span></span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
