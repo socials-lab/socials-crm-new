@@ -925,7 +925,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 setSelectedAssignmentId('');
                 setSelectedColleagueId('');
               }}>
-                <SelectTrigger>
+                <SelectTrigger className="border-2 border-primary/30 hover:border-primary/50 transition-colors">
                   <SelectValue placeholder="Vyberte typ úpravy" />
                 </SelectTrigger>
                 <SelectContent>
