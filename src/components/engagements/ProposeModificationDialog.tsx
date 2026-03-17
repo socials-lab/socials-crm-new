@@ -1092,75 +1092,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 </div>
               )}
 
-              {/* UPDATE ASSIGNMENT FIELDS */}
+              {/* UPDATE ASSIGNMENT FIELDS (legacy - hidden from dropdown but kept for backward compat) */}
               {requestType === 'update_assignment' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   <h4 className="font-medium">3. Změna odměny kolegy</h4>
-                  
-                  <div className="space-y-2">
-                    <Label>Kolega *</Label>
-                    <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Vyberte přiřazení" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currentAssignments.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {getColleagueName(a.colleague_id)} ({a.role_on_engagement || 'bez role'})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nový model odměny</Label>
-                      <Select value={costModel} onValueChange={(v) => setCostModel(v as 'hourly' | 'fixed_monthly' | 'percentage')}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="fixed_monthly">Fixní měsíční</SelectItem>
-                          <SelectItem value="hourly">Hodinová</SelectItem>
-                          <SelectItem value="percentage">% z revenue</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {costModel === 'fixed_monthly' && (
-                      <div className="space-y-2">
-                        <Label>Nová měsíční odměna (CZK)</Label>
-                        <Input 
-                          type="number" 
-                          value={monthlyCost} 
-                          onChange={(e) => setMonthlyCost(Number(e.target.value))}
-                        />
-                      </div>
-                    )}
-
-                    {costModel === 'hourly' && (
-                      <div className="space-y-2">
-                        <Label>Nová hodinová sazba (CZK)</Label>
-                        <Input 
-                          type="number" 
-                          value={hourlyCost} 
-                          onChange={(e) => setHourlyCost(Number(e.target.value))}
-                        />
-                      </div>
-                    )}
-
-                    {costModel === 'percentage' && (
-                      <div className="space-y-2">
-                        <Label>Nové % z revenue</Label>
-                        <Input 
-                          type="number" 
-                          value={percentageOfRevenue} 
-                          onChange={(e) => setPercentageOfRevenue(Number(e.target.value))}
-                        />
-                      </div>
-                    )}
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Pro úpravu odměn kolegů použijte typ „Úprava služby (cena + odměny)" – kde uvidíte i marži.
+                  </p>
                 </div>
               )}
 
