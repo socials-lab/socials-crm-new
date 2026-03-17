@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { 
@@ -37,6 +38,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import type { 
   ModificationRequestType,
+  ModificationRequestItem,
   AddServiceProposedChanges,
   UpdateServicePriceProposedChanges,
   DeactivateServiceProposedChanges,
@@ -114,6 +116,9 @@ export function ModificationRequestCard({
   const colorClass = REQUEST_TYPE_COLORS[request.request_type];
   const typeLabel = REQUEST_TYPE_LABELS[request.request_type];
   
+  // Check if this is a bundled (multi-item) request
+  const isBundled = request.items && request.items.length > 1;
+  
   // Check if client has approved
   const isClientApproved = request.status === 'client_approved';
   const isApplied = request.status === 'applied';
@@ -170,11 +175,9 @@ export function ModificationRequestCard({
   // Show delete button for pending, approved (waiting), or rejected requests
   const canDelete = onDelete && ['pending', 'approved', 'rejected'].includes(request.status) && !isApplied && !isClientApproved;
 
-  // Render proposed changes based on request type
-  const renderChanges = () => {
-    const changes = request.proposed_changes;
-    
-    switch (request.request_type) {
+  // Render changes for a given type and proposed_changes
+  const renderChangesForItem = (itemType: ModificationRequestType, changes: any) => {
+    switch (itemType) {
       case 'add_service': {
         const c = changes as AddServiceProposedChanges;
         return (
@@ -187,7 +190,6 @@ export function ModificationRequestCard({
           </div>
         );
       }
-      
       case 'update_service_price': {
         const c = changes as UpdateServicePriceProposedChanges;
         return (
@@ -203,7 +205,6 @@ export function ModificationRequestCard({
           </div>
         );
       }
-      
       case 'deactivate_service': {
         const c = changes as DeactivateServiceProposedChanges;
         return (
@@ -213,7 +214,6 @@ export function ModificationRequestCard({
           </div>
         );
       }
-      
       case 'add_assignment': {
         const c = changes as AddAssignmentProposedChanges;
         return (
@@ -232,7 +232,6 @@ export function ModificationRequestCard({
           </div>
         );
       }
-      
       case 'update_assignment': {
         const c = changes as UpdateAssignmentProposedChanges;
         return (
@@ -257,7 +256,16 @@ export function ModificationRequestCard({
           </div>
         );
       }
-      
+      case 'expand_country': {
+        const c = changes as any;
+        return (
+          <div className="space-y-1 text-sm">
+            <p><span className="text-muted-foreground">Služba:</span> {c.service_name || c.reference_service_name}</p>
+            <p><span className="text-muted-foreground">Země:</span> {c.new_country_name || c.new_country_code}</p>
+            <p><span className="text-muted-foreground">Cena:</span> {c.price?.toLocaleString('cs-CZ')} {c.currency}</p>
+          </div>
+        );
+      }
       case 'new_engagement': {
         const c = changes as NewEngagementProposedChanges;
         return (
@@ -291,10 +299,71 @@ export function ModificationRequestCard({
           </div>
         );
       }
-      
       default:
         return null;
     }
+  };
+
+  // Render proposed changes based on request type
+  const renderChanges = () => {
+    return renderChangesForItem(request.request_type, request.proposed_changes);
+  };
+
+  // Render all bundled items
+  const renderBundledItems = () => {
+    if (!request.items || request.items.length <= 1) return null;
+    
+    return (
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          📋 Nabídka obsahuje {request.items.length} položek
+        </p>
+        {request.items.map((item, idx) => {
+          const itemIcon = REQUEST_TYPE_ICONS[item.request_type];
+          const ItemIcon = itemIcon;
+          const itemColor = REQUEST_TYPE_COLORS[item.request_type];
+          const itemLabel = REQUEST_TYPE_LABELS[item.request_type];
+          return (
+            <div key={item.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className={`p-1 rounded ${itemColor}`}>
+                  <ItemIcon className="h-3 w-3" />
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  {idx + 1}. {itemLabel}
+                </Badge>
+              </div>
+              {renderChangesForItem(item.request_type, item.proposed_changes)}
+            </div>
+          );
+        })}
+        {/* Combined total for bundled items */}
+        {(() => {
+          let totalDelta = 0;
+          for (const item of request.items!) {
+            const c = item.proposed_changes as any;
+            if (item.request_type === 'add_service' || item.request_type === 'expand_country') {
+              totalDelta += c.price || 0;
+            } else if (item.request_type === 'update_service_price') {
+              totalDelta += (c.new_price || 0) - (c.old_price || 0);
+            } else if (item.request_type === 'deactivate_service') {
+              totalDelta -= c.price || 0;
+            }
+          }
+          if (totalDelta !== 0) {
+            return (
+              <div className="flex items-center justify-between pt-2 border-t text-sm">
+                <span className="font-medium">Celkový dopad:</span>
+                <span className={cn("font-semibold", totalDelta >= 0 ? "text-green-600" : "text-destructive")}>
+                  {totalDelta >= 0 ? '+' : ''}{totalDelta.toLocaleString('cs-CZ')} Kč/měs
+                </span>
+              </div>
+            );
+          }
+          return null;
+        })()}
+      </div>
+    );
   };
 
   const clientName = request.client_brand_name || request.client_name || 'Neznámý klient';
@@ -321,7 +390,7 @@ export function ModificationRequestCard({
                 <div>
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Badge variant="outline">
-                      {typeLabel}
+                      {isBundled ? `Nabídka (${request.items!.length} položek)` : typeLabel}
                     </Badge>
                     {/* Client confirmation badge */}
                     {isClientApproved && (
@@ -372,8 +441,8 @@ export function ModificationRequestCard({
               
               {/* Changes */}
               <div className="bg-muted/50 rounded-md p-3">
-                {renderChanges()}
-               </div>
+                {isBundled ? renderBundledItems() : renderChanges()}
+              </div>
 
               {/* Pricing Snapshot */}
               {request.pricing_snapshot && (

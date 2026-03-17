@@ -18,7 +18,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useCRMData } from '@/hooks/useCRMData';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useAuth } from '@/hooks/useAuth';
-import type { ModificationRequestType, ServiceTier } from '@/types/crm';
+import type { ModificationRequestType, ServiceTier, ModificationRequestItem, ModificationProposedChanges } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SERVICE_DETAILS } from '@/constants/serviceDetails';
@@ -174,6 +174,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   }>>([]);
   const [expandedNewEngServiceIdx, setExpandedNewEngServiceIdx] = useState<number | null>(null);
 
+  // Bundled items for multi-item requests
+  const [bundledItems, setBundledItems] = useState<ModificationRequestItem[]>([]);
+
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
   const selectedService = services.find(s => s.id === selectedServiceId);
@@ -232,6 +235,11 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setUpsoldById(editingRequest.upsold_by_id || 'none');
       setNote(editingRequest.note || '');
       setPricingSnapshot(editingRequest.pricing_snapshot || null);
+      
+      // Pre-fill bundled items
+      if (editingRequest.items && editingRequest.items.length > 0) {
+        setBundledItems(editingRequest.items);
+      }
 
       const changes = editingRequest.proposed_changes as any;
 
@@ -335,6 +343,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setNewEngName('');
       setNewEngOnboardingEmail('');
       setNewEngServices([]);
+      // Bundled items reset
+      setBundledItems([]);
     }
   }, [open]);
 
@@ -512,10 +522,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
   }, [requestType, selectedEngagementId, engagements, clients]);
 
-  const handleSubmit = async () => {
-    if (!selectedEngagementId || !requestType) return;
+  // Build proposed_changes from current form state
+  const buildCurrentProposedChanges = (): { proposed_changes: Record<string, unknown>; engagement_service_id?: string | null; engagement_assignment_id?: string | null } | null => {
+    if (!requestType) return null;
 
     let proposed_changes: Record<string, unknown> = {};
+    let eng_service_id: string | null = null;
+    let eng_assignment_id: string | null = null;
 
     switch (requestType) {
       case 'expand_country': {
@@ -548,11 +561,10 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       }
       case 'add_service':
         if (isCreativeBoost) {
-          // Creative Boost: credit-based pricing
           proposed_changes = {
             service_id: selectedServiceId,
             name: serviceName,
-            price: cbMaxCredits * cbPricePerCredit, // Calculated price
+            price: cbMaxCredits * cbPricePerCredit,
             currency: serviceCurrency,
             billing_type: 'monthly',
             selected_tier: null,
@@ -562,7 +574,6 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
             creative_boost_editor_reward_per_credit: cbEditorReward,
           };
         } else if (isAiSeo) {
-          // AI SEO: include default colleague info
           proposed_changes = {
             service_id: selectedServiceId,
             name: serviceName,
@@ -590,14 +601,16 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           };
         }
         break;
-      case 'update_service_price':
+      case 'update_service_price': {
         const oldService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
         const changedAssignments = serviceAssignmentEdits.filter(a => a.new_value !== a.old_value);
         const cbNewPrice = isUpdateCreativeBoost ? cbMaxCredits * cbPricePerCredit : newPrice;
         proposed_changes = {
           engagement_service_id: selectedEngagementServiceId,
+          service_name: oldService?.name || '',
           old_price: oldService?.price || 0,
           new_price: cbNewPrice,
+          currency: oldService?.currency || 'CZK',
           ...(isUpdateCreativeBoost ? {
             creative_boost_max_credits: cbMaxCredits,
             creative_boost_price_per_credit: cbPricePerCredit,
@@ -613,15 +626,17 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
             new_value: a.new_value,
           })) : undefined,
         };
+        eng_service_id = selectedEngagementServiceId;
         break;
+      }
       case 'deactivate_service':
-        proposed_changes = {
-          engagement_service_id: selectedEngagementServiceId,
-        };
+        proposed_changes = { engagement_service_id: selectedEngagementServiceId };
+        eng_service_id = selectedEngagementServiceId;
         break;
       case 'add_assignment':
         proposed_changes = {
           colleague_id: selectedColleagueId,
+          colleague_name: getColleagueName(selectedColleagueId),
           engagement_service_id: assignmentServiceId || null,
           role_on_engagement: roleOnEngagement,
           cost_model: costModel,
@@ -638,6 +653,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           monthly_cost: costModel === 'fixed_monthly' ? monthlyCost : null,
           percentage_of_revenue: costModel === 'percentage' ? percentageOfRevenue : null,
         };
+        eng_assignment_id = selectedAssignmentId;
         break;
       case 'new_engagement': {
         const totalMonthly = newEngServices.reduce((sum, s) => sum + (s.billing_type === 'monthly' ? s.price : 0), 0);
@@ -658,31 +674,140 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       }
     }
 
+    return { proposed_changes, engagement_service_id: eng_service_id, engagement_assignment_id: eng_assignment_id };
+  };
+
+  // Get a label for a bundled item
+  const getItemLabel = (item: ModificationRequestItem): string => {
+    const c = item.proposed_changes as any;
+    switch (item.request_type) {
+      case 'expand_country': return `🌍 ${c.service_name || c.reference_service_name || 'Nová země'} ${c.new_country_code || ''}`;
+      case 'add_service': return `📦 ${c.name || 'Nová služba'}`;
+      case 'update_service_price': return `💰 ${c.service_name || 'Změna ceny'}`;
+      case 'deactivate_service': return `❌ ${c.service_name || 'Deaktivace'}`;
+      case 'add_assignment': return `👤 ${c.colleague_name || 'Přiřazení kolegy'}`;
+      case 'update_assignment': return `⚙️ ${c.colleague_name || 'Změna odměny'}`;
+      case 'new_engagement': return `🏢 ${c.engagement_name || 'Nová zakázka'}`;
+      default: return 'Položka';
+    }
+  };
+
+  const getItemPrice = (item: ModificationRequestItem): number | null => {
+    const c = item.proposed_changes as any;
+    switch (item.request_type) {
+      case 'expand_country': return c.price || null;
+      case 'add_service': return c.price || null;
+      case 'update_service_price': return c.new_price ? (c.new_price - (c.old_price || 0)) : null;
+      case 'deactivate_service': return c.price ? -(c.price) : null;
+      default: return null;
+    }
+  };
+
+  // Save current item to bundle and reset for next item
+  const handleAddAnotherItem = () => {
+    const built = buildCurrentProposedChanges();
+    if (!built || !requestType) return;
+
+    const newItem: ModificationRequestItem = {
+      id: crypto.randomUUID(),
+      request_type: requestType as ModificationRequestType,
+      proposed_changes: built.proposed_changes as unknown as ModificationProposedChanges,
+      engagement_service_id: built.engagement_service_id,
+      engagement_assignment_id: built.engagement_assignment_id,
+      pricing_snapshot: pricingSnapshot,
+    };
+
+    setBundledItems(prev => [...prev, newItem]);
+
+    // Reset type-specific fields but keep engagement and step 4 fields
+    setRequestType('');
+    setRequestTypeConfirmed(false);
+    setSelectedServiceId('');
+    setSelectedEngagementServiceId('');
+    setSelectedAssignmentId('');
+    setSelectedColleagueId('');
+    setServiceName('');
+    setServicePrice(0);
+    setServiceDescription('');
+    setServiceDeliverables('');
+    setPricingSnapshot(null);
+    setPricingInternalCost(0);
+    setRequiresAdminApproval(false);
+    setExpandRefServiceId('');
+    setExpandCountryCode('');
+    setExpandServiceName('');
+    setExpandMultiplier(0.5);
+    setExpandFinalPrice(null);
+    setExpandIsNewShop(false);
+    setExpandNewClientName('');
+    setExpandNewClientBrand('');
+    setExpandNewClientIco('');
+    setExpandNewClientDic('');
+    setNewEngIsDifferentSro(false);
+    setNewEngClientName('');
+    setNewEngClientBrand('');
+    setNewEngName('');
+    setNewEngOnboardingEmail('');
+    setNewEngServices([]);
+    setServiceAssignmentEdits([]);
+    setNewPrice(0);
+    setRoleOnEngagement('');
+    setCostModel('fixed_monthly');
+    setHourlyCost(0);
+    setMonthlyCost(0);
+    setPercentageOfRevenue(0);
+
+    toast.success('Položka přidána do nabídky');
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedEngagementId) return;
+
+    // Collect all items: bundled items + current item (if any)
+    let allItems = [...bundledItems];
+    
+    if (requestType) {
+      const built = buildCurrentProposedChanges();
+      if (built) {
+        allItems.push({
+          id: crypto.randomUUID(),
+          request_type: requestType as ModificationRequestType,
+          proposed_changes: built.proposed_changes as unknown as ModificationProposedChanges,
+          engagement_service_id: built.engagement_service_id,
+          engagement_assignment_id: built.engagement_assignment_id,
+          pricing_snapshot: pricingSnapshot,
+        });
+      }
+    }
+
+    // Must have at least one item
+    if (allItems.length === 0) return;
+
+    // Use the first item's type/changes as the "primary" for backward compat
+    const primaryItem = allItems[0];
+    const isBundled = allItems.length > 1;
+
     try {
       if (isEditMode && editingRequest) {
-        // Update existing request
         await updateRequest(editingRequest.id, {
-          proposed_changes: proposed_changes as any,
+          proposed_changes: primaryItem.proposed_changes,
           effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
           note: note || null,
           upsell_commission_percent: upsoldById === 'none' ? 0 : 10,
+          items: isBundled ? allItems : undefined,
         });
       } else {
         await createRequest({
           engagement_id: selectedEngagementId,
-          request_type: requestType as ModificationRequestType,
-          proposed_changes: proposed_changes as any,
-          engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
-            ? selectedEngagementServiceId 
-            : requestType === 'add_assignment' ? (assignmentServiceId || null)
-            : null,
-          engagement_assignment_id: ['update_assignment'].includes(requestType)
-            ? selectedAssignmentId
-            : null,
+          request_type: primaryItem.request_type,
+          proposed_changes: primaryItem.proposed_changes,
+          engagement_service_id: primaryItem.engagement_service_id || null,
+          engagement_assignment_id: primaryItem.engagement_assignment_id || null,
           effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
           upsold_by_id: upsoldById === 'none' ? null : upsoldById,
           note: note || null,
-          pricing_snapshot: pricingSnapshot,
+          pricing_snapshot: primaryItem.pricing_snapshot || pricingSnapshot,
+          items: isBundled ? allItems : undefined,
         });
       }
       
@@ -2230,8 +2355,76 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
             </>
           )}
 
-          {/* ===== STEP 4: Details (only after engagement + type selected) ===== */}
-          {selectedEngagementId && requestType && (
+          {/* ===== BUNDLED ITEMS SUMMARY + ADD ANOTHER ===== */}
+          {selectedEngagementId && (bundledItems.length > 0 || requestType) && (
+            <div className="space-y-3">
+              {bundledItems.length > 0 && (
+                <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    📋 Položky v nabídce ({bundledItems.length})
+                  </p>
+                  {bundledItems.map((item, idx) => {
+                    const price = getItemPrice(item);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between gap-2 p-2 rounded border bg-background">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs font-medium text-muted-foreground">{idx + 1}.</span>
+                          <span className="text-sm truncate">{getItemLabel(item)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {price !== null && (
+                            <span className={cn("text-xs font-medium", price >= 0 ? "text-green-600" : "text-destructive")}>
+                              {price >= 0 ? '+' : ''}{price.toLocaleString('cs-CZ')} Kč
+                            </span>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                            onClick={() => setBundledItems(prev => prev.filter((_, i) => i !== idx))}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {(() => {
+                    const totalPrice = bundledItems.reduce((sum, item) => sum + (getItemPrice(item) || 0), 0);
+                    if (totalPrice !== 0) {
+                      return (
+                        <div className="flex items-center justify-between pt-1 border-t text-sm">
+                          <span className="font-medium">Celkem za uložené položky:</span>
+                          <span className={cn("font-semibold", totalPrice >= 0 ? "text-green-600" : "text-destructive")}>
+                            {totalPrice >= 0 ? '+' : ''}{totalPrice.toLocaleString('cs-CZ')} Kč/měs
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
+
+              {/* Add another item button — shown when current item is configured */}
+              {requestType && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleAddAnotherItem}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Uložit položku a přidat další
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* ===== STEP 4: Details (only after engagement + type selected OR bundled items exist) ===== */}
+          {selectedEngagementId && (requestType || bundledItems.length > 0) && (
             <div className="space-y-4 pt-2 border-t">
               {/* Effective From */}
               <div className="space-y-2">
@@ -2342,11 +2535,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={(isCreating || isUpdating) || !selectedEngagementId}
+            disabled={(isCreating || isUpdating) || !selectedEngagementId || (!requestType && bundledItems.length === 0)}
           >
             {isEditMode
               ? (isUpdating ? 'Ukládám...' : 'Uložit změny')
-              : (isCreating ? 'Odesílám...' : 'Odeslat ke schválení administrátorovi')}
+              : (isCreating ? 'Odesílám...' : (bundledItems.length > 0 
+                  ? `Odeslat nabídku (${bundledItems.length + (requestType ? 1 : 0)} položek)` 
+                  : 'Odeslat ke schválení administrátorovi'))}
           </Button>
         </DialogFooter>
       </DialogContent>

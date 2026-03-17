@@ -16,6 +16,7 @@ import { addAppliedModificationToHistory } from '@/data/appliedModificationsHist
 import type { 
   ModificationRequestType,
   ModificationProposedChanges,
+  ModificationRequestItem,
 } from '@/types/crm';
 import type { PricingSnapshot } from '@/utils/pricingEngine';
 
@@ -49,6 +50,7 @@ export function useModificationRequests() {
     upsell_commission_percent?: number;
     note?: string | null;
     pricing_snapshot?: PricingSnapshot | null;
+    items?: ModificationRequestItem[];
   }) => {
     if (!user) throw new Error('User not authenticated');
     
@@ -82,6 +84,7 @@ export function useModificationRequests() {
         note: params.note,
         requested_by: user.id,
         pricing_snapshot: params.pricing_snapshot,
+        items: params.items,
       });
       
       toast.success('Požadavek na úpravu byl odeslán ke schválení');
@@ -181,6 +184,7 @@ export function useModificationRequests() {
     upsold_by_id?: string | null;
     upsold_by_name?: string | null;
     pricing_snapshot?: PricingSnapshot | null;
+    items?: ModificationRequestItem[];
   }) => {
     if (!user) throw new Error('User not authenticated');
     
