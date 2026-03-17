@@ -329,6 +329,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setExpandNewClientIco('');
       setExpandNewClientDic('');
       // New engagement reset
+      setNewEngIsDifferentSro(false);
       setNewEngClientName('');
       setNewEngClientBrand('');
       setNewEngName('');
