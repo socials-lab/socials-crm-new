@@ -346,6 +346,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setNewEngServices([]);
       // Bundled items reset
       setBundledItems([]);
+      setBundleDiscountPercent(0);
     }
   }, [open]);
 
