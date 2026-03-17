@@ -60,10 +60,90 @@ interface ModificationRequestCardProps {
   onDelete?: (requestId: string) => Promise<void>;
   onSendEmail?: (request: StoredModificationRequest) => void;
   onCreateClient?: (request: StoredModificationRequest) => void;
+  onInlineUpdate?: (requestId: string, updates: Partial<Pick<StoredModificationRequest, 'proposed_changes' | 'items'>>) => void;
   isApproving?: boolean;
   isRejecting?: boolean;
   isApplying?: boolean;
   isDeleting?: boolean;
+}
+
+// Inline editable text component
+function InlineEditableText({ value, onSave, className, canEdit }: { value: string; onSave: (val: string) => void; className?: string; canEdit: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  if (!canEdit) return <span className={className}>{value}</span>;
+
+  if (editing) {
+    return (
+      <Input
+        ref={inputRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => { if (draft.trim() && draft !== value) onSave(draft.trim()); setEditing(false); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { if (draft.trim() && draft !== value) onSave(draft.trim()); setEditing(false); }
+          if (e.key === 'Escape') { setDraft(value); setEditing(false); }
+        }}
+        className="h-6 px-1 py-0 text-sm inline-flex w-auto min-w-[80px]"
+      />
+    );
+  }
+
+  return (
+    <span
+      className={cn(className, "cursor-pointer hover:bg-muted/80 rounded px-0.5 -mx-0.5 transition-colors border-b border-dashed border-transparent hover:border-muted-foreground/30")}
+      onClick={() => { setDraft(value); setEditing(true); }}
+      title="Klikněte pro úpravu"
+    >
+      {value}
+    </span>
+  );
+}
+
+// Inline editable number
+function InlineEditableNumber({ value, onSave, suffix, className, canEdit }: { value: number; onSave: (val: number) => void; suffix?: string; className?: string; canEdit: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  if (!canEdit) return <span className={className}>{value.toLocaleString('cs-CZ')}{suffix && ` ${suffix}`}</span>;
+
+  if (editing) {
+    return (
+      <Input
+        ref={inputRef}
+        type="number"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => { const n = Number(draft); if (!isNaN(n) && n !== value) onSave(n); setEditing(false); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { const n = Number(draft); if (!isNaN(n) && n !== value) onSave(n); setEditing(false); }
+          if (e.key === 'Escape') { setDraft(String(value)); setEditing(false); }
+        }}
+        className="h-6 px-1 py-0 text-sm inline-flex w-[100px]"
+      />
+    );
+  }
+
+  return (
+    <span
+      className={cn(className, "cursor-pointer hover:bg-muted/80 rounded px-0.5 -mx-0.5 transition-colors border-b border-dashed border-transparent hover:border-muted-foreground/30")}
+      onClick={() => { setDraft(String(value)); setEditing(true); }}
+      title="Klikněte pro úpravu"
+    >
+      {value.toLocaleString('cs-CZ')}{suffix && ` ${suffix}`}
+    </span>
+  );
 }
 
 const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
