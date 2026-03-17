@@ -15,10 +15,10 @@ import { type OnboardingData, type StoredModificationRequest, seedDemoModificati
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2, FileText, ArrowRight } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2, FileText, ArrowRight, ChevronDown, ChevronRight, History } from 'lucide-react';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, ModificationProposedChanges } from '@/types/crm';
-// StoredModificationRequest already imported above
 import { getAppliedModificationsHistory, type AppliedModificationHistory } from '@/data/appliedModificationsHistory';
 
 // Helper to get month label
@@ -112,7 +112,7 @@ function AppliedHistoryCard({ entry }: { entry: AppliedModificationHistory }) {
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  <span>{format(new Date(entry.client_approved_at), 'd. M. yyyy v H:mm', { locale: cs })}</span>
+                  <span>{format(new Date(entry.client_approved_at), "d. M. yyyy 'v' H:mm", { locale: cs })}</span>
                 </div>
               </div>
             </div>
@@ -136,6 +136,76 @@ function AppliedHistoryCard({ entry }: { entry: AppliedModificationHistory }) {
   );
 }
 
+const REQUEST_TYPE_LABELS_SHORT: Record<string, string> = {
+  add_service: 'Přidání služby',
+  update_service_price: 'Změna ceny',
+  deactivate_service: 'Ukončení služby',
+  add_assignment: 'Přiřazení kolegy',
+  update_assignment: 'Změna odměny',
+  expand_country: 'Rozšíření země',
+  new_engagement: 'Nová zakázka',
+};
+
+function CollapsibleModificationCard({ request, cardContent }: { request: StoredModificationRequest; cardContent: React.ReactNode }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const clientName = request.client_brand_name || request.client_name;
+  const typeLabel = REQUEST_TYPE_LABELS_SHORT[request.request_type] || request.request_type;
+  const effectiveDate = request.client_chosen_effective_from || request.effective_from;
+  
+  // Summary of pricing changes
+  const snapshot = request.pricing_snapshot as any;
+  const deltaRevenue = snapshot?.delta_revenue;
+  
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="overflow-hidden">
+        <CollapsibleTrigger asChild>
+          <button className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors text-left">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`p-1.5 rounded-md ${request.status === 'client_approved' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-primary/10'}`}>
+                {request.status === 'client_approved' 
+                  ? <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  : <PackageCheck className="h-4 w-4 text-primary" />
+                }
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium truncate">{clientName}</span>
+                  <Badge variant="outline" className="text-[10px] shrink-0">{typeLabel}</Badge>
+                  {request.items && request.items.length > 1 && (
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      {request.items.length} položek
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{request.engagement_name}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 shrink-0 ml-4">
+              {deltaRevenue != null && (
+                <span className={`text-sm font-semibold ${deltaRevenue >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+                  {deltaRevenue >= 0 ? '+' : ''}{deltaRevenue.toLocaleString('cs-CZ')} Kč
+                </span>
+              )}
+              {effectiveDate && (
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  od {format(new Date(effectiveDate), 'd.M.yyyy')}
+                </span>
+              )}
+              {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            </div>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t">
+            {cardContent}
+          </div>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
+
 export default function Modifications() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
@@ -146,6 +216,7 @@ export default function Modifications() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailRequest, setEmailRequest] = useState<StoredModificationRequest | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [historyMonth, setHistoryMonth] = useState<string>('all');
   
   const { 
     pendingRequests, 
@@ -580,6 +651,10 @@ export default function Modifications() {
             <XCircle className="h-4 w-4" />
             Zamítnuté
           </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Log změn
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="drafts" className="space-y-4">
@@ -715,14 +790,19 @@ export default function Modifications() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               {clientApproved.map((request) => (
-                <ModificationRequestCard
+                <CollapsibleModificationCard
                   key={request.id}
                   request={request}
-                  onApply={handleApply}
-                  onCreateClient={handleCreateClientFromOnboarding}
-                  isApplying={isApplying}
+                  cardContent={
+                    <ModificationRequestCard
+                      request={request}
+                      onApply={handleApply}
+                      onCreateClient={handleCreateClientFromOnboarding}
+                      isApplying={isApplying}
+                    />
+                  }
                 />
               ))}
             </div>
@@ -768,12 +848,17 @@ export default function Modifications() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {/* Show applied requests with full ModificationRequestCard for details */}
+            <div className="grid gap-3">
+              {/* Show applied requests with collapsible cards */}
               {applied.map((request) => (
-                <ModificationRequestCard
+                <CollapsibleModificationCard
                   key={request.id}
                   request={request}
+                  cardContent={
+                    <ModificationRequestCard
+                      request={request}
+                    />
+                  }
                 />
               ))}
               
@@ -809,6 +894,125 @@ export default function Modifications() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          {/* Month filter for history */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Log všech změn</span>
+            </div>
+            <Select value={historyMonth} onValueChange={setHistoryMonth}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Vyberte měsíc" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Všechny měsíce</SelectItem>
+                {availableMonths.map(month => (
+                  <SelectItem key={month} value={month}>
+                    {getMonthLabel(month)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(() => {
+            // Combine all requests sorted by date, filtered by month
+            const allRequests = [...(pendingRequests || [])].sort((a, b) => 
+              new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
+            );
+            
+            const filteredRequests = historyMonth === 'all' 
+              ? allRequests 
+              : allRequests.filter(r => {
+                  const date = new Date(r.updated_at || r.created_at);
+                  const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                  return monthStr === historyMonth;
+                });
+
+            const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+              draft: { label: 'Draft', color: 'bg-muted text-muted-foreground' },
+              pending: { label: 'Čeká na schválení', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+              approved: { label: 'Schváleno', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+              client_approved: { label: 'Klient potvrdil', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+              applied: { label: 'Aktivováno', color: 'bg-primary/10 text-primary' },
+              rejected: { label: 'Zamítnuto', color: 'bg-destructive/10 text-destructive' },
+            };
+
+            if (filteredRequests.length === 0) {
+              return (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <History className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground text-center">
+                      {historyMonth === 'all' ? 'Žádné záznamy' : `Žádné záznamy v ${getMonthLabel(historyMonth)}`}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            // Group by month
+            const grouped: Record<string, StoredModificationRequest[]> = {};
+            filteredRequests.forEach(r => {
+              const date = new Date(r.updated_at || r.created_at);
+              const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+              if (!grouped[key]) grouped[key] = [];
+              grouped[key].push(r);
+            });
+
+            return (
+              <div className="space-y-6">
+                {Object.entries(grouped)
+                  .sort(([a], [b]) => b.localeCompare(a))
+                  .map(([monthKey, requests]) => (
+                    <div key={monthKey}>
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        {getMonthLabel(monthKey)}
+                        <Badge variant="secondary" className="ml-2">{requests.length}</Badge>
+                      </h3>
+                      <div className="space-y-2">
+                        {requests.map(request => {
+                          const clientName = request.client_brand_name || request.client_name;
+                          const typeLabel = REQUEST_TYPE_LABELS_SHORT[request.request_type] || request.request_type;
+                          const statusInfo = STATUS_LABELS[request.status] || { label: request.status, color: 'bg-muted' };
+                          const snapshot = request.pricing_snapshot as any;
+                          const deltaRevenue = snapshot?.delta_revenue;
+                          const date = new Date(request.updated_at || request.created_at);
+
+                          return (
+                            <Card key={request.id} className="hover:bg-muted/30 transition-colors">
+                              <CardContent className="p-3 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap w-16 shrink-0">
+                                    {format(date, 'd.M.yyyy')}
+                                  </span>
+                                  <Badge className={`${statusInfo.color} text-[10px] shrink-0`}>
+                                    {statusInfo.label}
+                                  </Badge>
+                                  <span className="font-medium text-sm truncate">{clientName}</span>
+                                  <Badge variant="outline" className="text-[10px] shrink-0">{typeLabel}</Badge>
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                  {deltaRevenue != null && (
+                                    <span className={`text-sm font-semibold ${deltaRevenue >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+                                      {deltaRevenue >= 0 ? '+' : ''}{deltaRevenue.toLocaleString('cs-CZ')} Kč
+                                    </span>
+                                  )}
+                                  <span className="text-xs text-muted-foreground">{request.engagement_name}</span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            );
+          })()}
         </TabsContent>
       </Tabs>
 
