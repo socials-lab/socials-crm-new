@@ -236,6 +236,24 @@ export function useModificationRequests() {
     }
   }, [user, refresh]);
 
+  // Submit a draft to pending
+  const submitDraft = useCallback(async (requestId: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    try {
+      const result = submitDraftRequest(requestId);
+      if (!result) throw new Error('Draft not found or already submitted');
+      
+      toast.success('Návrh byl odeslán ke schválení');
+      refresh();
+      return result;
+    } catch (error) {
+      console.error('Error submitting draft:', error);
+      toast.error('Nepodařilo se odeslat návrh');
+      throw error;
+    }
+  }, [user, refresh]);
+
   return {
     pendingRequests,
     isLoadingPending: false,
@@ -251,6 +269,10 @@ export function useModificationRequests() {
     isUpdating,
     deleteRequest,
     isDeleting,
+    submitDraft,
+    refresh,
+  };
+}
     refresh,
   };
 }
