@@ -420,8 +420,8 @@ export function PricingImpactSection({
           </div>
         )}
 
-        {/* Reference service picker for expansion scenarios */}
-        {isExpansion && (
+        {/* Reference service picker for expansion scenarios — hidden when parent controls */}
+        {isExpansion && !isParentControlled && (
           <>
             <div className="space-y-2">
               <Label className="text-xs font-medium">Referenční služba (základ pro výpočet ceny)</Label>
@@ -501,8 +501,8 @@ export function PricingImpactSection({
           </>
         )}
 
-        {/* New client (different SRO) option for expand_shop */}
-        {scenario === 'expand_shop' && (
+        {/* New client (different SRO) option for expand_shop — hidden when parent controls */}
+        {scenario === 'expand_shop' && !isParentControlled && (
           <div className="space-y-3 p-3 rounded-md border bg-background">
             <div className="flex items-center gap-2">
               <Checkbox
