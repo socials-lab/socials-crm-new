@@ -258,6 +258,16 @@ export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, ti
         />
       )}
 
+      {/* Client-facing defaults: description + deliverables */}
+      {onDescriptionUpdate && onDeliverablesUpdate && (
+        <ClientDefaultsSection
+          description={description || ''}
+          onDescriptionUpdate={onDescriptionUpdate}
+          deliverables={defaultDeliverables || []}
+          onDeliverablesUpdate={onDeliverablesUpdate}
+        />
+      )}
+
       {/* Inline Tier Pricing Edit for Core Services */}
       {serviceType === 'core' && tierPricing && onTierPricingUpdate && (
         <TierPricingEditSection
