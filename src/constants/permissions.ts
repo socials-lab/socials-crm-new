@@ -23,6 +23,7 @@ export const ALL_PAGES = [
   { id: 'feedback', label: 'Feedback Zone', emoji: '💡' },
   { id: 'academy', label: 'Akademie', emoji: '📚' },
   { id: 'sop', label: 'SOP', emoji: '📖' },
+  { id: 'bug-reports', label: 'Bug Reports', emoji: '🐛' },
   // Reporting
   { id: 'analytics', label: 'Analytika', emoji: '📊' },
   // Nastavení
