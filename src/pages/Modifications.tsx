@@ -11,6 +11,7 @@ import { EditModificationRequestDialog } from '@/components/engagements/EditModi
 import { SendModificationEmailDialog } from '@/components/engagements/SendModificationEmailDialog';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useCRMData } from '@/hooks/useCRMData';
+import type { OnboardingData } from '@/data/modificationRequestsMockData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
