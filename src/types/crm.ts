@@ -825,6 +825,7 @@ export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, s
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
+  new_engagement: 'Nová zakázka (jiné SRO)',
 };
 
 // Status labels
