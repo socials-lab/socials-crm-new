@@ -862,16 +862,16 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 </div>
               )}
 
-              {/* UPDATE SERVICE PRICE FIELDS */}
+              {/* UPDATE SERVICE (PRICE + ASSIGNMENTS) FIELDS */}
               {requestType === 'update_service_price' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                  <h4 className="font-medium">3. Změna ceny</h4>
+                  <h4 className="font-medium">3. Úprava služby</h4>
                   
                   <div className="space-y-2">
                     <Label>Služba *</Label>
                     <Select value={selectedEngagementServiceId} onValueChange={setSelectedEngagementServiceId}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Vyberte službu" />
+                        <SelectValue placeholder="Vyberte stávající službu" />
                       </SelectTrigger>
                       <SelectContent>
                         {currentEngagementServices.filter(es => es.is_active).map((es) => (
@@ -883,14 +883,106 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Nová cena *</Label>
-                    <Input 
-                      type="number" 
-                      value={newPrice} 
-                      onChange={(e) => setNewPrice(Number(e.target.value))}
-                    />
-                  </div>
+                  {selectedEngagementServiceId && (
+                    <>
+                      {/* Price edit */}
+                      <div className="space-y-2">
+                        <Label>Nová cena (CZK) *</Label>
+                        <Input 
+                          type="number" 
+                          value={newPrice} 
+                          onChange={(e) => setNewPrice(Number(e.target.value))}
+                        />
+                        {(() => {
+                          const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+                          if (engService && newPrice !== engService.price) {
+                            const diff = newPrice - engService.price;
+                            return (
+                              <p className={cn("text-xs font-medium", diff > 0 ? "text-green-600" : "text-destructive")}>
+                                {diff > 0 ? '+' : ''}{diff.toLocaleString('cs-CZ')} Kč ({diff > 0 ? '+' : ''}{((diff / engService.price) * 100).toFixed(1)}%)
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+
+                      {/* Colleague assignments for this service */}
+                      {serviceAssignmentEdits.length > 0 && (
+                        <div className="space-y-3 pt-2 border-t">
+                          <h5 className="text-sm font-medium flex items-center gap-2">
+                            👥 Odměny kolegů na této službě
+                          </h5>
+                          
+                          {serviceAssignmentEdits.map((assignment, idx) => (
+                            <div key={assignment.assignment_id} className="grid grid-cols-4 gap-3 items-end p-3 rounded-md border bg-background">
+                              <div className="col-span-2">
+                                <p className="text-sm font-medium">{assignment.colleague_name}</p>
+                                <p className="text-xs text-muted-foreground">{assignment.role || 'bez role'}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Aktuální</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  {assignment.old_value.toLocaleString('cs-CZ')} Kč
+                                  <span className="text-[10px] ml-1">
+                                    {assignment.cost_model === 'hourly' ? '/h' : assignment.cost_model === 'percentage' ? '%' : '/měs'}
+                                  </span>
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Nová odměna</Label>
+                                <Input
+                                  type="number"
+                                  value={assignment.new_value}
+                                  onChange={(e) => {
+                                    const updated = [...serviceAssignmentEdits];
+                                    updated[idx] = { ...updated[idx], new_value: Number(e.target.value) };
+                                    setServiceAssignmentEdits(updated);
+                                  }}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Margin summary */}
+                          {(() => {
+                            const totalOldCost = serviceAssignmentEdits.reduce((sum, a) => sum + a.old_value, 0);
+                            const totalNewCost = serviceAssignmentEdits.reduce((sum, a) => sum + a.new_value, 0);
+                            const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+                            const oldPrice = engService?.price || 0;
+                            const oldMargin = oldPrice > 0 ? ((oldPrice - totalOldCost) / oldPrice * 100) : 0;
+                            const newMargin = newPrice > 0 ? ((newPrice - totalNewCost) / newPrice * 100) : 0;
+                            
+                            const getMarginColor = (m: number) => m >= 66 ? 'text-green-600' : m >= 63 ? 'text-orange-500' : 'text-destructive';
+                            
+                            return (
+                              <div className="grid grid-cols-2 gap-3 p-3 rounded-md border bg-muted/50">
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Aktuální marže služby</p>
+                                  <p className={cn("text-sm font-semibold", getMarginColor(oldMargin))}>
+                                    {oldMargin.toFixed(1)}% ({(oldPrice - totalOldCost).toLocaleString('cs-CZ')} Kč)
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Nová marže služby</p>
+                                  <p className={cn("text-sm font-semibold", getMarginColor(newMargin))}>
+                                    {newMargin.toFixed(1)}% ({(newPrice - totalNewCost).toLocaleString('cs-CZ')} Kč)
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+
+                      {serviceAssignmentEdits.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic">
+                          K této službě nejsou přiřazeni žádní kolegové.
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
