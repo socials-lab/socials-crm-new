@@ -323,17 +323,15 @@ export function PricingImpactSection({
   const showInternalCostWarning = deltaRevenue > 0 && deltaInternalCost === 0 && colleagueRewards.length === 0;
 
   return (
-    <div className="space-y-4 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 overflow-hidden min-w-0">
-      <div className="flex items-center gap-2">
-        <Calculator className="h-4 w-4 text-primary" />
-        <h4 className="font-semibold text-sm">Kalkulace spolupráce</h4>
-      </div>
-
-      {/* ===== BLOCK 1: Current State ===== */}
-      <div className="space-y-2">
-        <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Aktuální stav klienta
-        </h5>
+    <div className="space-y-5 overflow-hidden min-w-0">
+      {/* ===== BLOCK 1: Current State (read-only, muted) ===== */}
+      <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Calculator className="h-4 w-4 text-muted-foreground" />
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Aktuální stav klienta
+          </h4>
+        </div>
         <div className="grid grid-cols-3 gap-3 text-sm">
           <div className="bg-background rounded-md p-3 border">
             <p className="text-muted-foreground text-xs">Měsíční fee</p>
@@ -355,7 +353,7 @@ export function PricingImpactSection({
         </div>
 
         {clientEconomics.services.length > 0 && (
-          <div className="rounded-md border overflow-hidden">
+          <div className="rounded-md border overflow-hidden bg-background">
             <Table>
               <TableHeader>
                 <TableRow className="text-xs">
@@ -378,14 +376,16 @@ export function PricingImpactSection({
         )}
       </div>
 
-      {/* ===== BLOCK 2: Proposed Change ===== */}
-      <div className="space-y-3">
-        <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Navrhovaná změna
-        </h5>
+      {/* ===== BLOCK 2: Proposed Change (interactive, prominent) ===== */}
+      <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-primary" />
+          <h4 className="text-sm font-semibold">Navrhovaná změna</h4>
+        </div>
 
+        {/* Scenario type */}
         <div className="space-y-2">
-          <Label className="text-xs">Typ scénáře</Label>
+          <Label className="text-xs font-medium">Typ scénáře</Label>
           <Select value={scenario} onValueChange={(v) => setScenario(v as PricingScenario)}>
             <SelectTrigger className="h-9 text-sm">
               <SelectValue />
@@ -402,7 +402,7 @@ export function PricingImpactSection({
         {isExpansion && (
           <>
             <div className="space-y-2">
-              <Label className="text-xs">Referenční služba (základ pro výpočet ceny)</Label>
+              <Label className="text-xs font-medium">Referenční služba (základ pro výpočet ceny)</Label>
               <Select value={referenceServiceId} onValueChange={setReferenceServiceId}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Vyberte stávající službu klienta" />
@@ -418,7 +418,8 @@ export function PricingImpactSection({
             </div>
 
             {referenceService && (
-              <div className="space-y-3">
+              <div className="space-y-3 p-3 rounded-md border bg-background">
+                <p className="text-xs font-medium text-muted-foreground">Cenová kalkulace</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">
@@ -438,9 +439,7 @@ export function PricingImpactSection({
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">
-                      Finální cena položky
-                    </Label>
+                    <Label className="text-xs">Finální cena položky</Label>
                     <Input
                       type="number"
                       value={finalPriceOverride !== null ? finalPriceOverride : recommendedPrice}
@@ -574,164 +573,164 @@ export function PricingImpactSection({
             />
           </div>
         )}
+      </div>
 
-        {/* Colleague Rewards Table — always shown, with add row capability */}
-        <div className="space-y-2 p-3 rounded-md border bg-background">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="h-3.5 w-3.5 text-primary" />
-              <h6 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Odměny kolegů za tuto službu
-              </h6>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={addRewardRow}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Přidat
-            </Button>
+      {/* ===== BLOCK 3: Colleague Rewards (own section) ===== */}
+      <div className="rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <h4 className="text-sm font-semibold">Odměny kolegů</h4>
+            {isExpansion && referenceService && (
+              <span className="text-xs text-muted-foreground">(× {multiplier} multiplikátor)</span>
+            )}
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={addRewardRow}
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            Přidat kolegu
+          </Button>
+        </div>
 
-          {colleagueRewards.length > 0 ? (
-            <>
-              <div className="rounded-md border overflow-hidden">
-                <Table className="table-fixed w-full">
-                  <TableHeader>
-                    <TableRow className="text-xs">
-                      <TableHead className="h-8 text-xs w-[30%]">Role</TableHead>
-                      <TableHead className="h-8 text-xs w-[30%]">Kolega</TableHead>
-                      <TableHead className="h-8 text-xs text-right w-[12%]">Hodiny</TableHead>
-                      <TableHead className="h-8 text-xs text-right w-[20%]">Odměna</TableHead>
-                      <TableHead className="h-8 text-xs w-[8%]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {colleagueRewards.map((reward, idx) => (
-                      <TableRow key={idx} className="text-xs">
-                        <TableCell className="py-1.5">
-                          <Input
-                            value={reward.role}
-                            onChange={(e) => {
-                              const newRole = e.target.value;
-                              // Auto-fill reward from service config when role changes
-                              const tier = selectedTierProp || null;
-                              const recommended = getRewardsFromServiceConfig(
-                                selectedCatalogService?.reward_config as any,
-                                tier
-                              ) || getServiceRewardRecommendation(
-                                selectedCatalogService?.name || '',
-                                tier
-                              );
-                              const matchingReward = recommended?.find(
-                                r => r.role.toLowerCase() === newRole.toLowerCase()
-                              );
-                              const isExp = scenario === 'expand_country' || scenario === 'expand_shop';
-                              const rewardAmount = matchingReward
-                                ? (isExp ? Math.round(matchingReward.reward * multiplier) : matchingReward.reward)
-                                : undefined;
-                              const rewardHours = matchingReward?.hours;
-                              const rewardType = matchingReward?.rewardType;
+        {colleagueRewards.length > 0 ? (
+          <>
+            <div className="rounded-md border overflow-hidden bg-background">
+              <Table className="table-fixed w-full">
+                <TableHeader>
+                  <TableRow className="text-xs">
+                    <TableHead className="h-8 text-xs w-[30%]">Role</TableHead>
+                    <TableHead className="h-8 text-xs w-[30%]">Kolega</TableHead>
+                    <TableHead className="h-8 text-xs text-right w-[12%]">Hodiny</TableHead>
+                    <TableHead className="h-8 text-xs text-right w-[20%]">Odměna</TableHead>
+                    <TableHead className="h-8 text-xs w-[8%]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {colleagueRewards.map((reward, idx) => (
+                    <TableRow key={idx} className="text-xs">
+                      <TableCell className="py-1.5">
+                        <Input
+                          value={reward.role}
+                          onChange={(e) => {
+                            const newRole = e.target.value;
+                            const tier = selectedTierProp || null;
+                            const recommended = getRewardsFromServiceConfig(
+                              selectedCatalogService?.reward_config as any,
+                              tier
+                            ) || getServiceRewardRecommendation(
+                              selectedCatalogService?.name || '',
+                              tier
+                            );
+                            const matchingReward = recommended?.find(
+                              r => r.role.toLowerCase() === newRole.toLowerCase()
+                            );
+                            const isExp = scenario === 'expand_country' || scenario === 'expand_shop';
+                            const rewardAmount = matchingReward
+                              ? (isExp ? Math.round(matchingReward.reward * multiplier) : matchingReward.reward)
+                              : undefined;
+                            const rewardHours = matchingReward?.hours;
+                            const rewardType = matchingReward?.rewardType;
 
-                              setColleagueRewards(prev => prev.map((r, i) =>
-                                i === idx ? {
-                                  ...r,
-                                  role: newRole,
-                                  ...(rewardAmount !== undefined && r.reward === 0 ? { reward: rewardAmount } : {}),
-                                  ...(rewardHours !== undefined && r.hours === 0 ? { hours: rewardHours } : {}),
-                                  ...(rewardType ? { reward_type: rewardType } : {}),
-                                } : r
-                              ));
-                            }}
-                            className="h-7 text-xs w-full"
-                            placeholder="Role"
-                          />
-                        </TableCell>
-                        <TableCell className="py-1.5">
-                          <Select
-                            value={reward.colleague_id || ''}
-                            onValueChange={(val) => {
-                              const col = activeColleagues.find(c => c.id === val);
-                              setColleagueRewards(prev => prev.map((r, i) =>
-                                i === idx ? { ...r, colleague_id: val, colleague_name: col?.full_name } : r
-                              ));
-                            }}
-                          >
-                            <SelectTrigger className="h-7 text-xs w-full">
-                              <SelectValue placeholder="Vybrat kolegu" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {activeColleagues.map(c => (
-                                <SelectItem key={c.id} value={c.id} className="text-xs">
-                                  {c.full_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="py-1.5 text-right">
+                            setColleagueRewards(prev => prev.map((r, i) =>
+                              i === idx ? {
+                                ...r,
+                                role: newRole,
+                                ...(rewardAmount !== undefined && r.reward === 0 ? { reward: rewardAmount } : {}),
+                                ...(rewardHours !== undefined && r.hours === 0 ? { hours: rewardHours } : {}),
+                                ...(rewardType ? { reward_type: rewardType } : {}),
+                              } : r
+                            ));
+                          }}
+                          className="h-7 text-xs w-full"
+                          placeholder="Role"
+                        />
+                      </TableCell>
+                      <TableCell className="py-1.5">
+                        <Select
+                          value={reward.colleague_id || ''}
+                          onValueChange={(val) => {
+                            const col = activeColleagues.find(c => c.id === val);
+                            setColleagueRewards(prev => prev.map((r, i) =>
+                              i === idx ? { ...r, colleague_id: val, colleague_name: col?.full_name } : r
+                            ));
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-full">
+                            <SelectValue placeholder="Vybrat kolegu" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {activeColleagues.map(c => (
+                              <SelectItem key={c.id} value={c.id} className="text-xs">
+                                {c.full_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right">
+                        <Input
+                          type="number"
+                          value={reward.hours || ''}
+                          onChange={(e) => {
+                            setColleagueRewards(prev => prev.map((r, i) =>
+                              i === idx ? { ...r, hours: Number(e.target.value) } : r
+                            ));
+                          }}
+                          className="h-7 w-full text-xs text-right ml-auto"
+                          step="0.5"
+                          placeholder="0"
+                        />
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right">
+                        <div className="flex items-center gap-1 justify-end">
                           <Input
                             type="number"
-                            value={reward.hours || ''}
+                            value={reward.reward || ''}
                             onChange={(e) => {
                               setColleagueRewards(prev => prev.map((r, i) =>
-                                i === idx ? { ...r, hours: Number(e.target.value) } : r
+                                i === idx ? { ...r, reward: Number(e.target.value) } : r
                               ));
                             }}
-                            className="h-7 w-full text-xs text-right ml-auto"
-                            step="0.5"
+                            className="h-7 w-full text-xs text-right"
+                            step="100"
                             placeholder="0"
                           />
-                        </TableCell>
-                        <TableCell className="py-1.5 text-right">
-                          <div className="flex items-center gap-1 justify-end">
-                            <Input
-                              type="number"
-                              value={reward.reward || ''}
-                              onChange={(e) => {
-                                setColleagueRewards(prev => prev.map((r, i) =>
-                                  i === idx ? { ...r, reward: Number(e.target.value) } : r
-                                ));
-                              }}
-                              className="h-7 w-full text-xs text-right"
-                              step="100"
-                              placeholder="0"
-                            />
-                            <span className="text-muted-foreground text-[10px] shrink-0">
-                              {reward.reward_type === 'per_credit' ? 'Kč/kredit' : 'Kč'}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-1.5">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeRewardRow(idx)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <div className="flex justify-between items-center text-xs pt-1">
-                <span className="text-muted-foreground">Celkové interní náklady:</span>
-                <span className="font-semibold">{formatCZK(totalColleagueRewards)}</span>
-              </div>
-            </>
-          ) : (
-            <p className="text-xs text-muted-foreground py-2">
-              Zatím žádné odměny — klikněte „Přidat" pro přidání kolegy.
-            </p>
-          )}
-        </div>
+                          <span className="text-muted-foreground text-[10px] shrink-0">
+                            {reward.reward_type === 'per_credit' ? 'Kč/kredit' : 'Kč'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeRewardRow(idx)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex justify-between items-center text-xs pt-1">
+              <span className="text-muted-foreground">Celkové interní náklady:</span>
+              <span className="font-semibold">{formatCZK(totalColleagueRewards)}</span>
+            </div>
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground py-2">
+            Zatím žádné odměny — klikněte „Přidat kolegu" pro přidání.
+          </p>
+        )}
 
         {/* Warning: no internal cost */}
         {showInternalCostWarning && (
@@ -743,9 +742,17 @@ export function PricingImpactSection({
             </AlertDescription>
           </Alert>
         )}
+      </div>
 
-        {/* Summary row for proposed change */}
-        {deltaRevenue > 0 && (
+      {/* ===== BLOCK 4: Result — New State After Change ===== */}
+      {deltaRevenue > 0 && (
+        <div className="rounded-lg border-2 border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <h4 className="text-sm font-semibold">Výsledek po změně</h4>
+          </div>
+
+          {/* Delta summary */}
           <div className="flex items-center gap-4 text-sm bg-background rounded-md p-3 border">
             <div className="flex items-center gap-1">
               <TrendingUp className="h-3.5 w-3.5 text-green-600" />
@@ -758,15 +765,6 @@ export function PricingImpactSection({
               <span className="font-medium">{formatCZK(deltaInternalCost)}</span>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* ===== BLOCK 3: New State After Change ===== */}
-      {deltaRevenue > 0 && (
-        <div className="space-y-3">
-          <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Nový stav po změně
-          </h5>
 
           <div className="grid grid-cols-3 gap-3 text-sm">
             <div className="bg-background rounded-md p-3 border">
