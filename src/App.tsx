@@ -66,6 +66,7 @@ const App = () => (
                   <FeedbackProvider>
                     <AcademyDataProvider>
                       <SOPDataProvider>
+                      <BugReportsProvider>
                       <TooltipProvider>
                         <Toaster />
                         <Sonner />
