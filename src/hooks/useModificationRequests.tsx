@@ -187,6 +187,7 @@ export function useModificationRequests() {
     upsold_by_name?: string | null;
     pricing_snapshot?: PricingSnapshot | null;
     items?: ModificationRequestItem[];
+    bundle_discount_percent?: number;
   }) => {
     if (!user) throw new Error('User not authenticated');
     
