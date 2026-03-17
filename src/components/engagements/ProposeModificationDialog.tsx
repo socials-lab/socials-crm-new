@@ -915,7 +915,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           {/* ===== STEP 2: Request Type (only after engagement selected) ===== */}
           {selectedEngagementId && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium">2. Typ úpravy *</Label>
+              <Label className="text-sm font-semibold">2. Typ úpravy *</Label>
               <Select value={requestType || undefined} onValueChange={(v) => {
                 setRequestType(v as ModificationRequestType);
                 setRequestTypeConfirmed(true);
