@@ -190,6 +190,7 @@ function CollapsibleModificationCard({ request, cardContent }: { request: Stored
                   )}
                 </div>
               </div>
+            </div>
             <div className="flex items-center gap-4 shrink-0 ml-4">
               {deltaRevenue != null && (
                 <span className={`text-sm font-semibold ${deltaRevenue >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
