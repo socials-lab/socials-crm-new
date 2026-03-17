@@ -124,12 +124,6 @@ export function PendingModificationsSection() {
           break;
         }
         
-        case 'remove_assignment': {
-          if (request.engagement_assignment_id) {
-            await removeAssignment(request.engagement_assignment_id);
-          }
-          break;
-        }
       }
       
       // Mark request as approved

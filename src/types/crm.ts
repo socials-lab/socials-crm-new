@@ -805,8 +805,7 @@ export type ModificationRequestType =
   | 'update_service_price'
   | 'deactivate_service'
   | 'add_assignment'
-  | 'update_assignment'
-  | 'remove_assignment';
+  | 'update_assignment';
 
 // Status for modification requests
 export type ModificationRequestStatus = 
@@ -823,7 +822,6 @@ export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, s
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
-  remove_assignment: 'Odebrání kolegy',
 };
 
 // Status labels

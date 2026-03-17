@@ -33,7 +33,6 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Deaktivace služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
-  remove_assignment: 'Odebrání kolegy',
 };
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
@@ -42,7 +41,6 @@ const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
   'update_service_price',
   'deactivate_service',
   'add_assignment',
-  'remove_assignment',
 ];
 
 export function ProposeModificationDialog({ open, onOpenChange, editingRequest }: ProposeModificationDialogProps) {
@@ -424,11 +422,6 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           percentage_of_revenue: costModel === 'percentage' ? percentageOfRevenue : null,
         };
         break;
-      case 'remove_assignment':
-        proposed_changes = {
-          engagement_assignment_id: selectedAssignmentId,
-        };
-        break;
     }
 
     try {
@@ -448,7 +441,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
             ? selectedEngagementServiceId 
             : null,
-          engagement_assignment_id: ['update_assignment', 'remove_assignment'].includes(requestType)
+          engagement_assignment_id: ['update_assignment'].includes(requestType)
             ? selectedAssignmentId
             : null,
           effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
@@ -1103,28 +1096,6 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 </div>
               )}
 
-              {/* REMOVE ASSIGNMENT FIELDS */}
-              {requestType === 'remove_assignment' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                  <h4 className="font-medium">3. Odebrání kolegy</h4>
-                  
-                  <div className="space-y-2">
-                    <Label>Kolega k odebrání *</Label>
-                    <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Vyberte přiřazení" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currentAssignments.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {getColleagueName(a.colleague_id)} ({a.role_on_engagement || 'bez role'})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
 
               {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
               {((requestType === 'add_service' && selectedServiceId) || (requestType === 'update_service_price' && selectedEngagementServiceId)) && (() => {

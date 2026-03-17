@@ -5,7 +5,7 @@ import {
   Package, 
   DollarSign, 
   UserPlus, 
-  UserMinus, 
+   
   Settings,
   Check, 
   X, 
@@ -66,7 +66,6 @@ const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
   deactivate_service: X,
   add_assignment: UserPlus,
   update_assignment: Settings,
-  remove_assignment: UserMinus,
 };
 
 const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
@@ -75,7 +74,6 @@ const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
   deactivate_service: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   add_assignment: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   update_assignment: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  remove_assignment: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
@@ -84,7 +82,6 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny',
-  remove_assignment: 'Odebrání kolegy',
 };
 
 export function ModificationRequestCard({
@@ -253,15 +250,6 @@ export function ModificationRequestCard({
         );
       }
       
-      case 'remove_assignment': {
-        const c = changes as RemoveAssignmentProposedChanges;
-        return (
-          <div className="space-y-1 text-sm">
-            <p><span className="text-muted-foreground">Kolega:</span> {c.colleague_name}</p>
-            <p><span className="text-muted-foreground">Role:</span> {c.role_on_engagement}</p>
-          </div>
-        );
-      }
       
       default:
         return null;

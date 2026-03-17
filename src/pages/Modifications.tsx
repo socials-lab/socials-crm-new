@@ -46,7 +46,6 @@ function AppliedHistoryCard({ entry }: { entry: AppliedModificationHistory }) {
     deactivate_service: 'Ukončení služby',
     add_assignment: 'Přiřazení kolegy',
     update_assignment: 'Změna odměny',
-    remove_assignment: 'Odebrání kolegy',
   };
 
   const typeLabel = REQUEST_TYPE_LABELS[entry.request_type] || entry.request_type;
