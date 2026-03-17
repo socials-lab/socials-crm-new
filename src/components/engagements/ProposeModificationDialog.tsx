@@ -338,6 +338,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setNewEngName('');
       setNewEngOnboardingEmail('');
       setNewEngServices([]);
+      // Bundled items reset
+      setBundledItems([]);
     }
   }, [open]);
 
