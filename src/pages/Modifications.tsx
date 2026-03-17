@@ -652,7 +652,6 @@ export default function Modifications() {
             Zamítnuté
           </TabsTrigger>
         </TabsList>
-        </TabsList>
 
         <TabsContent value="drafts" className="space-y-4">
           {drafts.length === 0 ? (
