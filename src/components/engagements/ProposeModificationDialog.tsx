@@ -1181,8 +1181,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
               {/* ADD SERVICE FIELDS */}
               {requestType === 'add_service' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium">3. Nová služba</h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
