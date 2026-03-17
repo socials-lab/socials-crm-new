@@ -253,8 +253,15 @@ export default function Modifications() {
   };
 
   const handleEdit = (request: StoredModificationRequest) => {
-    setEditingRequest(request);
-    setEditDialogOpen(true);
+    if (request.status === 'pending') {
+      // For pending requests, open the full creation dialog pre-filled
+      setEditingRequest(request);
+      setDialogOpen(true);
+    } else {
+      // For other statuses, use the simpler edit dialog
+      setEditingRequest(request);
+      setEditDialogOpen(true);
+    }
   };
 
   const handleSaveEdit = async (requestId: string, updates: {
@@ -320,7 +327,14 @@ export default function Modifications() {
         description="Připravte nabídku na rozšíření spolupráce se stávajícím klientem"
       />
 
-      <ProposeModificationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ProposeModificationDialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingRequest(null);
+        }}
+        editingRequest={editingRequest?.status === 'pending' ? editingRequest : null}
+      />
       
       {/* Send Email Dialog */}
       {emailRequest && (

@@ -24,6 +24,7 @@ import type { PricingSnapshot } from '@/utils/pricingEngine';
 interface ProposeModificationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editingRequest?: import('@/data/modificationRequestsMockData').StoredModificationRequest | null;
 }
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
@@ -35,10 +36,11 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   remove_assignment: 'Odebrání kolegy',
 };
 
-export function ProposeModificationDialog({ open, onOpenChange }: ProposeModificationDialogProps) {
+export function ProposeModificationDialog({ open, onOpenChange, editingRequest }: ProposeModificationDialogProps) {
   const { engagements, clients, services, colleagues, engagementServices, assignments, getEngagementServicesByEngagementId, getAssignmentsByEngagementId } = useCRMData();
-  const { createRequest, isCreating } = useModificationRequests();
+  const { createRequest, updateRequest, isCreating, isUpdating } = useModificationRequests();
   const { user } = useAuth();
+  const isEditMode = !!editingRequest;
   
   // Find colleague record for current user
   const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
@@ -128,7 +130,59 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
 
   const prorationInfo = calculateProratedAmount();
 
-  // Reset form when dialog closes
+  // Pre-fill from editingRequest when opening in edit mode
+  useEffect(() => {
+    if (open && editingRequest) {
+      setSelectedEngagementId(editingRequest.engagement_id);
+      setRequestType(editingRequest.request_type);
+      setRequestTypeConfirmed(true);
+      setEffectiveFrom(editingRequest.effective_from ? new Date(editingRequest.effective_from) : undefined);
+      setUpsoldById(editingRequest.upsold_by_id || 'none');
+      setNote(editingRequest.note || '');
+      setPricingSnapshot(editingRequest.pricing_snapshot || null);
+
+      const changes = editingRequest.proposed_changes as any;
+
+      if (editingRequest.request_type === 'add_service') {
+        setSelectedServiceId(changes.service_id || 'custom');
+        setServiceName(changes.name || '');
+        setServicePrice(changes.price || 0);
+        setServiceCurrency(changes.currency || 'CZK');
+        setServiceBillingType(changes.billing_type || 'monthly');
+        setSelectedTier(changes.selected_tier || 'none');
+        setServiceDescription(changes.description || '');
+        setServiceDeliverables(changes.deliverables?.join('\n') || '');
+        if (changes.creative_boost_max_credits) {
+          setCbMaxCredits(changes.creative_boost_max_credits);
+          setCbPricePerCredit(changes.creative_boost_price_per_credit || 400);
+          setCbColleagueReward(changes.creative_boost_reward_per_credit || 80);
+        }
+      } else if (editingRequest.request_type === 'update_service_price') {
+        setSelectedEngagementServiceId(changes.engagement_service_id || editingRequest.engagement_service_id || '');
+        setNewPrice(changes.new_price || 0);
+      } else if (editingRequest.request_type === 'deactivate_service') {
+        setSelectedEngagementServiceId(changes.engagement_service_id || editingRequest.engagement_service_id || '');
+      } else if (editingRequest.request_type === 'add_assignment') {
+        setSelectedColleagueId(changes.colleague_id || '');
+        setRoleOnEngagement(changes.role_on_engagement || '');
+        setCostModel(changes.cost_model || 'fixed_monthly');
+        setHourlyCost(changes.hourly_cost || 0);
+        setMonthlyCost(changes.monthly_cost || 0);
+        setPercentageOfRevenue(changes.percentage_of_revenue || 0);
+      } else if (editingRequest.request_type === 'update_assignment' || editingRequest.request_type === 'remove_assignment') {
+        setSelectedAssignmentId(changes.engagement_assignment_id || editingRequest.engagement_assignment_id || '');
+        if (editingRequest.request_type === 'update_assignment') {
+          setCostModel(changes.cost_model || 'fixed_monthly');
+          setHourlyCost(changes.hourly_cost || 0);
+          setMonthlyCost(changes.monthly_cost || 0);
+          setPercentageOfRevenue(changes.percentage_of_revenue || 0);
+        }
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editingRequest?.id]);
+
+  // Reset form when dialog closes (only when not in edit mode, or always on close)
   useEffect(() => {
     if (!open) {
       setSelectedEngagementId('');
@@ -289,26 +343,35 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
     }
 
     try {
-      await createRequest({
-        engagement_id: selectedEngagementId,
-        request_type: requestType as ModificationRequestType,
-        proposed_changes: proposed_changes as any,
-        engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
-          ? selectedEngagementServiceId 
-          : null,
-        engagement_assignment_id: ['update_assignment', 'remove_assignment'].includes(requestType)
-          ? selectedAssignmentId
-          : null,
-        effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
-        upsold_by_id: upsoldById === 'none' ? null : upsoldById,
-        note: note || null,
-        pricing_snapshot: pricingSnapshot,
-      });
+      if (isEditMode && editingRequest) {
+        // Update existing request
+        await updateRequest(editingRequest.id, {
+          proposed_changes: proposed_changes as any,
+          effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
+          note: note || null,
+          upsell_commission_percent: upsoldById === 'none' ? 0 : 10,
+        });
+      } else {
+        await createRequest({
+          engagement_id: selectedEngagementId,
+          request_type: requestType as ModificationRequestType,
+          proposed_changes: proposed_changes as any,
+          engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
+            ? selectedEngagementServiceId 
+            : null,
+          engagement_assignment_id: ['update_assignment', 'remove_assignment'].includes(requestType)
+            ? selectedAssignmentId
+            : null,
+          effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
+          upsold_by_id: upsoldById === 'none' ? null : upsoldById,
+          note: note || null,
+          pricing_snapshot: pricingSnapshot,
+        });
+      }
       
-      // Just close the dialog - upgrade offer will be created at approval time
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to create modification request:', error);
+      console.error('Failed to save modification request:', error);
     }
   };
 
@@ -329,8 +392,8 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Navrhnout úpravu zakázky
+            {isEditMode ? <FileText className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+            {isEditMode ? 'Upravit návrh změny' : 'Navrhnout úpravu zakázky'}
           </DialogTitle>
         </DialogHeader>
 
@@ -977,9 +1040,11 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={isCreating || !selectedEngagementId}
+            disabled={(isCreating || isUpdating) || !selectedEngagementId}
           >
-            {isCreating ? 'Odesílám...' : 'Odeslat ke schválení'}
+            {isEditMode
+              ? (isUpdating ? 'Ukládám...' : 'Uložit změny')
+              : (isCreating ? 'Odesílám...' : 'Odeslat ke schválení')}
           </Button>
         </DialogFooter>
       </DialogContent>

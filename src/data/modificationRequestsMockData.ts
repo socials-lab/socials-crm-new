@@ -302,6 +302,9 @@ export function updateModificationRequest(
     effective_from?: string | null;
     note?: string | null;
     upsell_commission_percent?: number;
+    upsold_by_id?: string | null;
+    upsold_by_name?: string | null;
+    pricing_snapshot?: PricingSnapshot | null;
   }
 ): StoredModificationRequest | null {
   const requests = getModificationRequests();
@@ -322,6 +325,9 @@ export function updateModificationRequest(
     effective_from: updates.effective_from !== undefined ? updates.effective_from : request.effective_from,
     note: updates.note !== undefined ? updates.note : request.note,
     upsell_commission_percent: updates.upsell_commission_percent ?? request.upsell_commission_percent,
+    upsold_by_id: updates.upsold_by_id !== undefined ? updates.upsold_by_id : request.upsold_by_id,
+    upsold_by_name: updates.upsold_by_name !== undefined ? updates.upsold_by_name : request.upsold_by_name,
+    pricing_snapshot: updates.pricing_snapshot !== undefined ? updates.pricing_snapshot : request.pricing_snapshot,
     updated_at: new Date().toISOString(),
   };
   
