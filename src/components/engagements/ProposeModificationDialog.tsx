@@ -262,6 +262,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           setSelectedTier('growth');
           const growthPricing = service.tier_pricing?.find((p: any) => p.tier === 'growth');
           setServicePrice(growthPricing?.price ?? service.base_price ?? 0);
+        } else if (service.code === AI_SEO_CODE) {
+          // AI SEO: hourly-based with default colleague
+          setServicePrice(service.base_price || 0);
+          setSelectedTier('none');
+          setAiSeoColleagueName('Martin Tomčík');
+          setAiSeoHourlyRate(600);
+          setAiSeoHours(10);
         } else {
           // Addon or other service
           setServicePrice(service.base_price || 0);
