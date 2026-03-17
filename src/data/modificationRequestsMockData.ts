@@ -316,6 +316,7 @@ export function updateModificationRequest(
     upsold_by_id?: string | null;
     upsold_by_name?: string | null;
     pricing_snapshot?: PricingSnapshot | null;
+    items?: ModificationRequestItem[];
   }
 ): StoredModificationRequest | null {
   const requests = getModificationRequests();
