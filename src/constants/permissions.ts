@@ -23,6 +23,7 @@ export const ALL_PAGES = [
   { id: 'feedback', label: 'Feedback Zone', emoji: '💡' },
   { id: 'academy', label: 'Akademie', emoji: '📚' },
   { id: 'sop', label: 'SOP', emoji: '📖' },
+  { id: 'bug-reports', label: 'Bug Reports', emoji: '🐛' },
   // Reporting
   { id: 'analytics', label: 'Analytika', emoji: '📊' },
   // Nastavení
@@ -37,6 +38,6 @@ export const PAGE_GROUPS = [
   { label: 'Obchodní proces', pages: ['leads', 'clients', 'contacts', 'engagements', 'modifications', 'broadcasts'] },
   { label: 'Práce & dodávka', pages: ['extra-work', 'upsells', 'creative-boost', 'meetings', 'services'] },
   { label: 'Finance', pages: ['invoicing'] },
-  { label: 'Tým & interní', pages: ['colleagues', 'recruitment', 'feedback', 'academy', 'sop'] },
+  { label: 'Tým & interní', pages: ['colleagues', 'recruitment', 'feedback', 'academy', 'sop', 'bug-reports'] },
   { label: 'Reporting & nastavení', pages: ['analytics', 'settings', 'notifications'] },
 ] as const;

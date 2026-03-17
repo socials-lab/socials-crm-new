@@ -16,6 +16,7 @@ import { MeetingsDataProvider } from "@/hooks/useMeetingsData";
 import { FeedbackProvider } from "@/hooks/useFeedbackData";
 import { AcademyDataProvider } from "@/hooks/useAcademyData";
 import { SOPDataProvider } from "@/hooks/useSOPData";
+import { BugReportsProvider } from "@/hooks/useBugReports";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Contacts from "./pages/Contacts";
@@ -48,6 +49,7 @@ import UpgradeOfferPage from "./pages/UpgradeOfferPage";
 import ExtraWorkApproval from "./pages/ExtraWorkApproval";
 import PublicCreativeBoostPage from "./pages/PublicCreativeBoostPage";
 import PublicSOPPage from "./pages/PublicSOPPage";
+import BugReports from "./pages/BugReports";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +66,7 @@ const App = () => (
                   <FeedbackProvider>
                     <AcademyDataProvider>
                       <SOPDataProvider>
+                      <BugReportsProvider>
                       <TooltipProvider>
                         <Toaster />
                         <Sonner />
@@ -108,11 +111,13 @@ const App = () => (
                               <Route path="/academy" element={<Academy />} />
                               <Route path="/sop" element={<SOP />} />
                               <Route path="/sop/:articleId" element={<SOP />} />
+                              <Route path="/bug-reports" element={<BugReports />} />
                             </Route>
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </BrowserRouter>
                       </TooltipProvider>
+                      </BugReportsProvider>
                       </SOPDataProvider>
                     </AcademyDataProvider>
                   </FeedbackProvider>

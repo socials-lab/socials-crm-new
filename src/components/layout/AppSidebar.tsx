@@ -36,8 +36,10 @@ import {
   FileText,
   BarChart3,
   Settings,
+  Bug,
   type LucideIcon,
 } from 'lucide-react';
+import { useBugReports } from '@/hooks/useBugReports';
 
 interface NavItem {
   title: string;
@@ -95,6 +97,7 @@ const navGroups: NavGroup[] = [
       { title: 'Feedback Zone', url: '/feedback', page: 'feedback', icon: Lightbulb },
       { title: 'Akademie', url: '/academy', page: 'academy', icon: BookOpen },
       { title: 'SOP', url: '/sop', page: 'sop', icon: FileText },
+      { title: 'Bug Reports', url: '/bug-reports', page: 'bug-reports', icon: Bug },
     ],
   },
   {
@@ -113,6 +116,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { colleagueId, canAccessPage } = useUserRole();
   const { setOpenMobile } = useSidebar();
+  const { unresolvedCount } = useBugReports();
   
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -135,6 +139,7 @@ export function AppSidebar() {
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
+    const showBadge = item.page === 'bug-reports' && unresolvedCount > 0;
     return (
       <SidebarMenuItem key={item.title}>
         <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
@@ -149,7 +154,12 @@ export function AppSidebar() {
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span>{item.title}</span>
+            <span className="flex-1">{item.title}</span>
+            {showBadge && (
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-1">
+                {unresolvedCount}
+              </span>
+            )}
           </NavLink>
         </SidebarMenuButton>
       </SidebarMenuItem>

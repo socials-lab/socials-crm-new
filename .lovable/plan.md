@@ -1,60 +1,47 @@
 
 
-## Plán: Bug Report & Feature Request systém
+## Plan: Kontrola přefakturace víceprací klientům
 
-### Nové soubory
+### Problém
 
-**1. `src/types/bugReport.ts`** — Typy a konfigurace
-- `BugReportType`: `'bug' | 'feature'`
-- `BugReportStatus`: `'open' | 'in_progress' | 'resolved'`
-- `BugReport` interface: id, type, status, subject, description, page_url, screenshot_url, reported_by, created_at
-- Status/type config objekty s labels, barvami, ikonami
+Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
 
-**2. `src/data/bugReportsMockData.ts`** — Mock data (8-10 záznamů mix bugů a feature requestů)
+### Řešení
 
-**3. `src/hooks/useBugReports.tsx`** — Context provider + hook
-- Stav: `reports[]`, CRUD operace (add, updateStatus)
-- `unresolvedCount` getter (open + in_progress)
-- `addReport({ type, subject, description, pageUrl, screenshotFile })` — vytvoří nový záznam, uloží screenshot jako data URL
-- Provider pattern stejný jako `useFeedbackData`
+Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
+- `expected` — vícepráce se má přefakturovat klientovi (default)
+- `reinvoiced` — přefakturováno klientovi
+- `not_expected` — nepředpokládá se přefakturace klientovi
 
-**4. `src/components/bug-reports/BugReportFAB.tsx`** — Plovoucí tlačítko + Dialog
-- FAB: `fixed bottom-5 right-5 z-50`, 48×48, `Lightbulb` ikona, shadow-lg
-- Při kliknutí: pořídí screenshot přes `html2canvas` (nový npm balíček), uloží `window.location.href`
-- Dialog (shadcn): type switcher (Bug/Feature), readonly URL, subject, description, screenshot preview s X/upload
-- Submit volá `addReport` + toast + reset + close
-- `onSubmit` callback prop pro budoucí backend napojení
+Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
 
-**5. `src/components/bug-reports/BugReportImageDialog.tsx`** — Fullscreen screenshot dialog (klik z tabulky)
+### Databázové změny
 
-**6. `src/pages/BugReports.tsx`** — Admin stránka
-- PageHeader "Feedback & Bug Reports"
-- Tabs filtr: Typ (Vše/Bugy/Návrhy) + Status (Vše/Otevřené/V řešení/Vyřešené)
-- Shadcn Table: Typ badge, Status badge s ikonou, Předmět + description, pathname, datum (date-fns cs), img ikona, akce dropdown (změna statusu)
-- Admin check přes `useUserRole`
+```sql
+CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
+ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
+ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+```
 
-### Úpravy existujících souborů
+### UI změny
 
-**7. `src/App.tsx`**
-- Import `BugReportsProvider`, obalit routes
-- Import `BugReports` page, přidat route `/bug-reports`
-- Přidat `<BugReportFAB />` do AppLayout (nebo přímo do App pod BrowserRouter)
+**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
+- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
+- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
 
-**8. `src/components/layout/AppLayout.tsx`**
-- Přidat `<BugReportFAB />` před `</main>` (uvnitř protected layout, aby byl viditelný na všech stránkách)
+**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
+- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
+- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
 
-**9. `src/components/layout/AppSidebar.tsx`**
-- Přidat nav item "Feedback" s ikonou `Bug` do sekce "Tým & interní", url `/bug-reports`
-- Červený badge s `unresolvedCount` z `useBugReports` vedle názvu
+**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
+- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
+- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
 
-**10. `src/constants/permissions.ts`**
-- Přidat `{ id: 'bug-reports', label: 'Bug Reports', emoji: '🐛' }`
+**4. `src/types/crm.ts`**
+- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
 
-**11. `package.json`**
-- Přidat `html2canvas` dependency
-
-### Poznámky
-- Existující Feedback Zone (`/feedback`) zůstane beze změny — nový systém je odděleně na `/bug-reports`
-- Submit logika připravena jako callback `onSubmit` pro budoucí backend
-- Screenshot se ukládá jako base64 data URL v mock datech
+### Technické detaily
+- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
+- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
+- Badge se zobrazí vedle existujícího status badge
 
