@@ -228,6 +228,7 @@ function createClientApprovedNotification(request: StoredModificationRequest): v
   const notifications = getStoredNotifications();
   
   const changeTypeLabels: Record<ModificationRequestType, string> = {
+    expand_country: 'přidání nové země',
     add_service: 'přidání služby',
     update_service_price: 'změnu ceny',
     deactivate_service: 'deaktivaci služby',

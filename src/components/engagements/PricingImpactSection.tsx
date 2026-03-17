@@ -38,6 +38,12 @@ interface PricingImpactSectionProps {
   isAddonService: boolean;
   /** Tier selected in parent (growth/pro/elite) */
   selectedTier?: string | null;
+  /** When set to 'expand_country' or 'add_service', hides internal scenario selector */
+  requestType?: 'expand_country' | 'add_service' | string;
+  /** Multiplier from parent for expand_country */
+  expandMultiplier?: number;
+  /** Reference engagement_service_id from parent for expand_country */
+  expandRefServiceId?: string;
   onPriceChange: (price: number) => void;
   onInternalCostChange: (cost: number) => void;
   onSnapshotChange: (snapshot: PricingSnapshot | null) => void;
@@ -67,6 +73,9 @@ export function PricingImpactSection({
   selectedServiceId,
   isAddonService,
   selectedTier: selectedTierProp,
+  requestType: parentRequestType,
+  expandMultiplier: parentExpandMultiplier,
+  expandRefServiceId: parentExpandRefServiceId,
   onPriceChange,
   onInternalCostChange,
   onSnapshotChange,
@@ -74,12 +83,15 @@ export function PricingImpactSection({
 }: PricingImpactSectionProps) {
   const { engagements, engagementServices, assignments, services, colleagues } = useCRMData();
 
+  // When parent controls the scenario, override local state
+  const isParentControlled = parentRequestType === 'expand_country' || parentRequestType === 'add_service';
+
   // Local state
   const [scenario, setScenario] = useState<PricingScenario>(
-    isAddonService ? 'add_addon' : 'expand_country'
+    parentRequestType === 'expand_country' ? 'expand_country' : isAddonService ? 'add_addon' : 'expand_country'
   );
-  const [referenceServiceId, setReferenceServiceId] = useState<string>('');
-  const [multiplier, setMultiplier] = useState<number>(getDefaultMultiplier('expand_country') ?? 0.5);
+  const [referenceServiceId, setReferenceServiceId] = useState<string>(parentExpandRefServiceId || '');
+  const [multiplier, setMultiplier] = useState<number>(parentExpandMultiplier ?? getDefaultMultiplier('expand_country') ?? 0.5);
   const [manualInternalCost, setManualInternalCost] = useState<number>(0);
   const [justification, setJustification] = useState('');
 
@@ -115,12 +127,18 @@ export function PricingImpactSection({
     return activeClientServices.find(s => s.id === referenceServiceId);
   }, [activeClientServices, referenceServiceId]);
 
-  // Auto-select scenario based on service type
+  // Sync parent-controlled props
   useEffect(() => {
-    if (isAddonService) {
+    if (parentRequestType === 'expand_country') {
+      setScenario('expand_country');
+      if (parentExpandRefServiceId) setReferenceServiceId(parentExpandRefServiceId);
+      if (parentExpandMultiplier !== undefined) setMultiplier(parentExpandMultiplier);
+    } else if (parentRequestType === 'add_service') {
+      setScenario('add_addon'); // Direct pricing, no scenario picker
+    } else if (isAddonService) {
       setScenario('add_addon');
     }
-  }, [isAddonService]);
+  }, [isAddonService, parentRequestType, parentExpandRefServiceId, parentExpandMultiplier]);
 
   // Catalog service lookup
   const selectedCatalogService = useMemo(
@@ -385,23 +403,25 @@ export function PricingImpactSection({
           <h4 className="text-sm font-semibold">Navrhovaná změna</h4>
         </div>
 
-        {/* Scenario type */}
-        <div className="space-y-2">
-          <Label className="text-xs font-medium">Typ scénáře</Label>
-          <Select value={scenario} onValueChange={(v) => setScenario(v as PricingScenario)}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(isAddonService ? ADDON_SCENARIO_OPTIONS : CORE_SCENARIO_OPTIONS).map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Scenario type — hidden when parent controls the flow */}
+        {!isParentControlled && (
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Typ scénáře</Label>
+            <Select value={scenario} onValueChange={(v) => setScenario(v as PricingScenario)}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(isAddonService ? ADDON_SCENARIO_OPTIONS : CORE_SCENARIO_OPTIONS).map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-        {/* Reference service picker for expansion scenarios */}
-        {isExpansion && (
+        {/* Reference service picker for expansion scenarios — hidden when parent controls */}
+        {isExpansion && !isParentControlled && (
           <>
             <div className="space-y-2">
               <Label className="text-xs font-medium">Referenční služba (základ pro výpočet ceny)</Label>
@@ -481,8 +501,8 @@ export function PricingImpactSection({
           </>
         )}
 
-        {/* New client (different SRO) option for expand_shop */}
-        {scenario === 'expand_shop' && (
+        {/* New client (different SRO) option for expand_shop — hidden when parent controls */}
+        {scenario === 'expand_shop' && !isParentControlled && (
           <div className="space-y-3 p-3 rounded-md border bg-background">
             <div className="flex items-center gap-2">
               <Checkbox

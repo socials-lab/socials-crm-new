@@ -10,7 +10,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown, Globe } from 'lucide-react';
+import { MANAGED_COUNTRIES, getCountryName, getCountryFlag } from '@/constants/countries';
+import { Checkbox } from '@/components/ui/checkbox';
+import { calculateExpansionPrice, getDefaultMultiplier, formatCZK } from '@/utils/pricingEngine';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
@@ -30,6 +33,7 @@ interface ProposeModificationDialogProps {
 }
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+  expand_country: 'Přidání nové země',
   add_service: 'Přidání nové služby',
   update_service_price: 'Úprava služby (cena + odměny)',
   deactivate_service: 'Deaktivace služby',
@@ -39,6 +43,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
 const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
+  'expand_country',
   'add_service',
   'update_service_price',
   'deactivate_service',
@@ -117,7 +122,18 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [pricingInternalCost, setPricingInternalCost] = useState<number>(0);
   const [requiresAdminApproval, setRequiresAdminApproval] = useState(false);
 
-  // Detect Creative Boost & AI SEO
+  // Expand country state
+  const [expandRefServiceId, setExpandRefServiceId] = useState<string>('');
+  const [expandCountryCode, setExpandCountryCode] = useState<string>('');
+  const [expandServiceName, setExpandServiceName] = useState<string>('');
+  const [expandMultiplier, setExpandMultiplier] = useState<number>(0.5);
+  const [expandFinalPrice, setExpandFinalPrice] = useState<number | null>(null);
+  const [expandIsNewShop, setExpandIsNewShop] = useState(false);
+  const [expandNewClientName, setExpandNewClientName] = useState('');
+  const [expandNewClientBrand, setExpandNewClientBrand] = useState('');
+  const [expandNewClientIco, setExpandNewClientIco] = useState('');
+  const [expandNewClientDic, setExpandNewClientDic] = useState('');
+
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
   const selectedService = services.find(s => s.id === selectedServiceId);
@@ -212,7 +228,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         setHourlyCost(changes.hourly_cost || 0);
         setMonthlyCost(changes.monthly_cost || 0);
         setPercentageOfRevenue(changes.percentage_of_revenue || 0);
-      } else if (editingRequest.request_type === 'update_assignment' || editingRequest.request_type === 'remove_assignment') {
+      } else if (editingRequest.request_type === 'update_assignment') {
         setSelectedAssignmentId(changes.engagement_assignment_id || editingRequest.engagement_assignment_id || '');
         if (editingRequest.request_type === 'update_assignment') {
           setCostModel(changes.cost_model || 'fixed_monthly');
@@ -262,6 +278,16 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setPricingSnapshot(null);
       setPricingInternalCost(0);
       setRequiresAdminApproval(false);
+      setExpandRefServiceId('');
+      setExpandCountryCode('');
+      setExpandServiceName('');
+      setExpandMultiplier(0.5);
+      setExpandFinalPrice(null);
+      setExpandIsNewShop(false);
+      setExpandNewClientName('');
+      setExpandNewClientBrand('');
+      setExpandNewClientIco('');
+      setExpandNewClientDic('');
     }
   }, [open]);
 
@@ -434,6 +460,34 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     let proposed_changes: Record<string, unknown> = {};
 
     switch (requestType) {
+      case 'expand_country': {
+        const refEngService = currentEngagementServices.find(es => es.id === expandRefServiceId);
+        const refCatalogSvc = refEngService?.service_id ? services.find(s => s.id === refEngService.service_id) : null;
+        const refPrice = refEngService?.price || 0;
+        const calcPrice = expandFinalPrice !== null ? expandFinalPrice : Math.round(refPrice * expandMultiplier);
+        proposed_changes = {
+          reference_service_id: expandRefServiceId,
+          reference_service_name: refEngService?.name,
+          reference_price: refPrice,
+          new_country_code: expandCountryCode,
+          new_country_name: getCountryName(expandCountryCode),
+          service_name: expandServiceName,
+          price: calcPrice,
+          multiplier: expandMultiplier,
+          currency: refEngService?.currency || 'CZK',
+          billing_type: 'monthly',
+          service_id: refCatalogSvc?.id || null,
+          selected_tier: refEngService?.selected_tier || null,
+          requires_new_client: expandIsNewShop || undefined,
+          new_client_data: expandIsNewShop ? {
+            company_name: expandNewClientName,
+            brand_name: expandNewClientBrand || undefined,
+            ico: expandNewClientIco || undefined,
+            dic: expandNewClientDic || undefined,
+          } : undefined,
+        };
+        break;
+      }
       case 'add_service':
         if (isCreativeBoost) {
           // Creative Boost: credit-based pricing
@@ -665,6 +719,198 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           {/* ===== STEP 3: Type-specific fields (only after type selected) ===== */}
           {selectedEngagementId && requestTypeConfirmed && requestType && (
             <>
+              {/* EXPAND COUNTRY FIELDS */}
+              {requestType === 'expand_country' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    3. Přidání nové země
+                  </h4>
+                  
+                  {/* Reference service */}
+                  <div className="space-y-2">
+                    <Label>Referenční služba (základ pro výpočet ceny) *</Label>
+                    <Select value={expandRefServiceId} onValueChange={(v) => {
+                      setExpandRefServiceId(v);
+                      // Auto-generate name
+                      const refSvc = currentEngagementServices.find(es => es.id === v);
+                      if (refSvc && expandCountryCode) {
+                        setExpandServiceName(`${refSvc.name} ${expandCountryCode}`);
+                      }
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte stávající službu klienta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentEngagementServices.filter(es => es.is_active && es.billing_type === 'monthly').map((es) => (
+                          <SelectItem key={es.id} value={es.id}>
+                            {es.name} ({es.price?.toLocaleString('cs-CZ')} {es.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Country selector */}
+                  <div className="space-y-2">
+                    <Label>Nová země *</Label>
+                    <Select value={expandCountryCode} onValueChange={(v) => {
+                      setExpandCountryCode(v);
+                      // Auto-generate name
+                      const refSvc = currentEngagementServices.find(es => es.id === expandRefServiceId);
+                      if (refSvc) {
+                        setExpandServiceName(`${refSvc.name} ${v}`);
+                      }
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte zemi" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MANAGED_COUNTRIES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.flag} {c.name} ({c.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Service name (auto-generated, editable) */}
+                  {expandRefServiceId && expandCountryCode && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Název nové služby</Label>
+                        <Input 
+                          value={expandServiceName}
+                          onChange={(e) => setExpandServiceName(e.target.value)}
+                          placeholder="Např. Socials Boost SK"
+                        />
+                      </div>
+
+                      {/* Multiplier + price calculation */}
+                      {(() => {
+                        const refSvc = currentEngagementServices.find(es => es.id === expandRefServiceId);
+                        if (!refSvc) return null;
+                        const recommendedPrice = Math.round(refSvc.price * expandMultiplier);
+                        const effectivePrice = expandFinalPrice !== null ? expandFinalPrice : recommendedPrice;
+                        
+                        return (
+                          <div className="space-y-3 p-3 rounded-md border bg-background">
+                            <p className="text-xs font-medium text-muted-foreground">Cenová kalkulace</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs">
+                                  Multiplikátor
+                                  <span className="text-muted-foreground ml-1">(doporučeno: 0.5)</span>
+                                </Label>
+                                <Input
+                                  type="number"
+                                  step="0.05"
+                                  min="0.1"
+                                  max="2"
+                                  value={expandMultiplier}
+                                  onChange={(e) => {
+                                    setExpandMultiplier(Number(e.target.value));
+                                    setExpandFinalPrice(null);
+                                  }}
+                                  className="h-9"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Finální cena</Label>
+                                <Input
+                                  type="number"
+                                  value={expandFinalPrice !== null ? expandFinalPrice : recommendedPrice}
+                                  onChange={(e) => setExpandFinalPrice(Number(e.target.value))}
+                                  className="h-9"
+                                  step="100"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>
+                                Doporučená cena: {formatCZK(recommendedPrice)}
+                                {' '}({formatCZK(refSvc.price)} × {expandMultiplier})
+                              </span>
+                              {expandFinalPrice !== null && expandFinalPrice !== recommendedPrice && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 px-1.5 text-xs text-primary"
+                                  onClick={() => setExpandFinalPrice(null)}
+                                >
+                                  Použít doporučenou
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* New shop / different SRO checkbox */}
+                      <div className="space-y-3 p-3 rounded-md border bg-background">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="expand-new-shop"
+                            checked={expandIsNewShop}
+                            onCheckedChange={(checked) => setExpandIsNewShop(checked === true)}
+                          />
+                          <Label htmlFor="expand-new-shop" className="text-sm cursor-pointer">
+                            Nový shop je pod jiným SRO (nový klient)
+                          </Label>
+                        </div>
+
+                        {expandIsNewShop && (
+                          <div className="space-y-3 ml-6 pt-2 border-t">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs">Název společnosti *</Label>
+                                <Input
+                                  value={expandNewClientName}
+                                  onChange={(e) => setExpandNewClientName(e.target.value)}
+                                  placeholder="Např. NovýShop s.r.o."
+                                  className="h-9"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Název značky</Label>
+                                <Input
+                                  value={expandNewClientBrand}
+                                  onChange={(e) => setExpandNewClientBrand(e.target.value)}
+                                  placeholder="Např. NovýShop.cz"
+                                  className="h-9"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs">IČO</Label>
+                                <Input
+                                  value={expandNewClientIco}
+                                  onChange={(e) => setExpandNewClientIco(e.target.value)}
+                                  placeholder="12345678"
+                                  className="h-9"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">DIČ</Label>
+                                <Input
+                                  value={expandNewClientDic}
+                                  onChange={(e) => setExpandNewClientDic(e.target.value)}
+                                  placeholder="CZ12345678"
+                                  className="h-9"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* ADD SERVICE FIELDS */}
               {requestType === 'add_service' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
@@ -1339,10 +1585,36 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
               )}
   
 
-              {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
-              {((requestType === 'add_service' && selectedServiceId) || (requestType === 'update_service_price' && selectedEngagementServiceId)) && (() => {
+              {/* PRICING IMPACT SECTION - for add_service, update_service_price, and expand_country */}
+              {((requestType === 'add_service' && selectedServiceId) || (requestType === 'update_service_price' && selectedEngagementServiceId) || (requestType === 'expand_country' && expandRefServiceId && expandCountryCode)) && (() => {
                 const selectedEng = engagements.find(e => e.id === selectedEngagementId);
                 if (!selectedEng) return null;
+                
+                if (requestType === 'expand_country') {
+                  // For expand_country, the reference service IS the selected service
+                  const refEngSvc = currentEngagementServices.find(es => es.id === expandRefServiceId);
+                  const refCatalogSvc = refEngSvc?.service_id ? services.find(s => s.id === refEngSvc.service_id) : null;
+                  const refPrice = refEngSvc?.price || 0;
+                  const calcPrice = expandFinalPrice !== null ? expandFinalPrice : Math.round(refPrice * expandMultiplier);
+                  return (
+                    <PricingImpactSection
+                      clientId={selectedEng.client_id}
+                      engagementId={selectedEngagementId}
+                      proposedPrice={calcPrice}
+                      selectedServiceId={refCatalogSvc?.id || ''}
+                      isAddonService={false}
+                      selectedTier={refEngSvc?.selected_tier || null}
+                      requestType="expand_country"
+                      expandMultiplier={expandMultiplier}
+                      expandRefServiceId={expandRefServiceId}
+                      onPriceChange={() => {}}
+                      onInternalCostChange={setPricingInternalCost}
+                      onSnapshotChange={setPricingSnapshot}
+                      onRequiresAdminApproval={setRequiresAdminApproval}
+                    />
+                  );
+                }
+                
                 const isAddon = selectedService?.service_type === 'addon';
                 return (
                   <PricingImpactSection
@@ -1352,6 +1624,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     selectedServiceId={selectedServiceId}
                     isAddonService={isAddon}
                     selectedTier={selectedTier === 'none' ? null : selectedTier}
+                    requestType={requestType === 'add_service' ? 'add_service' : undefined}
                     onPriceChange={(price) => {
                       if (requestType === 'add_service') setServicePrice(price);
                       else setNewPrice(price);
@@ -1426,7 +1699,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
                 {/* Commission calculation */}
                 {upsoldById !== 'none' && (() => {
-                  const commissionBase = requestType === 'add_service'
+                  const commissionBase = requestType === 'expand_country'
+                    ? (() => {
+                        const refSvc = currentEngagementServices.find(es => es.id === expandRefServiceId);
+                        const refPrice = refSvc?.price || 0;
+                        return expandFinalPrice !== null ? expandFinalPrice : Math.round(refPrice * expandMultiplier);
+                      })()
+                    : requestType === 'add_service'
                     ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice)
                     : requestType === 'update_service_price'
                       ? Math.max(0, newPrice - (currentEngagementServices.find(es => es.id === selectedEngagementServiceId)?.price || 0))

@@ -1,60 +1,47 @@
 
 
-## Plan: Přidání nové země jako samostatný typ úpravy
+## Plan: Kontrola přefakturace víceprací klientům
 
 ### Problém
-Aktuálně je "Přidání nové země" schované jako scénář uvnitř "Přidání nové služby", kde se uživatel musí proklikat k referenční službě. Přitom přidání nové země je nejčastější úprava a koncepčně je jiná — nejde o novou službu, ale o rozšíření stávající služby do další země.
 
-### Navrhované změny
+Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
 
-**1. Nový typ úpravy `expand_country` v typovém systému**
-- `src/types/crm.ts`: Přidat `'expand_country'` do `ModificationRequestType`, label "Přidání nové země"
-- Přidat do `isClientFacingRequestType`
+### Řešení
 
-**2. Úprava dropdown typů v dialogu**
-- `src/components/engagements/ProposeModificationDialog.tsx`:
-  - Přidat `expand_country` do `VISIBLE_REQUEST_TYPES` a `REQUEST_TYPE_LABELS` 
-  - Nový blok pro `requestType === 'expand_country'` ve step 3:
-    1. **Referenční služba** — dropdown stávajících aktivních služeb na zakázce (např. "Socials Boost CZ – 25 000 Kč")
-    2. **Nová země** — výběr z `MANAGED_COUNTRIES` (multi-select nebo single select pro zemi, kterou přidáváme)
-    3. **Název nové služby** — auto-generovaný z referenční služby + kód země (např. "Socials Boost SK"), editovatelný
-    4. **Multiplikátor + Finální cena** — jako aktuálně v PricingImpactSection pro expand_country
-    5. **Odměny kolegů** — automaticky z referenční služby × multiplikátor
+Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
+- `expected` — vícepráce se má přefakturovat klientovi (default)
+- `reinvoiced` — přefakturováno klientovi
+- `not_expected` — nepředpokládá se přefakturace klientovi
 
-**3. Zjednodušení `add_service`**
-- Z `add_service` flow odstranit celou logiku referenční služby a scénářů (expand_country, expand_shop)
-- `add_service` bude čistě "přidávám úplně novou službu" — bez referenční služby, bez multiplikátoru
-- `PricingImpactSection` pro `add_service` nebude ukazovat typ scénáře ani referenční službu, jen přímý vstup ceny a odměn kolegů
+Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
 
-**4. Úprava `PricingImpactSection.tsx`**
-- Přidat nový prop `requestType` pro rozlišení chování
-- Pro `expand_country`: zobrazit referenční službu, multiplikátor, kalkulaci ceny, auto-odměny
-- Pro `add_service` / `add_addon`: skrýt scénáře, jen přímý vstup interních nákladů/odměn
-- Ponechat `expand_shop` jako scénář v rámci `expand_country` flow (checkbox "Nový shop pod jiným SRO" zůstane)
+### Databázové změny
 
-**5. Handlesubmit pro `expand_country`**
-- Nový case v `handleSubmit` switch — `proposed_changes` bude obsahovat:
-  - `reference_service_id`, `reference_service_name`
-  - `new_country_code`, `new_country_name`
-  - `service_name` (nový název služby)
-  - `price` (finální cena po multiplikátoru)
-  - `multiplier`
-  - `pricing_snapshot` z PricingImpactSection
+```sql
+CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
+ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
+ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+```
 
-**6. Co zůstane u `expand_shop`**
-- `expand_shop` scénář zůstane jako checkbox/varianta v rámci `expand_country` — "Jedná se o nový shop / značku pod jiným SRO?" Tím se otevřou pole pro nového klienta (IČO, DIČ atd.)
+### UI změny
 
-### Výsledný seznam typů úprav v dropdown
-1. **Přidání nové země** ← nový, nejčastější
-2. Přidání nové služby
-3. Úprava služby (cena + odměny)
-4. Deaktivace služby
-5. Přiřazení kolegy
+**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
+- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
+- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
 
-### Dotčené soubory
-- `src/types/crm.ts` — nový typ
-- `src/components/engagements/ProposeModificationDialog.tsx` — nový flow pro expand_country, zjednodušení add_service
-- `src/components/engagements/PricingImpactSection.tsx` — refaktor pro podporu nového requestType
-- `src/utils/pricingEngine.ts` — případné drobné úpravy typů
-- `src/types/upgradeOffer.ts` — pokud potřeba rozšířit UpgradeOfferChangeType
+**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
+- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
+- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
+
+**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
+- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
+- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
+
+**4. `src/types/crm.ts`**
+- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
+
+### Technické detaily
+- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
+- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
+- Badge se zobrazí vedle existujícího status badge
 

@@ -801,6 +801,7 @@ export interface EngagementWithDetails extends Engagement {
 
 // Request type for engagement modifications
 export type ModificationRequestType = 
+  | 'expand_country'
   | 'add_service'
   | 'update_service_price'
   | 'deactivate_service'
@@ -817,6 +818,7 @@ export type ModificationRequestStatus =
 
 // Labels for request types
 export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+  expand_country: 'Přidání nové země',
   add_service: 'Přidání služby',
   update_service_price: 'Úprava služby',
   deactivate_service: 'Ukončení služby',
@@ -939,5 +941,5 @@ export interface ModificationRequestWithDetails extends ModificationRequest {
 
 // Helper to check if a request type is client-facing
 export function isClientFacingRequestType(type: ModificationRequestType): boolean {
-  return ['add_service', 'update_service_price', 'deactivate_service'].includes(type);
+  return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service'].includes(type);
 }
