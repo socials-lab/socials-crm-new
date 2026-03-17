@@ -176,6 +176,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
   // Bundled items for multi-item requests
   const [bundledItems, setBundledItems] = useState<ModificationRequestItem[]>([]);
+  const [bundleDiscountPercent, setBundleDiscountPercent] = useState<number>(0);
 
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
@@ -240,6 +241,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       if (editingRequest.items && editingRequest.items.length > 0) {
         setBundledItems(editingRequest.items);
       }
+      setBundleDiscountPercent((editingRequest as any).bundle_discount_percent || 0);
 
       const changes = editingRequest.proposed_changes as any;
 
@@ -345,6 +347,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setNewEngServices([]);
       // Bundled items reset
       setBundledItems([]);
+      setBundleDiscountPercent(0);
     }
   }, [open]);
 
@@ -795,6 +798,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           note: note || null,
           upsell_commission_percent: upsoldById === 'none' ? 0 : 10,
           items: isBundled ? allItems : undefined,
+          bundle_discount_percent: isBundled && bundleDiscountPercent > 0 ? bundleDiscountPercent : undefined,
         });
       } else {
         await createRequest({
@@ -808,6 +812,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           note: note || null,
           pricing_snapshot: primaryItem.pricing_snapshot || pricingSnapshot,
           items: isBundled ? allItems : undefined,
+          bundle_discount_percent: isBundled && bundleDiscountPercent > 0 ? bundleDiscountPercent : undefined,
         });
       }
       
@@ -2463,6 +2468,55 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     {' '}({prorationInfo.remainingDays} z {prorationInfo.daysInMonth} dní)
                   </AlertDescription>
                 </Alert>
+              )}
+
+              {/* Bundle Discount - only for multi-item requests */}
+              {(bundledItems.length > 0 || (bundledItems.length === 0 && requestType)) && (bundledItems.length + (requestType ? 1 : 0)) > 1 && (
+                <div className="space-y-2 p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5">
+                  <Label className="flex items-center gap-2">
+                    🏷️ Sleva za balíček
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={50}
+                      value={bundleDiscountPercent}
+                      onChange={(e) => setBundleDiscountPercent(Math.min(50, Math.max(0, Number(e.target.value))))}
+                      className="w-24"
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                    {bundleDiscountPercent > 0 && (() => {
+                      // Calculate total price of all items
+                      let totalPrice = 0;
+                      const allCurrentItems = [...bundledItems];
+                      if (requestType) {
+                        const built = buildCurrentProposedChanges();
+                        if (built) {
+                          const c = built.proposed_changes as any;
+                          if (requestType === 'add_service' || requestType === 'expand_country') totalPrice += c.price || 0;
+                          else if (requestType === 'update_service_price') totalPrice += (c.new_price || 0) - (c.old_price || 0);
+                        }
+                      }
+                      for (const item of allCurrentItems) {
+                        const c = item.proposed_changes as any;
+                        if (item.request_type === 'add_service' || item.request_type === 'expand_country') totalPrice += c.price || 0;
+                        else if (item.request_type === 'update_service_price') totalPrice += (c.new_price || 0) - (c.old_price || 0);
+                      }
+                      const discountAmount = Math.round(totalPrice * bundleDiscountPercent / 100);
+                      const finalPrice = totalPrice - discountAmount;
+                      return (
+                        <div className="text-sm">
+                          <span className="text-muted-foreground line-through">{totalPrice.toLocaleString('cs-CZ')}</span>
+                          {' → '}
+                          <span className="font-semibold text-primary">{finalPrice.toLocaleString('cs-CZ')} Kč/měs</span>
+                          <span className="text-xs text-muted-foreground ml-1">(-{discountAmount.toLocaleString('cs-CZ')})</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Sleva se aplikuje na celkovou cenu balíčku, pokud klient přijme všechny položky najednou.</p>
+                </div>
               )}
 
               {/* Upsold By (commission tracking) */}

@@ -350,17 +350,35 @@ export function ModificationRequestCard({
               totalDelta -= c.price || 0;
             }
           }
-          if (totalDelta !== 0) {
-            return (
-              <div className="flex items-center justify-between pt-2 border-t text-sm">
-                <span className="font-medium">Celkový dopad:</span>
-                <span className={cn("font-semibold", totalDelta >= 0 ? "text-green-600" : "text-destructive")}>
-                  {totalDelta >= 0 ? '+' : ''}{totalDelta.toLocaleString('cs-CZ')} Kč/měs
-                </span>
-              </div>
-            );
-          }
-          return null;
+          const discountPercent = (request as any).bundle_discount_percent || 0;
+          const discountAmount = discountPercent > 0 ? Math.round(totalDelta * discountPercent / 100) : 0;
+          const finalPrice = totalDelta - discountAmount;
+          return (
+            <div className="space-y-1">
+              {totalDelta !== 0 && (
+                <div className="flex items-center justify-between pt-2 border-t text-sm">
+                  <span className="font-medium">Celkem před slevou:</span>
+                  <span className={cn("font-semibold", totalDelta >= 0 ? "text-green-600" : "text-destructive")}>
+                    {totalDelta >= 0 ? '+' : ''}{totalDelta.toLocaleString('cs-CZ')} Kč/měs
+                  </span>
+                </div>
+              )}
+              {discountPercent > 0 && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">🏷️ Sleva za balíček:</span>
+                    <span className="font-medium text-primary">-{discountPercent} % (-{discountAmount.toLocaleString('cs-CZ')} Kč)</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm font-bold">
+                    <span>Celkem po slevě:</span>
+                    <span className={cn(finalPrice >= 0 ? "text-green-600" : "text-destructive")}>
+                      {finalPrice >= 0 ? '+' : ''}{finalPrice.toLocaleString('cs-CZ')} Kč/měs
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          );
         })()}
       </div>
     );

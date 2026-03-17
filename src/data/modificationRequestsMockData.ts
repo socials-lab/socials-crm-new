@@ -48,6 +48,8 @@ export interface StoredModificationRequest {
   pricing_snapshot: PricingSnapshot | null;
   // Multi-item bundle support
   items?: ModificationRequestItem[];
+  // Bundle discount
+  bundle_discount_percent?: number;
   // Denormalized data for display
   engagement_name: string;
   client_id: string;
@@ -96,6 +98,7 @@ export function createModificationRequest(params: {
   requested_by: string;
   pricing_snapshot?: PricingSnapshot | null;
   items?: ModificationRequestItem[];
+  bundle_discount_percent?: number;
 }): StoredModificationRequest {
   const requests = getModificationRequests();
   
@@ -128,6 +131,7 @@ export function createModificationRequest(params: {
     pricing_snapshot: params.pricing_snapshot || null,
     // Multi-item bundle
     items: params.items && params.items.length > 0 ? params.items : undefined,
+    bundle_discount_percent: params.bundle_discount_percent || undefined,
     // Denormalized
     engagement_name: params.engagement_name,
     client_id: params.client_id,
@@ -317,6 +321,7 @@ export function updateModificationRequest(
     upsold_by_name?: string | null;
     pricing_snapshot?: PricingSnapshot | null;
     items?: ModificationRequestItem[];
+    bundle_discount_percent?: number;
   }
 ): StoredModificationRequest | null {
   const requests = getModificationRequests();
@@ -341,6 +346,7 @@ export function updateModificationRequest(
     upsold_by_name: updates.upsold_by_name !== undefined ? updates.upsold_by_name : request.upsold_by_name,
     pricing_snapshot: updates.pricing_snapshot !== undefined ? updates.pricing_snapshot : request.pricing_snapshot,
     items: updates.items !== undefined ? updates.items : request.items,
+    bundle_discount_percent: updates.bundle_discount_percent !== undefined ? updates.bundle_discount_percent : request.bundle_discount_percent,
     updated_at: new Date().toISOString(),
   };
   

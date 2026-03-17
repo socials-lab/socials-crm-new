@@ -51,6 +51,7 @@ export function useModificationRequests() {
     note?: string | null;
     pricing_snapshot?: PricingSnapshot | null;
     items?: ModificationRequestItem[];
+    bundle_discount_percent?: number;
   }) => {
     if (!user) throw new Error('User not authenticated');
     
@@ -85,6 +86,7 @@ export function useModificationRequests() {
         requested_by: user.id,
         pricing_snapshot: params.pricing_snapshot,
         items: params.items,
+        bundle_discount_percent: params.bundle_discount_percent,
       });
       
       toast.success('Požadavek na úpravu byl odeslán ke schválení');
@@ -185,6 +187,7 @@ export function useModificationRequests() {
     upsold_by_name?: string | null;
     pricing_snapshot?: PricingSnapshot | null;
     items?: ModificationRequestItem[];
+    bundle_discount_percent?: number;
   }) => {
     if (!user) throw new Error('User not authenticated');
     
