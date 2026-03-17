@@ -44,11 +44,13 @@ interface PricingImpactSectionProps {
   onRequiresAdminApproval: (required: boolean) => void;
 }
 
-const SCENARIO_OPTIONS: { value: PricingScenario; label: string }[] = [
+const CORE_SCENARIO_OPTIONS: { value: PricingScenario; label: string }[] = [
   { value: 'expand_country', label: 'Nová země (rozšíření stávající služby)' },
   { value: 'expand_shop', label: 'Nový shop / značka (rozšíření stávající služby)' },
+];
+
+const ADDON_SCENARIO_OPTIONS: { value: PricingScenario; label: string }[] = [
   { value: 'add_addon', label: 'Doplňková služba (addon)' },
-  { value: 'custom_manual', label: 'Vlastní úprava (manuální)' },
 ];
 
 const EMPTY_REWARD_ROW: ColleagueRewardEntry = {
@@ -391,7 +393,7 @@ export function PricingImpactSection({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {SCENARIO_OPTIONS.map((opt) => (
+              {(isAddonService ? ADDON_SCENARIO_OPTIONS : CORE_SCENARIO_OPTIONS).map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
               ))}
             </SelectContent>

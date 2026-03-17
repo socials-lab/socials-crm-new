@@ -2,7 +2,7 @@ import type { Engagement, EngagementService, EngagementAssignment } from '@/type
 
 // ============= Types =============
 
-export type PricingScenario = 'expand_country' | 'expand_shop' | 'add_addon' | 'custom_manual';
+export type PricingScenario = 'expand_country' | 'expand_shop' | 'add_addon';
 
 export type MarginValidationStatus = 'green' | 'orange' | 'red';
 
@@ -266,7 +266,6 @@ export function getScenarioLabel(scenario: PricingScenario): string {
     expand_country: 'Nová země',
     expand_shop: 'Nový shop / značka',
     add_addon: 'Doplňková služba',
-    custom_manual: 'Vlastní úprava',
   };
   return labels[scenario];
 }
