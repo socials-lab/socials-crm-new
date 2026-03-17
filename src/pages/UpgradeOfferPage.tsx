@@ -172,12 +172,10 @@ export default function UpgradeOfferPage() {
     }
   };
 
-  // Render team members from pricing_snapshot.colleague_rewards
-  const renderTeamSection = (serviceId?: string) => {
-    const rewards = offer?.pricing_snapshot?.colleague_rewards;
+  // Render team members from colleague_rewards array
+  const renderTeamSection = (rewards?: import('@/utils/pricingEngine').ColleagueRewardEntry[] | null) => {
     if (!rewards || rewards.length === 0) return null;
     
-    // If serviceId provided, we could filter — but colleague_rewards don't have service_id, so show all
     const teamMembers = rewards.filter(cr => cr.colleague_name);
     if (teamMembers.length === 0) return null;
 
@@ -201,7 +199,7 @@ export default function UpgradeOfferPage() {
   };
 
   // Render change details for a specific type and changes (used for bundled items)
-  const renderChangeDetailsForItem = (itemType: ModificationRequestType, changes: any) => {
+  const renderChangeDetailsForItem = (itemType: ModificationRequestType, changes: any, itemRewards?: import('@/utils/pricingEngine').ColleagueRewardEntry[] | null) => {
     switch (itemType) {
       case 'add_service': {
         const c = changes as unknown as AddServiceProposedChanges;
@@ -231,7 +229,7 @@ export default function UpgradeOfferPage() {
                 Fakturace za první měsíc: {prorationInfo.proratedAmount.toLocaleString('cs-CZ')} {c.currency} ({prorationInfo.remainingDays}/{prorationInfo.daysInMonth} dní)
               </p>
             )}
-            {renderTeamSection()}
+            {renderTeamSection(itemRewards)}
           </div>
         );
       }
@@ -353,7 +351,7 @@ export default function UpgradeOfferPage() {
                 </AlertDescription>
               </Alert>
             )}
-            {renderTeamSection()}
+            {renderTeamSection(offer?.pricing_snapshot?.colleague_rewards)}
           </div>
         );
       }
@@ -397,7 +395,7 @@ export default function UpgradeOfferPage() {
                 </div>
               )}
             </div>
-            {renderTeamSection()}
+            {renderTeamSection(offer?.pricing_snapshot?.colleague_rewards)}
           </div>
         );
       }
@@ -428,7 +426,7 @@ export default function UpgradeOfferPage() {
                 </div>
               )}
             </div>
-            {renderTeamSection()}
+            {renderTeamSection(offer?.pricing_snapshot?.colleague_rewards)}
           </div>
         );
       }
@@ -581,7 +579,7 @@ export default function UpgradeOfferPage() {
                       'Změna'
                     }</h2>
                   </div>
-                  {renderChangeDetailsForItem(item.request_type, item.proposed_changes)}
+                  {renderChangeDetailsForItem(item.request_type, item.proposed_changes, item.pricing_snapshot?.colleague_rewards)}
                 </CardContent>
               </Card>
             ))}
