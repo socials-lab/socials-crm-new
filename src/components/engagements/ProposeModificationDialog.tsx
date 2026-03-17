@@ -24,6 +24,7 @@ import type { PricingSnapshot } from '@/utils/pricingEngine';
 interface ProposeModificationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editingRequest?: import('@/data/modificationRequestsMockData').StoredModificationRequest | null;
 }
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
