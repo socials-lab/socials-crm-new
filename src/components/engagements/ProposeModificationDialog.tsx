@@ -1637,7 +1637,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             return (
                               <div className="grid grid-cols-2 gap-3 p-3 rounded-md border bg-muted/50">
                                 <div>
-                                  <p className="text-xs text-muted-foreground">Aktuální marže služby</p>
+                                  <p className="text-xs text-muted-foreground">Aktuální marže služby<InfoTip text="Marže = (příjmy − náklady) / příjmy. Cíl: 66 %+ (zelená). 63–65 % (oranžová). Pod 63 % (červená) vyžaduje schválení." /></p>
                                   <p className={cn("text-sm font-semibold", getMarginColor(oldMargin))}>
                                     {oldMargin.toFixed(1)}% ({(oldPrice - totalOldCost).toLocaleString('cs-CZ')} Kč)
                                   </p>
