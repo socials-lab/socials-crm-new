@@ -607,8 +607,34 @@ export function PricingImpactSection({
                           <Input
                             value={reward.role}
                             onChange={(e) => {
+                              const newRole = e.target.value;
+                              // Auto-fill reward from service config when role changes
+                              const tier = selectedTierProp || null;
+                              const recommended = getRewardsFromServiceConfig(
+                                selectedCatalogService?.reward_config as any,
+                                tier
+                              ) || getServiceRewardRecommendation(
+                                selectedCatalogService?.name || '',
+                                tier
+                              );
+                              const matchingReward = recommended?.find(
+                                r => r.role.toLowerCase() === newRole.toLowerCase()
+                              );
+                              const isExp = scenario === 'expand_country' || scenario === 'expand_shop';
+                              const rewardAmount = matchingReward
+                                ? (isExp ? Math.round(matchingReward.reward * multiplier) : matchingReward.reward)
+                                : undefined;
+                              const rewardHours = matchingReward?.hours;
+                              const rewardType = matchingReward?.rewardType;
+
                               setColleagueRewards(prev => prev.map((r, i) =>
-                                i === idx ? { ...r, role: e.target.value } : r
+                                i === idx ? {
+                                  ...r,
+                                  role: newRole,
+                                  ...(rewardAmount !== undefined && r.reward === 0 ? { reward: rewardAmount } : {}),
+                                  ...(rewardHours !== undefined && r.hours === 0 ? { hours: rewardHours } : {}),
+                                  ...(rewardType ? { reward_type: rewardType } : {}),
+                                } : r
                               ));
                             }}
                             className="h-7 text-xs w-full"
@@ -640,7 +666,7 @@ export function PricingImpactSection({
                         <TableCell className="py-1.5 text-right">
                           <Input
                             type="number"
-                            value={reward.hours}
+                            value={reward.hours || ''}
                             onChange={(e) => {
                               setColleagueRewards(prev => prev.map((r, i) =>
                                 i === idx ? { ...r, hours: Number(e.target.value) } : r
@@ -648,13 +674,14 @@ export function PricingImpactSection({
                             }}
                             className="h-7 w-full text-xs text-right ml-auto"
                             step="0.5"
+                            placeholder="0"
                           />
                         </TableCell>
                         <TableCell className="py-1.5 text-right">
                           <div className="flex items-center gap-1 justify-end">
                             <Input
                               type="number"
-                              value={reward.reward}
+                              value={reward.reward || ''}
                               onChange={(e) => {
                                 setColleagueRewards(prev => prev.map((r, i) =>
                                   i === idx ? { ...r, reward: Number(e.target.value) } : r
@@ -662,6 +689,7 @@ export function PricingImpactSection({
                               }}
                               className="h-7 w-full text-xs text-right"
                               step="100"
+                              placeholder="0"
                             />
                             <span className="text-muted-foreground text-[10px] shrink-0">
                               {reward.reward_type === 'per_credit' ? 'Kč/kredit' : 'Kč'}
