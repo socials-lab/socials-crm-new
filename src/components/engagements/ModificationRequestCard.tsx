@@ -5,7 +5,7 @@ import {
   Package, 
   DollarSign, 
   UserPlus, 
-   
+  Globe,
   Settings,
   Check, 
   X, 

@@ -30,6 +30,7 @@ interface ProposeModificationDialogProps {
 }
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+  expand_country: 'Přidání nové země',
   add_service: 'Přidání nové služby',
   update_service_price: 'Úprava služby (cena + odměny)',
   deactivate_service: 'Deaktivace služby',
@@ -39,6 +40,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
 const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
+  'expand_country',
   'add_service',
   'update_service_price',
   'deactivate_service',
