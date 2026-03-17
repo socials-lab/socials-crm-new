@@ -806,7 +806,8 @@ export type ModificationRequestType =
   | 'update_service_price'
   | 'deactivate_service'
   | 'add_assignment'
-  | 'update_assignment';
+  | 'update_assignment'
+  | 'new_engagement';
 
 // Status for modification requests
 export type ModificationRequestStatus = 
