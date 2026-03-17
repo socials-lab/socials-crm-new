@@ -478,80 +478,99 @@ export function ModificationRequestCard({
                 {isBundled ? renderBundledItems() : renderChanges()}
               </div>
 
-              {/* Pricing Snapshot */}
+              {/* Pricing Snapshot - Clear before/after overview */}
               {request.pricing_snapshot && (
-                <div className="rounded-md border p-3 space-y-2 text-xs">
-                  <div className="flex items-center gap-2 font-medium text-sm">
-                    📊 Dopad na marži
+                <div className="rounded-lg border-2 border-muted p-4 space-y-3">
+                  {/* Header with validation status */}
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm flex items-center gap-2">
+                      📊 Dopad na marži
+                    </span>
                     {request.pricing_snapshot.validation_status === 'green' && (
-                      <Badge className="bg-green-100 text-green-700 text-xs px-1.5 py-0">
-                        <CheckCircle2 className="h-3 w-3 mr-0.5" />OK
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />OK
                       </Badge>
                     )}
                     {request.pricing_snapshot.validation_status === 'orange' && (
-                      <Badge className="bg-amber-100 text-amber-700 text-xs px-1.5 py-0">
-                        <AlertTriangle className="h-3 w-3 mr-0.5" />Varování
+                      <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-xs">
+                        <AlertTriangle className="h-3 w-3 mr-1" />Varování
                       </Badge>
                     )}
                     {request.pricing_snapshot.validation_status === 'red' && (
-                      <Badge className="bg-red-100 text-red-700 text-xs px-1.5 py-0">
-                        <ShieldAlert className="h-3 w-3 mr-0.5" />Pod hranicí
-                      </Badge>
-                    )}
-                    {request.pricing_snapshot.requires_admin_approval && (
-                      <Badge variant="outline" className="text-xs px-1.5 py-0 border-destructive text-destructive">
-                        Vyžaduje admin schválení
+                      <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-xs">
+                        <ShieldAlert className="h-3 w-3 mr-1" />Pod hranicí
                       </Badge>
                     )}
                   </div>
-                  {/* Recommended vs final price */}
-                  {request.pricing_snapshot.recommended_price != null && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Doporučená cena:</span>
-                      <span>{formatCZK(request.pricing_snapshot.recommended_price)}</span>
-                      {request.pricing_snapshot.final_edited_price != null && request.pricing_snapshot.final_edited_price !== request.pricing_snapshot.recommended_price && (
+
+                  {/* Before → After comparison grid */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* BEFORE */}
+                    <div className="rounded-md bg-muted/60 p-3 text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Před změnou</p>
+                      <p className="text-lg font-bold">{formatCZK(request.pricing_snapshot.current_total_revenue)}</p>
+                      <p className="text-xs text-muted-foreground">měsíčně</p>
+                    </div>
+                    {/* CHANGE */}
+                    <div className="rounded-md bg-primary/5 border border-primary/20 p-3 text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Změna</p>
+                      <p className={cn("text-lg font-bold", request.pricing_snapshot.delta_revenue >= 0 ? "text-green-600 dark:text-green-400" : "text-destructive")}>
+                        {request.pricing_snapshot.delta_revenue >= 0 ? '+' : ''}{formatCZK(request.pricing_snapshot.delta_revenue)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {request.pricing_snapshot.delta_internal_cost > 0 && (
+                          <span>náklad: {formatCZK(request.pricing_snapshot.delta_internal_cost)}</span>
+                        )}
+                      </p>
+                    </div>
+                    {/* AFTER */}
+                    <div className="rounded-md bg-primary/10 border-2 border-primary/30 p-3 text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-primary font-medium mb-1">Po změně</p>
+                      <p className="text-lg font-bold text-primary">{formatCZK(request.pricing_snapshot.new_total_revenue)}</p>
+                      <p className="text-xs text-muted-foreground">měsíčně</p>
+                    </div>
+                  </div>
+
+                  {/* Margin comparison */}
+                  <div className="flex items-center gap-3 rounded-md bg-muted/40 px-3 py-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Marže:</span>
+                      {request.pricing_snapshot.current_margin_percent != null && (
                         <>
-                          <span className="text-muted-foreground">→ Finální:</span>
-                          <span className="font-medium text-primary">{formatCZK(request.pricing_snapshot.final_edited_price)}</span>
+                          <span className="font-medium">{request.pricing_snapshot.current_margin_percent.toFixed(1)}%</span>
+                          <span className="text-muted-foreground">→</span>
                         </>
                       )}
+                      <span className={cn(
+                        "font-bold text-base",
+                        request.pricing_snapshot.new_margin_percent >= 66 ? "text-green-600 dark:text-green-400" : 
+                        request.pricing_snapshot.new_margin_percent >= 63 ? "text-amber-600 dark:text-amber-400" : 
+                        "text-destructive"
+                      )}>
+                        {request.pricing_snapshot.new_margin_percent.toFixed(1)}%
+                      </span>
                     </div>
-                  )}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <span className="text-muted-foreground">Před:</span>{' '}
-                      {formatCZK(request.pricing_snapshot.current_total_revenue)}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">+ změna:</span>{' '}
-                      {formatCZK(request.pricing_snapshot.delta_revenue)}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Po:</span>{' '}
-                      {formatCZK(request.pricing_snapshot.new_total_revenue)}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-muted-foreground">Nová marže:</span>
-                    <span className="font-medium">{request.pricing_snapshot.new_margin_percent.toFixed(1)}%</span>
                     {request.pricing_snapshot.multiplier && (
-                      <span className="text-muted-foreground">
-                        (multiplikátor: {request.pricing_snapshot.multiplier})
-                      </span>
-                    )}
-                    {request.pricing_snapshot.delta_internal_cost > 0 && (
-                      <span className="text-muted-foreground">
-                        | interní: {formatCZK(request.pricing_snapshot.delta_internal_cost)}
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        multiplikátor: {request.pricing_snapshot.multiplier}
                       </span>
                     )}
                   </div>
+
+                  {request.pricing_snapshot.requires_admin_approval && (
+                    <Badge variant="outline" className="text-xs border-destructive text-destructive">
+                      ⚠️ Vyžaduje admin schválení
+                    </Badge>
+                  )}
+
                   {request.pricing_snapshot.justification && (
-                    <p className="text-muted-foreground italic">
+                    <p className="text-xs text-muted-foreground italic border-l-2 border-muted-foreground/30 pl-2">
                       Zdůvodnění: {request.pricing_snapshot.justification}
                     </p>
                   )}
+
                   {request.pricing_snapshot.requires_new_client && request.pricing_snapshot.new_client_data && (
-                    <div className="mt-1 p-2 rounded bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                    <div className="p-2 rounded bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-xs">
                       <span className="font-medium text-blue-800 dark:text-blue-300">🏢 Nový klient (jiné SRO):</span>{' '}
                       <span>{request.pricing_snapshot.new_client_data.company_name}</span>
                       {request.pricing_snapshot.new_client_data.brand_name && (
@@ -562,11 +581,12 @@ export function ModificationRequestCard({
                       )}
                     </div>
                   )}
+
                   {request.pricing_snapshot.colleague_rewards && request.pricing_snapshot.colleague_rewards.length > 0 && (
-                    <div className="mt-1 space-y-1">
+                    <div className="space-y-1 text-xs">
                       <span className="font-medium">👥 Odměny kolegů:</span>
                       {request.pricing_snapshot.colleague_rewards.map((cr, i) => (
-                        <div key={i} className="flex items-center gap-2">
+                        <div key={i} className="flex items-center gap-2 ml-4">
                           <span className="text-muted-foreground">{cr.role}:</span>
                           {cr.colleague_name && <span>{cr.colleague_name}</span>}
                           <span className="font-medium">
