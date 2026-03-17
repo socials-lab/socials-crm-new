@@ -307,14 +307,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       // New engagement reset
       setNewEngClientName('');
       setNewEngClientBrand('');
-      setNewEngClientIco('');
-      setNewEngClientDic('');
       setNewEngName('');
+      setNewEngOnboardingEmail('');
       setNewEngServices([]);
-      setNewEngContactName('');
-      setNewEngContactEmail('');
-      setNewEngContactPhone('');
-      setNewEngCopyContact(false);
     }
   }, [open]);
 
