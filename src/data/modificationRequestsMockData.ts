@@ -106,7 +106,7 @@ export function createModificationRequest(params: {
     id: crypto.randomUUID(),
     engagement_id: params.engagement_id,
     request_type: params.request_type,
-    status: 'pending',
+    status: (params as any).status === 'draft' ? 'draft' : 'pending',
     proposed_changes: params.proposed_changes,
     engagement_service_id: params.engagement_service_id || null,
     engagement_assignment_id: params.engagement_assignment_id || null,
