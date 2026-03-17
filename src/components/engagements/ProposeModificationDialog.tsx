@@ -43,7 +43,7 @@ const InfoTip = ({ text }: { text: string }) => (
   </Tooltip>
 );
 
-
+const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   expand_country: 'Přidání nové země',
   add_service: 'Přidání nové služby',
   update_service_price: 'Úprava služby (cena + odměny)',
