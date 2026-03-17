@@ -374,6 +374,17 @@ export default function Services() {
               </div>
               <ServiceDetailView
                 data={serviceDetailData}
+                serviceType={service.service_type}
+                tierPricing={service.tier_pricing?.map(tp => ({ tier: tp.tier, price: tp.price })) || null}
+                onTierPricingUpdate={(updatedTierPricing) => {
+                  updateService(service.id, { tier_pricing: updatedTierPricing as any });
+                  toast.success('Ceník tierů byl aktualizován');
+                }}
+                rewardConfig={service.reward_config}
+                onRewardConfigUpdate={(updatedRewardConfig) => {
+                  updateService(service.id, { reward_config: updatedRewardConfig.length > 0 ? updatedRewardConfig : null } as Partial<Service>);
+                  toast.success('Odměny kolegů byly aktualizovány');
+                }}
                 onCreditPricingUpdate={service.code === 'CREATIVE_BOOST' ? (updatedTypes) => {
                   // Sync with the global CB output types
                   const currentIds = cbOutputTypes.filter(t => t.isActive).map(t => t.id);
