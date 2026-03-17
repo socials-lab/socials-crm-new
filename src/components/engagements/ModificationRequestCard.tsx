@@ -334,10 +334,17 @@ export function ModificationRequestCard({
                         Aktivováno
                       </Badge>
                     )}
-                    {/* Waiting for client badge */}
+                    {/* Pending - waiting for admin approval */}
+                    {request.status === 'pending' && (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Čeká na schválení
+                      </Badge>
+                    )}
+                    {/* Approved & waiting for client */}
                     {showCopyLinkOnly && (
                       <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
-                        <Clock className="h-3 w-3 mr-1" />
+                        <Mail className="h-3 w-3 mr-1" />
                         Čeká na klienta
                       </Badge>
                     )}
