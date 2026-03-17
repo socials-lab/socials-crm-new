@@ -173,6 +173,7 @@ export default function UpgradeOfferPage() {
       case 'add_service': return 'Přidání nové služby';
       case 'update_service_price': return 'Změna ceny služby';
       case 'deactivate_service': return 'Ukončení služby';
+      case 'new_engagement': return 'Nová zakázka';
       default: return 'Změna';
     }
   };
