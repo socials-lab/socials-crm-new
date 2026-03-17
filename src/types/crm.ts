@@ -897,13 +897,40 @@ export interface RemoveAssignmentProposedChanges {
   role_on_engagement: string;
 }
 
+export interface NewEngagementProposedChanges {
+  new_client_data: {
+    company_name: string;
+    brand_name?: string;
+    ico?: string;
+    dic?: string;
+  };
+  engagement_name: string;
+  services: Array<{
+    service_id: string | null;
+    name: string;
+    price: number;
+    currency: string;
+    billing_type: 'monthly' | 'one_off';
+    selected_tier?: ServiceTier | null;
+  }>;
+  total_monthly_price: number;
+  currency: string;
+  contact_person?: {
+    name: string;
+    email?: string;
+    phone?: string;
+    copied_from_reference?: boolean;
+  };
+}
+
 export type ModificationProposedChanges = 
   | AddServiceProposedChanges
   | UpdateServicePriceProposedChanges
   | DeactivateServiceProposedChanges
   | AddAssignmentProposedChanges
   | UpdateAssignmentProposedChanges
-  | RemoveAssignmentProposedChanges;
+  | RemoveAssignmentProposedChanges
+  | NewEngagementProposedChanges;
 
 // Main modification request interface
 export interface ModificationRequest {
