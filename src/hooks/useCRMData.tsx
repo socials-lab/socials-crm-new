@@ -517,11 +517,12 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const dbCodes = new Set(dbServices.map((s: Service) => s.code));
       const missingMocks = MOCK_SERVICES.filter(mock => !dbCodes.has(mock.code));
       
-      if (missingMocks.length > 0) {
-        return [...dbServices, ...missingMocks].sort((a, b) => a.name.localeCompare(b.name));
-      }
+      const allServices = missingMocks.length > 0
+        ? [...dbServices, ...missingMocks].sort((a, b) => a.name.localeCompare(b.name))
+        : dbServices;
       
-      return dbServices;
+      // Enrich with demo reward_config if DB column not yet available
+      return enrichServicesWithDemoRewards(allServices);
     },
   });
 
