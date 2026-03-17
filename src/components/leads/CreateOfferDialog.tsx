@@ -120,7 +120,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     }
   }, [open, lead.potential_services, services]);
 
-  // Calculate totals
+  // Calculate totals + profitability
   const totals = useMemo(() => {
     const coreMonthly = editableServices
       .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
@@ -144,8 +144,40 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     const monthlyAfterDiscount = discountScope === 'all_services' 
       ? discountedBase 
       : discountedBase + addonMonthly;
-    return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount };
-  }, [editableServices, monthlyDiscountPercent, discountScope]);
+
+    // Calculate internal costs from reward configs
+    let totalInternalCost = 0;
+    const serviceCosts: { name: string; cost: number; roles: { role: string; reward: number }[] }[] = [];
+    
+    editableServices.forEach(es => {
+      const catalogService = services.find(s => s.id === es.service_id);
+      if (!catalogService) return;
+      
+      const enriched = enrichServiceWithDemoRewards(catalogService);
+      const roles = getRewardsFromServiceConfig(
+        enriched.reward_config as any,
+        es.selected_tier
+      );
+      
+      if (roles && roles.length > 0) {
+        let svcCost = 0;
+        const roleDetails: { role: string; reward: number }[] = [];
+        roles.forEach(r => {
+          // For per_credit, estimate based on Creative Boost defaults (30 credits)
+          const reward = r.rewardType === 'per_credit' ? r.reward * 30 : r.reward;
+          svcCost += reward;
+          roleDetails.push({ role: r.role, reward });
+        });
+        totalInternalCost += svcCost;
+        serviceCosts.push({ name: es.name, cost: svcCost, roles: roleDetails });
+      }
+    });
+
+    const revenue = monthlyAfterDiscount;
+    const margin = revenue > 0 ? ((revenue - totalInternalCost) / revenue) * 100 : 0;
+
+    return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount, totalInternalCost, serviceCosts, margin };
+  }, [editableServices, monthlyDiscountPercent, discountScope, services]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
     setEditableServices(prev => 
