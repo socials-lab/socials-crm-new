@@ -18,6 +18,25 @@ export interface EmailSentRecord {
   sent_by_name: string;
 }
 
+// Onboarding data filled by client for new SRO
+export interface OnboardingData {
+  company_name: string;
+  ico: string;
+  dic?: string;
+  website?: string;
+  industry?: string;
+  billing_street?: string;
+  billing_city?: string;
+  billing_zip?: string;
+  billing_country?: string;
+  billing_email?: string;
+  contact_name: string;
+  contact_email: string;
+  contact_phone?: string;
+  contact_position?: string;
+  filled_at: string;
+}
+
 // Simplified interface for localStorage storage
 export interface StoredModificationRequest {
   id: string;
@@ -52,6 +71,8 @@ export interface StoredModificationRequest {
   bundle_discount_percent?: number;
   // Client-chosen effective date
   client_chosen_effective_from: string | null;
+  // Onboarding data for new SRO
+  onboarding_data?: OnboardingData | null;
   // Denormalized data for display
   engagement_name: string;
   client_id: string;
