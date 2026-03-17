@@ -761,176 +761,53 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   };
 
   const handleSubmit = async () => {
-    if (!selectedEngagementId || !requestType) return;
+    if (!selectedEngagementId) return;
 
-    let proposed_changes: Record<string, unknown> = {};
-
-    switch (requestType) {
-      case 'expand_country': {
-        const refEngService = currentEngagementServices.find(es => es.id === expandRefServiceId);
-        const refCatalogSvc = refEngService?.service_id ? services.find(s => s.id === refEngService.service_id) : null;
-        const refPrice = refEngService?.price || 0;
-        const calcPrice = expandFinalPrice !== null ? expandFinalPrice : Math.round(refPrice * expandMultiplier);
-        proposed_changes = {
-          reference_service_id: expandRefServiceId,
-          reference_service_name: refEngService?.name,
-          reference_price: refPrice,
-          new_country_code: expandCountryCode,
-          new_country_name: getCountryName(expandCountryCode),
-          service_name: expandServiceName,
-          price: calcPrice,
-          multiplier: expandMultiplier,
-          currency: refEngService?.currency || 'CZK',
-          billing_type: 'monthly',
-          service_id: refCatalogSvc?.id || null,
-          selected_tier: refEngService?.selected_tier || null,
-          requires_new_client: expandIsNewShop || undefined,
-          new_client_data: expandIsNewShop ? {
-            company_name: expandNewClientName,
-            brand_name: expandNewClientBrand || undefined,
-            ico: expandNewClientIco || undefined,
-            dic: expandNewClientDic || undefined,
-          } : undefined,
-        };
-        break;
-      }
-      case 'add_service':
-        if (isCreativeBoost) {
-          // Creative Boost: credit-based pricing
-          proposed_changes = {
-            service_id: selectedServiceId,
-            name: serviceName,
-            price: cbMaxCredits * cbPricePerCredit, // Calculated price
-            currency: serviceCurrency,
-            billing_type: 'monthly',
-            selected_tier: null,
-            creative_boost_max_credits: cbMaxCredits,
-            creative_boost_price_per_credit: cbPricePerCredit,
-            creative_boost_reward_per_credit: cbColleagueReward,
-            creative_boost_editor_reward_per_credit: cbEditorReward,
-          };
-        } else if (isAiSeo) {
-          // AI SEO: include default colleague info
-          proposed_changes = {
-            service_id: selectedServiceId,
-            name: serviceName,
-            price: servicePrice,
-            currency: serviceCurrency,
-            billing_type: serviceBillingType,
-            selected_tier: null,
-            description: serviceDescription || undefined,
-            deliverables: serviceDeliverables ? serviceDeliverables.split('\n').filter(Boolean) : undefined,
-            ai_seo_colleague_name: aiSeoColleagueName,
-            ai_seo_hourly_rate: aiSeoHourlyRate,
-            ai_seo_hours: aiSeoHours,
-            ai_seo_total_reward: aiSeoHourlyRate * aiSeoHours,
-          };
-        } else {
-          proposed_changes = {
-            service_id: selectedServiceId === 'custom' ? null : selectedServiceId,
-            name: serviceName,
-            price: servicePrice,
-            currency: serviceCurrency,
-            billing_type: serviceBillingType,
-            selected_tier: selectedTier === 'none' ? null : selectedTier,
-            description: serviceDescription || undefined,
-            deliverables: serviceDeliverables ? serviceDeliverables.split('\n').filter(Boolean) : undefined,
-          };
-        }
-        break;
-      case 'update_service_price':
-        const oldService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
-        const changedAssignments = serviceAssignmentEdits.filter(a => a.new_value !== a.old_value);
-        const cbNewPrice = isUpdateCreativeBoost ? cbMaxCredits * cbPricePerCredit : newPrice;
-        proposed_changes = {
-          engagement_service_id: selectedEngagementServiceId,
-          old_price: oldService?.price || 0,
-          new_price: cbNewPrice,
-          ...(isUpdateCreativeBoost ? {
-            creative_boost_max_credits: cbMaxCredits,
-            creative_boost_price_per_credit: cbPricePerCredit,
-            creative_boost_reward_per_credit: cbColleagueReward,
-            creative_boost_editor_reward_per_credit: cbEditorReward,
-          } : {}),
-          assignment_changes: changedAssignments.length > 0 ? changedAssignments.map(a => ({
-            assignment_id: a.assignment_id,
-            colleague_name: a.colleague_name,
-            role: a.role,
-            cost_model: a.cost_model,
-            old_value: a.old_value,
-            new_value: a.new_value,
-          })) : undefined,
-        };
-        break;
-      case 'deactivate_service':
-        proposed_changes = {
-          engagement_service_id: selectedEngagementServiceId,
-        };
-        break;
-      case 'add_assignment':
-        proposed_changes = {
-          colleague_id: selectedColleagueId,
-          engagement_service_id: assignmentServiceId || null,
-          role_on_engagement: roleOnEngagement,
-          cost_model: costModel,
-          hourly_cost: costModel === 'hourly' ? hourlyCost : null,
-          monthly_cost: costModel === 'fixed_monthly' ? monthlyCost : null,
-          percentage_of_revenue: costModel === 'percentage' ? percentageOfRevenue : null,
-        };
-        break;
-      case 'update_assignment':
-        proposed_changes = {
-          engagement_assignment_id: selectedAssignmentId,
-          cost_model: costModel,
-          hourly_cost: costModel === 'hourly' ? hourlyCost : null,
-          monthly_cost: costModel === 'fixed_monthly' ? monthlyCost : null,
-          percentage_of_revenue: costModel === 'percentage' ? percentageOfRevenue : null,
-        };
-        break;
-      case 'new_engagement': {
-        const totalMonthly = newEngServices.reduce((sum, s) => sum + (s.billing_type === 'monthly' ? s.price : 0), 0);
-        proposed_changes = {
-          is_different_sro: newEngIsDifferentSro,
-          new_client_data: newEngIsDifferentSro && newEngClientName ? {
-            company_name: newEngClientName,
-            brand_name: newEngClientBrand || undefined,
-          } : undefined,
-          engagement_name: newEngName,
-          services: newEngServices,
-          total_monthly_price: totalMonthly,
-          currency: 'CZK',
-          onboarding_email: newEngIsDifferentSro ? newEngOnboardingEmail : undefined,
-          send_onboarding_form: newEngIsDifferentSro,
-        };
-        break;
+    // Collect all items: bundled items + current item (if any)
+    let allItems = [...bundledItems];
+    
+    if (requestType) {
+      const built = buildCurrentProposedChanges();
+      if (built) {
+        allItems.push({
+          id: crypto.randomUUID(),
+          request_type: requestType as ModificationRequestType,
+          proposed_changes: built.proposed_changes as unknown as ModificationProposedChanges,
+          engagement_service_id: built.engagement_service_id,
+          engagement_assignment_id: built.engagement_assignment_id,
+          pricing_snapshot: pricingSnapshot,
+        });
       }
     }
 
+    // Must have at least one item
+    if (allItems.length === 0) return;
+
+    // Use the first item's type/changes as the "primary" for backward compat
+    const primaryItem = allItems[0];
+    const isBundled = allItems.length > 1;
+
     try {
       if (isEditMode && editingRequest) {
-        // Update existing request
         await updateRequest(editingRequest.id, {
-          proposed_changes: proposed_changes as any,
+          proposed_changes: primaryItem.proposed_changes,
           effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
           note: note || null,
           upsell_commission_percent: upsoldById === 'none' ? 0 : 10,
+          items: isBundled ? allItems : undefined,
         });
       } else {
         await createRequest({
           engagement_id: selectedEngagementId,
-          request_type: requestType as ModificationRequestType,
-          proposed_changes: proposed_changes as any,
-          engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
-            ? selectedEngagementServiceId 
-            : requestType === 'add_assignment' ? (assignmentServiceId || null)
-            : null,
-          engagement_assignment_id: ['update_assignment'].includes(requestType)
-            ? selectedAssignmentId
-            : null,
+          request_type: primaryItem.request_type,
+          proposed_changes: primaryItem.proposed_changes,
+          engagement_service_id: primaryItem.engagement_service_id || null,
+          engagement_assignment_id: primaryItem.engagement_assignment_id || null,
           effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
           upsold_by_id: upsoldById === 'none' ? null : upsoldById,
           note: note || null,
-          pricing_snapshot: pricingSnapshot,
+          pricing_snapshot: primaryItem.pricing_snapshot || pricingSnapshot,
+          items: isBundled ? allItems : undefined,
         });
       }
       
