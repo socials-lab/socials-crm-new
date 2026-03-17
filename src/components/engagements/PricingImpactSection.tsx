@@ -280,6 +280,35 @@ export function PricingImpactSection({
     [clientEconomics, deltaRevenue, deltaInternalCost]
   );
 
+  // Build current colleague rewards from existing assignments
+  const currentColleagueRewards: ColleagueRewardEntry[] = useMemo(() => {
+    const engAssignments = assignments?.filter(a => a.engagement_id === engagementId) || [];
+    return engAssignments.map(a => {
+      const colleague = activeColleagues.find(c => c.id === a.colleague_id);
+      const costModel = a.cost_model || 'fixed_monthly';
+      let reward = 0;
+      let rewardType: 'fixed_monthly' | 'per_credit' | 'hourly' = 'fixed_monthly';
+      if (costModel === 'hourly') {
+        reward = a.hourly_cost || 0;
+        rewardType = 'hourly';
+      } else if (costModel === 'percentage') {
+        reward = a.percentage_of_revenue || 0;
+        rewardType = 'per_credit';
+      } else {
+        reward = a.monthly_cost || 0;
+        rewardType = 'fixed_monthly';
+      }
+      return {
+        role: a.role_on_engagement || 'Bez role',
+        colleague_id: a.colleague_id,
+        colleague_name: colleague?.full_name,
+        hours: 0,
+        reward,
+        reward_type: rewardType,
+      };
+    }).filter(r => r.reward > 0);
+  }, [assignments, engagementId, activeColleagues]);
+
   // Update admin approval requirement
   useEffect(() => {
     onRequiresAdminApproval(impact.requiresAdminApproval);
@@ -322,9 +351,10 @@ export function PricingImpactSection({
       requires_new_client: requiresNewClient && scenario === 'expand_shop' ? true : undefined,
       new_client_data: newClientData,
       colleague_rewards: colleagueRewards.length > 0 ? colleagueRewards : undefined,
+      current_colleague_rewards: currentColleagueRewards.length > 0 ? currentColleagueRewards : undefined,
     };
     onSnapshotChange(snapshot);
-  }, [scenario, referenceService, multiplier, deltaRevenue, deltaInternalCost, clientEconomics, impact, justification, requiresNewClient, newClientName, newClientBrand, newClientIco, newClientDic, newClientNote, colleagueRewards, recommendedPrice, finalPriceOverride, isExpansion]);
+  }, [scenario, referenceService, multiplier, deltaRevenue, deltaInternalCost, clientEconomics, impact, justification, requiresNewClient, newClientName, newClientBrand, newClientIco, newClientDic, newClientNote, colleagueRewards, currentColleagueRewards, recommendedPrice, finalPriceOverride, isExpansion]);
 
   const defaultMult = getDefaultMultiplier(scenario);
 
