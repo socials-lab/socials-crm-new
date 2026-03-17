@@ -913,6 +913,15 @@ export interface NewEngagementProposedChanges {
     selected_tier?: ServiceTier | null;
     description?: string;
     deliverables?: string[];
+    assignments?: Array<{
+      colleague_id: string;
+      colleague_name: string;
+      role: string;
+      cost_model: 'hourly' | 'fixed_monthly' | 'percentage';
+      monthly_cost?: number;
+      hourly_cost?: number;
+      percentage_of_revenue?: number;
+    }>;
   }>;
   total_monthly_price: number;
   currency: string;

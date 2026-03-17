@@ -161,6 +161,15 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     selected_tier?: string | null;
     description?: string;
     deliverables?: string[];
+    assignments?: Array<{
+      colleague_id: string;
+      colleague_name: string;
+      role: string;
+      cost_model: 'hourly' | 'fixed_monthly' | 'percentage';
+      monthly_cost?: number;
+      hourly_cost?: number;
+      percentage_of_revenue?: number;
+    }>;
   }>>([]);
   const [expandedNewEngServiceIdx, setExpandedNewEngServiceIdx] = useState<number | null>(null);
 
@@ -1937,6 +1946,147 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                     <p className="text-xs text-muted-foreground italic">Žádné deliverables. Klikněte na "Přidat bod".</p>
                                   )}
                                 </div>
+                              </div>
+                              
+                              {/* Colleague assignments */}
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-xs font-medium">Přiřazení kolegové</Label>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button type="button" variant="ghost" size="sm" className="h-6 text-xs gap-1">
+                                        <Plus className="h-3 w-3" /> Přidat kolegu
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-64 p-0" align="end">
+                                      <Command>
+                                        <CommandInput placeholder="Hledat kolegu..." />
+                                        <CommandList>
+                                          <CommandEmpty>Nenalezeno.</CommandEmpty>
+                                          <CommandGroup>
+                                            {colleagues.filter(c => c.status === 'active').sort((a, b) => a.full_name.localeCompare(b.full_name)).map((col) => {
+                                              const alreadyAdded = (svc.assignments || []).some(a => a.colleague_id === col.id);
+                                              if (alreadyAdded) return null;
+                                              // Auto-detect role from position
+                                              const pos = col.position.toLowerCase();
+                                              let autoRole = '';
+                                              if (pos.includes('video')) autoRole = 'Video Editor';
+                                              else if (pos.includes('design') || pos.includes('grafik')) autoRole = 'Graphic Designer';
+                                              else if (pos.includes('ppc') || pos.includes('google')) autoRole = 'PPC Specialist';
+                                              else if (pos.includes('meta') || pos.includes('facebook') || pos.includes('social')) autoRole = 'Meta Ads Specialist';
+                                              else if (pos.includes('seo')) autoRole = 'SEO Specialist';
+                                              else if (pos.includes('sales') || pos.includes('obchod')) autoRole = 'Sales Specialist';
+                                              else if (pos.includes('account') || pos.includes('pm') || pos.includes('project')) autoRole = 'Account Manager';
+                                              
+                                              const isCreativeRole = autoRole === 'Graphic Designer' || autoRole === 'Video Editor';
+                                              return (
+                                                <CommandItem
+                                                  key={col.id}
+                                                  value={col.full_name}
+                                                  onSelect={() => {
+                                                    const updated = [...newEngServices];
+                                                    const newAssignment = {
+                                                      colleague_id: col.id,
+                                                      colleague_name: col.full_name,
+                                                      role: autoRole,
+                                                      cost_model: (isCreativeRole ? 'fixed_monthly' : 'fixed_monthly') as 'hourly' | 'fixed_monthly' | 'percentage',
+                                                      monthly_cost: 0,
+                                                      hourly_cost: 0,
+                                                    };
+                                                    updated[idx] = {
+                                                      ...updated[idx],
+                                                      assignments: [...(updated[idx].assignments || []), newAssignment],
+                                                    };
+                                                    setNewEngServices(updated);
+                                                  }}
+                                                >
+                                                  <span className="text-xs">{col.full_name}</span>
+                                                  <span className="text-[10px] text-muted-foreground ml-1">({col.position})</span>
+                                                </CommandItem>
+                                              );
+                                            })}
+                                          </CommandGroup>
+                                        </CommandList>
+                                      </Command>
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                                
+                                {(svc.assignments || []).length === 0 && (
+                                  <p className="text-xs text-muted-foreground italic">Zatím nepřiřazen žádný kolega.</p>
+                                )}
+                                
+                                {(svc.assignments || []).map((asn, aIdx) => (
+                                  <div key={aIdx} className="flex items-center gap-2 p-1.5 rounded border bg-background">
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-xs font-medium truncate block">{asn.colleague_name}</span>
+                                    </div>
+                                    <Input
+                                      value={asn.role}
+                                      onChange={(e) => {
+                                        const updated = [...newEngServices];
+                                        const assignments = [...(updated[idx].assignments || [])];
+                                        assignments[aIdx] = { ...assignments[aIdx], role: e.target.value };
+                                        updated[idx] = { ...updated[idx], assignments };
+                                        setNewEngServices(updated);
+                                      }}
+                                      placeholder="Role"
+                                      className="h-6 w-28 text-[11px]"
+                                    />
+                                    <Select
+                                      value={asn.cost_model}
+                                      onValueChange={(v) => {
+                                        const updated = [...newEngServices];
+                                        const assignments = [...(updated[idx].assignments || [])];
+                                        assignments[aIdx] = { ...assignments[aIdx], cost_model: v as any };
+                                        updated[idx] = { ...updated[idx], assignments };
+                                        setNewEngServices(updated);
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-6 w-24 text-[11px]">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="fixed_monthly">Kč/měs</SelectItem>
+                                        <SelectItem value="hourly">Kč/hod</SelectItem>
+                                        <SelectItem value="percentage">% z revenue</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <Input
+                                      type="number"
+                                      value={asn.cost_model === 'hourly' ? (asn.hourly_cost || 0) : asn.cost_model === 'percentage' ? (asn.percentage_of_revenue || 0) : (asn.monthly_cost || 0)}
+                                      onChange={(e) => {
+                                        const val = Number(e.target.value);
+                                        const updated = [...newEngServices];
+                                        const assignments = [...(updated[idx].assignments || [])];
+                                        if (asn.cost_model === 'hourly') {
+                                          assignments[aIdx] = { ...assignments[aIdx], hourly_cost: val };
+                                        } else if (asn.cost_model === 'percentage') {
+                                          assignments[aIdx] = { ...assignments[aIdx], percentage_of_revenue: val };
+                                        } else {
+                                          assignments[aIdx] = { ...assignments[aIdx], monthly_cost: val };
+                                        }
+                                        updated[idx] = { ...updated[idx], assignments };
+                                        setNewEngServices(updated);
+                                      }}
+                                      className="h-6 w-20 text-[11px]"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 shrink-0 text-destructive hover:text-destructive"
+                                      onClick={() => {
+                                        const updated = [...newEngServices];
+                                        const assignments = (updated[idx].assignments || []).filter((_, i) => i !== aIdx);
+                                        updated[idx] = { ...updated[idx], assignments };
+                                        setNewEngServices(updated);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           )}
