@@ -278,6 +278,16 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setPricingSnapshot(null);
       setPricingInternalCost(0);
       setRequiresAdminApproval(false);
+      setExpandRefServiceId('');
+      setExpandCountryCode('');
+      setExpandServiceName('');
+      setExpandMultiplier(0.5);
+      setExpandFinalPrice(null);
+      setExpandIsNewShop(false);
+      setExpandNewClientName('');
+      setExpandNewClientBrand('');
+      setExpandNewClientIco('');
+      setExpandNewClientDic('');
     }
   }, [open]);
 
