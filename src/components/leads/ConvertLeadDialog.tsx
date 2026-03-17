@@ -72,7 +72,6 @@ const convertSchema = z.object({
   currency: z.string().min(1, 'Měna je povinná'),
   monthly_fee: z.coerce.number().min(0),
   one_off_fee: z.coerce.number().min(0),
-  target_margin_percent: z.coerce.number().min(0).max(100),
   start_date: z.string().min(1, 'Datum je povinné'),
   end_date: z.string().optional(),
   notice_period_months: z.coerce.number().optional(),
@@ -152,7 +151,6 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       currency: 'CZK',
       monthly_fee: 0,
       one_off_fee: 0,
-      target_margin_percent: 40,
       start_date: new Date().toISOString().split('T')[0],
       end_date: '',
       notice_period_months: 1,
@@ -251,7 +249,6 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         currency: lead.currency,
         monthly_fee: monthlyTotal || (lead.offer_type === 'retainer' ? lead.estimated_price : 0),
         one_off_fee: oneOffTotal || (lead.offer_type === 'one_off' ? lead.estimated_price : 0),
-        target_margin_percent: 40,
         start_date: new Date().toISOString().split('T')[0],
         end_date: '',
         notice_period_months: 1,
@@ -1024,19 +1021,6 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="target_margin_percent"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cílová marže (%)</FormLabel>
-                      <FormControl>
-                        <Input type="number" min={0} max={100} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               {/* Services from offer */}
@@ -1236,6 +1220,48 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 </div>
               ))}
             </div>
+
+            {/* Margin warning */}
+            {(() => {
+              const monthlyFee = form.watch('monthly_fee') || 0;
+              const totalTeamCost = teamMembers.reduce((sum, m) => {
+                if (m.cost_model === 'fixed_monthly') return sum + (m.monthly_cost || 0);
+                if (m.cost_model === 'hourly') return sum + (m.hourly_cost || 0) * 160 / 12; // rough estimate
+                return sum;
+              }, 0);
+              const margin = monthlyFee > 0 ? ((monthlyFee - totalTeamCost) / monthlyFee) * 100 : 0;
+              
+              if (monthlyFee > 0 && totalTeamCost > 0) {
+                return (
+                  <div className={`p-3 rounded-lg border flex items-start gap-2 ${
+                    margin >= 66 ? 'bg-green-500/10 border-green-500/30' :
+                    margin >= 50 ? 'bg-yellow-500/10 border-yellow-500/30' :
+                    'bg-red-500/10 border-red-500/30'
+                  }`}>
+                    {margin < 66 && <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${margin >= 50 ? 'text-yellow-600' : 'text-red-600'}`} />}
+                    <div className="text-sm space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Odhadovaná marže:</span>
+                        <span className={`font-bold ${
+                          margin >= 66 ? 'text-green-600' : margin >= 50 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {margin.toFixed(1)} %
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({monthlyFee.toLocaleString('cs-CZ')} – {totalTeamCost.toLocaleString('cs-CZ')} = {Math.round(monthlyFee - totalTeamCost).toLocaleString('cs-CZ')} Kč)
+                        </span>
+                      </div>
+                      {margin < 66 && (
+                        <p className="text-xs text-muted-foreground">
+                          ⚠️ Minimální cílová marže je 66 %. Zvažte úpravu ceny nebo snížení interních nákladů.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

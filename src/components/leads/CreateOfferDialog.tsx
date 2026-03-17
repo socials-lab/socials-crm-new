@@ -487,6 +487,14 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                           </span>
                         </span>
                       </div>
+                      {totals.margin < 66 && (
+                        <div className="flex items-center gap-2 p-2 rounded bg-red-500/10 border border-red-500/20 mt-1">
+                          <TrendingUp className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                          <p className="text-xs text-red-700 dark:text-red-400">
+                            ⚠️ Marže je pod minimální cílovou hodnotou 66 %. Zvažte úpravu ceny nebo rozsahu služeb.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
