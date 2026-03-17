@@ -464,20 +464,43 @@ export default function UpgradeOfferPage() {
             {/* Combined total */}
             <Card className="mb-8 border-primary/30 bg-primary/5">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-lg">Celkem měsíčně</span>
-                  <span className="font-bold text-xl text-primary">
-                    {(() => {
-                      let total = 0;
-                      for (const item of offer.items!) {
-                        const c = item.proposed_changes as any;
-                        if (item.request_type === 'add_service' || item.request_type === 'expand_country') total += c.price || 0;
-                        else if (item.request_type === 'update_service_price') total += c.new_price || 0;
-                      }
-                      return total.toLocaleString('cs-CZ');
-                    })()} CZK
-                  </span>
-                </div>
+                {(() => {
+                  let total = 0;
+                  for (const item of offer.items!) {
+                    const c = item.proposed_changes as any;
+                    if (item.request_type === 'add_service' || item.request_type === 'expand_country') total += c.price || 0;
+                    else if (item.request_type === 'update_service_price') total += c.new_price || 0;
+                  }
+                  const discountPercent = (offer as any).bundle_discount_percent || 0;
+                  const discountAmount = discountPercent > 0 ? Math.round(total * discountPercent / 100) : 0;
+                  const finalPrice = total - discountAmount;
+                  return (
+                    <div className="space-y-2">
+                      {discountPercent > 0 && (
+                        <>
+                          <div className="flex items-center justify-between text-muted-foreground">
+                            <span>Celkem bez slevy</span>
+                            <span className="line-through">{total.toLocaleString('cs-CZ')} CZK/měs</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1.5">
+                              🏷️ Sleva za balíček ({discountPercent} %)
+                            </span>
+                            <span className="font-medium text-primary">-{discountAmount.toLocaleString('cs-CZ')} CZK</span>
+                          </div>
+                        </>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-lg">
+                          {discountPercent > 0 ? 'Celkem po slevě' : 'Celkem měsíčně'}
+                        </span>
+                        <span className="font-bold text-xl text-primary">
+                          {finalPrice.toLocaleString('cs-CZ')} CZK/měs
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </>
