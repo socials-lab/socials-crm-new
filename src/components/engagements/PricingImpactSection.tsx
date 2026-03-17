@@ -161,13 +161,29 @@ export function PricingImpactSection({
     if (recommended) {
       const isExp = scenario === 'expand_country' || scenario === 'expand_shop';
       const roles = isExp ? applyMultiplierToRewards(recommended, multiplier) : recommended;
+
+      // Get current assignments on this engagement to auto-match colleagues by role
+      const engAssignments = assignments?.filter(a => a.engagement_id === engagementId) || [];
+
       setColleagueRewards(
-        roles.map(r => ({
-          role: r.role,
-          hours: r.hours,
-          reward: r.reward,
-          reward_type: r.rewardType,
-        }))
+        roles.map(r => {
+          // Find an existing assignment matching this role
+          const matchingAssignment = engAssignments.find(
+            a => a.role_on_engagement?.toLowerCase() === r.role.toLowerCase()
+          );
+          const matchedColleague = matchingAssignment
+            ? activeColleagues.find(c => c.id === matchingAssignment.colleague_id)
+            : null;
+
+          return {
+            role: r.role,
+            hours: r.hours,
+            reward: r.reward,
+            reward_type: r.rewardType,
+            colleague_id: matchedColleague?.id,
+            colleague_name: matchedColleague?.full_name,
+          };
+        })
       );
     } else {
       // No recommendation — keep existing manual rows or show empty
@@ -177,7 +193,7 @@ export function PricingImpactSection({
       // Don't clear manually added rows
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCatalogService?.id, selectedTierProp, scenario, multiplier]);
+  }, [selectedCatalogService?.id, selectedTierProp, scenario, multiplier, engagementId, assignments]);
 
   // Update multiplier when scenario changes + reset new client
   useEffect(() => {
