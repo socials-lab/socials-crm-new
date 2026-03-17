@@ -131,6 +131,7 @@ export function createModificationRequest(params: {
     pricing_snapshot: params.pricing_snapshot || null,
     // Multi-item bundle
     items: params.items && params.items.length > 0 ? params.items : undefined,
+    bundle_discount_percent: params.bundle_discount_percent || undefined,
     // Denormalized
     engagement_name: params.engagement_name,
     client_id: params.client_id,
