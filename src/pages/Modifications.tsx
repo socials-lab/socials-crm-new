@@ -828,43 +828,94 @@ export default function Modifications() {
             </Select>
             {selectedMonth !== 'all' && (
               <Badge variant="secondary">
-                {filteredHistory.length} záznamů
+                {(() => {
+                  const filteredApplied = applied.filter(r => {
+                    const date = new Date(r.updated_at || r.created_at);
+                    const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    return monthStr === selectedMonth;
+                  });
+                  return filteredApplied.length + filteredHistory.length;
+                })()} záznamů
               </Badge>
             )}
           </div>
 
-          {applied.length === 0 && filteredHistory.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <PackageCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground text-center">
-                  {selectedMonth === 'all' 
-                    ? 'Žádné aktivované změny' 
-                    : `Žádné aktivované změny v ${getMonthLabel(selectedMonth)}`}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-3">
-              {/* Show applied requests with collapsible cards */}
-              {applied.map((request) => (
-                <CollapsibleModificationCard
-                  key={request.id}
-                  request={request}
-                  cardContent={
-                    <ModificationRequestCard
-                      request={request}
-                    />
-                  }
-                />
-              ))}
-              
-              {/* Also show history entries that are no longer in localStorage */}
-              {filteredHistory
-                .filter(h => !applied.some(r => r.id === h.modification_request_id))
-                .map((historyEntry) => (
-                  <AppliedHistoryCard key={historyEntry.id} entry={historyEntry} />
-                ))}
+          {(() => {
+            // Filter applied requests by month too
+            const filteredApplied = selectedMonth === 'all'
+              ? applied
+              : applied.filter(r => {
+                  const date = new Date(r.updated_at || r.created_at);
+                  const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                  return monthStr === selectedMonth;
+                });
+
+            const allEmpty = filteredApplied.length === 0 && filteredHistory.length === 0;
+
+            if (allEmpty) {
+              return (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <PackageCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground text-center">
+                      {selectedMonth === 'all' 
+                        ? 'Žádné aktivované změny' 
+                        : `Žádné aktivované změny v ${getMonthLabel(selectedMonth)}`}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            // Group all items by month
+            type AppliedItem = { type: 'request'; data: StoredModificationRequest } | { type: 'history'; data: AppliedModificationHistory };
+            const allItems: AppliedItem[] = [
+              ...filteredApplied.map(r => ({ type: 'request' as const, data: r })),
+              ...filteredHistory
+                .filter(h => !filteredApplied.some(r => r.id === h.modification_request_id))
+                .map(h => ({ type: 'history' as const, data: h })),
+            ];
+
+            const grouped: Record<string, AppliedItem[]> = {};
+            allItems.forEach(item => {
+              const date = item.type === 'request'
+                ? new Date(item.data.updated_at || item.data.created_at)
+                : new Date((item.data as AppliedModificationHistory).applied_at);
+              const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+              if (!grouped[key]) grouped[key] = [];
+              grouped[key].push(item);
+            });
+
+            return (
+              <div className="space-y-6">
+                {Object.entries(grouped)
+                  .sort(([a], [b]) => b.localeCompare(a))
+                  .map(([monthKey, items]) => (
+                    <div key={monthKey}>
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        {getMonthLabel(monthKey)}
+                        <Badge variant="secondary" className="ml-2">{items.length}</Badge>
+                      </h3>
+                      <div className="grid gap-3">
+                        {items.map(item => 
+                          item.type === 'request' ? (
+                            <CollapsibleModificationCard
+                              key={item.data.id}
+                              request={item.data}
+                              cardContent={
+                                <ModificationRequestCard request={item.data} />
+                              }
+                            />
+                          ) : (
+                            <AppliedHistoryCard key={(item.data as AppliedModificationHistory).id} entry={item.data as AppliedModificationHistory} />
+                          )
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            );
+          })()}
             </div>
           )}
         </TabsContent>
