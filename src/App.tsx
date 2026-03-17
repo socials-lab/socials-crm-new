@@ -49,6 +49,7 @@ import UpgradeOfferPage from "./pages/UpgradeOfferPage";
 import ExtraWorkApproval from "./pages/ExtraWorkApproval";
 import PublicCreativeBoostPage from "./pages/PublicCreativeBoostPage";
 import PublicSOPPage from "./pages/PublicSOPPage";
+import BugReports from "./pages/BugReports";
 
 const queryClient = new QueryClient();
 
