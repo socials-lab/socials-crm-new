@@ -402,7 +402,10 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="custom">Vlastní služba</SelectItem>
-                          {services.filter(s => s.is_active).map((service) => (
+                          {[...services.filter(s => s.is_active)].sort((a, b) => {
+                            if (a.service_type === b.service_type) return a.name.localeCompare(b.name);
+                            return a.service_type === 'core' ? -1 : 1;
+                          }).map((service) => (
                             <SelectItem key={service.id} value={service.id}>
                               <span className="flex items-center gap-2">
                                 {service.name}
