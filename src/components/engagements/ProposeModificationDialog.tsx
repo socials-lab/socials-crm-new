@@ -384,10 +384,19 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         break;
       case 'update_service_price':
         const oldService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+        const changedAssignments = serviceAssignmentEdits.filter(a => a.new_value !== a.old_value);
         proposed_changes = {
           engagement_service_id: selectedEngagementServiceId,
           old_price: oldService?.price || 0,
           new_price: newPrice,
+          assignment_changes: changedAssignments.length > 0 ? changedAssignments.map(a => ({
+            assignment_id: a.assignment_id,
+            colleague_name: a.colleague_name,
+            role: a.role,
+            cost_model: a.cost_model,
+            old_value: a.old_value,
+            new_value: a.new_value,
+          })) : undefined,
         };
         break;
       case 'deactivate_service':
