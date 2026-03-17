@@ -445,27 +445,68 @@ export default function UpgradeOfferPage() {
                   Děkujeme za potvrzení! 🎉
                 </h2>
                 <p className="text-green-600">
-                  Vaše potvrzení bylo úspěšně zaznamenáno. Budeme vás informovat o dalších krocích.
+                  Vaše potvrzení bylo úspěšně zaznamenáno. Na váš email jsme odeslali souhrn.
                 </p>
               </div>
               
-              <div className="p-4 rounded-lg bg-white/60 border border-green-200">
-                <p className="text-xs font-semibold text-green-800 mb-3 uppercase tracking-wide">
-                  📋 Detail potvrzení
+              <div className="p-4 rounded-lg bg-white/60 border border-green-200 space-y-4">
+                <p className="text-xs font-semibold text-green-800 uppercase tracking-wide">
+                  📋 Souhrn potvrzené změny
                 </p>
-                <div className="space-y-2 text-sm text-green-700">
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Zakázka:</span>
+                    <span className="font-medium">{offer.engagement_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Typ změny:</span>
+                    <span className="font-medium">{getChangeLabel()}</span>
+                  </div>
+                  {totalMonthlyPrice > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Měsíční cena:</span>
+                      <span className="font-semibold">{totalMonthlyPrice.toLocaleString('cs-CZ')} CZK</span>
+                    </div>
+                  )}
+                  {offer.client_chosen_effective_from && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Začátek platnosti:</span>
+                        <span className="font-medium">
+                          {format(new Date(offer.client_chosen_effective_from), 'd. MMMM yyyy', { locale: cs })}
+                        </span>
+                      </div>
+                      {totalMonthlyPrice > 0 && (() => {
+                        const d = new Date(offer.client_chosen_effective_from);
+                        const dim = getDaysInMonth(d);
+                        const rd = dim - getDate(d) + 1;
+                        const pro = Math.round((totalMonthlyPrice / dim) * rd);
+                        if (rd < dim) {
+                          return (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Fakturace za {format(d, 'LLLL', { locale: cs })}:</span>
+                              <span className="font-medium">{pro.toLocaleString('cs-CZ')} CZK ({rd}/{dim} dní)</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </>
+                  )}
+                </div>
+
+                <div className="border-t border-green-200 pt-3 space-y-2 text-sm text-green-700">
                   {offer.client_email && (
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Email:</span>
-                      <span className="font-medium">{offer.client_email}</span>
+                      <Mail className="h-3.5 w-3.5" />
+                      <span>Potvrzení odesláno na: <strong>{offer.client_email}</strong></span>
                     </div>
                   )}
                   {offer.client_approved_at && (
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Potvrzeno:</span>
-                      <span className="font-medium">
-                        {format(new Date(offer.client_approved_at), "d. MMMM yyyy 'v' HH:mm:ss", { locale: cs })}
-                      </span>
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>Potvrzeno: {format(new Date(offer.client_approved_at), "d. MMMM yyyy 'v' HH:mm", { locale: cs })}</span>
                     </div>
                   )}
                 </div>
