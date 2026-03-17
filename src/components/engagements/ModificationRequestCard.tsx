@@ -262,15 +262,40 @@ export function ModificationRequestCard({
   // Show delete button for pending, approved (waiting), or rejected requests
   const canDelete = onDelete && ['pending', 'approved', 'rejected'].includes(request.status) && !isApplied && !isClientApproved;
 
+  // Helper to update proposed_changes inline
+  const updateMainChanges = (patch: Record<string, any>) => {
+    if (!onInlineUpdate) return;
+    onInlineUpdate(request.id, {
+      proposed_changes: { ...request.proposed_changes, ...patch } as any,
+    });
+    toast.success('Hodnota aktualizována');
+  };
+
+  // Helper to update a specific bundled item's changes
+  const updateItemChanges = (itemId: string, patch: Record<string, any>) => {
+    if (!onInlineUpdate || !request.items) return;
+    const updatedItems = request.items.map(item =>
+      item.id === itemId ? { ...item, proposed_changes: { ...item.proposed_changes, ...patch } as any } : item
+    );
+    onInlineUpdate(request.id, { items: updatedItems });
+    toast.success('Hodnota aktualizována');
+  };
+
   // Render changes for a given type and proposed_changes
-  const renderChangesForItem = (itemType: ModificationRequestType, changes: any) => {
+  const renderChangesForItem = (itemType: ModificationRequestType, changes: any, itemId?: string) => {
+    const updateFn = (patch: Record<string, any>) => itemId ? updateItemChanges(itemId, patch) : updateMainChanges(patch);
+    
     switch (itemType) {
       case 'add_service': {
         const c = changes as AddServiceProposedChanges;
         return (
           <div className="space-y-1 text-sm">
-            <p><span className="text-muted-foreground">Služba:</span> {c.name}</p>
-            <p><span className="text-muted-foreground">Cena:</span> {c.price.toLocaleString('cs-CZ')} {c.currency}/{c.billing_type === 'monthly' ? 'měs' : 'jednorázově'}</p>
+            <p><span className="text-muted-foreground">Služba:</span>{' '}
+              <InlineEditableText value={c.name} canEdit={canInlineEdit} onSave={(v) => updateFn({ name: v })} className="font-medium" />
+            </p>
+            <p><span className="text-muted-foreground">Cena:</span>{' '}
+              <InlineEditableNumber value={c.price} canEdit={canInlineEdit} onSave={(v) => updateFn({ price: v })} suffix={`${c.currency}/${c.billing_type === 'monthly' ? 'měs' : 'jednorázově'}`} />
+            </p>
             {c.selected_tier && (
               <p><span className="text-muted-foreground">Tier:</span> {c.selected_tier.toUpperCase()}</p>
             )}
@@ -281,13 +306,14 @@ export function ModificationRequestCard({
         const c = changes as UpdateServicePriceProposedChanges;
         return (
           <div className="space-y-1 text-sm">
-            <p><span className="text-muted-foreground">Služba:</span> {c.service_name}</p>
+            <p><span className="text-muted-foreground">Služba:</span>{' '}
+              <InlineEditableText value={c.service_name} canEdit={canInlineEdit} onSave={(v) => updateFn({ service_name: v })} className="font-medium" />
+            </p>
             <p>
               <span className="text-muted-foreground">Cena:</span>{' '}
               <span className="line-through text-muted-foreground">{c.old_price.toLocaleString('cs-CZ')}</span>
               {' → '}
-              <span className="font-medium text-primary">{c.new_price.toLocaleString('cs-CZ')}</span>
-              {' '}{c.currency}
+              <InlineEditableNumber value={c.new_price} canEdit={canInlineEdit} onSave={(v) => updateFn({ new_price: v })} suffix={c.currency} className="font-medium text-primary" />
             </p>
           </div>
         );
