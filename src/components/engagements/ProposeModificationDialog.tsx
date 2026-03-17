@@ -41,7 +41,6 @@ const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
   'update_service_price',
   'deactivate_service',
   'add_assignment',
-  'remove_assignment',
 ];
 
 export function ProposeModificationDialog({ open, onOpenChange, editingRequest }: ProposeModificationDialogProps) {
