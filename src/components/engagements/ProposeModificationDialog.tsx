@@ -999,8 +999,19 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        // Don't close on outside click/escape if there's meaningful data — draft is auto-saved
+        if (!isOpen && selectedEngagementId) {
+          // Just close — draft is already saved to localStorage
+        }
+        onOpenChange(isOpen);
+      }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => {
+        // Prevent closing on outside click if form has data
+        if (selectedEngagementId) {
+          e.preventDefault();
+        }
+      }}>
        <TooltipProvider delayDuration={200}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
