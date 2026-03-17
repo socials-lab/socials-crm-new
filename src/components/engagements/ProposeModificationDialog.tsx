@@ -441,7 +441,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
             ? selectedEngagementServiceId 
             : null,
-          engagement_assignment_id: ['update_assignment', 'remove_assignment'].includes(requestType)
+          engagement_assignment_id: ['update_assignment'].includes(requestType)
             ? selectedAssignmentId
             : null,
           effective_from: effectiveFrom ? format(effectiveFrom, 'yyyy-MM-dd') : null,
