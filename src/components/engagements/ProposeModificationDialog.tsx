@@ -293,6 +293,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
             creative_boost_max_credits: cbMaxCredits,
             creative_boost_price_per_credit: cbPricePerCredit,
             creative_boost_reward_per_credit: cbColleagueReward,
+            creative_boost_editor_reward_per_credit: cbEditorReward,
           };
         } else {
           proposed_changes = {
