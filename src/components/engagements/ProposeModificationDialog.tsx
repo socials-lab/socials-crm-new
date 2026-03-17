@@ -1338,7 +1338,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           >
             {isEditMode
               ? (isUpdating ? 'Ukládám...' : 'Uložit změny')
-              : (isCreating ? 'Odesílám...' : 'Odeslat ke schválení')}
+              : (isCreating ? 'Odesílám...' : 'Odeslat ke schválení administrátorovi')}
           </Button>
         </DialogFooter>
       </DialogContent>
