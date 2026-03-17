@@ -84,7 +84,8 @@ export function PricingImpactSection({
   const { engagements, engagementServices, assignments, services, colleagues } = useCRMData();
 
   // When parent controls the scenario, override local state
-  const isParentControlled = parentRequestType === 'expand_country' || parentRequestType === 'add_service';
+  const isParentControlled = parentRequestType === 'expand_country' || parentRequestType === 'add_service' || parentRequestType === 'update_service_price';
+  const isUpdateServicePrice = parentRequestType === 'update_service_price';
 
   // Local state
   const [scenario, setScenario] = useState<PricingScenario>(
@@ -425,7 +426,8 @@ export function PricingImpactSection({
         )}
       </div>
 
-      {/* ===== BLOCK 2: Proposed Change (interactive, prominent) ===== */}
+      {/* ===== BLOCK 2: Proposed Change (interactive, prominent) — hidden for update_service_price ===== */}
+      {!isUpdateServicePrice && (
       <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-4">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-primary" />
@@ -625,8 +627,10 @@ export function PricingImpactSection({
           </div>
         )}
       </div>
+      )}
 
-      {/* ===== BLOCK 3: Colleague Rewards (own section) ===== */}
+      {/* ===== BLOCK 3: Colleague Rewards (own section) — hidden for update_service_price ===== */}
+      {!isUpdateServicePrice && (
       <div className="rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -817,6 +821,7 @@ export function PricingImpactSection({
           </Alert>
         )}
       </div>
+      )}
 
       {/* ===== BLOCK 4: Result — New State After Change ===== */}
       {deltaRevenue > 0 && (
