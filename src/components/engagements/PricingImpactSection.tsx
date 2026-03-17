@@ -574,14 +574,14 @@ export function PricingImpactSection({
           {colleagueRewards.length > 0 ? (
             <>
               <div className="rounded-md border overflow-hidden">
-                <Table>
+                <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow className="text-xs">
-                      <TableHead className="h-8 text-xs">Role</TableHead>
-                      <TableHead className="h-8 text-xs">Kolega</TableHead>
-                      <TableHead className="h-8 text-xs text-right">Hodiny</TableHead>
-                      <TableHead className="h-8 text-xs text-right">Odměna</TableHead>
-                      <TableHead className="h-8 text-xs w-8"></TableHead>
+                      <TableHead className="h-8 text-xs w-[30%]">Role</TableHead>
+                      <TableHead className="h-8 text-xs w-[30%]">Kolega</TableHead>
+                      <TableHead className="h-8 text-xs text-right w-[12%]">Hodiny</TableHead>
+                      <TableHead className="h-8 text-xs text-right w-[20%]">Odměna</TableHead>
+                      <TableHead className="h-8 text-xs w-[8%]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
