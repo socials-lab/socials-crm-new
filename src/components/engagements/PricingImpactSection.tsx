@@ -666,7 +666,7 @@ export function PricingImpactSection({
                         <TableCell className="py-1.5 text-right">
                           <Input
                             type="number"
-                            value={reward.hours}
+                            value={reward.hours || ''}
                             onChange={(e) => {
                               setColleagueRewards(prev => prev.map((r, i) =>
                                 i === idx ? { ...r, hours: Number(e.target.value) } : r
@@ -674,13 +674,14 @@ export function PricingImpactSection({
                             }}
                             className="h-7 w-full text-xs text-right ml-auto"
                             step="0.5"
+                            placeholder="0"
                           />
                         </TableCell>
                         <TableCell className="py-1.5 text-right">
                           <div className="flex items-center gap-1 justify-end">
                             <Input
                               type="number"
-                              value={reward.reward}
+                              value={reward.reward || ''}
                               onChange={(e) => {
                                 setColleagueRewards(prev => prev.map((r, i) =>
                                   i === idx ? { ...r, reward: Number(e.target.value) } : r
@@ -688,6 +689,7 @@ export function PricingImpactSection({
                               }}
                               className="h-7 w-full text-xs text-right"
                               step="100"
+                              placeholder="0"
                             />
                             <span className="text-muted-foreground text-[10px] shrink-0">
                               {reward.reward_type === 'per_credit' ? 'Kč/kredit' : 'Kč'}
