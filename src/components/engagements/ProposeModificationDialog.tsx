@@ -706,6 +706,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
   };
 
+  const getItemInternalCost = (item: ModificationRequestItem): number => {
+    if (item.pricing_snapshot) {
+      return item.pricing_snapshot.delta_internal_cost || 0;
+    }
+    return 0;
+  };
+
   // Save current item to bundle and reset for next item
   const handleAddAnotherItem = () => {
     const built = buildCurrentProposedChanges();
