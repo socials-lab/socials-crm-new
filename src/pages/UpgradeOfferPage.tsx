@@ -612,6 +612,9 @@ export default function UpgradeOfferPage() {
                             </span>
                             <span className="font-medium text-primary">-{discountAmount.toLocaleString('cs-CZ')} CZK</span>
                           </div>
+                          <p className="text-xs text-muted-foreground italic">
+                            Sleva se vztahuje na odběr všech služeb v balíčku najednou. Při odběru jednotlivých služeb se uplatňují standardní ceny.
+                          </p>
                         </>
                       )}
                       <div className="flex items-center justify-between">
