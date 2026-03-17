@@ -154,6 +154,7 @@ export default function Modifications() {
     applyRequest,
     updateRequest,
     deleteRequest,
+    submitDraft,
     isApproving,
     isRejecting,
     isApplying,
