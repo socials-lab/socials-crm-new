@@ -234,6 +234,7 @@ function createClientApprovedNotification(request: StoredModificationRequest): v
     deactivate_service: 'deaktivaci služby',
     add_assignment: 'přiřazení kolegy',
     update_assignment: 'změnu odměny',
+    new_engagement: 'novou zakázku',
   };
   
   const clientName = request.client_brand_name || request.client_name;

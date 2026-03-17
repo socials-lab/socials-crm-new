@@ -970,5 +970,5 @@ export interface ModificationRequestWithDetails extends ModificationRequest {
 
 // Helper to check if a request type is client-facing
 export function isClientFacingRequestType(type: ModificationRequestType): boolean {
-  return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service'].includes(type);
+  return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service', 'new_engagement'].includes(type);
 }

@@ -3,7 +3,7 @@ import type { ModificationRequestType, ModificationProposedChanges } from './crm
 // Re-export from crm.ts for backwards compatibility
 export { isClientFacingRequestType } from './crm';
 
-export type UpgradeOfferChangeType = 'add_service' | 'update_service_price' | 'deactivate_service';
+export type UpgradeOfferChangeType = 'add_service' | 'update_service_price' | 'deactivate_service' | 'new_engagement';
 
 export type UpgradeOfferStatus = 'pending' | 'accepted' | 'expired';
 
