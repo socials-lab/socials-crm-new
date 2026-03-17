@@ -61,6 +61,7 @@ interface ModificationRequestCardProps {
 }
 
 const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
+  expand_country: Globe,
   add_service: Package,
   update_service_price: DollarSign,
   deactivate_service: X,
@@ -69,6 +70,7 @@ const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
 };
 
 const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
+  expand_country: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   add_service: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   update_service_price: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   deactivate_service: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
@@ -77,6 +79,7 @@ const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
 };
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+  expand_country: 'Nová země',
   add_service: 'Přidání služby',
   update_service_price: 'Změna ceny',
   deactivate_service: 'Ukončení služby',
