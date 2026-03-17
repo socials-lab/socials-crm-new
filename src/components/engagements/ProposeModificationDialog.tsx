@@ -2477,7 +2477,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                         {/* Total engagement economics */}
                         {hasCurrentData && (
                           <div className="p-2 rounded border bg-background space-y-1">
-                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">📊 Celková ekonomika klienta po změně</p>
+                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">📊 Celková ekonomika klienta po změně<InfoTip text="Projekce celkové zakázky po aplikování všech navržených změn — zahrnuje stávající služby + nové položky." /></p>
                             <div className="grid grid-cols-3 gap-2 text-xs">
                               <div>
                                 <p className="text-muted-foreground">Celkové příjmy</p>
