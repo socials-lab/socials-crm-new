@@ -486,9 +486,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   <SelectValue placeholder="Vyberte typ úpravy" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(REQUEST_TYPE_LABELS).map(([value, label]) => (
+                  {VISIBLE_REQUEST_TYPES.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {label}
+                      {REQUEST_TYPE_LABELS[value]}
                     </SelectItem>
                   ))}
                 </SelectContent>
