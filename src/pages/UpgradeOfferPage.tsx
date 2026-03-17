@@ -395,7 +395,7 @@ export default function UpgradeOfferPage() {
                 </div>
               )}
             </div>
-            {renderTeamSection()}
+            {renderTeamSection(offer?.pricing_snapshot?.colleague_rewards)}
           </div>
         );
       }
