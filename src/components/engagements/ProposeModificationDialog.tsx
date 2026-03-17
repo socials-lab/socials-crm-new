@@ -214,7 +214,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         setHourlyCost(changes.hourly_cost || 0);
         setMonthlyCost(changes.monthly_cost || 0);
         setPercentageOfRevenue(changes.percentage_of_revenue || 0);
-      } else if (editingRequest.request_type === 'update_assignment' || editingRequest.request_type === 'remove_assignment') {
+      } else if (editingRequest.request_type === 'update_assignment') {
         setSelectedAssignmentId(changes.engagement_assignment_id || editingRequest.engagement_assignment_id || '');
         if (editingRequest.request_type === 'update_assignment') {
           setCostModel(changes.cost_model || 'fixed_monthly');
