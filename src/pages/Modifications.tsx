@@ -178,8 +178,17 @@ function CollapsibleModificationCard({ request, cardContent }: { request: Stored
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground truncate">{request.engagement_name}</p>
-              </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="truncate">{request.engagement_name}</span>
+                  {request.client_approved_at && (
+                    <span className="flex items-center gap-1 shrink-0 text-green-600 dark:text-green-400">
+                      <Mail className="h-3 w-3" />
+                      {request.client_email}
+                      <span className="text-muted-foreground mx-0.5">·</span>
+                      {format(new Date(request.client_approved_at), "d.M.yyyy 'v' H:mm")}
+                    </span>
+                  )}
+                </div>
             </div>
             <div className="flex items-center gap-4 shrink-0 ml-4">
               {deltaRevenue != null && (
