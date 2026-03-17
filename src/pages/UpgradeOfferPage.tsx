@@ -17,7 +17,7 @@ import {
   type StoredModificationRequest 
 } from '@/data/modificationRequestsMockData';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, DeactivateServiceProposedChanges, ModificationRequestType } from '@/types/crm';
-import socialsLogo from '@/assets/socials-logo.svg';
+import socialsLogoDark from '@/assets/socials-logo-dark.svg';
 
 // Helper to calculate prorated amount
 function calculateProratedAmount(monthlyPrice: number, effectiveFrom: string) {
