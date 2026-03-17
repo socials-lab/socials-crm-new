@@ -249,7 +249,6 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         currency: lead.currency,
         monthly_fee: monthlyTotal || (lead.offer_type === 'retainer' ? lead.estimated_price : 0),
         one_off_fee: oneOffTotal || (lead.offer_type === 'one_off' ? lead.estimated_price : 0),
-        target_margin_percent: 40,
         start_date: new Date().toISOString().split('T')[0],
         end_date: '',
         notice_period_months: 1,
