@@ -1518,7 +1518,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>🎨 Odměna za kredit — Grafik (CZK)</Label>
+                              <Label>🎨 Odměna za kredit — Grafik (CZK)<InfoTip text="Interní odměna grafikovi za zpracování jednoho kreditu." /></Label>
                               <Input 
                                 type="number" 
                                 value={cbColleagueReward} 
