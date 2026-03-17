@@ -216,7 +216,7 @@ export default function Modifications() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailRequest, setEmailRequest] = useState<StoredModificationRequest | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
-  const [historyMonth, setHistoryMonth] = useState<string>('all');
+  
   
   const { 
     pendingRequests, 
@@ -651,10 +651,6 @@ export default function Modifications() {
             <XCircle className="h-4 w-4" />
             Zamítnuté
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <History className="h-4 w-4" />
-            Log změn
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="drafts" className="space-y-4">
@@ -831,45 +827,94 @@ export default function Modifications() {
             </Select>
             {selectedMonth !== 'all' && (
               <Badge variant="secondary">
-                {filteredHistory.length} záznamů
+                {(() => {
+                  const filteredApplied = applied.filter(r => {
+                    const date = new Date(r.updated_at || r.created_at);
+                    const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    return monthStr === selectedMonth;
+                  });
+                  return filteredApplied.length + filteredHistory.length;
+                })()} záznamů
               </Badge>
             )}
           </div>
 
-          {applied.length === 0 && filteredHistory.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <PackageCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground text-center">
-                  {selectedMonth === 'all' 
-                    ? 'Žádné aktivované změny' 
-                    : `Žádné aktivované změny v ${getMonthLabel(selectedMonth)}`}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-3">
-              {/* Show applied requests with collapsible cards */}
-              {applied.map((request) => (
-                <CollapsibleModificationCard
-                  key={request.id}
-                  request={request}
-                  cardContent={
-                    <ModificationRequestCard
-                      request={request}
-                    />
-                  }
-                />
-              ))}
-              
-              {/* Also show history entries that are no longer in localStorage */}
-              {filteredHistory
-                .filter(h => !applied.some(r => r.id === h.modification_request_id))
-                .map((historyEntry) => (
-                  <AppliedHistoryCard key={historyEntry.id} entry={historyEntry} />
-                ))}
-            </div>
-          )}
+          {(() => {
+            // Filter applied requests by month too
+            const filteredApplied = selectedMonth === 'all'
+              ? applied
+              : applied.filter(r => {
+                  const date = new Date(r.updated_at || r.created_at);
+                  const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                  return monthStr === selectedMonth;
+                });
+
+            const allEmpty = filteredApplied.length === 0 && filteredHistory.length === 0;
+
+            if (allEmpty) {
+              return (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <PackageCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground text-center">
+                      {selectedMonth === 'all' 
+                        ? 'Žádné aktivované změny' 
+                        : `Žádné aktivované změny v ${getMonthLabel(selectedMonth)}`}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            // Group all items by month
+            type AppliedItem = { type: 'request'; data: StoredModificationRequest } | { type: 'history'; data: AppliedModificationHistory };
+            const allItems: AppliedItem[] = [
+              ...filteredApplied.map(r => ({ type: 'request' as const, data: r })),
+              ...filteredHistory
+                .filter(h => !filteredApplied.some(r => r.id === h.modification_request_id))
+                .map(h => ({ type: 'history' as const, data: h })),
+            ];
+
+            const grouped: Record<string, AppliedItem[]> = {};
+            allItems.forEach(item => {
+              const date = item.type === 'request'
+                ? new Date(item.data.updated_at || item.data.created_at)
+                : new Date((item.data as AppliedModificationHistory).applied_at);
+              const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+              if (!grouped[key]) grouped[key] = [];
+              grouped[key].push(item);
+            });
+
+            return (
+              <div className="space-y-6">
+                {Object.entries(grouped)
+                  .sort(([a], [b]) => b.localeCompare(a))
+                  .map(([monthKey, items]) => (
+                    <div key={monthKey}>
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        {getMonthLabel(monthKey)}
+                        <Badge variant="secondary" className="ml-2">{items.length}</Badge>
+                      </h3>
+                      <div className="grid gap-3">
+                        {items.map(item => 
+                          item.type === 'request' ? (
+                            <CollapsibleModificationCard
+                              key={item.data.id}
+                              request={item.data}
+                              cardContent={
+                                <ModificationRequestCard request={item.data} />
+                              }
+                            />
+                          ) : (
+                            <AppliedHistoryCard key={(item.data as AppliedModificationHistory).id} entry={item.data as AppliedModificationHistory} />
+                          )
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="rejected" className="space-y-4">
@@ -896,124 +941,6 @@ export default function Modifications() {
           )}
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-4">
-          {/* Month filter for history */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <History className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Log všech změn</span>
-            </div>
-            <Select value={historyMonth} onValueChange={setHistoryMonth}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Vyberte měsíc" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všechny měsíce</SelectItem>
-                {availableMonths.map(month => (
-                  <SelectItem key={month} value={month}>
-                    {getMonthLabel(month)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {(() => {
-            // Combine all requests sorted by date, filtered by month
-            const allRequests = [...(pendingRequests || [])].sort((a, b) => 
-              new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
-            );
-            
-            const filteredRequests = historyMonth === 'all' 
-              ? allRequests 
-              : allRequests.filter(r => {
-                  const date = new Date(r.updated_at || r.created_at);
-                  const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                  return monthStr === historyMonth;
-                });
-
-            const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-              draft: { label: 'Draft', color: 'bg-muted text-muted-foreground' },
-              pending: { label: 'Čeká na schválení', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-              approved: { label: 'Schváleno', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-              client_approved: { label: 'Klient potvrdil', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-              applied: { label: 'Aktivováno', color: 'bg-primary/10 text-primary' },
-              rejected: { label: 'Zamítnuto', color: 'bg-destructive/10 text-destructive' },
-            };
-
-            if (filteredRequests.length === 0) {
-              return (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <History className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                    <p className="text-muted-foreground text-center">
-                      {historyMonth === 'all' ? 'Žádné záznamy' : `Žádné záznamy v ${getMonthLabel(historyMonth)}`}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            }
-
-            // Group by month
-            const grouped: Record<string, StoredModificationRequest[]> = {};
-            filteredRequests.forEach(r => {
-              const date = new Date(r.updated_at || r.created_at);
-              const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-              if (!grouped[key]) grouped[key] = [];
-              grouped[key].push(r);
-            });
-
-            return (
-              <div className="space-y-6">
-                {Object.entries(grouped)
-                  .sort(([a], [b]) => b.localeCompare(a))
-                  .map(([monthKey, requests]) => (
-                    <div key={monthKey}>
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                        {getMonthLabel(monthKey)}
-                        <Badge variant="secondary" className="ml-2">{requests.length}</Badge>
-                      </h3>
-                      <div className="space-y-2">
-                        {requests.map(request => {
-                          const clientName = request.client_brand_name || request.client_name;
-                          const typeLabel = REQUEST_TYPE_LABELS_SHORT[request.request_type] || request.request_type;
-                          const statusInfo = STATUS_LABELS[request.status] || { label: request.status, color: 'bg-muted' };
-                          const snapshot = request.pricing_snapshot as any;
-                          const deltaRevenue = snapshot?.delta_revenue;
-                          const date = new Date(request.updated_at || request.created_at);
-
-                          return (
-                            <Card key={request.id} className="hover:bg-muted/30 transition-colors">
-                              <CardContent className="p-3 flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap w-16 shrink-0">
-                                    {format(date, 'd.M.yyyy')}
-                                  </span>
-                                  <Badge className={`${statusInfo.color} text-[10px] shrink-0`}>
-                                    {statusInfo.label}
-                                  </Badge>
-                                  <span className="font-medium text-sm truncate">{clientName}</span>
-                                  <Badge variant="outline" className="text-[10px] shrink-0">{typeLabel}</Badge>
-                                </div>
-                                <div className="flex items-center gap-3 shrink-0">
-                                  {deltaRevenue != null && (
-                                    <span className={`text-sm font-semibold ${deltaRevenue >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
-                                      {deltaRevenue >= 0 ? '+' : ''}{deltaRevenue.toLocaleString('cs-CZ')} Kč
-                                    </span>
-                                  )}
-                                  <span className="text-xs text-muted-foreground">{request.engagement_name}</span>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            );
-          })()}
-        </TabsContent>
       </Tabs>
 
       {/* Success dialog after approval */}
