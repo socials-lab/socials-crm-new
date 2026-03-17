@@ -2,6 +2,7 @@ import { createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/services/activityLogger';
+import { enrichServicesWithDemoRewards } from '@/utils/serviceRewardDemoData';
 import type { 
   Client, 
   ClientContact,
