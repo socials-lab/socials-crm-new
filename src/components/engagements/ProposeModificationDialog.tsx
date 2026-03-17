@@ -62,7 +62,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [selectedTier, setSelectedTier] = useState<ServiceTier | 'none'>('none');
 
   // Creative Boost specific fields
-  const [cbMaxCredits, setCbMaxCredits] = useState<number>(50);
+  const [cbMaxCredits, setCbMaxCredits] = useState<number>(30);
   const [cbPricePerCredit, setCbPricePerCredit] = useState<number>(400);
   const [cbColleagueReward, setCbColleagueReward] = useState<number>(150);
   const [cbEditorReward, setCbEditorReward] = useState<number>(100);
@@ -199,7 +199,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setServiceCurrency('CZK');
       setServiceBillingType('monthly');
       setSelectedTier('none');
-      setCbMaxCredits(50);
+      setCbMaxCredits(30);
       setCbPricePerCredit(400);
       setCbColleagueReward(150);
       setCbEditorReward(100);
@@ -240,7 +240,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         
         if (service.code === CREATIVE_BOOST_CODE) {
           // Creative Boost: set defaults, price is calculated from credits
-          setCbMaxCredits(50);
+          setCbMaxCredits(30);
           setCbPricePerCredit(400);
           setCbColleagueReward(150);
           setCbEditorReward(100);
