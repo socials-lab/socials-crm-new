@@ -1380,7 +1380,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       {/* Tier selector only for core services */}
                       {isCoreService && (
                         <div className="space-y-2">
-                          <Label>Tier</Label>
+                          <Label>Tier<InfoTip text="Úroveň služby určuje rozsah práce a doporučenou cenu. Growth = základní, Pro = rozšířená, Elite = premium." /></Label>
                           <Select value={selectedTier} onValueChange={(v) => setSelectedTier(v as ServiceTier | 'none')}>
                             <SelectTrigger>
                               <SelectValue placeholder="Vyberte tier" />
