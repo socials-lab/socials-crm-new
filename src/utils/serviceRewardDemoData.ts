@@ -45,6 +45,15 @@ const DEMO_REWARD_CONFIGS: Record<string, ServiceRewardTierConfig[]> = {
   FAVI: [
     { roles: [{ role: 'PPC Specialist', hours: 2, reward: 1400, reward_type: 'fixed_monthly' }] },
   ],
+  AI_SEO: [
+    { roles: [{ role: 'SEO Specialist', hours: 10, reward: 6000, reward_type: 'fixed_monthly' }] },
+  ],
+  COMPARATOR_SETUP: [
+    { roles: [{ role: 'PPC Specialist', hours: 4, reward: 2800, reward_type: 'fixed_monthly' }] },
+  ],
+  ANALYTICS_MEASUREMENT: [
+    { roles: [{ role: 'PPC Specialist', hours: 0, reward: 700, reward_type: 'hourly' }] },
+  ],
 };
 
 /**

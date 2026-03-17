@@ -536,6 +536,7 @@ function TierPricingEditSection({ tierPricing, onUpdate }: TierPricingEditSectio
 const ROLE_OPTIONS = [
   'Meta Ads Specialist',
   'PPC Specialist',
+  'SEO Specialist',
   'Graphic Designer',
   'Video Editor',
   'Sales Specialist',
