@@ -159,7 +159,10 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     currency: string;
     billing_type: 'monthly' | 'one_off';
     selected_tier?: string | null;
+    description?: string;
+    deliverables?: string[];
   }>>([]);
+  const [expandedNewEngServiceIdx, setExpandedNewEngServiceIdx] = useState<number | null>(null);
 
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
