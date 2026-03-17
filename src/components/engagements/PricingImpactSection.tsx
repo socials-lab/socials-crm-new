@@ -644,7 +644,7 @@ export function PricingImpactSection({
                                   i === idx ? { ...r, reward: Number(e.target.value) } : r
                                 ));
                               }}
-                              className="h-7 w-20 text-xs text-right"
+                              className="h-7 w-full text-xs text-right"
                               step="100"
                             />
                             <span className="text-muted-foreground text-[10px] shrink-0">
