@@ -147,7 +147,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [expandNewClientIco, setExpandNewClientIco] = useState('');
   const [expandNewClientDic, setExpandNewClientDic] = useState('');
 
-  // New engagement (new SRO) state
+  // New engagement state
+  const [newEngIsDifferentSro, setNewEngIsDifferentSro] = useState(false);
   const [newEngClientName, setNewEngClientName] = useState('');
   const [newEngClientBrand, setNewEngClientBrand] = useState('');
   const [newEngName, setNewEngName] = useState('');
