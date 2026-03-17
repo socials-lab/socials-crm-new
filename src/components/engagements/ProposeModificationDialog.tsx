@@ -650,6 +650,48 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     </div>
                   )}
 
+                  {/* AI SEO specific fields */}
+                  {isAiSeo && (
+                    <div className="space-y-4 p-4 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800">
+                      <h5 className="font-medium text-sm">🤖 AI SEO – Řešitel & odměna</h5>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm">Řešitel</Label>
+                          <Input 
+                            value={aiSeoColleagueName}
+                            onChange={(e) => setAiSeoColleagueName(e.target.value)}
+                            className="text-sm"
+                          />
+                          <p className="text-xs text-muted-foreground">SEO specialista</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Hodinová sazba (Kč)</Label>
+                          <Input 
+                            type="number"
+                            value={aiSeoHourlyRate}
+                            onChange={(e) => setAiSeoHourlyRate(Number(e.target.value))}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Počet hodin / měsíc</Label>
+                          <Input 
+                            type="number"
+                            value={aiSeoHours}
+                            onChange={(e) => setAiSeoHours(Number(e.target.value))}
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="text-sm font-medium">
+                        Celková měsíční odměna: <span className="text-green-600 dark:text-green-400">{(aiSeoHourlyRate * aiSeoHours).toLocaleString('cs-CZ')} Kč</span>
+                        <span className="text-muted-foreground ml-1">({aiSeoHours}h × {aiSeoHourlyRate} Kč)</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Standard service fields (non-Creative Boost) */}
                   {!isCreativeBoost && (
                     <>
