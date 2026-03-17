@@ -38,6 +38,7 @@ import Broadcasts from "./pages/Broadcasts";
 import ApplicantOnboardingForm from "./pages/ApplicantOnboardingForm";
 import NotFound from "./pages/NotFound";
 import OnboardingForm from "./pages/OnboardingForm";
+import ModificationOnboardingForm from "./pages/ModificationOnboardingForm";
 import Notifications from "./pages/Notifications";
 import Feedback from "./pages/Feedback";
 import Academy from "./pages/Academy";
@@ -80,6 +81,7 @@ const App = () => (
                             <Route path="/offer/:token" element={<PublicOfferPage />} />
                             <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
                             <Route path="/upgrade/:token" element={<UpgradeOfferPage />} />
+                            <Route path="/modification-onboarding/:requestId" element={<ModificationOnboardingForm />} />
                             <Route path="/extra-work-approval/:token" element={<ExtraWorkApproval />} />
                             <Route path="/extra-work-approval-test" element={<ExtraWorkApproval testMode />} />
                             <Route path="/creative-boost-share/:token" element={<PublicCreativeBoostPage />} />

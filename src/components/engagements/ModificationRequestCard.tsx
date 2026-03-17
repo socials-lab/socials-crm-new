@@ -58,6 +58,7 @@ interface ModificationRequestCardProps {
   onEdit?: (request: StoredModificationRequest) => void;
   onDelete?: (requestId: string) => Promise<void>;
   onSendEmail?: (request: StoredModificationRequest) => void;
+  onCreateClient?: (request: StoredModificationRequest) => void;
   isApproving?: boolean;
   isRejecting?: boolean;
   isApplying?: boolean;
@@ -102,6 +103,7 @@ export function ModificationRequestCard({
   onEdit,
   onDelete,
   onSendEmail,
+  onCreateClient,
   isApproving,
   isRejecting,
   isApplying,
@@ -678,6 +680,73 @@ export function ModificationRequestCard({
                   📧 Klient potvrdil: {format(new Date(request.client_approved_at), 'd.M.yyyy v H:mm')} ({request.client_email})
                 </div>
               )}
+
+              {/* Onboarding data for new engagement with different SRO */}
+              {request.request_type === 'new_engagement' && isClientApproved && (() => {
+                const c = request.proposed_changes as any;
+                const hasOnboarding = c.is_different_sro && c.send_onboarding_form;
+                if (!hasOnboarding) return null;
+
+                if (request.onboarding_data) {
+                  const d = request.onboarding_data;
+                  return (
+                    <div className="bg-primary/5 border border-primary/20 rounded-md p-3 text-xs space-y-2">
+                      <span className="font-semibold text-primary flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Fakturační údaje vyplněny ({format(new Date(d.filled_at), 'd.M.yyyy H:mm')})
+                      </span>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
+                        <span>Firma: <strong className="text-foreground">{d.company_name}</strong></span>
+                        <span>IČO: <strong className="text-foreground">{d.ico}</strong></span>
+                        {d.dic && <span>DIČ: <strong className="text-foreground">{d.dic}</strong></span>}
+                        {d.billing_email && <span>Fakturační e-mail: <strong className="text-foreground">{d.billing_email}</strong></span>}
+                        {d.billing_street && <span>Adresa: <strong className="text-foreground">{d.billing_street}, {d.billing_city} {d.billing_zip}</strong></span>}
+                        <span>Kontakt: <strong className="text-foreground">{d.contact_name}</strong> ({d.contact_email})</span>
+                      </div>
+                      {onCreateClient && (
+                        <Button
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={() => onCreateClient(request)}
+                        >
+                          <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                          Vytvořit klienta a zakázku z těchto údajů
+                        </Button>
+                      )}
+                    </div>
+                  );
+                } else {
+                  // Onboarding not yet filled
+                  const onboardingLink = `${window.location.origin}/modification-onboarding/${request.id}`;
+                  return (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3 text-xs space-y-2">
+                      <span className="font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        Čeká se na vyplnění fakturačních údajů klientem
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          readOnly
+                          value={onboardingLink}
+                          className="flex-1 bg-background border rounded px-2 py-1 text-xs truncate"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs shrink-0"
+                          onClick={() => {
+                            navigator.clipboard.writeText(onboardingLink);
+                            toast.success('Odkaz zkopírován');
+                          }}
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Kopírovat
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                }
+              })()}
 
               {/* Email sending history */}
               {request.emails_sent && request.emails_sent.length > 0 && (

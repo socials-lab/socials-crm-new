@@ -649,6 +649,31 @@ export default function UpgradeOfferPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Onboarding form CTA for new engagement with different SRO */}
+                {offer.request_type === 'new_engagement' && (() => {
+                  const c = offer.proposed_changes as unknown as NewEngagementProposedChanges;
+                  return c.is_different_sro && c.send_onboarding_form;
+                })() && (
+                  <div className="border-t border-green-200 pt-4 mt-4">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center space-y-3">
+                      <p className="text-amber-800 font-semibold">
+                        📋 Ještě jeden krok – vyplňte fakturační údaje
+                      </p>
+                      <p className="text-amber-700 text-sm">
+                        Pro novou právní entitu potřebujeme vaše fakturační údaje (IČO, DIČ, adresa) a kontaktní osobu.
+                      </p>
+                      <Button
+                        className="w-full"
+                        size="lg"
+                        onClick={() => window.location.href = `/modification-onboarding/${offer.id}`}
+                      >
+                        <Building2 className="h-4 w-4 mr-2" />
+                        Vyplnit fakturační údaje
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
