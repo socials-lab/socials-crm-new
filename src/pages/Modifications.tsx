@@ -136,7 +136,77 @@ function AppliedHistoryCard({ entry }: { entry: AppliedModificationHistory }) {
   );
 }
 
-export default function Modifications() {
+const REQUEST_TYPE_LABELS_SHORT: Record<string, string> = {
+  add_service: 'Přidání služby',
+  update_service_price: 'Změna ceny',
+  deactivate_service: 'Ukončení služby',
+  add_assignment: 'Přiřazení kolegy',
+  update_assignment: 'Změna odměny',
+  expand_country: 'Rozšíření země',
+  new_engagement: 'Nová zakázka',
+};
+
+function CollapsibleModificationCard({ request, cardContent }: { request: StoredModificationRequest; cardContent: React.ReactNode }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const clientName = request.client_brand_name || request.client_name;
+  const typeLabel = REQUEST_TYPE_LABELS_SHORT[request.request_type] || request.request_type;
+  const effectiveDate = request.client_chosen_effective_from || request.effective_from;
+  
+  // Summary of pricing changes
+  const snapshot = request.pricing_snapshot as any;
+  const deltaRevenue = snapshot?.delta_revenue;
+  
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="overflow-hidden">
+        <CollapsibleTrigger asChild>
+          <button className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors text-left">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`p-1.5 rounded-md ${request.status === 'client_approved' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-primary/10'}`}>
+                {request.status === 'client_approved' 
+                  ? <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  : <PackageCheck className="h-4 w-4 text-primary" />
+                }
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium truncate">{clientName}</span>
+                  <Badge variant="outline" className="text-[10px] shrink-0">{typeLabel}</Badge>
+                  {request.items && request.items.length > 1 && (
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      {request.items.length} položek
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{request.engagement_name}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 shrink-0 ml-4">
+              {deltaRevenue != null && (
+                <span className={`text-sm font-semibold ${deltaRevenue >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+                  {deltaRevenue >= 0 ? '+' : ''}{deltaRevenue.toLocaleString('cs-CZ')} Kč
+                </span>
+              )}
+              {effectiveDate && (
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  od {format(new Date(effectiveDate), 'd.M.yyyy')}
+                </span>
+              )}
+              {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            </div>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t">
+            {cardContent}
+          </div>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
+
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [approvedRequest, setApprovedRequest] = useState<StoredModificationRequest | null>(null);
