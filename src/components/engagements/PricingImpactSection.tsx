@@ -301,7 +301,7 @@ export function PricingImpactSection({
     <div className="space-y-4 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 overflow-hidden min-w-0">
       <div className="flex items-center gap-2">
         <Calculator className="h-4 w-4 text-primary" />
-        <h4 className="font-semibold text-sm">Dopad na spolupráci</h4>
+        <h4 className="font-semibold text-sm">Kalkulace spolupráce</h4>
       </div>
 
       {/* ===== BLOCK 1: Current State ===== */}
