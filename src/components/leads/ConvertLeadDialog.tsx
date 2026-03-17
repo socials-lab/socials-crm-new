@@ -151,7 +151,6 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       currency: 'CZK',
       monthly_fee: 0,
       one_off_fee: 0,
-      target_margin_percent: 40,
       start_date: new Date().toISOString().split('T')[0],
       end_date: '',
       notice_period_months: 1,
