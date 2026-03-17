@@ -45,6 +45,7 @@ export default function UpgradeOfferPage() {
   const [email, setEmail] = useState('');
   const [agreedToChange, setAgreedToChange] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (!token) {
