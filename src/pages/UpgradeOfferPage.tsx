@@ -579,7 +579,7 @@ export default function UpgradeOfferPage() {
                       'Změna'
                     }</h2>
                   </div>
-                  {renderChangeDetailsForItem(item.request_type, item.proposed_changes)}
+                  {renderChangeDetailsForItem(item.request_type, item.proposed_changes, item.pricing_snapshot?.colleague_rewards)}
                 </CardContent>
               </Card>
             ))}
