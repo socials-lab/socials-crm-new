@@ -241,6 +241,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       if (editingRequest.items && editingRequest.items.length > 0) {
         setBundledItems(editingRequest.items);
       }
+      setBundleDiscountPercent((editingRequest as any).bundle_discount_percent || 0);
 
       const changes = editingRequest.proposed_changes as any;
 
