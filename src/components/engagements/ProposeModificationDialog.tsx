@@ -2453,7 +2453,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             <p className="font-semibold text-green-600">+{totalRevenue.toLocaleString('cs-CZ')} Kč</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Interní náklady</p>
+                            <p className="text-muted-foreground">Interní náklady<InfoTip text="Součet odměn kolegů přiřazených ke všem službám v balíčku." /></p>
                             <p className="font-semibold text-destructive">-{totalInternalCost.toLocaleString('cs-CZ')} Kč</p>
                           </div>
                           <div>
