@@ -157,6 +157,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           setCbMaxCredits(changes.creative_boost_max_credits);
           setCbPricePerCredit(changes.creative_boost_price_per_credit || 400);
           setCbColleagueReward(changes.creative_boost_reward_per_credit || 80);
+          setCbEditorReward(changes.creative_boost_editor_reward_per_credit || 100);
         }
       } else if (editingRequest.request_type === 'update_service_price') {
         setSelectedEngagementServiceId(changes.engagement_service_id || editingRequest.engagement_service_id || '');
