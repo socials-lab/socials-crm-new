@@ -67,6 +67,7 @@ const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
   deactivate_service: X,
   add_assignment: UserPlus,
   update_assignment: Settings,
+  new_engagement: Building2,
 };
 
 const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
@@ -76,6 +77,7 @@ const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
   deactivate_service: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   add_assignment: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   update_assignment: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  new_engagement: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
 };
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
@@ -85,6 +87,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny',
+  new_engagement: 'Nová zakázka',
 };
 
 export function ModificationRequestCard({
