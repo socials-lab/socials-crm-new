@@ -83,12 +83,15 @@ export function PricingImpactSection({
 }: PricingImpactSectionProps) {
   const { engagements, engagementServices, assignments, services, colleagues } = useCRMData();
 
+  // When parent controls the scenario, override local state
+  const isParentControlled = parentRequestType === 'expand_country' || parentRequestType === 'add_service';
+
   // Local state
   const [scenario, setScenario] = useState<PricingScenario>(
-    isAddonService ? 'add_addon' : 'expand_country'
+    parentRequestType === 'expand_country' ? 'expand_country' : isAddonService ? 'add_addon' : 'expand_country'
   );
-  const [referenceServiceId, setReferenceServiceId] = useState<string>('');
-  const [multiplier, setMultiplier] = useState<number>(getDefaultMultiplier('expand_country') ?? 0.5);
+  const [referenceServiceId, setReferenceServiceId] = useState<string>(parentExpandRefServiceId || '');
+  const [multiplier, setMultiplier] = useState<number>(parentExpandMultiplier ?? getDefaultMultiplier('expand_country') ?? 0.5);
   const [manualInternalCost, setManualInternalCost] = useState<number>(0);
   const [justification, setJustification] = useState('');
 
