@@ -979,6 +979,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         });
       }
       
+      clearDraft();
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to save modification request:', error);
