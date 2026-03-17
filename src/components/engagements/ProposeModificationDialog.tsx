@@ -1712,8 +1712,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
               {/* DEACTIVATE SERVICE FIELDS */}
               {requestType === 'deactivate_service' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium">3. Deaktivace služby</h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   
                   <div className="space-y-2">
                     <Label>Služba k deaktivaci *</Label>
