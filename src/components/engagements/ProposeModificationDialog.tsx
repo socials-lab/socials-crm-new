@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +33,15 @@ interface ProposeModificationDialogProps {
   onOpenChange: (open: boolean) => void;
   editingRequest?: import('@/data/modificationRequestsMockData').StoredModificationRequest | null;
 }
+
+const InfoTip = ({ text }: { text: string }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Info className="h-3.5 w-3.5 ml-1 inline-block text-muted-foreground cursor-help shrink-0" />
+    </TooltipTrigger>
+    <TooltipContent className="max-w-[300px] text-xs">{text}</TooltipContent>
+  </Tooltip>
+);
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   expand_country: 'Přidání nové země',
@@ -844,6 +854,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+       <TooltipProvider delayDuration={200}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEditMode ? <FileText className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
@@ -1015,7 +1026,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
                                 <Label className="text-xs">
-                                  Multiplikátor
+                                  Multiplikátor<InfoTip text="Koeficient pro výpočet ceny nové země. 0.5 = polovina ceny CZ služby. Např. CZ služba za 20 000 Kč × 0.5 = 10 000 Kč pro SK." />
                                   <span className="text-muted-foreground ml-1">(doporučeno: 0.5)</span>
                                 </Label>
                                 <Input
@@ -1032,7 +1043,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-xs">Finální cena</Label>
+                                <Label className="text-xs">Finální cena<InfoTip text="Výsledná měsíční cena pro klienta. Automaticky se počítá z multiplikátoru, ale můžete ji ručně upravit." /></Label>
                                 <Input
                                   type="number"
                                   value={expandFinalPrice !== null ? expandFinalPrice : recommendedPrice}
@@ -1072,7 +1083,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             onCheckedChange={(checked) => setExpandIsNewShop(checked === true)}
                           />
                           <Label htmlFor="expand-new-shop" className="text-sm cursor-pointer">
-                            Nový shop je pod jiným SRO (nový klient)
+                            Nový shop je pod jiným SRO (nový klient)<InfoTip text="Zaškrtněte, pokud nová země běží pod jinou právní entitou (jiné IČO). Klientovi se odešle onboarding formulář pro vyplnění fakturačních údajů." />
                           </Label>
                         </div>
 
@@ -1207,7 +1218,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       <h5 className="font-medium text-sm flex items-center gap-2">🎨 Nastavení Creative Boost</h5>
                       
                       <div className="space-y-2">
-                        <Label>Měsíční kreditový balíček</Label>
+                        <Label>Měsíční kreditový balíček<InfoTip text="Maximální počet kreditů, které klient může měsíčně využít. 1 kredit = 1 grafický výstup (post, story, reel cover)." /></Label>
                         <Input 
                           type="number" 
                           value={cbMaxCredits} 
@@ -1218,7 +1229,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       </div>
 
                       <div className="space-y-2">
-                        <Label>💰 Cena za kredit pro klienta (CZK)</Label>
+                        <Label>💰 Cena za kredit pro klienta (CZK)<InfoTip text="Kolik klient platí za každý využitý kredit. Doporučeno 400 Kč — nižší cena snižuje marži." /></Label>
                         <Input 
                           type="number" 
                           value={cbPricePerCredit} 
@@ -1230,7 +1241,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>🎨 Odměna za kredit — Grafik (CZK)</Label>
+                          <Label>🎨 Odměna za kredit — Grafik (CZK)<InfoTip text="Interní odměna grafikovi za zpracování jednoho kreditu. Marže = cena pro klienta − odměna grafik − odměna editor." /></Label>
                           <Input 
                             type="number" 
                             value={cbColleagueReward} 
@@ -1240,7 +1251,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                           <p className="text-xs text-muted-foreground">Doporučeno: 150 Kč</p>
                         </div>
                         <div className="space-y-2">
-                          <Label>🎬 Odměna za kredit — Editor (CZK)</Label>
+                          <Label>🎬 Odměna za kredit — Editor (CZK)<InfoTip text="Interní odměna editorovi za zpracování jednoho kreditu. Marže = cena pro klienta − odměna grafik − odměna editor." /></Label>
                           <Input 
                             type="number" 
                             value={cbEditorReward} 
@@ -1369,7 +1380,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       {/* Tier selector only for core services */}
                       {isCoreService && (
                         <div className="space-y-2">
-                          <Label>Tier</Label>
+                          <Label>Tier<InfoTip text="Úroveň služby určuje rozsah práce a doporučenou cenu. Growth = základní, Pro = rozšířená, Elite = premium." /></Label>
                           <Select value={selectedTier} onValueChange={(v) => setSelectedTier(v as ServiceTier | 'none')}>
                             <SelectTrigger>
                               <SelectValue placeholder="Vyberte tier" />
@@ -1478,7 +1489,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                           <h5 className="font-medium text-sm flex items-center gap-2">🎨 Úprava Creative Boost</h5>
                           
                           <div className="space-y-2">
-                            <Label>Měsíční kreditový balíček</Label>
+                            <Label>Měsíční kreditový balíček<InfoTip text="Maximální počet kreditů, které klient může měsíčně využít. 1 kredit = 1 grafický výstup (post, story, reel cover)." /></Label>
                             <Input 
                               type="number" 
                               value={cbMaxCredits} 
@@ -1492,7 +1503,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                           </div>
 
                           <div className="space-y-2">
-                            <Label>💰 Cena za kredit pro klienta (CZK)</Label>
+                            <Label>💰 Cena za kredit pro klienta (CZK)<InfoTip text="Kolik klient platí za každý využitý kredit. Doporučeno 400 Kč — nižší cena snižuje marži." /></Label>
                             <Input 
                               type="number" 
                               value={cbPricePerCredit} 
@@ -1507,7 +1518,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>🎨 Odměna za kredit — Grafik (CZK)</Label>
+                              <Label>🎨 Odměna za kredit — Grafik (CZK)<InfoTip text="Interní odměna grafikovi za zpracování jednoho kreditu." /></Label>
                               <Input 
                                 type="number" 
                                 value={cbColleagueReward} 
@@ -1517,7 +1528,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                               <p className="text-xs text-muted-foreground">Doporučeno: 150 Kč</p>
                             </div>
                             <div className="space-y-2">
-                              <Label>🎬 Odměna za kredit — Editor (CZK)</Label>
+                              <Label>🎬 Odměna za kredit — Editor (CZK)<InfoTip text="Interní odměna editorovi za zpracování jednoho kreditu." /></Label>
                               <Input 
                                 type="number" 
                                 value={cbEditorReward} 
@@ -1626,7 +1637,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             return (
                               <div className="grid grid-cols-2 gap-3 p-3 rounded-md border bg-muted/50">
                                 <div>
-                                  <p className="text-xs text-muted-foreground">Aktuální marže služby</p>
+                                  <p className="text-xs text-muted-foreground">Aktuální marže služby<InfoTip text="Marže = (příjmy − náklady) / příjmy. Cíl: 66 %+ (zelená). 63–65 % (oranžová). Pod 63 % (červená) vyžaduje schválení." /></p>
                                   <p className={cn("text-sm font-semibold", getMarginColor(oldMargin))}>
                                     {oldMargin.toFixed(1)}% ({(oldPrice - totalOldCost).toLocaleString('cs-CZ')} Kč)
                                   </p>
@@ -2438,15 +2449,15 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                         {/* Per-bundle economics */}
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <div>
-                            <p className="text-muted-foreground">Nové příjmy</p>
+                            <p className="text-muted-foreground">Nové příjmy<InfoTip text="Celková měsíční cena pro klienta ze všech nových/upravených služeb v tomto balíčku." /></p>
                             <p className="font-semibold text-green-600">+{totalRevenue.toLocaleString('cs-CZ')} Kč</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Interní náklady</p>
+                            <p className="text-muted-foreground">Interní náklady<InfoTip text="Součet odměn kolegů přiřazených ke všem službám v balíčku." /></p>
                             <p className="font-semibold text-destructive">-{totalInternalCost.toLocaleString('cs-CZ')} Kč</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Marže balíčku</p>
+                            <p className="text-muted-foreground">Marže balíčku<InfoTip text="Marže = (příjmy − náklady) / příjmy. Cíl: 66 %+ (zelená). 63–65 % (oranžová). Pod 63 % (červená) vyžaduje schválení." /></p>
                             <p className={cn("font-semibold", marginColor)}>
                               {marginAmount.toLocaleString('cs-CZ')} Kč ({marginPercent} %)
                             </p>
@@ -2466,7 +2477,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                         {/* Total engagement economics */}
                         {hasCurrentData && (
                           <div className="p-2 rounded border bg-background space-y-1">
-                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">📊 Celková ekonomika klienta po změně</p>
+                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">📊 Celková ekonomika klienta po změně<InfoTip text="Projekce celkové zakázky po aplikování všech navržených změn — zahrnuje stávající služby + nové položky." /></p>
                             <div className="grid grid-cols-3 gap-2 text-xs">
                               <div>
                                 <p className="text-muted-foreground">Celkové příjmy</p>
@@ -2553,7 +2564,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
               {(bundledItems.length > 0 || (bundledItems.length === 0 && requestType)) && (bundledItems.length + (requestType ? 1 : 0)) > 1 && (
                 <div className="space-y-2 p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5">
                   <Label className="flex items-center gap-2">
-                    🏷️ Sleva za balíček
+                    🏷️ Sleva za balíček<InfoTip text="Procentuální sleva z celkové ceny, pokud klient přijme všechny položky najednou. Maximum 50 %." />
                   </Label>
                   <div className="flex items-center gap-3">
                     <Input
@@ -2600,7 +2611,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
               {/* Upsold By (commission tracking) */}
               <div className="space-y-2">
-                <Label>Kdo dohodl (pro provizi)</Label>
+                <Label>Kdo dohodl (pro provizi)<InfoTip text="Kolega, který dohodl upsell s klientem. Dostane 10 % z nového měsíčního fee jako měsíční provizi." /></Label>
                 <Select value={upsoldById} onValueChange={setUpsoldById}>
                   <SelectTrigger>
                     <SelectValue placeholder="Vyberte kolegu" />
@@ -2635,7 +2646,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   if (commissionBase <= 0) return null;
                   return (
                     <div className="rounded-md border bg-muted/30 p-3 space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Provize za upsell (10 %)</p>
+                      <p className="text-xs font-medium text-muted-foreground">Provize za upsell (10 %)<InfoTip text="Měsíční provize = 10 % z nového měsíčního příjmu z této úpravy. Vyplácí se kolegovi, který upsell dohodl." /></p>
                       <p className="text-sm font-semibold">
                         {commission.toLocaleString('cs-CZ')} CZK / měsíc
                       </p>
@@ -2677,6 +2688,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   : 'Odeslat ke schválení administrátorovi'))}
           </Button>
         </DialogFooter>
+       </TooltipProvider>
       </DialogContent>
     </Dialog>
   );
