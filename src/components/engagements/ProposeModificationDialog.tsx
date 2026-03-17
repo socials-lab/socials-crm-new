@@ -291,7 +291,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
     try {
       await createRequest({
         engagement_id: selectedEngagementId,
-        request_type: requestType,
+        request_type: requestType as ModificationRequestType,
         proposed_changes: proposed_changes as any,
         engagement_service_id: ['update_service_price', 'deactivate_service'].includes(requestType) 
           ? selectedEngagementServiceId 
