@@ -161,6 +161,15 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     selected_tier?: string | null;
     description?: string;
     deliverables?: string[];
+    assignments?: Array<{
+      colleague_id: string;
+      colleague_name: string;
+      role: string;
+      cost_model: 'hourly' | 'fixed_monthly' | 'percentage';
+      monthly_cost?: number;
+      hourly_cost?: number;
+      percentage_of_revenue?: number;
+    }>;
   }>>([]);
   const [expandedNewEngServiceIdx, setExpandedNewEngServiceIdx] = useState<number | null>(null);
 
