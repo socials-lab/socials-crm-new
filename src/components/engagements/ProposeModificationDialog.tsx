@@ -2535,11 +2535,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={(isCreating || isUpdating) || !selectedEngagementId}
+            disabled={(isCreating || isUpdating) || !selectedEngagementId || (!requestType && bundledItems.length === 0)}
           >
             {isEditMode
               ? (isUpdating ? 'Ukládám...' : 'Uložit změny')
-              : (isCreating ? 'Odesílám...' : 'Odeslat ke schválení administrátorovi')}
+              : (isCreating ? 'Odesílám...' : (bundledItems.length > 0 
+                  ? `Odeslat nabídku (${bundledItems.length + (requestType ? 1 : 0)} položek)` 
+                  : 'Odeslat ke schválení administrátorovi'))}
           </Button>
         </DialogFooter>
       </DialogContent>
