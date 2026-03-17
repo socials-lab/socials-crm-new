@@ -1506,8 +1506,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
               {/* UPDATE SERVICE (PRICE + ASSIGNMENTS) FIELDS */}
               {requestType === 'update_service_price' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium">3. Úprava služby</h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   
                   <div className="space-y-2">
                     <Label>Služba *</Label>
