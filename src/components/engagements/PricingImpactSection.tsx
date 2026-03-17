@@ -674,20 +674,6 @@ export function PricingImpactSection({
                         </Select>
                       </TableCell>
                       <TableCell className="py-1.5 text-right">
-                        <Input
-                          type="number"
-                          value={reward.hours || ''}
-                          onChange={(e) => {
-                            setColleagueRewards(prev => prev.map((r, i) =>
-                              i === idx ? { ...r, hours: Number(e.target.value) } : r
-                            ));
-                          }}
-                          className="h-7 w-full text-xs text-right ml-auto"
-                          step="0.5"
-                          placeholder="0"
-                        />
-                      </TableCell>
-                      <TableCell className="py-1.5 text-right">
                         <div className="flex items-center gap-1 justify-end">
                           <Input
                             type="number"
