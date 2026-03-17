@@ -942,6 +942,17 @@ export type ModificationProposedChanges =
   | RemoveAssignmentProposedChanges
   | NewEngagementProposedChanges;
 
+// Item within a bundled modification request
+export interface ModificationRequestItem {
+  id: string;
+  request_type: ModificationRequestType;
+  proposed_changes: ModificationProposedChanges;
+  engagement_service_id?: string | null;
+  engagement_assignment_id?: string | null;
+  /** Pricing snapshot for this specific item */
+  pricing_snapshot?: import('@/utils/pricingEngine').PricingSnapshot | null;
+}
+
 // Main modification request interface
 export interface ModificationRequest {
   id: string;
@@ -965,6 +976,8 @@ export interface ModificationRequest {
   upgrade_offer_valid_until: string | null;
   client_email: string | null;
   client_approved_at: string | null;
+  // Multi-item bundle support
+  items?: ModificationRequestItem[];
   created_at: string;
   updated_at: string;
 }

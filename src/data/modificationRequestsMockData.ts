@@ -2,6 +2,7 @@ import type {
   ModificationRequestType,
   ModificationRequestStatus,
   ModificationProposedChanges,
+  ModificationRequestItem,
 } from '@/types/crm';
 import type { Notification } from '@/types/notifications';
 import type { PricingSnapshot } from '@/utils/pricingEngine';
