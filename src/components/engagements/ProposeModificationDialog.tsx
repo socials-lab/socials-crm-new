@@ -10,7 +10,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Info, Plus, FileText } from 'lucide-react';
+import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useAuth } from '@/hooks/useAuth';
@@ -55,6 +56,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
   // Form state
   const [selectedEngagementId, setSelectedEngagementId] = useState<string>('');
+  const [engagementComboOpen, setEngagementComboOpen] = useState(false);
   const [requestType, setRequestType] = useState<ModificationRequestType | ''>('');
   const [requestTypeConfirmed, setRequestTypeConfirmed] = useState(false);
   const [effectiveFrom, setEffectiveFrom] = useState<Date | undefined>(new Date());
@@ -587,24 +589,50 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           {/* ===== STEP 1: Engagement Selection ===== */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">1. Zakázka *</Label>
-            <Select value={selectedEngagementId} onValueChange={(v) => {
-              setSelectedEngagementId(v);
-              // Reset dependent selections
-              setSelectedServiceId('');
-              setSelectedEngagementServiceId('');
-              setSelectedAssignmentId('');
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Vyberte zakázku" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeEngagements.map((engagement) => (
-                  <SelectItem key={engagement.id} value={engagement.id}>
-                    {getClientName(engagement.client_id)} – {engagement.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={engagementComboOpen} onOpenChange={setEngagementComboOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={engagementComboOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedEngagementId
+                    ? (() => {
+                        const eng = activeEngagements.find(e => e.id === selectedEngagementId);
+                        return eng ? `${getClientName(eng.client_id)} – ${eng.name}` : 'Vyberte zakázku';
+                      })()
+                    : 'Vyberte zakázku'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Hledat zakázku..." />
+                  <CommandList>
+                    <CommandEmpty>Žádná zakázka nenalezena.</CommandEmpty>
+                    <CommandGroup>
+                      {activeEngagements.map((engagement) => (
+                        <CommandItem
+                          key={engagement.id}
+                          value={`${getClientName(engagement.client_id)} ${engagement.name}`}
+                          onSelect={() => {
+                            setSelectedEngagementId(engagement.id);
+                            setSelectedServiceId('');
+                            setSelectedEngagementServiceId('');
+                            setSelectedAssignmentId('');
+                            setEngagementComboOpen(false);
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", selectedEngagementId === engagement.id ? "opacity-100" : "opacity-0")} />
+                          {getClientName(engagement.client_id)} – {engagement.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* ===== STEP 2: Request Type (only after engagement selected) ===== */}
@@ -1309,7 +1337,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   </p>
                 </div>
               )}
-
+  
 
               {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
               {((requestType === 'add_service' && selectedServiceId) || (requestType === 'update_service_price' && selectedEngagementServiceId)) && (() => {
