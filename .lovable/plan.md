@@ -1,23 +1,47 @@
 
 
-## Plan: Zobrazení jmen kolegů u služeb na klientské nabídce
+## Plan: Kontrola přefakturace víceprací klientům
 
-### Kontext
-Data o kolezích (jméno, role) jsou již uložena v `pricing_snapshot.colleague_rewards` jako `ColleagueRewardEntry[]` (s polem `colleague_name` a `role`). Stačí je zobrazit na stránce `/upgrade/:token`.
+### Problém
 
-### Změny
+Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
 
-**`src/pages/UpgradeOfferPage.tsx`**
+### Řešení
 
-V metodě `renderChangeDetailsForItem` (a `renderChangeDetails`) přidám pod detaily každé služby sekci "Váš tým", která zobrazí jména a role kolegů přiřazených k dané službě:
+Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
+- `expected` — vícepráce se má přefakturovat klientovi (default)
+- `reinvoiced` — přefakturováno klientovi
+- `not_expected` — nepředpokládá se přefakturace klientovi
 
-- Pokud má nabídka `pricing_snapshot.colleague_rewards`, vyfiltruju kolegy relevantní pro danou službu (nebo zobrazím všechny pokud jde o single-service nabídku)
-- Zobrazím je jako kompaktní seznam s ikonkou uživatele: **Role** — Jméno kolegy
-- U bundle nabídek (více položek) se pokusím namatchovat kolegy na službu přes `service_id` nebo zobrazím společný tým pod všemi službami
-- Bez cen — klient vidí pouze jméno a pozici/roli
+Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
 
-Vizuálně: malá sekce s nadpisem "👤 Váš tým" pod cenou každé služby, s kartičkami nebo badges pro každého kolegu.
+### Databázové změny
 
-### Soubory k úpravě
-- `src/pages/UpgradeOfferPage.tsx` — přidání sekce s jmény kolegů do renderChangeDetailsForItem a renderChangeDetails
+```sql
+CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
+ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
+ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
+```
+
+### UI změny
+
+**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
+- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
+- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
+
+**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
+- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
+- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
+
+**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
+- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
+- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
+
+**4. `src/types/crm.ts`**
+- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
+
+### Technické detaily
+- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
+- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
+- Badge se zobrazí vedle existujícího status badge
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, getDaysInMonth, startOfMonth, addMonths, getDate } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Check, Clock, AlertCircle, Package, DollarSign, X as XIcon, CheckCircle2, Calendar as CalendarIcon, Info, Building2, Mail } from 'lucide-react';
+import { Check, Clock, AlertCircle, Package, DollarSign, X as XIcon, CheckCircle2, Calendar as CalendarIcon, Info, Building2, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -172,6 +172,34 @@ export default function UpgradeOfferPage() {
     }
   };
 
+  // Render team members from pricing_snapshot.colleague_rewards
+  const renderTeamSection = (serviceId?: string) => {
+    const rewards = offer?.pricing_snapshot?.colleague_rewards;
+    if (!rewards || rewards.length === 0) return null;
+    
+    // If serviceId provided, we could filter — but colleague_rewards don't have service_id, so show all
+    const teamMembers = rewards.filter(cr => cr.colleague_name);
+    if (teamMembers.length === 0) return null;
+
+    return (
+      <div className="mt-3 pt-3 border-t border-border/50">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+          <User className="h-3.5 w-3.5" />
+          Váš tým
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {teamMembers.map((cr, i) => (
+            <div key={i} className="inline-flex items-center gap-1.5 bg-muted rounded-full px-3 py-1 text-sm">
+              <User className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-medium">{cr.colleague_name}</span>
+              <span className="text-muted-foreground">— {cr.role}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // Render change details for a specific type and changes (used for bundled items)
   const renderChangeDetailsForItem = (itemType: ModificationRequestType, changes: any) => {
     switch (itemType) {
@@ -203,6 +231,7 @@ export default function UpgradeOfferPage() {
                 Fakturace za první měsíc: {prorationInfo.proratedAmount.toLocaleString('cs-CZ')} {c.currency} ({prorationInfo.remainingDays}/{prorationInfo.daysInMonth} dní)
               </p>
             )}
+            {renderTeamSection()}
           </div>
         );
       }
@@ -324,6 +353,7 @@ export default function UpgradeOfferPage() {
                 </AlertDescription>
               </Alert>
             )}
+            {renderTeamSection()}
           </div>
         );
       }
@@ -367,6 +397,7 @@ export default function UpgradeOfferPage() {
                 </div>
               )}
             </div>
+            {renderTeamSection()}
           </div>
         );
       }
@@ -397,6 +428,7 @@ export default function UpgradeOfferPage() {
                 </div>
               )}
             </div>
+            {renderTeamSection()}
           </div>
         );
       }
