@@ -397,6 +397,7 @@ export default function UpgradeOfferPage() {
                 </div>
               )}
             </div>
+            {renderTeamSection()}
           </div>
         );
       }
