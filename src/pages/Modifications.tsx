@@ -206,7 +206,7 @@ function CollapsibleModificationCard({ request, cardContent }: { request: Stored
   );
 }
 
-
+export default function Modifications() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [approvedRequest, setApprovedRequest] = useState<StoredModificationRequest | null>(null);
