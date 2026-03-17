@@ -609,7 +609,7 @@ export function PricingImpactSection({
                               ));
                             }}
                           >
-                            <SelectTrigger className="h-7 text-xs w-[180px]">
+                            <SelectTrigger className="h-7 text-xs w-full">
                               <SelectValue placeholder="Vybrat kolegu" />
                             </SelectTrigger>
                             <SelectContent>
