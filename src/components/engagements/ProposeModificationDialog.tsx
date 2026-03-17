@@ -1026,7 +1026,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
                                 <Label className="text-xs">
-                                  Multiplikátor
+                                  Multiplikátor<InfoTip text="Koeficient pro výpočet ceny nové země. 0.5 = polovina ceny CZ služby. Např. CZ služba za 20 000 Kč × 0.5 = 10 000 Kč pro SK." />
                                   <span className="text-muted-foreground ml-1">(doporučeno: 0.5)</span>
                                 </Label>
                                 <Input
