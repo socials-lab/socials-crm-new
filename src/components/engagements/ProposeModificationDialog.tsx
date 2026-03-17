@@ -1075,8 +1075,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                         </>
                       )}
 
-                      {/* Colleague assignments for this service */}
-                      {serviceAssignmentEdits.length > 0 && (
+                      {/* Colleague assignments for this service (hidden for Creative Boost — rewards are per-credit) */}
+                      {!isUpdateCreativeBoost && serviceAssignmentEdits.length > 0 && (
                         <div className="space-y-3 pt-2 border-t">
                           <h5 className="text-sm font-medium flex items-center gap-2">
                             👥 Odměny kolegů na této službě
