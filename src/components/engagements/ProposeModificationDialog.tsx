@@ -65,6 +65,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [cbMaxCredits, setCbMaxCredits] = useState<number>(50);
   const [cbPricePerCredit, setCbPricePerCredit] = useState<number>(400);
   const [cbColleagueReward, setCbColleagueReward] = useState<number>(80);
+  const [cbEditorReward, setCbEditorReward] = useState<number>(100);
 
   // For update_service_price
   const [selectedEngagementServiceId, setSelectedEngagementServiceId] = useState<string>('');
@@ -156,6 +157,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           setCbMaxCredits(changes.creative_boost_max_credits);
           setCbPricePerCredit(changes.creative_boost_price_per_credit || 400);
           setCbColleagueReward(changes.creative_boost_reward_per_credit || 80);
+          setCbEditorReward(changes.creative_boost_editor_reward_per_credit || 100);
         }
       } else if (editingRequest.request_type === 'update_service_price') {
         setSelectedEngagementServiceId(changes.engagement_service_id || editingRequest.engagement_service_id || '');
@@ -200,6 +202,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setCbMaxCredits(50);
       setCbPricePerCredit(400);
       setCbColleagueReward(80);
+      setCbEditorReward(100);
       setSelectedEngagementServiceId('');
       setNewPrice(0);
       setSelectedColleagueId('');
@@ -240,6 +243,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           setCbMaxCredits(50);
           setCbPricePerCredit(400);
           setCbColleagueReward(80);
+          setCbEditorReward(100);
           setServicePrice(0); // Price is calculated
           setSelectedTier('none');
         } else if (service.service_type === 'core') {
@@ -289,6 +293,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
             creative_boost_max_credits: cbMaxCredits,
             creative_boost_price_per_credit: cbPricePerCredit,
             creative_boost_reward_per_credit: cbColleagueReward,
+            creative_boost_editor_reward_per_credit: cbEditorReward,
           };
         } else {
           proposed_changes = {
@@ -535,15 +540,27 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                         <p className="text-xs text-muted-foreground">Doporučeno: 400 Kč</p>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>🎨 Odměna za kredit pro grafika (CZK)</Label>
-                        <Input 
-                          type="number" 
-                          value={cbColleagueReward} 
-                          onChange={(e) => setCbColleagueReward(Number(e.target.value))}
-                          min={0}
-                        />
-                        <p className="text-xs text-muted-foreground">Doporučeno: 80 Kč</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>🎨 Odměna za kredit — Grafik (CZK)</Label>
+                          <Input 
+                            type="number" 
+                            value={cbColleagueReward} 
+                            onChange={(e) => setCbColleagueReward(Number(e.target.value))}
+                            min={0}
+                          />
+                          <p className="text-xs text-muted-foreground">Doporučeno: 80 Kč</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>🎬 Odměna za kredit — Editor (CZK)</Label>
+                          <Input 
+                            type="number" 
+                            value={cbEditorReward} 
+                            onChange={(e) => setCbEditorReward(Number(e.target.value))}
+                            min={0}
+                          />
+                          <p className="text-xs text-muted-foreground">Doporučeno: 100 Kč</p>
+                        </div>
                       </div>
 
                       <div className="pt-2 border-t space-y-1">
@@ -553,15 +570,29 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                         <p className="text-xs text-muted-foreground">
                           = {cbMaxCredits} kreditů × {cbPricePerCredit} Kč/kredit
                         </p>
-                        {cbColleagueReward > 0 && (
-                          <>
-                            <p className="text-sm font-medium mt-2">
-                              Odměna pro grafika: <span className="text-green-600">{(cbMaxCredits * cbColleagueReward).toLocaleString('cs-CZ')} CZK/měsíc</span>
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              = {cbMaxCredits} kreditů × {cbColleagueReward} Kč/kredit
-                            </p>
-                          </>
+                        {(cbColleagueReward > 0 || cbEditorReward > 0) && (
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            {cbColleagueReward > 0 && (
+                              <div>
+                                <p className="text-sm font-medium">
+                                  Odměna grafik: <span className="text-green-600">{(cbMaxCredits * cbColleagueReward).toLocaleString('cs-CZ')} Kč/měs</span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  = {cbMaxCredits} kr. × {cbColleagueReward} Kč
+                                </p>
+                              </div>
+                            )}
+                            {cbEditorReward > 0 && (
+                              <div>
+                                <p className="text-sm font-medium">
+                                  Odměna editor: <span className="text-green-600">{(cbMaxCredits * cbEditorReward).toLocaleString('cs-CZ')} Kč/měs</span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  = {cbMaxCredits} kr. × {cbEditorReward} Kč
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
