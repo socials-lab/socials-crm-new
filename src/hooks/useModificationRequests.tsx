@@ -51,6 +51,7 @@ export function useModificationRequests() {
     note?: string | null;
     pricing_snapshot?: PricingSnapshot | null;
     items?: ModificationRequestItem[];
+    bundle_discount_percent?: number;
   }) => {
     if (!user) throw new Error('User not authenticated');
     
