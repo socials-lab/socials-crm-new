@@ -17,9 +17,10 @@ import { toast } from 'sonner';
 import { 
   getModificationRequestByToken, 
   clientAcceptOffer,
+  seedNewEngagementDemo,
   type StoredModificationRequest 
 } from '@/data/modificationRequestsMockData';
-import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, DeactivateServiceProposedChanges, ModificationRequestType } from '@/types/crm';
+import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, DeactivateServiceProposedChanges, NewEngagementProposedChanges, ModificationRequestType } from '@/types/crm';
 import socialsLogoDark from '@/assets/socials-logo-dark.svg';
 
 // Helper to calculate prorated amount
