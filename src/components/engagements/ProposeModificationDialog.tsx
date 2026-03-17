@@ -123,13 +123,6 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const isAiSeo = selectedService?.code === AI_SEO_CODE;
   const isCoreService = selectedService?.service_type === 'core' && !isCreativeBoost;
 
-  // Detect Creative Boost in update mode
-  const selectedUpdateEngService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
-  const selectedUpdateCatalogService = selectedUpdateEngService?.service_id 
-    ? services.find(s => s.id === selectedUpdateEngService.service_id) 
-    : null;
-  const isUpdateCreativeBoost = selectedUpdateCatalogService?.code === CREATIVE_BOOST_CODE;
-
   // Get engagement-specific services and assignments
   const currentEngagementServices = selectedEngagementId 
     ? getEngagementServicesByEngagementId(selectedEngagementId)
@@ -137,6 +130,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const currentAssignments = selectedEngagementId
     ? getAssignmentsByEngagementId(selectedEngagementId)
     : [];
+
+  // Detect Creative Boost in update mode
+  const selectedUpdateEngService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+  const selectedUpdateCatalogService = selectedUpdateEngService?.service_id 
+    ? services.find(s => s.id === selectedUpdateEngService.service_id) 
+    : null;
+  const isUpdateCreativeBoost = selectedUpdateCatalogService?.code === CREATIVE_BOOST_CODE;
 
   // Calculate prorated amount
   const calculateProratedAmount = () => {
