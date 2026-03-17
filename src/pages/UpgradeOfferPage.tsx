@@ -83,6 +83,7 @@ export default function UpgradeOfferPage() {
     const c = offer.proposed_changes as any;
     if (offer.request_type === 'add_service' || offer.request_type === 'expand_country') return c.price || 0;
     if (offer.request_type === 'update_service_price') return c.new_price || 0;
+    if (offer.request_type === 'new_engagement') return c.total_monthly_price || 0;
     return 0;
   }, [offer]);
 
