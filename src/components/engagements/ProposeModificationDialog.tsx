@@ -541,11 +541,38 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">Žádný</SelectItem>
-                              <SelectItem value="growth">GROWTH</SelectItem>
-                              <SelectItem value="pro">PRO</SelectItem>
-                              <SelectItem value="elite">ELITE</SelectItem>
+                              <SelectItem value="growth">
+                                <span className="flex flex-col">
+                                  <span>GROWTH</span>
+                                  <span className="text-[10px] text-muted-foreground">spend do 400 000 Kč</span>
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="pro">
+                                <span className="flex flex-col">
+                                  <span>PRO</span>
+                                  <span className="text-[10px] text-muted-foreground">spend 400 – 800 000 Kč</span>
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="elite">
+                                <span className="flex flex-col">
+                                  <span>ELITE</span>
+                                  <span className="text-[10px] text-muted-foreground">spend nad 800 000 Kč</span>
+                                </span>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
+
+                          {/* Platform info for core services */}
+                          {selectedService && (
+                            <p className="text-xs text-muted-foreground">
+                              Platformy:{' '}
+                              <span className="font-medium text-foreground">
+                                {selectedService.code === 'PPC_BOOST' && 'Google Ads + S-klik'}
+                                {selectedService.code === 'PERFORMANCE_BOOST' && 'Meta Ads, Google Ads, S-klik'}
+                                {selectedService.code === 'SOCIALS_BOOST' && 'Meta Ads'}
+                              </span>
+                            </p>
+                          )}
                         </div>
                       )}
 
