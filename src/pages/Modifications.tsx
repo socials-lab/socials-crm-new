@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2, FileText, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, ModificationProposedChanges } from '@/types/crm';
-import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
+// StoredModificationRequest already imported above
 import { getAppliedModificationsHistory, type AppliedModificationHistory } from '@/data/appliedModificationsHistory';
 
 // Helper to get month label
