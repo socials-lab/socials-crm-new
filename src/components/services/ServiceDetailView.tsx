@@ -65,9 +65,14 @@ interface ServiceDetailViewProps {
   // Reward config inline editing
   rewardConfig?: ServiceRewardTierConfig[] | null;
   onRewardConfigUpdate?: (rewardConfig: ServiceRewardTierConfig[]) => void;
+  // Client-facing defaults
+  description?: string;
+  onDescriptionUpdate?: (description: string) => void;
+  defaultDeliverables?: string[] | null;
+  onDeliverablesUpdate?: (deliverables: string[]) => void;
 }
 
-export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, tierPricing, onTierPricingUpdate, rewardConfig, onRewardConfigUpdate }: ServiceDetailViewProps) {
+export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, tierPricing, onTierPricingUpdate, rewardConfig, onRewardConfigUpdate, description, onDescriptionUpdate, defaultDeliverables, onDeliverablesUpdate }: ServiceDetailViewProps) {
   // Guard against undefined or null data
   if (!data) {
     return (
