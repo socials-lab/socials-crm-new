@@ -235,6 +235,11 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setUpsoldById(editingRequest.upsold_by_id || 'none');
       setNote(editingRequest.note || '');
       setPricingSnapshot(editingRequest.pricing_snapshot || null);
+      
+      // Pre-fill bundled items
+      if (editingRequest.items && editingRequest.items.length > 0) {
+        setBundledItems(editingRequest.items);
+      }
 
       const changes = editingRequest.proposed_changes as any;
 
