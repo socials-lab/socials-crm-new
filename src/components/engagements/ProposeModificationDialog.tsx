@@ -706,6 +706,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
   };
 
+  const getItemInternalCost = (item: ModificationRequestItem): number => {
+    if (item.pricing_snapshot) {
+      return item.pricing_snapshot.delta_internal_cost || 0;
+    }
+    return 0;
+  };
+
   // Save current item to bundle and reset for next item
   const handleAddAnotherItem = () => {
     const built = buildCurrentProposedChanges();
@@ -2370,17 +2377,25 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   </p>
                   {bundledItems.map((item, idx) => {
                     const price = getItemPrice(item);
+                    const cost = getItemInternalCost(item);
                     return (
                       <div key={item.id} className="flex items-center justify-between gap-2 p-2 rounded border bg-background">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-xs font-medium text-muted-foreground">{idx + 1}.</span>
                           <span className="text-sm truncate">{getItemLabel(item)}</span>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-3 shrink-0">
                           {price !== null && (
-                            <span className={cn("text-xs font-medium", price >= 0 ? "text-green-600" : "text-destructive")}>
-                              {price >= 0 ? '+' : ''}{price.toLocaleString('cs-CZ')} Kč
-                            </span>
+                            <div className="text-right">
+                              <span className={cn("text-xs font-medium", price >= 0 ? "text-green-600" : "text-destructive")}>
+                                {price >= 0 ? '+' : ''}{price.toLocaleString('cs-CZ')} Kč
+                              </span>
+                              {cost > 0 && (
+                                <p className="text-[10px] text-muted-foreground">
+                                  náklad: {cost.toLocaleString('cs-CZ')} Kč
+                                </p>
+                              )}
+                            </div>
                           )}
                           <Button
                             type="button"
@@ -2395,19 +2410,83 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       </div>
                     );
                   })}
+
+                  {/* Bundle economics summary */}
                   {(() => {
-                    const totalPrice = bundledItems.reduce((sum, item) => sum + (getItemPrice(item) || 0), 0);
-                    if (totalPrice !== 0) {
-                      return (
-                        <div className="flex items-center justify-between pt-1 border-t text-sm">
-                          <span className="font-medium">Celkem za uložené položky:</span>
-                          <span className={cn("font-semibold", totalPrice >= 0 ? "text-green-600" : "text-destructive")}>
-                            {totalPrice >= 0 ? '+' : ''}{totalPrice.toLocaleString('cs-CZ')} Kč/měs
-                          </span>
+                    const totalRevenue = bundledItems.reduce((sum, item) => sum + (getItemPrice(item) || 0), 0);
+                    const totalInternalCost = bundledItems.reduce((sum, item) => sum + getItemInternalCost(item), 0);
+                    const discountAmount = bundleDiscountPercent > 0 ? Math.round(totalRevenue * bundleDiscountPercent / 100) : 0;
+                    const revenueAfterDiscount = totalRevenue - discountAmount;
+                    const marginAmount = revenueAfterDiscount - totalInternalCost;
+                    const marginPercent = revenueAfterDiscount > 0 ? Math.round((marginAmount / revenueAfterDiscount) * 100) : 0;
+                    const marginColor = marginPercent >= 66 ? 'text-green-600' : marginPercent >= 63 ? 'text-yellow-600' : 'text-destructive';
+
+                    // Get current engagement economics if we have a snapshot from any item
+                    const firstSnapshot = bundledItems.find(i => i.pricing_snapshot)?.pricing_snapshot;
+                    const currentRevenue = firstSnapshot?.current_total_revenue || 0;
+                    const currentCost = firstSnapshot?.current_total_internal_cost || 0;
+                    const hasCurrentData = currentRevenue > 0;
+
+                    const newTotalRevenue = currentRevenue + revenueAfterDiscount;
+                    const newTotalCost = currentCost + totalInternalCost;
+                    const newTotalMargin = newTotalRevenue - newTotalCost;
+                    const newTotalMarginPercent = newTotalRevenue > 0 ? Math.round((newTotalMargin / newTotalRevenue) * 100) : 0;
+                    const totalMarginColor = newTotalMarginPercent >= 66 ? 'text-green-600' : newTotalMarginPercent >= 63 ? 'text-yellow-600' : 'text-destructive';
+
+                    return (
+                      <div className="space-y-2 pt-2 border-t">
+                        {/* Per-bundle economics */}
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <p className="text-muted-foreground">Nové příjmy</p>
+                            <p className="font-semibold text-green-600">+{totalRevenue.toLocaleString('cs-CZ')} Kč</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Interní náklady</p>
+                            <p className="font-semibold text-destructive">-{totalInternalCost.toLocaleString('cs-CZ')} Kč</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Marže balíčku</p>
+                            <p className={cn("font-semibold", marginColor)}>
+                              {marginAmount.toLocaleString('cs-CZ')} Kč ({marginPercent} %)
+                            </p>
+                          </div>
                         </div>
-                      );
-                    }
-                    return null;
+
+                        {bundleDiscountPercent > 0 && (
+                          <div className="flex items-center justify-between text-xs p-1.5 rounded bg-primary/5 border border-primary/20">
+                            <span>🏷️ Po slevě {bundleDiscountPercent} %:</span>
+                            <span className="font-semibold">
+                              <span className="line-through text-muted-foreground mr-1">{totalRevenue.toLocaleString('cs-CZ')}</span>
+                              → {revenueAfterDiscount.toLocaleString('cs-CZ')} Kč/měs
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Total engagement economics */}
+                        {hasCurrentData && (
+                          <div className="p-2 rounded border bg-background space-y-1">
+                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">📊 Celková ekonomika klienta po změně</p>
+                            <div className="grid grid-cols-3 gap-2 text-xs">
+                              <div>
+                                <p className="text-muted-foreground">Celkové příjmy</p>
+                                <p className="font-semibold">{newTotalRevenue.toLocaleString('cs-CZ')} Kč</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Celkové náklady</p>
+                                <p className="font-semibold">{newTotalCost.toLocaleString('cs-CZ')} Kč</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Celková marže</p>
+                                <p className={cn("font-bold", totalMarginColor)}>
+                                  {newTotalMarginPercent} %
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
                   })()}
                 </div>
               )}

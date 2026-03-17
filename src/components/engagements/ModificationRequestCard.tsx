@@ -340,6 +340,7 @@ export function ModificationRequestCard({
         {/* Combined total for bundled items */}
         {(() => {
           let totalDelta = 0;
+          let totalInternalCost = 0;
           for (const item of request.items!) {
             const c = item.proposed_changes as any;
             if (item.request_type === 'add_service' || item.request_type === 'expand_country') {
@@ -349,30 +350,45 @@ export function ModificationRequestCard({
             } else if (item.request_type === 'deactivate_service') {
               totalDelta -= c.price || 0;
             }
+            if (item.pricing_snapshot) {
+              totalInternalCost += item.pricing_snapshot.delta_internal_cost || 0;
+            }
           }
           const discountPercent = (request as any).bundle_discount_percent || 0;
           const discountAmount = discountPercent > 0 ? Math.round(totalDelta * discountPercent / 100) : 0;
-          const finalPrice = totalDelta - discountAmount;
+          const revenueAfterDiscount = totalDelta - discountAmount;
+          const marginAmount = revenueAfterDiscount - totalInternalCost;
+          const marginPercent = revenueAfterDiscount > 0 ? Math.round((marginAmount / revenueAfterDiscount) * 100) : 0;
+          const marginColor = marginPercent >= 66 ? 'text-green-600' : marginPercent >= 63 ? 'text-yellow-600' : 'text-destructive';
+
           return (
-            <div className="space-y-1">
-              {totalDelta !== 0 && (
-                <div className="flex items-center justify-between pt-2 border-t text-sm">
-                  <span className="font-medium">Celkem před slevou:</span>
-                  <span className={cn("font-semibold", totalDelta >= 0 ? "text-green-600" : "text-destructive")}>
-                    {totalDelta >= 0 ? '+' : ''}{totalDelta.toLocaleString('cs-CZ')} Kč/měs
-                  </span>
+            <div className="space-y-1 pt-2 border-t">
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <p className="text-muted-foreground">Příjmy</p>
+                  <p className="font-semibold">+{totalDelta.toLocaleString('cs-CZ')} Kč</p>
                 </div>
-              )}
+                <div>
+                  <p className="text-muted-foreground">Náklady</p>
+                  <p className="font-semibold">{totalInternalCost > 0 ? `-${totalInternalCost.toLocaleString('cs-CZ')} Kč` : '—'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Marže</p>
+                  <p className={cn("font-semibold", marginColor)}>
+                    {totalInternalCost > 0 ? `${marginPercent} %` : '—'}
+                  </p>
+                </div>
+              </div>
               {discountPercent > 0 && (
                 <>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">🏷️ Sleva za balíček:</span>
                     <span className="font-medium text-primary">-{discountPercent} % (-{discountAmount.toLocaleString('cs-CZ')} Kč)</span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-bold">
-                    <span>Celkem po slevě:</span>
-                    <span className={cn(finalPrice >= 0 ? "text-green-600" : "text-destructive")}>
-                      {finalPrice >= 0 ? '+' : ''}{finalPrice.toLocaleString('cs-CZ')} Kč/měs
+                    <span>Po slevě:</span>
+                    <span className={cn(revenueAfterDiscount >= 0 ? "text-green-600" : "text-destructive")}>
+                      {revenueAfterDiscount.toLocaleString('cs-CZ')} Kč/měs
                     </span>
                   </div>
                 </>
