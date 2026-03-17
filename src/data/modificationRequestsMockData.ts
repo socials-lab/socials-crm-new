@@ -614,6 +614,7 @@ export function seedDemoModificationStatuses(): { clientApproved: StoredModifica
     pricing_snapshot: null,
     items: [
       {
+        id: 'demo-item-ca-001',
         request_type: 'add_service',
         proposed_changes: {
           name: 'Socials Boost PRO',
