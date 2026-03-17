@@ -756,7 +756,10 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 <SelectContent>
                   {VISIBLE_REQUEST_TYPES.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {REQUEST_TYPE_LABELS[value]}
+                      <div className="flex flex-col gap-0.5 py-0.5">
+                        <span className="font-medium">{REQUEST_TYPE_LABELS[value]}</span>
+                        <span className="text-xs text-muted-foreground leading-tight">{REQUEST_TYPE_DESCRIPTIONS[value]}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
