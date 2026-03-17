@@ -46,6 +46,8 @@ export interface StoredModificationRequest {
   emails_sent: EmailSentRecord[];
   // Pricing engine snapshot
   pricing_snapshot: PricingSnapshot | null;
+  // Multi-item bundle support
+  items?: ModificationRequestItem[];
   // Denormalized data for display
   engagement_name: string;
   client_id: string;
