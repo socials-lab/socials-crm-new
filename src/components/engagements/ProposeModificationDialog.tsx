@@ -1087,27 +1087,52 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                               <Users className="h-3.5 w-3.5" />
                               Stávající kolegové na této službě
-                              <InfoTip text="Kolegové aktuálně přiřazení k referenční službě. Při rozšíření o novou zemi se jejich odměna obvykle navyšuje o podíl odpovídající multiplikátoru." />
+                              <InfoTip text="Kolegové aktuálně přiřazení k referenční službě. Navýšení odměny se počítá z multiplikátoru. Celková odměna = součet všech odměn kolegy napříč zakázkou." />
                             </p>
                             {serviceAssignments.map(a => {
                               const colleague = colleagues.find(c => c.id === a.colleague_id);
                               const isFixed = a.cost_model === 'fixed_monthly';
                               const currentReward = isFixed ? (a.monthly_cost || 0) : (a.hourly_cost || 0);
                               const rewardIncrease = Math.round(currentReward * expandMultiplier);
-                              const newTotal = currentReward + rewardIncrease;
+                              const newServiceTotal = currentReward + rewardIncrease;
                               const unit = isFixed ? '/měs' : '/hod';
 
+                              // Calculate total reward for this colleague across ALL services in this engagement
+                              const allColleagueAssignments = currentAssignments.filter(
+                                ca => ca.colleague_id === a.colleague_id
+                              );
+                              const currentTotalReward = allColleagueAssignments.reduce((sum, ca) => {
+                                if (ca.cost_model === 'fixed_monthly') return sum + (ca.monthly_cost || 0);
+                                return sum;
+                              }, 0);
+                              const newTotalReward = currentTotalReward + rewardIncrease;
+
                               return (
-                                <div key={a.id} className="flex items-center justify-between gap-3 p-2 rounded bg-muted/50 text-sm">
-                                  <div className="min-w-0">
-                                    <p className="font-medium truncate">{colleague?.full_name || 'Neznámý'}</p>
-                                    <p className="text-xs text-muted-foreground">{a.role_on_engagement || colleague?.position}</p>
+                                <div key={a.id} className="p-2.5 rounded bg-muted/50 space-y-1.5">
+                                  <div className="flex items-center justify-between gap-3 text-sm">
+                                    <div className="min-w-0">
+                                      <p className="font-medium truncate">{colleague?.full_name || 'Neznámý'}</p>
+                                      <p className="text-xs text-muted-foreground">{a.role_on_engagement || colleague?.position}</p>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-muted-foreground">{formatCZK(currentReward)}{unit}</span>
+                                        <span className="text-primary font-medium">+{formatCZK(rewardIncrease)}</span>
+                                        <span className="font-semibold">→ {formatCZK(newServiceTotal)}{unit}</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-2 text-xs shrink-0">
-                                    <span className="text-muted-foreground">{formatCZK(currentReward)}{unit}</span>
-                                    <span className="text-primary font-medium">+{formatCZK(rewardIncrease)}</span>
-                                    <span className="font-semibold">→ {formatCZK(newTotal)}{unit}</span>
-                                  </div>
+                                  {isFixed && allColleagueAssignments.length > 1 && (
+                                    <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                                      <span className="text-muted-foreground">
+                                        Celková odměna na zakázce ({allColleagueAssignments.length} služeb)
+                                        <InfoTip text="Součet měsíčních odměn tohoto kolegy za všechny služby v rámci zakázky, včetně navrhovaného navýšení." />
+                                      </span>
+                                      <span className="font-semibold">
+                                        {formatCZK(currentTotalReward)} → {formatCZK(newTotalReward)}/měs
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
