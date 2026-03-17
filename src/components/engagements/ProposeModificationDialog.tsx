@@ -589,24 +589,50 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           {/* ===== STEP 1: Engagement Selection ===== */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">1. Zakázka *</Label>
-            <Select value={selectedEngagementId} onValueChange={(v) => {
-              setSelectedEngagementId(v);
-              // Reset dependent selections
-              setSelectedServiceId('');
-              setSelectedEngagementServiceId('');
-              setSelectedAssignmentId('');
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Vyberte zakázku" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeEngagements.map((engagement) => (
-                  <SelectItem key={engagement.id} value={engagement.id}>
-                    {getClientName(engagement.client_id)} – {engagement.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={engagementComboOpen} onOpenChange={setEngagementComboOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={engagementComboOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedEngagementId
+                    ? (() => {
+                        const eng = activeEngagements.find(e => e.id === selectedEngagementId);
+                        return eng ? `${getClientName(eng.client_id)} – ${eng.name}` : 'Vyberte zakázku';
+                      })()
+                    : 'Vyberte zakázku'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Hledat zakázku..." />
+                  <CommandList>
+                    <CommandEmpty>Žádná zakázka nenalezena.</CommandEmpty>
+                    <CommandGroup>
+                      {activeEngagements.map((engagement) => (
+                        <CommandItem
+                          key={engagement.id}
+                          value={`${getClientName(engagement.client_id)} ${engagement.name}`}
+                          onSelect={() => {
+                            setSelectedEngagementId(engagement.id);
+                            setSelectedServiceId('');
+                            setSelectedEngagementServiceId('');
+                            setSelectedAssignmentId('');
+                            setEngagementComboOpen(false);
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", selectedEngagementId === engagement.id ? "opacity-100" : "opacity-0")} />
+                          {getClientName(engagement.client_id)} – {engagement.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* ===== STEP 2: Request Type (only after engagement selected) ===== */}
