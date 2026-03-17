@@ -374,17 +374,57 @@ export default function UpgradeOfferPage() {
           </p>
         </div>
 
-        {/* Change details card */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-6">
-              {getChangeIcon()}
-              <h2 className="font-semibold">{getChangeLabel()}</h2>
-            </div>
-            
-            {renderChangeDetails()}
-          </CardContent>
-        </Card>
+        {/* Change details card(s) */}
+        {isBundled ? (
+          <>
+            {offer.items!.map((item, idx) => (
+              <Card key={item.id} className="mb-4">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Badge variant="outline">{idx + 1}.</Badge>
+                    <h2 className="font-semibold">{
+                      item.request_type === 'add_service' ? 'Přidání nové služby' :
+                      item.request_type === 'update_service_price' ? 'Změna ceny služby' :
+                      item.request_type === 'deactivate_service' ? 'Ukončení služby' :
+                      item.request_type === 'expand_country' ? 'Rozšíření do nové země' :
+                      'Změna'
+                    }</h2>
+                  </div>
+                  {renderChangeDetailsForItem(item.request_type, item.proposed_changes)}
+                </CardContent>
+              </Card>
+            ))}
+            {/* Combined total */}
+            <Card className="mb-8 border-primary/30 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-lg">Celkem měsíčně</span>
+                  <span className="font-bold text-xl text-primary">
+                    {(() => {
+                      let total = 0;
+                      for (const item of offer.items!) {
+                        const c = item.proposed_changes as any;
+                        if (item.request_type === 'add_service' || item.request_type === 'expand_country') total += c.price || 0;
+                        else if (item.request_type === 'update_service_price') total += c.new_price || 0;
+                      }
+                      return total.toLocaleString('cs-CZ');
+                    })()} CZK
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <Card className="mb-8">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 mb-6">
+                {getChangeIcon()}
+                <h2 className="font-semibold">{getChangeLabel()}</h2>
+              </div>
+              {renderChangeDetails()}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Confirmation form */}
         {!isAccepted && !isExpired && (
