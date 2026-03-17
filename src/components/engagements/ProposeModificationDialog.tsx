@@ -333,7 +333,77 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
   }, [selectedEngagementServiceId, currentEngagementServices, currentAssignments, colleagues]);
 
-  const handleSubmit = async () => {
+  // Auto-detect role from colleague position for add_assignment
+  useEffect(() => {
+    if (requestType !== 'add_assignment' || !selectedColleagueId) return;
+    const colleague = colleagues.find(c => c.id === selectedColleagueId);
+    if (!colleague) return;
+    const pos = colleague.position.toLowerCase();
+    if (pos.includes('video')) {
+      setRoleOnEngagement('Video Editor');
+    } else if (pos.includes('design') || pos.includes('grafik')) {
+      setRoleOnEngagement('Graphic Designer');
+    } else if (pos.includes('ppc') || pos.includes('google')) {
+      setRoleOnEngagement('PPC Specialist');
+    } else if (pos.includes('meta') || pos.includes('facebook') || pos.includes('social')) {
+      setRoleOnEngagement('Meta Ads Specialist');
+    } else if (pos.includes('seo')) {
+      setRoleOnEngagement('SEO Specialist');
+    } else if (pos.includes('sales') || pos.includes('obchod')) {
+      setRoleOnEngagement('Sales Specialist');
+    } else if (pos.includes('account') || pos.includes('pm') || pos.includes('project')) {
+      setRoleOnEngagement('Account Manager');
+    }
+  }, [selectedColleagueId, requestType, colleagues]);
+
+  // Auto-fill reward from service config when service or colleague changes for add_assignment
+  useEffect(() => {
+    if (requestType !== 'add_assignment' || !assignmentServiceId) return;
+    const engService = currentEngagementServices.find(es => es.id === assignmentServiceId);
+    if (!engService) return;
+
+    // Find matching service in catalog
+    const catalogService = services.find(s => s.id === engService.service_id);
+    const tier = engService.selected_tier || null;
+    
+    // Try DB reward_config first, then fallback to hardcoded
+    let recommended = catalogService?.reward_config 
+      ? getRewardsFromServiceConfig(catalogService.reward_config as any, tier)
+      : null;
+    if (!recommended) {
+      recommended = getServiceRewardRecommendation(engService.name, tier);
+    }
+
+    if (recommended && recommended.length > 0) {
+      // Find match by role if colleague is already selected
+      const colleague = colleagues.find(c => c.id === selectedColleagueId);
+      const pos = colleague?.position?.toLowerCase() || '';
+      
+      // Try to match role to colleague position
+      let matchedReward = recommended[0]; // default to first
+      for (const r of recommended) {
+        const roleLower = r.role.toLowerCase();
+        if (
+          (roleLower.includes('meta') && (pos.includes('meta') || pos.includes('social') || pos.includes('facebook'))) ||
+          (roleLower.includes('ppc') && (pos.includes('ppc') || pos.includes('google'))) ||
+          (roleLower.includes('graphic') && (pos.includes('design') || pos.includes('grafik'))) ||
+          (roleLower.includes('seo') && pos.includes('seo')) ||
+          (roleLower.includes('video') && pos.includes('video'))
+        ) {
+          matchedReward = r;
+          break;
+        }
+      }
+
+      setCostModel(matchedReward.rewardType === 'hourly' ? 'hourly' : matchedReward.rewardType === 'per_credit' ? 'fixed_monthly' : 'fixed_monthly');
+      if (matchedReward.rewardType === 'hourly') {
+        setHourlyCost(matchedReward.reward);
+      } else {
+        setMonthlyCost(matchedReward.reward);
+      }
+    }
+  }, [assignmentServiceId, requestType, selectedColleagueId, currentEngagementServices, services, colleagues]);
+
     if (!selectedEngagementId || !requestType) return;
 
     let proposed_changes: Record<string, unknown> = {};
