@@ -357,6 +357,8 @@ export default function Modifications() {
         contract_url: null,
         contact_person_id: null,
         notice_period_months: null,
+        managed_countries: [],
+        pinned_notes: '',
       });
 
       // 4. Create engagement services
