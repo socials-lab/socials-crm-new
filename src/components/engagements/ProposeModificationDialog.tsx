@@ -62,10 +62,16 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [selectedTier, setSelectedTier] = useState<ServiceTier | 'none'>('none');
 
   // Creative Boost specific fields
+  // Creative Boost specific fields
   const [cbMaxCredits, setCbMaxCredits] = useState<number>(30);
   const [cbPricePerCredit, setCbPricePerCredit] = useState<number>(400);
   const [cbColleagueReward, setCbColleagueReward] = useState<number>(150);
   const [cbEditorReward, setCbEditorReward] = useState<number>(100);
+
+  // AI SEO specific fields
+  const [aiSeoColleagueName, setAiSeoColleagueName] = useState<string>('Martin Tomčík');
+  const [aiSeoHourlyRate, setAiSeoHourlyRate] = useState<number>(600);
+  const [aiSeoHours, setAiSeoHours] = useState<number>(10);
 
   // For update_service_price
   const [selectedEngagementServiceId, setSelectedEngagementServiceId] = useState<string>('');
@@ -91,10 +97,12 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [pricingInternalCost, setPricingInternalCost] = useState<number>(0);
   const [requiresAdminApproval, setRequiresAdminApproval] = useState(false);
 
-  // Detect Creative Boost
+  // Detect Creative Boost & AI SEO
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
+  const AI_SEO_CODE = 'AI_SEO';
   const selectedService = services.find(s => s.id === selectedServiceId);
   const isCreativeBoost = selectedService?.code === CREATIVE_BOOST_CODE;
+  const isAiSeo = selectedService?.code === AI_SEO_CODE;
   const isCoreService = selectedService?.service_type === 'core' && !isCreativeBoost;
 
   // Get engagement-specific services and assignments
@@ -203,6 +211,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setCbPricePerCredit(400);
       setCbColleagueReward(150);
       setCbEditorReward(100);
+      setAiSeoColleagueName('Martin Tomčík');
+      setAiSeoHourlyRate(600);
+      setAiSeoHours(10);
       setSelectedEngagementServiceId('');
       setNewPrice(0);
       setSelectedColleagueId('');
@@ -251,6 +262,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           setSelectedTier('growth');
           const growthPricing = service.tier_pricing?.find((p: any) => p.tier === 'growth');
           setServicePrice(growthPricing?.price ?? service.base_price ?? 0);
+        } else if (service.code === AI_SEO_CODE) {
+          // AI SEO: hourly-based with default colleague
+          setServicePrice(service.base_price || 0);
+          setSelectedTier('none');
+          setAiSeoColleagueName('Martin Tomčík');
+          setAiSeoHourlyRate(600);
+          setAiSeoHours(10);
         } else {
           // Addon or other service
           setServicePrice(service.base_price || 0);
@@ -294,6 +312,22 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
             creative_boost_price_per_credit: cbPricePerCredit,
             creative_boost_reward_per_credit: cbColleagueReward,
             creative_boost_editor_reward_per_credit: cbEditorReward,
+          };
+        } else if (isAiSeo) {
+          // AI SEO: include default colleague info
+          proposed_changes = {
+            service_id: selectedServiceId,
+            name: serviceName,
+            price: servicePrice,
+            currency: serviceCurrency,
+            billing_type: serviceBillingType,
+            selected_tier: null,
+            description: serviceDescription || undefined,
+            deliverables: serviceDeliverables ? serviceDeliverables.split('\n').filter(Boolean) : undefined,
+            ai_seo_colleague_name: aiSeoColleagueName,
+            ai_seo_hourly_rate: aiSeoHourlyRate,
+            ai_seo_hours: aiSeoHours,
+            ai_seo_total_reward: aiSeoHourlyRate * aiSeoHours,
           };
         } else {
           proposed_changes = {
@@ -612,6 +646,48 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             )}
                           </div>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI SEO specific fields */}
+                  {isAiSeo && (
+                    <div className="space-y-4 p-4 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800">
+                      <h5 className="font-medium text-sm">🤖 AI SEO – Řešitel & odměna</h5>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm">Řešitel</Label>
+                          <Input 
+                            value={aiSeoColleagueName}
+                            onChange={(e) => setAiSeoColleagueName(e.target.value)}
+                            className="text-sm"
+                          />
+                          <p className="text-xs text-muted-foreground">SEO specialista</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Hodinová sazba (Kč)</Label>
+                          <Input 
+                            type="number"
+                            value={aiSeoHourlyRate}
+                            onChange={(e) => setAiSeoHourlyRate(Number(e.target.value))}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Počet hodin / měsíc</Label>
+                          <Input 
+                            type="number"
+                            value={aiSeoHours}
+                            onChange={(e) => setAiSeoHours(Number(e.target.value))}
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="text-sm font-medium">
+                        Celková měsíční odměna: <span className="text-green-600 dark:text-green-400">{(aiSeoHourlyRate * aiSeoHours).toLocaleString('cs-CZ')} Kč</span>
+                        <span className="text-muted-foreground ml-1">({aiSeoHours}h × {aiSeoHourlyRate} Kč)</span>
                       </div>
                     </div>
                   )}
