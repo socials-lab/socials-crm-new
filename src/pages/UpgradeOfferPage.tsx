@@ -749,10 +749,6 @@ export default function UpgradeOfferPage() {
           </Card>
         )}
 
-        {/* Contact section */}
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>Máte dotazy? Kontaktujte nás na info@socials.cz</p>
-        </div>
       </main>
     </div>
   );
