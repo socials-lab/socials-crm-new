@@ -313,6 +313,22 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
             creative_boost_reward_per_credit: cbColleagueReward,
             creative_boost_editor_reward_per_credit: cbEditorReward,
           };
+        } else if (isAiSeo) {
+          // AI SEO: include default colleague info
+          proposed_changes = {
+            service_id: selectedServiceId,
+            name: serviceName,
+            price: servicePrice,
+            currency: serviceCurrency,
+            billing_type: serviceBillingType,
+            selected_tier: null,
+            description: serviceDescription || undefined,
+            deliverables: serviceDeliverables ? serviceDeliverables.split('\n').filter(Boolean) : undefined,
+            ai_seo_colleague_name: aiSeoColleagueName,
+            ai_seo_hourly_rate: aiSeoHourlyRate,
+            ai_seo_hours: aiSeoHours,
+            ai_seo_total_reward: aiSeoHourlyRate * aiSeoHours,
+          };
         } else {
           proposed_changes = {
             service_id: selectedServiceId === 'custom' ? null : selectedServiceId,
