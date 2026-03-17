@@ -2457,7 +2457,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             <p className="font-semibold text-destructive">-{totalInternalCost.toLocaleString('cs-CZ')} Kč</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Marže balíčku</p>
+                            <p className="text-muted-foreground">Marže balíčku<InfoTip text="Marže = (příjmy − náklady) / příjmy. Cíl: 66 %+ (zelená). 63–65 % (oranžová). Pod 63 % (červená) vyžaduje schválení." /></p>
                             <p className={cn("font-semibold", marginColor)}>
                               {marginAmount.toLocaleString('cs-CZ')} Kč ({marginPercent} %)
                             </p>
