@@ -607,8 +607,34 @@ export function PricingImpactSection({
                           <Input
                             value={reward.role}
                             onChange={(e) => {
+                              const newRole = e.target.value;
+                              // Auto-fill reward from service config when role changes
+                              const tier = selectedTierProp || null;
+                              const recommended = getRewardsFromServiceConfig(
+                                selectedCatalogService?.reward_config as any,
+                                tier
+                              ) || getServiceRewardRecommendation(
+                                selectedCatalogService?.name || '',
+                                tier
+                              );
+                              const matchingReward = recommended?.find(
+                                r => r.role.toLowerCase() === newRole.toLowerCase()
+                              );
+                              const isExp = scenario === 'expand_country' || scenario === 'expand_shop';
+                              const rewardAmount = matchingReward
+                                ? (isExp ? Math.round(matchingReward.reward * multiplier) : matchingReward.reward)
+                                : undefined;
+                              const rewardHours = matchingReward?.hours;
+                              const rewardType = matchingReward?.rewardType;
+
                               setColleagueRewards(prev => prev.map((r, i) =>
-                                i === idx ? { ...r, role: e.target.value } : r
+                                i === idx ? {
+                                  ...r,
+                                  role: newRole,
+                                  ...(rewardAmount !== undefined && r.reward === 0 ? { reward: rewardAmount } : {}),
+                                  ...(rewardHours !== undefined && r.hours === 0 ? { hours: rewardHours } : {}),
+                                  ...(rewardType ? { reward_type: rewardType } : {}),
+                                } : r
                               ));
                             }}
                             className="h-7 text-xs w-full"
