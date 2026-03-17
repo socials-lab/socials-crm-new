@@ -278,7 +278,10 @@ export default function Modifications() {
     await deleteRequest(requestId);
   };
 
-  const handleSendEmail = (request: StoredModificationRequest) => {
+  const handleSubmitDraft = async (requestId: string) => {
+    await submitDraft(requestId);
+  };
+
     setEmailRequest(request);
     setEmailDialogOpen(true);
   };
