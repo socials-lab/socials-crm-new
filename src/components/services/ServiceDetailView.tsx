@@ -89,9 +89,11 @@ export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, ti
   const hasTierComparison = data.tier_comparison && data.tier_comparison.length > 0 && data.tier_prices;
   const hasCreditPricing = data.credit_pricing && data.credit_pricing.outputTypes && data.credit_pricing.outputTypes.length > 0;
 
+  const hasInlineEditors = onDescriptionUpdate || onDeliverablesUpdate || onTierPricingUpdate || onRewardConfigUpdate;
+
   const hasContent = data.tagline || (data.platforms && data.platforms.length > 0) || 
                      hasBenefits || hasSetupContent || hasManagementContent ||
-                     hasTierComparison || hasCreditPricing;
+                     hasTierComparison || hasCreditPricing || hasInlineEditors;
   
   if (!hasContent) {
     return (
