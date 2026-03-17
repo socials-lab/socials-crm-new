@@ -1585,10 +1585,36 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
               )}
   
 
-              {/* PRICING IMPACT SECTION - for add_service and update_service_price */}
-              {((requestType === 'add_service' && selectedServiceId) || (requestType === 'update_service_price' && selectedEngagementServiceId)) && (() => {
+              {/* PRICING IMPACT SECTION - for add_service, update_service_price, and expand_country */}
+              {((requestType === 'add_service' && selectedServiceId) || (requestType === 'update_service_price' && selectedEngagementServiceId) || (requestType === 'expand_country' && expandRefServiceId && expandCountryCode)) && (() => {
                 const selectedEng = engagements.find(e => e.id === selectedEngagementId);
                 if (!selectedEng) return null;
+                
+                if (requestType === 'expand_country') {
+                  // For expand_country, the reference service IS the selected service
+                  const refEngSvc = currentEngagementServices.find(es => es.id === expandRefServiceId);
+                  const refCatalogSvc = refEngSvc?.service_id ? services.find(s => s.id === refEngSvc.service_id) : null;
+                  const refPrice = refEngSvc?.price || 0;
+                  const calcPrice = expandFinalPrice !== null ? expandFinalPrice : Math.round(refPrice * expandMultiplier);
+                  return (
+                    <PricingImpactSection
+                      clientId={selectedEng.client_id}
+                      engagementId={selectedEngagementId}
+                      proposedPrice={calcPrice}
+                      selectedServiceId={refCatalogSvc?.id || ''}
+                      isAddonService={false}
+                      selectedTier={refEngSvc?.selected_tier || null}
+                      requestType="expand_country"
+                      expandMultiplier={expandMultiplier}
+                      expandRefServiceId={expandRefServiceId}
+                      onPriceChange={() => {}}
+                      onInternalCostChange={setPricingInternalCost}
+                      onSnapshotChange={setPricingSnapshot}
+                      onRequiresAdminApproval={setRequiresAdminApproval}
+                    />
+                  );
+                }
+                
                 const isAddon = selectedService?.service_type === 'addon';
                 return (
                   <PricingImpactSection
@@ -1598,6 +1624,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     selectedServiceId={selectedServiceId}
                     isAddonService={isAddon}
                     selectedTier={selectedTier === 'none' ? null : selectedTier}
+                    requestType={requestType === 'add_service' ? 'add_service' : undefined}
                     onPriceChange={(price) => {
                       if (requestType === 'add_service') setServicePrice(price);
                       else setNewPrice(price);
