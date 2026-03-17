@@ -2449,7 +2449,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                         {/* Per-bundle economics */}
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <div>
-                            <p className="text-muted-foreground">Nové příjmy</p>
+                            <p className="text-muted-foreground">Nové příjmy<InfoTip text="Celková měsíční cena pro klienta ze všech nových/upravených služeb v tomto balíčku." /></p>
                             <p className="font-semibold text-green-600">+{totalRevenue.toLocaleString('cs-CZ')} Kč</p>
                           </div>
                           <div>
