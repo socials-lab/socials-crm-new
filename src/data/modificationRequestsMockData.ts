@@ -321,6 +321,7 @@ export function updateModificationRequest(
     upsold_by_name?: string | null;
     pricing_snapshot?: PricingSnapshot | null;
     items?: ModificationRequestItem[];
+    bundle_discount_percent?: number;
   }
 ): StoredModificationRequest | null {
   const requests = getModificationRequests();
