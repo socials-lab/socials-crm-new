@@ -178,6 +178,9 @@ export function useModificationRequests() {
     effective_from?: string | null;
     note?: string | null;
     upsell_commission_percent?: number;
+    upsold_by_id?: string | null;
+    upsold_by_name?: string | null;
+    pricing_snapshot?: PricingSnapshot | null;
   }) => {
     if (!user) throw new Error('User not authenticated');
     
