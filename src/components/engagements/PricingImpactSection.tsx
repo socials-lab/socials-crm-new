@@ -630,7 +630,7 @@ export function PricingImpactSection({
                                 i === idx ? { ...r, hours: Number(e.target.value) } : r
                               ));
                             }}
-                            className="h-7 w-16 text-xs text-right ml-auto"
+                            className="h-7 w-full text-xs text-right ml-auto"
                             step="0.5"
                           />
                         </TableCell>
