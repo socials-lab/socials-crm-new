@@ -53,24 +53,66 @@ export default function UpgradeOfferPage() {
       return;
     }
 
-    // Fetch from localStorage
     const request = getModificationRequestByToken(token);
     setOffer(request);
+    if (request?.effective_from) {
+      setSelectedDate(new Date(request.effective_from));
+    } else {
+      // Default: 1st of next month
+      setSelectedDate(startOfMonth(addMonths(new Date(), 1)));
+    }
     setIsLoading(false);
   }, [token]);
 
+  // Get total monthly price from offer
+  const totalMonthlyPrice = useMemo(() => {
+    if (!offer) return 0;
+    if (offer.items && offer.items.length > 0) {
+      let total = 0;
+      for (const item of offer.items) {
+        const c = item.proposed_changes as any;
+        if (item.request_type === 'add_service' || item.request_type === 'expand_country') total += c.price || 0;
+        else if (item.request_type === 'update_service_price') total += c.new_price || 0;
+      }
+      const discountPercent = offer.bundle_discount_percent || 0;
+      return Math.round(total * (1 - discountPercent / 100));
+    }
+    const c = offer.proposed_changes as any;
+    if (offer.request_type === 'add_service' || offer.request_type === 'expand_country') return c.price || 0;
+    if (offer.request_type === 'update_service_price') return c.new_price || 0;
+    return 0;
+  }, [offer]);
+
+  // Live prorated calculation
+  const prorationCalc = useMemo(() => {
+    if (!selectedDate || !totalMonthlyPrice) return null;
+    const daysInMonth = getDaysInMonth(selectedDate);
+    const startDay = getDate(selectedDate);
+    const remainingDays = daysInMonth - startDay + 1;
+    const proratedAmount = Math.round((totalMonthlyPrice / daysInMonth) * remainingDays);
+    return {
+      proratedAmount,
+      remainingDays,
+      daysInMonth,
+      monthName: format(selectedDate, 'LLLL yyyy', { locale: cs }),
+      isFullMonth: startDay === 1,
+    };
+  }, [selectedDate, totalMonthlyPrice]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!offer || !email || !agreedToChange || !token) return;
+    if (!offer || !email || !agreedToChange || !token || !selectedDate) return;
 
     setIsSubmitting(true);
     
     try {
-      const updatedOffer = clientAcceptOffer(token, email);
+      const updatedOffer = clientAcceptOffer(token, email, selectedDate.toISOString());
       
       if (updatedOffer) {
         setOffer(updatedOffer);
-        toast.success('Změna byla úspěšně potvrzena');
+        toast.success('Změna byla úspěšně potvrzena. Na váš email jsme odeslali potvrzení.', {
+          duration: 6000,
+        });
       } else {
         throw new Error('Failed to accept offer');
       }
