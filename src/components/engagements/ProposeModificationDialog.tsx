@@ -29,12 +29,21 @@ interface ProposeModificationDialogProps {
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   add_service: 'Přidání nové služby',
-  update_service_price: 'Změna ceny služby',
+  update_service_price: 'Úprava služby (cena + odměny)',
   deactivate_service: 'Deaktivace služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
   remove_assignment: 'Odebrání kolegy',
 };
+
+// Types visible in the dropdown (update_assignment is merged into update_service_price)
+const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
+  'add_service',
+  'update_service_price',
+  'deactivate_service',
+  'add_assignment',
+  'remove_assignment',
+];
 
 export function ProposeModificationDialog({ open, onOpenChange, editingRequest }: ProposeModificationDialogProps) {
   const { engagements, clients, services, colleagues, engagementServices, assignments, getEngagementServicesByEngagementId, getAssignmentsByEngagementId } = useCRMData();
