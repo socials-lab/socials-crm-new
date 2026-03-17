@@ -2,7 +2,7 @@ import type { Engagement, EngagementService, EngagementAssignment } from '@/type
 
 // ============= Types =============
 
-export type PricingScenario = 'expand_country' | 'expand_shop' | 'add_addon' | 'custom_manual';
+export type PricingScenario = 'expand_country' | 'expand_shop' | 'add_addon';
 
 export type MarginValidationStatus = 'green' | 'orange' | 'red';
 
