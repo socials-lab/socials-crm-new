@@ -117,6 +117,7 @@ const App = () => (
                           </Routes>
                         </BrowserRouter>
                       </TooltipProvider>
+                      </BugReportsProvider>
                       </SOPDataProvider>
                     </AcademyDataProvider>
                   </FeedbackProvider>
