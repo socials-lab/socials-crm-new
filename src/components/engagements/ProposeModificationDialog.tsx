@@ -404,6 +404,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
   }, [assignmentServiceId, requestType, selectedColleagueId, currentEngagementServices, services, colleagues]);
 
+  const handleSubmit = async () => {
     if (!selectedEngagementId || !requestType) return;
 
     let proposed_changes: Record<string, unknown> = {};
