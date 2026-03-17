@@ -386,7 +386,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
           )}
 
           {/* ===== STEP 3: Type-specific fields (only after type selected) ===== */}
-          {selectedEngagementId && requestType && (
+          {selectedEngagementId && requestTypeConfirmed && requestType && (
             <>
               {/* ADD SERVICE FIELDS */}
               {requestType === 'add_service' && (
