@@ -266,7 +266,6 @@ export function getScenarioLabel(scenario: PricingScenario): string {
     expand_country: 'Nová země',
     expand_shop: 'Nový shop / značka',
     add_addon: 'Doplňková služba',
-    custom_manual: 'Vlastní úprava',
   };
   return labels[scenario];
 }
