@@ -361,38 +361,53 @@ export default function UpgradeOfferPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container max-w-3xl mx-auto px-4 py-4 flex items-center justify-center">
-          <img src={socialsLogo} alt="Socials.cz" className="h-8" />
+    <div className="min-h-screen bg-[hsl(var(--muted))]">
+      {/* Header with primary accent */}
+      <header className="bg-background border-b">
+        <div className="container max-w-3xl mx-auto px-4 py-5 flex items-center justify-center">
+          <img src={socialsLogoDark} alt="Socials.cz" className="h-8" />
         </div>
       </header>
+
+      {/* Hero intro banner */}
+      <div className="bg-primary/10 border-b border-primary/20">
+        <div className="container max-w-3xl mx-auto px-4 py-8 text-center">
+          <h1 className="text-2xl font-bold mb-3">Návrh úpravy spolupráce</h1>
+          <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
+            Vážený kliente, na základě naší komunikace jsme pro vás připravili návrh na rozšíření spolupráce.
+            Níže naleznete přehled navrhovaných změn včetně cen.
+          </p>
+          <div className="mt-4 inline-flex items-center gap-2 bg-background rounded-full px-4 py-2 text-sm border shadow-sm">
+            <Building2 className="h-4 w-4 text-primary" />
+            <span className="font-medium">{clientName}</span>
+            <span className="text-muted-foreground">–</span>
+            <span className="text-muted-foreground">{offer.engagement_name}</span>
+          </div>
+        </div>
+      </div>
 
       <main className="container max-w-3xl mx-auto px-4 py-8">
         {/* Success state */}
         {isAccepted && (
-          <Card className="mb-8 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 dark:border-green-800">
+          <Card className="mb-8 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
             <CardContent className="pt-8 pb-8">
-              {/* Big success icon and thank you */}
               <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/50 mb-4">
-                  <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+                  <CheckCircle2 className="h-10 w-10 text-green-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">
+                <h2 className="text-2xl font-bold text-green-700 mb-2">
                   Děkujeme za potvrzení! 🎉
                 </h2>
-                <p className="text-green-600 dark:text-green-500">
+                <p className="text-green-600">
                   Vaše potvrzení bylo úspěšně zaznamenáno. Budeme vás informovat o dalších krocích.
                 </p>
               </div>
               
-              {/* Confirmation details */}
-              <div className="p-4 rounded-lg bg-white/60 dark:bg-green-900/30 border border-green-200 dark:border-green-800">
-                <p className="text-xs font-semibold text-green-800 dark:text-green-300 mb-3 uppercase tracking-wide">
+              <div className="p-4 rounded-lg bg-white/60 border border-green-200">
+                <p className="text-xs font-semibold text-green-800 mb-3 uppercase tracking-wide">
                   📋 Detail potvrzení
                 </p>
-                <div className="space-y-2 text-sm text-green-700 dark:text-green-400">
+                <div className="space-y-2 text-sm text-green-700">
                   {offer.client_email && (
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Email:</span>
@@ -430,16 +445,6 @@ export default function UpgradeOfferPage() {
             </CardContent>
           </Card>
         )}
-
-        {/* Main content */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-2">Návrh úpravy spolupráce</h1>
-          <p className="text-muted-foreground">
-            Pro: <span className="font-medium text-foreground">{clientName}</span>
-            {' – '}
-            <span className="font-medium text-foreground">{offer.engagement_name}</span>
-          </p>
-        </div>
 
         {/* Change details card(s) */}
         {isBundled ? (
