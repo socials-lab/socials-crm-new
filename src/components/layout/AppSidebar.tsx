@@ -36,8 +36,10 @@ import {
   FileText,
   BarChart3,
   Settings,
+  Bug,
   type LucideIcon,
 } from 'lucide-react';
+import { useBugReports } from '@/hooks/useBugReports';
 
 interface NavItem {
   title: string;
