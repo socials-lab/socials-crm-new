@@ -174,6 +174,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   }>>([]);
   const [expandedNewEngServiceIdx, setExpandedNewEngServiceIdx] = useState<number | null>(null);
 
+  // Bundled items for multi-item requests
+  const [bundledItems, setBundledItems] = useState<ModificationRequestItem[]>([]);
+
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
   const selectedService = services.find(s => s.id === selectedServiceId);
