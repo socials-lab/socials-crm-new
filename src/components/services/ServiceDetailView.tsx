@@ -67,7 +67,7 @@ interface ServiceDetailViewProps {
   onRewardConfigUpdate?: (rewardConfig: ServiceRewardTierConfig[]) => void;
 }
 
-export function ServiceDetailView({ data, onCreditPricingUpdate }: ServiceDetailViewProps) {
+export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, tierPricing, onTierPricingUpdate, rewardConfig, onRewardConfigUpdate }: ServiceDetailViewProps) {
   // Guard against undefined or null data
   if (!data) {
     return (
