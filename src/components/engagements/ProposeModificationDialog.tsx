@@ -422,11 +422,6 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           percentage_of_revenue: costModel === 'percentage' ? percentageOfRevenue : null,
         };
         break;
-      case 'remove_assignment':
-        proposed_changes = {
-          engagement_assignment_id: selectedAssignmentId,
-        };
-        break;
     }
 
     try {
