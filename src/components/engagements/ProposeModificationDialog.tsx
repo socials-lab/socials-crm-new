@@ -1852,8 +1852,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
                {/* UPDATE ASSIGNMENT FIELDS (legacy - hidden from dropdown but kept for backward compat) */}
               {requestType === 'update_assignment' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium">3. Změna odměny kolegy</h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   <p className="text-sm text-muted-foreground">
                     Pro úpravu odměn kolegů použijte typ „Úprava služby (cena + odměny)" – kde uvidíte i marži.
                   </p>
