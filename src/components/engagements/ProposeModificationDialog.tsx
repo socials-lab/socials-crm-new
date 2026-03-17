@@ -1528,7 +1528,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                               <p className="text-xs text-muted-foreground">Doporučeno: 150 Kč</p>
                             </div>
                             <div className="space-y-2">
-                              <Label>🎬 Odměna za kredit — Editor (CZK)</Label>
+                              <Label>🎬 Odměna za kredit — Editor (CZK)<InfoTip text="Interní odměna editorovi za zpracování jednoho kreditu." /></Label>
                               <Input 
                                 type="number" 
                                 value={cbEditorReward} 
