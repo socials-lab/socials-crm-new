@@ -479,6 +479,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'add_assignment':
         proposed_changes = {
           colleague_id: selectedColleagueId,
+          engagement_service_id: assignmentServiceId || null,
           role_on_engagement: roleOnEngagement,
           cost_model: costModel,
           hourly_cost: costModel === 'hourly' ? hourlyCost : null,
