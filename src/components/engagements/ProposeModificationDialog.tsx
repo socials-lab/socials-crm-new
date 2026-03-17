@@ -1892,6 +1892,20 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             </Button>
                           </div>
                           
+                          {/* Compact assignment summary when collapsed */}
+                          {!isExpanded && (svc.assignments || []).length > 0 && (
+                            <div className="px-2 pb-2 flex flex-wrap gap-1">
+                              {(svc.assignments || []).map((asn, aIdx) => (
+                                <span key={aIdx} className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5">
+                                  {asn.colleague_name}
+                                  <span className="text-primary/60">
+                                    ({asn.cost_model === 'hourly' ? `${asn.hourly_cost || 0} Kč/h` : asn.cost_model === 'percentage' ? `${asn.percentage_of_revenue || 0}%` : `${asn.monthly_cost || 0} Kč/m`})
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          
                           {/* Expandable description & deliverables */}
                           {isExpanded && (
                             <div className="px-2 pb-3 pt-1 space-y-3 border-t">
