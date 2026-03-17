@@ -211,6 +211,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setCbPricePerCredit(400);
       setCbColleagueReward(150);
       setCbEditorReward(100);
+      setAiSeoColleagueName('Martin Tomčík');
+      setAiSeoHourlyRate(600);
+      setAiSeoHours(10);
       setSelectedEngagementServiceId('');
       setNewPrice(0);
       setSelectedColleagueId('');
