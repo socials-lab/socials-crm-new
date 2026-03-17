@@ -385,6 +385,14 @@ export default function Services() {
                   updateService(service.id, { reward_config: updatedRewardConfig.length > 0 ? updatedRewardConfig : null } as Partial<Service>);
                   toast.success('Odměny kolegů byly aktualizovány');
                 }}
+                description={service.description}
+                onDescriptionUpdate={(desc) => {
+                  updateService(service.id, { description: desc });
+                }}
+                defaultDeliverables={service.default_deliverables}
+                onDeliverablesUpdate={(deliverables) => {
+                  updateService(service.id, { default_deliverables: deliverables.length > 0 ? deliverables : null } as Partial<Service>);
+                }}
                 onCreditPricingUpdate={service.code === 'CREATIVE_BOOST' ? (updatedTypes) => {
                   // Sync with the global CB output types
                   const currentIds = cbOutputTypes.filter(t => t.isActive).map(t => t.id);
