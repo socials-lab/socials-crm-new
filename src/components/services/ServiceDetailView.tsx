@@ -621,20 +621,18 @@ function RewardConfigEditSection({ rewardConfig, onUpdate, serviceType }: Reward
         Odměny kolegů dle pozice
       </h4>
 
-      {local.length === 0 && (
-        <div className="flex gap-2">
-          {serviceType === 'core' ? (
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={scaffoldCore}>
-              <Plus className="h-3 w-3" />
-              Přidat odměny pro Growth / Pro / Elite
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addAddonConfig}>
-              <Plus className="h-3 w-3" />
-              Přidat odměny
-            </Button>
-          )}
-        </div>
+      {local.length === 0 && serviceType === 'core' && (
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={scaffoldCore}>
+          <Plus className="h-3 w-3" />
+          Přidat odměny pro Growth / Pro / Elite
+        </Button>
+      )}
+
+      {local.length === 0 && serviceType !== 'core' && (
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addAddonConfig}>
+          <Plus className="h-3 w-3" />
+          Přidat odměny
+        </Button>
       )}
 
       {local.map((tierConfig, tierIdx) => (
@@ -688,6 +686,19 @@ function RewardConfigEditSection({ rewardConfig, onUpdate, serviceType }: Reward
           </Button>
         </div>
       ))}
+
+      {/* Always show button to add another colleague/role group for non-core or when core already has tiers */}
+      {local.length > 0 && serviceType !== 'core' && (
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addAddonConfig}>
+          <Plus className="h-3 w-3" />
+          Přidat dalšího kolegu
+        </Button>
+      )}
+      {local.length > 0 && serviceType === 'core' && (
+        <p className="text-[10px] text-muted-foreground">
+          Klikněte na „Přidat pozici" v rámci tieru pro přidání dalšího kolegy.
+        </p>
+      )}
     </div>
   );
 }
