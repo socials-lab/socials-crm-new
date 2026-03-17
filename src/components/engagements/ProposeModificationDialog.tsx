@@ -2646,7 +2646,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   if (commissionBase <= 0) return null;
                   return (
                     <div className="rounded-md border bg-muted/30 p-3 space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Provize za upsell (10 %)</p>
+                      <p className="text-xs font-medium text-muted-foreground">Provize za upsell (10 %)<InfoTip text="Měsíční provize = 10 % z nového měsíčního příjmu z této úpravy. Vyplácí se kolegovi, který upsell dohodl." /></p>
                       <p className="text-sm font-semibold">
                         {commission.toLocaleString('cs-CZ')} CZK / měsíc
                       </p>
