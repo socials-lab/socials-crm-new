@@ -562,6 +562,26 @@ export function ModificationRequestCard({
                     )}
                   </div>
 
+                  {/* Upsell commission */}
+                  {request.upsold_by_name && (
+                    <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-sm">
+                      <span className="text-amber-700 dark:text-amber-400">🏆</span>
+                      <span className="text-muted-foreground">Provize pro {request.upsold_by_name}:</span>
+                      <span className="font-bold text-amber-700 dark:text-amber-400">
+                        {(() => {
+                          const pct = request.upsell_commission_percent || 10;
+                          const base = request.pricing_snapshot 
+                            ? (request.pricing_snapshot.delta_revenue > 0 ? request.pricing_snapshot.delta_revenue : request.pricing_snapshot.new_total_revenue)
+                            : 0;
+                          const commission = Math.round(base * pct / 100);
+                          return `${commission.toLocaleString('cs-CZ')} Kč`;
+                        })()}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        jednorázově ({request.upsell_commission_percent || 10} %)
+                      </span>
+                    </div>
+                  )}
                   {request.pricing_snapshot.requires_admin_approval && (
                     <Badge variant="outline" className="text-xs border-destructive text-destructive">
                       ⚠️ Vyžaduje admin schválení
