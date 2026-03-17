@@ -1731,6 +1731,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       </SelectContent>
                     </Select>
                   </div>
+                  </div>
                 </div>
               )}
 
