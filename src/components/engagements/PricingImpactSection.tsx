@@ -298,7 +298,7 @@ export function PricingImpactSection({
   const showInternalCostWarning = deltaRevenue > 0 && deltaInternalCost === 0 && colleagueRewards.length === 0;
 
   return (
-    <div className="space-y-4 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5">
+    <div className="space-y-4 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 overflow-hidden min-w-0">
       <div className="flex items-center gap-2">
         <Calculator className="h-4 w-4 text-primary" />
         <h4 className="font-semibold text-sm">Dopad na spolupráci</h4>
