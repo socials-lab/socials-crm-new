@@ -664,6 +664,7 @@ export default function Modifications() {
                   onReject={handleReject}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  onInlineUpdate={handleInlineUpdate}
                   isApproving={isApproving}
                   isRejecting={isRejecting}
                   isDeleting={isDeleting}
