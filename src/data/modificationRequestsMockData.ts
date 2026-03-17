@@ -611,7 +611,20 @@ export function seedDemoModificationStatuses(): { clientApproved: StoredModifica
       sent_by_id: 'admin',
       sent_by_name: 'Marek Admin',
     }],
-    pricing_snapshot: null,
+    pricing_snapshot: {
+      current_total_revenue: 45000,
+      new_total_revenue: 75400,
+      delta_revenue: 30400,
+      current_margin_percent: 68,
+      new_margin_percent: 66.5,
+      colleague_rewards: [
+        { role: 'Meta Ads Specialist', colleague_name: 'Tereza Nováková', colleague_id: 'c1', reward: 7500, reward_type: 'fixed_monthly' },
+        { role: 'PPC Specialist', colleague_name: 'Jan Procházka', colleague_id: 'c2', reward: 8500, reward_type: 'fixed_monthly' },
+      ],
+      current_colleague_rewards: [
+        { role: 'PPC Specialist', colleague_name: 'Jan Procházka', colleague_id: 'c2', reward: 7000, reward_type: 'fixed_monthly' },
+      ],
+    } as any,
     items: [
       {
         id: 'demo-item-ca-001',
@@ -701,7 +714,19 @@ export function seedDemoModificationStatuses(): { clientApproved: StoredModifica
       sent_by_id: 'admin',
       sent_by_name: 'Marek Admin',
     }],
-    pricing_snapshot: null,
+    pricing_snapshot: {
+      current_total_revenue: 45000,
+      new_total_revenue: 48000,
+      delta_revenue: 3000,
+      current_margin_percent: 68,
+      new_margin_percent: 67.2,
+      colleague_rewards: [
+        { role: 'PPC Specialist', colleague_name: 'Jan Procházka', colleague_id: 'c2', reward: 8500, reward_type: 'fixed_monthly' },
+      ],
+      current_colleague_rewards: [
+        { role: 'PPC Specialist', colleague_name: 'Jan Procházka', colleague_id: 'c2', reward: 7000, reward_type: 'fixed_monthly' },
+      ],
+    } as any,
     client_chosen_effective_from: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
     engagement_name: 'Test Client - Retainer 2025',
     client_id: 'c0000000-0000-0000-0000-000000000001',
