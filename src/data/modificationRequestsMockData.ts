@@ -331,8 +331,8 @@ export function updateModificationRequest(
   
   const request = requests[index];
   
-  // Only allow editing pending or approved (waiting for client) requests
-  if (!['pending', 'approved'].includes(request.status)) {
+  // Only allow editing draft, pending or approved (waiting for client) requests
+  if (!['draft', 'pending', 'approved'].includes(request.status)) {
     return null;
   }
   
