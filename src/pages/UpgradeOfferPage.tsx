@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Check, Clock, AlertCircle, Package, DollarSign, X as XIcon, CheckCircle2, Calendar, Info } from 'lucide-react';
+import { Check, Clock, AlertCircle, Package, DollarSign, X as XIcon, CheckCircle2, Calendar, Info, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
