@@ -39,6 +39,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Deaktivace služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
+  new_engagement: 'Nová zakázka (jiné SRO)',
 };
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
@@ -48,6 +49,7 @@ const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
   'update_service_price',
   'deactivate_service',
   'add_assignment',
+  'new_engagement',
 ];
 
 export function ProposeModificationDialog({ open, onOpenChange, editingRequest }: ProposeModificationDialogProps) {
