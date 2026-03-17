@@ -281,7 +281,7 @@ export default function Modifications() {
   const handleSubmitDraft = async (requestId: string) => {
     await submitDraft(requestId);
   };
-
+  const handleSendEmail = (request: StoredModificationRequest) => {
     setEmailRequest(request);
     setEmailDialogOpen(true);
   };
