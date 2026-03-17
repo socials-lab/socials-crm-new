@@ -380,6 +380,9 @@ export default function Modifications() {
           invoiced_at: null,
           invoiced_in_period: null,
           invoice_id: null,
+          upsold_by_id: request.upsold_by_id || null,
+          upsell_commission_percent: request.upsell_commission_percent || 0,
+          effective_from: request.client_chosen_effective_from || request.effective_from || null,
         });
       }
 
