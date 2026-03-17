@@ -627,8 +627,10 @@ export function PricingImpactSection({
           </div>
         )}
       </div>
+      )}
 
-      {/* ===== BLOCK 3: Colleague Rewards (own section) ===== */}
+      {/* ===== BLOCK 3: Colleague Rewards (own section) — hidden for update_service_price ===== */}
+      {!isUpdateServicePrice && (
       <div className="rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
