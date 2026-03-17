@@ -353,6 +353,7 @@ export default function UpgradeOfferPage() {
                 </AlertDescription>
               </Alert>
             )}
+            {renderTeamSection()}
           </div>
         );
       }
