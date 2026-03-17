@@ -50,6 +50,7 @@ export function useModificationRequests() {
     upsell_commission_percent?: number;
     note?: string | null;
     pricing_snapshot?: PricingSnapshot | null;
+    items?: ModificationRequestItem[];
   }) => {
     if (!user) throw new Error('User not authenticated');
     
