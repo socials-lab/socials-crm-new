@@ -37,7 +37,11 @@ export function BugReportFAB() {
       const canvas = await html2canvas(document.body, {
         useCORS: true,
         logging: false,
-        scale: window.devicePixelRatio * 0.5,
+        scale: 1,
+        width: document.documentElement.scrollWidth,
+        height: document.documentElement.scrollHeight,
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight,
       });
       setScreenshotDataUrl(canvas.toDataURL('image/png'));
     } catch {
