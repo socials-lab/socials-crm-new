@@ -89,9 +89,12 @@ export function useModificationRequests() {
         pricing_snapshot: params.pricing_snapshot,
         items: params.items,
         bundle_discount_percent: params.bundle_discount_percent,
-      });
+        status: params.status || 'pending',
+      } as any);
       
-      toast.success('Požadavek na úpravu byl odeslán ke schválení');
+      toast.success(params.status === 'draft' 
+        ? 'Návrh byl uložen jako draft' 
+        : 'Požadavek na úpravu byl odeslán ke schválení');
       refresh();
       return result;
     } catch (error) {
