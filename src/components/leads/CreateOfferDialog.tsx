@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Copy, ExternalLink, Check } from 'lucide-react';
+import { Loader2, Copy, ExternalLink, Check, TrendingUp } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
@@ -21,6 +21,8 @@ import { addPublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { getServiceDetail } from '@/constants/serviceDetails';
+import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
+import { getRewardsFromServiceConfig } from '@/constants/serviceRewards';
 
 interface CreateOfferDialogProps {
   open: boolean;
@@ -118,7 +120,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     }
   }, [open, lead.potential_services, services]);
 
-  // Calculate totals
+  // Calculate totals + profitability
   const totals = useMemo(() => {
     const coreMonthly = editableServices
       .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
@@ -142,8 +144,40 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     const monthlyAfterDiscount = discountScope === 'all_services' 
       ? discountedBase 
       : discountedBase + addonMonthly;
-    return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount };
-  }, [editableServices, monthlyDiscountPercent, discountScope]);
+
+    // Calculate internal costs from reward configs
+    let totalInternalCost = 0;
+    const serviceCosts: { name: string; cost: number; roles: { role: string; reward: number }[] }[] = [];
+    
+    editableServices.forEach(es => {
+      const catalogService = services.find(s => s.id === es.service_id);
+      if (!catalogService) return;
+      
+      const enriched = enrichServiceWithDemoRewards(catalogService);
+      const roles = getRewardsFromServiceConfig(
+        enriched.reward_config as any,
+        es.selected_tier
+      );
+      
+      if (roles && roles.length > 0) {
+        let svcCost = 0;
+        const roleDetails: { role: string; reward: number }[] = [];
+        roles.forEach(r => {
+          // For per_credit, estimate based on Creative Boost defaults (30 credits)
+          const reward = r.rewardType === 'per_credit' ? r.reward * 30 : r.reward;
+          svcCost += reward;
+          roleDetails.push({ role: r.role, reward });
+        });
+        totalInternalCost += svcCost;
+        serviceCosts.push({ name: es.name, cost: svcCost, roles: roleDetails });
+      }
+    });
+
+    const revenue = monthlyAfterDiscount;
+    const margin = revenue > 0 ? ((revenue - totalInternalCost) / revenue) * 100 : 0;
+
+    return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount, totalInternalCost, serviceCosts, margin };
+  }, [editableServices, monthlyDiscountPercent, discountScope, services]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
     setEditableServices(prev => 
@@ -409,6 +443,50 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                           </span>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Profitability / Internal costs */}
+                  {editableServices.length > 0 && totals.totalInternalCost > 0 && (
+                    <div className="p-3 rounded-lg border border-dashed space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>Interní ekonomika (odhad)</span>
+                      </div>
+                      
+                      {totals.serviceCosts.map((sc, idx) => (
+                        <div key={idx} className="text-xs space-y-0.5">
+                          <div className="flex items-center justify-between text-muted-foreground">
+                            <span>{sc.name}</span>
+                            <span>{sc.cost.toLocaleString('cs-CZ')} Kč</span>
+                          </div>
+                          {sc.roles.map((r, ri) => (
+                            <div key={ri} className="flex items-center justify-between pl-3 text-muted-foreground/70">
+                              <span>{r.role}</span>
+                              <span>{r.reward.toLocaleString('cs-CZ')} Kč</span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                      
+                      <Separator />
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Interní náklady celkem:</span>
+                        <span className="font-medium">{totals.totalInternalCost.toLocaleString('cs-CZ')} Kč/měs</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Odhadovaná marže:</span>
+                        <span className={`font-bold ${
+                          totals.margin >= 66 ? 'text-green-600' : 
+                          totals.margin >= 50 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {totals.margin.toFixed(1)} %
+                          <span className="font-normal text-xs ml-1">
+                            ({Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč)
+                          </span>
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
