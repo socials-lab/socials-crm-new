@@ -82,7 +82,6 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny',
-  remove_assignment: 'Odebrání kolegy',
 };
 
 export function ModificationRequestCard({
