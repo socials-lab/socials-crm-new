@@ -642,7 +642,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'new_engagement': {
         const totalMonthly = newEngServices.reduce((sum, s) => sum + (s.billing_type === 'monthly' ? s.price : 0), 0);
         proposed_changes = {
-          new_client_data: newEngClientName ? {
+          is_different_sro: newEngIsDifferentSro,
+          new_client_data: newEngIsDifferentSro && newEngClientName ? {
             company_name: newEngClientName,
             brand_name: newEngClientBrand || undefined,
           } : undefined,
@@ -650,8 +651,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           services: newEngServices,
           total_monthly_price: totalMonthly,
           currency: 'CZK',
-          onboarding_email: newEngOnboardingEmail,
-          send_onboarding_form: true,
+          onboarding_email: newEngIsDifferentSro ? newEngOnboardingEmail : undefined,
+          send_onboarding_form: newEngIsDifferentSro,
         };
         break;
       }
