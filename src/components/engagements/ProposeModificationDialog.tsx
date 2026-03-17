@@ -82,9 +82,18 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [aiSeoHourlyRate, setAiSeoHourlyRate] = useState<number>(600);
   const [aiSeoHours, setAiSeoHours] = useState<number>(10);
 
-  // For update_service_price
+  // For update_service_price (merged with update_assignment)
   const [selectedEngagementServiceId, setSelectedEngagementServiceId] = useState<string>('');
   const [newPrice, setNewPrice] = useState<number>(0);
+  // Editable assignments for the selected service (used in update_service_price)
+  const [serviceAssignmentEdits, setServiceAssignmentEdits] = useState<Array<{
+    assignment_id: string;
+    colleague_name: string;
+    role: string;
+    cost_model: 'hourly' | 'fixed_monthly' | 'percentage';
+    old_value: number;
+    new_value: number;
+  }>>([]);
 
   // Assignment-related fields
   const [selectedColleagueId, setSelectedColleagueId] = useState<string>('');
