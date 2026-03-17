@@ -712,6 +712,7 @@ export default function Modifications() {
                   key={request.id}
                   request={request}
                   onApply={handleApply}
+                  onCreateClient={handleCreateClientFromOnboarding}
                   isApplying={isApplying}
                 />
               ))}
