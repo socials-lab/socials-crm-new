@@ -56,6 +56,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
   // Form state
   const [selectedEngagementId, setSelectedEngagementId] = useState<string>('');
+  const [engagementComboOpen, setEngagementComboOpen] = useState(false);
   const [requestType, setRequestType] = useState<ModificationRequestType | ''>('');
   const [requestTypeConfirmed, setRequestTypeConfirmed] = useState(false);
   const [effectiveFrom, setEffectiveFrom] = useState<Date | undefined>(new Date());
