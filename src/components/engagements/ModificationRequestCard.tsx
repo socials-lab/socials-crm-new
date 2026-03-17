@@ -802,7 +802,7 @@ export function ModificationRequestCard({
               {/* Client acceptance info */}
               {isClientApproved && request.client_approved_at && (
                 <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
-                  📧 Klient potvrdil: {format(new Date(request.client_approved_at), 'd.M.yyyy v H:mm')} ({request.client_email})
+                  📧 Klient potvrdil: {format(new Date(request.client_approved_at), "d.M.yyyy 'v' H:mm")} ({request.client_email})
                 </div>
               )}
 
