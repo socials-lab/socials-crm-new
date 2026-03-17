@@ -216,6 +216,7 @@ export default function Modifications() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailRequest, setEmailRequest] = useState<StoredModificationRequest | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [historyMonth, setHistoryMonth] = useState<string>('all');
   
   const { 
     pendingRequests, 
