@@ -798,6 +798,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           note: note || null,
           upsell_commission_percent: upsoldById === 'none' ? 0 : 10,
           items: isBundled ? allItems : undefined,
+          bundle_discount_percent: isBundled && bundleDiscountPercent > 0 ? bundleDiscountPercent : undefined,
         });
       } else {
         await createRequest({
