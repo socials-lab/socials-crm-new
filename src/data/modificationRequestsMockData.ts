@@ -309,7 +309,26 @@ export function applyModificationRequest(requestId: string): StoredModificationR
   return requests[index];
 }
 
-// Update modification request (for editing before final approval)
+// Submit a draft (move from draft → pending)
+export function submitDraftRequest(requestId: string): StoredModificationRequest | null {
+  const requests = getModificationRequests();
+  const index = requests.findIndex(r => r.id === requestId);
+  
+  if (index === -1) return null;
+  if (requests[index].status !== 'draft') return null;
+  
+  requests[index] = {
+    ...requests[index],
+    status: 'pending',
+    requested_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  
+  saveRequests(requests);
+  return requests[index];
+}
+
+
 export function updateModificationRequest(
   requestId: string,
   updates: {
