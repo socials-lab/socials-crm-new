@@ -865,7 +865,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         <div className="space-y-6 py-4">
           {/* ===== STEP 1: Engagement Selection ===== */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">1. Zakázka *</Label>
+            <Label className="text-sm font-semibold">1. Zakázka *</Label>
             <Popover open={engagementComboOpen} onOpenChange={setEngagementComboOpen}>
               <PopoverTrigger asChild>
                 <Button
