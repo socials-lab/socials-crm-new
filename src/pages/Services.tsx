@@ -375,9 +375,9 @@ export default function Services() {
               <ServiceDetailView
                 data={serviceDetailData}
                 serviceType={service.service_type}
-                tierPricing={service.tier_pricing}
+                tierPricing={service.tier_pricing?.map(tp => ({ tier: tp.tier, price: tp.price })) || null}
                 onTierPricingUpdate={(updatedTierPricing) => {
-                  updateService(service.id, { tier_pricing: updatedTierPricing });
+                  updateService(service.id, { tier_pricing: updatedTierPricing as any });
                   toast.success('Ceník tierů byl aktualizován');
                 }}
                 rewardConfig={service.reward_config}
