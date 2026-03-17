@@ -18,7 +18,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useCRMData } from '@/hooks/useCRMData';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useAuth } from '@/hooks/useAuth';
-import type { ModificationRequestType, ServiceTier } from '@/types/crm';
+import type { ModificationRequestType, ServiceTier, ModificationRequestItem, ModificationProposedChanges } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SERVICE_DETAILS } from '@/constants/serviceDetails';
