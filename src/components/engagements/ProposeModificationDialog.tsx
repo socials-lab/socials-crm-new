@@ -2589,7 +2589,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     selectedServiceId={selectedServiceId}
                     isAddonService={isAddon}
                     selectedTier={selectedTier === 'none' ? null : selectedTier}
-                    requestType={requestType === 'add_service' ? 'add_service' : undefined}
+                    requestType={requestType === 'add_service' ? 'add_service' : requestType === 'update_service_price' ? 'update_service_price' : undefined}
                     onPriceChange={(price) => {
                       if (requestType === 'add_service') setServicePrice(price);
                       else setNewPrice(price);
