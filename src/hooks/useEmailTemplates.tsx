@@ -53,7 +53,7 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
     template_key: 'send_modification',
     name: 'Návrh změny zakázky',
     subject_template: '{type} – {client} / Socials',
-    body_template: '{greeting}\n\nrádi bychom Vás informovali o navrhované změně ve spolupráci:\n\n{change_type}\n{change_details}\n\nPlatnost od: {effective_from}\n\nOdkaz: {upgrade_link}\n\n{signature}',
+    body_template: '{greeting}\n\npřipravili jsme pro Vás návrh úpravy naší spolupráce.\n\n{change_type}\n{change_details}\n\nNavrhované datum účinnosti: {effective_from}\n\nKompletní přehled změn a potvrzení naleznete na odkazu níže:\n👉 {upgrade_link}\n\nPokud s návrhem souhlasíte, stačí jej potvrdit – služba se aktivuje automaticky. Platnost odkazu: {valid_until}.\n\nV případě jakýchkoli dotazů se na mě neváhejte obrátit.\n\n{signature}',
     description: 'Návrh změny zakázky',
     available_variables: ['greeting', 'client', 'type', 'change_type', 'change_details', 'effective_from', 'upgrade_link', 'valid_until', 'signature'],
   },
