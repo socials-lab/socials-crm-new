@@ -33,7 +33,6 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   deactivate_service: 'Deaktivace služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
-  remove_assignment: 'Odebrání kolegy',
 };
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
