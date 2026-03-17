@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Check, Zap, Target, CreditCard, X, Plus, Image, Video } from 'lucide-react';
+import { Check, Zap, Target, CreditCard, X, Plus, Image, Video, Users, Pencil, Trash2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
