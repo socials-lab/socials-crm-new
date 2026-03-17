@@ -165,6 +165,9 @@ export default function Modifications() {
   } = useModificationRequests();
   const { addEngagementService, updateEngagementService, addClient, addEngagement, addContact } = useCRMData();
 
+  // Seed demo data for client_approved and applied tabs
+  useState(() => { seedDemoModificationStatuses(); });
+
   // Get applied modifications history
   const appliedHistory = useMemo(() => getAppliedModificationsHistory(), [pendingRequests]);
   const availableMonths = useMemo(() => generateAvailableMonths(), []);
