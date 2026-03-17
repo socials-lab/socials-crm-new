@@ -947,11 +947,12 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
             <>
               {/* EXPAND COUNTRY FIELDS */}
               {requestType === 'expand_country' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium flex items-center gap-2">
                     <Globe className="h-4 w-4" />
                     3. Přidání nové země
                   </h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   
                   {/* Reference service */}
                   <div className="space-y-2">
@@ -1174,13 +1175,15 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       </div>
                     </>
                   )}
+                  </div>
                 </div>
               )}
 
               {/* ADD SERVICE FIELDS */}
               {requestType === 'add_service' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium">3. Nová služba</h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1497,13 +1500,15 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       </div>
                     </>
                   )}
+                  </div>
                 </div>
               )}
 
               {/* UPDATE SERVICE (PRICE + ASSIGNMENTS) FIELDS */}
               {requestType === 'update_service_price' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium">3. Úprava služby</h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   
                   <div className="space-y-2">
                     <Label>Služba *</Label>
@@ -1701,13 +1706,15 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       )}
                     </>
                   )}
+                  </div>
                 </div>
               )}
 
               {/* DEACTIVATE SERVICE FIELDS */}
               {requestType === 'deactivate_service' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium">3. Deaktivace služby</h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   
                   <div className="space-y-2">
                     <Label>Služba k deaktivaci *</Label>
@@ -1724,13 +1731,15 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       </SelectContent>
                     </Select>
                   </div>
+                  </div>
                 </div>
               )}
 
               {/* ADD ASSIGNMENT FIELDS */}
               {requestType === 'add_assignment' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium">3. Přiřazení kolegy ke službě</h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   
                   {/* Service selection */}
                   <div className="space-y-2">
@@ -1837,26 +1846,30 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       )}
                     </>
                   )}
+                  </div>
                 </div>
               )}
 
                {/* UPDATE ASSIGNMENT FIELDS (legacy - hidden from dropdown but kept for backward compat) */}
               {requestType === 'update_assignment' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium">3. Změna odměny kolegy</h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   <p className="text-sm text-muted-foreground">
                     Pro úpravu odměn kolegů použijte typ „Úprava služby (cena + odměny)" – kde uvidíte i marži.
-                  </p>
+                   </p>
+                  </div>
                 </div>
               )}
 
               {/* NEW ENGAGEMENT FIELDS */}
               {requestType === 'new_engagement' && (
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4">
                   <h4 className="font-medium flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
                     3. Nová zakázka
                   </h4>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
 
                   {/* Same vs different SRO toggle */}
                   <div className="flex items-center gap-2 p-3 rounded-md border bg-background">
@@ -2361,6 +2374,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                       </AlertDescription>
                     </Alert>
                   )}
+                  </div>
                 </div>
               )}
   
