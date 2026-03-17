@@ -252,6 +252,23 @@ export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, ti
           onUpdate={onCreditPricingUpdate}
         />
       )}
+
+      {/* Inline Tier Pricing Edit for Core Services */}
+      {serviceType === 'core' && tierPricing && onTierPricingUpdate && (
+        <TierPricingEditSection
+          tierPricing={tierPricing}
+          onUpdate={onTierPricingUpdate}
+        />
+      )}
+
+      {/* Inline Reward Config Edit */}
+      {onRewardConfigUpdate && (
+        <RewardConfigEditSection
+          rewardConfig={rewardConfig || []}
+          onUpdate={onRewardConfigUpdate}
+          serviceType={serviceType}
+        />
+      )}
     </div>
   );
 }
