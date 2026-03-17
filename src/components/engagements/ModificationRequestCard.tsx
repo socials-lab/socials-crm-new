@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import type { 
   ModificationRequestType,
@@ -59,10 +60,90 @@ interface ModificationRequestCardProps {
   onDelete?: (requestId: string) => Promise<void>;
   onSendEmail?: (request: StoredModificationRequest) => void;
   onCreateClient?: (request: StoredModificationRequest) => void;
+  onInlineUpdate?: (requestId: string, updates: Partial<Pick<StoredModificationRequest, 'proposed_changes' | 'items'>>) => void;
   isApproving?: boolean;
   isRejecting?: boolean;
   isApplying?: boolean;
   isDeleting?: boolean;
+}
+
+// Inline editable text component
+function InlineEditableText({ value, onSave, className, canEdit }: { value: string; onSave: (val: string) => void; className?: string; canEdit: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  if (!canEdit) return <span className={className}>{value}</span>;
+
+  if (editing) {
+    return (
+      <Input
+        ref={inputRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => { if (draft.trim() && draft !== value) onSave(draft.trim()); setEditing(false); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { if (draft.trim() && draft !== value) onSave(draft.trim()); setEditing(false); }
+          if (e.key === 'Escape') { setDraft(value); setEditing(false); }
+        }}
+        className="h-6 px-1 py-0 text-sm inline-flex w-auto min-w-[80px]"
+      />
+    );
+  }
+
+  return (
+    <span
+      className={cn(className, "cursor-pointer hover:bg-muted/80 rounded px-0.5 -mx-0.5 transition-colors border-b border-dashed border-transparent hover:border-muted-foreground/30")}
+      onClick={() => { setDraft(value); setEditing(true); }}
+      title="Klikněte pro úpravu"
+    >
+      {value}
+    </span>
+  );
+}
+
+// Inline editable number
+function InlineEditableNumber({ value, onSave, suffix, className, canEdit }: { value: number; onSave: (val: number) => void; suffix?: string; className?: string; canEdit: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  if (!canEdit) return <span className={className}>{value.toLocaleString('cs-CZ')}{suffix && ` ${suffix}`}</span>;
+
+  if (editing) {
+    return (
+      <Input
+        ref={inputRef}
+        type="number"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => { const n = Number(draft); if (!isNaN(n) && n !== value) onSave(n); setEditing(false); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { const n = Number(draft); if (!isNaN(n) && n !== value) onSave(n); setEditing(false); }
+          if (e.key === 'Escape') { setDraft(String(value)); setEditing(false); }
+        }}
+        className="h-6 px-1 py-0 text-sm inline-flex w-[100px]"
+      />
+    );
+  }
+
+  return (
+    <span
+      className={cn(className, "cursor-pointer hover:bg-muted/80 rounded px-0.5 -mx-0.5 transition-colors border-b border-dashed border-transparent hover:border-muted-foreground/30")}
+      onClick={() => { setDraft(String(value)); setEditing(true); }}
+      title="Klikněte pro úpravu"
+    >
+      {value.toLocaleString('cs-CZ')}{suffix && ` ${suffix}`}
+    </span>
+  );
 }
 
 const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
@@ -104,6 +185,7 @@ export function ModificationRequestCard({
   onDelete,
   onSendEmail,
   onCreateClient,
+  onInlineUpdate,
   isApproving,
   isRejecting,
   isApplying,
@@ -125,6 +207,9 @@ export function ModificationRequestCard({
   const isClientApproved = request.status === 'client_approved';
   const isApplied = request.status === 'applied';
   const hasUpgradeToken = !!request.upgrade_offer_token;
+  
+  // Can inline edit if editable status and handler provided
+  const canInlineEdit = !!onInlineUpdate && ['pending', 'approved', 'draft'].includes(request.status);
   
   const handleApprove = async () => {
     if (onApprove) {
@@ -177,15 +262,40 @@ export function ModificationRequestCard({
   // Show delete button for pending, approved (waiting), or rejected requests
   const canDelete = onDelete && ['pending', 'approved', 'rejected'].includes(request.status) && !isApplied && !isClientApproved;
 
+  // Helper to update proposed_changes inline
+  const updateMainChanges = (patch: Record<string, any>) => {
+    if (!onInlineUpdate) return;
+    onInlineUpdate(request.id, {
+      proposed_changes: { ...request.proposed_changes, ...patch } as any,
+    });
+    toast.success('Hodnota aktualizována');
+  };
+
+  // Helper to update a specific bundled item's changes
+  const updateItemChanges = (itemId: string, patch: Record<string, any>) => {
+    if (!onInlineUpdate || !request.items) return;
+    const updatedItems = request.items.map(item =>
+      item.id === itemId ? { ...item, proposed_changes: { ...item.proposed_changes, ...patch } as any } : item
+    );
+    onInlineUpdate(request.id, { items: updatedItems });
+    toast.success('Hodnota aktualizována');
+  };
+
   // Render changes for a given type and proposed_changes
-  const renderChangesForItem = (itemType: ModificationRequestType, changes: any) => {
+  const renderChangesForItem = (itemType: ModificationRequestType, changes: any, itemId?: string) => {
+    const updateFn = (patch: Record<string, any>) => itemId ? updateItemChanges(itemId, patch) : updateMainChanges(patch);
+    
     switch (itemType) {
       case 'add_service': {
         const c = changes as AddServiceProposedChanges;
         return (
           <div className="space-y-1 text-sm">
-            <p><span className="text-muted-foreground">Služba:</span> {c.name}</p>
-            <p><span className="text-muted-foreground">Cena:</span> {c.price.toLocaleString('cs-CZ')} {c.currency}/{c.billing_type === 'monthly' ? 'měs' : 'jednorázově'}</p>
+            <p><span className="text-muted-foreground">Služba:</span>{' '}
+              <InlineEditableText value={c.name} canEdit={canInlineEdit} onSave={(v) => updateFn({ name: v })} className="font-medium" />
+            </p>
+            <p><span className="text-muted-foreground">Cena:</span>{' '}
+              <InlineEditableNumber value={c.price} canEdit={canInlineEdit} onSave={(v) => updateFn({ price: v })} suffix={`${c.currency}/${c.billing_type === 'monthly' ? 'měs' : 'jednorázově'}`} />
+            </p>
             {c.selected_tier && (
               <p><span className="text-muted-foreground">Tier:</span> {c.selected_tier.toUpperCase()}</p>
             )}
@@ -196,13 +306,14 @@ export function ModificationRequestCard({
         const c = changes as UpdateServicePriceProposedChanges;
         return (
           <div className="space-y-1 text-sm">
-            <p><span className="text-muted-foreground">Služba:</span> {c.service_name}</p>
+            <p><span className="text-muted-foreground">Služba:</span>{' '}
+              <InlineEditableText value={c.service_name} canEdit={canInlineEdit} onSave={(v) => updateFn({ service_name: v })} className="font-medium" />
+            </p>
             <p>
               <span className="text-muted-foreground">Cena:</span>{' '}
               <span className="line-through text-muted-foreground">{c.old_price.toLocaleString('cs-CZ')}</span>
               {' → '}
-              <span className="font-medium text-primary">{c.new_price.toLocaleString('cs-CZ')}</span>
-              {' '}{c.currency}
+              <InlineEditableNumber value={c.new_price} canEdit={canInlineEdit} onSave={(v) => updateFn({ new_price: v })} suffix={c.currency} className="font-medium text-primary" />
             </p>
           </div>
         );
@@ -262,14 +373,24 @@ export function ModificationRequestCard({
         const c = changes as any;
         return (
           <div className="space-y-1 text-sm">
-            <p><span className="text-muted-foreground">Služba:</span> {c.service_name || c.reference_service_name}</p>
+            <p><span className="text-muted-foreground">Služba:</span>{' '}
+              <InlineEditableText value={c.service_name || c.reference_service_name} canEdit={canInlineEdit} onSave={(v) => updateFn({ service_name: v })} className="font-medium" />
+            </p>
             <p><span className="text-muted-foreground">Země:</span> {c.new_country_name || c.new_country_code}</p>
-            <p><span className="text-muted-foreground">Cena:</span> {c.price?.toLocaleString('cs-CZ')} {c.currency}</p>
+            <p><span className="text-muted-foreground">Cena:</span>{' '}
+              <InlineEditableNumber value={c.price || 0} canEdit={canInlineEdit} onSave={(v) => updateFn({ price: v })} suffix={c.currency} />
+            </p>
           </div>
         );
       }
       case 'new_engagement': {
         const c = changes as NewEngagementProposedChanges;
+        const updateServiceInNewEngagement = (serviceIdx: number, patch: Record<string, any>) => {
+          const updatedServices = [...c.services];
+          updatedServices[serviceIdx] = { ...updatedServices[serviceIdx], ...patch };
+          const newTotal = updatedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+          updateFn({ services: updatedServices, total_monthly_price: newTotal });
+        };
         return (
           <div className="space-y-1 text-sm">
             <p><span className="text-muted-foreground">Typ:</span> {c.is_different_sro ? 'Jiné SRO (nová firma)' : 'Stejné SRO'}</p>
@@ -278,11 +399,15 @@ export function ModificationRequestCard({
                 {c.new_client_data.brand_name && <span className="text-muted-foreground"> ({c.new_client_data.brand_name})</span>}
               </p>
             )}
-            <p><span className="text-muted-foreground">Zakázka:</span> {c.engagement_name}</p>
+            <p><span className="text-muted-foreground">Zakázka:</span>{' '}
+              <InlineEditableText value={c.engagement_name} canEdit={canInlineEdit} onSave={(v) => updateFn({ engagement_name: v })} className="font-medium" />
+            </p>
             <p><span className="text-muted-foreground">Služby:</span> {c.services.length}×</p>
             {c.services.map((s, i) => (
               <div key={i} className="ml-3">
-                <p>• {s.name} — {s.price.toLocaleString('cs-CZ')} {s.currency}/{s.billing_type === 'monthly' ? 'měs' : 'jednorázově'}</p>
+                <p>• <InlineEditableText value={s.name} canEdit={canInlineEdit} onSave={(v) => updateServiceInNewEngagement(i, { name: v })} className="font-medium" />
+                  {' — '}<InlineEditableNumber value={s.price} canEdit={canInlineEdit} onSave={(v) => updateServiceInNewEngagement(i, { price: v })} suffix={`${s.currency}/${s.billing_type === 'monthly' ? 'měs' : 'jednorázově'}`} />
+                </p>
                 {s.assignments && s.assignments.length > 0 && (
                   <div className="ml-4 text-xs text-muted-foreground">
                     {s.assignments.map((a, aIdx) => (
@@ -335,7 +460,7 @@ export function ModificationRequestCard({
                   {idx + 1}. {itemLabel}
                 </Badge>
               </div>
-              {renderChangesForItem(item.request_type, item.proposed_changes)}
+              {renderChangesForItem(item.request_type, item.proposed_changes, item.id)}
             </div>
           );
         })}

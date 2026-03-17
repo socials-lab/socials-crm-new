@@ -279,6 +279,10 @@ export default function Modifications() {
     await deleteRequest(requestId);
   };
 
+  const handleInlineUpdate = (requestId: string, updates: Partial<Pick<StoredModificationRequest, 'proposed_changes' | 'items'>>) => {
+    updateRequest(requestId, updates);
+  };
+
   const handleSubmitDraft = async (requestId: string) => {
     await submitDraft(requestId);
   };
@@ -660,6 +664,7 @@ export default function Modifications() {
                   onReject={handleReject}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  onInlineUpdate={handleInlineUpdate}
                   isApproving={isApproving}
                   isRejecting={isRejecting}
                   isDeleting={isDeleting}
@@ -688,6 +693,7 @@ export default function Modifications() {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onSendEmail={handleSendEmail}
+                  onInlineUpdate={handleInlineUpdate}
                   isDeleting={isDeleting}
                 />
               ))}
