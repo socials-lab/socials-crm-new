@@ -20,6 +20,7 @@ import {
   Mail,
   AlertTriangle,
   ShieldAlert,
+  Eye,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -630,15 +631,26 @@ export function ModificationRequestCard({
                     )}
                     {/* Copy link button - only shown if there's a token */}
                     {hasUpgradeToken && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8"
-                        onClick={handleCopyLink}
-                      >
-                        {linkCopied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
-                        {linkCopied ? 'Zkopírováno' : 'Odkaz'}
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => window.open(`/upgrade/${request.upgrade_offer_token}`, '_blank')}
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          Náhled
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={handleCopyLink}
+                        >
+                          {linkCopied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                          {linkCopied ? 'Zkopírováno' : 'Odkaz'}
+                        </Button>
+                      </>
                     )}
                     <Button
                       variant="outline"
