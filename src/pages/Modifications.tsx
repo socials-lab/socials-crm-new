@@ -327,7 +327,14 @@ export default function Modifications() {
         description="Připravte nabídku na rozšíření spolupráce se stávajícím klientem"
       />
 
-      <ProposeModificationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ProposeModificationDialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingRequest(null);
+        }}
+        editingRequest={editingRequest?.status === 'pending' ? editingRequest : null}
+      />
       
       {/* Send Email Dialog */}
       {emailRequest && (
