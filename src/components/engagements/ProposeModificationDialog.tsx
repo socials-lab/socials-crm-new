@@ -865,7 +865,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         <div className="space-y-6 py-4">
           {/* ===== STEP 1: Engagement Selection ===== */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">1. Zakázka *</Label>
+            <Label className="text-sm font-semibold">1. Zakázka *</Label>
             <Popover open={engagementComboOpen} onOpenChange={setEngagementComboOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -915,7 +915,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           {/* ===== STEP 2: Request Type (only after engagement selected) ===== */}
           {selectedEngagementId && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium">2. Typ úpravy *</Label>
+              <Label className="text-sm font-semibold">2. Typ úpravy *</Label>
               <Select value={requestType || undefined} onValueChange={(v) => {
                 setRequestType(v as ModificationRequestType);
                 setRequestTypeConfirmed(true);
@@ -925,7 +925,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 setSelectedAssignmentId('');
                 setSelectedColleagueId('');
               }}>
-                <SelectTrigger>
+                <SelectTrigger className="border-2 border-primary/30 hover:border-primary/50 transition-colors">
                   <SelectValue placeholder="Vyberte typ úpravy" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2586,11 +2586,11 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  className="w-full"
+                  size="lg"
+                  className="w-full border-2 border-dashed border-primary/40 hover:border-primary hover:bg-primary/5 text-primary font-medium"
                   onClick={handleAddAnotherItem}
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Uložit položku a přidat další
                 </Button>
               )}
