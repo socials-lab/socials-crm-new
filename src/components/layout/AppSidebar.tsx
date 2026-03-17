@@ -116,6 +116,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { colleagueId, canAccessPage } = useUserRole();
   const { setOpenMobile } = useSidebar();
+  const { unresolvedCount } = useBugReports();
   
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
