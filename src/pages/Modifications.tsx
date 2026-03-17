@@ -254,8 +254,8 @@ export default function Modifications() {
   };
 
   const handleEdit = (request: StoredModificationRequest) => {
-    if (request.status === 'pending') {
-      // For pending requests, open the full creation dialog pre-filled
+    if (request.status === 'pending' || request.status === 'draft') {
+      // For pending/draft requests, open the full creation dialog pre-filled
       setEditingRequest(request);
       setDialogOpen(true);
     } else {
