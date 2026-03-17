@@ -29,12 +29,21 @@ interface ProposeModificationDialogProps {
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   add_service: 'Přidání nové služby',
-  update_service_price: 'Změna ceny služby',
+  update_service_price: 'Úprava služby (cena + odměny)',
   deactivate_service: 'Deaktivace služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
   remove_assignment: 'Odebrání kolegy',
 };
+
+// Types visible in the dropdown (update_assignment is merged into update_service_price)
+const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
+  'add_service',
+  'update_service_price',
+  'deactivate_service',
+  'add_assignment',
+  'remove_assignment',
+];
 
 export function ProposeModificationDialog({ open, onOpenChange, editingRequest }: ProposeModificationDialogProps) {
   const { engagements, clients, services, colleagues, engagementServices, assignments, getEngagementServicesByEngagementId, getAssignmentsByEngagementId } = useCRMData();
@@ -73,9 +82,18 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [aiSeoHourlyRate, setAiSeoHourlyRate] = useState<number>(600);
   const [aiSeoHours, setAiSeoHours] = useState<number>(10);
 
-  // For update_service_price
+  // For update_service_price (merged with update_assignment)
   const [selectedEngagementServiceId, setSelectedEngagementServiceId] = useState<string>('');
   const [newPrice, setNewPrice] = useState<number>(0);
+  // Editable assignments for the selected service (used in update_service_price)
+  const [serviceAssignmentEdits, setServiceAssignmentEdits] = useState<Array<{
+    assignment_id: string;
+    colleague_name: string;
+    role: string;
+    cost_model: 'hourly' | 'fixed_monthly' | 'percentage';
+    old_value: number;
+    new_value: number;
+  }>>([]);
 
   // Assignment-related fields
   const [selectedColleagueId, setSelectedColleagueId] = useState<string>('');
@@ -215,6 +233,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setAiSeoHourlyRate(600);
       setAiSeoHours(10);
       setSelectedEngagementServiceId('');
+      setServiceAssignmentEdits([]);
       setNewPrice(0);
       setSelectedColleagueId('');
       setRoleOnEngagement('');
@@ -282,15 +301,37 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
     }
   }, [selectedServiceId, services]);
 
-  // Auto-fill price when selecting engagement service for update
+  // Auto-fill price and assignments when selecting engagement service for update
   useEffect(() => {
     if (selectedEngagementServiceId) {
       const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
       if (engService) {
         setNewPrice(engService.price);
       }
+      // Load assignments linked to this service (or all for the engagement)
+      const serviceAssignments = currentAssignments.filter(
+        a => a.engagement_service_id === selectedEngagementServiceId || !a.engagement_service_id
+      );
+      setServiceAssignmentEdits(
+        serviceAssignments.map(a => {
+          const colleague = colleagues.find(c => c.id === a.colleague_id);
+          const currentValue = a.cost_model === 'hourly' 
+            ? (a.hourly_cost || 0) 
+            : a.cost_model === 'percentage' 
+              ? (a.percentage_of_revenue || 0) 
+              : (a.monthly_cost || 0);
+          return {
+            assignment_id: a.id,
+            colleague_name: colleague?.full_name || 'Neznámý',
+            role: a.role_on_engagement || '',
+            cost_model: a.cost_model || 'fixed_monthly',
+            old_value: currentValue,
+            new_value: currentValue,
+          };
+        })
+      );
     }
-  }, [selectedEngagementServiceId, currentEngagementServices]);
+  }, [selectedEngagementServiceId, currentEngagementServices, currentAssignments, colleagues]);
 
   const handleSubmit = async () => {
     if (!selectedEngagementId || !requestType) return;
@@ -344,10 +385,19 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         break;
       case 'update_service_price':
         const oldService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+        const changedAssignments = serviceAssignmentEdits.filter(a => a.new_value !== a.old_value);
         proposed_changes = {
           engagement_service_id: selectedEngagementServiceId,
           old_price: oldService?.price || 0,
           new_price: newPrice,
+          assignment_changes: changedAssignments.length > 0 ? changedAssignments.map(a => ({
+            assignment_id: a.assignment_id,
+            colleague_name: a.colleague_name,
+            role: a.role,
+            cost_model: a.cost_model,
+            old_value: a.old_value,
+            new_value: a.new_value,
+          })) : undefined,
         };
         break;
       case 'deactivate_service':
@@ -477,9 +527,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   <SelectValue placeholder="Vyberte typ úpravy" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(REQUEST_TYPE_LABELS).map(([value, label]) => (
+                  {VISIBLE_REQUEST_TYPES.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {label}
+                      {REQUEST_TYPE_LABELS[value]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -813,16 +863,16 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 </div>
               )}
 
-              {/* UPDATE SERVICE PRICE FIELDS */}
+              {/* UPDATE SERVICE (PRICE + ASSIGNMENTS) FIELDS */}
               {requestType === 'update_service_price' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                  <h4 className="font-medium">3. Změna ceny</h4>
+                  <h4 className="font-medium">3. Úprava služby</h4>
                   
                   <div className="space-y-2">
                     <Label>Služba *</Label>
                     <Select value={selectedEngagementServiceId} onValueChange={setSelectedEngagementServiceId}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Vyberte službu" />
+                        <SelectValue placeholder="Vyberte stávající službu" />
                       </SelectTrigger>
                       <SelectContent>
                         {currentEngagementServices.filter(es => es.is_active).map((es) => (
@@ -834,14 +884,106 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Nová cena *</Label>
-                    <Input 
-                      type="number" 
-                      value={newPrice} 
-                      onChange={(e) => setNewPrice(Number(e.target.value))}
-                    />
-                  </div>
+                  {selectedEngagementServiceId && (
+                    <>
+                      {/* Price edit */}
+                      <div className="space-y-2">
+                        <Label>Nová cena (CZK) *</Label>
+                        <Input 
+                          type="number" 
+                          value={newPrice} 
+                          onChange={(e) => setNewPrice(Number(e.target.value))}
+                        />
+                        {(() => {
+                          const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+                          if (engService && newPrice !== engService.price) {
+                            const diff = newPrice - engService.price;
+                            return (
+                              <p className={cn("text-xs font-medium", diff > 0 ? "text-green-600" : "text-destructive")}>
+                                {diff > 0 ? '+' : ''}{diff.toLocaleString('cs-CZ')} Kč ({diff > 0 ? '+' : ''}{((diff / engService.price) * 100).toFixed(1)}%)
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+
+                      {/* Colleague assignments for this service */}
+                      {serviceAssignmentEdits.length > 0 && (
+                        <div className="space-y-3 pt-2 border-t">
+                          <h5 className="text-sm font-medium flex items-center gap-2">
+                            👥 Odměny kolegů na této službě
+                          </h5>
+                          
+                          {serviceAssignmentEdits.map((assignment, idx) => (
+                            <div key={assignment.assignment_id} className="grid grid-cols-4 gap-3 items-end p-3 rounded-md border bg-background">
+                              <div className="col-span-2">
+                                <p className="text-sm font-medium">{assignment.colleague_name}</p>
+                                <p className="text-xs text-muted-foreground">{assignment.role || 'bez role'}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Aktuální</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  {assignment.old_value.toLocaleString('cs-CZ')} Kč
+                                  <span className="text-[10px] ml-1">
+                                    {assignment.cost_model === 'hourly' ? '/h' : assignment.cost_model === 'percentage' ? '%' : '/měs'}
+                                  </span>
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Nová odměna</Label>
+                                <Input
+                                  type="number"
+                                  value={assignment.new_value}
+                                  onChange={(e) => {
+                                    const updated = [...serviceAssignmentEdits];
+                                    updated[idx] = { ...updated[idx], new_value: Number(e.target.value) };
+                                    setServiceAssignmentEdits(updated);
+                                  }}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Margin summary */}
+                          {(() => {
+                            const totalOldCost = serviceAssignmentEdits.reduce((sum, a) => sum + a.old_value, 0);
+                            const totalNewCost = serviceAssignmentEdits.reduce((sum, a) => sum + a.new_value, 0);
+                            const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
+                            const oldPrice = engService?.price || 0;
+                            const oldMargin = oldPrice > 0 ? ((oldPrice - totalOldCost) / oldPrice * 100) : 0;
+                            const newMargin = newPrice > 0 ? ((newPrice - totalNewCost) / newPrice * 100) : 0;
+                            
+                            const getMarginColor = (m: number) => m >= 66 ? 'text-green-600' : m >= 63 ? 'text-orange-500' : 'text-destructive';
+                            
+                            return (
+                              <div className="grid grid-cols-2 gap-3 p-3 rounded-md border bg-muted/50">
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Aktuální marže služby</p>
+                                  <p className={cn("text-sm font-semibold", getMarginColor(oldMargin))}>
+                                    {oldMargin.toFixed(1)}% ({(oldPrice - totalOldCost).toLocaleString('cs-CZ')} Kč)
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Nová marže služby</p>
+                                  <p className={cn("text-sm font-semibold", getMarginColor(newMargin))}>
+                                    {newMargin.toFixed(1)}% ({(newPrice - totalNewCost).toLocaleString('cs-CZ')} Kč)
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+
+                      {serviceAssignmentEdits.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic">
+                          K této službě nejsou přiřazeni žádní kolegové.
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -951,75 +1093,13 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                 </div>
               )}
 
-              {/* UPDATE ASSIGNMENT FIELDS */}
+              {/* UPDATE ASSIGNMENT FIELDS (legacy - hidden from dropdown but kept for backward compat) */}
               {requestType === 'update_assignment' && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                   <h4 className="font-medium">3. Změna odměny kolegy</h4>
-                  
-                  <div className="space-y-2">
-                    <Label>Kolega *</Label>
-                    <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Vyberte přiřazení" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currentAssignments.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {getColleagueName(a.colleague_id)} ({a.role_on_engagement || 'bez role'})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nový model odměny</Label>
-                      <Select value={costModel} onValueChange={(v) => setCostModel(v as 'hourly' | 'fixed_monthly' | 'percentage')}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="fixed_monthly">Fixní měsíční</SelectItem>
-                          <SelectItem value="hourly">Hodinová</SelectItem>
-                          <SelectItem value="percentage">% z revenue</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {costModel === 'fixed_monthly' && (
-                      <div className="space-y-2">
-                        <Label>Nová měsíční odměna (CZK)</Label>
-                        <Input 
-                          type="number" 
-                          value={monthlyCost} 
-                          onChange={(e) => setMonthlyCost(Number(e.target.value))}
-                        />
-                      </div>
-                    )}
-
-                    {costModel === 'hourly' && (
-                      <div className="space-y-2">
-                        <Label>Nová hodinová sazba (CZK)</Label>
-                        <Input 
-                          type="number" 
-                          value={hourlyCost} 
-                          onChange={(e) => setHourlyCost(Number(e.target.value))}
-                        />
-                      </div>
-                    )}
-
-                    {costModel === 'percentage' && (
-                      <div className="space-y-2">
-                        <Label>Nové % z revenue</Label>
-                        <Input 
-                          type="number" 
-                          value={percentageOfRevenue} 
-                          onChange={(e) => setPercentageOfRevenue(Number(e.target.value))}
-                        />
-                      </div>
-                    )}
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Pro úpravu odměn kolegů použijte typ „Úprava služby (cena + odměny)" – kde uvidíte i marži.
+                  </p>
                 </div>
               )}
 
