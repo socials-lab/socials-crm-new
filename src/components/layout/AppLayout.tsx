@@ -102,6 +102,7 @@ export function AppLayout() {
           {/* Main content - add bottom padding on mobile for bottom nav */}
           <main className="flex-1 overflow-auto bg-background pb-16 md:pb-0 relative">
             <Outlet />
+            <BugReportFAB />
           </main>
           
           {/* Mobile bottom navigation */}

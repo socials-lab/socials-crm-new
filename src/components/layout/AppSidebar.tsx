@@ -139,6 +139,7 @@ export function AppSidebar() {
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
+    const showBadge = item.page === 'bug-reports' && unresolvedCount > 0;
     return (
       <SidebarMenuItem key={item.title}>
         <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
@@ -153,7 +154,12 @@ export function AppSidebar() {
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span>{item.title}</span>
+            <span className="flex-1">{item.title}</span>
+            {showBadge && (
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-1">
+                {unresolvedCount}
+              </span>
+            )}
           </NavLink>
         </SidebarMenuButton>
       </SidebarMenuItem>
