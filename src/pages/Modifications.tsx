@@ -305,7 +305,7 @@ export default function Modifications() {
     return '';
   };
 
-  const totalActive = pending.length + waitingForClient.length + clientApproved.length;
+  const totalActive = drafts.length + pending.length + waitingForClient.length + clientApproved.length;
 
   if (isLoadingPending) {
     return (
