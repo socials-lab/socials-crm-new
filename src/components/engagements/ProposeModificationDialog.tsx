@@ -122,7 +122,18 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [pricingInternalCost, setPricingInternalCost] = useState<number>(0);
   const [requiresAdminApproval, setRequiresAdminApproval] = useState(false);
 
-  // Detect Creative Boost & AI SEO
+  // Expand country state
+  const [expandRefServiceId, setExpandRefServiceId] = useState<string>('');
+  const [expandCountryCode, setExpandCountryCode] = useState<string>('');
+  const [expandServiceName, setExpandServiceName] = useState<string>('');
+  const [expandMultiplier, setExpandMultiplier] = useState<number>(0.5);
+  const [expandFinalPrice, setExpandFinalPrice] = useState<number | null>(null);
+  const [expandIsNewShop, setExpandIsNewShop] = useState(false);
+  const [expandNewClientName, setExpandNewClientName] = useState('');
+  const [expandNewClientBrand, setExpandNewClientBrand] = useState('');
+  const [expandNewClientIco, setExpandNewClientIco] = useState('');
+  const [expandNewClientDic, setExpandNewClientDic] = useState('');
+
   const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
   const AI_SEO_CODE = 'AI_SEO';
   const selectedService = services.find(s => s.id === selectedServiceId);
