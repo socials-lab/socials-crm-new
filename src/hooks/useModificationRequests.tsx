@@ -86,6 +86,7 @@ export function useModificationRequests() {
         requested_by: user.id,
         pricing_snapshot: params.pricing_snapshot,
         items: params.items,
+        bundle_discount_percent: params.bundle_discount_percent,
       });
       
       toast.success('Požadavek na úpravu byl odeslán ke schválení');
