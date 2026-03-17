@@ -801,6 +801,7 @@ export interface EngagementWithDetails extends Engagement {
 
 // Request type for engagement modifications
 export type ModificationRequestType = 
+  | 'expand_country'
   | 'add_service'
   | 'update_service_price'
   | 'deactivate_service'
