@@ -1892,6 +1892,20 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                             </Button>
                           </div>
                           
+                          {/* Compact assignment summary when collapsed */}
+                          {!isExpanded && (svc.assignments || []).length > 0 && (
+                            <div className="px-2 pb-2 flex flex-wrap gap-1">
+                              {(svc.assignments || []).map((asn, aIdx) => (
+                                <span key={aIdx} className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5">
+                                  {asn.colleague_name}
+                                  <span className="text-primary/60">
+                                    ({asn.cost_model === 'hourly' ? `${asn.hourly_cost || 0} Kč/h` : asn.cost_model === 'percentage' ? `${asn.percentage_of_revenue || 0}%` : `${asn.monthly_cost || 0} Kč/m`})
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          
                           {/* Expandable description & deliverables */}
                           {isExpanded && (
                             <div className="px-2 pb-3 pt-1 space-y-3 border-t">
@@ -1997,7 +2011,19 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                               else if (pos.includes('sales') || pos.includes('obchod')) autoRole = 'Sales Specialist';
                                               else if (pos.includes('account') || pos.includes('pm') || pos.includes('project')) autoRole = 'Account Manager';
                                               
-                                              const isCreativeRole = autoRole === 'Graphic Designer' || autoRole === 'Video Editor';
+                                              // Look up default reward from service config
+                                              const rewardRoles = catalogSvc 
+                                                ? (getRewardsFromServiceConfig((catalogSvc as any).reward_config, svc.selected_tier) 
+                                                  ?? getServiceRewardRecommendation(svc.name, svc.selected_tier))
+                                                : getServiceRewardRecommendation(svc.name, svc.selected_tier);
+                                              const matchedReward = rewardRoles?.find(r => r.role === autoRole);
+                                              
+                                              const defaultCostModel = matchedReward 
+                                                ? (matchedReward.rewardType === 'per_credit' ? 'fixed_monthly' : matchedReward.rewardType === 'hourly' ? 'hourly' : 'fixed_monthly')
+                                                : 'fixed_monthly';
+                                              const defaultMonthlyCost = matchedReward && matchedReward.rewardType === 'fixed_monthly' ? matchedReward.reward : 0;
+                                              const defaultHourlyCost = matchedReward && matchedReward.rewardType === 'hourly' ? matchedReward.reward : 0;
+
                                               return (
                                                 <CommandItem
                                                   key={col.id}
@@ -2008,15 +2034,17 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                                       colleague_id: col.id,
                                                       colleague_name: col.full_name,
                                                       role: autoRole,
-                                                      cost_model: (isCreativeRole ? 'fixed_monthly' : 'fixed_monthly') as 'hourly' | 'fixed_monthly' | 'percentage',
-                                                      monthly_cost: 0,
-                                                      hourly_cost: 0,
+                                                      cost_model: defaultCostModel as 'hourly' | 'fixed_monthly' | 'percentage',
+                                                      monthly_cost: defaultMonthlyCost,
+                                                      hourly_cost: defaultHourlyCost,
                                                     };
                                                     updated[idx] = {
                                                       ...updated[idx],
                                                       assignments: [...(updated[idx].assignments || []), newAssignment],
                                                     };
                                                     setNewEngServices(updated);
+                                                    // Auto-expand service to show the assignment
+                                                    setExpandedNewEngServiceIdx(idx);
                                                   }}
                                                 >
                                                   <span className="text-xs">{col.full_name}</span>
