@@ -201,7 +201,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setSelectedTier('none');
       setCbMaxCredits(50);
       setCbPricePerCredit(400);
-      setCbColleagueReward(80);
+      setCbColleagueReward(150);
       setCbEditorReward(100);
       setSelectedEngagementServiceId('');
       setNewPrice(0);
