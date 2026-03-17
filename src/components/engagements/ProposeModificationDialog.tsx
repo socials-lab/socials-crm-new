@@ -11,7 +11,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, getDaysInMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown, Globe, Building2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { CalendarIcon, Info, Plus, FileText, Check, ChevronsUpDown, Globe, Building2, Trash2, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { MANAGED_COUNTRIES, getCountryName, getCountryFlag } from '@/constants/countries';
 import { Checkbox } from '@/components/ui/checkbox';
 import { calculateExpansionPrice, getDefaultMultiplier, formatCZK } from '@/utils/pricingEngine';
@@ -1070,6 +1070,46 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                 </Button>
                               )}
                             </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Existing colleagues on this service */}
+                      {(() => {
+                        const serviceAssignments = currentAssignments.filter(
+                          a => a.engagement_service_id === expandRefServiceId
+                        );
+                        if (serviceAssignments.length === 0) return null;
+
+                        return (
+                          <div className="space-y-3 p-3 rounded-md border bg-background">
+                            <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                              <Users className="h-3.5 w-3.5" />
+                              Stávající kolegové na této službě
+                              <InfoTip text="Kolegové aktuálně přiřazení k referenční službě. Při rozšíření o novou zemi se jejich odměna obvykle navyšuje o podíl odpovídající multiplikátoru." />
+                            </p>
+                            {serviceAssignments.map(a => {
+                              const colleague = colleagues.find(c => c.id === a.colleague_id);
+                              const isFixed = a.cost_model === 'fixed_monthly';
+                              const currentReward = isFixed ? (a.monthly_cost || 0) : (a.hourly_cost || 0);
+                              const rewardIncrease = Math.round(currentReward * expandMultiplier);
+                              const newTotal = currentReward + rewardIncrease;
+                              const unit = isFixed ? '/měs' : '/hod';
+
+                              return (
+                                <div key={a.id} className="flex items-center justify-between gap-3 p-2 rounded bg-muted/50 text-sm">
+                                  <div className="min-w-0">
+                                    <p className="font-medium truncate">{colleague?.full_name || 'Neznámý'}</p>
+                                    <p className="text-xs text-muted-foreground">{a.role_on_engagement || colleague?.position}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs shrink-0">
+                                    <span className="text-muted-foreground">{formatCZK(currentReward)}{unit}</span>
+                                    <span className="text-primary font-medium">+{formatCZK(rewardIncrease)}</span>
+                                    <span className="font-semibold">→ {formatCZK(newTotal)}{unit}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         );
                       })()}

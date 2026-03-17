@@ -1,59 +1,47 @@
 
 
-## Plan: Show existing colleague assignments when expanding to a new country
+## Plan: Kontrola přefakturace víceprací klientům
 
-### Problem
-When adding a new country for an existing service, the specialist is likely already assigned. The dialog should automatically show who is currently assigned, their current reward, and the proposed reward increase based on the multiplier.
+### Problém
 
-### Approach
-In the `expand_country` section of `ProposeModificationDialog.tsx` (after the price calculation block, ~line 1075), add a new "Stávající kolegové" section that:
+Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
 
-1. **Finds existing assignments** for the selected reference service (`expandRefServiceId`) by filtering `currentAssignments` where `engagement_service_id === expandRefServiceId`
-2. **Shows each assigned colleague** with their name, role, and current reward
-3. **Calculates the proposed reward increase** using the same `expandMultiplier` — e.g. if current reward is 9,100 CZK and multiplier is 0.5, the increase is +4,550 CZK
-4. **Displays a clear summary**: current reward → proposed increase → new total
+### Řešení
 
-### Changes
+Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
+- `expected` — vícepráce se má přefakturovat klientovi (default)
+- `reinvoiced` — přefakturováno klientovi
+- `not_expected` — nepředpokládá se přefakturace klientovi
 
-**Single file: `src/components/engagements/ProposeModificationDialog.tsx`**
+Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
 
-After the price calculation block (~line 1075, before the SRO checkbox), insert a new section:
+### Databázové změny
 
-```tsx
-{/* Existing colleagues on this service */}
-{(() => {
-  const serviceAssignments = currentAssignments.filter(
-    a => a.engagement_service_id === expandRefServiceId
-  );
-  if (serviceAssignments.length === 0) return null;
-  
-  return (
-    <div className="space-y-3 p-3 rounded-md border bg-background">
-      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-        <Users className="h-3.5 w-3.5" />
-        Stávající kolegové na této službě
-        <InfoTip text="Kolegové aktuálně přiřazení k referenční službě. Při rozšíření o novou zemi se jejich odměna obvykle navyšuje o podíl odpovídající multiplikátoru." />
-      </p>
-      {serviceAssignments.map(a => {
-        const colleague = colleagues.find(c => c.id === a.colleague_id);
-        const currentReward = a.cost_model === 'fixed_monthly' ? a.monthly_cost 
-          : a.cost_model === 'hourly' ? a.hourly_cost : 0;
-        const rewardIncrease = Math.round((currentReward || 0) * expandMultiplier);
-        const newTotal = (currentReward || 0) + rewardIncrease;
-        return (
-          // Card per colleague showing:
-          // - Name + role
-          // - Current reward (e.g. 9,100 CZK/měs)
-          // - Proposed increase (+4,550 CZK) 
-          // - New total (13,650 CZK/měs)
-        );
-      })}
-    </div>
-  );
-})()}
+```sql
+CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
+ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
+ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
 ```
 
-Also need to import `Users` icon from lucide-react (check if already imported).
+### UI změny
 
-No other files need changes. The data for proposed increases will also be stored in `proposed_changes` for the submission step.
+**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
+- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
+- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
+
+**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
+- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
+- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
+
+**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
+- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
+- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
+
+**4. `src/types/crm.ts`**
+- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
+
+### Technické detaily
+- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
+- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
+- Badge se zobrazí vedle existujícího status badge
 
