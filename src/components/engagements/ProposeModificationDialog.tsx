@@ -2127,14 +2127,24 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                     )}
                   </div>
 
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      Po schválení se klientovi odešle onboarding formulář na <strong>{newEngOnboardingEmail || '...'}</strong>. 
-                      Klient vyplní fakturační údaje (IČO, DIČ, adresa) a kontaktní osobu. 
-                      Následně se automaticky vytvoří smlouva — stejný proces jako u nového klienta.
-                    </AlertDescription>
-                  </Alert>
+                  {newEngIsDifferentSro ? (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Po schválení se klientovi odešle onboarding formulář na <strong>{newEngOnboardingEmail || '...'}</strong>. 
+                        Klient vyplní fakturační údaje (IČO, DIČ, adresa) a kontaktní osobu. 
+                        Následně se automaticky vytvoří smlouva — stejný proces jako u nového klienta.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Nová zakázka bude navázána na stávajícího klienta a jeho SRO. 
+                        Po schválení se vytvoří zakázka s vybranými službami.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               )}
   

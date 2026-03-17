@@ -898,6 +898,8 @@ export interface RemoveAssignmentProposedChanges {
 }
 
 export interface NewEngagementProposedChanges {
+  /** Whether this is under a different legal entity */
+  is_different_sro?: boolean;
   /** Optional hint – client fills in full details via onboarding form */
   new_client_data?: {
     company_name?: string;
@@ -925,10 +927,10 @@ export interface NewEngagementProposedChanges {
   }>;
   total_monthly_price: number;
   currency: string;
-  /** Email where the onboarding form + offer will be sent */
-  onboarding_email: string;
-  /** Client fills in IČO, DIČ, billing via onboarding form (same as new client) */
-  send_onboarding_form: true;
+  /** Email where the onboarding form + offer will be sent (only for different SRO) */
+  onboarding_email?: string;
+  /** Client fills in IČO, DIČ, billing via onboarding form (only for different SRO) */
+  send_onboarding_form?: boolean;
 }
 
 export type ModificationProposedChanges = 
