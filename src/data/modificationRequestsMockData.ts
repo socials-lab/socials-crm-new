@@ -50,6 +50,8 @@ export interface StoredModificationRequest {
   items?: ModificationRequestItem[];
   // Bundle discount
   bundle_discount_percent?: number;
+  // Client-chosen effective date
+  client_chosen_effective_from: string | null;
   // Denormalized data for display
   engagement_name: string;
   client_id: string;
