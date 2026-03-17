@@ -1503,7 +1503,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                           </div>
 
                           <div className="space-y-2">
-                            <Label>💰 Cena za kredit pro klienta (CZK)</Label>
+                            <Label>💰 Cena za kredit pro klienta (CZK)<InfoTip text="Kolik klient platí za každý využitý kredit. Doporučeno 400 Kč — nižší cena snižuje marži." /></Label>
                             <Input 
                               type="number" 
                               value={cbPricePerCredit} 
