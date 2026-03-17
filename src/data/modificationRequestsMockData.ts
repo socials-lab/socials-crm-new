@@ -95,6 +95,7 @@ export function createModificationRequest(params: {
   note?: string | null;
   requested_by: string;
   pricing_snapshot?: PricingSnapshot | null;
+  items?: ModificationRequestItem[];
 }): StoredModificationRequest {
   const requests = getModificationRequests();
   
@@ -125,6 +126,8 @@ export function createModificationRequest(params: {
     emails_sent: [],
     // Pricing engine snapshot
     pricing_snapshot: params.pricing_snapshot || null,
+    // Multi-item bundle
+    items: params.items && params.items.length > 0 ? params.items : undefined,
     // Denormalized
     engagement_name: params.engagement_name,
     client_id: params.client_id,
