@@ -15,7 +15,11 @@ import { type OnboardingData, type StoredModificationRequest, seedDemoModificati
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2, FileText, ArrowRight } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2, FileText, ArrowRight, ChevronDown, ChevronRight, History } from 'lucide-react';
+import { toast } from 'sonner';
+import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, ModificationProposedChanges } from '@/types/crm';
+import { getAppliedModificationsHistory, type AppliedModificationHistory } from '@/data/appliedModificationsHistory';
 import { toast } from 'sonner';
 import type { AddServiceProposedChanges, UpdateServicePriceProposedChanges, ModificationProposedChanges } from '@/types/crm';
 // StoredModificationRequest already imported above
