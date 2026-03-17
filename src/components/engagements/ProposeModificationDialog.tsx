@@ -1043,7 +1043,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-xs">Finální cena</Label>
+                                <Label className="text-xs">Finální cena<InfoTip text="Výsledná měsíční cena pro klienta. Automaticky se počítá z multiplikátoru, ale můžete ji ručně upravit." /></Label>
                                 <Input
                                   type="number"
                                   value={expandFinalPrice !== null ? expandFinalPrice : recommendedPrice}
