@@ -843,12 +843,17 @@ export default function Modifications() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {/* Show applied requests with full ModificationRequestCard for details */}
+            <div className="grid gap-3">
+              {/* Show applied requests with collapsible cards */}
               {applied.map((request) => (
-                <ModificationRequestCard
+                <CollapsibleModificationCard
                   key={request.id}
                   request={request}
+                  cardContent={
+                    <ModificationRequestCard
+                      request={request}
+                    />
+                  }
                 />
               ))}
               
