@@ -688,3 +688,100 @@ function RewardConfigEditSection({ rewardConfig, onUpdate, serviceType }: Reward
     </div>
   );
 }
+
+// ---- Client Defaults Section ----
+
+import { Textarea } from '@/components/ui/textarea';
+
+interface ClientDefaultsSectionProps {
+  description: string;
+  onDescriptionUpdate: (description: string) => void;
+  deliverables: string[];
+  onDeliverablesUpdate: (deliverables: string[]) => void;
+}
+
+function ClientDefaultsSection({ description, onDescriptionUpdate, deliverables, onDeliverablesUpdate }: ClientDefaultsSectionProps) {
+  const [localDesc, setLocalDesc] = useState(description);
+  const [localDeliverables, setLocalDeliverables] = useState(deliverables.length > 0 ? deliverables : ['']);
+
+  const handleDescBlur = () => {
+    onDescriptionUpdate(localDesc);
+  };
+
+  const handleDeliverableChange = (index: number, value: string) => {
+    const updated = localDeliverables.map((d, i) => i === index ? value : d);
+    setLocalDeliverables(updated);
+  };
+
+  const handleDeliverableBlur = () => {
+    onDeliverablesUpdate(localDeliverables.filter(d => d.trim()));
+  };
+
+  const addDeliverable = () => {
+    setLocalDeliverables([...localDeliverables, '']);
+  };
+
+  const removeDeliverable = (index: number) => {
+    const updated = localDeliverables.filter((_, i) => i !== index);
+    setLocalDeliverables(updated.length > 0 ? updated : ['']);
+    onDeliverablesUpdate(updated.filter(d => d.trim()));
+  };
+
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        📄 Popis služby pro klienta
+      </h4>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Stručný popis</Label>
+        <Textarea
+          value={localDesc}
+          onChange={(e) => setLocalDesc(e.target.value)}
+          onBlur={handleDescBlur}
+          placeholder="Např. Správa Google Ads a S-kliku – více zakázek a vyšší zisk"
+          rows={2}
+          className="text-xs"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Co klient dostane (každý řádek = 1 bod)</Label>
+        <div className="space-y-1.5">
+          {localDeliverables.map((item, index) => (
+            <div key={index} className="flex items-center gap-1.5">
+              <Input
+                value={item}
+                onChange={(e) => handleDeliverableChange(index, e.target.value)}
+                onBlur={handleDeliverableBlur}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addDeliverable();
+                  }
+                }}
+                placeholder="Např. Správa kampaní na Meta platformách"
+                className="h-8 text-xs flex-1"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-6 text-muted-foreground hover:text-destructive flex-shrink-0"
+                onClick={() => removeDeliverable(index)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addDeliverable}>
+          <Plus className="h-3 w-3" />
+          Přidat bod
+        </Button>
+        <p className="text-[10px] text-muted-foreground">
+          Pro služby z katalogu se popis načte automaticky do nabídky — můžete ho upravit.
+        </p>
+      </div>
+    </div>
+  );
+}
