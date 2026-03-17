@@ -362,8 +362,9 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
           {selectedEngagementId && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">2. Typ úpravy *</Label>
-              <Select value={requestType} onValueChange={(v) => {
+              <Select value={requestType || undefined} onValueChange={(v) => {
                 setRequestType(v as ModificationRequestType);
+                setRequestTypeConfirmed(true);
                 // Reset type-dependent selections
                 setSelectedServiceId('');
                 setSelectedEngagementServiceId('');
@@ -371,7 +372,7 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
                 setSelectedColleagueId('');
               }}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Vyberte typ úpravy" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(REQUEST_TYPE_LABELS).map(([value, label]) => (
