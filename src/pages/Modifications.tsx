@@ -112,7 +112,7 @@ function AppliedHistoryCard({ entry }: { entry: AppliedModificationHistory }) {
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  <span>{format(new Date(entry.client_approved_at), 'd. M. yyyy v H:mm', { locale: cs })}</span>
+                  <span>{format(new Date(entry.client_approved_at), "d. M. yyyy 'v' H:mm", { locale: cs })}</span>
                 </div>
               </div>
             </div>
