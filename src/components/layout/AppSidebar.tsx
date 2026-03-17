@@ -97,6 +97,7 @@ const navGroups: NavGroup[] = [
       { title: 'Feedback Zone', url: '/feedback', page: 'feedback', icon: Lightbulb },
       { title: 'Akademie', url: '/academy', page: 'academy', icon: BookOpen },
       { title: 'SOP', url: '/sop', page: 'sop', icon: FileText },
+      { title: 'Bug Reports', url: '/bug-reports', page: 'bug-reports', icon: Bug },
     ],
   },
   {
