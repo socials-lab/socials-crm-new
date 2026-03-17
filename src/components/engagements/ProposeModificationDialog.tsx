@@ -22,6 +22,7 @@ import type { ModificationRequestType, ServiceTier } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SERVICE_DETAILS } from '@/constants/serviceDetails';
+import { getServiceDefaults } from '@/constants/serviceDefaults';
 import { PricingImpactSection } from '@/components/engagements/PricingImpactSection';
 import type { PricingSnapshot } from '@/utils/pricingEngine';
 import { getServiceRewardRecommendation, getRewardsFromServiceConfig } from '@/constants/serviceRewards';
