@@ -132,7 +132,8 @@ export function ProposeModificationDialog({ open, onOpenChange }: ProposeModific
   useEffect(() => {
     if (!open) {
       setSelectedEngagementId('');
-      setRequestType('add_service');
+      setRequestType('');
+      setRequestTypeConfirmed(false);
       setEffectiveFrom(new Date());
       setUpsoldById('none');
       setNote('');
