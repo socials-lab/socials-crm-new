@@ -818,6 +818,7 @@ export type ModificationRequestStatus =
 
 // Labels for request types
 export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+  expand_country: 'Přidání nové země',
   add_service: 'Přidání služby',
   update_service_price: 'Úprava služby',
   deactivate_service: 'Ukončení služby',
