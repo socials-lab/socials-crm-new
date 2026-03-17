@@ -2734,30 +2734,61 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
                 {/* Commission calculation */}
                 {upsoldById !== 'none' && (() => {
-                  const commissionBase = requestType === 'expand_country'
-                    ? (() => {
-                        const refSvc = currentEngagementServices.find(es => es.id === expandRefServiceId);
-                        const refPrice = refSvc?.price || 0;
-                        return expandFinalPrice !== null ? expandFinalPrice : Math.round(refPrice * expandMultiplier);
-                      })()
-                    : requestType === 'add_service'
-                    ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice)
-                    : requestType === 'update_service_price'
-                      ? Math.max(0, newPrice - (currentEngagementServices.find(es => es.id === selectedEngagementServiceId)?.price || 0))
-                      : requestType === 'add_assignment'
-                        ? (costModel === 'fixed_monthly' ? monthlyCost : costModel === 'hourly' ? hourlyCost : 0)
-                        : 0;
-                  const commission = Math.round(commissionBase * 0.1);
+                  // Calculate commission base from current item
+                  let currentItemBase = 0;
+                  if (requestType) {
+                    currentItemBase = requestType === 'expand_country'
+                      ? (() => {
+                          const refSvc = currentEngagementServices.find(es => es.id === expandRefServiceId);
+                          const refPrice = refSvc?.price || 0;
+                          return expandFinalPrice !== null ? expandFinalPrice : Math.round(refPrice * expandMultiplier);
+                        })()
+                      : requestType === 'add_service'
+                      ? (isCreativeBoost ? cbMaxCredits * cbPricePerCredit : servicePrice)
+                      : requestType === 'update_service_price'
+                        ? Math.max(0, newPrice - (currentEngagementServices.find(es => es.id === selectedEngagementServiceId)?.price || 0))
+                        : requestType === 'add_assignment'
+                          ? (costModel === 'fixed_monthly' ? monthlyCost : costModel === 'hourly' ? hourlyCost : 0)
+                          : 0;
+                  }
+
+                  // Sum bundled items' prices
+                  let bundledBase = 0;
+                  for (const item of bundledItems) {
+                    const pc = item.proposed_changes as any;
+                    if (item.request_type === 'add_service' || item.request_type === 'expand_country') {
+                      bundledBase += pc.price || 0;
+                    } else if (item.request_type === 'update_service_price') {
+                      bundledBase += Math.max(0, (pc.new_price || 0) - (pc.old_price || 0));
+                    } else if (item.request_type === 'add_assignment') {
+                      bundledBase += pc.monthly_cost || pc.hourly_cost || 0;
+                    }
+                  }
+
+                  const totalBase = currentItemBase + bundledBase;
+                  
+                  // Apply bundle discount if set
+                  const discountedBase = bundleDiscountPercent > 0 && bundledItems.length > 0
+                    ? Math.round(totalBase * (1 - bundleDiscountPercent / 100))
+                    : totalBase;
+                  
+                  const commission = Math.round(discountedBase * 0.1);
                   const upsoldColleague = colleagues.find(c => c.id === upsoldById);
-                  if (commissionBase <= 0) return null;
+                  if (totalBase <= 0) return null;
                   return (
-                    <div className="rounded-md border bg-muted/30 p-3 space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Provize za upsell (10 %)<InfoTip text="Měsíční provize = 10 % z nového měsíčního příjmu z této úpravy. Vyplácí se kolegovi, který upsell dohodl." /></p>
-                      <p className="text-sm font-semibold">
-                        {commission.toLocaleString('cs-CZ')} CZK / měsíc
+                    <div className="rounded-md border bg-primary/5 p-3 space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Jednorázová provize za upsell (10 %)
+                        <InfoTip text="Jednorázová provize = 10 % z nového měsíčního fee. Vyplácí se v prvním plném měsíci fakturace." />
+                      </p>
+                      <p className="text-lg font-bold text-primary">
+                        {commission.toLocaleString('cs-CZ')} CZK
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        = 10 % z {commissionBase.toLocaleString('cs-CZ')} CZK měsíčního fee
+                        = 10 % z {discountedBase.toLocaleString('cs-CZ')} CZK
+                        {bundleDiscountPercent > 0 && bundledItems.length > 0 && (
+                          <span> (po slevě {bundleDiscountPercent} %)</span>
+                        )}
                         {upsoldColleague && <> → <span className="font-medium text-foreground">{upsoldColleague.full_name}</span></>}
                       </p>
                     </div>
