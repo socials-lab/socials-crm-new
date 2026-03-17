@@ -103,6 +103,7 @@ export function ModificationRequestCard({
   onEdit,
   onDelete,
   onSendEmail,
+  onCreateClient,
   isApproving,
   isRejecting,
   isApplying,
