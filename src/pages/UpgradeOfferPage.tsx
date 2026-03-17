@@ -126,6 +126,73 @@ export default function UpgradeOfferPage() {
     }
   };
 
+  // Render change details for a specific type and changes (used for bundled items)
+  const renderChangeDetailsForItem = (itemType: ModificationRequestType, changes: any) => {
+    switch (itemType) {
+      case 'add_service': {
+        const c = changes as unknown as AddServiceProposedChanges;
+        const prorationInfo = c.price && offer.effective_from
+          ? calculateProratedAmount(c.price, offer.effective_from)
+          : null;
+        return (
+          <div className="space-y-3">
+            <h3 className="font-semibold">{c.name}</h3>
+            {c.description && <p className="text-muted-foreground text-sm">{c.description}</p>}
+            {c.deliverables && c.deliverables.length > 0 && (
+              <ul className="space-y-1">
+                {c.deliverables.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex justify-between items-center pt-2 border-t">
+              <span className="text-muted-foreground">Měsíční cena:</span>
+              <span className="font-semibold">{c.price?.toLocaleString('cs-CZ')} {c.currency}</span>
+            </div>
+            {prorationInfo && offer.effective_from && (
+              <p className="text-xs text-muted-foreground">
+                Fakturace za první měsíc: {prorationInfo.proratedAmount.toLocaleString('cs-CZ')} {c.currency} ({prorationInfo.remainingDays}/{prorationInfo.daysInMonth} dní)
+              </p>
+            )}
+          </div>
+        );
+      }
+      case 'update_service_price': {
+        const c = changes as unknown as UpdateServicePriceProposedChanges;
+        return (
+          <div className="space-y-2">
+            <h3 className="font-semibold">{c.service_name}</h3>
+            <div className="flex justify-between"><span className="text-muted-foreground">Původní:</span><span className="line-through text-muted-foreground">{c.old_price?.toLocaleString('cs-CZ')} {c.currency}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Nová:</span><span className="font-semibold text-primary">{c.new_price?.toLocaleString('cs-CZ')} {c.currency}</span></div>
+          </div>
+        );
+      }
+      case 'deactivate_service': {
+        const c = changes as unknown as DeactivateServiceProposedChanges;
+        return (
+          <div className="space-y-2">
+            <h3 className="font-semibold">{c.service_name}</h3>
+            <p className="text-muted-foreground text-sm">Služba bude ukončena.</p>
+          </div>
+        );
+      }
+      case 'expand_country': {
+        const c = changes as any;
+        return (
+          <div className="space-y-2">
+            <h3 className="font-semibold">{c.service_name || c.reference_service_name} — {c.new_country_name || c.new_country_code}</h3>
+            <div className="flex justify-between"><span className="text-muted-foreground">Měsíční cena:</span><span className="font-semibold">{c.price?.toLocaleString('cs-CZ')} {c.currency}</span></div>
+          </div>
+        );
+      }
+      default:
+        return <p>Detaily změny nejsou k dispozici</p>;
+    }
+  };
+
   // Render change details based on type
   const renderChangeDetails = () => {
     const changes = offer.proposed_changes;
