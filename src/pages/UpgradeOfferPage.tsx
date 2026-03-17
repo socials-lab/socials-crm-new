@@ -172,12 +172,10 @@ export default function UpgradeOfferPage() {
     }
   };
 
-  // Render team members from pricing_snapshot.colleague_rewards
-  const renderTeamSection = (serviceId?: string) => {
-    const rewards = offer?.pricing_snapshot?.colleague_rewards;
+  // Render team members from colleague_rewards array
+  const renderTeamSection = (rewards?: import('@/utils/pricingEngine').ColleagueRewardEntry[] | null) => {
     if (!rewards || rewards.length === 0) return null;
     
-    // If serviceId provided, we could filter — but colleague_rewards don't have service_id, so show all
     const teamMembers = rewards.filter(cr => cr.colleague_name);
     if (teamMembers.length === 0) return null;
 
