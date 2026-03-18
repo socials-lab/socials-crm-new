@@ -4,6 +4,7 @@ import { AppSidebar } from './AppSidebar';
 import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { Outlet } from 'react-router-dom';
+import { BugReportFAB } from '@/components/bug-reports/BugReportFAB';
 import { Menu, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -130,8 +131,9 @@ export function AppLayout() {
           </header>
           
           {/* Main content - add bottom padding on mobile for bottom nav */}
-          <main className="flex-1 overflow-auto bg-background pb-16 md:pb-0">
+          <main className="relative flex-1 overflow-auto bg-background pb-16 md:pb-0">
             <Outlet />
+            <BugReportFAB />
           </main>
           
           {/* Mobile bottom navigation */}

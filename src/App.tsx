@@ -17,6 +17,7 @@ import { ApplicantsDataProvider } from "@/hooks/useApplicantsData";
 import { MeetingsDataProvider } from "@/hooks/useMeetingsData";
 import { FeedbackProvider } from "@/hooks/useFeedbackData";
 import { SOPDataProvider } from "@/hooks/useSOPData";
+import { BugReportsProvider } from "@/hooks/useBugReports";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Contacts from "./pages/Contacts";
@@ -50,6 +51,7 @@ import Upsells from "./pages/Upsells";
 import Academy from "./pages/Academy";
 import SOP from "./pages/SOP";
 import PublicSOPPage from "./pages/PublicSOPPage";
+import BugReports from "./pages/BugReports";
 
 function isAuthError(error: unknown): boolean {
   if (error && typeof error === 'object') {
@@ -117,9 +119,10 @@ const App = () => (
                   <MeetingsDataProvider>
                     <FeedbackProvider>
                       <SOPDataProvider>
-                      <TooltipProvider>
-                        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                          <Routes>
+                        <BugReportsProvider>
+                          <TooltipProvider>
+                            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                              <Routes>
                             {/* Public routes */}
                             <Route path="/auth" element={<Auth />} />
                             <Route path="/auth/callback" element={<AuthCallback />} />
@@ -158,13 +161,15 @@ const App = () => (
                               <Route path="/academy" element={<Academy />} />
                               <Route path="/sop" element={<SOP />} />
                               <Route path="/sop/:articleId" element={<SOP />} />
+                              <Route path="/bug-reports" element={<BugReports />} />
                             </Route>
                             <Route path="*" element={<NotFound />} />
-                          </Routes>
-                        </BrowserRouter>
-                        <Toaster />
-                        <Sonner />
-                      </TooltipProvider>
+                              </Routes>
+                            </BrowserRouter>
+                            <Toaster />
+                            <Sonner />
+                          </TooltipProvider>
+                        </BugReportsProvider>
                       </SOPDataProvider>
                     </FeedbackProvider>
                   </MeetingsDataProvider>
