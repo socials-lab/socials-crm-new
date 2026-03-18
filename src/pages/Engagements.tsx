@@ -528,7 +528,7 @@ function EngagementsContent() {
   // Show loading state while data is being fetched
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center h-64">
+      <div className="p-4 md:p-6 flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         <span className="ml-2 text-muted-foreground">Načítám zakázky...</span>
       </div>
@@ -536,7 +536,7 @@ function EngagementsContent() {
   }
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <PageHeader
         title="📋 Zakázky"
         titleAccent="& projekty"

@@ -256,7 +256,7 @@ export default function MyProfile() {
 
   if (!colleagueId) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <PageHeader
           title="Můj"
           titleAccent="profil"
@@ -273,7 +273,7 @@ export default function MyProfile() {
 
   if (!currentColleague) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <PageHeader
           title="Můj"
           titleAccent="profil"

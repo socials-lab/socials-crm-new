@@ -13,12 +13,37 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useUserRole } from '@/hooks/useUserRole';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo.svg';
+import {
+  LayoutDashboard,
+  User,
+  Target,
+  Building2,
+  Contact,
+  ClipboardList,
+  FilePenLine,
+  Send,
+  Wrench,
+  Coins,
+  Palette,
+  CalendarDays,
+  Package,
+  Receipt,
+  Users,
+  GraduationCap,
+  Lightbulb,
+  BookOpen,
+  FileText,
+  BarChart3,
+  Settings,
+  type LucideIcon,
+} from 'lucide-react';
 
 interface NavItem {
   title: string;
   url: string;
   page: string;
+  icon: LucideIcon;
   requiresColleague?: boolean;
 }
 
@@ -31,63 +56,63 @@ const navGroups: NavGroup[] = [
   {
     label: null,
     items: [
-      { title: '🏠 Přehled', url: '/', page: 'dashboard' },
-      { title: '👤 Můj přehled', url: '/my-work', page: 'my-work', requiresColleague: true },
-      { title: '📝 Můj profil', url: '/my-profile', page: 'my-profile' },
+      { title: 'Přehled', url: '/', page: 'dashboard', icon: LayoutDashboard },
+      { title: 'Můj přehled', url: '/my-work', page: 'my-work', icon: User, requiresColleague: true },
+      { title: 'Můj profil', url: '/my-profile', page: 'my-profile', icon: User },
     ],
   },
   {
     label: 'Obchod',
     items: [
-      { title: '🎯 Leady', url: '/leads', page: 'leads' },
-      { title: '🏢 Klienti', url: '/clients', page: 'clients' },
-      { title: '📇 Kontakty', url: '/contacts', page: 'contacts' },
-      { title: '📋 Zakázky', url: '/engagements', page: 'engagements' },
-      { title: '📝 Návrhy změn', url: '/modifications', page: 'modifications' },
-      { title: '📨 Rozesílky', url: '/broadcasts', page: 'broadcasts' },
+      { title: 'Leady', url: '/leads', page: 'leads', icon: Target },
+      { title: 'Klienti', url: '/clients', page: 'clients', icon: Building2 },
+      { title: 'Kontakty', url: '/contacts', page: 'contacts', icon: Contact },
+      { title: 'Zakázky', url: '/engagements', page: 'engagements', icon: ClipboardList },
+      { title: 'Návrhy změn', url: '/modifications', page: 'modifications', icon: FilePenLine },
+      { title: 'Rozesílky', url: '/broadcasts', page: 'broadcasts', icon: Send },
     ],
   },
   {
     label: 'Práce & dodávka',
     items: [
-      { title: '🔧 Vícepráce', url: '/extra-work', page: 'extra-work' },
-      { title: '💰 Provize', url: '/upsells', page: 'upsells' },
-      { title: '🎨 Creative Boost', url: '/creative-boost', page: 'creative-boost' },
-      { title: '📅 Meetingy', url: '/meetings', page: 'meetings' },
-      { title: '📦 Služby', url: '/services', page: 'services' },
+      { title: 'Vícepráce', url: '/extra-work', page: 'extra-work', icon: Wrench },
+      { title: 'Provize', url: '/upsells', page: 'upsells', icon: Coins },
+      { title: 'Creative Boost', url: '/creative-boost', page: 'creative-boost', icon: Palette },
+      { title: 'Meetingy', url: '/meetings', page: 'meetings', icon: CalendarDays },
+      { title: 'Služby', url: '/services', page: 'services', icon: Package },
     ],
   },
   {
     label: 'Finance',
     items: [
-      { title: '🧾 Fakturace', url: '/invoicing', page: 'invoicing' },
+      { title: 'Fakturace', url: '/invoicing', page: 'invoicing', icon: Receipt },
     ],
   },
   {
     label: 'Tým & interní',
     items: [
-      { title: '👥 Kolegové', url: '/colleagues', page: 'colleagues' },
-      { title: '🎓 Nábor', url: '/recruitment', page: 'recruitment' },
-      { title: '💡 Feedback Zone', url: '/feedback', page: 'feedback' },
-      { title: '📚 Akademie', url: '/academy', page: 'academy' },
-      { title: '📖 SOP Databáze', url: '/sop', page: 'sop' },
+      { title: 'Kolegové', url: '/colleagues', page: 'colleagues', icon: Users },
+      { title: 'Nábor', url: '/recruitment', page: 'recruitment', icon: GraduationCap },
+      { title: 'Feedback Zone', url: '/feedback', page: 'feedback', icon: Lightbulb },
+      { title: 'Akademie', url: '/academy', page: 'academy', icon: BookOpen },
+      { title: 'SOP Databáze', url: '/sop', page: 'sop', icon: FileText },
     ],
   },
   {
     label: 'Reporting',
     items: [
-      { title: '📊 Analytika', url: '/analytics', page: 'analytics' },
+      { title: 'Analytika', url: '/analytics', page: 'analytics', icon: BarChart3 },
     ],
   },
 ];
 
-const managementNavItems = [
-  { title: '⚙️ Nastavení', url: '/settings', page: 'settings' },
+const managementNavItems: NavItem[] = [
+  { title: 'Nastavení', url: '/settings', page: 'settings', icon: Settings },
 ];
 
 export function AppSidebar() {
   const location = useLocation();
-  const { colleagueId, canAccessPage, allowedPages, role, isSuperAdmin } = useUserRole();
+  const { colleagueId, canAccessPage } = useUserRole();
   const { setOpenMobile } = useSidebar();
 
   const isActive = (path: string) => {
@@ -112,46 +137,52 @@ export function AppSidebar() {
 
   const visibleManagementItems = managementNavItems.filter(item => canAccessPage(item.page));
 
-  const renderNavItem = (item: NavItem) => (
-    <SidebarMenuItem key={item.title}>
-      <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
-        <NavLink
-          to={item.url}
-          onClick={handleNavClick}
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-3 md:py-2.5 text-sidebar-foreground/80 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground touch-manipulation',
-            isActive(item.url) && 'bg-sidebar-accent text-sidebar-foreground font-medium'
-          )}
-        >
-          <span>{item.title}</span>
-        </NavLink>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
+  const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
+    return (
+      <SidebarMenuItem key={item.title}>
+        <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+          <NavLink
+            to={item.url}
+            onClick={handleNavClick}
+            className={cn(
+              'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-all touch-manipulation',
+              isActive(item.url)
+                ? 'bg-white/10 font-medium [&>svg]:text-[hsl(82,100%,45%)] text-white'
+                : 'text-white/60 hover:bg-white/5 hover:text-white/90'
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1">{item.title}</span>
+          </NavLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
 
   return (
-    <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4">
+    <Sidebar collapsible="offcanvas" className="border-r border-white/10 !bg-[#1a1a1a]">
+      <SidebarHeader className="px-4 py-4">
         <div className="flex items-center gap-2">
-          <img src={socialsLogo} alt="Socials" className="h-8 w-auto max-w-[120px] object-contain" />
-          <span className="text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">CRM</span>
+          <img src={socialsLogo} alt="Socials" className="h-7 w-auto max-w-[110px] object-contain" />
+          <span className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">CRM</span>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-2 [&_*]:!bg-transparent">
         {navGroups.map((group, idx) => {
           const visibleItems = getVisibleItems(group.items);
           if (visibleItems.length === 0) return null;
 
           return (
-            <SidebarGroup key={group.label ?? idx} className={idx > 0 ? 'pt-2 border-t border-sidebar-border/50' : ''}>
+            <SidebarGroup key={group.label ?? idx} className={idx > 0 ? 'pt-3 mt-1 border-t border-white/[0.06]' : ''}>
               {group.label && (
-                <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-sidebar-foreground/50 px-3 pb-1">
+                <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-white/30 px-2.5 pb-1 font-medium">
                   {group.label}
                 </SidebarGroupLabel>
               )}
               <SidebarGroupContent>
-                <SidebarMenu>
+                <SidebarMenu className="gap-0.5">
                   {visibleItems.map(renderNavItem)}
                 </SidebarMenu>
               </SidebarGroupContent>
@@ -160,9 +191,9 @@ export function AppSidebar() {
         })}
 
         {visibleManagementItems.length > 0 && (
-          <SidebarGroup className="mt-auto pt-2 border-t border-sidebar-border/50">
+          <SidebarGroup className="mt-auto pt-3 border-t border-white/[0.06]">
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-0.5">
                 {visibleManagementItems.map(renderNavItem)}
               </SidebarMenu>
             </SidebarGroupContent>

@@ -68,7 +68,7 @@ export default function Broadcasts() {
   }
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <PageHeader
         title="Rozesílky"
         description="Hromadné emaily kontaktům aktivních klientů"

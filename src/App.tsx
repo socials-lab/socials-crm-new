@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RouteGuard } from "@/components/layout/RouteGuard";
@@ -105,74 +106,76 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <UserRoleProvider>
-        <CRMDataProvider>
-          <CreativeBoostProvider>
-            <LeadsDataProvider>
-              <ApplicantsDataProvider>
-                <MeetingsDataProvider>
-                  <FeedbackProvider>
-                    <SOPDataProvider>
-                    <TooltipProvider>
-                      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                        <Routes>
-                          {/* Public routes */}
-                          <Route path="/auth" element={<Auth />} />
-                          <Route path="/auth/callback" element={<AuthCallback />} />
-                          <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
-                          <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
-                          <Route path="/offer/:token" element={<PublicOfferPage />} />
-                          <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
-                          <Route path="/modification/:token" element={<PublicModificationPage />} />
-                          <Route path="/extra-work-approval/:token" element={<ExtraWorkApproval />} />
-                          <Route path="/creative-boost-share/:token" element={<PublicCreativeBoostPage />} />
-                          <Route path="/sop-share/:token" element={<PublicSOPPage />} />
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="socials-theme">
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <UserRoleProvider>
+          <CRMDataProvider>
+            <CreativeBoostProvider>
+              <LeadsDataProvider>
+                <ApplicantsDataProvider>
+                  <MeetingsDataProvider>
+                    <FeedbackProvider>
+                      <SOPDataProvider>
+                      <TooltipProvider>
+                        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                          <Routes>
+                            {/* Public routes */}
+                            <Route path="/auth" element={<Auth />} />
+                            <Route path="/auth/callback" element={<AuthCallback />} />
+                            <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
+                            <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
+                            <Route path="/offer/:token" element={<PublicOfferPage />} />
+                            <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
+                            <Route path="/modification/:token" element={<PublicModificationPage />} />
+                            <Route path="/extra-work-approval/:token" element={<ExtraWorkApproval />} />
+                            <Route path="/creative-boost-share/:token" element={<PublicCreativeBoostPage />} />
+                            <Route path="/sop-share/:token" element={<PublicSOPPage />} />
 
-                          {/* Protected routes */}
-                          <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
-                            <Route path="/" element={<Dashboard />} />
-                            <Route path="/my-work" element={<MyWork />} />
-                            <Route path="/my-profile" element={<MyProfile />} />
-                            <Route path="/leads" element={<Leads />} />
-                            <Route path="/clients" element={<Clients />} />
-                            <Route path="/contacts" element={<Contacts />} />
-                            <Route path="/engagements" element={<Engagements />} />
-                            <Route path="/modifications" element={<Modifications />} />
-                            <Route path="/broadcasts" element={<Broadcasts />} />
-                            <Route path="/extra-work" element={<ExtraWork />} />
-                            <Route path="/invoicing" element={<Invoicing />} />
-                            <Route path="/creative-boost" element={<CreativeBoost />} />
-                            <Route path="/meetings" element={<Meetings />} />
-                            <Route path="/services" element={<Services />} />
-                            <Route path="/colleagues" element={<Colleagues />} />
-                            <Route path="/recruitment" element={<Recruitment />} />
-                            <Route path="/analytics" element={<Analytics />} />
-                            <Route path="/upsells" element={<Upsells />} />
-                            <Route path="/settings" element={<Settings />} />
-                            <Route path="/notifications" element={<Notifications />} />
-                            <Route path="/feedback" element={<Feedback />} />
-                            <Route path="/academy" element={<Academy />} />
-                            <Route path="/sop" element={<SOP />} />
-                            <Route path="/sop/:articleId" element={<SOP />} />
-                          </Route>
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </BrowserRouter>
-                      <Toaster />
-                      <Sonner />
-                    </TooltipProvider>
-                    </SOPDataProvider>
-                  </FeedbackProvider>
-                </MeetingsDataProvider>
-              </ApplicantsDataProvider>
-            </LeadsDataProvider>
-          </CreativeBoostProvider>
-        </CRMDataProvider>
-      </UserRoleProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+                            {/* Protected routes */}
+                            <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
+                              <Route path="/" element={<Dashboard />} />
+                              <Route path="/my-work" element={<MyWork />} />
+                              <Route path="/my-profile" element={<MyProfile />} />
+                              <Route path="/leads" element={<Leads />} />
+                              <Route path="/clients" element={<Clients />} />
+                              <Route path="/contacts" element={<Contacts />} />
+                              <Route path="/engagements" element={<Engagements />} />
+                              <Route path="/modifications" element={<Modifications />} />
+                              <Route path="/broadcasts" element={<Broadcasts />} />
+                              <Route path="/extra-work" element={<ExtraWork />} />
+                              <Route path="/invoicing" element={<Invoicing />} />
+                              <Route path="/creative-boost" element={<CreativeBoost />} />
+                              <Route path="/meetings" element={<Meetings />} />
+                              <Route path="/services" element={<Services />} />
+                              <Route path="/colleagues" element={<Colleagues />} />
+                              <Route path="/recruitment" element={<Recruitment />} />
+                              <Route path="/analytics" element={<Analytics />} />
+                              <Route path="/upsells" element={<Upsells />} />
+                              <Route path="/settings" element={<Settings />} />
+                              <Route path="/notifications" element={<Notifications />} />
+                              <Route path="/feedback" element={<Feedback />} />
+                              <Route path="/academy" element={<Academy />} />
+                              <Route path="/sop" element={<SOP />} />
+                              <Route path="/sop/:articleId" element={<SOP />} />
+                            </Route>
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </BrowserRouter>
+                        <Toaster />
+                        <Sonner />
+                      </TooltipProvider>
+                      </SOPDataProvider>
+                    </FeedbackProvider>
+                  </MeetingsDataProvider>
+                </ApplicantsDataProvider>
+              </LeadsDataProvider>
+            </CreativeBoostProvider>
+          </CRMDataProvider>
+        </UserRoleProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

@@ -1042,7 +1042,7 @@ export default function Analytics() {
 
   if (!canSeeAnalytics) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[60vh]">
+      <div className="p-4 md:p-6 flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <h2 className="text-lg font-semibold">Přístup odepřen</h2>
           <p className="text-muted-foreground">Nemáte oprávnění k zobrazení analytiky.</p>

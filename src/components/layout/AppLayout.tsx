@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,6 +123,7 @@ export function AppLayout() {
               <MobileMenuButton />
             </div>
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               <NotificationsDropdown />
               <UserMenu />
             </div>

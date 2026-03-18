@@ -17,15 +17,15 @@ interface KPICardProps {
 export function KPICard({ title, value, subtitle, icon: Icon, trend, className }: KPICardProps) {
   return (
     <div className={cn(
-      'rounded-xl border bg-card p-4 sm:p-5 shadow-sm transition-all duration-200 hover:shadow-lg hover:scale-[1.02] hover:border-primary/30 cursor-default',
+      'rounded-xl border bg-card p-4 md:p-5 shadow-sm transition-all duration-200 hover:shadow-lg hover:scale-[1.02] hover:border-primary/30 cursor-default min-w-[160px] md:min-w-0',
       className
     )}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="space-y-1 min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight">{title}</p>
-          <p className="text-xl sm:text-2xl font-semibold tracking-tight">{value}</p>
+      <div className="flex items-start justify-between">
+        <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
+          <p className="text-xs md:text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-xl md:text-2xl font-semibold tracking-tight">{value}</p>
           {subtitle && (
-            <div className="text-xs text-muted-foreground leading-tight">{subtitle}</div>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           )}
           {trend && (
             <p className={cn(
@@ -37,8 +37,8 @@ export function KPICard({ title, value, subtitle, icon: Icon, trend, className }
           )}
         </div>
         {Icon && (
-          <div className="rounded-lg bg-primary/10 p-2 sm:p-2.5 shrink-0">
-            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          <div className="rounded-lg bg-primary/10 p-2 md:p-2.5 shrink-0 ml-2">
+            <Icon className="h-4 w-4 md:h-5 md:w-5 text-primary" />
           </div>
         )}
       </div>
