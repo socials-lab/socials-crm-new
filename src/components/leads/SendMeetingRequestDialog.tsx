@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Send, Plus, X, CheckCircle2, Calendar } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Send, Plus, X, Calendar, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useMeetingScheduleUrl } from '@/hooks/useMeetingScheduleUrl';
 import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
-import { getDefaultEmailSignature } from '@/lib/emailSignature';
+import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
 
 interface SendMeetingRequestDialogProps {
   open: boolean;
@@ -28,10 +29,64 @@ interface SendMeetingRequestDialogProps {
   contactEmail: string | null;
   companyName: string;
   leadId: string;
-  onSent?: (emailData: { subject: string; body: string; recipients: string[] }) => void;
+  onSent?: () => void;
 }
 
-const DEFAULT_BCC = ['danny@socials.cz', 'dana.bauerova@socials.cz'];
+const DEFAULT_BCC = [DEFAULT_GMAIL_BCC, 'dana.bauerova@socials.cz'];
+
+function EmailTagList({
+  emails,
+  onRemove,
+  newEmail,
+  onNewEmailChange,
+  onAdd,
+  placeholder,
+}: {
+  emails: string[];
+  onRemove: (email: string) => void;
+  newEmail: string;
+  onNewEmailChange: (value: string) => void;
+  onAdd: () => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {emails.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {emails.map(email => (
+            <Badge key={email} variant="secondary" className="gap-1 pr-1 font-normal">
+              {email}
+              <button
+                type="button"
+                onClick={() => onRemove(email)}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Input
+          value={newEmail}
+          onChange={(event) => onNewEmailChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              onAdd();
+            }
+          }}
+          placeholder={placeholder}
+          className="text-sm"
+        />
+        <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={onAdd}>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function SendMeetingRequestDialog({
   open,
@@ -45,18 +100,18 @@ export function SendMeetingRequestDialog({
   const { fillTemplate } = useEmailTemplates();
   const { user } = useAuth();
   const { colleagues } = useCRMData();
+  const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
   const { meetingUrl } = useMeetingScheduleUrl();
   const currentUserColleague = colleagues.find((colleague) => colleague.profile_id === user?.id);
 
-  const getDefaults = () => {
-    const urlValue = meetingUrl || '[DOPLŇTE ODKAZ NA SJEDNÁNÍ SCHŮZKY]';
+  const defaults = useMemo(() => {
     return fillTemplate('meeting_request', {
       company: companyName,
       name: contactName,
-      meeting_url: urlValue,
+      meeting_url: meetingUrl || '',
       signature: getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' }),
     });
-  };
+  }, [fillTemplate, companyName, contactName, meetingUrl, currentUserColleague]);
 
   const [toEmails, setToEmails] = useState<string[]>(contactEmail ? [contactEmail] : []);
   const [newToEmail, setNewToEmail] = useState('');
@@ -64,16 +119,13 @@ export function SendMeetingRequestDialog({
   const [bccEmails, setBccEmails] = useState<string[]>(DEFAULT_BCC);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailContent, setEmailContent] = useState('');
-  const [initialized, setInitialized] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // Initialize content when dialog opens and template/meetingUrl are ready
-  if (open && !initialized && fillTemplate) {
-    const defaults = getDefaults();
+  useEffect(() => {
+    if (!open) return;
     setEmailSubject(defaults.subject);
     setEmailContent(defaults.body);
-    setInitialized(true);
-  }
+  }, [open, defaults.subject, defaults.body]);
 
   const addEmail = (
     email: string,
@@ -105,26 +157,44 @@ export function SendMeetingRequestDialog({
       return;
     }
 
-    setIsSending(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    onSent?.({
-      subject: emailSubject,
-      body: emailContent,
-      recipients: toEmails,
-    });
-    setIsSending(false);
-    toast.success('Žádost o schůzku byla odeslána');
-    onOpenChange(false);
-  };
+    if (!hasGmailScope) {
+      toast.error('Pro odesílání emailů je potřeba propojit Google účet s oprávněním pro Gmail');
+      return;
+    }
 
-  const handleMarkAsSent = () => {
-    onSent?.({
-      subject: emailSubject,
-      body: emailContent,
-      recipients: toEmails,
-    });
-    toast.success('Žádost o schůzku byla označena jako odeslaná');
-    onOpenChange(false);
+    if (!meetingUrl || !meetingUrl.trim()) {
+      toast.error('Chybí URL pro sjednání schůzky. Nastavte ji v Nastavení -> Profil.');
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      const htmlContent = formatEmailTextToHtml(emailContent);
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6; color: #333;">
+          ${htmlContent}
+        </div>
+      `;
+
+      const result = await sendEmail(toEmails.join(', '), emailSubject, html, {
+        cc: ccEmails.join(', '),
+        bcc: bccEmails.join(', '),
+        leadId: leadId,
+      });
+
+      if (!result) {
+        throw new Error('Odeslání emailu selhalo');
+      }
+
+      onSent?.();
+      toast.success('Žádost o schůzku byla odeslána');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to send meeting request email:', error);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -133,62 +203,11 @@ export function SendMeetingRequestDialog({
       setNewToEmail('');
       setCcEmails([]);
       setBccEmails(DEFAULT_BCC);
-      const defaults = getDefaults();
       setEmailSubject(defaults.subject);
       setEmailContent(defaults.body);
-      setInitialized(true);
-    } else {
-      setInitialized(false);
     }
     onOpenChange(newOpen);
   };
-
-  const EmailTagList = ({
-    emails,
-    onRemove,
-    newEmail,
-    onNewEmailChange,
-    onAdd,
-    placeholder,
-  }: {
-    emails: string[];
-    onRemove: (e: string) => void;
-    newEmail: string;
-    onNewEmailChange: (v: string) => void;
-    onAdd: () => void;
-    placeholder: string;
-  }) => (
-    <div className="space-y-2">
-      {emails.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {emails.map(email => (
-            <Badge key={email} variant="secondary" className="gap-1 pr-1 font-normal">
-              {email}
-              <button
-                type="button"
-                onClick={() => onRemove(email)}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
-      <div className="flex gap-2">
-        <Input
-          value={newEmail}
-          onChange={(e) => onNewEmailChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } }}
-          placeholder={placeholder}
-          className="text-sm"
-        />
-        <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={onAdd}>
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -209,6 +228,27 @@ export function SendMeetingRequestDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Google Connection Warning */}
+          {!isCheckingConnection && !hasGmailScope && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                  Pro odesílání emailů je potřeba propojit Google účet
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={connectGoogleCalendar}
+                  disabled={googleLoading}
+                >
+                  Propojit Google účet
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* To */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Komu</Label>
@@ -259,15 +299,8 @@ export function SendMeetingRequestDialog({
             Zrušit
           </Button>
           <Button
-            variant="secondary"
-            onClick={handleMarkAsSent}
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Označit jako odeslané
-          </Button>
-          <Button
             onClick={handleSend}
-            disabled={isSending || toEmails.length === 0}
+            disabled={isSending || toEmails.length === 0 || !hasGmailScope || !meetingUrl || !meetingUrl.trim()}
           >
             {isSending ? (
               <>

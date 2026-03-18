@@ -218,6 +218,7 @@ export function SendOnboardingFormDialog({
       const result = await sendEmail(lead.contact_email.trim(), emailSubject, html, {
         cc: finalCcEmails.join(', '),
         bcc: finalBccEmails.join(', '),
+        leadId: lead.id,
       });
       
       if (result) {

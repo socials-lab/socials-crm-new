@@ -14,6 +14,7 @@ interface GmailSendRequest {
   html: string;
   cc?: string;
   bcc?: string;
+  lead_id?: string;
 }
 
 const withTimeout = async <T>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
@@ -63,7 +64,7 @@ serve(async (req) => {
     }
 
     userId = user.id;
-    const { to, subject, html, cc, bcc }: GmailSendRequest = await req.json();
+    const { to, subject, html, cc, bcc, lead_id }: GmailSendRequest = await req.json();
     
     if (!to || !subject || !html) {
       return new Response(
@@ -230,6 +231,8 @@ serve(async (req) => {
         .map((email) => email.trim().toLowerCase())
         .filter((email) => email.length > 0);
 
+    const toList = parseEmails(to);
+
     // Process CC
     const ccList = parseEmails(cc);
     if (ccList.length > 0) {
@@ -242,13 +245,40 @@ serve(async (req) => {
       emailHeaders.push(`Bcc: ${bccList.join(', ')}`);
     }
 
+    let trackedHtml = html;
+    let trackingRecordId: string | null = null;
+    let trackingToken: string | null = null;
+
+    if (lead_id) {
+      const { data: trackingRow, error: trackingInsertError } = await supabaseAdmin
+        .from("lead_email_tracking")
+        .insert({
+          lead_id,
+          subject,
+          to_recipients: toList,
+          cc_recipients: ccList,
+          sent_by: user.id,
+        })
+        .select("id, tracking_token")
+        .single();
+
+      if (trackingInsertError || !trackingRow?.tracking_token) {
+        throw new Error(`Failed to create lead email tracking record: ${trackingInsertError?.message || "missing tracking token"}`);
+      }
+
+      trackingRecordId = trackingRow.id as string;
+      trackingToken = trackingRow.tracking_token as string;
+      const trackingUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/lead-email-track?token=${encodeURIComponent(trackingToken)}`;
+      trackedHtml = `${html}<img src="${trackingUrl}" width="1" height="1" style="display:none" alt="" />`;
+    }
+
     emailHeaders.push(
       `Subject: ${encodeSubject(subject)}`,
       `MIME-Version: 1.0`,
       `Content-Type: text/html; charset=utf-8`,
       `Content-Transfer-Encoding: base64`,
       ``,
-      encodeBase64Utf8(html)
+      encodeBase64Utf8(trackedHtml)
     );
     const emailMessage = emailHeaders.join('\r\n');
 
@@ -310,6 +340,19 @@ serve(async (req) => {
 
     const gmailResult = await gmailResponse.json();
     const durationMs = Date.now() - startTime;
+
+    if (trackingRecordId) {
+      const { error: trackingUpdateError } = await supabaseAdmin
+        .from("lead_email_tracking")
+        .update({
+          gmail_message_id: gmailResult.id || null,
+        })
+        .eq("id", trackingRecordId);
+
+      if (trackingUpdateError) {
+        throw new Error(`Failed to persist lead email tracking message id: ${trackingUpdateError.message}`);
+      }
+    }
     
     // Log successful integration call (best effort, non-blocking)
     void supabaseAdmin.from('integration_log').insert({

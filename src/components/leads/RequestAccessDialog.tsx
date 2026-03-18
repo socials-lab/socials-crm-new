@@ -169,6 +169,7 @@ export function RequestAccessDialog({
       const result = await sendEmail(allRecipients, emailSubject, html, {
         cc: ccEmails.join(', '),
         bcc: bccEmails.join(', '),
+        leadId: leadId,
       });
 
       if (result) {

@@ -138,6 +138,7 @@ export function SendOfferDialog({
       const result = await sendEmail(lead.contact_email.trim(), emailSubject, html, {
         cc: ccEmails.join(', '),
         bcc: bccEmails.join(', '),
+        leadId: lead.id,
       });
       
       if (result) {

@@ -305,7 +305,7 @@ export function useGoogleCalendar() {
     to: string,
     subject: string,
     html: string,
-    options?: { cc?: string; bcc?: string }
+    options?: { cc?: string; bcc?: string; leadId?: string }
   ) => {
     setIsLoading(true);
     setError(null);
@@ -318,6 +318,7 @@ export function useGoogleCalendar() {
           html,
           cc: options?.cc,
           bcc: options?.bcc,
+          lead_id: options?.leadId,
         },
       }, 60000);
 

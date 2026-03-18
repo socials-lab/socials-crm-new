@@ -3,7 +3,6 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Building2, MapPin } from 'lucide-react';
 import { useAresSearch, type CompanySearchResult } from '@/hooks/useAresSearch';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CompanySearchInputProps {
   value: string;
@@ -103,7 +102,7 @@ export function CompanySearchInput({
 
       {open && inputValue.trim().length >= 3 && (
         <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md">
-          <ScrollArea className="max-h-[300px]">
+          <div className="max-h-[300px] overflow-y-auto overscroll-contain">
             {error && (
               <div className="py-4 px-3 text-center text-sm text-destructive">
                 {error}
@@ -164,7 +163,7 @@ export function CompanySearchInput({
                 ))}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
       )}
     </div>
