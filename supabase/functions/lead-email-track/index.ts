@@ -70,7 +70,7 @@ serve(async (req) => {
         lead_id: firstOpenRow.lead_id,
         author_id: "system",
         author_name: "System",
-        text: "Klient pravdepodobne otevrel odeslany e-mail (open tracking).",
+        text: "Klient pravděpodobně otevřel odeslaný e-mail (open tracking).",
         note_type: "email_received",
         call_date: null,
         subject,

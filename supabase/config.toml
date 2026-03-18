@@ -53,5 +53,8 @@ verify_jwt = false
 [functions.broadcast-track]
 verify_jwt = false
 
+[functions.lead-email-track]
+verify_jwt = false
+
 [functions.create-lead-webhook]
 verify_jwt = false
