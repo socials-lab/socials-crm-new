@@ -59,6 +59,7 @@ import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
 import { RequestAccessDialog } from './RequestAccessDialog';
+import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
@@ -123,6 +124,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
+  const [isMeetingRequestOpen, setIsMeetingRequestOpen] = useState(false);
   const [isOnboardingFormOpen, setIsOnboardingFormOpen] = useState(false);
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
@@ -706,6 +708,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                   <h4 className="text-sm font-medium text-muted-foreground mb-3">Proces</h4>
                   <LeadFlowStepper
                     lead={lead}
+                    onSendMeetingRequest={() => setIsMeetingRequestOpen(true)}
                     onRequestAccess={() => setIsRequestAccessOpen(true)}
                     onMarkAccessReceived={async () => {
                       try {
@@ -1249,7 +1252,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium">Historie komunikace</span>
                       <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-auto">
-                        {(lead.notes?.length || 0) + (lead.access_request_sent_at ? 1 : 0) + (lead.offer_sent_at ? 1 : 0)} událostí
+                        {(lead.notes?.length || 0) + (lead.meeting_request_sent_at ? 1 : 0) + (lead.access_request_sent_at ? 1 : 0) + (lead.offer_sent_at ? 1 : 0)} událostí
                       </Badge>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pt-3">
@@ -1337,6 +1340,24 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
             });
           } catch (error) {
             toast.error('Nepodařilo se uložit změny');
+          }
+        }}
+      />
+
+      <SendMeetingRequestDialog
+        open={isMeetingRequestOpen}
+        onOpenChange={setIsMeetingRequestOpen}
+        contactName={lead.contact_name}
+        contactEmail={lead.contact_email}
+        companyName={lead.company_name}
+        leadId={lead.id}
+        onSent={async () => {
+          try {
+            await updateLead(lead.id, {
+              meeting_request_sent_at: new Date().toISOString(),
+            });
+          } catch (error) {
+            toast.error('Nepodařilo se uložit změnu');
           }
         }}
       />

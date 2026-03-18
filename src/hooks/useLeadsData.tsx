@@ -26,6 +26,7 @@ const LEAD_FIELD_LABELS: Record<string, string> = {
   probability_percent: 'Pravděpodobnost',
   offer_url: 'URL nabídky',
   offer_created_at: 'Nabídka vytvořena',
+  meeting_request_sent_at: 'Žádost o schůzku odeslána',
   billing_street: 'Ulice',
   billing_city: 'Město',
   billing_zip: 'PSČ',
@@ -150,6 +151,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
           stage: lead.stage || 'new_lead',
           potential_services: Array.isArray(lead.potential_services) ? lead.potential_services : [],
           access_request_platforms: Array.isArray(lead.access_request_platforms) ? lead.access_request_platforms : [],
+          meeting_request_sent_at: lead.meeting_request_sent_at || null,
         };
       });
     },

@@ -12,6 +12,7 @@ import {
   Plus,
   MailOpen,
   User,
+  Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Lead } from '@/types/crm';
@@ -123,6 +124,16 @@ export function LeadCommunicationTimeline({
   });
 
   // System events
+  if (lead.meeting_request_sent_at) {
+    events.push({
+      id: 'meeting-request-sent',
+      date: lead.meeting_request_sent_at,
+      icon: <Calendar className="h-3 w-3" />,
+      title: 'Žádost o schůzku odeslána',
+      direction: 'sent',
+    });
+  }
+
   if (lead.access_request_sent_at) {
     events.push({
       id: 'access-sent',

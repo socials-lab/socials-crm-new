@@ -652,6 +652,9 @@ export interface Lead {
   converted_to_client_id: string | null;
   converted_to_engagement_id: string | null;
   converted_at: string | null;
+
+  // Meeting request tracking
+  meeting_request_sent_at: string | null;
   
   // Access request tracking
   access_request_sent_at: string | null;

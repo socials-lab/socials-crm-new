@@ -2223,6 +2223,7 @@ export type Database = {
           offer_sent_by_id: string | null
           offer_type: string | null
           offer_url: string | null
+          meeting_request_sent_at: string | null
           onboarding_form_completed_at: string | null
           onboarding_form_sent_at: string | null
           onboarding_form_url: string | null
@@ -2287,6 +2288,7 @@ export type Database = {
           offer_sent_by_id?: string | null
           offer_type?: string | null
           offer_url?: string | null
+          meeting_request_sent_at?: string | null
           onboarding_form_completed_at?: string | null
           onboarding_form_sent_at?: string | null
           onboarding_form_url?: string | null
@@ -2351,6 +2353,7 @@ export type Database = {
           offer_sent_by_id?: string | null
           offer_type?: string | null
           offer_url?: string | null
+          meeting_request_sent_at?: string | null
           onboarding_form_completed_at?: string | null
           onboarding_form_sent_at?: string | null
           onboarding_form_url?: string | null
@@ -2943,6 +2946,7 @@ export type Database = {
           email_notifications_enabled: boolean | null
           full_name: string | null
           id: string
+          meeting_schedule_url: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2953,6 +2957,7 @@ export type Database = {
           email_notifications_enabled?: boolean | null
           full_name?: string | null
           id: string
+          meeting_schedule_url?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2963,6 +2968,7 @@ export type Database = {
           email_notifications_enabled?: boolean | null
           full_name?: string | null
           id?: string
+          meeting_schedule_url?: string | null
           updated_at?: string | null
         }
         Relationships: []

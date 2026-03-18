@@ -10,7 +10,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { User, Bell, Loader2 } from 'lucide-react';
+import { useMeetingScheduleUrl } from '@/hooks/useMeetingScheduleUrl';
+import { User, Bell, Loader2, Calendar, Save } from 'lucide-react';
 import { EmailTemplatesManager } from '@/components/settings/EmailTemplatesManager';
 
 type EmailNotificationLevel = 'none' | 'important' | 'all';
@@ -19,11 +20,14 @@ export default function Settings() {
   const { user } = useAuth();
   const { role, isSuperAdmin } = useUserRole();
   const { toast } = useToast();
+  const { meetingUrl, isLoading: isMeetingUrlLoading, saveMeetingUrl, isSaving } = useMeetingScheduleUrl();
 
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || user?.email?.split('@')[0] || '');
   const [savingProfile, setSavingProfile] = useState(false);
   const [emailLevel, setEmailLevel] = useState<EmailNotificationLevel>('none');
   const [loadingPrefs, setLoadingPrefs] = useState(true);
+  const [meetingUrlValue, setMeetingUrlValue] = useState('');
+  const [isMeetingUrlDirty, setIsMeetingUrlDirty] = useState(false);
 
   // Load email notification preference from profiles table
   useEffect(() => {
@@ -40,6 +44,12 @@ export default function Settings() {
         setLoadingPrefs(false);
       });
   }, [user]);
+
+  useEffect(() => {
+    if (isMeetingUrlLoading) return;
+    setMeetingUrlValue(meetingUrl);
+    setIsMeetingUrlDirty(false);
+  }, [meetingUrl, isMeetingUrlLoading]);
 
   const updateEmailLevel = async (newLevel: EmailNotificationLevel) => {
     if (!user) return;
@@ -105,8 +115,9 @@ export default function Settings() {
       }
 
       toast({ title: 'Uloženo', description: 'Profil byl úspěšně aktualizován.' });
-    } catch (err: any) {
-      toast({ title: 'Chyba', description: err.message || 'Nepodařilo se uložit profil.', variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Nepodařilo se ulozit profil.';
+      toast({ title: 'Chyba', description: message, variant: 'destructive' });
     } finally {
       setSavingProfile(false);
     }
@@ -132,6 +143,40 @@ export default function Settings() {
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calendar className="h-4 w-4" />
+              URL pro sjednání schůzky
+            </CardTitle>
+            <CardDescription>
+              Odkaz na Calendly, Cal.com nebo jiný plánovač. Tato URL se použije v emailu "Žádost o schůzku".
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              value={meetingUrlValue}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setMeetingUrlValue(nextValue);
+                setIsMeetingUrlDirty(nextValue !== meetingUrl);
+              }}
+              placeholder="https://calendly.com/vas-profil"
+            />
+            <Button
+              onClick={() => {
+                saveMeetingUrl(meetingUrlValue.trim());
+                setIsMeetingUrlDirty(false);
+              }}
+              disabled={!isMeetingUrlDirty || isSaving}
+              size="sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? 'Ukládám...' : 'Uložit URL'}
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Profile Settings */}
         <Card>
           <CardHeader className="pb-3">

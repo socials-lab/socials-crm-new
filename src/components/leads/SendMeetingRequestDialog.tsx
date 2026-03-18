@@ -16,8 +16,10 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import { useAuth } from '@/hooks/useAuth';
+import { useCRMData } from '@/hooks/useCRMData';
 import { useMeetingScheduleUrl } from '@/hooks/useMeetingScheduleUrl';
 import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
+import { getDefaultEmailSignature } from '@/lib/emailSignature';
 
 interface SendMeetingRequestDialogProps {
   open: boolean;
@@ -41,7 +43,10 @@ export function SendMeetingRequestDialog({
   onSent,
 }: SendMeetingRequestDialogProps) {
   const { fillTemplate } = useEmailTemplates();
+  const { user } = useAuth();
+  const { colleagues } = useCRMData();
   const { meetingUrl } = useMeetingScheduleUrl();
+  const currentUserColleague = colleagues.find((colleague) => colleague.profile_id === user?.id);
 
   const getDefaults = () => {
     const urlValue = meetingUrl || '[DOPLŇTE ODKAZ NA SJEDNÁNÍ SCHŮZKY]';
@@ -49,6 +54,7 @@ export function SendMeetingRequestDialog({
       company: companyName,
       name: contactName,
       meeting_url: urlValue,
+      signature: getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' }),
     });
   };
 

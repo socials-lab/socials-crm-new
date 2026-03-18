@@ -72,6 +72,14 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
     body_template: `Dobrý den {name},\n\nděkujeme za Váš zájem o pozici {position} v agentuře Socials a za čas, který jste věnoval/a přípravě své přihlášky.\n\nPo pečlivém zvážení jsme se rozhodli pokračovat s jinými kandidáty, jejichž profil je v tuto chvíli blíže našim aktuálním potřebám.\n\nPřejeme Vám mnoho úspěchů v dalším profesním směřování a věříme, že najdete pozici, která bude přesně pro Vás.\n\n{signature}`,
     available_variables: ['name', 'position', 'signature'],
   },
+  meeting_request: {
+    template_key: 'meeting_request',
+    name: 'Žádost o schůzku',
+    description: 'Email s odkazem na sjednání online schůzky.',
+    subject_template: 'Schůzka ohledně spolupráce - {company} / Socials',
+    body_template: `Dobrý den {name},\n\nděkuji za Váš zájem o spolupráci.\n\nRádi bychom si s Vámi domluvili krátký telefonát, abychom zjistili, jak Vám můžeme nejlépe pomoci.\n\nSjednejte si se mnou hovor kliknutím na odkaz níže:\n👉 {meeting_url}\n\nDěkuji a budu se těšit na náš rozhovor.\n\n{signature}`,
+    available_variables: ['name', 'company', 'meeting_url', 'signature'],
+  },
   applicant_onboarding: {
     template_key: 'applicant_onboarding',
     name: 'Onboarding kandidáta',
@@ -94,7 +102,7 @@ export function useEmailTemplates() {
   const { data: dbTemplates = [], isLoading } = useQuery({
     queryKey: ['email-templates'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('email_templates')
         .select('*')
         .order('name');
@@ -112,7 +120,7 @@ export function useEmailTemplates() {
     },
   });
 
-  const getTemplate = (key: string): EmailTemplate => {
+  const getTemplate = useCallback((key: string): EmailTemplate => {
     const existing = dbTemplates.find((template) => template.template_key === key);
     if (existing) return existing;
 
@@ -137,7 +145,7 @@ export function useEmailTemplates() {
       updated_at: null,
       updated_by: null,
     };
-  };
+  }, [dbTemplates]);
 
   const fillTemplate = useCallback(
     (key: string, variables: Record<string, string>) => {
@@ -153,7 +161,7 @@ export function useEmailTemplates() {
 
       return { subject, body };
     },
-    [dbTemplates]
+    [getTemplate]
   );
 
   const updateMutation = useMutation({
@@ -169,7 +177,7 @@ export function useEmailTemplates() {
         updated_by: user?.id || null,
       };
 
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('email_templates')
         .upsert(payload, { onConflict: 'template_key' });
 

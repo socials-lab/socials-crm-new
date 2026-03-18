@@ -64,6 +64,7 @@ import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
 import { RequestAccessDialog } from './RequestAccessDialog';
+import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
@@ -113,6 +114,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
+  const [isMeetingRequestOpen, setIsMeetingRequestOpen] = useState(false);
   const [isOnboardingFormOpen, setIsOnboardingFormOpen] = useState(false);
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
@@ -693,6 +695,40 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
                 💬 Komunikace s klientem
               </h4>
+
+              {/* Meeting Request */}
+              <div className={cn(
+                "p-3 rounded-lg border",
+                lead.meeting_request_sent_at ? "border-green-500/30 bg-green-500/5" : "bg-card"
+              )}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Send className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">Žádost o schůzku</p>
+                        {lead.meeting_request_sent_at && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                      </div>
+                      {lead.meeting_request_sent_at ? (
+                        <div className="text-xs text-green-700">
+                          ✓ Odeslano {new Date(lead.meeting_request_sent_at).toLocaleDateString('cs-CZ')}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Zatim neodeslano</p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsMeetingRequestOpen(true)}
+                    disabled={isFinished}
+                    title={isFinished ? 'Lead je uzavren' : undefined}
+                  >
+                    {lead.meeting_request_sent_at ? 'Znovu odeslat' : 'Odeslat'}
+                  </Button>
+                </div>
+              </div>
               
               {/* Access Request */}
               <div className={cn(
@@ -1307,6 +1343,25 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
             });
           } catch (error) {
             console.error('Failed to update access request:', error);
+            toast.error('Nepodařilo se uložit změnu');
+          }
+        }}
+      />
+
+      <SendMeetingRequestDialog
+        open={isMeetingRequestOpen}
+        onOpenChange={setIsMeetingRequestOpen}
+        contactName={lead.contact_name}
+        contactEmail={lead.contact_email}
+        companyName={lead.company_name}
+        leadId={lead.id}
+        onSent={async () => {
+          try {
+            await updateLead(lead.id, {
+              meeting_request_sent_at: new Date().toISOString(),
+            });
+          } catch (error) {
+            console.error('Failed to update meeting request:', error);
             toast.error('Nepodařilo se uložit změnu');
           }
         }}

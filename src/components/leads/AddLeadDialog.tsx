@@ -306,6 +306,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       offer_url: data.offer_url || null,
       offer_created_at: lead?.offer_created_at || null,
       potential_services: lead?.potential_services || [],
+      meeting_request_sent_at: lead?.meeting_request_sent_at || null,
       access_request_sent_at: lead?.access_request_sent_at || null,
       access_request_platforms: lead?.access_request_platforms || [],
       access_received_at: lead?.access_received_at || null,
