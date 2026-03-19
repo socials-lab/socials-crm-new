@@ -744,7 +744,7 @@ export default function Analytics() {
     const industryMap = new Map<string, number>();
     activeClientsForPeriod.forEach(c => {
       const clientEngs = activeEngs.filter(e => e.client_id === c.id);
-      const revenue = clientEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+      const revenue = clientEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
       const industry = c.industry || 'Neuvedeno';
       industryMap.set(industry, (industryMap.get(industry) || 0) + revenue);
     });
