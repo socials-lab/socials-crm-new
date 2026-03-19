@@ -722,7 +722,7 @@ export default function Analytics() {
     const topClientsByMargin = activeClientsForPeriod
       .map(c => {
         const clientEngs = activeEngs.filter(e => e.client_id === c.id);
-        const revenue = clientEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        const revenue = clientEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
         const cost = clientEngs.reduce((sum, e) => {
           const engAssignments = assignments.filter(a => a.engagement_id === e.id);
           return sum + engAssignments.reduce((s, a) => s + (a.monthly_cost || 0), 0);
