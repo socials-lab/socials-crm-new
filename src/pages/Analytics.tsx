@@ -324,7 +324,8 @@ export default function Analytics() {
         const client = getClientById(e.client_id);
         const engAssignments = assignments.filter(a => a.engagement_id === e.id);
         const cost = engAssignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
-        const margin = e.monthly_fee && e.monthly_fee > 0 ? ((e.monthly_fee - cost) / e.monthly_fee) * 100 : 0;
+        const engRevenue = getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []);
+        const margin = engRevenue > 0 ? ((engRevenue - cost) / engRevenue) * 100 : 0;
         return {
           name: e.name,
           client: client?.brand_name || client?.name || '',
