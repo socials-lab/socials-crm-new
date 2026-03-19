@@ -458,7 +458,8 @@ export default function Dashboard() {
       .filter(c => c.status === 'active' && c.start_date && isAfter(parseISO(c.start_date), threeMonthsAgo))
       .map(client => {
         const clientEngagements = engagements.filter(e => e.client_id === client.id && e.status === 'active');
-        const totalMonthly = clientEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        const totalMonthly = clientEngagements.reduce((sum, e) => 
+          sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
         const engagementNames = clientEngagements.map(e => e.name).join(', ');
         const startDate = parseISO(client.start_date!);
         const timeAgo = formatDistanceToNow(startDate, { locale: cs, addSuffix: true });
