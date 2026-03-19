@@ -379,6 +379,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             creative_boost_min_credits: null,
             creative_boost_max_credits: null,
             creative_boost_price_per_credit: null,
+            creative_boost_fixed_billing: true,
             upsold_by_id: null,
             upsell_commission_percent: null,
             effective_from: null,

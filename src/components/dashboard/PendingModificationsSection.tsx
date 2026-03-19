@@ -53,6 +53,7 @@ export function PendingModificationsSection() {
             creative_boost_min_credits: changes.creative_boost_min_credits || null,
             creative_boost_max_credits: changes.creative_boost_max_credits || null,
             creative_boost_price_per_credit: changes.creative_boost_price_per_credit || null,
+            creative_boost_fixed_billing: true,
             upsold_by_id: request.upsold_by_id,
             upsell_commission_percent: request.upsell_commission_percent,
             effective_from: request.effective_from,
