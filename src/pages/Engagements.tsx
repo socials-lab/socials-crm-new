@@ -777,6 +777,7 @@ function EngagementsContent() {
                                         updateEngagementService(engService.id, { 
                                           creative_boost_max_credits: updates.maxCredits,
                                           creative_boost_price_per_credit: updates.pricePerCredit,
+                                          ...(updates.fixedBilling !== undefined && { creative_boost_fixed_billing: updates.fixedBilling }),
                                         });
                                         // Save banner/video rewards to mock data
                                         if (cbAssignment) {
