@@ -1,13 +1,14 @@
-import { TrendingUp, TrendingDown, DollarSign, Receipt, Minus } from 'lucide-react';
-import type { EngagementAssignment } from '@/types/crm';
+import { TrendingUp, TrendingDown, DollarSign, Minus, Palette } from 'lucide-react';
+import type { EngagementAssignment, EngagementService } from '@/types/crm';
 
 interface EngagementFinancialOverviewProps {
   revenue: number;
   assignments: EngagementAssignment[];
   currency: string;
+  engagementServices?: EngagementService[];
 }
 
-export function EngagementFinancialOverview({ revenue, assignments, currency }: EngagementFinancialOverviewProps) {
+export function EngagementFinancialOverview({ revenue, assignments, currency, engagementServices = [] }: EngagementFinancialOverviewProps) {
   const totalCost = assignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
   const margin = revenue - totalCost;
   const marginPercent = revenue > 0 ? ((margin / revenue) * 100) : 0;
@@ -26,6 +27,15 @@ export function EngagementFinancialOverview({ revenue, assignments, currency }: 
 
   const MarginIcon = marginPercent >= 40 ? TrendingUp : marginPercent >= 20 ? Minus : TrendingDown;
 
+  // Find Creative Boost services for breakdown
+  const cbServices = engagementServices.filter(s => s.is_active && s.creative_boost_max_credits);
+  const cbTotal = cbServices.reduce((sum, s) => {
+    const maxCredits = s.creative_boost_max_credits || 0;
+    const pricePerCredit = s.creative_boost_price_per_credit || 400;
+    return sum + (maxCredits * pricePerCredit);
+  }, 0);
+  const otherTotal = revenue - cbTotal;
+
   return (
     <div className={`mb-6 p-4 rounded-lg border ${getMarginBg(marginPercent)}`}>
       <h4 className="font-medium text-sm flex items-center gap-2 mb-3">
@@ -38,6 +48,24 @@ export function EngagementFinancialOverview({ revenue, assignments, currency }: 
           <p className="text-sm font-semibold">
             {revenue.toLocaleString()} {currency}
           </p>
+          {cbServices.length > 0 && (
+            <div className="mt-1.5 space-y-0.5">
+              {otherTotal > 0 && (
+                <p className="text-[10px] text-muted-foreground">
+                  Služby: {otherTotal.toLocaleString()} {currency}
+                </p>
+              )}
+              {cbServices.map(s => (
+                <p key={s.id} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Palette className="h-2.5 w-2.5" />
+                  {s.name}: {((s.creative_boost_max_credits || 0) * (s.creative_boost_price_per_credit || 0)).toLocaleString()} {currency}
+                  <span className="opacity-70">
+                    ({s.creative_boost_max_credits} kr × {s.creative_boost_price_per_credit} {currency})
+                  </span>
+                </p>
+              ))}
+            </div>
+          )}
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-1">Náklady</p>
