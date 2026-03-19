@@ -636,6 +636,7 @@ function EngagementsContent() {
                       revenue={totalServicesAmount}
                       assignments={engagementAssignments}
                       currency={engagement.currency || 'CZK'}
+                      estimatedCbCost={estimatedCbCost}
                     />
                   )}
 
