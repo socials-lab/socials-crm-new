@@ -16,6 +16,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useUserRole } from '@/hooks/useUserRole';
+import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
 
 import { format, subMonths, startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -61,7 +62,7 @@ export default function Analytics() {
 
   const { leads } = useLeadsData();
   const { getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits } = useCreativeBoostData();
-  const { clients, engagements, extraWorks, colleagues, assignments, engagementMetrics, getClientById } = useCRMData();
+  const { clients, engagements, engagementServices, extraWorks, colleagues, assignments, engagementMetrics, getClientById } = useCRMData();
   const { canAccessPage } = useUserRole();
   
   // Check permissions
@@ -175,14 +176,17 @@ export default function Analytics() {
     });
 
     // MRR calculation
-    const mrr = activeEngs.reduce((sum, e) => sum + e.monthly_fee, 0);
+    const mrr = activeEngs.reduce(
+      (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
+      0,
+    );
     const prevMrr = engagements
       .filter(e => {
         const start = new Date(e.start_date);
         const end = e.end_date ? new Date(e.end_date) : null;
         return e.status === 'active' && start <= prevPeriodEnd && (!end || end >= prevPeriodStart);
       })
-      .reduce((sum, e) => sum + e.monthly_fee, 0);
+      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []), 0);
 
     // Average margin
     const metrics = engagementMetrics.filter((m) =>
@@ -204,7 +208,7 @@ export default function Analytics() {
           const end = e.end_date ? new Date(e.end_date) : null;
           return e.status === 'active' && start <= monthEnd && (!end || end >= monthStart);
         })
-        .reduce((sum, e) => sum + e.monthly_fee, 0);
+        .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []), 0);
 
       return {
         month: format(date, 'MMM', { locale: cs }),
@@ -215,7 +219,7 @@ export default function Analytics() {
     // Revenue breakdown - calculate from actual data
     const retainerRevenue = activeEngs
       .filter(e => e.type === 'retainer')
-      .reduce((sum, e) => sum + e.monthly_fee, 0);
+      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []), 0);
     
     const oneOffRevenue = activeEngs
       .filter(e => e.type === 'one_off')
@@ -280,7 +284,7 @@ export default function Analytics() {
         pendingExtraWork,
       },
     };
-  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, clients, engagements, engagementMetrics, getClientById, extraWorks, leads, getClientMonthSummaries]);
+  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, clients, engagements, engagementMetrics, engagementServices, getClientById, extraWorks, leads, getClientMonthSummaries]);
 
   // =====================================================
   // LEADS DATA
@@ -540,14 +544,17 @@ export default function Analytics() {
     });
 
     // Total invoicing
-    const totalInvoicing = activeEngs.reduce((sum, e) => sum + e.monthly_fee, 0);
+    const totalInvoicing = activeEngs.reduce(
+      (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
+      0,
+    );
     const prevInvoicing = engagements
       .filter(e => {
         const start = new Date(e.start_date);
         const end = e.end_date ? new Date(e.end_date) : null;
         return e.status === 'active' && start <= prevPeriodEnd && (!end || end >= prevPeriodStart);
       })
-      .reduce((sum, e) => sum + e.monthly_fee, 0);
+      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []), 0);
     const invoicingChange = prevInvoicing > 0 
       ? ((totalInvoicing - prevInvoicing) / prevInvoicing) * 100 
       : 0;
@@ -587,7 +594,10 @@ export default function Analytics() {
     const topClientsByRevenue = activeClientsForPeriod
       .map(c => {
         const clientEngs = activeEngs.filter(e => e.client_id === c.id);
-        const revenue = clientEngs.reduce((sum, e) => sum + e.monthly_fee, 0);
+        const revenue = clientEngs.reduce(
+          (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
+          0,
+        );
         return { name: c.brand_name, revenue };
       })
       .sort((a, b) => b.revenue - a.revenue)
@@ -631,7 +641,7 @@ export default function Analytics() {
       topClientsByMargin,
       clientsByTier,
     };
-  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, clients, engagements, engagementMetrics]);
+  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, clients, engagements, engagementMetrics, engagementServices]);
 
   // =====================================================
   // FINANCE DATA
@@ -648,14 +658,24 @@ export default function Analytics() {
     });
 
     // Total invoicing
-    const totalInvoicing = activeEngs.reduce((sum, e) => sum + e.monthly_fee, 0);
+    const totalInvoicing = activeEngs.reduce(
+      (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
+      0,
+    );
     const prevInvoicing = engagements
       .filter(e => {
         const start = new Date(e.start_date);
         const end = e.end_date ? new Date(e.end_date) : null;
         return e.status === 'active' && start <= prevPeriodEnd && (!end || end >= prevPeriodStart);
       })
-      .reduce((sum, e) => sum + e.monthly_fee, 0);
+      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []), 0);
+    const engagementRevenueMap = new Map(
+      activeEngs.map((engagement) => [
+        engagement.id,
+        getEngagementMonthlyRevenue(engagement.id, engagement.monthly_fee, engagementServices || []),
+      ]),
+    );
+
     const invoicingChange = prevInvoicing > 0 
       ? ((totalInvoicing - prevInvoicing) / prevInvoicing) * 100 
       : 0;
@@ -688,10 +708,14 @@ export default function Analytics() {
         id: e.id,
         name: e.name,
         client: client?.brand_name || '',
-        revenue: e.monthly_fee,
+        revenue: engagementRevenueMap.get(e.id) || 0,
         cost,
-        marginAbsolute: metric?.margin_amount || (e.monthly_fee - cost),
-        marginPercent: metric?.margin_percent || (e.monthly_fee > 0 ? ((e.monthly_fee - cost) / e.monthly_fee) * 100 : 0),
+        marginAbsolute: metric?.margin_amount || ((engagementRevenueMap.get(e.id) || 0) - cost),
+        marginPercent: metric?.margin_percent || (() => {
+          const engagementRevenue = engagementRevenueMap.get(e.id) || 0;
+          if (engagementRevenue <= 0) return 0;
+          return ((engagementRevenue - cost) / engagementRevenue) * 100;
+        })(),
       };
     }).sort((a, b) => b.marginPercent - a.marginPercent);
 
@@ -816,7 +840,7 @@ export default function Analytics() {
         creditsTrend,
       },
     };
-  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, engagements, engagementMetrics, extraWorks, assignments, getClientById, colleagues, getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits]);
+  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, engagements, engagementMetrics, engagementServices, extraWorks, assignments, getClientById, colleagues, getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits]);
 
   const creativeBoostData = useMemo(() => {
     const allSummaries = currentPeriodMonthKeys.flatMap((key) =>
@@ -962,7 +986,10 @@ export default function Analytics() {
       return e.status === 'active' && start <= periodEnd && (!end || end >= periodStart);
     });
 
-    const mrr = activeEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const mrr = activeEngs.reduce(
+      (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
+      0,
+    );
     const totalTeamCost = assignments
       .filter((a) => activeEngs.some((e) => e.id === a.engagement_id))
       .reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
@@ -976,7 +1003,8 @@ export default function Analytics() {
       );
       const revenue = colleagueAssignments.reduce((sum, a) => {
         const eng = activeEngs.find((e) => e.id === a.engagement_id);
-        return sum + (eng?.monthly_fee || 0);
+        if (!eng) return sum;
+        return sum + getEngagementMonthlyRevenue(eng.id, eng.monthly_fee, engagementServices || []);
       }, 0);
       return {
         name: c.full_name.split(' ')[0] || c.full_name,
@@ -1004,7 +1032,8 @@ export default function Analytics() {
       const engagementCount = new Set(colleagueAssignments.map((a) => a.engagement_id)).size;
       const revenue = colleagueAssignments.reduce((sum, a) => {
         const eng = activeEngs.find((e) => e.id === a.engagement_id);
-        return sum + (eng?.monthly_fee || 0);
+        if (!eng) return sum;
+        return sum + getEngagementMonthlyRevenue(eng.id, eng.monthly_fee, engagementServices || []);
       }, 0);
       return {
         name: c.full_name,
@@ -1038,7 +1067,7 @@ export default function Analytics() {
       topRevenueGenerators,
       freelancerVsEmployee,
     };
-  }, [assignments, colleagues, engagements, periodEnd, periodStart]);
+  }, [assignments, colleagues, engagements, engagementServices, periodEnd, periodStart]);
 
   if (!canSeeAnalytics) {
     return (

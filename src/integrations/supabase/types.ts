@@ -1376,6 +1376,7 @@ export type Database = {
           billing_type: string
           created_at: string | null
           creative_boost_max_credits: number | null
+          creative_boost_fixed_billing: boolean | null
           creative_boost_min_credits: number | null
           creative_boost_price_per_credit: number | null
           creative_boost_reward_per_credit_banner: number | null
@@ -1403,6 +1404,7 @@ export type Database = {
           billing_type: string
           created_at?: string | null
           creative_boost_max_credits?: number | null
+          creative_boost_fixed_billing?: boolean | null
           creative_boost_min_credits?: number | null
           creative_boost_price_per_credit?: number | null
           creative_boost_reward_per_credit_banner?: number | null
@@ -1430,6 +1432,7 @@ export type Database = {
           billing_type?: string
           created_at?: string | null
           creative_boost_max_credits?: number | null
+          creative_boost_fixed_billing?: boolean | null
           creative_boost_min_credits?: number | null
           creative_boost_price_per_credit?: number | null
           creative_boost_reward_per_credit_banner?: number | null

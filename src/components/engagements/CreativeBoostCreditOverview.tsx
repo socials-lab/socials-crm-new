@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +25,8 @@ interface CreativeBoostCreditOverviewProps {
   year: number;
   month: number;
   canSeeFinancials: boolean;
-  onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number }) => void;
+  assignedColleagueAssignmentId?: string;
+  onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number; fixedBilling?: boolean }) => void;
   onDelete: () => void;
 }
 
@@ -36,6 +38,7 @@ export function CreativeBoostCreditOverview({
   year, 
   month,
   canSeeFinancials,
+  assignedColleagueAssignmentId: _assignedColleagueAssignmentId,
   onUpdateSettings,
   onDelete
 }: CreativeBoostCreditOverviewProps) {
@@ -44,6 +47,7 @@ export function CreativeBoostCreditOverview({
   const [isEditing, setIsEditing] = useState(false);
   const [tempMaxCredits, setTempMaxCredits] = useState('');
   const [tempPricePerCredit, setTempPricePerCredit] = useState('');
+  const [tempFixedBilling, setTempFixedBilling] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const maxCredits = engagementService.creative_boost_max_credits ?? 0;
@@ -57,6 +61,7 @@ export function CreativeBoostCreditOverview({
     e.stopPropagation();
     setTempMaxCredits(String(maxCredits));
     setTempPricePerCredit(String(pricePerCredit));
+    setTempFixedBilling(engagementService.creative_boost_fixed_billing !== false);
     setIsEditing(true);
   };
   
@@ -65,6 +70,7 @@ export function CreativeBoostCreditOverview({
     onUpdateSettings({
       maxCredits: parseInt(tempMaxCredits) || 0,
       pricePerCredit: parseFloat(tempPricePerCredit) || 0,
+      fixedBilling: tempFixedBilling,
     });
     setIsEditing(false);
   };
@@ -86,6 +92,9 @@ export function CreativeBoostCreditOverview({
             <span className="text-sm font-medium">Creative Boost</span>
             <Badge variant="outline" className="text-[10px] h-5">
               {MONTH_NAMES[month - 1]} {year}
+            </Badge>
+            <Badge variant={engagementService.creative_boost_fixed_billing !== false ? 'secondary' : 'outline'} className="text-[10px] h-5">
+              {engagementService.creative_boost_fixed_billing !== false ? 'Fixní' : 'Dle čerpání'}
             </Badge>
           </div>
           <div className="flex items-center gap-1">
@@ -119,7 +128,21 @@ export function CreativeBoostCreditOverview({
         
         {/* Settings edit mode - only for users with financial access */}
         {isEditing && canSeeFinancials && (
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-background border">
+          <div className="p-2 rounded-lg bg-background border space-y-2">
+            <div className="flex items-center justify-between pt-1 border-t">
+              <div className="space-y-0.5">
+                <span className="text-xs font-medium">Fixní fakturace</span>
+                <p className="text-[10px] text-muted-foreground">
+                  {tempFixedBilling ? 'Platí celý balíček' : 'Platí dle čerpání'}
+                </p>
+              </div>
+              <Switch
+                checked={tempFixedBilling}
+                onCheckedChange={setTempFixedBilling}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+            <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-muted-foreground">Max:</span>
               <Input
@@ -160,6 +183,7 @@ export function CreativeBoostCreditOverview({
             >
               <X className="h-3.5 w-3.5" />
             </Button>
+            </div>
           </div>
         )}
         
@@ -197,6 +221,19 @@ export function CreativeBoostCreditOverview({
             )}
           </div>
         </div>
+
+        {/* Invoiced amount */}
+        {canSeeFinancials && (
+          <div className="flex items-center justify-between pt-1 border-t">
+            <span className="text-xs text-muted-foreground">Fakturovaná částka</span>
+            <span className="text-xs font-semibold text-foreground">
+              {(maxCredits * pricePerCredit).toLocaleString()} Kč
+              <span className="font-normal text-muted-foreground ml-1">
+                ({maxCredits} kr × {pricePerCredit.toLocaleString()} Kč)
+              </span>
+            </span>
+          </div>
+        )}
         
         {/* Footer */}
         <div className="flex items-center justify-between pt-1">

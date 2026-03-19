@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,7 @@ const engagementServiceSchema = z.object({
   creative_boost_min_credits: z.coerce.number().nullable(),
   creative_boost_max_credits: z.coerce.number().nullable(),
   creative_boost_price_per_credit: z.coerce.number().nullable(),
+  creative_boost_fixed_billing: z.boolean(),
   creative_boost_reward_per_credit_banner: z.coerce.number().nullable(),
   creative_boost_reward_per_credit_video: z.coerce.number().nullable(),
 });
@@ -128,6 +130,7 @@ export function AddEngagementServiceDialog({
       creative_boost_min_credits: null,
       creative_boost_max_credits: null,
       creative_boost_price_per_credit: null,
+      creative_boost_fixed_billing: true,
       creative_boost_reward_per_credit_banner: null,
       creative_boost_reward_per_credit_video: null,
     },
@@ -150,6 +153,7 @@ export function AddEngagementServiceDialog({
         creative_boost_min_credits: existingService.creative_boost_min_credits,
         creative_boost_max_credits: existingService.creative_boost_max_credits,
         creative_boost_price_per_credit: existingService.creative_boost_price_per_credit,
+        creative_boost_fixed_billing: existingService.creative_boost_fixed_billing !== false,
         creative_boost_reward_per_credit_banner: existingService.creative_boost_reward_per_credit_banner,
         creative_boost_reward_per_credit_video: existingService.creative_boost_reward_per_credit_video,
       });
@@ -167,6 +171,7 @@ export function AddEngagementServiceDialog({
       creative_boost_min_credits: null,
       creative_boost_max_credits: null,
       creative_boost_price_per_credit: null,
+      creative_boost_fixed_billing: true,
       creative_boost_reward_per_credit_banner: null,
       creative_boost_reward_per_credit_video: null,
     });
@@ -267,6 +272,7 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_min_credits', 0);
         form.setValue('creative_boost_max_credits', 50);
         form.setValue('creative_boost_price_per_credit', 400);
+        form.setValue('creative_boost_fixed_billing', true);
         form.setValue('creative_boost_reward_per_credit_banner', 80);
         form.setValue('creative_boost_reward_per_credit_video', 80);
         form.setValue('price', 0);
@@ -276,6 +282,7 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_min_credits', null);
         form.setValue('creative_boost_max_credits', null);
         form.setValue('creative_boost_price_per_credit', null);
+        form.setValue('creative_boost_fixed_billing', true);
         form.setValue('creative_boost_reward_per_credit_banner', null);
         form.setValue('creative_boost_reward_per_credit_video', null);
         form.setValue('selected_tier', 'growth'); // Default to GROWTH
@@ -296,6 +303,7 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_min_credits', null);
         form.setValue('creative_boost_max_credits', null);
         form.setValue('creative_boost_price_per_credit', null);
+        form.setValue('creative_boost_fixed_billing', true);
         form.setValue('creative_boost_reward_per_credit_banner', null);
         form.setValue('creative_boost_reward_per_credit_video', null);
         form.setValue('selected_tier', null);
@@ -381,6 +389,7 @@ export function AddEngagementServiceDialog({
           creative_boost_min_credits: data.creative_boost_min_credits,
           creative_boost_max_credits: data.creative_boost_max_credits,
           creative_boost_price_per_credit: data.creative_boost_price_per_credit,
+          creative_boost_fixed_billing: data.creative_boost_fixed_billing,
           creative_boost_reward_per_credit_banner: data.creative_boost_reward_per_credit_banner,
           creative_boost_reward_per_credit_video: data.creative_boost_reward_per_credit_video,
           // One-off invoicing tracking
@@ -523,9 +532,28 @@ export function AddEngagementServiceDialog({
                 />
 
                 <div className="pt-2 border-t space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="creative_boost_fixed_billing"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-sm font-medium">Fixní fakturace</FormLabel>
+                          <FormDescription className="text-xs">
+                            {field.value
+                              ? 'Klient platí celý balíček bez ohledu na čerpání'
+                              : 'Klient platí pouze dle skutečně vyčerpaných kreditů'}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                   <div>
                     <p className="text-sm font-medium">
-                      Měsíční fakturace: {' '}
+                      {form.watch('creative_boost_fixed_billing') ? 'Měsíční fakturace (fixní):' : 'Max. měsíční fakturace (dle čerpání):'}{' '}
                       <span className="text-primary">
                         {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)).toLocaleString('cs-CZ')} {engagementCurrency}
                       </span>

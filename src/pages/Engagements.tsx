@@ -63,8 +63,6 @@ import { EditAssignmentDialog } from '@/components/engagements/EditAssignmentDia
 import { serviceTierConfigs } from '@/constants/services';
 import { MANAGED_COUNTRIES, getCountryFlag } from '@/constants/countries';
 
-// Default reward per credit when not configured in assignment
-const DEFAULT_REWARD_PER_CREDIT = 80;
 import type { EngagementStatus, EngagementType, Engagement, EngagementAssignment, EngagementService, ServiceTier, Service } from '@/types/crm';
 import { ADVERTISING_PLATFORMS } from '@/types/crm';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -75,6 +73,7 @@ import { normalizeUrlProtocol } from '@/lib/validation';
 import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 import { isEngagementServiceActiveInMonth } from '@/lib/engagementServiceLifecycle';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
+import { getCreativeBoostExpectedMonthlyRevenue } from '@/utils/engagementRevenueUtils';
 
 // Dynamic lookup for Creative Boost service ID
 const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
@@ -104,6 +103,20 @@ function withPromiseTimeout<T>(promise: Promise<T>, timeoutMs: number, label: st
       setTimeout(() => reject(new Error(`${label} timeout after ${timeoutMs}ms`)), timeoutMs);
     }),
   ]);
+}
+
+function getCreativeBoostEstimatedPayrollCost(service: EngagementService): number {
+  if (service.creative_boost_max_credits === null) {
+    throw new Error(`Creative Boost service ${service.id} is missing max credits.`);
+  }
+  if (
+    service.creative_boost_reward_per_credit_banner === null ||
+    service.creative_boost_reward_per_credit_video === null
+  ) {
+    throw new Error(`Creative Boost service ${service.id} is missing reward per credit configuration.`);
+  }
+  const averageReward = (service.creative_boost_reward_per_credit_banner + service.creative_boost_reward_per_credit_video) / 2;
+  return service.creative_boost_max_credits * averageReward;
 }
 
 const getTierPrice = (service: Service | undefined, tier: ServiceTier): number | null => {
@@ -615,15 +628,8 @@ function EngagementsContent() {
           const totalServicesAmount = engagementServicesList
             .filter((service) => isEngagementServiceActiveInMonth(service, filterYear, filterMonth))
             .reduce((sum, s) => {
-              // For Creative Boost, calculate from USED credits for the FILTERED month only
               if (isCreativeBoostEngagementService(s, CREATIVE_BOOST_SERVICE_ID)) {
-                const cbSummary = getClientMonthSummaryByEngagementServiceId(s.id, filterYear, filterMonth);
-                // If there's summary data for this month, use estimated invoice
-                if (cbSummary) {
-                  return sum + cbSummary.estimatedInvoice;
-                }
-                // If no data for this month, return 0 (not fallback to max)
-                return sum;
+                return sum + getCreativeBoostExpectedMonthlyRevenue(s);
               }
               return sum + s.price;
             }, 0);
@@ -786,17 +792,23 @@ function EngagementsContent() {
                       .filter((service) => isEngagementServiceActiveInMonth(service, filterYear, filterMonth))
                       .reduce((sum, s) => {
                         if (isCreativeBoostEngagementService(s, CREATIVE_BOOST_SERVICE_ID)) {
-                          const cbSummary = getClientMonthSummaryByEngagementServiceId(s.id, filterYear, filterMonth);
-                          return cbSummary ? sum + cbSummary.estimatedInvoice : sum;
+                          return sum + getCreativeBoostExpectedMonthlyRevenue(s);
                         }
                         return sum + s.price;
                       }, 0);
+                    const estimatedCbCost = engServices
+                      .filter((service) =>
+                        isEngagementServiceActiveInMonth(service, filterYear, filterMonth) &&
+                        isCreativeBoostEngagementService(service, CREATIVE_BOOST_SERVICE_ID),
+                      )
+                      .reduce((sum, service) => sum + getCreativeBoostEstimatedPayrollCost(service), 0);
 
                     return (
                       <EngagementFinancialOverview
                         revenue={totalRevenue}
                         assignments={engAssignments}
                         currency={engagement.currency}
+                        estimatedCbCost={estimatedCbCost}
                       />
                     );
                   })()}
@@ -956,6 +968,7 @@ function EngagementsContent() {
                                         updateEngagementService(engService.id, { 
                                           creative_boost_max_credits: updates.maxCredits,
                                           creative_boost_price_per_credit: updates.pricePerCredit,
+                                          ...(updates.fixedBilling !== undefined && { creative_boost_fixed_billing: updates.fixedBilling }),
                                         });
                                         // Also update Creative Boost client month if exists
                                         const eng = engagements.find(e => e.id === engService.engagement_id);
@@ -1146,8 +1159,14 @@ function EngagementsContent() {
                                             ? engagementServices.find(es => es.id === assignment.engagement_service_id)
                                             : null;
                                           if (service && isCreativeBoostEngagementService(service, CREATIVE_BOOST_SERVICE_ID)) {
-                                            const bannerReward = service.creative_boost_reward_per_credit_banner ?? DEFAULT_REWARD_PER_CREDIT;
-                                            const videoReward = service.creative_boost_reward_per_credit_video ?? DEFAULT_REWARD_PER_CREDIT;
+                                            if (
+                                              service.creative_boost_reward_per_credit_banner === null ||
+                                              service.creative_boost_reward_per_credit_video === null
+                                            ) {
+                                              return 'Chybí B/V odměna';
+                                            }
+                                            const bannerReward = service.creative_boost_reward_per_credit_banner;
+                                            const videoReward = service.creative_boost_reward_per_credit_video;
                                             if (bannerReward === videoReward) {
                                               return `${bannerReward} Kč/kredit`;
                                             }
@@ -1708,6 +1727,7 @@ function EngagementsContent() {
                 creative_boost_min_credits: data.creative_boost_min_credits,
                 creative_boost_max_credits: data.creative_boost_max_credits,
                 creative_boost_price_per_credit: data.creative_boost_price_per_credit,
+                creative_boost_fixed_billing: data.creative_boost_fixed_billing,
                 creative_boost_reward_per_credit_banner: data.creative_boost_reward_per_credit_banner,
                 creative_boost_reward_per_credit_video: data.creative_boost_reward_per_credit_video,
                 upsold_by_id: data.upsold_by_id,

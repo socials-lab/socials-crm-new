@@ -44,6 +44,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
 import { getTargetForMonth, calculateActualRevenue, formatCurrencyShort } from '@/utils/businessPlanUtils';
+import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
 import { supabase } from '@/integrations/supabase/client';
 import type { LucideIcon } from 'lucide-react';
 
@@ -397,7 +398,10 @@ export default function Dashboard() {
     const topClients = activeClients
       .map(client => {
         const clientEngagements = engagements.filter(e => e.client_id === client.id && e.status === 'active');
-        const totalMonthly = clientEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        const totalMonthly = clientEngagements.reduce(
+          (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
+          0,
+        );
         return { ...client, totalMonthly };
       })
       .sort((a, b) => b.totalMonthly - a.totalMonthly)
@@ -409,7 +413,7 @@ export default function Dashboard() {
     const concentration = totalRevenue > 0 ? (top5Revenue / metrics.mrr * 100) : 0;
     
     return { atRisk, topClients, concentration };
-  }, [clients, engagements, metrics.mrr]);
+  }, [clients, engagements, engagementServices, metrics.mrr]);
 
   // === TEAM ===
   const upcomingBirthdays = getUpcomingBirthdays(colleagues, 14);
@@ -515,8 +519,8 @@ export default function Dashboard() {
       totalValue: requests
         .filter(r => ['pending', 'approved', 'client_approved'].includes(r.status))
         .reduce((sum, r) => {
-          const changes = r.proposed_changes as any;
-          return sum + (changes?.price || changes?.new_price || 0);
+          const changes = r.proposed_changes as { price?: number; new_price?: number } | null;
+          return sum + (changes?.price ?? changes?.new_price ?? 0);
         }, 0),
     };
   }, [pendingRequests]);
@@ -542,7 +546,10 @@ export default function Dashboard() {
       .filter(c => c.status === 'active' && c.start_date && isAfter(parseISO(c.start_date), threeMonthsAgo))
       .map(client => {
         const clientEngagements = engagements.filter(e => e.client_id === client.id && e.status === 'active');
-        const totalMonthly = clientEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        const totalMonthly = clientEngagements.reduce(
+          (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
+          0,
+        );
         const engagementNames = clientEngagements.map(e => e.name).join(', ');
         const startDate = parseISO(client.start_date!);
         const timeAgo = formatDistanceToNow(startDate, { locale: cs, addSuffix: true });
@@ -552,7 +559,7 @@ export default function Dashboard() {
       .slice(0, 5);
     
     return realClients;
-  }, [clients, engagements]);
+  }, [clients, engagements, engagementServices]);
 
   // === ENDING ENGAGEMENTS (next 60 days) ===
   const endingEngagements = useMemo(() => {

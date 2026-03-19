@@ -75,6 +75,18 @@ const createEmptyItem = (currency: string): InvoiceItemDraft => ({
   isAmountManual: true,
 });
 
+function getServiceSuggestedInvoiceAmount(service: EngagementService): number {
+  const hasCreativeBoostPricing =
+    service.creative_boost_price_per_credit !== null || service.creative_boost_max_credits !== null;
+  if (!hasCreativeBoostPricing) {
+    return service.price;
+  }
+  if (service.creative_boost_price_per_credit === null || service.creative_boost_max_credits === null) {
+    throw new Error(`Creative Boost service ${service.id} is missing max credits or price per credit.`);
+  }
+  return service.creative_boost_max_credits * service.creative_boost_price_per_credit;
+}
+
 export function CreateInvoiceFromEngagementDialog({
   open,
   onOpenChange,
@@ -179,7 +191,7 @@ export function CreateInvoiceFromEngagementDialog({
           description: `${s.name} - ${periodLabel}`,
           hours: '',
           hourlyRate: '',
-          amount: s.price.toString(),
+          amount: getServiceSuggestedInvoiceAmount(s).toString(),
           currency: engagementCurrency,
           isReverseCharge: false,
           isAmountManual: true,
