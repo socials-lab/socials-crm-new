@@ -203,8 +203,21 @@ export function CreativeBoostCreditOverview({
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
-              </div>
             </div>
+            <div className="flex items-center justify-between pt-1 border-t">
+              <div className="space-y-0.5">
+                <span className="text-xs font-medium">Fixní fakturace</span>
+                <p className="text-[10px] text-muted-foreground">
+                  {tempFixedBilling ? 'Platí celý balíček' : 'Platí dle čerpání'}
+                </p>
+              </div>
+              <Switch
+                checked={tempFixedBilling}
+                onCheckedChange={setTempFixedBilling}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
           </div>
         )}
         
