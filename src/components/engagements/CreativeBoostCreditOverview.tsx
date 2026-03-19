@@ -68,6 +68,7 @@ export function CreativeBoostCreditOverview({
     setTempPricePerCredit(String(pricePerCredit));
     setTempBannerReward(String(rewards.bannerRewardPerCredit));
     setTempVideoReward(String(rewards.videoRewardPerCredit));
+    setTempFixedBilling(engagementService.creative_boost_fixed_billing ?? true);
     setIsEditing(true);
   };
   
