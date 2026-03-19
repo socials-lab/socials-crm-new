@@ -102,6 +102,9 @@ export function CreativeBoostCreditOverview({
             <Badge variant="outline" className="text-[10px] h-5">
               {MONTH_NAMES[month - 1]} {year}
             </Badge>
+            <Badge variant={engagementService.creative_boost_fixed_billing !== false ? 'secondary' : 'outline'} className="text-[10px] h-5">
+              {engagementService.creative_boost_fixed_billing !== false ? 'Fixní' : 'Dle čerpání'}
+            </Badge>
           </div>
           <div className="flex items-center gap-1">
             {canSeeFinancials && (
