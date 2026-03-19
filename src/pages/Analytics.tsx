@@ -15,6 +15,7 @@ import { PeriodSelector, type PeriodMode } from '@/components/analytics/PeriodSe
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
 
 import { format, subMonths, startOfMonth, endOfMonth, differenceInDays, differenceInMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
