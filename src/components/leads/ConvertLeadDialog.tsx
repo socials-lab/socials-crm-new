@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -30,11 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toDateOnlyString, toNullableNumber } from '@/lib/dbNormalize';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import type { Lead, CostModel, ClientTier } from '@/types/crm';
+import type { Lead, CostModel, ClientTier, ServiceRewardRole, ServiceRewardTierConfig } from '@/types/crm';
 import { toast } from 'sonner';
 
 const convertSchema = z.object({
@@ -63,6 +64,8 @@ interface TeamMember {
   monthly_cost: number;
   hourly_cost: number;
   percentage_of_revenue: number;
+  // Marks this row as auto-proposed from a concrete service.
+  _serviceIndex?: number;
 }
 
 interface ConvertLeadDialogProps {
@@ -73,7 +76,7 @@ interface ConvertLeadDialogProps {
 }
 
 export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: ConvertLeadDialogProps) {
-  const { colleagues } = useCRMData();
+  const { colleagues, services } = useCRMData();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -99,6 +102,23 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
     },
   });
 
+  function getRewardRolesForTier(
+    rewardConfig: ServiceRewardTierConfig[] | null | undefined,
+    tier: string | null | undefined
+  ): ServiceRewardRole[] {
+    if (!rewardConfig || rewardConfig.length === 0) return [];
+
+    if (tier) {
+      const match = rewardConfig.find(cfg => cfg.tier?.toLowerCase() === tier.toLowerCase());
+      if (match?.roles?.length) return match.roles;
+    }
+
+    const noTier = rewardConfig.find(cfg => !cfg.tier);
+    if (noTier?.roles?.length) return noTier.roles;
+
+    return [];
+  }
+
   // Reset form when lead changes
   useEffect(() => {
     if (lead && open) {
@@ -120,9 +140,36 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         notice_period_months: 3,
         engagement_notes: lead.summary,
       });
-      setTeamMembers([]);
+
+      const suggestedTeam: TeamMember[] = [];
+      for (const [serviceIndex, leadService] of (lead.potential_services || []).entries()) {
+        const catalogService = services.find(s => s.id === leadService.service_id);
+        if (!catalogService?.reward_config?.length) continue;
+
+        const matchedRoles = getRewardRolesForTier(catalogService.reward_config, leadService.selected_tier);
+        for (const role of matchedRoles) {
+          const costModel: CostModel = role.reward_type === 'hourly' ? 'hourly' : 'fixed_monthly';
+          const monthlyCost = role.reward_type === 'fixed_monthly'
+            ? role.reward
+            : role.reward_type === 'per_credit'
+              ? role.reward * 30
+              : 0;
+
+          suggestedTeam.push({
+            colleague_id: '',
+            role: role.role,
+            cost_model: costModel,
+            monthly_cost: monthlyCost,
+            hourly_cost: role.reward_type === 'hourly' ? role.reward : 0,
+            percentage_of_revenue: 0,
+            _serviceIndex: serviceIndex,
+          });
+        }
+      }
+
+      setTeamMembers(suggestedTeam);
     }
-  }, [lead, open, form]);
+  }, [lead, open, form, services]);
 
   const addTeamMember = () => {
     setTeamMembers(prev => [...prev, {
@@ -401,6 +448,16 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
   // Check if lead has at least one service
   const hasServices = (lead.potential_services?.length ?? 0) > 0;
+  const hasSuggestedTeam = teamMembers.some(member => member._serviceIndex !== undefined);
+
+  const monthlyRevenue = monthlyTotal > 0 ? monthlyTotal : 0;
+  const totalTeamCost = teamMembers.reduce((sum, member) => {
+    if (member.cost_model === 'fixed_monthly') return sum + (member.monthly_cost || 0);
+    if (member.cost_model === 'hourly') return sum + ((member.hourly_cost || 0) * 160 / 12);
+    if (member.cost_model === 'percentage') return sum + (monthlyRevenue * (member.percentage_of_revenue || 0) / 100);
+    return sum;
+  }, 0);
+  const margin = monthlyRevenue > 0 ? ((monthlyRevenue - totalTeamCost) / monthlyRevenue) * 100 : 0;
 
   // Count contacts that will be created
   const totalContacts = 1 + // Primary contact
@@ -565,7 +622,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   <div className="pt-2 border-t space-y-1">
                     {monthlyTotal > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Měsíční celkem:</span>
+                        <span className="text-muted-foreground">Předběžná cena (měsíčně):</span>
                         <span className="font-medium">{monthlyTotal.toLocaleString('cs-CZ')} {currency}/měsíc</span>
                       </div>
                     )}
@@ -844,7 +901,15 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             {/* Team Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
-                <h4 className="font-medium text-sm">Tým na zakázce</h4>
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  Tým na zakázce
+                  {hasSuggestedTeam && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      Navrženo automaticky
+                    </Badge>
+                  )}
+                </h4>
                 <Button type="button" variant="outline" size="sm" onClick={addTeamMember}>
                   <Plus className="h-4 w-4 mr-1" />
                   Přidat člena
@@ -939,6 +1004,37 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 </div>
               ))}
             </div>
+
+            {/* Margin warning */}
+            {monthlyRevenue > 0 && totalTeamCost > 0 && (
+              <div className={`p-3 rounded-lg border flex items-start gap-2 ${
+                margin >= 66 ? 'bg-green-500/10 border-green-500/30' :
+                margin >= 50 ? 'bg-yellow-500/10 border-yellow-500/30' :
+                'bg-red-500/10 border-red-500/30'
+              }`}>
+                {margin < 66 && (
+                  <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${margin >= 50 ? 'text-yellow-600' : 'text-red-600'}`} />
+                )}
+                <div className="text-sm space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Odhadovaná marže:</span>
+                    <span className={`font-bold ${
+                      margin >= 66 ? 'text-green-600' : margin >= 50 ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
+                      {margin.toFixed(1)} %
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({monthlyRevenue.toLocaleString('cs-CZ')} – {Math.round(totalTeamCost).toLocaleString('cs-CZ')} = {Math.round(monthlyRevenue - totalTeamCost).toLocaleString('cs-CZ')} Kč)
+                    </span>
+                  </div>
+                  {margin < 66 && (
+                    <p className="text-xs text-muted-foreground">
+                      ⚠️ Minimální cílová marže je 66 %. Zvažte úpravu ceny nebo snížení interních nákladů.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isConverting}>

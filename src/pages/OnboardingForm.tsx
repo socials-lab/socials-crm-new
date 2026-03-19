@@ -139,38 +139,6 @@ const onboardingSchema = z.object({
 
 type OnboardingFormData = z.infer<typeof onboardingSchema>;
 
-// Mock lead pro testování (odpovídá TEST_OFFER v publicOffersMockData.ts)
-const TEST_LEAD = {
-  id: 'test-lead',
-  company_name: 'Testovací Firma s.r.o.',
-  ico: '12345678',
-  dic: 'CZ12345678',
-  website: 'https://www.example-eshop.cz',
-  industry: 'E-commerce',
-  contact_name: 'Jan Novák',
-  contact_email: 'jan.novak@example.cz',
-  contact_phone: '+420 123 456 789',
-  contact_position: 'Jednatel',
-  billing_street: 'Václavské náměstí 1',
-  billing_city: 'Praha',
-  billing_zip: '11000',
-  billing_country: 'Česká republika',
-  billing_email: 'fakturace@example.cz',
-  stage: 'offer_sent' as const,
-  owner_id: 'test-owner',
-  owner_name: 'Petr Svoboda',
-  owner_email: 'petr.svoboda@socials.cz',
-  source: 'website' as const,
-  potential_services: [
-    { id: 'svc-1', name: 'Meta Ads Management', price: 25000, currency: 'CZK', billing_type: 'monthly' as const, selected_tier: 'pro' as const },
-    { id: 'svc-2', name: 'Google Ads PPC', price: 18000, currency: 'CZK', billing_type: 'monthly' as const, selected_tier: 'growth' as const },
-    { id: 'svc-3', name: 'Kreativní produkce', price: 15000, currency: 'CZK', billing_type: 'monthly' as const, selected_tier: 'pro' as const },
-    { id: 'svc-4', name: 'Úvodní Audit & Strategie', price: 12000, currency: 'CZK', billing_type: 'one_off' as const, selected_tier: null },
-  ],
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
 export default function OnboardingForm() {
   const { leadId } = useParams<{ leadId: string }>();
   const { lookupCompany, isLoading: isAresLoading } = useAresLookup();
@@ -228,37 +196,6 @@ export default function OnboardingForm() {
     async function fetchLead() {
       if (!leadId) {
         setLeadNotFound(true);
-        setIsLoading(false);
-        return;
-      }
-
-      // Handle test lead for development
-      if (leadId === 'test-lead') {
-        const testLead = TEST_LEAD as unknown as OnboardingLead;
-        setLead(testLead);
-        setOriginalIco(testLead.ico);
-        form.reset({
-          company_name: testLead.company_name,
-          ico: testLead.ico,
-          dic: testLead.dic || '',
-          website: testLead.website || '',
-          industry: testLead.industry || '',
-          billing_street: testLead.billing_street || '',
-          billing_city: testLead.billing_city || '',
-          billing_zip: testLead.billing_zip || '',
-          billing_country: testLead.billing_country || 'Česká republika',
-          billing_email: testLead.billing_email || '',
-          signatories: [{
-            name: testLead.contact_name,
-            position: testLead.contact_position || '',
-            email: testLead.contact_email || '',
-            phone: testLead.contact_phone || '',
-          }],
-          useSignatoriesForProject: true,
-          projectContacts: [],
-          startDate: startOfMonth(addMonths(new Date(), 1)),
-          orderConfirmed: false,
-        });
         setIsLoading(false);
         return;
       }

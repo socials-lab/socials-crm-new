@@ -12,13 +12,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Copy, ExternalLink, Check } from 'lucide-react';
+import { Loader2, Copy, ExternalLink, Check, TrendingUp } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
-import type { Service, ServiceTier } from '@/types/crm';
+import type { Service, ServiceTier, ServiceRewardRole, ServiceRewardTierConfig } from '@/types/crm';
 import { supabase } from '@/integrations/supabase/client';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { getServiceDetail } from '@/constants/serviceDetails';
@@ -75,6 +75,23 @@ function getOfferTypeFromServices(services: Array<{ billing_type: 'monthly' | 'o
   const hasOneOff = services.some(s => s.billing_type === 'one_off');
   if (hasMonthly && hasOneOff) return 'retainer'; // Mixed: default to retainer
   return hasMonthly ? 'retainer' : 'one_off';
+}
+
+function getRewardRolesForTier(
+  rewardConfig: ServiceRewardTierConfig[] | null | undefined,
+  tier: string | null | undefined
+): ServiceRewardRole[] {
+  if (!rewardConfig || rewardConfig.length === 0) return [];
+
+  if (tier) {
+    const tierMatch = rewardConfig.find(cfg => cfg.tier?.toLowerCase() === tier.toLowerCase());
+    if (tierMatch?.roles?.length) return tierMatch.roles;
+  }
+
+  const noTierMatch = rewardConfig.find(cfg => !cfg.tier);
+  if (noTierMatch?.roles?.length) return noTierMatch.roles;
+
+  return [];
 }
 
 // Default portfolio links that can be added
@@ -149,7 +166,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     }
   }, [open, lead.potential_services, services]);
 
-  // Calculate totals
+  // Calculate totals and profitability estimate
   const totals = useMemo(() => {
     const coreMonthly = editableServices
       .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
@@ -176,6 +193,30 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
       ? discountedBase
       : discountedBase + addonMonthly;
 
+    let totalInternalCost = 0;
+    const serviceCosts: { name: string; cost: number; roles: { role: string; reward: number }[] }[] = [];
+    for (const editableService of editableServices) {
+      const catalogService = services.find(service => service.id === editableService.service_id);
+      if (!catalogService?.reward_config?.length) continue;
+
+      const matchedRoles = getRewardRolesForTier(catalogService.reward_config, editableService.selected_tier);
+      if (matchedRoles.length === 0) continue;
+
+      let serviceCost = 0;
+      const roles: { role: string; reward: number }[] = [];
+      for (const role of matchedRoles) {
+        const reward = role.reward_type === 'per_credit' ? role.reward * 30 : role.reward;
+        serviceCost += reward;
+        roles.push({ role: role.role, reward });
+      }
+
+      totalInternalCost += serviceCost;
+      serviceCosts.push({ name: editableService.name, cost: serviceCost, roles });
+    }
+
+    const revenue = monthlyAfterDiscount;
+    const margin = revenue > 0 ? ((revenue - totalInternalCost) / revenue) * 100 : 0;
+
     return {
       monthly,
       coreMonthly,
@@ -186,8 +227,11 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
       totalDiscount,
       monthlyAfterDiscount,
       monthlyDiscountAmount,
+      totalInternalCost,
+      serviceCosts,
+      margin,
     };
-  }, [editableServices, monthlyDiscountPercent, discountScope]);
+  }, [editableServices, monthlyDiscountPercent, discountScope, services]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
     setEditableServices(prev =>
@@ -474,6 +518,58 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                           <span className="font-medium">
                             -{totals.totalDiscount.toLocaleString('cs-CZ')} {lead.currency}
                           </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Profitability / internal costs */}
+                  {editableServices.length > 0 && totals.totalInternalCost > 0 && (
+                    <div className="p-3 rounded-lg border border-dashed space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>Interní ekonomika (odhad)</span>
+                      </div>
+
+                      {totals.serviceCosts.map((serviceCost, index) => (
+                        <div key={index} className="text-xs space-y-0.5">
+                          <div className="flex items-center justify-between text-muted-foreground">
+                            <span>{serviceCost.name}</span>
+                            <span>{serviceCost.cost.toLocaleString('cs-CZ')} Kč</span>
+                          </div>
+                          {serviceCost.roles.map((roleCost, roleIndex) => (
+                            <div key={roleIndex} className="flex items-center justify-between pl-3 text-muted-foreground/70">
+                              <span>{roleCost.role}</span>
+                              <span>{roleCost.reward.toLocaleString('cs-CZ')} Kč</span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+
+                      <Separator />
+
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Interní náklady celkem:</span>
+                        <span className="font-medium">{totals.totalInternalCost.toLocaleString('cs-CZ')} Kč/měs</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Odhadovaná marže:</span>
+                        <span className={`font-bold ${
+                          totals.margin >= 66 ? 'text-green-600' :
+                          totals.margin >= 50 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {totals.margin.toFixed(1)} %
+                          <span className="font-normal text-xs ml-1">
+                            ({Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč)
+                          </span>
+                        </span>
+                      </div>
+                      {totals.margin < 66 && (
+                        <div className="flex items-center gap-2 p-2 rounded bg-red-500/10 border border-red-500/20 mt-1">
+                          <TrendingUp className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                          <p className="text-xs text-red-700 dark:text-red-400">
+                            ⚠️ Marže je pod minimální cílovou hodnotou 66 %. Zvažte úpravu ceny nebo rozsahu služeb.
+                          </p>
                         </div>
                       )}
                     </div>

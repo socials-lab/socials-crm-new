@@ -43,7 +43,6 @@ import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
 import socialsLogo from '@/assets/socials-logo.png';
 import { supabase } from '@/integrations/supabase/client';
-import { TEST_OFFER, ADDON_ONLY_OFFER } from '@/data/publicOffersMockData';
 
 // Portfolio icon by type
 function getPortfolioIcon(type: PortfolioLink['type']) {
@@ -491,18 +490,6 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
       // Check for invalid/placeholder tokens
       if (!token || token === ':token' || token.length < 3) {
         setError('Neplatný odkaz na nabídku');
-        setLoading(false);
-        return;
-      }
-
-      // Test offer fallbacks
-      if (token === 'test-nabidka-123') {
-        setOffer(TEST_OFFER);
-        setLoading(false);
-        return;
-      }
-      if (token === 'test-addon-only') {
-        setOffer(ADDON_ONLY_OFFER);
         setLoading(false);
         return;
       }
