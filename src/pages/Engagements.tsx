@@ -409,6 +409,19 @@ function EngagementsContent() {
               return sum + s.price;
             }, 0);
           
+          // Calculate estimated CB cost at 100% credit usage
+          const estimatedCbCost = engagementServicesList
+            .filter(s => s.is_active && (s.service_id === CREATIVE_BOOST_SERVICE_ID || s.creative_boost_max_credits))
+            .reduce((sum, s) => {
+              const maxCredits = s.creative_boost_max_credits || 0;
+              // Find assignment for this CB service to get reward per credit
+              const cbAssignment = engagementAssignments.find(a => a.engagement_service_id === s.id);
+              const rewards = getRewards(cbAssignment?.id ?? null);
+              // Use average of banner/video reward as estimate
+              const avgReward = (rewards.bannerRewardPerCredit + rewards.videoRewardPerCredit) / 2;
+              return sum + (maxCredits * avgReward);
+            }, 0);
+          
           // Use services total if available, otherwise fall back to engagement fees
           const displayAmount = engagementServicesList.length > 0 
             ? totalServicesAmount 
@@ -623,6 +636,7 @@ function EngagementsContent() {
                       revenue={totalServicesAmount}
                       assignments={engagementAssignments}
                       currency={engagement.currency || 'CZK'}
+                      estimatedCbCost={estimatedCbCost}
                     />
                   )}
 

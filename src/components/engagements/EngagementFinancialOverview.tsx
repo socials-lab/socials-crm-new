@@ -1,14 +1,16 @@
-import { TrendingUp, TrendingDown, DollarSign, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Minus, Info } from 'lucide-react';
 import type { EngagementAssignment } from '@/types/crm';
 
 interface EngagementFinancialOverviewProps {
   revenue: number;
   assignments: EngagementAssignment[];
   currency: string;
+  estimatedCbCost?: number; // Estimated CB cost at 100% credit usage
 }
 
-export function EngagementFinancialOverview({ revenue, assignments, currency }: EngagementFinancialOverviewProps) {
-  const totalCost = assignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
+export function EngagementFinancialOverview({ revenue, assignments, currency, estimatedCbCost = 0 }: EngagementFinancialOverviewProps) {
+  const assignmentCost = assignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
+  const totalCost = assignmentCost + estimatedCbCost;
   const margin = revenue - totalCost;
   const marginPercent = revenue > 0 ? ((margin / revenue) * 100) : 0;
 
@@ -25,12 +27,19 @@ export function EngagementFinancialOverview({ revenue, assignments, currency }: 
   };
 
   const MarginIcon = marginPercent >= 40 ? TrendingUp : marginPercent >= 20 ? Minus : TrendingDown;
+  const hasEstimate = estimatedCbCost > 0;
 
   return (
     <div className={`mb-6 p-4 rounded-lg border ${getMarginBg(marginPercent)}`}>
       <h4 className="font-medium text-sm flex items-center gap-2 mb-3">
         <DollarSign className="h-4 w-4 text-muted-foreground" />
         Finanční přehled
+        {hasEstimate && (
+          <span className="text-[10px] font-normal text-muted-foreground flex items-center gap-1">
+            <Info className="h-3 w-3" />
+            vč. odhadu CB při 100% čerpání
+          </span>
+        )}
       </h4>
       <div className="grid grid-cols-3 gap-4">
         <div>
@@ -40,13 +49,18 @@ export function EngagementFinancialOverview({ revenue, assignments, currency }: 
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground mb-1">Náklady</p>
+          <p className="text-xs text-muted-foreground mb-1">Náklady {hasEstimate && '(odhad)'}</p>
           <p className="text-sm font-semibold">
             {totalCost.toLocaleString()} {currency}
           </p>
+          {hasEstimate && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Fixní: {assignmentCost.toLocaleString()} + CB: ~{estimatedCbCost.toLocaleString()} {currency}
+            </p>
+          )}
         </div>
         <div>
-          <p className="text-xs text-muted-foreground mb-1">Marže</p>
+          <p className="text-xs text-muted-foreground mb-1">Marže {hasEstimate && '(odhad)'}</p>
           <p className={`text-sm font-semibold flex items-center gap-1 ${getMarginColor(marginPercent)}`}>
             <MarginIcon className="h-3.5 w-3.5" />
             {margin.toLocaleString()} {currency}
