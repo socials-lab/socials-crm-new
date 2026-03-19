@@ -646,7 +646,7 @@ export default function Analytics() {
       return e.status === 'active' && start <= periodEnd && (!end || end >= periodStart);
     });
 
-    const totalInvoicing = activeEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const totalInvoicing = activeEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     const prevInvoicing = engagements
       .filter(e => {
         if (!e.start_date) return false;
