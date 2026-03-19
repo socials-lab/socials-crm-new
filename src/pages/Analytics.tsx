@@ -284,7 +284,7 @@ export default function Analytics() {
         });
       } else {
         // No services defined, count as engagement fee
-        serviceMap.set('Retainer', (serviceMap.get('Retainer') || 0) + (eng.monthly_fee || 0));
+        serviceMap.set('Retainer', (serviceMap.get('Retainer') || 0) + getEngagementMonthlyRevenue(eng.id, eng.monthly_fee || 0, engagementServices || []));
       }
     });
     
