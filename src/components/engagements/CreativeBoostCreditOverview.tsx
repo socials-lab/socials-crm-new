@@ -79,6 +79,7 @@ export function CreativeBoostCreditOverview({
       pricePerCredit: parseInt(tempPricePerCredit) || 0,
       bannerRewardPerCredit: parseInt(tempBannerReward) || 0,
       videoRewardPerCredit: parseInt(tempVideoReward) || 0,
+      fixedBilling: tempFixedBilling,
     });
     setIsEditing(false);
   };
