@@ -169,7 +169,7 @@ export default function Analytics() {
     });
 
     // MRR calculation
-    const mrr = activeEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const mrr = activeEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     const prevMrr = engagements
       .filter(e => {
         if (!e.start_date) return false;
