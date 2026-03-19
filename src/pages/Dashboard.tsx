@@ -387,7 +387,8 @@ export default function Dashboard() {
   // === NEXT MONTH INVOICING ===
   const nextMonthInvoicing = useMemo(() => {
     const activeEngagements = engagements.filter(e => e.status === 'active');
-    const retainerTotal = activeEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const retainerTotal = activeEngagements.reduce((sum, e) => 
+      sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     
     const extraWorksToInvoice = extraWorks
       ?.filter(w => w.status === 'ready_to_invoice')
