@@ -308,7 +308,7 @@ export default function Analytics() {
         return e.status === 'active' && start <= monthEnd && (!end || end >= monthStart);
       });
       
-      const revenue = monthEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+      const revenue = monthEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
       const margin = calculateAvgMargin(monthEngs, assignments);
 
       return {
