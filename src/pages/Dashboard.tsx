@@ -54,6 +54,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
 import { getTargetForMonth, calculateActualRevenue, formatCurrencyShort } from '@/utils/businessPlanUtils';
+import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
 import type { LucideIcon } from 'lucide-react';
 
 // Helper component for activity rows
