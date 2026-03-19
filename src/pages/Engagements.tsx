@@ -623,6 +623,7 @@ function EngagementsContent() {
                       revenue={totalServicesAmount}
                       assignments={engagementAssignments}
                       currency={engagement.currency || 'CZK'}
+                      engagementServices={engagementServicesList}
                     />
                   )}
 
