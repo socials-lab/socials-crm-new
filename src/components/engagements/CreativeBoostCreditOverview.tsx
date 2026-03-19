@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Palette, ExternalLink, Settings, Trash2, Check, X } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +27,7 @@ interface CreativeBoostCreditOverviewProps {
   month: number;
   canSeeFinancials: boolean;
   assignedColleagueAssignmentId?: string | null; // ID of assignment for reward lookup
-  onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number; bannerRewardPerCredit?: number; videoRewardPerCredit?: number }) => void;
+  onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number; bannerRewardPerCredit?: number; videoRewardPerCredit?: number; fixedBilling?: boolean }) => void;
   onDelete: () => void;
 }
 
@@ -49,6 +50,7 @@ export function CreativeBoostCreditOverview({
   const [tempPricePerCredit, setTempPricePerCredit] = useState('');
   const [tempBannerReward, setTempBannerReward] = useState('');
   const [tempVideoReward, setTempVideoReward] = useState('');
+  const [tempFixedBilling, setTempFixedBilling] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const maxCredits = engagementService.creative_boost_max_credits ?? 0;
@@ -66,6 +68,7 @@ export function CreativeBoostCreditOverview({
     setTempPricePerCredit(String(pricePerCredit));
     setTempBannerReward(String(rewards.bannerRewardPerCredit));
     setTempVideoReward(String(rewards.videoRewardPerCredit));
+    setTempFixedBilling(engagementService.creative_boost_fixed_billing ?? true);
     setIsEditing(true);
   };
   
@@ -76,6 +79,7 @@ export function CreativeBoostCreditOverview({
       pricePerCredit: parseInt(tempPricePerCredit) || 0,
       bannerRewardPerCredit: parseInt(tempBannerReward) || 0,
       videoRewardPerCredit: parseInt(tempVideoReward) || 0,
+      fixedBilling: tempFixedBilling,
     });
     setIsEditing(false);
   };
@@ -97,6 +101,9 @@ export function CreativeBoostCreditOverview({
             <span className="text-sm font-medium">Creative Boost</span>
             <Badge variant="outline" className="text-[10px] h-5">
               {MONTH_NAMES[month - 1]} {year}
+            </Badge>
+            <Badge variant={engagementService.creative_boost_fixed_billing !== false ? 'secondary' : 'outline'} className="text-[10px] h-5">
+              {engagementService.creative_boost_fixed_billing !== false ? 'Fixní' : 'Dle čerpání'}
             </Badge>
           </div>
           <div className="flex items-center gap-1">
@@ -199,8 +206,21 @@ export function CreativeBoostCreditOverview({
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
-              </div>
             </div>
+            <div className="flex items-center justify-between pt-1 border-t">
+              <div className="space-y-0.5">
+                <span className="text-xs font-medium">Fixní fakturace</span>
+                <p className="text-[10px] text-muted-foreground">
+                  {tempFixedBilling ? 'Platí celý balíček' : 'Platí dle čerpání'}
+                </p>
+              </div>
+              <Switch
+                checked={tempFixedBilling}
+                onCheckedChange={setTempFixedBilling}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
           </div>
         )}
         

@@ -179,6 +179,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     creative_boost_max_credits: 50,
     creative_boost_min_credits: 30,
     creative_boost_price_per_credit: 400,
+    creative_boost_fixed_billing: true,
     invoicing_status: null,
     invoiced_at: null,
     invoiced_in_period: null,

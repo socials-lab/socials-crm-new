@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
+import { Switch } from '@/components/ui/switch';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, getDaysInMonth, differenceInDays, startOfMonth, endOfMonth, isFirstDayOfMonth } from 'date-fns';
@@ -59,6 +60,7 @@ const engagementServiceSchema = z.object({
   creative_boost_max_credits: z.coerce.number().nullable(),
   creative_boost_price_per_credit: z.coerce.number().nullable(),
   creative_boost_colleague_reward_per_credit: z.coerce.number().nullable(),
+  creative_boost_fixed_billing: z.boolean(),
   // Effective date for prorated billing
   effective_from: z.date().nullable(),
 });
@@ -116,6 +118,7 @@ export function AddEngagementServiceDialog({
       creative_boost_max_credits: null,
       creative_boost_price_per_credit: null,
       creative_boost_colleague_reward_per_credit: null,
+      creative_boost_fixed_billing: true,
       effective_from: new Date(), // Default to today
     },
   });
@@ -209,6 +212,7 @@ export function AddEngagementServiceDialog({
       creative_boost_min_credits: data.creative_boost_min_credits,
       creative_boost_max_credits: data.creative_boost_max_credits,
       creative_boost_price_per_credit: data.creative_boost_price_per_credit,
+      creative_boost_fixed_billing: data.creative_boost_fixed_billing,
       // Note: reward per credit is stored in frontend mock data, not in DB
       invoicing_status: isOneOff ? 'pending' : 'not_applicable',
       invoiced_at: null,
@@ -335,10 +339,33 @@ export function AddEngagementServiceDialog({
                   )}
                 />
 
-                <div className="pt-2 border-t space-y-2">
+                <div className="pt-2 border-t space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="creative_boost_fixed_billing"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-sm font-medium">Fixní fakturace</FormLabel>
+                          <FormDescription className="text-xs">
+                            {field.value 
+                              ? 'Klient platí celý balíček bez ohledu na čerpání' 
+                              : 'Klient platí pouze za skutečně vyčerpané kredity'}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
                   <div>
                     <p className="text-sm font-medium">
-                      Měsíční fakturace: {' '}
+                      {form.watch('creative_boost_fixed_billing') ? 'Měsíční fakturace (fixní):' : 'Max. měsíční fakturace (dle čerpání):'} {' '}
                       <span className="text-primary">
                         {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)).toLocaleString('cs-CZ')} CZK
                       </span>
