@@ -118,6 +118,7 @@ export function AddEngagementServiceDialog({
       creative_boost_max_credits: null,
       creative_boost_price_per_credit: null,
       creative_boost_colleague_reward_per_credit: null,
+      creative_boost_fixed_billing: true,
       effective_from: new Date(), // Default to today
     },
   });
