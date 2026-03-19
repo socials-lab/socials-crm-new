@@ -17,7 +17,7 @@ import {
   X as XIcon,
   User,
 } from 'lucide-react';
-import { getHistoryByEngagementId, type AppliedModificationHistory } from '@/data/appliedModificationsHistory';
+import { useModificationRequests, type StoredModificationRequest } from '@/hooks/useModificationRequests';
 
 interface ModificationHistoryDialogProps {
   open: boolean;
@@ -27,12 +27,13 @@ interface ModificationHistoryDialogProps {
 }
 
 const REQUEST_TYPE_LABELS: Record<string, string> = {
+  expand_country: 'Rozšíření země',
   add_service: 'Přidání služby',
   update_service_price: 'Změna ceny',
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny',
-  remove_assignment: 'Odebrání kolegy',
+  new_engagement: 'Nová zakázka',
 };
 
 const REQUEST_TYPE_ICONS: Record<string, typeof Package> = {
@@ -47,7 +48,10 @@ export function ModificationHistoryDialog({
   engagementId,
   engagementName,
 }: ModificationHistoryDialogProps) {
-  const history = getHistoryByEngagementId(engagementId);
+  const { pendingRequests } = useModificationRequests();
+  const history = pendingRequests
+    .filter((request) => request.engagement_id === engagementId && request.status === 'applied')
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,7 +84,7 @@ export function ModificationHistoryDialog({
   );
 }
 
-function HistoryEntry({ entry }: { entry: AppliedModificationHistory }) {
+function HistoryEntry({ entry }: { entry: StoredModificationRequest }) {
   const Icon = REQUEST_TYPE_ICONS[entry.request_type] || Package;
   const typeLabel = REQUEST_TYPE_LABELS[entry.request_type] || entry.request_type;
 
@@ -95,7 +99,7 @@ function HistoryEntry({ entry }: { entry: AppliedModificationHistory }) {
           <div>
             <Badge variant="outline">{typeLabel}</Badge>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {format(new Date(entry.applied_at), "d. MMMM yyyy 'v' H:mm", { locale: cs })}
+              {format(new Date(entry.updated_at || entry.created_at), "d. MMMM yyyy 'v' H:mm", { locale: cs })}
             </p>
           </div>
         </div>

@@ -35,7 +35,6 @@ import type {
   DeactivateServiceProposedChanges,
   AddAssignmentProposedChanges,
   UpdateAssignmentProposedChanges,
-  RemoveAssignmentProposedChanges,
 } from '@/types/crm';
 
 const REQUEST_TYPE_CONFIG: Record<string, {
@@ -79,6 +78,18 @@ const REQUEST_TYPE_CONFIG: Record<string, {
     icon: UserMinus,
     color: 'text-red-600',
     bgColor: 'bg-red-50 dark:bg-red-950/30',
+  },
+  expand_country: {
+    label: 'Rozšíření do nové země',
+    icon: RefreshCw,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/30',
+  },
+  new_engagement: {
+    label: 'Nová zakázka',
+    icon: Building2,
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-950/30',
   },
 };
 
@@ -217,8 +228,8 @@ function ChangeDetails({ request }: { request: StoredModificationRequest }) {
       );
     }
 
-    case 'remove_assignment': {
-      const changes = request.proposed_changes as RemoveAssignmentProposedChanges;
+    case 'expand_country': {
+      const changes = request.proposed_changes as any;
       return (
         <div className={`p-4 rounded-lg ${config?.bgColor || 'bg-muted'}`}>
           <div className="flex items-center gap-2 mb-3">
@@ -227,12 +238,43 @@ function ChangeDetails({ request }: { request: StoredModificationRequest }) {
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Člen týmu:</span>
-              <span className="font-medium">{changes.colleague_name}</span>
+              <span className="text-muted-foreground">Služba:</span>
+              <span className="font-medium">{changes.service_name || changes.reference_service_name}</span>
             </div>
-            <p className="text-muted-foreground text-xs mt-2">
-              Toto přiřazení bude odebráno po potvrzení této změny.
-            </p>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Nová země:</span>
+              <span className="font-medium">{changes.new_country_name || changes.new_country_code}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Cena:</span>
+              <span className="font-medium">{(changes.price || 0).toLocaleString('cs-CZ')} {changes.currency || 'CZK'}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    case 'new_engagement': {
+      const changes = request.proposed_changes as any;
+      return (
+        <div className={`p-4 rounded-lg ${config?.bgColor || 'bg-muted'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <Icon className={`h-5 w-5 ${config?.color || ''}`} />
+            <span className="font-medium">{config?.label || 'Změna'}</span>
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Nová zakázka:</span>
+              <span className="font-medium">{changes.engagement_name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Služby:</span>
+              <span className="font-medium">{(changes.services || []).length}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Měsíční cena:</span>
+              <span className="font-medium">{(changes.total_monthly_price || 0).toLocaleString('cs-CZ')} {changes.currency || 'CZK'}</span>
+            </div>
           </div>
         </div>
       );

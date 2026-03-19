@@ -3,24 +3,15 @@ export type UserRole = 'admin' | 'management' | 'project_manager' | 'specialist'
 // App pages for granular permissions
 export type AppPage = 
   | 'dashboard'
-  | 'my-work'
   | 'leads'
   | 'clients'
   | 'contacts'
   | 'engagements'
-  | 'modifications'
-  | 'broadcasts'
-  | 'upsells'
-  | 'extra-work'
+  | 'extra_work'
   | 'invoicing'
-  | 'creative-boost'
-  | 'meetings'
+  | 'creative_boost'
   | 'services'
   | 'colleagues'
-  | 'recruitment'
-  | 'feedback'
-  | 'academy'
-  | 'sop'
   | 'analytics'
   | 'settings';
 
@@ -72,8 +63,6 @@ export interface Profile {
 }
 
 // Client Contact - for multiple contacts per client
-// Note: Email is required for NEW contacts (enforced by DB constraint and frontend validation)
-// but kept as string | null for backward compatibility with existing data
 export interface ClientContact {
   id: string;
   client_id: string;
@@ -86,7 +75,6 @@ export interface ClientContact {
   notes: string;
   created_at: string;
   updated_at: string;
-  deleted_at?: string | null; // Soft delete timestamp
 }
 
 export type ClientTier = 'standard' | 'gold' | 'platinum' | 'diamond';
@@ -97,12 +85,11 @@ export interface Client {
   brand_name: string;
   ico: string;
   dic: string | null;
-  website: string | null;
+  website: string;
   country: string;
   industry: string;
   status: ClientStatus;
   tier: ClientTier;
-  currency: string;
   // Sales representative who acquired the client
   sales_representative_id: string | null;
   // Billing address
@@ -111,20 +98,18 @@ export interface Client {
   billing_zip: string | null;
   billing_country: string | null;
   billing_email: string | null;
-  // Acquisition tracking - nullable in DB, but UI provides defaults
+  // Legacy main contact (deprecated, use ClientContact instead)
+  main_contact_name: string;
+  main_contact_email: string;
+  main_contact_phone: string;
   acquisition_channel: string;
   start_date: string;
   end_date: string | null;
-  // Notes - nullable in DB, but UI provides empty string defaults
   notes: string;
   pinned_notes: string;
-  // External integrations
-  fakturoid_subject_id: number | null;
-  created_by: string | null;
+  created_by: string;
   created_at: string;
   updated_at: string;
-  // Soft delete
-  deleted_at: string | null;
 }
 
 export type ServiceCategory = 'performance' | 'creative' | 'lead_gen' | 'analytics' | 'consulting';
@@ -151,25 +136,16 @@ export interface ServiceTierConfig {
   max_spend: number | null;
 }
 
-// Service detail types
-export interface ServiceSetupItem {
-  title: string;
-  items: string[];
+export interface ServiceRewardRole {
+  role: string;
+  hours: number;
+  reward: number;
+  reward_type: 'fixed_monthly' | 'per_credit' | 'hourly';
 }
 
-export interface ServiceTierFeature {
-  feature: string;
-  growth: string | boolean;
-  pro: string | boolean;
-  elite: string | boolean;
-}
-
-export interface ServiceCreditPricing {
-  basePrice: number;
-  currency: string;
-  expressMultiplier: number;
-  colleagueRewardPerCredit?: number;
-  outputTypes: { name: string; credits: number; description: string }[];
+export interface ServiceRewardTierConfig {
+  tier?: string;
+  roles: ServiceRewardRole[];
 }
 
 export interface Service {
@@ -182,29 +158,27 @@ export interface Service {
   external_url: string | null;
   base_price: number;
   currency: string;
-  billing_type: 'monthly' | 'one_off';
   tier_pricing: CoreServicePricing[] | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
   // Default values for offer generation
-  default_deliverables: string[] | null;
-  default_frequency: string | null;
-  default_requirements: string[] | null;
-  default_turnaround: string | null;
-  offer_description: string | null;
-  // Service details
-  tagline: string | null;
-  platforms: string[] | null;
-  target_audience: string | null;
-  benefits: string[] | null;
-  setup_items: ServiceSetupItem[] | null;
-  management_items: ServiceSetupItem[] | null;
-  tier_comparison: ServiceTierFeature[] | null;
-  credit_pricing: ServiceCreditPricing | null;
+  default_deliverables?: string[] | null;
+  // Colleague reward configuration per tier
+  reward_config?: ServiceRewardTierConfig[] | null;
 }
 
-// ClientService removed - services are now tracked via engagement_services instead
+export interface ClientService {
+  id: string;
+  client_id: string;
+  service_id: string;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
 
 // Advertising platforms
 export const ADVERTISING_PLATFORMS = [
@@ -221,18 +195,20 @@ export const ADVERTISING_PLATFORMS = [
 
 export type AdvertisingPlatform = typeof ADVERTISING_PLATFORMS[number];
 
-// Termination tracking
-export type TerminationReason =
-  | 'budget_cut'
-  | 'strategy_change'
-  | 'dissatisfied'
-  | 'agency_terminated'
-  | 'project_completed'
-  | 'merged_with_another'
-  | 'other';
+// Termination reason for engagements
+export type TerminationReason = 
+  | 'budget_cut'        // Snížení rozpočtu
+  | 'strategy_change'   // Změna strategie
+  | 'dissatisfied'      // Nespokojenost s výsledky
+  | 'agency_terminated' // Ukončeno agenturou
+  | 'project_completed' // Projekt dokončen
+  | 'merged_with_another' // Sloučeno s jinou zakázkou
+  | 'other';            // Jiný důvod
 
+// Who initiated the termination
 export type TerminationInitiatedBy = 'client' | 'agency';
 
+// Labels for termination reasons (Czech)
 export const TERMINATION_REASON_LABELS: Record<TerminationReason, string> = {
   budget_cut: 'Snížení rozpočtu',
   strategy_change: 'Změna strategie',
@@ -243,11 +219,13 @@ export const TERMINATION_REASON_LABELS: Record<TerminationReason, string> = {
   other: 'Jiný důvod',
 };
 
+// Labels for termination initiator (Czech)
 export const TERMINATION_INITIATED_BY_LABELS: Record<TerminationInitiatedBy, string> = {
   client: 'Klient',
   agency: 'Agentura',
 };
 
+// Termination data interface
 export interface TerminationData {
   end_date: string;
   termination_reason: TerminationReason;
@@ -273,16 +251,16 @@ export interface Engagement {
   platforms: string[];
   managed_countries: string[];
   notes: string;
+  pinned_notes: string | null;
   // Document links from lead conversion
   offer_url: string | null;
   contract_url: string | null;
-  // Termination tracking
+  // Termination tracking (optional - only set when terminating)
   termination_reason?: TerminationReason | null;
   termination_initiated_by?: TerminationInitiatedBy | null;
   termination_notes?: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at?: string | null; // Soft delete timestamp
 }
 
 // One-off invoicing status
@@ -305,8 +283,8 @@ export interface EngagementService {
   creative_boost_min_credits: number | null;
   creative_boost_max_credits: number | null;
   creative_boost_price_per_credit: number | null;
-  creative_boost_reward_per_credit_banner: number | null;
-  creative_boost_reward_per_credit_video: number | null;
+  creative_boost_fixed_billing: boolean; // true = fixed package, false = usage-based
+  // Note: Reward per credit for graphic designer/video editor is stored in frontend mock data (creativeBoostRewardsMockData.ts)
   // One-off invoicing tracking
   invoicing_status: OneOffInvoicingStatus;
   invoiced_at: string | null;
@@ -315,10 +293,8 @@ export interface EngagementService {
   // Upsell tracking - who sold this service
   upsold_by_id: string | null;
   upsell_commission_percent: number | null;
-  // Effective date for modifications/upsells
-  effective_from: string | null;
-  // Service is active until this date (exclusive). Example: end_date=2026-04-01 means inactive from 1.4.
-  end_date: string | null;
+  // Effective date for prorated billing
+  effective_from: string | null; // Date when this service starts (for mid-month proration)
   created_at: string;
   updated_at: string;
 }
@@ -334,24 +310,36 @@ export interface Colleague {
   is_freelancer: boolean;
   internal_hourly_cost: number;
   monthly_fixed_cost: number | null;
-  capacity_hours_per_month: number | null;
-  capacity_slots: Record<string, number> | null;
+  capacity_hours_per_month: number | null; // Legacy - kept for extra work calculations
+  max_engagements: number | null; // Max number of engagements colleague can handle
+  capacity_slots: Record<string, number> | null; // Capacity slots per service type (meta, google, graphics)
   status: ColleagueStatus;
   notes: string;
   birthday: string | null;
-  // Billing/personal fields
-  personal_email: string | null;
-  ico: string | null;
-  dic: string | null;
-  company_name: string | null;
-  billing_street: string | null;
-  billing_city: string | null;
-  billing_zip: string | null;
-  bank_account: string | null;
-  email_signature: string | null;
-  max_engagements: number | null;
+  avatar_url: string | null;          // Profilová fotka (1:1)
+  // Personal & billing info (collected during onboarding)
+  personal_email: string | null;      // Soukromý email
+  ico: string | null;                 // IČO
+  dic: string | null;                 // DIČ
+  company_name: string | null;        // Název firmy/OSVČ
+  billing_street: string | null;      // Ulice a číslo
+  billing_city: string | null;        // Město
+  billing_zip: string | null;         // PSČ
+  bank_account: string | null;        // Číslo účtu
   created_at: string;
   updated_at: string;
+}
+
+// Colleague Capacity History - for tracking capacity changes over time
+export interface ColleagueCapacityRecord {
+  id: string;
+  colleague_id: string;
+  capacity_hours: number;
+  previous_capacity_hours: number | null;
+  effective_from: string;
+  reason: string;
+  changed_by: string | null;
+  created_at: string;
 }
 
 export interface EngagementAssignment {
@@ -364,9 +352,6 @@ export interface EngagementAssignment {
   hourly_cost: number | null;
   monthly_cost: number | null;
   percentage_of_revenue: number | null;
-  reward_per_credit: number | null;
-  reward_per_credit_banner: number | null;
-  reward_per_credit_video: number | null;
   start_date: string;
   end_date: string | null;
   notes: string;
@@ -393,49 +378,58 @@ export type InvoiceStatus = 'draft' | 'ready' | 'issued' | 'paid';
 export type LineItemSource = 'engagement' | 'manual' | 'creative_boost' | 'extra_work' | 'one_off';
 
 // Extra Work types - unified linear workflow
-export type ExtraWorkStatus = 'pending_approval' | 'in_progress' | 'ready_to_invoice' | 'invoiced' | 'rejected';
+export type ExtraWorkStatus = 'pending_approval' | 'client_approved' | 'in_progress' | 'ready_to_invoice' | 'invoiced' | 'rejected';
+
+// Client reinvoice tracking
+export type ClientReinvoiceStatus = 'expected' | 'reinvoiced' | 'not_expected';
 
 export interface ExtraWork {
   id: string;
   client_id: string;
   engagement_id: string;
   colleague_id: string;
-
+  
   name: string;
   description: string;
   amount: number;
   currency: string;
   hours_worked: number | null;
   hourly_rate: number | null;
-
+  
   work_date: string;
   billing_period: string;
-
+  
   // Unified status workflow
   status: ExtraWorkStatus;
   approval_date: string | null;
   approved_by: string | null;
-
-  // Client approval fields
+  
+  // Invoice tracking (set when status changes to 'invoiced')
+  invoice_id: string | null;
+  invoice_number: string | null;
+  invoiced_at: string | null;
+  
+  // Client approval flow
   approval_token: string | null;
   client_approval_email: string | null;
   client_approved_at: string | null;
   client_rejected_at: string | null;
   client_rejection_reason: string | null;
-
-  // Invoice tracking (set when status changes to 'invoiced')
-  invoice_id: string | null;
-  invoice_number: string | null;
-  invoiced_at: string | null;
-
+  
+  // Individual internal hourly rate for this extra work (overrides colleague default)
+  internal_hourly_rate: number | null;
+  
   // Upsell tracking - who sold this extra work
   upsold_by_id: string | null;
   upsell_commission_percent: number | null;
-
+  
+  // Client reinvoice tracking
+  client_reinvoice_status: ClientReinvoiceStatus;
+  client_invoice_note: string | null;
+  
   notes: string;
   created_at: string;
   updated_at: string;
-  deleted_at?: string | null; // Soft delete timestamp
 }
 
 export interface ExtraWorkWithDetails extends ExtraWork {
@@ -450,8 +444,6 @@ export interface InvoiceLineItem {
   source: LineItemSource;
   engagement_id: string | null;
   extra_work_id: string | null;
-  engagement_service_id: string | null;
-  creative_boost_client_month_id?: string | null;
   source_description: string;
   source_amount: number;
   period_start: string;
@@ -472,12 +464,6 @@ export interface InvoiceLineItem {
   hourly_rate: number | null;
   currency: string;
   is_reverse_charge: boolean;
-  // Fakturoid fields
-  vat_rate: number;
-  unit_name: string;
-  // Timestamps
-  created_at: string;
-  updated_at: string;
 }
 
 export interface MonthlyClientInvoice {
@@ -517,9 +503,6 @@ export interface MonthlyEngagementInvoice {
   notes: string;
   created_at: string;
   updated_at: string;
-  fakturoid_id: string | null;
-  fakturoid_url: string | null;
-  invoice_number: string | null;
 }
 
 // Lead types
@@ -534,7 +517,7 @@ export type LeadStage =
   | 'lost'               // Prohráno
   | 'postponed';         // Odloženo
 
-export type LeadSource =
+export type LeadSource = 
   | 'referral'
   | 'inbound'
   | 'cold_outreach'
@@ -545,14 +528,6 @@ export type LeadSource =
 
 export type LeadOfferType = 'retainer' | 'one_off';
 
-export type LeadQualificationStatus = 'pending' | 'qualified' | 'bad_fit';
-
-export const LEAD_QUALIFICATION_LABELS: Record<LeadQualificationStatus, string> = {
-  pending: 'Čeká na posouzení',
-  qualified: 'Kvalifikovaný',
-  bad_fit: 'Bad Fit',
-};
-
 // Service in a lead offer
 export interface LeadService {
   id: string;
@@ -560,10 +535,6 @@ export interface LeadService {
   name: string;
   selected_tier: ServiceTier | null;
   price: number;
-  // Optional original price before discount (if a discount was applied)
-  original_price?: number | null;
-  // Optional reason/label for discount in offer snapshot
-  discount_reason?: string | null;
   currency: string;
   billing_type: 'monthly' | 'one_off';
 }
@@ -591,20 +562,31 @@ export interface LeadNote {
   created_at: string;
 }
 
+// Lead qualification status
+export type LeadQualificationStatus = 'pending' | 'qualified' | 'bad_fit';
+
+// Labels for qualification status (Czech)
+export const LEAD_QUALIFICATION_LABELS: Record<LeadQualificationStatus, string> = {
+  pending: 'Čeká na posouzení',
+  qualified: 'Kvalifikovaný',
+  bad_fit: 'Bad Fit',
+};
+
 export interface Lead {
   id: string;
   // Company
   company_name: string;
   ico: string;
   dic: string | null;
-  vat_payer_status: 'reliable' | 'unreliable' | 'not_found' | null;
-  vat_payer_checked_at: string | null;
   website: string | null;
   industry: string | null;
   
-  // Court registration info (from ARES)
-  court_name: string | null;
-  court_file_number: string | null;
+  // ARES data
+  legal_form: string | null;
+  founded_date: string | null;
+  directors: Array<{ name: string; role: string; ownership_percent: number | null }> | string[] | null;
+  ares_nace: string | null;
+  court_registration: string | null;
   
   // Billing address
   billing_street: string | null;
@@ -627,12 +609,12 @@ export interface Lead {
   client_message: string | null;
   ad_spend_monthly: number | null;
   summary: string;
-
-  // Qualification tracking
+  
+  // Qualification tracking (for marketing effectiveness)
   qualification_status: LeadQualificationStatus;
-  qualification_reason: string | null;
+  qualification_reason: string | null;  // Reason for bad_fit
   qualified_at: string | null;
-
+  
   // Offer
   potential_service: string;
   potential_services: LeadService[];
@@ -652,7 +634,7 @@ export interface Lead {
   converted_to_client_id: string | null;
   converted_to_engagement_id: string | null;
   converted_at: string | null;
-
+  
   // Meeting request tracking
   meeting_request_sent_at: string | null;
   
@@ -666,31 +648,18 @@ export interface Lead {
   onboarding_form_url: string | null;
   onboarding_form_completed_at: string | null;
   
-  // Onboarding form data
-  onboarding_signatories: Array<{
-    name: string;
-    position?: string;
-    email: string;
-    phone?: string;
-  }> | null;
-  onboarding_project_contacts: Array<{
-    name: string;
-    email: string;
-    phone?: string;
-  }> | null;
-  onboarding_start_date: string | null;
-  
   // Contract tracking
-  digisign_id: string | null;
   contract_url: string | null;
   contract_created_at: string | null;
   contract_sent_at: string | null;
   contract_signed_at: string | null;
   
+  // VAT payer reliability
+  vat_payer_status: 'reliable' | 'unreliable' | 'not_found' | null;
+  
   // Meta
   created_at: string;
   updated_at: string;
-  deleted_at?: string | null;
   created_by: string;
   updated_by: string;
 }
@@ -719,6 +688,9 @@ export interface LeadHistoryEntry {
   created_at: string;
 }
 
+// Entity types for engagement history
+export type EngagementHistoryEntityType = 'assignment' | 'service' | 'engagement';
+
 // Engagement change types
 export type EngagementChangeType = 
   | 'created'
@@ -732,6 +704,7 @@ export type EngagementChangeType =
   | 'colleague_updated'
   | 'end_date_set';
 
+// Legacy interface for mock data compatibility
 export interface EngagementHistoryEntry {
   id: string;
   engagement_id: string;
@@ -747,9 +720,7 @@ export interface EngagementHistoryEntry {
   created_at: string;
 }
 
-// Entity types for engagement history (used by EngagementHistoryDialog)
-export type EngagementHistoryEntityType = 'assignment' | 'service' | 'engagement';
-
+// New Supabase-backed engagement history
 export interface EngagementHistoryRecord {
   id: string;
   engagement_id: string;
@@ -797,30 +768,51 @@ export interface IssuedInvoice {
   total_amount: number;
   currency: string;
   
-  // Status & payment
-  status: string;
-  paid_at: string | null;
-
   // Timestamps
   issued_at: string;
   issued_by: string | null;
-
+  
   created_at: string;
+}
+
+// Extended types with relations
+export interface ClientWithEngagements extends Client {
+  engagements: Engagement[];
+  services: (ClientService & { service: Service })[];
+}
+
+export interface ClientWithContacts extends Client {
+  contacts: ClientContact[];
+}
+
+export interface EngagementServiceWithDetails extends EngagementService {
+  service: Service;
+  assignments: (EngagementAssignment & { colleague: Colleague })[];
+}
+
+export interface EngagementWithDetails extends Engagement {
+  client: Client;
+  contact_person: ClientContact | null;
+  engagement_services: EngagementServiceWithDetails[];
+  assignments: (EngagementAssignment & { colleague: Colleague })[];
+  monthly_metrics: EngagementMonthlyMetrics[];
 }
 
 // ============= Modification Request Types =============
 
 // Request type for engagement modifications
-export type ModificationRequestType =
+export type ModificationRequestType = 
+  | 'expand_country'
   | 'add_service'
   | 'update_service_price'
   | 'deactivate_service'
   | 'add_assignment'
   | 'update_assignment'
-  | 'remove_assignment';
+  | 'new_engagement';
 
 // Status for modification requests
-export type ModificationRequestStatus =
+export type ModificationRequestStatus = 
+  | 'draft'            // Rozpracovaný návrh (viditelný pro všechny)
   | 'pending'          // Čeká na interní schválení
   | 'approved'         // Interně schváleno, čeká na klienta (pro client-facing změny)
   | 'client_approved'  // Klient potvrdil, připraveno k aplikaci
@@ -829,16 +821,18 @@ export type ModificationRequestStatus =
 
 // Labels for request types
 export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+  expand_country: 'Přidání nové země',
   add_service: 'Přidání služby',
-  update_service_price: 'Změna ceny služby',
+  update_service_price: 'Úprava služby',
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
-  remove_assignment: 'Odebrání kolegy',
+  new_engagement: 'Nová zakázka (jiné SRO)',
 };
 
 // Status labels
 export const MODIFICATION_REQUEST_STATUS_LABELS: Record<ModificationRequestStatus, string> = {
+  draft: 'Rozpracováno',
   pending: 'Čeká na schválení',
   approved: 'Čeká na klienta',
   client_approved: 'Klient potvrdil',
@@ -854,9 +848,11 @@ export interface AddServiceProposedChanges {
   currency: string;
   billing_type: 'monthly' | 'one_off';
   selected_tier?: ServiceTier | null;
+  // Service description for client-facing offer
   description?: string;
   deliverables?: string[];
   benefits?: string[];
+  // Creative Boost specific
   creative_boost_min_credits?: number | null;
   creative_boost_max_credits?: number | null;
   creative_boost_price_per_credit?: number | null;
@@ -904,13 +900,61 @@ export interface RemoveAssignmentProposedChanges {
   role_on_engagement: string;
 }
 
-export type ModificationProposedChanges =
+export interface NewEngagementProposedChanges {
+  /** Whether this is under a different legal entity */
+  is_different_sro?: boolean;
+  /** Optional hint – client fills in full details via onboarding form */
+  new_client_data?: {
+    company_name?: string;
+    brand_name?: string;
+  };
+  engagement_name: string;
+  services: Array<{
+    service_id: string | null;
+    name: string;
+    price: number;
+    currency: string;
+    billing_type: 'monthly' | 'one_off';
+    selected_tier?: ServiceTier | null;
+    description?: string;
+    deliverables?: string[];
+    assignments?: Array<{
+      colleague_id: string;
+      colleague_name: string;
+      role: string;
+      cost_model: 'hourly' | 'fixed_monthly' | 'percentage';
+      monthly_cost?: number;
+      hourly_cost?: number;
+      percentage_of_revenue?: number;
+    }>;
+  }>;
+  total_monthly_price: number;
+  currency: string;
+  /** Email where the onboarding form + offer will be sent (only for different SRO) */
+  onboarding_email?: string;
+  /** Client fills in IČO, DIČ, billing via onboarding form (only for different SRO) */
+  send_onboarding_form?: boolean;
+}
+
+export type ModificationProposedChanges = 
   | AddServiceProposedChanges
   | UpdateServicePriceProposedChanges
   | DeactivateServiceProposedChanges
   | AddAssignmentProposedChanges
   | UpdateAssignmentProposedChanges
-  | RemoveAssignmentProposedChanges;
+  | RemoveAssignmentProposedChanges
+  | NewEngagementProposedChanges;
+
+// Item within a bundled modification request
+export interface ModificationRequestItem {
+  id: string;
+  request_type: ModificationRequestType;
+  proposed_changes: ModificationProposedChanges;
+  engagement_service_id?: string | null;
+  engagement_assignment_id?: string | null;
+  /** Pricing snapshot for this specific item */
+  pricing_snapshot?: import('@/utils/pricingEngine').PricingSnapshot | null;
+}
 
 // Main modification request interface
 export interface ModificationRequest {
@@ -930,10 +974,13 @@ export interface ModificationRequest {
   reviewed_by: string | null;
   reviewed_at: string | null;
   rejection_reason: string | null;
+  // Client approval fields
   upgrade_offer_token: string | null;
   upgrade_offer_valid_until: string | null;
   client_email: string | null;
   client_approved_at: string | null;
+  // Multi-item bundle support
+  items?: ModificationRequestItem[];
   created_at: string;
   updated_at: string;
 }
@@ -949,27 +996,5 @@ export interface ModificationRequestWithDetails extends ModificationRequest {
 
 // Helper to check if a request type is client-facing
 export function isClientFacingRequestType(type: ModificationRequestType): boolean {
-  return ['add_service', 'update_service_price', 'deactivate_service'].includes(type);
-}
-
-// Extended types with relations
-export interface ClientWithEngagements extends Client {
-  engagements: Engagement[];
-}
-
-export interface ClientWithContacts extends Client {
-  contacts: ClientContact[];
-}
-
-export interface EngagementServiceWithDetails extends EngagementService {
-  service: Service;
-  assignments: (EngagementAssignment & { colleague: Colleague })[];
-}
-
-export interface EngagementWithDetails extends Engagement {
-  client: Client;
-  contact_person: ClientContact | null;
-  engagement_services: EngagementServiceWithDetails[];
-  assignments: (EngagementAssignment & { colleague: Colleague })[];
-  monthly_metrics: EngagementMonthlyMetrics[];
+  return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service', 'new_engagement'].includes(type);
 }

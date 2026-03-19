@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Send, User, Mail, Building2, Link2, Phone, AlertCircle } from 'lucide-react';
+import { Send, User, Mail, Building2, Link2, Phone } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,14 +14,20 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { EmailTagInput } from '@/components/ui/email-tag-input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
-import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { useModificationRequests, type StoredModificationRequest } from '@/hooks/useModificationRequests';
-import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
+import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
+import { recordEmailSent, type StoredModificationRequest } from '@/hooks/useModificationRequests';
+import { supabase } from '@/integrations/supabase/client';
 import type {
   AddServiceProposedChanges,
   UpdateServicePriceProposedChanges,
@@ -55,16 +61,14 @@ export function SendModificationEmailDialog({
 }: SendModificationEmailDialogProps) {
   const { colleagues, clients, clientContacts } = useCRMData();
   const { user } = useAuth();
-  const { hasGmailScope, isCheckingConnection, connectGoogleCalendar, sendEmail, isLoading: googleLoading } = useGoogleCalendar();
-  const { recordEmailSent } = useModificationRequests();
   const { fillTemplate } = useEmailTemplates();
   
   const [recipientEmail, setRecipientEmail] = useState('');
-  const [ccEmails, setCcEmails] = useState<string[]>([]);
-  const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailContent, setEmailContent] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
 
   // Get sender from logged-in user's colleague record
   const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
@@ -133,28 +137,16 @@ export function SendModificationEmailDialog({
   // Initialize form when dialog opens
   useEffect(() => {
     if (open) {
-      // Set default email
       setRecipientEmail(findDefaultEmail());
       
-      setCcEmails([]);
-      setBccEmails([DEFAULT_GMAIL_BCC]);
-
-      // Set default subject
       const subjectPrefix = REQUEST_TYPE_SUBJECTS[request.request_type] || 'Návrh změny';
       const { subject } = fillTemplate('send_modification', {
         type: subjectPrefix,
         client: clientName,
-        greeting: '',
-        change_type: '',
-        change_details: '',
-        effective_from: '',
-        upgrade_link: '',
-        valid_until: '',
-        signature: '',
       });
       setEmailSubject(subject);
     }
-  }, [open, request, fillTemplate, clientName]);
+  }, [open, request]);
 
   // Generate email content when dialog opens or sender info available
   useEffect(() => {
@@ -170,27 +162,24 @@ export function SendModificationEmailDialog({
     const validUntil = request.upgrade_offer_valid_until
       ? format(new Date(request.upgrade_offer_valid_until), 'd. MMMM yyyy', { locale: cs })
       : '14 dní';
-    const defaultSignature = getDefaultEmailSignature(currentUserColleague, {
-      fallbackName: 'Tým Socials',
-      includePosition: true,
-      includeEmail: true,
-      includePhone: true,
-    });
 
     const { body } = fillTemplate('send_modification', {
       greeting,
-      type: REQUEST_TYPE_SUBJECTS[request.request_type] || 'Návrh změny',
       client: clientName,
+      type: REQUEST_TYPE_SUBJECTS[request.request_type] || 'Návrh změny',
       change_type: changeTypeLabel,
       change_details: changeDetails,
       effective_from: effectiveFrom,
       upgrade_link: upgradeLink,
       valid_until: validUntil,
-      signature: defaultSignature,
+      sender_name: currentUserColleague.full_name,
+      sender_position: currentUserColleague.position,
+      sender_email: currentUserColleague.email,
+      sender_phone: currentUserColleague.phone || '',
     });
 
     setEmailContent(body);
-  }, [currentUserColleague, open, request, upgradeLink, fillTemplate, clientName]);
+  }, [currentUserColleague, open, request, upgradeLink]);
 
   const handleSend = async () => {
     if (!recipientEmail.trim()) {
@@ -203,11 +192,6 @@ export function SendModificationEmailDialog({
       return;
     }
 
-    if (!hasGmailScope) {
-      toast.error('Pro odesílání emailů je potřeba propojit Google účet s oprávněním pro Gmail');
-      return;
-    }
-
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(recipientEmail)) {
@@ -216,43 +200,46 @@ export function SendModificationEmailDialog({
     }
 
     setIsSending(true);
-
     try {
-      const htmlContent = formatEmailTextToHtml(emailContent);
+      const html = emailContent
+        .split('\n')
+        .map((line) => line.trim())
+        .join('<br />');
 
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6; color: #333;">
-          ${htmlContent}
-        </div>
-      `;
-
-      const result = await sendEmail(recipientEmail, emailSubject, html, {
-        cc: ccEmails.join(', '),
-        bcc: bccEmails.join(', '),
-      });
-
-      if (result) {
-        // Record the email in history
-        await recordEmailSent(
-          request.id,
-          recipientEmail,
-          currentUserColleague.id,
-          currentUserColleague.full_name
-        );
-
-        // Log email action for debugging
-        console.log('📧 Email sent:', {
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
           to: recipientEmail,
           subject: emailSubject,
-          sender: currentUserColleague.full_name,
-          requestId: request.id,
-        });
+          html,
+          cc: cc.join(','),
+          bcc: bcc.join(','),
+        },
+      });
 
-        toast.success(`📧 Email odeslán na ${recipientEmail}`);
-        onOpenChange(false);
+      if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.error || 'Email nebyl odeslán');
       }
-    } catch (err: unknown) {
-      console.error('Failed to send modification email:', err);
+
+      await recordEmailSent(
+        request.id,
+        recipientEmail,
+        currentUserColleague.id,
+        currentUserColleague.full_name
+      );
+
+      console.log('📧 Email sent:', {
+        to: recipientEmail,
+        subject: emailSubject,
+        sender: currentUserColleague.full_name,
+        requestId: request.id,
+      });
+
+      toast.success(`📧 Email odeslán na ${recipientEmail}`);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to send modification email:', error);
+      toast.error(error instanceof Error ? error.message : 'Nepodařilo se odeslat email');
     } finally {
       setIsSending(false);
     }
@@ -272,27 +259,6 @@ export function SendModificationEmailDialog({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
-          {/* Google Connection Warning */}
-          {!isCheckingConnection && !hasGmailScope && (
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                  Pro odesílání emailů je potřeba propojit Google účet
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={connectGoogleCalendar}
-                  disabled={googleLoading}
-                >
-                  Propojit Google účet
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* Client Info */}
           <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-1">
             <div className="flex items-center gap-2">
@@ -315,24 +281,8 @@ export function SendModificationEmailDialog({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">CC</Label>
-              <EmailTagInput
-                value={ccEmails}
-                onChange={setCcEmails}
-                placeholder="oddeleni@firma.cz"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">BCC</Label>
-              <EmailTagInput
-                value={bccEmails}
-                onChange={setBccEmails}
-                placeholder="danny@socials.cz"
-              />
-            </div>
-          </div>
+          {/* CC / BCC */}
+          <EmailCcBccFields cc={cc} onCcChange={setCc} bcc={bcc} onBccChange={setBcc} />
 
           {/* Sender Info Card - Current user */}
           {currentUserColleague && (
@@ -388,7 +338,7 @@ export function SendModificationEmailDialog({
           </Button>
           <Button
             onClick={handleSend}
-            disabled={isSending || !recipientEmail || !currentUserColleague || !hasGmailScope}
+            disabled={isSending || !recipientEmail || !currentUserColleague}
           >
             {isSending ? (
               <>

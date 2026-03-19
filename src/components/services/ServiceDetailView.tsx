@@ -1,8 +1,14 @@
-import { Check, Target, CreditCard } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Check, Zap, Target, CreditCard, X, Plus, Image, Video, Users, Pencil, Trash2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { ServiceRewardTierConfig, ServiceRewardRole } from '@/types/crm';
 
 interface SetupItem {
   title: string;
@@ -16,18 +22,25 @@ interface TierFeature {
   elite: string | boolean;
 }
 
+interface TierPriceEntry {
+  price: number | null;
+  spend: string;
+  originalPrice?: number;
+}
+
 interface TierPrices {
-  growth: { price: number; spend: string };
-  pro: { price: number; spend: string };
-  elite: { price: number; spend: string };
+  growth: TierPriceEntry;
+  pro: TierPriceEntry;
+  elite: TierPriceEntry;
 }
 
 interface CreditPricing {
   basePrice: number;
   currency: string;
   expressMultiplier: number;
-  colleagueRewardPerCredit?: number;
-  outputTypes: { name: string; credits: number; description: string }[];
+  bannerRewardPerCredit?: number;
+  videoRewardPerCredit?: number;
+  outputTypes?: { name: string; credits: number; description: string; category?: string }[];
 }
 
 export interface ServiceDetailData {
@@ -38,15 +51,28 @@ export interface ServiceDetailData {
   setup_items?: SetupItem[];
   management_items?: SetupItem[];
   tier_comparison?: TierFeature[];
-  tier_pricing?: TierPrices | null;
+  tier_prices?: TierPrices | null;
   credit_pricing?: CreditPricing | null;
 }
 
 interface ServiceDetailViewProps {
   data: ServiceDetailData;
+  onCreditPricingUpdate?: (outputTypes: { name: string; credits: number; description: string; category?: string }[]) => void;
+  // Tier prices inline editing
+  serviceType?: 'core' | 'addon';
+  tierPricing?: { tier: string; price: number | null }[] | null;
+  onTierPricingUpdate?: (tierPricing: { tier: string; price: number | null }[]) => void;
+  // Reward config inline editing
+  rewardConfig?: ServiceRewardTierConfig[] | null;
+  onRewardConfigUpdate?: (rewardConfig: ServiceRewardTierConfig[]) => void;
+  // Client-facing defaults
+  description?: string;
+  onDescriptionUpdate?: (description: string) => void;
+  defaultDeliverables?: string[] | null;
+  onDeliverablesUpdate?: (deliverables: string[]) => void;
 }
 
-export function ServiceDetailView({ data }: ServiceDetailViewProps) {
+export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, tierPricing, onTierPricingUpdate, rewardConfig, onRewardConfigUpdate, description, onDescriptionUpdate, defaultDeliverables, onDeliverablesUpdate }: ServiceDetailViewProps) {
   // Guard against undefined or null data
   if (!data) {
     return (
@@ -60,18 +86,14 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
   const hasSetupContent = data.setup_items && data.setup_items.some(s => s.items && s.items.length > 0);
   const hasManagementContent = data.management_items && data.management_items.some(s => s.items && s.items.length > 0);
   const hasBenefits = data.benefits && data.benefits.length > 0;
-  // Check if tier_pricing is in the expected object format (not array format from form)
-  const hasTierPricing = data.tier_pricing &&
-    typeof data.tier_pricing === 'object' &&
-    !Array.isArray(data.tier_pricing) &&
-    data.tier_pricing.growth &&
-    typeof data.tier_pricing.growth.spend === 'string';
-  const hasTierComparison = data.tier_comparison && data.tier_comparison.length > 0;
+  const hasTierComparison = data.tier_comparison && data.tier_comparison.length > 0 && data.tier_prices;
   const hasCreditPricing = data.credit_pricing && data.credit_pricing.outputTypes && data.credit_pricing.outputTypes.length > 0;
 
-  const hasContent = data.tagline || (data.platforms && data.platforms.length > 0) ||
+  const hasInlineEditors = onDescriptionUpdate || onDeliverablesUpdate || onTierPricingUpdate || onRewardConfigUpdate;
+
+  const hasContent = data.tagline || (data.platforms && data.platforms.length > 0) || 
                      hasBenefits || hasSetupContent || hasManagementContent ||
-                     hasTierPricing || hasCreditPricing;
+                     hasTierComparison || hasCreditPricing || hasInlineEditors;
   
   if (!hasContent) {
     return (
@@ -111,7 +133,8 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
       {hasBenefits && (
         <div className="space-y-2">
           <h4 className="text-sm font-semibold flex items-center gap-2">
-            ⚡ Co získáte
+            <Zap className="h-4 w-4 text-chart-4" />
+            Co získáte
           </h4>
           <ul className="space-y-1.5">
             {data.benefits.map((benefit, index) => (
@@ -183,159 +206,118 @@ export function ServiceDetailView({ data }: ServiceDetailViewProps) {
         </Accordion>
       )}
 
-      {/* Tier Pricing Cards for Core Services */}
-      {hasTierPricing && data.tier_pricing && (
+      {/* Tier Comparison Table for Core Services */}
+      {hasTierComparison && (
         <div className="space-y-2">
           <h4 className="text-sm font-semibold flex items-center gap-2">
             📦 Balíčky dle rozpočtu
           </h4>
-
+          
           {/* Tier Cards */}
           <div className="grid grid-cols-3 gap-2 mb-3">
-            <Card className="bg-chart-1/5 border-chart-1/20">
-              <CardHeader className="p-3 pb-1">
-                <CardTitle className="text-xs font-bold flex items-center gap-1">
-                  🚀 GROWTH
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_pricing.growth?.spend || 'do 50k'}</div>
-                <div className="text-lg font-bold text-chart-1">
-                  {(data.tier_pricing.growth?.price || 0).toLocaleString('cs-CZ')} Kč
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-chart-2/5 border-chart-2/20">
-              <CardHeader className="p-3 pb-1">
-                <CardTitle className="text-xs font-bold flex items-center gap-1">
-                  💪 PRO
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_pricing.pro?.spend || '50k - 150k'}</div>
-                <div className="text-lg font-bold text-chart-2">
-                  {(data.tier_pricing.pro?.price || 0).toLocaleString('cs-CZ')} Kč
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-chart-4/5 border-chart-4/20">
-              <CardHeader className="p-3 pb-1">
-                <CardTitle className="text-xs font-bold flex items-center gap-1">
-                  🏆 ELITE
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <div className="text-[10px] text-muted-foreground">{data.tier_pricing.elite?.spend || '150k+'}</div>
-                <div className="text-lg font-bold text-chart-4">
-                  {(data.tier_pricing.elite?.price || 0).toLocaleString('cs-CZ')} Kč
-                </div>
-              </CardContent>
-            </Card>
+            {renderTierCard('🚀', 'GROWTH', data.tier_prices!.growth, 'chart-1')}
+            {renderTierCard('💪', 'PRO', data.tier_prices!.pro, 'chart-2')}
+            {renderTierCard('🏆', 'ELITE', data.tier_prices!.elite, 'chart-4')}
           </div>
 
-          {/* Feature Comparison Table - only show if there are features */}
-          {hasTierComparison && (
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="text-xs font-medium">Funkce</TableHead>
-                    <TableHead className="text-xs font-medium text-center w-24">GROWTH</TableHead>
-                    <TableHead className="text-xs font-medium text-center w-24">PRO</TableHead>
-                    <TableHead className="text-xs font-medium text-center w-24">ELITE</TableHead>
+          {/* Feature Comparison Table */}
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="text-xs font-medium">Funkce</TableHead>
+                  <TableHead className="text-xs font-medium text-center w-24">GROWTH</TableHead>
+                  <TableHead className="text-xs font-medium text-center w-24">PRO</TableHead>
+                  <TableHead className="text-xs font-medium text-center w-24">ELITE</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.tier_comparison!.map((row, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="text-xs">{row.feature}</TableCell>
+                    <TableCell className="text-center">
+                      {renderTierValue(row.growth)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {renderTierValue(row.pro)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {renderTierValue(row.elite)}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.tier_comparison!.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="text-xs">{row.feature}</TableCell>
-                      <TableCell className="text-center">
-                        {renderTierValue(row.growth)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {renderTierValue(row.pro)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {renderTierValue(row.elite)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 
       {/* Credit Pricing for Creative Boost */}
       {hasCreditPricing && data.credit_pricing && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-semibold flex items-center gap-2">
-            <CreditCard className="h-4 w-4 text-chart-4" />
-            Ceník kreditů
-          </h4>
-          
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-3">
-                <div className="text-xs text-muted-foreground">💰 Cena pro klienta</div>
-                <div className="text-lg font-bold text-primary">
-                  {data.credit_pricing.basePrice} {data.credit_pricing.currency}
-                </div>
-                <div className="text-[10px] text-muted-foreground">za kredit</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-status-active/5 border-status-active/20">
-              <CardContent className="p-3">
-                <div className="text-xs text-muted-foreground">🎨 Odměna grafika</div>
-                <div className="text-lg font-bold text-status-active">
-                  {data.credit_pricing.colleagueRewardPerCredit || 80} {data.credit_pricing.currency}
-                </div>
-                <div className="text-[10px] text-muted-foreground">za kredit</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-chart-4/5 border-chart-4/20">
-              <CardContent className="p-3">
-                <div className="text-xs text-muted-foreground">⚡ Express</div>
-                <div className="text-lg font-bold text-chart-4">
-                  +{((data.credit_pricing.expressMultiplier - 1) * 100).toFixed(0)}%
-                </div>
-                <div className="text-[10px] text-muted-foreground">
-                  ({data.credit_pricing.basePrice * data.credit_pricing.expressMultiplier} {data.credit_pricing.currency})
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <CreditPricingSection
+          creditPricing={data.credit_pricing}
+          onUpdate={onCreditPricingUpdate}
+        />
+      )}
 
-          {data.credit_pricing.outputTypes && data.credit_pricing.outputTypes.length > 0 && (
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="text-xs font-medium">Typ výstupu</TableHead>
-                    <TableHead className="text-xs font-medium text-center w-20">Kredity</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.credit_pricing.outputTypes.map((output, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="text-xs">
-                        <div>{output.name}</div>
-                      </TableCell>
-                      <TableCell className="text-xs text-center font-medium">
-                        {output.credits}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
+      {/* Client-facing defaults: description + deliverables */}
+      {onDescriptionUpdate && onDeliverablesUpdate && (
+        <ClientDefaultsSection
+          description={description || ''}
+          onDescriptionUpdate={onDescriptionUpdate}
+          deliverables={defaultDeliverables || []}
+          onDeliverablesUpdate={onDeliverablesUpdate}
+        />
+      )}
+
+      {/* Inline Tier Pricing Edit for Core Services */}
+      {serviceType === 'core' && tierPricing && onTierPricingUpdate && (
+        <TierPricingEditSection
+          tierPricing={tierPricing}
+          onUpdate={onTierPricingUpdate}
+        />
+      )}
+
+      {/* Inline Reward Config Edit */}
+      {onRewardConfigUpdate && (
+        <RewardConfigEditSection
+          rewardConfig={rewardConfig || []}
+          onUpdate={onRewardConfigUpdate}
+          serviceType={serviceType}
+        />
       )}
     </div>
+  );
+}
+
+function renderTierCard(emoji: string, label: string, tier: TierPriceEntry, colorClass: string) {
+  return (
+    <Card className={`bg-${colorClass}/5 border-${colorClass}/20`}>
+      <CardHeader className="p-3 pb-1">
+        <CardTitle className="text-xs font-bold flex items-center gap-1">
+          {emoji} {label}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
+        <div className="text-[10px] text-muted-foreground">{tier.spend}</div>
+        {tier.price !== null ? (
+          <div>
+            {tier.originalPrice && (
+              <div className="text-xs text-muted-foreground line-through">
+                {tier.originalPrice.toLocaleString('cs-CZ')} Kč
+              </div>
+            )}
+            <div className={`text-lg font-bold text-${colorClass}`}>
+              {tier.price.toLocaleString('cs-CZ')} Kč
+            </div>
+          </div>
+        ) : (
+          <div className={`text-sm font-bold text-${colorClass}`}>
+            Individuální kalkulace
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -348,4 +330,472 @@ function renderTierValue(value: string | boolean) {
     );
   }
   return <span className="text-xs">{value}</span>;
+}
+
+interface CreditPricingSectionProps {
+  creditPricing: CreditPricing;
+  onUpdate?: (outputTypes: { name: string; credits: number; description: string; category?: string }[]) => void;
+}
+
+type OutputItem = { name: string; credits: number; description: string; category?: string; id?: string };
+
+function CreditPricingSection({ creditPricing, onUpdate }: CreditPricingSectionProps) {
+  const [localOutputTypes, setLocalOutputTypes] = useState<OutputItem[]>(creditPricing.outputTypes || []);
+  const isEditable = !!onUpdate;
+
+  const bannerCategories = ['banner', 'banner_translation', 'banner_revision'];
+  const videoCategories = ['video', 'video_translation'];
+
+  const bannerTypes = useMemo(() => localOutputTypes.filter(t => !t.category || bannerCategories.includes(t.category)), [localOutputTypes]);
+  const videoTypes = useMemo(() => localOutputTypes.filter(t => t.category && videoCategories.includes(t.category)), [localOutputTypes]);
+
+  const handleFieldChange = (index: number, field: 'name' | 'credits', value: string | number) => {
+    const updated = localOutputTypes.map((item, i) =>
+      i === index ? { ...item, [field]: value } : item
+    );
+    setLocalOutputTypes(updated);
+  };
+
+  const handleBlurSave = () => {
+    if (onUpdate) onUpdate(localOutputTypes);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') (e.target as HTMLElement).blur();
+  };
+
+  const handleRemove = (index: number) => {
+    const updated = localOutputTypes.filter((_, i) => i !== index);
+    setLocalOutputTypes(updated);
+    if (onUpdate) onUpdate(updated);
+  };
+
+  const handleAdd = (category: string) => {
+    const updated = [...localOutputTypes, { name: '', credits: 1, description: '', category }];
+    setLocalOutputTypes(updated);
+    if (onUpdate) onUpdate(updated);
+  };
+
+  const getGlobalIndex = (item: OutputItem) => localOutputTypes.indexOf(item);
+
+  const renderTable = (items: OutputItem[], label: string, icon: React.ReactNode, addCategory: string) => (
+    <div className="space-y-1.5">
+      <h5 className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground">
+        {icon}
+        {label}
+      </h5>
+      {items.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="text-xs font-medium">Typ výstupu</TableHead>
+                <TableHead className="text-xs font-medium text-center w-20">Kredity</TableHead>
+                {isEditable && <TableHead className="w-8" />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((output) => {
+                const globalIdx = getGlobalIndex(output);
+                return (
+                  <TableRow key={globalIdx}>
+                    <TableCell className="text-xs p-1.5">
+                      {isEditable ? (
+                        <Input
+                          value={output.name}
+                          onChange={(e) => handleFieldChange(globalIdx, 'name', e.target.value)}
+                          onBlur={handleBlurSave}
+                          onKeyDown={handleKeyDown}
+                          className="h-7 text-xs"
+                          placeholder="Název výstupu"
+                        />
+                      ) : (
+                        <div>{output.name}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-center font-medium p-1.5">
+                      {isEditable ? (
+                        <Input
+                          type="number"
+                          min={0.5}
+                          step={0.5}
+                          value={output.credits}
+                          onChange={(e) => handleFieldChange(globalIdx, 'credits', parseFloat(e.target.value) || 1)}
+                          onBlur={handleBlurSave}
+                          onKeyDown={handleKeyDown}
+                          className="h-7 text-xs text-center w-16 mx-auto"
+                        />
+                      ) : (
+                        output.credits
+                      )}
+                    </TableCell>
+                    {isEditable && (
+                      <TableCell className="p-1.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleRemove(globalIdx)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      {isEditable && (
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => handleAdd(addCategory)}>
+          <Plus className="h-3 w-3" />
+          Přidat
+        </Button>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        <CreditCard className="h-4 w-4 text-chart-4" />
+        Ceník kreditů
+      </h4>
+      
+      <p className="text-xs text-muted-foreground">
+        Cena za kredit a odměna grafika se nastavují na úrovni jednotlivé zakázky.
+      </p>
+
+      {renderTable(bannerTypes, 'Bannery', <Image className="h-3.5 w-3.5" />, 'banner')}
+      {renderTable(videoTypes, 'Videa', <Video className="h-3.5 w-3.5" />, 'video')}
+    </div>
+  );
+}
+
+// ---- Tier Pricing Inline Edit ----
+
+const TIER_META: { tier: string; emoji: string; label: string; color: string }[] = [
+  { tier: 'growth', emoji: '🚀', label: 'GROWTH', color: 'chart-1' },
+  { tier: 'pro', emoji: '💪', label: 'PRO', color: 'chart-2' },
+  { tier: 'elite', emoji: '🏆', label: 'ELITE', color: 'chart-4' },
+];
+
+interface TierPricingEditSectionProps {
+  tierPricing: { tier: string; price: number | null }[];
+  onUpdate: (tierPricing: { tier: string; price: number | null }[]) => void;
+}
+
+function TierPricingEditSection({ tierPricing, onUpdate }: TierPricingEditSectionProps) {
+  const [local, setLocal] = useState(tierPricing);
+
+  const handleChange = (tier: string, value: string) => {
+    const updated = local.map(tp =>
+      tp.tier === tier ? { ...tp, price: value === '' ? null : Number(value) } : tp
+    );
+    setLocal(updated);
+  };
+
+  const handleBlur = () => {
+    onUpdate(local);
+  };
+
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        💰 Ceník dle tieru
+      </h4>
+      <div className="grid grid-cols-3 gap-2">
+        {TIER_META.map(({ tier, emoji, label }) => {
+          const tp = local.find(t => t.tier === tier);
+          return (
+            <div key={tier} className="space-y-1">
+              <Label className="text-xs font-medium">{emoji} {label}</Label>
+              <Input
+                type="number"
+                min={0}
+                value={tp?.price ?? ''}
+                onChange={(e) => handleChange(tier, e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+                className="h-8 text-xs"
+                placeholder="Individ."
+              />
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-muted-foreground">Prázdné pole = individuální kalkulace</p>
+    </div>
+  );
+}
+
+// ---- Reward Config Inline Edit ----
+
+const ROLE_OPTIONS = [
+  'Meta Ads Specialist',
+  'PPC Specialist',
+  'SEO Specialist',
+  'Graphic Designer',
+  'Video Editor',
+  'Sales Specialist',
+  'Account Manager',
+];
+
+const REWARD_TYPE_OPTIONS: { value: ServiceRewardRole['reward_type']; label: string }[] = [
+  { value: 'fixed_monthly', label: 'Fixní měs.' },
+  { value: 'per_credit', label: 'Za kredit' },
+  { value: 'hourly', label: 'Hodinová' },
+];
+
+interface RewardConfigEditSectionProps {
+  rewardConfig: ServiceRewardTierConfig[];
+  onUpdate: (config: ServiceRewardTierConfig[]) => void;
+  serviceType?: 'core' | 'addon';
+}
+
+function RewardConfigEditSection({ rewardConfig, onUpdate, serviceType }: RewardConfigEditSectionProps) {
+  const [local, setLocal] = useState<ServiceRewardTierConfig[]>(rewardConfig);
+
+  const save = (updated: ServiceRewardTierConfig[]) => {
+    setLocal(updated);
+    onUpdate(updated);
+  };
+
+  const scaffoldCore = () => {
+    const tiers = ['growth', 'pro', 'elite'];
+    const newConfig = tiers.map(tier => {
+      const existing = local.find(rc => rc.tier === tier);
+      return existing || { tier, roles: [{ role: '', hours: 0, reward: 0, reward_type: 'fixed_monthly' as const }] };
+    });
+    save(newConfig);
+  };
+
+  const addAddonConfig = () => {
+    save([...local, { roles: [{ role: '', hours: 0, reward: 0, reward_type: 'fixed_monthly' as const }] }]);
+  };
+
+  const removeTierConfig = (idx: number) => {
+    save(local.filter((_, i) => i !== idx));
+  };
+
+  const addRole = (tierIdx: number) => {
+    const updated = local.map((tc, i) =>
+      i === tierIdx
+        ? { ...tc, roles: [...tc.roles, { role: '', hours: 0, reward: 0, reward_type: 'fixed_monthly' as const }] }
+        : tc
+    );
+    save(updated);
+  };
+
+  const removeRole = (tierIdx: number, roleIdx: number) => {
+    const updated = local.map((tc, i) =>
+      i === tierIdx ? { ...tc, roles: tc.roles.filter((_, ri) => ri !== roleIdx) } : tc
+    );
+    save(updated);
+  };
+
+  const updateRole = (tierIdx: number, roleIdx: number, field: keyof ServiceRewardRole, value: string | number) => {
+    const updated = local.map((tc, i) =>
+      i === tierIdx
+        ? {
+            ...tc,
+            roles: tc.roles.map((r, ri) =>
+              ri === roleIdx ? { ...r, [field]: field === 'hours' || field === 'reward' ? Number(value) : value } : r
+            ),
+          }
+        : tc
+    );
+    setLocal(updated);
+  };
+
+  const handleBlur = () => {
+    onUpdate(local);
+  };
+
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        <Users className="h-4 w-4 text-chart-2" />
+        Odměny kolegů dle pozice
+      </h4>
+
+      {local.length === 0 && serviceType === 'core' && (
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={scaffoldCore}>
+          <Plus className="h-3 w-3" />
+          Přidat odměny pro Growth / Pro / Elite
+        </Button>
+      )}
+
+      {local.length === 0 && serviceType !== 'core' && (
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addAddonConfig}>
+          <Plus className="h-3 w-3" />
+          Přidat odměny
+        </Button>
+      )}
+
+      {local.map((tierConfig, tierIdx) => (
+        <div key={tierIdx} className="space-y-2 p-3 rounded-md border bg-muted/30">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold uppercase tracking-wider">
+              {tierConfig.tier ? tierConfig.tier.toUpperCase() : 'Odměny'}
+            </Label>
+            <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-destructive" onClick={() => removeTierConfig(tierIdx)}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+
+          {tierConfig.roles.map((role, roleIdx) => (
+            <div key={roleIdx} className="grid grid-cols-[1fr_55px_75px_90px_24px] gap-1.5 items-end">
+              <div className="space-y-0.5">
+                {roleIdx === 0 && <Label className="text-[10px] text-muted-foreground">Pozice</Label>}
+                <Select value={role.role} onValueChange={(v) => { updateRole(tierIdx, roleIdx, 'role', v); onUpdate(local.map((tc, i) => i === tierIdx ? { ...tc, roles: tc.roles.map((r, ri) => ri === roleIdx ? { ...r, role: v } : r) } : tc)); }}>
+                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Pozice" /></SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(r => (<SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-0.5">
+                {roleIdx === 0 && <Label className="text-[10px] text-muted-foreground">Hod.</Label>}
+                <Input type="number" value={role.hours} onChange={(e) => updateRole(tierIdx, roleIdx, 'hours', e.target.value)} onBlur={handleBlur} className="h-7 text-xs" step="0.5" />
+              </div>
+              <div className="space-y-0.5">
+                {roleIdx === 0 && <Label className="text-[10px] text-muted-foreground">Odměna</Label>}
+                <Input type="number" value={role.reward} onChange={(e) => updateRole(tierIdx, roleIdx, 'reward', e.target.value)} onBlur={handleBlur} className="h-7 text-xs" step="100" />
+              </div>
+              <div className="space-y-0.5">
+                {roleIdx === 0 && <Label className="text-[10px] text-muted-foreground">Typ</Label>}
+                <Select value={role.reward_type} onValueChange={(v) => { updateRole(tierIdx, roleIdx, 'reward_type', v); onUpdate(local.map((tc, i) => i === tierIdx ? { ...tc, roles: tc.roles.map((r, ri) => ri === roleIdx ? { ...r, reward_type: v as ServiceRewardRole['reward_type'] } : r) } : tc)); }}>
+                  <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {REWARD_TYPE_OPTIONS.map(rt => (<SelectItem key={rt.value} value={rt.value} className="text-xs">{rt.label}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-6 text-muted-foreground hover:text-destructive" onClick={() => removeRole(tierIdx, roleIdx)}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+
+          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => addRole(tierIdx)}>
+            <Plus className="h-3 w-3" />
+            Přidat pozici
+          </Button>
+        </div>
+      ))}
+
+      {/* Always show button to add another colleague/role group for non-core or when core already has tiers */}
+      {local.length > 0 && serviceType !== 'core' && (
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addAddonConfig}>
+          <Plus className="h-3 w-3" />
+          Přidat dalšího kolegu
+        </Button>
+      )}
+      {local.length > 0 && serviceType === 'core' && (
+        <p className="text-[10px] text-muted-foreground">
+          Klikněte na „Přidat pozici" v rámci tieru pro přidání dalšího kolegy.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ---- Client Defaults Section ----
+
+import { Textarea } from '@/components/ui/textarea';
+
+interface ClientDefaultsSectionProps {
+  description: string;
+  onDescriptionUpdate: (description: string) => void;
+  deliverables: string[];
+  onDeliverablesUpdate: (deliverables: string[]) => void;
+}
+
+function ClientDefaultsSection({ description, onDescriptionUpdate, deliverables, onDeliverablesUpdate }: ClientDefaultsSectionProps) {
+  const [localDesc, setLocalDesc] = useState(description);
+  const [localDeliverables, setLocalDeliverables] = useState(deliverables.length > 0 ? deliverables : ['']);
+
+  const handleDescBlur = () => {
+    onDescriptionUpdate(localDesc);
+  };
+
+  const handleDeliverableChange = (index: number, value: string) => {
+    const updated = localDeliverables.map((d, i) => i === index ? value : d);
+    setLocalDeliverables(updated);
+  };
+
+  const handleDeliverableBlur = () => {
+    onDeliverablesUpdate(localDeliverables.filter(d => d.trim()));
+  };
+
+  const addDeliverable = () => {
+    setLocalDeliverables([...localDeliverables, '']);
+  };
+
+  const removeDeliverable = (index: number) => {
+    const updated = localDeliverables.filter((_, i) => i !== index);
+    setLocalDeliverables(updated.length > 0 ? updated : ['']);
+    onDeliverablesUpdate(updated.filter(d => d.trim()));
+  };
+
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        📄 Popis služby pro klienta
+      </h4>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Stručný popis</Label>
+        <Textarea
+          value={localDesc}
+          onChange={(e) => setLocalDesc(e.target.value)}
+          onBlur={handleDescBlur}
+          placeholder="Např. Správa Google Ads a S-kliku – více zakázek a vyšší zisk"
+          rows={2}
+          className="text-xs"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Co klient dostane (každý řádek = 1 bod)</Label>
+        <div className="space-y-1.5">
+          {localDeliverables.map((item, index) => (
+            <div key={index} className="flex items-center gap-1.5">
+              <Input
+                value={item}
+                onChange={(e) => handleDeliverableChange(index, e.target.value)}
+                onBlur={handleDeliverableBlur}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addDeliverable();
+                  }
+                }}
+                placeholder="Např. Správa kampaní na Meta platformách"
+                className="h-8 text-xs flex-1"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-6 text-muted-foreground hover:text-destructive flex-shrink-0"
+                onClick={() => removeDeliverable(index)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addDeliverable}>
+          <Plus className="h-3 w-3" />
+          Přidat bod
+        </Button>
+        <p className="text-[10px] text-muted-foreground">
+          Pro služby z katalogu se popis načte automaticky do nabídky — můžete ho upravit.
+        </p>
+      </div>
+    </div>
+  );
 }

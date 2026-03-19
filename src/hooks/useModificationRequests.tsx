@@ -8,16 +8,20 @@ import { toast } from 'sonner';
 import { withAbortTimeout, withTimeout } from '@/utils/asyncUtils';
 import type {
   ModificationRequestType,
+  ModificationRequestStatus,
   ModificationProposedChanges,
+  ModificationRequestItem,
 } from '@/types/crm';
+import type { PricingSnapshot } from '@/utils/pricingEngine';
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
+  expand_country: 'Rozšíření země',
   add_service: 'Přidání služby',
   update_service_price: 'Změna ceny',
   deactivate_service: 'Ukončení služby',
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny',
-  remove_assignment: 'Odebrání kolegy',
+  new_engagement: 'Nová zakázka',
 };
 
 // Email sent record type
@@ -35,11 +39,16 @@ export interface StoredModificationRequest {
   id: string;
   engagement_id: string;
   request_type: ModificationRequestType;
-  status: 'pending' | 'approved' | 'client_approved' | 'applied' | 'rejected';
+  status: ModificationRequestStatus;
   proposed_changes: ModificationProposedChanges;
   engagement_service_id: string | null;
   engagement_assignment_id: string | null;
+  items?: ModificationRequestItem[];
+  pricing_snapshot?: PricingSnapshot | null;
+  bundle_discount_percent?: number | null;
   effective_from: string | null;
+  client_chosen_effective_from?: string | null;
+  onboarding_data?: Record<string, unknown> | null;
   upsold_by_id: string | null;
   upsell_commission_percent: number;
   requested_by: string | null;
@@ -160,9 +169,14 @@ export function useModificationRequests() {
       engagement_service_id?: string | null;
       engagement_assignment_id?: string | null;
       effective_from?: string | null;
+      client_chosen_effective_from?: string | null;
       upsold_by_id?: string | null;
       upsell_commission_percent?: number;
       note?: string | null;
+      pricing_snapshot?: PricingSnapshot | null;
+      items?: ModificationRequestItem[];
+      bundle_discount_percent?: number;
+      status?: 'pending' | 'draft';
     }) => {
       if (!user) throw new Error('User not authenticated');
 
@@ -202,20 +216,25 @@ export function useModificationRequests() {
         : null;
 
       const { error } = await withAbortTimeout(
-        (signal) => supabase
-          .from('modification_requests')
+        (signal) => (supabase
+          .from('modification_requests') as any)
           .insert({
             engagement_id: params.engagement_id,
             request_type: params.request_type,
-            status: 'pending',
+            status: params.status ?? 'pending',
             proposed_changes: params.proposed_changes as unknown as Record<string, unknown>,
             engagement_service_id: params.engagement_service_id || null,
             engagement_assignment_id: params.engagement_assignment_id || null,
             effective_from: params.effective_from || null,
+            client_chosen_effective_from: params.client_chosen_effective_from || null,
             upsold_by_id: params.upsold_by_id || null,
             upsold_by_name: upsoldByColleague?.full_name || null,
             upsell_commission_percent: params.upsell_commission_percent ?? 10,
             note: params.note || null,
+            pricing_snapshot: params.pricing_snapshot ?? null,
+            items: params.items ?? null,
+            bundle_discount_percent: params.bundle_discount_percent ?? 0,
+            onboarding_data: null,
             requested_by: user.id,
             // Denormalized fields
             engagement_name: engagement.name,
@@ -393,19 +412,43 @@ export function useModificationRequests() {
       requestId: string;
       updates: {
         proposed_changes?: ModificationProposedChanges;
+        items?: ModificationRequestItem[];
+        pricing_snapshot?: PricingSnapshot | null;
+        bundle_discount_percent?: number;
         effective_from?: string | null;
+        client_chosen_effective_from?: string | null;
+        onboarding_data?: Record<string, unknown> | null;
+        status?: ModificationRequestStatus;
         note?: string | null;
         upsell_commission_percent?: number;
       };
     }) => {
-      const { data, error } = await supabase
-        .from('modification_requests')
+      const { data, error } = await (supabase
+        .from('modification_requests') as any)
         .update({
           ...(params.updates.proposed_changes && {
             proposed_changes: params.updates.proposed_changes as unknown as Record<string, unknown>,
           }),
+          ...(params.updates.items !== undefined && {
+            items: params.updates.items,
+          }),
+          ...(params.updates.pricing_snapshot !== undefined && {
+            pricing_snapshot: params.updates.pricing_snapshot,
+          }),
+          ...(params.updates.bundle_discount_percent !== undefined && {
+            bundle_discount_percent: params.updates.bundle_discount_percent,
+          }),
           ...(params.updates.effective_from !== undefined && {
             effective_from: params.updates.effective_from,
+          }),
+          ...(params.updates.client_chosen_effective_from !== undefined && {
+            client_chosen_effective_from: params.updates.client_chosen_effective_from,
+          }),
+          ...(params.updates.onboarding_data !== undefined && {
+            onboarding_data: params.updates.onboarding_data,
+          }),
+          ...(params.updates.status !== undefined && {
+            status: params.updates.status,
           }),
           ...(params.updates.note !== undefined && {
             note: params.updates.note,
@@ -415,7 +458,7 @@ export function useModificationRequests() {
           }),
         })
         .eq('id', params.requestId)
-        .in('status', ['pending', 'approved'])
+        .in('status', ['draft', 'pending', 'approved', 'client_approved'])
         .select()
         .single();
 
@@ -439,7 +482,7 @@ export function useModificationRequests() {
         .from('modification_requests')
         .delete()
         .eq('id', requestId)
-        .in('status', ['pending', 'approved', 'rejected']);
+        .in('status', ['draft', 'pending', 'approved', 'client_approved', 'rejected']);
 
       if (error) throw error;
     },
@@ -505,6 +548,25 @@ export function useModificationRequests() {
   const applyRequest = async (requestId: string) => {
     setApplyingId(requestId);
     try {
+      const request = pendingRequests.find(r => r.id === requestId);
+      if (request && (request.request_type === 'expand_country' || request.request_type === 'new_engagement')) {
+        const canApplyDirectly = request.status === 'approved' || request.status === 'client_approved';
+        if (!canApplyDirectly) {
+          throw new Error('Požadavek nelze aktivovat v aktuálním stavu');
+        }
+        const { error } = await (supabase
+          .from('modification_requests') as any)
+          .update({
+            status: 'applied',
+            reviewed_by: user?.id || null,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq('id', requestId);
+        if (error) throw error;
+        queryClient.invalidateQueries({ queryKey: ['modification_requests'] });
+        toast.success('Změna byla aplikována');
+        return { success: true };
+      }
       return await applyMutation.mutateAsync(requestId);
     } finally {
       setApplyingId(null);
@@ -513,11 +575,24 @@ export function useModificationRequests() {
 
   const updateRequest = async (requestId: string, updates: {
     proposed_changes?: ModificationProposedChanges;
+    items?: ModificationRequestItem[];
+    pricing_snapshot?: PricingSnapshot | null;
+    bundle_discount_percent?: number;
     effective_from?: string | null;
+    client_chosen_effective_from?: string | null;
+    onboarding_data?: Record<string, unknown> | null;
+    status?: ModificationRequestStatus;
     note?: string | null;
     upsell_commission_percent?: number;
   }) => {
     return updateMutation.mutateAsync({ requestId, updates });
+  };
+
+  const submitDraft = async (requestId: string) => {
+    return updateMutation.mutateAsync({
+      requestId,
+      updates: { status: 'pending' },
+    });
   };
 
   const deleteRequest = async (requestId: string) => {
@@ -546,17 +621,43 @@ export function useModificationRequests() {
     isCreating: createMutation.isPending,
     approveRequest,
     approvingId, // Specific ID being approved
+    isApproving: approvingId !== null,
     rejectRequest,
     rejectingId, // Specific ID being rejected
+    isRejecting: rejectingId !== null,
     applyRequest,
     applyingId, // Specific ID being applied
+    isApplying: applyingId !== null,
     updateRequest,
     isUpdating: updateMutation.isPending,
     deleteRequest,
     deletingId, // Specific ID being deleted
+    isDeleting: deletingId !== null,
+    submitDraft,
     recordEmailSent,
     refresh,
   };
+}
+
+export async function recordEmailSent(
+  requestId: string,
+  sentTo: string,
+  sentById: string,
+  sentByName: string
+) {
+  const { data, error } = await supabase
+    .from('modification_request_emails')
+    .insert({
+      modification_request_id: requestId,
+      sent_to: sentTo,
+      sent_by_id: sentById,
+      sent_by_name: sentByName,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
 // Standalone function to get request by token (for public approval page)

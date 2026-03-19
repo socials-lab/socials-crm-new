@@ -34,8 +34,8 @@ interface CreditPricing {
   basePrice: number;
   currency: string;
   expressMultiplier: number;
-  colleagueRewardPerCredit: number;
-  outputTypes: { name: string; credits: number; description: string }[];
+  bannerRewardPerCredit: number;
+  videoRewardPerCredit: number;
 }
 
 interface ServiceDetailData {
@@ -46,7 +46,7 @@ interface ServiceDetailData {
   setup_items: SetupItem[];
   management_items: SetupItem[];
   tier_comparison: TierFeature[];
-  tier_pricing: TierPrices | null;
+  tier_prices: TierPrices | null;
   credit_pricing: CreditPricing | null;
 }
 
@@ -72,7 +72,7 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
     setup_items: [],
     management_items: [],
     tier_comparison: [],
-    tier_pricing: null,
+    tier_prices: null,
     credit_pricing: null,
   });
 
@@ -81,60 +81,34 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
 
   useEffect(() => {
     if (service) {
-      // Check if service has database values
-      const hasDbData = service.tagline ||
-        (service.platforms && service.platforms.length > 0) ||
-        service.target_audience ||
-        (service.benefits && service.benefits.length > 0) ||
-        (service.setup_items && (service.setup_items as SetupItem[]).length > 0) ||
-        (service.management_items && (service.management_items as SetupItem[]).length > 0) ||
-        (service.tier_comparison && (service.tier_comparison as TierFeature[]).length > 0) ||
-        service.tier_pricing ||
-        service.credit_pricing;
-
-      if (hasDbData) {
-        // Load from database fields
+      // Load data from constants based on service code
+      const constantDetail = getServiceDetail(service.code);
+      
+      if (constantDetail) {
         setData({
-          tagline: service.tagline || '',
-          platforms: service.platforms || [],
-          target_audience: service.target_audience || '',
-          benefits: service.benefits || [],
-          setup_items: (service.setup_items as SetupItem[]) || [],
-          management_items: (service.management_items as SetupItem[]) || [],
-          tier_comparison: (service.tier_comparison as TierFeature[]) || [],
-          tier_pricing: (service.tier_pricing as TierPrices) || null,
-          credit_pricing: (service.credit_pricing as CreditPricing) || null,
+          tagline: constantDetail.tagline || '',
+          platforms: constantDetail.platforms || [],
+          target_audience: constantDetail.targetAudience || '',
+          benefits: constantDetail.benefits || [],
+          setup_items: constantDetail.setup || [],
+          management_items: constantDetail.management || [],
+          tier_comparison: constantDetail.tierComparison || [],
+          tier_prices: constantDetail.tierPricing || null,
+          credit_pricing: constantDetail.creditPricing || null,
         });
       } else {
-        // Fall back to constants based on service code
-        const constantDetail = getServiceDetail(service.code);
-
-        if (constantDetail) {
-          setData({
-            tagline: constantDetail.tagline || '',
-            platforms: constantDetail.platforms || [],
-            target_audience: constantDetail.targetAudience || '',
-            benefits: constantDetail.benefits || [],
-            setup_items: constantDetail.setup || [],
-            management_items: constantDetail.management || [],
-            tier_comparison: constantDetail.tierComparison || [],
-            tier_pricing: constantDetail.tierPricing || null,
-            credit_pricing: constantDetail.creditPricing || null,
-          });
-        } else {
-          // Reset to empty state if no constant found
-          setData({
-            tagline: '',
-            platforms: [],
-            target_audience: '',
-            benefits: [],
-            setup_items: [],
-            management_items: [],
-            tier_comparison: [],
-            tier_pricing: null,
-            credit_pricing: null,
-          });
-        }
+        // Reset to empty state if no constant found
+        setData({
+          tagline: '',
+          platforms: [],
+          target_audience: '',
+          benefits: [],
+          setup_items: [],
+          management_items: [],
+          tier_comparison: [],
+          tier_prices: null,
+          credit_pricing: null,
+        });
       }
     }
   }, [service]);
@@ -303,20 +277,20 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
 
   // Tier prices
   const enableTierPrices = () => {
-    setData(prev => ({ ...prev, tier_pricing: emptyTierPrices }));
+    setData(prev => ({ ...prev, tier_prices: emptyTierPrices }));
   };
 
   const disableTierPrices = () => {
-    setData(prev => ({ ...prev, tier_pricing: null }));
+    setData(prev => ({ ...prev, tier_prices: null }));
   };
 
   const updateTierPrice = (tier: 'growth' | 'pro' | 'elite', field: 'price' | 'spend', value: number | string) => {
-    if (!data.tier_pricing) return;
+    if (!data.tier_prices) return;
     setData(prev => ({
       ...prev,
-      tier_pricing: {
-        ...prev.tier_pricing!,
-        [tier]: { ...prev.tier_pricing![tier], [field]: value },
+      tier_prices: {
+        ...prev.tier_prices!,
+        [tier]: { ...prev.tier_prices![tier], [field]: value },
       },
     }));
   };
@@ -325,7 +299,7 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
   const enableCreditPricing = () => {
     setData(prev => ({
       ...prev,
-      credit_pricing: { basePrice: 400, currency: 'CZK', expressMultiplier: 1.5, colleagueRewardPerCredit: 80, outputTypes: [] },
+      credit_pricing: { basePrice: 400, currency: 'CZK', expressMultiplier: 1.5, bannerRewardPerCredit: 80, videoRewardPerCredit: 80 },
     }));
   };
 
@@ -341,40 +315,7 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
     }));
   };
 
-  const addOutputType = () => {
-    if (!data.credit_pricing) return;
-    setData(prev => ({
-      ...prev,
-      credit_pricing: {
-        ...prev.credit_pricing!,
-        outputTypes: [...prev.credit_pricing!.outputTypes, { name: '', credits: 1, description: '' }],
-      },
-    }));
-  };
-
-  const removeOutputType = (index: number) => {
-    if (!data.credit_pricing) return;
-    setData(prev => ({
-      ...prev,
-      credit_pricing: {
-        ...prev.credit_pricing!,
-        outputTypes: prev.credit_pricing!.outputTypes.filter((_, i) => i !== index),
-      },
-    }));
-  };
-
-  const updateOutputType = (index: number, field: string, value: string | number) => {
-    if (!data.credit_pricing) return;
-    setData(prev => ({
-      ...prev,
-      credit_pricing: {
-        ...prev.credit_pricing!,
-        outputTypes: prev.credit_pricing!.outputTypes.map((o, i) =>
-          i === index ? { ...o, [field]: value } : o
-        ),
-      },
-    }));
-  };
+  // Output types are now managed inline in ServiceDetailView via useCreativeBoostData
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -615,12 +556,12 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm">Balíčky dle rozpočtu (GROWTH/PRO/ELITE)</CardTitle>
                     <Switch
-                      checked={!!data.tier_pricing}
+                      checked={!!data.tier_prices}
                       onCheckedChange={(checked) => checked ? enableTierPrices() : disableTierPrices()}
                     />
                   </div>
                 </CardHeader>
-                {data.tier_pricing && (
+                {data.tier_prices && (
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-3 gap-4">
                       {(['growth', 'pro', 'elite'] as const).map((tier) => (
@@ -630,12 +571,12 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
                           </Label>
                           <Input
                             type="number"
-                            value={data.tier_pricing![tier].price || ''}
-                            onChange={(e) => updateTierPrice(tier, 'price', e.target.value === '' ? 0 : Number(e.target.value))}
+                            value={data.tier_prices![tier].price}
+                            onChange={(e) => updateTierPrice(tier, 'price', Number(e.target.value))}
                             placeholder="Cena"
                           />
                           <Input
-                            value={data.tier_pricing![tier].spend}
+                            value={data.tier_prices![tier].spend}
                             onChange={(e) => updateTierPrice(tier, 'spend', e.target.value)}
                             placeholder="Rozpočet (např. do 400 000 Kč)"
                           />
@@ -651,50 +592,41 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
                           Přidat
                         </Button>
                       </div>
-                      {data.tier_comparison.length > 0 && (
-                        <div className="grid grid-cols-[1fr,60px,60px,60px,auto] gap-2 items-center text-xs text-muted-foreground font-medium">
-                          <span>Funkce</span>
-                          <span className="text-center">GRO</span>
-                          <span className="text-center">PRO</span>
-                          <span className="text-center">ELI</span>
-                          <span></span>
-                        </div>
-                      )}
                       <div className="space-y-2">
                         {data.tier_comparison.map((feature, index) => (
-                          <div key={index} className="grid grid-cols-[1fr,60px,60px,60px,auto] gap-2 items-center">
+                          <div key={index} className="grid grid-cols-[1fr,100px,100px,100px,auto] gap-2 items-center">
                             <Input
                               value={feature.feature}
                               onChange={(e) => updateTierFeature(index, 'feature', e.target.value)}
                               placeholder="Název funkce"
                             />
-                            <Button
-                              type="button"
-                              variant={feature.growth === true ? 'default' : 'outline'}
-                              size="sm"
-                              className={`h-8 w-full ${feature.growth === true ? 'bg-green-600 hover:bg-green-700' : feature.growth === false ? 'bg-muted text-muted-foreground' : ''}`}
-                              onClick={() => updateTierFeature(index, 'growth', feature.growth === true ? false : true)}
-                            >
-                              {feature.growth === true ? '✓' : '—'}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={feature.pro === true ? 'default' : 'outline'}
-                              size="sm"
-                              className={`h-8 w-full ${feature.pro === true ? 'bg-green-600 hover:bg-green-700' : feature.pro === false ? 'bg-muted text-muted-foreground' : ''}`}
-                              onClick={() => updateTierFeature(index, 'pro', feature.pro === true ? false : true)}
-                            >
-                              {feature.pro === true ? '✓' : '—'}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={feature.elite === true ? 'default' : 'outline'}
-                              size="sm"
-                              className={`h-8 w-full ${feature.elite === true ? 'bg-green-600 hover:bg-green-700' : feature.elite === false ? 'bg-muted text-muted-foreground' : ''}`}
-                              onClick={() => updateTierFeature(index, 'elite', feature.elite === true ? false : true)}
-                            >
-                              {feature.elite === true ? '✓' : '—'}
-                            </Button>
+                            <Input
+                              value={typeof feature.growth === 'boolean' ? (feature.growth ? '✓' : '—') : feature.growth}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateTierFeature(index, 'growth', val === '✓' ? true : val === '—' ? false : val);
+                              }}
+                              placeholder="GROWTH"
+                              className="text-center text-xs"
+                            />
+                            <Input
+                              value={typeof feature.pro === 'boolean' ? (feature.pro ? '✓' : '—') : feature.pro}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateTierFeature(index, 'pro', val === '✓' ? true : val === '—' ? false : val);
+                              }}
+                              placeholder="PRO"
+                              className="text-center text-xs"
+                            />
+                            <Input
+                              value={typeof feature.elite === 'boolean' ? (feature.elite ? '✓' : '—') : feature.elite}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateTierFeature(index, 'elite', val === '✓' ? true : val === '—' ? false : val);
+                              }}
+                              placeholder="ELITE"
+                              className="text-center text-xs"
+                            />
                             <Button
                               type="button"
                               variant="ghost"
@@ -730,8 +662,8 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
                         <Label>💰 Výchozí cena za kredit (klient)</Label>
                         <Input
                           type="number"
-                          value={data.credit_pricing.basePrice || ''}
-                          onChange={(e) => updateCreditPricing('basePrice', e.target.value === '' ? 0 : Number(e.target.value))}
+                          value={data.credit_pricing.basePrice}
+                          onChange={(e) => updateCreditPricing('basePrice', Number(e.target.value))}
                           placeholder="400"
                         />
                         <p className="text-xs text-muted-foreground">
@@ -739,15 +671,24 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
                         </p>
                       </div>
                       <div className="space-y-2">
-                        <Label>🎨 Výchozí odměna grafika za kredit</Label>
+                        <Label>🖼️ Výchozí odměna za banner kredit</Label>
                         <Input
                           type="number"
-                          value={data.credit_pricing.colleagueRewardPerCredit || ''}
-                          onChange={(e) => updateCreditPricing('colleagueRewardPerCredit', e.target.value === '' ? 0 : Number(e.target.value))}
+                          value={data.credit_pricing.bannerRewardPerCredit}
+                          onChange={(e) => updateCreditPricing('bannerRewardPerCredit', Number(e.target.value))}
+                          placeholder="80"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>🎬 Výchozí odměna za video kredit</Label>
+                        <Input
+                          type="number"
+                          value={data.credit_pricing.videoRewardPerCredit}
+                          onChange={(e) => updateCreditPricing('videoRewardPerCredit', Number(e.target.value))}
                           placeholder="80"
                         />
                         <p className="text-xs text-muted-foreground">
-                          Výchozí odměna pro grafika/kolegu za 1 kredit
+                          Výchozí odměna pro grafika/kolegu za 1 kredit dle typu výstupu
                         </p>
                       </div>
                     </div>
@@ -764,53 +705,15 @@ export function ServiceDetailEditDialog({ open, onOpenChange, service, onSave }:
                         <Input
                           type="number"
                           step="0.1"
-                          value={data.credit_pricing.expressMultiplier || ''}
-                          onChange={(e) => updateCreditPricing('expressMultiplier', e.target.value === '' ? 0 : Number(e.target.value))}
+                          value={data.credit_pricing.expressMultiplier}
+                          onChange={(e) => updateCreditPricing('expressMultiplier', Number(e.target.value))}
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <Label>Typy výstupů</Label>
-                        <Button type="button" variant="outline" size="sm" onClick={addOutputType}>
-                          <Plus className="h-4 w-4 mr-1" />
-                          Přidat
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        {data.credit_pricing.outputTypes.map((output, index) => (
-                          <div key={index} className="grid grid-cols-[1fr,80px,1fr,auto] gap-2 items-center">
-                            <Input
-                              value={output.name}
-                              onChange={(e) => updateOutputType(index, 'name', e.target.value)}
-                              placeholder="Název"
-                            />
-                            <Input
-                              type="number"
-                              step="0.25"
-                              value={output.credits || ''}
-                              onChange={(e) => updateOutputType(index, 'credits', e.target.value === '' ? 0 : Number(e.target.value))}
-                              placeholder="Kredity"
-                            />
-                            <Input
-                              value={output.description}
-                              onChange={(e) => updateOutputType(index, 'description', e.target.value)}
-                              placeholder="Popis"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeOutputType(index)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Typy výstupů se spravují přímo v tabulce ceníku kreditů v detailu služby.
+                    </p>
                   </CardContent>
                 )}
               </Card>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, MoreVertical, Pencil, Trash2, ChevronDown, ChevronUp, ExternalLink, Users, FileEdit } from 'lucide-react';
+import { Search, Plus, MoreVertical, Pencil, Trash2, ChevronDown, ChevronUp, ExternalLink, FileEdit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -10,14 +10,14 @@ import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCRMData } from '@/hooks/useCRMData';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { ServiceFormDialog } from '@/components/services/ServiceFormDialog';
 import { DeleteServiceDialog } from '@/components/services/DeleteServiceDialog';
 import { ServiceDetailView, type ServiceDetailData } from '@/components/services/ServiceDetailView';
 import { ServiceDetailEditDialog } from '@/components/services/ServiceDetailEditDialog';
 import { serviceTierConfigs } from '@/constants/services';
 import { getServiceDetail } from '@/constants/serviceDetails';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import type { Service, ServiceCategory, ServiceType } from '@/types/crm';
 
 const categoryColors: Record<ServiceCategory, string> = {
@@ -36,13 +36,30 @@ const categoryLabels: Record<ServiceCategory, string> = {
   consulting: 'Konzultace',
 };
 
+function normalizeTierPricing(
+  tierPricing: Service['tier_pricing']
+): { tier: string; price: number | null }[] | null {
+  if (!tierPricing) return null;
+
+  if (Array.isArray(tierPricing)) {
+    return tierPricing.map((tp) => ({ tier: tp.tier, price: tp.price }));
+  }
+
+  // Legacy/object shape: { growth: { price }, pro: { price }, elite: { price } }
+  if (typeof tierPricing === 'object') {
+    const obj = tierPricing as Record<string, { price?: number | null }>;
+    const tiers = ['growth', 'pro', 'elite'];
+    return tiers.map((tier) => ({ tier, price: obj[tier]?.price ?? null }));
+  }
+
+  console.error('Invalid tier_pricing format in service record', { tierPricing });
+  return null;
+}
+
 export default function Services() {
   const { services, engagementServices, clients, engagements, addService, updateService, deleteService, toggleServiceActive } = useCRMData();
-  const { isSuperAdmin, role } = useUserRole();
+  const { outputTypes: cbOutputTypes, updateOutputType, addOutputType, removeOutputType } = useCreativeBoostData();
   const navigate = useNavigate();
-  
-  // Check if user can manage services (admin or management roles)
-  const canManageServices = isSuperAdmin || role === 'admin' || role === 'management';
   
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | ServiceType>('all');
@@ -158,118 +175,108 @@ export default function Services() {
     const isExpanded = expandedServiceId === service.id;
     const activeClients = getActiveClientsForService(service.id);
     const activeClientCount = getActiveClientCount(service.id);
-
-    // Get service detail - prefer database fields, fall back to constants
+    
+    // Get service detail from constants
     const constantDetail = getServiceDetail(service.code);
+    
+    // For Creative Boost, merge outputTypes from the CB hook (single source of truth)
+    const cbOutputTypesForView = service.code === 'CREATIVE_BOOST'
+      ? cbOutputTypes.filter(t => t.isActive).map(t => ({
+          name: t.name,
+          credits: t.baseCredits,
+          description: t.description,
+          id: t.id,
+          category: t.category,
+        }))
+      : undefined;
 
-    // Build service detail data from database fields first, then constants as fallback
-    const serviceDetailData: ServiceDetailData | undefined = {
-      tagline: service.tagline || constantDetail?.tagline,
-      platforms: service.platforms || constantDetail?.platforms,
-      target_audience: service.target_audience || constantDetail?.targetAudience,
-      benefits: service.benefits || constantDetail?.benefits,
-      setup_items: service.setup_items || constantDetail?.setup,
-      management_items: service.management_items || constantDetail?.management,
-      tier_comparison: service.tier_comparison || constantDetail?.tierComparison,
-      tier_pricing: service.tier_pricing || constantDetail?.tierPricing || null,
-      credit_pricing: service.credit_pricing || constantDetail?.creditPricing || null,
-    };
+    const serviceDetailData: ServiceDetailData | undefined = constantDetail ? {
+      tagline: constantDetail.tagline,
+      platforms: constantDetail.platforms,
+      target_audience: constantDetail.targetAudience,
+      benefits: constantDetail.benefits,
+      setup_items: constantDetail.setup,
+      management_items: constantDetail.management,
+      tier_comparison: constantDetail.tierComparison,
+      tier_prices: constantDetail.tierPricing || null,
+      credit_pricing: constantDetail.creditPricing ? {
+        ...constantDetail.creditPricing,
+        outputTypes: cbOutputTypesForView,
+      } : null,
+    } : undefined;
 
     return (
       <Card key={service.id} className="overflow-hidden">
         {/* Header - Collapsed View */}
         <div
-          className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+          className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={() => toggleExpand(service.id)}
         >
-          {/* Top row - Name and actions */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-primary font-semibold text-sm">
-                  {service.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <div className="font-medium truncate">{service.name}</div>
-                <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                  {service.code}
-                </code>
-              </div>
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <span className="text-primary font-semibold text-sm">
+                {service.name.charAt(0).toUpperCase()}
+              </span>
             </div>
-
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-              {canManageServices && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-popover">
-                    <DropdownMenuItem onClick={() => handleEditService(service)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Upravit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleToggleActive(service)}>
-                      {service.is_active ? 'Deaktivovat' : 'Aktivovat'}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => handleDeleteClick(service)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Smazat
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
-              {isExpanded ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              )}
+            <div className="min-w-0">
+              <div className="font-medium truncate">{service.name}</div>
+              <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                {service.code}
+              </code>
             </div>
           </div>
 
-          {/* Bottom row - Badges */}
-          <div className="flex flex-wrap items-center gap-1.5 mt-2 ml-11">
-            <Badge
-              variant="outline"
-              className={service.service_type === 'core'
-                ? 'bg-primary/10 text-primary border-primary/20 text-xs'
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Badge 
+              variant="outline" 
+              className={service.service_type === 'core' 
+                ? 'bg-primary/10 text-primary border-primary/20 text-xs' 
                 : 'bg-muted text-muted-foreground text-xs'
               }
             >
               {service.service_type === 'core' ? 'Core' : 'Add-on'}
             </Badge>
 
-            <Badge variant="outline" className={`text-xs ${categoryColors[service.category] || 'bg-muted'}`}>
-              {categoryLabels[service.category] || service.category}
-            </Badge>
-
-            {service.service_type === 'addon' && service.base_price > 0 && (
-              <span className="font-semibold text-xs whitespace-nowrap">
-                {service.base_price.toLocaleString('cs-CZ')} {service.currency}
-              </span>
-            )}
-
-            <Badge variant="outline" className="gap-1 text-xs">
-              <Users className="h-3 w-3" />
-              {activeClientCount}
-            </Badge>
-
-            <Badge
-              variant="outline"
-              className={service.is_active
-                ? 'bg-status-active/10 text-status-active border-status-active/20 text-xs'
+            <Badge 
+              variant="outline" 
+              className={service.is_active 
+                ? 'bg-status-active/10 text-status-active border-status-active/20 text-xs' 
                 : 'bg-muted text-muted-foreground border-muted text-xs'
               }
             >
               {service.is_active ? 'Aktivní' : 'Neaktivní'}
             </Badge>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover">
+                <DropdownMenuItem onClick={() => handleEditService(service)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Upravit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleToggleActive(service)}>
+                  {service.is_active ? 'Deaktivovat' : 'Aktivovat'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handleDeleteClick(service)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Smazat
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
           </div>
         </div>
 
@@ -284,92 +291,72 @@ export default function Services() {
 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Kategorie:</span>
-                {canManageServices ? (
-                  <Select
-                    value={service.category}
-                    onValueChange={(value) => handleCategoryChange(service, value as ServiceCategory)}
-                  >
-                    <SelectTrigger className="w-[120px] h-7 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      {Object.entries(categoryLabels).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <span className="text-xs">{categoryLabels[service.category] || service.category}</span>
-                )}
+                <Select
+                  value={service.category}
+                  onValueChange={(value) => handleCategoryChange(service, value as ServiceCategory)}
+                >
+                  <SelectTrigger className="w-[120px] h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {Object.entries(categoryLabels).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Status:</span>
-                {canManageServices ? (
-                  <>
-                    <Switch
-                      checked={service.is_active}
-                      onCheckedChange={() => handleToggleActive(service)}
-                      className="scale-90"
-                    />
-                    <span className="text-xs">
-                      {service.is_active ? 'Aktivní' : 'Neaktivní'}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-xs">
-                    {service.is_active ? 'Aktivní' : 'Neaktivní'}
-                  </span>
-                )}
+                <Switch
+                  checked={service.is_active}
+                  onCheckedChange={() => handleToggleActive(service)}
+                  className="scale-90"
+                />
+                <span className="text-xs">
+                  {service.is_active ? 'Aktivní' : 'Neaktivní'}
+                </span>
               </div>
 
               {/* Only show base price editing for Add-on services */}
               {service.service_type === 'addon' && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">Cena:</span>
-                  {canManageServices ? (
-                    editingPriceId === service.id ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          value={tempPrice}
-                          onChange={(e) => setTempPrice(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handlePriceSave(service);
-                            } else if (e.key === 'Escape') {
-                              setEditingPriceId(null);
-                            }
-                          }}
-                          onBlur={() => handlePriceSave(service)}
-                          className="h-7 w-24 text-xs"
-                          autoFocus
-                        />
-                        <span className="text-xs text-muted-foreground">{service.currency}</span>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingPriceId(service.id);
-                          setTempPrice(String(service.base_price));
+                  {editingPriceId === service.id ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        value={tempPrice}
+                        onChange={(e) => setTempPrice(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handlePriceSave(service);
+                          } else if (e.key === 'Escape') {
+                            setEditingPriceId(null);
+                          }
                         }}
-                        className="flex items-center gap-1 text-xs font-medium hover:text-primary transition-colors"
-                      >
-                        {service.base_price > 0
-                          ? `${service.base_price.toLocaleString('cs-CZ')} ${service.currency}`
-                          : 'Nenastaveno'}
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                    )
+                        onBlur={() => handlePriceSave(service)}
+                        className="h-7 w-24 text-xs"
+                        autoFocus
+                      />
+                      <span className="text-xs text-muted-foreground">{service.currency}</span>
+                    </div>
                   ) : (
-                    <span className="text-xs font-medium">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPriceId(service.id);
+                        setTempPrice(String(service.base_price));
+                      }}
+                      className="flex items-center gap-1 text-xs font-medium hover:text-primary transition-colors"
+                    >
                       {service.base_price > 0
-                        ? `${service.base_price.toLocaleString('cs-CZ')} ${service.currency}`
+                        ? `${service.base_price.toLocaleString('cs-CZ')} ${service.currency}${service.code === 'CREATIVE_BOOST' ? '/kredit' : ''}`
                         : 'Nenastaveno'}
-                    </span>
+                      <Pencil className="h-3 w-3" />
+                    </button>
                   )}
                 </div>
               )}
@@ -391,33 +378,73 @@ export default function Services() {
             <div className="mt-3 pt-3 border-t">
               <div className="flex justify-between items-center mb-2">
                 <h5 className="text-xs font-semibold text-muted-foreground">Detaily služby</h5>
-                {canManageServices && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs px-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingDetailService(service);
-                      setDetailEditDialogOpen(true);
-                    }}
-                  >
-                    <FileEdit className="mr-1 h-3 w-3" />
-                    Upravit detaily
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs px-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingDetailService(service);
+                    setDetailEditDialogOpen(true);
+                  }}
+                >
+                  <FileEdit className="mr-1 h-3 w-3" />
+                  Upravit detaily
+                </Button>
               </div>
-              <ServiceDetailView data={serviceDetailData} />
+              <ServiceDetailView
+                data={serviceDetailData}
+                serviceType={service.service_type}
+                tierPricing={normalizeTierPricing(service.tier_pricing)}
+                onTierPricingUpdate={(updatedTierPricing) => {
+                  updateService(service.id, { tier_pricing: updatedTierPricing as any });
+                  toast.success('Ceník tierů byl aktualizován');
+                }}
+                rewardConfig={service.reward_config}
+                onRewardConfigUpdate={(updatedRewardConfig) => {
+                  updateService(service.id, { reward_config: updatedRewardConfig.length > 0 ? updatedRewardConfig : null } as Partial<Service>);
+                  toast.success('Odměny kolegů byly aktualizovány');
+                }}
+                description={service.description}
+                onDescriptionUpdate={(desc) => {
+                  updateService(service.id, { description: desc });
+                }}
+                defaultDeliverables={service.default_deliverables}
+                onDeliverablesUpdate={(deliverables) => {
+                  updateService(service.id, { default_deliverables: deliverables.length > 0 ? deliverables : null } as Partial<Service>);
+                }}
+                onCreditPricingUpdate={service.code === 'CREATIVE_BOOST' ? (updatedTypes) => {
+                  // Sync with the global CB output types
+                  const currentIds = cbOutputTypes.filter(t => t.isActive).map(t => t.id);
+                  const updatedIds = updatedTypes.filter(t => (t as any).id).map(t => (t as any).id);
+                  
+                  // Remove deleted types
+                  currentIds.forEach(id => {
+                    if (!updatedIds.includes(id)) {
+                      removeOutputType(id);
+                    }
+                  });
+                  
+                  // Update or add types
+                  updatedTypes.forEach(t => {
+                    const existingId = (t as any).id;
+                    if (existingId) {
+                      updateOutputType(existingId, { name: t.name, baseCredits: t.credits });
+                    } else if (t.name) {
+                      addOutputType({
+                        name: t.name,
+                        category: 'banner',
+                        baseCredits: t.credits,
+                        description: t.description || '',
+                        isActive: true,
+                      });
+                    }
+                  });
+                  
+                  toast.success('Ceník kreditů byl aktualizován');
+                } : undefined}
+              />
             </div>
-
-            {/* Description */}
-            {service.description && (
-              <div className="mt-3 pt-3 border-t">
-                <p className="text-xs text-muted-foreground">
-                  {service.description}
-                </p>
-              </div>
-            )}
 
             {/* Active Clients */}
             {activeClients.length > 0 && (
@@ -442,26 +469,24 @@ export default function Services() {
             )}
 
             {/* Action Buttons */}
-            {canManageServices && (
-              <div className="mt-3 pt-3 border-t flex gap-2">
-                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleEditService(service)}>
-                  <Pencil className="mr-1 h-3 w-3" />
-                  Upravit
-                </Button>
-                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleToggleActive(service)}>
-                  {service.is_active ? 'Deaktivovat' : 'Aktivovat'}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => handleDeleteClick(service)}
-                >
-                  <Trash2 className="mr-1 h-3 w-3" />
-                  Smazat
-                </Button>
-              </div>
-            )}
+            <div className="mt-3 pt-3 border-t flex gap-2">
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleEditService(service)}>
+                <Pencil className="mr-1 h-3 w-3" />
+                Upravit
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleToggleActive(service)}>
+                {service.is_active ? 'Deaktivovat' : 'Aktivovat'}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => handleDeleteClick(service)}
+              >
+                <Trash2 className="mr-1 h-3 w-3" />
+                Smazat
+              </Button>
+            </div>
           </CardContent>
         )}
       </Card>
@@ -469,18 +494,16 @@ export default function Services() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
+    <div className="p-6 space-y-6 animate-fade-in">
       <PageHeader
         title="📦 Služby"
         titleAccent="agentury"
         description="Správa nabídky služeb"
         actions={
-          canManageServices ? (
-            <Button className="gap-2" onClick={handleAddService}>
-              <Plus className="h-4 w-4" />
-              Přidat službu
-            </Button>
-          ) : undefined
+          <Button className="gap-2" onClick={handleAddService}>
+            <Plus className="h-4 w-4" />
+            Přidat službu
+          </Button>
         }
       />
 

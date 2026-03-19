@@ -20,7 +20,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { toDateOnlyString } from '@/lib/dbNormalize';
 import type { StoredModificationRequest } from '@/hooks/useModificationRequests';
 import type { 
   AddServiceProposedChanges, 
@@ -98,7 +97,7 @@ export function EditModificationRequestDialog({
     
     await onSave(request.id, {
       proposed_changes: updatedChanges,
-      effective_from: effectiveFrom ? toDateOnlyString(effectiveFrom) : null,
+      effective_from: effectiveFrom ? effectiveFrom.toISOString().split('T')[0] : null,
       note: note || null,
       upsell_commission_percent: commission,
     });
@@ -133,7 +132,7 @@ export function EditModificationRequestDialog({
                   id="service-price"
                   type="number"
                   value={servicePrice}
-                  onChange={(e) => { const v = e.target.value; setServicePrice(v === '' ? 0 : (Number(v) || 0)); }}
+                  onChange={(e) => setServicePrice(Number(e.target.value))}
                 />
               </div>
             </>
@@ -147,7 +146,7 @@ export function EditModificationRequestDialog({
                 id="new-price"
                 type="number"
                 value={newPrice}
-                onChange={(e) => { const v = e.target.value; setNewPrice(v === '' ? 0 : (Number(v) || 0)); }}
+                onChange={(e) => setNewPrice(Number(e.target.value))}
               />
             </div>
           )}
