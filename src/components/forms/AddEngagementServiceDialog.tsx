@@ -339,10 +339,33 @@ export function AddEngagementServiceDialog({
                   )}
                 />
 
-                <div className="pt-2 border-t space-y-2">
+                <div className="pt-2 border-t space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="creative_boost_fixed_billing"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-sm font-medium">Fixní fakturace</FormLabel>
+                          <FormDescription className="text-xs">
+                            {field.value 
+                              ? 'Klient platí celý balíček bez ohledu na čerpání' 
+                              : 'Klient platí pouze za skutečně vyčerpané kredity'}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
                   <div>
                     <p className="text-sm font-medium">
-                      Měsíční fakturace: {' '}
+                      {form.watch('creative_boost_fixed_billing') ? 'Měsíční fakturace (fixní):' : 'Max. měsíční fakturace (dle čerpání):'} {' '}
                       <span className="text-primary">
                         {((form.watch('creative_boost_max_credits') ?? 0) * (form.watch('creative_boost_price_per_credit') ?? 0)).toLocaleString('cs-CZ')} CZK
                       </span>
