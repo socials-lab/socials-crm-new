@@ -226,7 +226,7 @@ export default function Analytics() {
     });
 
     // Real revenue breakdown
-    const retainersRevenue = activeEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const retainersRevenue = activeEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     
     const approvedExtraWorks = extraWorks.filter(ew => {
       const workDate = new Date(ew.work_date);
