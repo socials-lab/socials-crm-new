@@ -27,7 +27,7 @@ interface CreativeBoostCreditOverviewProps {
   month: number;
   canSeeFinancials: boolean;
   assignedColleagueAssignmentId?: string | null; // ID of assignment for reward lookup
-  onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number; bannerRewardPerCredit?: number; videoRewardPerCredit?: number }) => void;
+  onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number; bannerRewardPerCredit?: number; videoRewardPerCredit?: number; fixedBilling?: boolean }) => void;
   onDelete: () => void;
 }
 
