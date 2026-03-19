@@ -400,8 +400,8 @@ function EngagementsContent() {
           const totalServicesAmount = engagementServicesList
             .filter(s => s.is_active)
             .reduce((sum, s) => {
-              if (s.service_id === CREATIVE_BOOST_SERVICE_ID) {
-                // Use package price (maxCredits * pricePerCredit) for retainer display
+              if (s.service_id === CREATIVE_BOOST_SERVICE_ID || s.creative_boost_max_credits) {
+                // Always calculate as 100% credit usage (maxCredits * pricePerCredit)
                 const maxCredits = s.creative_boost_max_credits || 0;
                 const pricePerCredit = s.creative_boost_price_per_credit || 400;
                 return sum + (maxCredits * pricePerCredit);
