@@ -212,6 +212,7 @@ export function AddEngagementServiceDialog({
       creative_boost_min_credits: data.creative_boost_min_credits,
       creative_boost_max_credits: data.creative_boost_max_credits,
       creative_boost_price_per_credit: data.creative_boost_price_per_credit,
+      creative_boost_fixed_billing: data.creative_boost_fixed_billing,
       // Note: reward per credit is stored in frontend mock data, not in DB
       invoicing_status: isOneOff ? 'pending' : 'not_applicable',
       invoiced_at: null,
