@@ -60,6 +60,7 @@ const engagementServiceSchema = z.object({
   creative_boost_max_credits: z.coerce.number().nullable(),
   creative_boost_price_per_credit: z.coerce.number().nullable(),
   creative_boost_colleague_reward_per_credit: z.coerce.number().nullable(),
+  creative_boost_fixed_billing: z.boolean(),
   // Effective date for prorated billing
   effective_from: z.date().nullable(),
 });
