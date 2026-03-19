@@ -654,7 +654,7 @@ export default function Analytics() {
         const end = e.end_date ? new Date(e.end_date) : null;
         return e.status === 'active' && start <= prevPeriodEnd && (!end || end >= prevPeriodStart);
       })
-      .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     const invoicingChange = prevInvoicing > 0 
       ? ((totalInvoicing - prevInvoicing) / prevInvoicing) * 100 
       : 0;
