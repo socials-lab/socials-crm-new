@@ -314,7 +314,8 @@ export default function Dashboard() {
     const topClients = activeClients
       .map(client => {
         const clientEngagements = engagements.filter(e => e.client_id === client.id && e.status === 'active');
-        const totalMonthly = clientEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        const totalMonthly = clientEngagements.reduce((sum, e) => 
+          sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
         return { ...client, totalMonthly };
       })
       .sort((a, b) => b.totalMonthly - a.totalMonthly)
