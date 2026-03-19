@@ -217,7 +217,7 @@ export default function Analytics() {
           const end = e.end_date ? new Date(e.end_date) : null;
           return e.status === 'active' && start <= monthEnd && (!end || end >= monthStart);
         })
-        .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
 
       return {
         month: format(date, 'MMM', { locale: cs }),
