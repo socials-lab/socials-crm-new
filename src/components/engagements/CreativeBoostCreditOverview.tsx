@@ -259,6 +259,19 @@ export function CreativeBoostCreditOverview({
           </div>
         </div>
         
+        {/* Invoiced amount */}
+        {canSeeFinancials && (
+          <div className="flex items-center justify-between pt-1 border-t">
+            <span className="text-xs text-muted-foreground">Fakturovaná částka</span>
+            <span className="text-xs font-semibold text-foreground">
+              {(maxCredits * pricePerCredit).toLocaleString()} Kč
+              <span className="font-normal text-muted-foreground ml-1">
+                ({maxCredits} kr × {pricePerCredit.toLocaleString()} Kč)
+              </span>
+            </span>
+          </div>
+        )}
+        
         {/* Footer */}
         <div className="flex items-center justify-between pt-1">
           <div className="flex flex-col gap-0.5">
