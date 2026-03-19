@@ -258,7 +258,7 @@ export default function Analytics() {
     const totalRevenue = retainersRevenue;
     const clientRevenues = activeClientsForPeriod.map(c => {
       const clientEngs = activeEngs.filter(e => e.client_id === c.id);
-      const revenue = clientEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+      const revenue = clientEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
       return { name: c.brand_name || c.name, revenue };
     }).filter(c => c.revenue > 0).sort((a, b) => b.revenue - a.revenue);
 
