@@ -15,6 +15,7 @@ import { PeriodSelector, type PeriodMode } from '@/components/analytics/PeriodSe
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
 
 import { format, subMonths, startOfMonth, endOfMonth, differenceInDays, differenceInMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -168,7 +169,7 @@ export default function Analytics() {
     });
 
     // MRR calculation
-    const mrr = activeEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const mrr = activeEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     const prevMrr = engagements
       .filter(e => {
         if (!e.start_date) return false;
@@ -176,7 +177,7 @@ export default function Analytics() {
         const end = e.end_date ? new Date(e.end_date) : null;
         return e.status === 'active' && start <= prevPeriodEnd && (!end || end >= prevPeriodStart);
       })
-      .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
 
     // ARR
     const arr = mrr * 12;
@@ -216,7 +217,7 @@ export default function Analytics() {
           const end = e.end_date ? new Date(e.end_date) : null;
           return e.status === 'active' && start <= monthEnd && (!end || end >= monthStart);
         })
-        .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
 
       return {
         month: format(date, 'MMM', { locale: cs }),
@@ -225,7 +226,7 @@ export default function Analytics() {
     });
 
     // Real revenue breakdown
-    const retainersRevenue = activeEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const retainersRevenue = activeEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     
     const approvedExtraWorks = extraWorks.filter(ew => {
       const workDate = new Date(ew.work_date);
@@ -257,7 +258,7 @@ export default function Analytics() {
     const totalRevenue = retainersRevenue;
     const clientRevenues = activeClientsForPeriod.map(c => {
       const clientEngs = activeEngs.filter(e => e.client_id === c.id);
-      const revenue = clientEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+      const revenue = clientEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
       return { name: c.brand_name || c.name, revenue };
     }).filter(c => c.revenue > 0).sort((a, b) => b.revenue - a.revenue);
 
@@ -283,7 +284,7 @@ export default function Analytics() {
         });
       } else {
         // No services defined, count as engagement fee
-        serviceMap.set('Retainer', (serviceMap.get('Retainer') || 0) + (eng.monthly_fee || 0));
+        serviceMap.set('Retainer', (serviceMap.get('Retainer') || 0) + getEngagementMonthlyRevenue(eng.id, eng.monthly_fee || 0, engagementServices || []));
       }
     });
     
@@ -307,7 +308,7 @@ export default function Analytics() {
         return e.status === 'active' && start <= monthEnd && (!end || end >= monthStart);
       });
       
-      const revenue = monthEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+      const revenue = monthEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
       const margin = calculateAvgMargin(monthEngs, assignments);
 
       return {
@@ -323,7 +324,8 @@ export default function Analytics() {
         const client = getClientById(e.client_id);
         const engAssignments = assignments.filter(a => a.engagement_id === e.id);
         const cost = engAssignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
-        const margin = e.monthly_fee && e.monthly_fee > 0 ? ((e.monthly_fee - cost) / e.monthly_fee) * 100 : 0;
+        const engRevenue = getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []);
+        const margin = engRevenue > 0 ? ((engRevenue - cost) / engRevenue) * 100 : 0;
         return {
           name: e.name,
           client: client?.brand_name || client?.name || '',
@@ -644,7 +646,7 @@ export default function Analytics() {
       return e.status === 'active' && start <= periodEnd && (!end || end >= periodStart);
     });
 
-    const totalInvoicing = activeEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const totalInvoicing = activeEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     const prevInvoicing = engagements
       .filter(e => {
         if (!e.start_date) return false;
@@ -652,7 +654,7 @@ export default function Analytics() {
         const end = e.end_date ? new Date(e.end_date) : null;
         return e.status === 'active' && start <= prevPeriodEnd && (!end || end >= prevPeriodStart);
       })
-      .reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     const invoicingChange = prevInvoicing > 0 
       ? ((totalInvoicing - prevInvoicing) / prevInvoicing) * 100 
       : 0;
@@ -711,7 +713,7 @@ export default function Analytics() {
     const topClientsByRevenue = activeClientsForPeriod
       .map(c => {
         const clientEngs = activeEngs.filter(e => e.client_id === c.id);
-        const revenue = clientEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        const revenue = clientEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
         return { name: c.brand_name || c.name, revenue };
       })
       .sort((a, b) => b.revenue - a.revenue)
@@ -720,7 +722,7 @@ export default function Analytics() {
     const topClientsByMargin = activeClientsForPeriod
       .map(c => {
         const clientEngs = activeEngs.filter(e => e.client_id === c.id);
-        const revenue = clientEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        const revenue = clientEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
         const cost = clientEngs.reduce((sum, e) => {
           const engAssignments = assignments.filter(a => a.engagement_id === e.id);
           return sum + engAssignments.reduce((s, a) => s + (a.monthly_cost || 0), 0);
@@ -742,7 +744,7 @@ export default function Analytics() {
     const industryMap = new Map<string, number>();
     activeClientsForPeriod.forEach(c => {
       const clientEngs = activeEngs.filter(e => e.client_id === c.id);
-      const revenue = clientEngs.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+      const revenue = clientEngs.reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
       const industry = c.industry || 'Neuvedeno';
       industryMap.set(industry, (industryMap.get(industry) || 0) + revenue);
     });

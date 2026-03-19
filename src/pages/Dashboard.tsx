@@ -54,6 +54,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
 import { getTargetForMonth, calculateActualRevenue, formatCurrencyShort } from '@/utils/businessPlanUtils';
+import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
 import type { LucideIcon } from 'lucide-react';
 
 // Helper component for activity rows
@@ -125,8 +126,9 @@ export default function Dashboard() {
     const activeEngagements = engagements.filter(e => e.status === 'active');
     const activeColleagues = colleagues.filter(c => c.status === 'active');
     
-    // MRR calculation
-    const mrr = activeEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    // MRR calculation (including Creative Boost revenue)
+    const mrr = activeEngagements.reduce((sum, e) => 
+      sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     const arr = mrr * 12;
     
     // Pipeline value (leads not yet won)
@@ -312,7 +314,8 @@ export default function Dashboard() {
     const topClients = activeClients
       .map(client => {
         const clientEngagements = engagements.filter(e => e.client_id === client.id && e.status === 'active');
-        const totalMonthly = clientEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        const totalMonthly = clientEngagements.reduce((sum, e) => 
+          sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
         return { ...client, totalMonthly };
       })
       .sort((a, b) => b.totalMonthly - a.totalMonthly)
@@ -384,7 +387,8 @@ export default function Dashboard() {
   // === NEXT MONTH INVOICING ===
   const nextMonthInvoicing = useMemo(() => {
     const activeEngagements = engagements.filter(e => e.status === 'active');
-    const retainerTotal = activeEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    const retainerTotal = activeEngagements.reduce((sum, e) => 
+      sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     
     const extraWorksToInvoice = extraWorks
       ?.filter(w => w.status === 'ready_to_invoice')
@@ -454,7 +458,8 @@ export default function Dashboard() {
       .filter(c => c.status === 'active' && c.start_date && isAfter(parseISO(c.start_date), threeMonthsAgo))
       .map(client => {
         const clientEngagements = engagements.filter(e => e.client_id === client.id && e.status === 'active');
-        const totalMonthly = clientEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+        const totalMonthly = clientEngagements.reduce((sum, e) => 
+          sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
         const engagementNames = clientEngagements.map(e => e.name).join(', ');
         const startDate = parseISO(client.start_date!);
         const timeAgo = formatDistanceToNow(startDate, { locale: cs, addSuffix: true });
