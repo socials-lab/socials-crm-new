@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Palette, ExternalLink, Settings, Trash2, Check, X } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
