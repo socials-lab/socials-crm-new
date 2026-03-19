@@ -126,8 +126,9 @@ export default function Dashboard() {
     const activeEngagements = engagements.filter(e => e.status === 'active');
     const activeColleagues = colleagues.filter(c => c.status === 'active');
     
-    // MRR calculation
-    const mrr = activeEngagements.reduce((sum, e) => sum + (e.monthly_fee || 0), 0);
+    // MRR calculation (including Creative Boost revenue)
+    const mrr = activeEngagements.reduce((sum, e) => 
+      sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee || 0, engagementServices || []), 0);
     const arr = mrr * 12;
     
     // Pipeline value (leads not yet won)
