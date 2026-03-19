@@ -50,6 +50,7 @@ export function CreativeBoostCreditOverview({
   const [tempPricePerCredit, setTempPricePerCredit] = useState('');
   const [tempBannerReward, setTempBannerReward] = useState('');
   const [tempVideoReward, setTempVideoReward] = useState('');
+  const [tempFixedBilling, setTempFixedBilling] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const maxCredits = engagementService.creative_boost_max_credits ?? 0;
