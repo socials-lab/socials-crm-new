@@ -235,14 +235,11 @@ export default function Dashboard() {
     const activeClients = clients.filter(c => c.status === 'active');
     const activeEngagements = engagements.filter(e => e.status === 'active');
     const activeEngagementIds = new Set(activeEngagements.map(e => e.id));
-    const activeMonthlyServices = (engagementServices || []).filter(service =>
-      service.is_active &&
-      service.billing_type === 'monthly' &&
-      activeEngagementIds.has(service.engagement_id)
+
+    const mrr = activeEngagements.reduce(
+      (sum, engagement) => sum + getEngagementMonthlyRevenue(engagement.id, engagement.monthly_fee, engagementServices || []),
+      0,
     );
-    
-    // MRR from active monthly services (matches invoicing logic better than stale engagement.monthly_fee)
-    const mrr = activeMonthlyServices.reduce((sum, service) => sum + (service.price || 0), 0);
     const arr = mrr * 12;
     
     // Pipeline value (leads not yet won)
@@ -479,14 +476,11 @@ export default function Dashboard() {
     const activeEngagementIds = new Set(
       engagements.filter(e => e.status === 'active').map(e => e.id)
     );
-    const retainerTotal = (engagementServices || [])
-      .filter(service =>
-        service.is_active &&
-        service.billing_type === 'monthly' &&
-        activeEngagementIds.has(service.engagement_id) &&
-        !service.creative_boost_max_credits
-      )
-      .reduce((sum, service) => sum + (service.price || 0), 0);
+    const activeEngagements = engagements.filter((engagement) => activeEngagementIds.has(engagement.id));
+    const retainerTotal = activeEngagements.reduce(
+      (sum, engagement) => sum + getEngagementMonthlyRevenue(engagement.id, engagement.monthly_fee, engagementServices || []),
+      0,
+    );
     
     const extraWorksToInvoice = extraWorks
       ?.filter(w => w.status === 'ready_to_invoice' && w.billing_period === invoicePeriod)

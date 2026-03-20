@@ -23,12 +23,22 @@ export function getEngagementMonthlyRevenue(
   monthlyFee: number,
   engagementServices: EngagementService[],
 ): number {
-  const cbServices = engagementServices.filter((service) =>
+  const monthlyServices = engagementServices.filter((service) =>
     service.engagement_id === engagementId &&
     service.is_active &&
-    (service.creative_boost_max_credits !== null || service.creative_boost_price_per_credit !== null),
+    service.billing_type === 'monthly',
   );
 
-  const cbRevenue = cbServices.reduce((sum, service) => sum + getCreativeBoostExpectedMonthlyRevenue(service), 0);
-  return monthlyFee + cbRevenue;
+  if (monthlyServices.length === 0) {
+    return monthlyFee;
+  }
+
+  return monthlyServices.reduce((sum, service) => {
+    const isCreativeBoostService =
+      service.creative_boost_max_credits !== null || service.creative_boost_price_per_credit !== null;
+    if (isCreativeBoostService) {
+      return sum + getCreativeBoostExpectedMonthlyRevenue(service);
+    }
+    return sum + service.price;
+  }, 0);
 }
