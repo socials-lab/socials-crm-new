@@ -25,7 +25,7 @@ export function KPICard({ title, value, subtitle, icon: Icon, trend, className }
           <p className="text-xs md:text-sm font-medium text-muted-foreground">{title}</p>
           <p className="text-xl md:text-2xl font-semibold tracking-tight">{value}</p>
           {subtitle && (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
+            <p className="break-words text-xs text-muted-foreground">{subtitle}</p>
           )}
           {trend && (
             <p className={cn(

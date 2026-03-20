@@ -352,46 +352,53 @@ export default function Contacts() {
 
       {/* Search and Filters */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-3">
+          <div className="relative min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Hledat podle jména, emailu, telefonu, firmy..."
+              placeholder="Jméno, email, telefon, firma…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
-          <Select
-            value={filters.clientId}
-            onValueChange={(v) => setFilters(f => ({ ...f, clientId: v }))}
-          >
-            <SelectTrigger className="w-full sm:w-[250px]">
-              <SelectValue placeholder="Filtr podle klienta" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Všichni klienti</SelectItem>
-              {/* Issue #18: Only show active clients in filter dropdown */}
-              {contactsFilterClients.map(client => (
-                <SelectItem key={client.id} value={client.id}>
-                  {getClientOptionLabel(client)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant={showAdvancedFilters || hasActiveFilters ? "secondary" : "outline"}
-            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className="gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            <span className="hidden sm:inline">Filtry</span>
-            {hasActiveFilters && (
-              <Badge variant="default" className="h-5 w-5 p-0 justify-center text-xs">
-                {(filters.isPrimary !== 'all' ? 1 : 0) + (filters.isDecisionMaker !== 'all' ? 1 : 0)}
-              </Badge>
-            )}
-          </Button>
+          <div className="flex min-w-0 gap-2">
+            <Select
+              value={filters.clientId}
+              onValueChange={(v) => setFilters(f => ({ ...f, clientId: v }))}
+            >
+              <SelectTrigger className="h-10 min-w-0 flex-1 sm:w-[250px] sm:flex-none">
+                <SelectValue placeholder="Filtr podle klienta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Všichni klienti</SelectItem>
+                {/* Issue #18: Only show active clients in filter dropdown */}
+                {contactsFilterClients.map(client => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {getClientOptionLabel(client)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant={showAdvancedFilters || hasActiveFilters ? "secondary" : "outline"}
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="relative h-10 w-10 shrink-0 gap-0 p-0 sm:w-auto sm:gap-2 sm:px-4"
+              aria-label="Rozšířené filtry"
+            >
+              <Filter className="h-4 w-4" />
+              <span className="hidden sm:inline">Filtry</span>
+              {hasActiveFilters && (
+                <Badge
+                  variant="default"
+                  className="absolute -right-1 -top-1 flex h-4 min-w-4 justify-center p-0 px-1 text-[10px] sm:static sm:flex sm:h-5 sm:w-5 sm:p-0 sm:text-xs"
+                >
+                  {(filters.isPrimary !== 'all' ? 1 : 0) + (filters.isDecisionMaker !== 'all' ? 1 : 0)}
+                </Badge>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Advanced Filters Panel */}
@@ -405,7 +412,7 @@ export default function Contacts() {
                     value={filters.isPrimary}
                     onValueChange={(v) => setFilters(f => ({ ...f, isPrimary: v }))}
                   >
-                    <SelectTrigger className="w-[150px]">
+                    <SelectTrigger className="w-full min-w-0 sm:w-[150px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -422,7 +429,7 @@ export default function Contacts() {
                     value={filters.isDecisionMaker}
                     onValueChange={(v) => setFilters(f => ({ ...f, isDecisionMaker: v }))}
                   >
-                    <SelectTrigger className="w-[150px]">
+                    <SelectTrigger className="w-full min-w-0 sm:w-[150px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -445,8 +452,8 @@ export default function Contacts() {
         </Collapsible>
 
         {/* Results count */}
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
+        <div className="flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+          <span className="min-w-0">
             {filteredContacts.length === 0
               ? 'Žádné kontakty'
               : filteredContacts.length === 1
@@ -463,7 +470,7 @@ export default function Contacts() {
       </div>
 
       {/* Contacts Cards */}
-      <div className="space-y-3">
+      <div className="space-y-3 max-sm:pb-8">
         {paginatedContacts.length === 0 ? (
           <Card className="p-8 text-center text-muted-foreground">
             Žádné kontakty nenalezeny
@@ -479,7 +486,7 @@ export default function Contacts() {
               )}
             >
               {/* Mobile view - condensed card */}
-              <div className="sm:hidden p-3 space-y-2">
+              <div className="sm:hidden space-y-2 p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm shrink-0">

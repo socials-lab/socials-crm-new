@@ -38,7 +38,7 @@ function CreativeBoostContent() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in p-4 md:p-6">
       <PageHeader
         title="🎨 Creative Boost"
         titleAccent="kredity"
@@ -46,8 +46,8 @@ function CreativeBoostContent() {
       />
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <TabsList>
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Přehled</TabsTrigger>
             {canConfigureOutputTypes && (
               <TabsTrigger value="output-types">Typy výstupů</TabsTrigger>
@@ -58,7 +58,7 @@ function CreativeBoostContent() {
             value={`${selectedYear}-${selectedMonth}`}
             onValueChange={handlePeriodChange}
           >
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-popover">

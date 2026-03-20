@@ -659,16 +659,16 @@ function EngagementsContent() {
               )}
             >
               <div 
-                className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                className="flex flex-col gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors sm:flex-row sm:items-center sm:justify-between"
                 onClick={() => toggleExpand(engagement.id)}
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary font-semibold text-sm shrink-0">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
                     {clientLabel.charAt(0) || '?'}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-sm">{engagement.name}</span>
-                    <p className="text-xs text-muted-foreground truncate">
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{engagement.name}</span>
+                    <p className="truncate text-xs text-muted-foreground">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -687,7 +687,7 @@ function EngagementsContent() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end sm:gap-3">
                   {/* Unbilled one-off warning badge */}
                   {hasUnbilledItems && (
                     <Badge variant="outline" className="text-xs whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200 gap-1">

@@ -186,8 +186,8 @@ export default function Leads() {
         titleAccent="pipeline"
         description="Správa obchodních příležitostí"
         actions={
-          <div className="flex items-center gap-2">
-            <div className="flex border rounded-lg overflow-hidden">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <div className="flex shrink-0 border rounded-lg overflow-hidden">
               <Button
                 variant={viewMode === 'kanban' ? 'default' : 'ghost'}
                 size="sm"
@@ -205,20 +205,22 @@ export default function Leads() {
                 <List className="h-4 w-4" />
               </Button>
             </div>
-            <Button className="gap-2" onClick={handleAddNew}>
-              <Plus className="h-4 w-4" />
-              Přidat lead
+            <Button className="min-w-0 flex-1 gap-2 sm:flex-initial" onClick={handleAddNew}>
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="truncate">Přidat lead</span>
             </Button>
           </div>
         }
       />
 
       {/* KPI Period Selector */}
-      <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">KPI období:</span>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">KPI období:</span>
+        </div>
         <Select value={kpiPeriod} onValueChange={(v) => setKpiPeriod(v as KPIPeriod)}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -272,7 +274,7 @@ export default function Leads() {
           />
         </div>
         <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Odpovědná osoba" />
           </SelectTrigger>
           <SelectContent>
@@ -285,7 +287,7 @@ export default function Leads() {
           </SelectContent>
         </Select>
         <Select value={stageFilter} onValueChange={(v) => setStageFilter(v as LeadStage | 'all')}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="Stav" />
           </SelectTrigger>
           <SelectContent>

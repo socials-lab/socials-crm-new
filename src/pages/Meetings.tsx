@@ -202,7 +202,7 @@ export default function Meetings() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in p-4 md:p-6">
       <PageHeader
         title="📅 Meetingy"
         description="Evidence interních a klientských meetingů"

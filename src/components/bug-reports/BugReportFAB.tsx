@@ -103,7 +103,7 @@ export function BugReportFAB() {
       <Button
         onClick={handleFabClick}
         disabled={capturing}
-        className="fixed bottom-5 right-5 z-50 h-12 w-12 rounded-full p-0 shadow-lg"
+        className="fixed z-[60] h-12 w-12 rounded-full p-0 shadow-lg bottom-[calc(env(safe-area-inset-bottom)+3.5rem+0.75rem)] right-4 md:bottom-5 md:right-5"
         size="icon"
       >
         {capturing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Lightbulb className="h-5 w-5" />}

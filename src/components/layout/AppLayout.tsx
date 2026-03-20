@@ -117,9 +117,9 @@ export function AppLayout() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {/* Top header bar */}
-          <header className="flex h-12 shrink-0 items-center justify-between border-b bg-background px-3 md:px-4">
+          <header className="flex h-12 shrink-0 items-center justify-between border-b bg-background px-4">
             <div className="flex items-center gap-2">
               <MobileMenuButton />
             </div>
@@ -131,7 +131,7 @@ export function AppLayout() {
           </header>
           
           {/* Main content - add bottom padding on mobile for bottom nav */}
-          <main className="relative flex-1 overflow-auto bg-background pb-16 md:pb-0">
+          <main className="relative min-w-0 flex-1 overflow-auto bg-background pb-32 md:pb-0">
             <Outlet />
             <BugReportFAB />
           </main>

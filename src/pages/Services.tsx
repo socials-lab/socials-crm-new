@@ -209,24 +209,24 @@ export default function Services() {
       <Card key={service.id} className="overflow-hidden">
         {/* Header - Collapsed View */}
         <div
-          className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+          className="flex cursor-pointer flex-col gap-2 p-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
           onClick={() => toggleExpand(service.id)}
         >
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <span className="text-primary font-semibold text-sm">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <span className="text-sm font-semibold text-primary">
                 {service.name.charAt(0).toUpperCase()}
               </span>
             </div>
-            <div className="min-w-0">
-              <div className="font-medium truncate">{service.name}</div>
-              <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            <div className="min-w-0 flex-1">
+              <div className="font-medium break-normal sm:truncate">{service.name}</div>
+              <code className="mt-0.5 inline-block max-w-full truncate text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                 {service.code}
               </code>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pl-11 sm:pl-0">
             <Badge 
               variant="outline" 
               className={service.service_type === 'core' 
@@ -494,7 +494,7 @@ export default function Services() {
   };
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in p-4 sm:p-6">
       <PageHeader
         title="📦 Služby"
         titleAccent="agentury"
@@ -507,8 +507,8 @@ export default function Services() {
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative max-w-md flex-1">
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="relative min-w-0 w-full sm:max-w-md sm:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Hledat služby..."

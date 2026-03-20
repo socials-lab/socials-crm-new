@@ -255,14 +255,14 @@ function MyWorkContent() {
   return (
     <div className="p-4 md:p-6 space-y-5 animate-fade-in">
       {/* Header with greeting */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-xl md:text-2xl font-semibold">
             👋 Ahoj, <span className="text-primary">{vokativ(currentColleague.full_name.split(' ')[0]).replace(/^./, (c: string) => c.toUpperCase())}</span>
           </h1>
           <p className="text-sm text-muted-foreground">{currentColleague.position}</p>
         </div>
-        <div className="text-right">
+        <div className="shrink-0 text-left sm:text-right">
           <p className="text-xs text-muted-foreground">Dnes</p>
           <p className="text-sm font-medium">{format(currentDate, 'EEEE d. MMMM', { locale: cs })}</p>
         </div>
@@ -275,9 +275,9 @@ function MyWorkContent() {
         {/* My Engagements - with start dates */}
         <Card>
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-primary" />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                <Briefcase className="h-4 w-4 shrink-0 text-primary" />
                 Moje zakázky
               </CardTitle>
               <Link to="/engagements">
@@ -557,7 +557,7 @@ function MyWorkContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-2 sm:grid-cols-2 max-h-[400px] overflow-y-auto">
+            <div className="grid gap-2 sm:grid-cols-2 lg:max-h-[400px] lg:overflow-y-auto">
               {activeColleagues.map((colleague) => (
                 <div key={colleague.id} className="p-3 rounded-lg border space-y-2">
                   <div className="flex items-center gap-2">

@@ -25,14 +25,24 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   form_completed: 'Formulář vyplněn',
   contract_signed: 'Smlouva podepsána',
   lead_converted: 'Lead převeden',
+  lead_qualified: 'Kvalifikovaný lead',
   access_granted: 'Přístupy uděleny',
   offer_sent: 'Nabídka odeslána',
+  offer_viewed: 'Nabídka zobrazena',
   colleague_birthday: 'Narozeniny kolegy',
   new_feedback_idea: 'Nový nápad',
   client_approved_modification: 'Klient potvrdil změnu',
   modification_approved: 'Návrh schválen',
   modification_client_approved: 'Klient potvrdil návrh',
   modification_rejected: 'Návrh zamítnut',
+  engagement_assigned: 'Zakázka přiřazena',
+  engagement_service_added: 'Služba přidána k zakázce',
+  engagement_ending_soon: 'Končící zakázka',
+  extra_work_approved: 'Vícepráce schválena',
+  extra_work_ready_to_invoice: 'Vícepráce k fakturaci',
+  creative_boost_activated: 'Creative Boost aktivován',
+  creative_boost_deadline: 'Creative Boost termín',
+  sop_update_suggested: 'Návrh úpravy SOP',
 };
 
 export default function Notifications() {
@@ -78,7 +88,7 @@ export default function Notifications() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in p-4 md:space-y-6 md:p-6">
       <PageHeader
         title="🔔 Notifikace"
         description="Přehled všech upozornění a událostí"
@@ -112,7 +122,7 @@ export default function Notifications() {
           </TabsList>
 
           <Select value={filterType} onValueChange={(v) => setFilterType(v as NotificationType | 'all')}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Filtrovat typ" />
             </SelectTrigger>
@@ -120,7 +130,7 @@ export default function Notifications() {
               <SelectItem value="all">Všechny typy</SelectItem>
               {Object.entries(NOTIFICATION_TYPE_LABELS).map(([type, label]) => (
                 <SelectItem key={type} value={type}>
-                  {NOTIFICATION_CONFIG[type as NotificationType].icon} {label}
+                  {NOTIFICATION_CONFIG[type as NotificationType]?.icon ?? '🔔'} {label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -137,7 +147,11 @@ export default function Notifications() {
             </Card>
           ) : (
             filteredNotifications.map((notification) => {
-              const config = NOTIFICATION_CONFIG[notification.type];
+              const config = NOTIFICATION_CONFIG[notification.type] ?? {
+                icon: '🔔',
+                color: 'text-muted-foreground',
+                bgColor: 'bg-muted',
+              };
               return (
                 <Card 
                   key={notification.id}
@@ -172,7 +186,7 @@ export default function Notifications() {
                           )}
                         </div>
                         <Badge variant="outline" className="text-xs shrink-0">
-                          {NOTIFICATION_TYPE_LABELS[notification.type]}
+                          {NOTIFICATION_TYPE_LABELS[notification.type] ?? notification.type}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
@@ -229,7 +243,11 @@ export default function Notifications() {
             </Card>
           ) : (
             filteredNotifications.map((notification) => {
-              const config = NOTIFICATION_CONFIG[notification.type];
+              const config = NOTIFICATION_CONFIG[notification.type] ?? {
+                icon: '🔔',
+                color: 'text-muted-foreground',
+                bgColor: 'bg-muted',
+              };
               return (
                 <Card 
                   key={notification.id}
@@ -251,7 +269,7 @@ export default function Notifications() {
                           <div className="h-2 w-2 rounded-full bg-primary" />
                         </div>
                         <Badge variant="outline" className="text-xs shrink-0">
-                          {NOTIFICATION_TYPE_LABELS[notification.type]}
+                          {NOTIFICATION_TYPE_LABELS[notification.type] ?? notification.type}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">

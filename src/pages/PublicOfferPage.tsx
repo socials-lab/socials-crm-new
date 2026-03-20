@@ -368,11 +368,12 @@ function NextStepsSection() {
     <section className="mb-10">
       <p className="text-xs text-muted-foreground text-center mb-3">Jak to probíhá?</p>
       
-      {/* Compact horizontal timeline */}
-      <div className="flex items-center justify-between gap-2 px-2">
+      {/* Timeline: horizontal scroll on narrow screens, row on sm+ */}
+      <div className="w-full overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]">
+        <div className="flex min-w-[520px] items-stretch justify-between gap-3 px-2 sm:min-w-0">
         {PROCESS_STEPS.map((step, idx) => (
-          <div key={idx} className="flex items-center gap-2 flex-1">
-            <div className="flex flex-col items-center text-center flex-1">
+          <div key={idx} className="flex min-w-[4.5rem] flex-1 items-center gap-2 sm:min-w-0">
+            <div className="flex flex-1 flex-col items-center text-center">
               <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center mb-1">
                 <step.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
@@ -380,10 +381,11 @@ function NextStepsSection() {
               <p className="text-[10px] text-muted-foreground">{step.description}</p>
             </div>
             {idx < PROCESS_STEPS.length - 1 && (
-              <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0 hidden sm:block" />
+              <ArrowRight className="hidden h-3 w-3 shrink-0 text-muted-foreground/50 sm:block" />
             )}
           </div>
         ))}
+        </div>
       </div>
     </section>
   );

@@ -105,14 +105,14 @@ export default function Recruitment() {
   }, [applicants, colleagues]);
 
   return (
-    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in p-4 md:p-6">
       <PageHeader 
         title="🎓 Nábor" 
         titleAccent="kandidátů"
         description="Pipeline uchazečů o práci"
         actions={
-          <div className="flex items-center gap-2">
-            <div className="flex border rounded-lg overflow-hidden">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <div className="flex shrink-0 border rounded-lg overflow-hidden">
               <Button
                 variant={viewMode === 'kanban' ? 'default' : 'ghost'}
                 size="sm"
@@ -130,9 +130,9 @@ export default function Recruitment() {
                 <List className="h-4 w-4" />
               </Button>
             </div>
-            <Button className="gap-2" onClick={handleAddNew}>
-              <Plus className="h-4 w-4" />
-              Přidat uchazeče
+            <Button className="min-w-0 flex-1 gap-2 sm:flex-initial" onClick={handleAddNew}>
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="truncate">Přidat uchazeče</span>
             </Button>
           </div>
         }

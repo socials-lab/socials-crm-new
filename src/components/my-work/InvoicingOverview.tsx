@@ -313,14 +313,15 @@ export function InvoicingOverview({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Month/Year filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Fakturovat za</span>
+        {/* Month/Year filter — stack on narrow screens so selects stay clear of the bug-report FAB */}
+        <div className="flex max-sm:flex-col max-sm:gap-2 sm:items-center sm:gap-2">
+          <span className="text-sm text-muted-foreground shrink-0">Fakturovat za</span>
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
           <Select
             value={selectedMonth.toString()}
             onValueChange={(v) => setSelectedMonth(Number(v))}
           >
-            <SelectTrigger className="w-[110px]">
+            <SelectTrigger className="w-full sm:w-[110px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -335,7 +336,7 @@ export function InvoicingOverview({
             value={selectedYear.toString()}
             onValueChange={(v) => setSelectedYear(Number(v))}
           >
-            <SelectTrigger className="w-20">
+            <SelectTrigger className="w-full sm:w-20">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -346,6 +347,7 @@ export function InvoicingOverview({
               ))}
             </SelectContent>
           </Select>
+          </div>
         </div>
 
         {/* Invoice line items */}

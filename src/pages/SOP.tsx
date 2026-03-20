@@ -198,7 +198,7 @@ export default function SOP() {
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)] animate-fade-in overflow-hidden">
       {/* Fixed header + search area */}
-      <div className="shrink-0 p-4 md:p-6 pb-0 space-y-6">
+      <div className="shrink-0 space-y-6 p-4 pb-0 md:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <PageHeader title="📖 SOP Databáze" description="Postupy a návody pro tým" />
           {isSuperAdmin && (
@@ -226,12 +226,12 @@ export default function SOP() {
 
       {/* Content area */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 md:p-6 pt-6">
+        <div className="grid grid-cols-1 gap-4 p-4 pt-6 md:grid-cols-2 md:p-6 lg:grid-cols-3">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}
         </div>
       ) : isMobile ? (
         /* Mobile: single column, no master-detail */
-        <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4 pt-6">
           <ScrollArea className="w-full whitespace-nowrap">
             <div className="flex gap-2 pb-1">
               <Badge
@@ -314,7 +314,7 @@ export default function SOP() {
                   }`}
                 >
                   <FilePenLine className="h-4 w-4 shrink-0" />
-                  <span className="flex-1">Drafty</span>
+                  <span className="flex-1">Koncepty</span>
                   <span className="text-xs text-muted-foreground shrink-0">{draftArticles.length}</span>
                 </button>
               </>

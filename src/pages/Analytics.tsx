@@ -1081,7 +1081,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in p-4 sm:space-y-6 sm:p-6">
       <PageHeader 
         title="📊 Analytika"
         titleAccent="agentury"

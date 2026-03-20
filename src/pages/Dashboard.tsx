@@ -123,16 +123,16 @@ function formatRelativeDate(dateIso: string) {
 
 function ActivityFeedRow({ icon: Icon, title, subtitle, at, colorClass, value, isNegative }: ActivityEvent) {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-muted/20">
+    <div className="flex items-start gap-3 p-3 rounded-xl border border-border/60 bg-muted/20">
       <div className={`p-1.5 rounded-full shrink-0 ${colorClass}`}>
         <Icon className="h-3.5 w-3.5" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">{title}</span>
-          <span className="text-xs text-muted-foreground">{formatRelativeDate(at)}</span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className="text-sm font-medium break-words">{title}</span>
+          <span className="text-xs text-muted-foreground shrink-0">{formatRelativeDate(at)}</span>
         </div>
-        <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+        <p className="text-xs text-muted-foreground break-words hyphens-auto">{subtitle}</p>
       </div>
       {value !== undefined && value > 0 && (
         <span className={`text-sm font-medium whitespace-nowrap ${isNegative ? 'text-destructive' : 'text-emerald-600'}`}>
@@ -718,19 +718,26 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-2">
-                {recentEvents.length > 0 ? (
-                  recentEvents.map((event) => (
+            {recentEvents.length > 0 ? (
+              <>
+                <div className="space-y-2 lg:hidden">
+                  {recentEvents.map((event) => (
                     <ActivityFeedRow key={event.id} {...event} />
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    Žádné změny za posledních 7 dní
-                  </p>
-                )}
-              </div>
-            </ScrollArea>
+                  ))}
+                </div>
+                <ScrollArea className="hidden h-[400px] pr-4 lg:block">
+                  <div className="space-y-2">
+                    {recentEvents.map((event) => (
+                      <ActivityFeedRow key={event.id} {...event} />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Žádné změny za posledních 7 dní
+              </p>
+            )}
           </CardContent>
         </Card>
 

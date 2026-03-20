@@ -46,7 +46,7 @@ const Invoicing = () => {
   // Show access denied for users without financial permissions
   if (!canAccessInvoicing) {
     return (
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
+      <div className="space-y-4 animate-fade-in p-4 md:space-y-6 md:p-6">
         <PageHeader
           title="🧾 Fakturace"
           titleAccent="měsíční"
@@ -218,7 +218,7 @@ const Invoicing = () => {
 
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in p-4 md:space-y-6 md:p-6">
       <PageHeader
         title="🧾 Fakturace"
         titleAccent="měsíční"

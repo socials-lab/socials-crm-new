@@ -627,27 +627,39 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
       </AlertDialog>
 
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent
+          aria-describedby={undefined}
+          className={cn(
+            'flex w-full max-w-5xl flex-col gap-0 p-0',
+            'h-[90dvh] max-h-[90dvh]',
+            'max-lg:inset-0 max-lg:left-0 max-lg:top-0 max-lg:h-[100dvh] max-lg:max-h-[100dvh] max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-none',
+          )}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 pb-4 border-b flex-shrink-0 gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <DialogTitle className="text-xl font-semibold">
+          <div className="flex flex-shrink-0 flex-col gap-3 border-b p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6 sm:pb-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <DialogTitle className="text-lg font-semibold sm:text-xl">
                   <InlineEditField
                     value={lead.company_name}
                     onSave={(v) => handleUpdateLead({ company_name: v })}
                     placeholder="Název firmy"
-                    displayClassName="text-xl font-semibold"
+                    displayClassName="text-lg font-semibold sm:text-xl break-normal"
                   />
                 </DialogTitle>
-                <Badge variant="outline" className={cn("text-xs", STAGE_COLORS[lead.stage])}>
+                <Badge variant="outline" className={cn('shrink-0 text-xs', STAGE_COLORS[lead.stage])}>
                   {STAGE_LABELS[lead.stage]}
                 </Badge>
               </div>
-              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                {lead.ico && <span>IČO: {lead.ico}</span>}
-                {owner && <span>• {owner.full_name}</span>}
-                <span>•</span>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                {lead.ico && <span className="break-all">IČO: {lead.ico}</span>}
+                {owner && (
+                  <>
+                    <span className="hidden sm:inline">•</span>
+                    <span className="min-w-0 break-words">{owner.full_name}</span>
+                  </>
+                )}
+                <span className="hidden sm:inline">•</span>
                 <InlineEditField
                   value={lead.estimated_price}
                   onSave={(v) => handleUpdateLead({ estimated_price: Number(v) || 0 })}
@@ -662,24 +674,24 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
             <Button
               variant="outline"
               size="sm"
-              className="text-destructive hover:text-destructive"
+              className="shrink-0 text-destructive hover:text-destructive max-sm:w-full sm:self-start"
               onClick={() => setIsDeleteConfirmOpen(true)}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="mr-2 h-4 w-4" />
               Smazat lead
             </Button>
           </div>
 
-          {/* 2-column layout */}
-          <div className="flex-1 flex min-h-0">
+          {/* Desktop: side-by-side. Mobile: stacked full width (fixed w-[380px] was starving the main column). */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
             {/* Left column: Flow + Info */}
-            <ScrollArea className="flex-1 border-r">
-              <div className="p-6 space-y-6">
+            <ScrollArea className="min-h-0 min-w-0 border-b max-lg:h-[52dvh] max-lg:flex-none lg:flex-1 lg:border-b-0 lg:border-r">
+              <div className="space-y-6 p-4 sm:p-6">
                 {/* Stage selector */}
-                <div className="flex items-center gap-3">
-                  <label className="text-xs text-muted-foreground whitespace-nowrap">Stav:</label>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                  <label className="whitespace-nowrap text-xs text-muted-foreground">Stav:</label>
                   <Select value={lead.stage} onValueChange={handleStageChange}>
-                    <SelectTrigger className="h-8 w-auto">
+                    <SelectTrigger className="h-8 w-full min-w-0 sm:w-auto sm:max-w-[220px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -692,7 +704,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                     value={lead.owner_id}
                     onValueChange={(id) => handleUpdateLead({ owner_id: id })}
                   >
-                    <SelectTrigger className="h-8 w-auto">
+                    <SelectTrigger className="h-8 w-full min-w-0 sm:w-auto sm:max-w-[240px]">
                       <SelectValue placeholder="Odpovědná osoba" />
                     </SelectTrigger>
                     <SelectContent className="bg-background">
@@ -759,7 +771,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pl-6 pt-3">
                     <div className="space-y-2 text-sm">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                           <span className="text-muted-foreground text-xs">IČO</span>
                           <div className="flex items-center gap-2">
@@ -975,9 +987,9 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                     <CollapsibleContent className="pl-6 pt-3">
                       <div className="space-y-3">
                         {(lead.onboarding_signatories || []).map((signatory: { name: string; position?: string; email: string; phone?: string }, index: number) => (
-                          <div key={index} className="p-3 rounded-lg border bg-card space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
+                          <div key={index} className="space-y-2 rounded-lg border bg-card p-3">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                                 <User className="h-3.5 w-3.5 text-muted-foreground" />
                                 <InlineEditField
                                   value={signatory.name}
@@ -1018,7 +1030,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                                 </Button>
                               )}
                             </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                               <div className="flex items-center gap-1.5">
                                 <Mail className="h-3 w-3 text-muted-foreground" />
                                 <InlineEditField
@@ -1081,7 +1093,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pl-6 pt-3">
                     <div className="space-y-3 text-sm">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                           <span className="text-xs text-muted-foreground">Zdroj</span>
                           <InlineEditField
@@ -1167,9 +1179,9 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
             </ScrollArea>
 
             {/* Right column: Notes + Collapsible Timeline */}
-            <div className="w-[380px] flex flex-col min-h-0">
-              <ScrollArea className="flex-1">
-                <div className="p-5 space-y-4">
+            <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:h-auto lg:max-h-none lg:w-[380px] lg:max-w-[380px] lg:flex-none">
+              <ScrollArea className="min-h-0 flex-1 lg:min-h-0">
+                <div className="space-y-4 p-4 sm:p-5">
                   {/* Inline note form */}
                   <div className="space-y-2 p-3 rounded-lg border bg-card">
                     <div className="flex gap-1 flex-wrap">

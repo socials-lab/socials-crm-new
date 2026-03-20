@@ -215,9 +215,9 @@ export default function PublicCreativeBoostPage() {
         {/* Credit usage */}
         <Card className="mb-8">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-semibold">Využití kreditů</h2>
-              <span className={cn("text-2xl font-bold", isOverMax && "text-red-600")}>
+              <span className={cn("text-2xl font-bold tabular-nums", isOverMax && "text-red-600")}>
                 {usedCredits} / {data.max_credits}
               </span>
             </div>
@@ -241,6 +241,7 @@ export default function PublicCreativeBoostPage() {
                 <Image className="h-5 w-5 text-blue-600" />
                 <h2 className="text-lg font-semibold">Bannery</h2>
               </div>
+              <div className="w-full min-w-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -254,6 +255,7 @@ export default function PublicCreativeBoostPage() {
                   {renderOutputRows(bannerOutputs)}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -265,6 +267,7 @@ export default function PublicCreativeBoostPage() {
                 <Video className="h-5 w-5 text-purple-600" />
                 <h2 className="text-lg font-semibold">Videa</h2>
               </div>
+              <div className="w-full min-w-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -278,6 +281,7 @@ export default function PublicCreativeBoostPage() {
                   {renderOutputRows(videoOutputs)}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         )}

@@ -147,18 +147,18 @@ export default function ExtraWork() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          title="🔧 Vícepráce"
-          titleAccent="& schválení"
-          description="Správa víceprací a jejich fakturace"
-        />
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Přidat vícepráci
-        </Button>
-      </div>
+    <div className="space-y-4 animate-fade-in p-4 md:space-y-6 md:p-6">
+      <PageHeader
+        title="🔧 Vícepráce"
+        titleAccent="& schválení"
+        description="Správa víceprací a jejich fakturace"
+        actions={
+          <Button className="w-full sm:w-auto" onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Přidat vícepráci
+          </Button>
+        }
+      />
 
       <div className="grid gap-4 md:grid-cols-5">
         <KPICard

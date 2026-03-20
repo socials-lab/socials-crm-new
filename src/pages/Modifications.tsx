@@ -78,8 +78,8 @@ function CollapsibleModificationCard({ request, cardContent }: { request: Stored
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className="overflow-hidden">
         <CollapsibleTrigger asChild>
-          <button className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors text-left">
-            <div className="flex items-center gap-3 min-w-0">
+          <button className="flex w-full flex-col gap-3 p-4 text-left transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
               <div className={`p-1.5 rounded-md ${request.status === 'client_approved' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-primary/10'}`}>
                 {request.status === 'client_approved' 
                   ? <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -109,7 +109,7 @@ function CollapsibleModificationCard({ request, cardContent }: { request: Stored
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-4 shrink-0 ml-4">
+            <div className="ml-auto flex shrink-0 items-center gap-3 sm:ml-4 sm:gap-4">
               {deltaRevenue != null && (
                 <span className={`text-sm font-semibold ${deltaRevenue >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
                   {deltaRevenue >= 0 ? '+' : ''}{deltaRevenue.toLocaleString('cs-CZ')} Kč
@@ -477,7 +477,7 @@ export default function Modifications() {
 
   if (isLoadingPending) {
     return (
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="space-y-4 p-4 md:space-y-6 md:p-6">
         <PageHeader 
           title="Návrhy změn" 
           description="Připravte nabídku na rozšíření spolupráce se stávajícím klientem"
@@ -490,7 +490,7 @@ export default function Modifications() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-5 md:space-y-6">
+    <div className="space-y-5 p-4 md:space-y-6 md:p-6">
       <PageHeader 
         title="Návrhy změn" 
         description="Připravte nabídku na rozšíření spolupráce se stávajícím klientem"
@@ -588,7 +588,7 @@ export default function Modifications() {
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="drafts" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Drafty
+            Koncepty
             {drafts.length > 0 && (
               <Badge variant="secondary" className="ml-1">{drafts.length}</Badge>
             )}
@@ -647,7 +647,7 @@ export default function Modifications() {
                         <div className="flex items-center gap-2 mb-1">
                           <Badge variant="outline" className="text-muted-foreground">
                             <FileText className="h-3 w-3 mr-1" />
-                            Draft
+                            Koncept
                           </Badge>
                         </div>
                         <h4 className="font-medium flex items-center gap-2">
@@ -781,13 +781,13 @@ export default function Modifications() {
 
         <TabsContent value="applied" className="space-y-4">
           {/* Month filter */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex min-w-0 items-center gap-2">
+              <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Filtr podle měsíce:</span>
             </div>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Vyberte měsíc" />
               </SelectTrigger>
               <SelectContent>

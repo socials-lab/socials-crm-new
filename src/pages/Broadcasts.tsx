@@ -68,7 +68,7 @@ export default function Broadcasts() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in p-4 md:p-6">
       <PageHeader
         title="Rozesílky"
         description="Hromadné emaily kontaktům aktivních klientů"
@@ -91,6 +91,7 @@ export default function Broadcasts() {
           <p>Zatím žádné rozesílky</p>
         </div>
       ) : (
+        <div className="w-full min-w-0 overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -121,6 +122,7 @@ export default function Broadcasts() {
             ))}
           </TableBody>
         </Table>
+        </div>
       )}
 
       <CreateBroadcastDialog

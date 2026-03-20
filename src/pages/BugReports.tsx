@@ -26,9 +26,9 @@ const STATUS_VARIANT: Record<BugReportStatus, string> = {
 };
 
 const STATUS_LABELS: Record<BugReportStatus, string> = {
-  open: "Open",
-  in_progress: "In Progress",
-  resolved: "Resolved",
+  open: "Otevřené",
+  in_progress: "Rozpracované",
+  resolved: "Vyřešené",
 };
 
 const ALL_STATUSES: BugReportStatus[] = ["open", "in_progress", "resolved"];
@@ -68,54 +68,54 @@ export default function BugReports() {
     setUpdatingStatusId(reportId);
     try {
       await updateStatus(reportId, status);
-      toast.success("Report status updated");
+      toast.success("Stav hlášení byl aktualizován");
     } catch (error) {
       console.error("Failed to update bug report status:", error);
-      toast.error("Failed to update status");
+      toast.error("Stav se nepodařilo aktualizovat");
     } finally {
       setUpdatingStatusId(null);
     }
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <PageHeader title="Bug Reports & Feedback" />
+    <div className="min-w-0 space-y-6 p-4 md:p-6">
+      <PageHeader title="Bug reporty" titleAccent="a zpětná vazba" />
 
       <div className="flex flex-wrap gap-4">
         <Tabs value={typeFilter} onValueChange={(value) => setTypeFilter(parseTypeFilter(value))}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
+          <TabsList className="h-auto flex-wrap justify-start gap-1">
+            <TabsTrigger value="all">Vše</TabsTrigger>
             <TabsTrigger value="bug" className="gap-1">
-              <Bug className="h-3.5 w-3.5" /> Bugs
+              <Bug className="h-3.5 w-3.5" /> Chyby
             </TabsTrigger>
             <TabsTrigger value="feature" className="gap-1">
-              <Lightbulb className="h-3.5 w-3.5" /> Feature Requests
+              <Lightbulb className="h-3.5 w-3.5" /> Návrhy
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
         <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(parseStatusFilter(value))}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="open">Open</TabsTrigger>
-            <TabsTrigger value="in_progress">In Progress</TabsTrigger>
-            <TabsTrigger value="resolved">Resolved</TabsTrigger>
+          <TabsList className="h-auto flex-wrap justify-start gap-1">
+            <TabsTrigger value="all">Vše</TabsTrigger>
+            <TabsTrigger value="open">Otevřené</TabsTrigger>
+            <TabsTrigger value="in_progress">Rozpracované</TabsTrigger>
+            <TabsTrigger value="resolved">Vyřešené</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       <div className="rounded-md border">
-        <Table>
+        <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[110px]">Type</TableHead>
-              <TableHead className="w-[130px]">Status</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead className="hidden md:table-cell">Reported by</TableHead>
-              <TableHead className="hidden lg:table-cell max-w-[220px]">Page</TableHead>
-              <TableHead className="hidden md:table-cell w-[150px]">Created</TableHead>
-              <TableHead className="w-[70px]">Image</TableHead>
-              {isAdmin && <TableHead className="w-[70px]">Actions</TableHead>}
+              <TableHead className="w-[110px]">Typ</TableHead>
+              <TableHead className="w-[130px]">Stav</TableHead>
+              <TableHead>Předmět</TableHead>
+              <TableHead className="hidden md:table-cell">Nahlásil</TableHead>
+              <TableHead className="hidden lg:table-cell max-w-[220px]">Stránka</TableHead>
+              <TableHead className="hidden md:table-cell w-[150px]">Vytvořeno</TableHead>
+              <TableHead className="w-[70px]">Obrázek</TableHead>
+              {isAdmin && <TableHead className="w-[70px]">Akce</TableHead>}
             </TableRow>
           </TableHeader>
 
@@ -125,7 +125,7 @@ export default function BugReports() {
                 <TableCell colSpan={isAdmin ? 8 : 7} className="py-12 text-center text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading bug reports...
+                    Načítání hlášení…
                   </span>
                 </TableCell>
               </TableRow>
@@ -134,7 +134,7 @@ export default function BugReports() {
             {!isLoading && filteredReports.length === 0 && (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 8 : 7} className="py-8 text-center text-muted-foreground">
-                  No records found
+                  Žádné záznamy
                 </TableCell>
               </TableRow>
             )}
@@ -148,7 +148,7 @@ export default function BugReports() {
                       className={report.type === "bug" ? "border-0 bg-destructive/10 text-destructive" : "border-0 bg-primary/10 text-primary"}
                     >
                       {report.type === "bug" ? <Bug className="mr-1 h-3 w-3" /> : <Lightbulb className="mr-1 h-3 w-3" />}
-                      {report.type === "bug" ? "Bug" : "Feature"}
+                      {report.type === "bug" ? "Chyba" : "Návrh"}
                     </Badge>
                   </TableCell>
                   <TableCell>

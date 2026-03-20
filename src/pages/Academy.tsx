@@ -414,8 +414,8 @@ function AcademyContent() {
             )}
 
             {/* Video info and actions */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 {selectedVideo?.duration && (
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
@@ -425,12 +425,12 @@ function AcademyContent() {
               </div>
               
               {selectedVideo && !watchedVideoIds.includes(selectedVideo.id) ? (
-                <Button onClick={() => handleVideoComplete(selectedVideo.id)}>
+                <Button className="w-full shrink-0 sm:w-auto" onClick={() => handleVideoComplete(selectedVideo.id)}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Označit jako zhlédnuté
                 </Button>
               ) : (
-                <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <Badge className="w-fit shrink-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Zhlédnuto
                 </Badge>

@@ -10,7 +10,7 @@ export default function Upsells() {
   // Only users with financial access can view this page
   if (!canSeeFinancials && !isSuperAdmin) {
     return (
-      <div className="p-4 md:p-6 space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in p-4 md:p-6">
         <PageHeader 
           title="💰 Provize" 
           titleAccent="z upsellů"
@@ -25,7 +25,7 @@ export default function Upsells() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in p-4 md:p-6">
       <PageHeader 
         title="💰 Provize" 
         titleAccent="z upsellů"

@@ -11,6 +11,8 @@ export type NotificationType =
   | 'new_feedback_idea'
   | 'modification_approved'
   | 'client_approved_modification'
+  | 'modification_client_approved'
+  | 'modification_rejected'
   | 'engagement_assigned'
   | 'engagement_service_added'
   | 'engagement_ending_soon'
@@ -132,6 +134,18 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, {
     icon: '✅', 
     color: 'text-green-600',
     bgColor: 'bg-green-500/10',
+    entityType: 'modification'
+  },
+  modification_client_approved: {
+    icon: '✅',
+    color: 'text-green-600',
+    bgColor: 'bg-green-500/10',
+    entityType: 'modification'
+  },
+  modification_rejected: {
+    icon: '❌',
+    color: 'text-red-600',
+    bgColor: 'bg-red-500/10',
     entityType: 'modification'
   },
   engagement_assigned: {

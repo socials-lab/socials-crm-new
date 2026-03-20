@@ -294,7 +294,7 @@ export default function MyProfile() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in p-4 md:space-y-6 md:p-6">
       <PageHeader
         title="Můj"
         titleAccent="profil"
@@ -425,13 +425,13 @@ export default function MyProfile() {
                           <CalendarDays className="h-4 w-4" />
                           Datum narození
                         </FormLabel>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                           <Select
                             value={selectedDay?.toString() || ''}
                             onValueChange={(v) => handleDateChange('day', parseInt(v))}
                           >
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Den" />
                               </SelectTrigger>
                             </FormControl>
@@ -449,7 +449,7 @@ export default function MyProfile() {
                             onValueChange={(v) => handleDateChange('month', parseInt(v))}
                           >
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Měsíc" />
                               </SelectTrigger>
                             </FormControl>
@@ -467,7 +467,7 @@ export default function MyProfile() {
                             onValueChange={(v) => handleDateChange('year', parseInt(v))}
                           >
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Rok" />
                               </SelectTrigger>
                             </FormControl>
