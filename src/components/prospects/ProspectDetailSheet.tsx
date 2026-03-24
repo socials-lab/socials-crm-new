@@ -40,7 +40,7 @@ const FREE_EMAIL_DOMAINS = new Set([
   'live.com', 'msn.com', 'aol.com', 'mail.com', 'zoho.com',
 ]);
 
-function getCompanyUrl(email: string): string | null {
+export function getCompanyUrl(email: string): string | null {
   const domain = email.split('@')[1]?.toLowerCase();
   if (!domain || FREE_EMAIL_DOMAINS.has(domain)) return null;
   return `https://${domain}`;
