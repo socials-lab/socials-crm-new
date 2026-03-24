@@ -18,8 +18,12 @@ export function useProspectsData() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return (data || []).map((p: any) => ({
+      if (error) {
+        console.warn('Prospects table not available, using demo data');
+        return DEMO_PROSPECTS;
+      }
+      if (!data || data.length === 0) return DEMO_PROSPECTS;
+      return data.map((p: any) => ({
         ...p,
         notes: Array.isArray(p.notes) ? p.notes : [],
       })) as Prospect[];
