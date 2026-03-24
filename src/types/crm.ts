@@ -295,6 +295,10 @@ export interface EngagementService {
   upsell_commission_percent: number | null;
   // Effective date for prorated billing
   effective_from: string | null; // Date when this service starts (for mid-month proration)
+  // Introductory discount fields
+  intro_discount_percent: number | null;
+  intro_discount_months: number | null;
+  intro_discount_start_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -537,6 +541,9 @@ export interface LeadService {
   price: number;
   currency: string;
   billing_type: 'monthly' | 'one_off';
+  // Introductory discount (optional)
+  intro_discount_percent?: number | null;
+  intro_discount_months?: number | null;
 }
 
 export type LeadNoteType = 'general' | 'call' | 'internal' | 'email_sent' | 'email_received';
