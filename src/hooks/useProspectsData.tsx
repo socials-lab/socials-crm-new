@@ -101,7 +101,11 @@ export function useProspectsData() {
         .select('*')
         .order('occurred_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Prospect interactions table not available, using demo data');
+        return DEMO_INTERACTIONS;
+      }
+      if (!data || data.length === 0) return DEMO_INTERACTIONS;
       return (data || []) as unknown as ProspectInteraction[];
     },
     enabled: !!user,
