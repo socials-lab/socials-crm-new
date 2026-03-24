@@ -17,6 +17,8 @@ import {
   deleteConversation as deleteConv,
   type Conversation,
 } from '@/services/assistantHistory';
+import { parseActionsFromContent, type CrmAction } from '@/services/crmActions';
+import { ActionCard } from './ActionCard';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -361,50 +363,59 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
             )}
 
             <div className="space-y-4">
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div
-                    className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
-                      msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    {msg.role === 'assistant' ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none [&_table]:text-xs [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1 [&_th]:bg-muted/50 [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_hr]:my-2 [&_h2]:text-sm [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:mt-2 [&_h3]:mb-1">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            a: ({ href, children, ...props }) => {
-                              if (href?.startsWith('/sop/') || href === '/feedback') {
-                                return (
-                                  <a
-                                    {...props}
-                                    href={href}
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      navigate(href);
-                                      onClose();
-                                    }}
-                                    className="text-primary underline cursor-pointer hover:text-primary/80"
-                                  >
-                                    {children}
-                                  </a>
-                                );
-                              }
-                              return <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline" {...props}>{children}</a>;
-                            },
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
+              {messages.map((msg, i) => {
+                if (msg.role === 'assistant') {
+                  const { text, actions } = parseActionsFromContent(msg.content);
+                  return (
+                    <div key={i} className="flex justify-start">
+                      <div className="max-w-[85%]">
+                        {text && (
+                          <div className="rounded-xl px-3 py-2 text-sm bg-muted">
+                            <div className="prose prose-sm dark:prose-invert max-w-none [&_table]:text-xs [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1 [&_th]:bg-muted/50 [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_hr]:my-2 [&_h2]:text-sm [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:mt-2 [&_h3]:mb-1">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  a: ({ href, children, ...props }) => {
+                                    if (href?.startsWith('/sop/') || href === '/feedback') {
+                                      return (
+                                        <a
+                                          {...props}
+                                          href={href}
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            navigate(href);
+                                            onClose();
+                                          }}
+                                          className="text-primary underline cursor-pointer hover:text-primary/80"
+                                        >
+                                          {children}
+                                        </a>
+                                      );
+                                    }
+                                    return <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline" {...props}>{children}</a>;
+                                  },
+                                }}
+                              >
+                                {text}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        )}
+                        {actions.map((action, j) => (
+                          <ActionCard key={j} action={action} />
+                        ))}
                       </div>
-                    ) : (
+                    </div>
+                  );
+                }
+                return (
+                  <div key={i} className="flex justify-end">
+                    <div className="max-w-[85%] rounded-xl px-3 py-2 text-sm bg-primary text-primary-foreground">
                       <p className="whitespace-pre-wrap">{msg.content}</p>
-                    )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
                 <div className="flex justify-start">
