@@ -97,6 +97,15 @@ export function ProspectDetailSheet({ prospect, onClose }: Props) {
                   <span>{prospect.company}</span>
                 </div>
               )}
+              {companyUrl && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Web</span>
+                  <a href={companyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 text-sm">
+                    {companyUrl.replace('https://', '')}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Status</span>
                 <Select value={prospect.status} onValueChange={v => updateStatus(prospect.id, v as ProspectStatus)}>
