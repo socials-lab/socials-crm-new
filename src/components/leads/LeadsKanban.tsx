@@ -218,9 +218,15 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
   return (
     <>
       <div className="space-y-4">
-        {/* Active Stages - 2x3 Grid (fits on screen) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {ACTIVE_STAGES.map(stage => renderStageColumn(stage))}
+        {/* Active Stages - horizontal scroll, fixed-width columns */}
+        <div className="overflow-x-auto scrollbar-thin pb-2">
+          <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+            {ACTIVE_STAGES.map(stage => (
+              <div key={stage} className="w-[260px] flex-shrink-0">
+                {renderStageColumn(stage)}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Closed Stages - Collapsible Section */}

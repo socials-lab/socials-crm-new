@@ -32,7 +32,7 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="font-medium text-sm truncate">{lead.company_name}</span>
+            <span className="font-medium text-sm">{lead.company_name}</span>
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
             {lead.access_request_sent_at && (
