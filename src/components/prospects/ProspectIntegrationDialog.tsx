@@ -191,8 +191,8 @@ console.log(data);`;
         body: JSON.stringify({
           name: testName,
           email: testEmail,
-          interaction_type: testType,
-          interaction_title: testTitle,
+          interaction_type: interactionType,
+          interaction_title: interactionTitle,
         })
       });
       const data = await res.json();
