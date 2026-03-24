@@ -46,6 +46,13 @@ export function EngagementServiceCard({
 
   const totalAssignmentCost = assignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
 
+  const discountInfo = getIntroDiscountInfo(
+    engagementService.price,
+    engagementService.intro_discount_percent,
+    engagementService.intro_discount_months,
+    engagementService.intro_discount_start_date
+  );
+
   return (
     <>
       <Card className="border-border/50">
