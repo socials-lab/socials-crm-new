@@ -59,8 +59,6 @@ export function ProspectIntegrationDialog({ open, onOpenChange }: Props) {
   // Test tab state
   const [testName, setTestName] = useState('');
   const [testEmail, setTestEmail] = useState('');
-  const [testType, setTestType] = useState<ProspectInteractionType>('webinar_registration');
-  const [testTitle, setTestTitle] = useState('');
   const [testing, setTesting] = useState(false);
 
   const titlePlaceholder = interactionType === 'webinar_registration' || interactionType === 'webinar_attended'
@@ -176,8 +174,8 @@ console.log(data);`;
   }, null, 2);
 
   const handleTest = async () => {
-    if (!testName || !testEmail || !testTitle) {
-      toast.error('Vyplňte jméno, e-mail a název aktivity');
+    if (!testName || !testEmail || !interactionTitle) {
+      toast.error('Vyplňte jméno, e-mail a název zdroje');
       return;
     }
     setTesting(true);
@@ -191,8 +189,8 @@ console.log(data);`;
         body: JSON.stringify({
           name: testName,
           email: testEmail,
-          interaction_type: testType,
-          interaction_title: testTitle,
+          interaction_type: interactionType,
+          interaction_title: interactionTitle,
         })
       });
       const data = await res.json();
@@ -200,7 +198,6 @@ console.log(data);`;
         toast.success('Testovací zájemce byl úspěšně vytvořen!');
         setTestName('');
         setTestEmail('');
-        setTestTitle('');
       } else {
         toast.error(`Chyba: ${data.error || 'Neznámá chyba'}`);
       }
@@ -217,9 +214,38 @@ console.log(data);`;
         <DialogHeader>
           <DialogTitle>Napojení landing pages</DialogTitle>
           <DialogDescription>
-            Připojte své landing page k CRM přes webhook. Zkopírujte si hotový formulář nebo použijte API.
+            Vyplňte zdroj (typ a název), vygeneruje se kód pro napojení formuláře na vaší landing page.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Source config — always visible */}
+        <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+          <p className="text-sm font-medium">Zdroj kontaktu</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Typ zdroje</Label>
+              <Select value={interactionType} onValueChange={v => setInteractionType(v as ProspectInteractionType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.entries(INTERACTION_TYPE_LABELS) as [ProspectInteractionType, string][]).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Název zdroje *</Label>
+              <Input
+                value={interactionTitle}
+                onChange={e => setInteractionTitle(e.target.value)}
+                placeholder={titlePlaceholder}
+              />
+            </div>
+          </div>
+          {!interactionTitle && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">⚠ Vyplňte název zdroje pro vygenerování kódu</p>
+          )}
+        </div>
 
         <Tabs defaultValue="form" className="mt-2">
           <TabsList className="grid w-full grid-cols-3">
@@ -239,53 +265,26 @@ console.log(data);`;
 
           <TabsContent value="form" className="space-y-4 mt-4">
             <p className="text-sm text-muted-foreground">
-              Nastavte typ a název aktivity, pak zkopírujte HTML kód do své landing page.
+              Zkopírujte tento kód a dejte ho AI (nebo vložte přímo do landing page). Obsahuje formulář i odesílací logiku.
             </p>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Typ interakce</Label>
-                <Select value={interactionType} onValueChange={v => setInteractionType(v as ProspectInteractionType)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(Object.entries(INTERACTION_TYPE_LABELS) as [ProspectInteractionType, string][]).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Název aktivity</Label>
-                <Input
-                  value={interactionTitle}
-                  onChange={e => setInteractionTitle(e.target.value)}
-                  placeholder={titlePlaceholder}
-                />
-              </div>
-            </div>
-
             <CodeBlock code={htmlSnippet} label="HTML + JavaScript snippet" />
           </TabsContent>
 
           <TabsContent value="api" className="space-y-4 mt-4">
             <p className="text-sm text-muted-foreground">
-              Použijte webhook URL pro vlastní implementaci. Všechna data posílejte jako POST JSON.
+              Webhook URL a příklady pro vlastní napojení. Zkopírujte a předejte AI pro napojení formuláře.
             </p>
 
             <CodeBlock code={WEBHOOK_URL} label="Webhook URL" />
-
             <CodeBlock code={`Authorization: Bearer ${ANON_KEY}`} label="Authorization header" />
-
             <CodeBlock code={payloadExample} label="JSON payload" />
-
             <CodeBlock code={curlSnippet} label="cURL příklad" />
-
             <CodeBlock code={fetchSnippet} label="JavaScript fetch příklad" />
           </TabsContent>
 
           <TabsContent value="test" className="space-y-4 mt-4">
             <p className="text-sm text-muted-foreground">
-              Odešlete testovací data na webhook a ověřte, že napojení funguje.
+              Odešlete testovací data a ověřte, že napojení funguje.
             </p>
 
             <div className="grid grid-cols-2 gap-3">
@@ -299,25 +298,7 @@ console.log(data);`;
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Typ interakce</Label>
-                <Select value={testType} onValueChange={v => setTestType(v as ProspectInteractionType)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(Object.entries(INTERACTION_TYPE_LABELS) as [ProspectInteractionType, string][]).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Název aktivity *</Label>
-                <Input value={testTitle} onChange={e => setTestTitle(e.target.value)} placeholder="Webinář: Test" />
-              </div>
-            </div>
-
-            <Button onClick={handleTest} disabled={testing} className="w-full">
+            <Button onClick={handleTest} disabled={testing || !interactionTitle} className="w-full">
               {testing && <Loader2 className="h-4 w-4 animate-spin" />}
               {testing ? 'Odesílám...' : 'Odeslat testovací data'}
             </Button>
