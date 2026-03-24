@@ -54,10 +54,19 @@ export function ProspectDetailSheet({ prospect, onClose }: Props) {
   const [noteType, setNoteType] = useState<LeadNoteType>('general');
   const [callDate, setCallDate] = useState('');
   const [showConvert, setShowConvert] = useState(false);
+  const [aresResults, setAresResults] = useState<AresSearchResult[]>([]);
+  const [aresLoading, setAresLoading] = useState(false);
+
+  const companyUrl = prospect ? getCompanyUrl(prospect.email) : null;
+  const searchName = prospect?.company || (companyUrl ? companyUrl.replace('https://', '').replace('www.', '').split('.')[0] : null);
+
+  useEffect(() => {
+    if (!searchName) { setAresResults([]); return; }
+    setAresLoading(true);
+    searchAresByName(searchName).then(r => { setAresResults(r); setAresLoading(false); });
+  }, [searchName]);
 
   if (!prospect) return null;
-
-  const companyUrl = getCompanyUrl(prospect.email);
 
   const handleAddNote = () => {
     if (!noteText.trim()) return;
