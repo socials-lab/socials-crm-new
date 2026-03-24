@@ -131,7 +131,7 @@ export function ProspectDetailSheet({ prospect, onClose }: Props) {
                         {r.address && <span className="text-muted-foreground text-xs block">{r.address}</span>}
                       </div>
                       <a
-                        href={`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${r.ico}`}
+                        href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${r.ico}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={e => e.stopPropagation()}
