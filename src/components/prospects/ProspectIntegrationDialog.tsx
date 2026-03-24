@@ -198,7 +198,6 @@ console.log(data);`;
         toast.success('Testovací zájemce byl úspěšně vytvořen!');
         setTestName('');
         setTestEmail('');
-        setTestTitle('');
       } else {
         toast.error(`Chyba: ${data.error || 'Neznámá chyba'}`);
       }
