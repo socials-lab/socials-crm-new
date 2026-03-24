@@ -182,11 +182,11 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-primary/5">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bot className="h-4 w-4 text-primary" />
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-lg">
+            🤖
           </div>
           <div>
-            <h3 className="text-sm font-semibold">AI Asistent</h3>
+            <h3 className="text-sm font-semibold">Dandroid</h3>
             <p className="text-[10px] text-muted-foreground">Ceník · SOP · Nabídky</p>
           </div>
         </div>
@@ -199,8 +199,8 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
       <ScrollArea className="flex-1 px-4 py-3" ref={scrollRef}>
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 py-12">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-primary" />
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">
+              🤖
             </div>
             <div className="text-center">
               <p className="text-sm font-medium">Jak ti můžu pomoct?</p>
