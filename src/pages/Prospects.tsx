@@ -41,7 +41,7 @@ export default function Prospects() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Zájemci" subtitle="Kontakty z lead magnetů a webinářů" />
+      <PageHeader title="Zájemci" description="Kontakty z lead magnetů a webinářů" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KPICard title="Celkem zájemců" value={prospects.length} icon={Users} />

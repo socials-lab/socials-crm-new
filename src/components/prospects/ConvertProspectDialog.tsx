@@ -7,9 +7,11 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
-import { useLeadsData } from '@/hooks/useLeadsData';
 import { useProspectsData } from '@/hooks/useProspectsData';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ProspectWithInteractions } from '@/types/prospect';
 
 interface Props {
@@ -19,28 +21,36 @@ interface Props {
 }
 
 export function ConvertProspectDialog({ prospect, open, onOpenChange }: Props) {
-  const { addLead } = useLeadsData();
   const { markConverted } = useProspectsData();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   if (!prospect) return null;
 
   const handleConvert = async () => {
     try {
-      const leadData = {
-        company_name: prospect.company || prospect.name,
-        contact_name: prospect.name,
-        contact_email: prospect.email,
-        contact_phone: prospect.phone || '',
-        source: 'inbound' as const,
-        summary: `Převedeno ze zájemců. Interakce: ${prospect.interactions.map(i => i.title).join(', ')}`,
-      };
+      const { data: newLead, error } = await supabase
+        .from('leads')
+        .insert({
+          company_name: prospect.company || prospect.name,
+          contact_name: prospect.name,
+          contact_email: prospect.email,
+          contact_phone: prospect.phone || '',
+          source: 'inbound' as const,
+          summary: `Převedeno ze zájemců. Interakce: ${prospect.interactions.map(i => i.title).join(', ')}`,
+          stage: 'new_lead' as const,
+          created_by: user?.id || null,
+        })
+        .select('id')
+        .single();
 
-      const newLead = await addLead(leadData);
-      if (newLead?.id) {
-        await markConverted(prospect.id, newLead.id);
-        onOpenChange(false);
-      }
+      if (error) throw error;
+
+      await markConverted(prospect.id, newLead.id);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      onOpenChange(false);
     } catch (error) {
+      console.error('Convert error:', error);
       toast.error('Nepodařilo se převést na lead');
     }
   };

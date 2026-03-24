@@ -36,7 +36,7 @@ export function useProspectsData() {
         .order('occurred_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as ProspectInteraction[];
+      return (data || []) as unknown as ProspectInteraction[];
     },
     enabled: !!user,
   });

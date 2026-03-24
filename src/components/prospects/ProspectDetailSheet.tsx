@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowRight, Plus, Phone, MessageSquare, Lock } from 'lucide-react';
 import { useProspectsData } from '@/hooks/useProspectsData';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { cn } from '@/lib/utils';
 import {
   PROSPECT_STATUS_LABELS,
@@ -34,7 +35,7 @@ const NOTE_TYPES: { value: LeadNoteType; label: string; icon: React.ReactNode }[
 
 export function ProspectDetailSheet({ prospect, onClose }: Props) {
   const { updateStatus, addNote } = useProspectsData();
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const [noteText, setNoteText] = useState('');
   const [noteType, setNoteType] = useState<LeadNoteType>('general');
   const [callDate, setCallDate] = useState('');
@@ -44,7 +45,7 @@ export function ProspectDetailSheet({ prospect, onClose }: Props) {
 
   const handleAddNote = () => {
     if (!noteText.trim()) return;
-    const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Uživatel' : 'Uživatel';
+    const authorName = user?.email || 'Uživatel';
     addNote(prospect.id, noteText.trim(), noteType, authorName, noteType === 'call' ? callDate || null : null);
     setNoteText('');
     setCallDate('');
