@@ -140,6 +140,11 @@ export default function Prospects() {
         prospect={selectedProspect}
         onClose={() => setSelectedProspect(null)}
       />
+
+      <ProspectIntegrationDialog
+        open={integrationOpen}
+        onOpenChange={setIntegrationOpen}
+      />
     </div>
   );
 }
