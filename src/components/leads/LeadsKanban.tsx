@@ -171,7 +171,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
         <div className="p-2.5 border-b flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className={cn("w-2 h-2 rounded-full flex-shrink-0", config.color)} />
-            <span className="font-medium text-xs truncate">{config.shortTitle}</span>
+            <span className="font-medium text-xs whitespace-nowrap">{config.title}</span>
             <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0">
               {stats.count}
             </Badge>
@@ -218,9 +218,15 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
   return (
     <>
       <div className="space-y-4">
-        {/* Active Stages - 2x3 Grid (fits on screen) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {ACTIVE_STAGES.map(stage => renderStageColumn(stage))}
+        {/* Active Stages - horizontal scroll, fixed-width columns */}
+        <div className="overflow-x-auto scrollbar-thin pb-2">
+          <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+            {ACTIVE_STAGES.map(stage => (
+              <div key={stage} className="w-[260px] flex-shrink-0">
+                {renderStageColumn(stage)}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Closed Stages - Collapsible Section */}
