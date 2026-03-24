@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowRight, Plus, Phone, MessageSquare, Lock, ExternalLink } from 'lucide-react';
+import { ArrowRight, Plus, Phone, MessageSquare, Lock, ExternalLink, Building2, Loader2 } from 'lucide-react';
+import { searchAresByName, type AresSearchResult } from '@/utils/aresUtils';
 import { useProspectsData } from '@/hooks/useProspectsData';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';

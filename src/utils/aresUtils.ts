@@ -137,3 +137,27 @@ export async function fetchAresData(ico: string): Promise<AresData | null> {
     return null;
   }
 }
+
+export interface AresSearchResult {
+  ico: string;
+  companyName: string;
+  address: string | null;
+}
+
+export async function searchAresByName(query: string): Promise<AresSearchResult[]> {
+  try {
+    const res = await fetch(
+      `https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat?obchodniJmeno=${encodeURIComponent(query)}&start=0&pocet=5`
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const items = data?.ekonomickeSubjekty || [];
+    return items.map((item: any) => ({
+      ico: item.ico || '',
+      companyName: item.obchodniJmeno || item.nazev || '',
+      address: item.sidlo?.textovaAdresa || null,
+    }));
+  } catch {
+    return [];
+  }
+}
