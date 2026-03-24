@@ -11,10 +11,10 @@ type Msg = { role: 'user' | 'assistant'; content: string };
 const CHAT_URL = `https://empndmpeyrdycjdesoxr.supabase.co/functions/v1/agency-assistant`;
 
 const QUICK_ACTIONS = [
-  { label: 'Jak nacenit nabídku?', message: 'Jak mám správně nacenit nabídku pro nového klienta? Jaký postup mám dodržet?' },
-  { label: 'Jaké jsou odměny?', message: 'Jaké jsou doporučené odměny pro kolegy podle pozice a služby?' },
-  { label: 'Co potřebuji k onboardingu?', message: 'Jaké přístupy a podklady potřebuji od klienta k onboardingu?' },
-  { label: 'Performance Boost kalkulace', message: 'Udělej mi kalkulaci Performance Boost pro klienta s ad spendem 300 000 Kč měsíčně.' },
+  { label: '💰 Nacenit službu pro klienta', message: 'Potřebuji nacenit službu pro klienta. Poraď mi jaký balíček vybrat, kolik účtovat a jaké nastavit odměny kolegům.' },
+  { label: '👤 Odměny kolegů dle služby', message: 'Jaké jsou doporučené odměny pro kolegy podle pozice a služby? Ukaž mi tabulku odměn pro všechny core balíčky a addony.' },
+  { label: '📊 Kalkulace Performance Boost', message: 'Udělej mi kompletní kalkulaci Performance Boost pro klienta s ad spendem 300 000 Kč měsíčně – cena, odměny, marže.' },
+  { label: '📖 Jak probíhá onboarding?', message: 'Jaký je postup onboardingu nového klienta? Co potřebuji za přístupy a podklady?' },
 ];
 
 async function streamChat({
