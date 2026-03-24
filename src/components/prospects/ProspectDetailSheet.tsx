@@ -116,15 +116,35 @@ export function ProspectDetailSheet({ prospect, onClose }: Props) {
                   </a>
                 </div>
               )}
+              {/* ARES lookup section */}
+              {(aresLoading || aresResults.length > 0) && (
+                <div className="pt-1">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <Building2 className="h-3 w-3" /> ARES
+                    {aresLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                  </span>
+                  {aresResults.map(r => (
+                    <div key={r.ico} className="flex items-center justify-between text-sm mt-1 pl-4">
+                      <div className="min-w-0">
+                        <span className="font-medium">{r.companyName}</span>
+                        <span className="text-muted-foreground text-xs ml-2">IČO: {r.ico}</span>
+                        {r.address && <span className="text-muted-foreground text-xs block">{r.address}</span>}
+                      </div>
+                      <a
+                        href={`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${r.ico}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-primary hover:underline text-xs whitespace-nowrap inline-flex items-center gap-1 ml-2"
+                      >
+                        ARES <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Status</span>
-                <Select value={prospect.status} onValueChange={v => updateStatus(prospect.id, v as ProspectStatus)}>
-                  <SelectTrigger className="w-[160px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.entries(PROSPECT_STATUS_LABELS) as [ProspectStatus, string][]).map(([k, l]) => (
-                      <SelectItem key={k} value={k}>{l}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
