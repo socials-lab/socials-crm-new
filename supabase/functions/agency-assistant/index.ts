@@ -174,16 +174,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    let sopArticles: { title: string; content: string; category_title?: string }[] = [];
+    let sopArticles: { id: string; title: string; content: string; category_title?: string }[] = [];
     try {
       const { data: articles } = await supabase
         .from("sop_articles")
-        .select("title, content, search_text, category_id")
+        .select("id, title, content, search_text, category_id")
         .eq("is_published", true)
         .order("sort_order");
 
       if (articles && articles.length > 0) {
-        // Fetch categories for labels
         const { data: categories } = await supabase
           .from("sop_categories")
           .select("id, title")
@@ -191,6 +190,7 @@ serve(async (req) => {
 
         const catMap = new Map((categories || []).map(c => [c.id, c.title]));
         sopArticles = articles.map(a => ({
+          id: a.id,
           title: a.title,
           content: a.search_text || a.content || '',
           category_title: catMap.get(a.category_id) || undefined,
