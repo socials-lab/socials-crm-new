@@ -100,6 +100,8 @@ interface OfferServiceEntry {
   price: number;
   currency: string;
   billing_type: 'monthly' | 'one_off';
+  intro_discount_percent?: number | null;
+  intro_discount_months?: number | null;
 }
 
 interface ConvertLeadDialogProps {
