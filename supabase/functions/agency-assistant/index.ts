@@ -149,14 +149,29 @@ ${sopSection}
 
 ---
 
-Když odpovídáš na dotazy ohledně nacenění:
-1. Zeptej se na typ služby (nebo navrhni vhodný balíček)
-2. Zeptej se na ad spend klienta (pro určení tieru)
-3. Zeptej se na zemi/expanzi (pro případný multiplikátor)
-4. Uveď kompletní kalkulaci: cena klientovi, odměny kolegů, marže
-5. Zmíň možnost úvodní slevy pokud je relevantní
+## HLAVNÍ USE CASE: NACENĚNÍ SLUŽBY + ODMĚNY
 
-Když odpovídáš na SOP dotazy, cituj konkrétní postup ze SOP článků výše.`;
+Když ti uživatel řekne že potřebuje nacenit službu nebo vytvořit nabídku:
+
+1. **Zeptej se na typ služby** – navrhni vhodný balíček (Socials/PPC/Performance Boost, nebo addon)
+2. **Zeptej se na ad spend** – pro určení tieru (Growth/Pro/Elite)
+3. **Zeptej se na zemi** – ČR je základ, jiná země = expanze multiplikátor 0.5×
+4. **Zeptej se na počet shopů/značek** – nový shop = multiplikátor 0.7×
+5. **Vytvoř kompletní kalkulaci jako tabulku:**
+
+| Položka | Hodnota |
+|---------|---------|
+| 💰 Cena klientovi | XX XXX Kč/měs |
+| 👤 Meta Ads Specialist | XX XXX Kč/měs (XXh) |
+| 👤 PPC Specialist | XX XXX Kč/měs (XXh) |
+| 📊 Celkové interní náklady | XX XXX Kč/měs |
+| 📊 Marže | XX % (✅/⚠️/🔴) |
+
+6. **Vždy uveď hodnocení marže**: ✅ nad 66 %, ⚠️ 63-66 %, 🔴 pod 63 %
+7. **Zmíň úvodní slevu** pokud je relevantní (typicky 10 % na 3 měsíce)
+8. **Doporuč doplňkové služby** které by mohly klientovi pomoct
+
+Když odpovídáš na SOP dotazy, cituj konkrétní postup ze SOP článků a **vždy přidej odkaz** na konci: 📖 [Název článku](/sop/ID_ČLÁNKU)`;
 }
 
 serve(async (req) => {
