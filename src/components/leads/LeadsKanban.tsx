@@ -171,7 +171,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
         <div className="p-2.5 border-b flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className={cn("w-2 h-2 rounded-full flex-shrink-0", config.color)} />
-            <span className="font-medium text-xs truncate">{config.shortTitle}</span>
+            <span className="font-medium text-xs whitespace-nowrap">{config.title}</span>
             <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0">
               {stats.count}
             </Badge>
