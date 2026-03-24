@@ -152,36 +152,53 @@ async function executeCreateExtraWork(data: Record<string, any>) {
 }
 
 async function executeAddNote(data: Record<string, any>) {
-  const table = data.entity_type === 'lead' ? 'leads' : 'clients';
-  const nameCol = data.entity_type === 'lead' ? 'company_name' : 'name';
+  if (data.entity_type === 'lead') {
+    const { data: entities } = await supabase
+      .from('leads')
+      .select('id, company_name')
+      .ilike('company_name', `%${data.entity_name}%`)
+      .limit(1);
 
-  const { data: entities } = await supabase
-    .from(table)
-    .select(`id, ${nameCol}, pinned_notes`)
-    .ilike(nameCol, `%${data.entity_name}%`)
-    .limit(1);
+    if (!entities || entities.length === 0) {
+      return { success: false, message: `Lead "${data.entity_name}" nenalezen.` };
+    }
 
-  if (!entities || entities.length === 0) {
-    return { success: false, message: `${data.entity_type === 'lead' ? 'Lead' : 'Klient'} "${data.entity_name}" nenalezen.` };
+    const entity = entities[0];
+    // For leads, notes is a jsonb array
+    const existingNotes = (entity as any).notes || [];
+    const newNote = { text: `🤖 Dandroid: ${data.note}`, created_at: new Date().toISOString(), author: 'Dandroid' };
+    
+    const { error } = await supabase
+      .from('leads')
+      .update({ notes: [...(Array.isArray(existingNotes) ? existingNotes : []), newNote] as any })
+      .eq('id', entity.id);
+
+    if (error) throw error;
+    return { success: true, message: `Poznámka přidána k leadu "${entity.company_name}" ✅`, url: '/leads' };
+  } else {
+    const { data: entities } = await supabase
+      .from('clients')
+      .select('id, name, pinned_notes')
+      .ilike('name', `%${data.entity_name}%`)
+      .limit(1);
+
+    if (!entities || entities.length === 0) {
+      return { success: false, message: `Klient "${data.entity_name}" nenalezen.` };
+    }
+
+    const entity = entities[0];
+    const existingNotes = entity.pinned_notes || '';
+    const timestamp = new Date().toLocaleString('cs-CZ');
+    const newNotes = `${existingNotes}\n\n🤖 Dandroid (${timestamp}):\n${data.note}`.trim();
+
+    const { error } = await supabase
+      .from('clients')
+      .update({ pinned_notes: newNotes })
+      .eq('id', entity.id);
+
+    if (error) throw error;
+    return { success: true, message: `Poznámka přidána ke klientovi "${entity.name}" ✅`, url: '/clients' };
   }
-
-  const entity = entities[0];
-  const existingNotes = (entity as any).pinned_notes || '';
-  const timestamp = new Date().toLocaleString('cs-CZ');
-  const newNotes = `${existingNotes}\n\n🤖 Dandroid (${timestamp}):\n${data.note}`.trim();
-
-  const { error } = await supabase
-    .from(table)
-    .update({ pinned_notes: newNotes })
-    .eq('id', entity.id);
-
-  if (error) throw error;
-  const entityName = (entity as any)[nameCol];
-  return {
-    success: true,
-    message: `Poznámka přidána k "${entityName}" ✅`,
-    url: data.entity_type === 'lead' ? '/leads' : '/clients',
-  };
 }
 
 /**
