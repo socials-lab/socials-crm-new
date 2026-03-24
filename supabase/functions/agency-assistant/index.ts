@@ -11,9 +11,9 @@ const corsHeaders = {
  * Build the system prompt with all agency knowledge baked in.
  * SOP articles are fetched from DB and injected dynamically.
  */
-async function buildSystemPrompt(sopArticles: { title: string; content: string; category_title?: string }[]): Promise<string> {
+async function buildSystemPrompt(sopArticles: { id: string; title: string; content: string; category_title?: string }[]): Promise<string> {
   const sopSection = sopArticles.length > 0
-    ? sopArticles.map(a => `### ${a.category_title ? `[${a.category_title}] ` : ''}${a.title}\n${a.content}`).join('\n\n')
+    ? sopArticles.map(a => `### ${a.category_title ? `[${a.category_title}] ` : ''}${a.title}\nID: ${a.id}\nOdkaz: /sop/${a.id}\n${a.content}`).join('\n\n')
     : 'Žádné SOP články nejsou k dispozici.';
 
   return `Jsi AI asistent agentury zaměřené na výkonnostní marketing pro e-shopy. Odpovídáš česky.
