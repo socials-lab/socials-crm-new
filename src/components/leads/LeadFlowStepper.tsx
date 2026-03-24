@@ -77,6 +77,11 @@ function ServicesInlineList({
           {s.selected_tier && (
             <Badge variant="outline" className="text-[10px] h-4 px-1">{s.selected_tier}</Badge>
           )}
+          {s.intro_discount_percent && s.intro_discount_months && (
+            <Badge variant="outline" className="text-[10px] h-4 px-1 bg-amber-500/10 text-amber-700 border-amber-500/30">
+              -{s.intro_discount_percent}% / {s.intro_discount_months} měs.
+            </Badge>
+          )}
           <span className="font-medium tabular-nums">{s.price.toLocaleString()} {currency}</span>
           {onRemove && (
             <button

@@ -100,6 +100,8 @@ interface OfferServiceEntry {
   price: number;
   currency: string;
   billing_type: 'monthly' | 'one_off';
+  intro_discount_percent?: number | null;
+  intro_discount_months?: number | null;
 }
 
 interface ConvertLeadDialogProps {
@@ -173,6 +175,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         price: ls.price || 0,
         currency: ls.currency || lead.currency || 'CZK',
         billing_type: ls.billing_type || 'monthly',
+        intro_discount_percent: ls.intro_discount_percent ?? null,
+        intro_discount_months: ls.intro_discount_months ?? null,
       }));
       setOfferServices(offerSvcs);
 
@@ -383,6 +387,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             upsold_by_id: null,
             upsell_commission_percent: null,
             effective_from: null,
+            intro_discount_percent: offerSvc.intro_discount_percent ?? null,
+            intro_discount_months: offerSvc.intro_discount_months ?? null,
+            intro_discount_start_date: offerSvc.intro_discount_percent && offerSvc.intro_discount_months
+              ? new Date().toISOString().split('T')[0]
+              : null,
           });
           createdServiceIds.push(created.id);
         } catch (e) {

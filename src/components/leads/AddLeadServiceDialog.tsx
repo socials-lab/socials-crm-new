@@ -15,6 +15,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Percent } from 'lucide-react';
 import type { Service, LeadService, ServiceTier } from '@/types/crm';
 import { SERVICE_TIER_CONFIGS } from '@/constants/services';
 import { getServiceDetail } from '@/constants/serviceDetails';
@@ -37,6 +40,9 @@ export function AddLeadServiceDialog({
   const [price, setPrice] = useState(0);
   const [currency, setCurrency] = useState('CZK');
   const [billingType, setBillingType] = useState<'monthly' | 'one_off'>('monthly');
+  const [hasIntroDiscount, setHasIntroDiscount] = useState(false);
+  const [introDiscountPercent, setIntroDiscountPercent] = useState(10);
+  const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
 
   const selectedService = services.find(s => s.id === selectedServiceId);
   const isCoreService = selectedService?.service_type === 'core';
@@ -72,6 +78,10 @@ export function AddLeadServiceDialog({
     }
   };
 
+  const discountedPrice = hasIntroDiscount 
+    ? Math.round(price * (1 - introDiscountPercent / 100)) 
+    : price;
+
   const handleSubmit = () => {
     if (!selectedService) return;
     
@@ -83,6 +93,8 @@ export function AddLeadServiceDialog({
       price,
       currency,
       billing_type: billingType,
+      intro_discount_percent: hasIntroDiscount ? introDiscountPercent : null,
+      intro_discount_months: hasIntroDiscount ? introDiscountMonths : null,
     });
     
     // Reset form
@@ -91,6 +103,9 @@ export function AddLeadServiceDialog({
     setPrice(0);
     setCurrency('CZK');
     setBillingType('monthly');
+    setHasIntroDiscount(false);
+    setIntroDiscountPercent(10);
+    setIntroDiscountMonths(3);
     onOpenChange(false);
   };
 
@@ -130,7 +145,6 @@ export function AddLeadServiceDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {SERVICE_TIER_CONFIGS.map((config) => {
-                    // Try DB tier_pricing first, then fall back to SERVICE_DETAILS constants
                     const dbTierPricing = selectedService?.tier_pricing?.find(p => p.tier === config.tier);
                     const constantDetail = selectedService ? getServiceDetail(selectedService.code) : undefined;
                     const constantTierPrice = constantDetail?.tierPricing?.[config.tier as keyof typeof constantDetail.tierPricing];
@@ -179,6 +193,65 @@ export function AddLeadServiceDialog({
               </Select>
             </div>
           </div>
+
+          {/* Intro Discount Section */}
+          {billingType === 'monthly' && (
+            <div className="space-y-3 p-3 rounded-lg border border-dashed">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Percent className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-medium">Úvodní sleva</Label>
+                </div>
+                <Switch 
+                  checked={hasIntroDiscount} 
+                  onCheckedChange={setHasIntroDiscount} 
+                />
+              </div>
+              
+              {hasIntroDiscount && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Sleva (%)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={introDiscountPercent}
+                        onChange={(e) => setIntroDiscountPercent(Math.min(100, Math.max(1, Number(e.target.value))))}
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Počet měsíců</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={24}
+                        value={introDiscountMonths}
+                        onChange={(e) => setIntroDiscountMonths(Math.min(24, Math.max(1, Number(e.target.value))))}
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
+                    <span className="text-xs text-muted-foreground">
+                      Prvních {introDiscountMonths} měs. za:
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs line-through text-muted-foreground">
+                        {price.toLocaleString('cs-CZ')} {currency}
+                      </span>
+                      <Badge variant="secondary" className="text-xs">
+                        {discountedPrice.toLocaleString('cs-CZ')} {currency}/měs
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Měna</Label>
