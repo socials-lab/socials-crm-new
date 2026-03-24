@@ -18,12 +18,24 @@ export default function Prospects() {
   const { prospects, isLoading } = useProspectsData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProspectStatus | 'all'>('all');
+  const [interactionFilter, setInteractionFilter] = useState<string>('all');
   const [selectedProspect, setSelectedProspect] = useState<ProspectWithInteractions | null>(null);
   const [integrationOpen, setIntegrationOpen] = useState(false);
+
+  // Collect unique interaction titles for filter dropdown
+  const interactionTitles = useMemo(() => {
+    const titles = new Set<string>();
+    prospects.forEach(p => p.interactions.forEach(i => titles.add(i.title)));
+    return Array.from(titles).sort();
+  }, [prospects]);
 
   const filtered = useMemo(() => {
     return prospects.filter(p => {
       if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+      if (interactionFilter !== 'all') {
+        const hasMatch = p.interactions.some(i => i.title === interactionFilter);
+        if (!hasMatch) return false;
+      }
       if (search) {
         const q = search.toLowerCase();
         return (
@@ -34,7 +46,7 @@ export default function Prospects() {
       }
       return true;
     });
-  }, [prospects, search, statusFilter]);
+  }, [prospects, search, statusFilter, interactionFilter]);
 
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -81,6 +93,17 @@ export default function Prospects() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={interactionFilter} onValueChange={v => setInteractionFilter(v)}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Lead magnet / webinář" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Všechny lead magnety</SelectItem>
+            {interactionTitles.map(title => (
+              <SelectItem key={title} value={title}>{title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-lg border bg-card">
@@ -102,9 +125,9 @@ export default function Prospects() {
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  {search || statusFilter !== 'all' ? 'Žádní zájemci neodpovídají filtru' : 'Zatím žádní zájemci'}
-                </TableCell>
+               <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                   {search || statusFilter !== 'all' || interactionFilter !== 'all' ? 'Žádní zájemci neodpovídají filtru' : 'Zatím žádní zájemci'}
+                 </TableCell>
               </TableRow>
             ) : (
               filtered.map(prospect => (
