@@ -76,7 +76,7 @@ export default function Prospects() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <PageHeader
         title="Zájemci"
         description="Kontakty z lead magnetů a webinářů"
