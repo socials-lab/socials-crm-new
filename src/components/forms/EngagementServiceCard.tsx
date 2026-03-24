@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pencil, Trash2, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Pencil, Trash2, UserPlus, ChevronDown, ChevronUp, Percent, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { getIntroDiscountInfo } from '@/utils/introDiscountUtils';
 import {
   AlertDialog,
   AlertDialogAction,
