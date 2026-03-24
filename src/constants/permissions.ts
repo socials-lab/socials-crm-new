@@ -4,6 +4,7 @@ export const ALL_PAGES = [
   { id: 'my-work', label: 'Můj přehled', emoji: '👤' },
   // Obchodní proces
   { id: 'leads', label: 'Leady', emoji: '🎯' },
+  { id: 'prospects', label: 'Zájemci', emoji: '🧲' },
   { id: 'clients', label: 'Klienti', emoji: '🏢' },
   { id: 'contacts', label: 'Kontakty', emoji: '📇' },
   { id: 'engagements', label: 'Zakázky', emoji: '📋' },
@@ -35,7 +36,7 @@ export type PageId = typeof ALL_PAGES[number]['id'];
 
 export const PAGE_GROUPS = [
   { label: 'Osobní přehledy', pages: ['dashboard', 'my-work'] },
-  { label: 'Obchodní proces', pages: ['leads', 'clients', 'contacts', 'engagements', 'modifications', 'broadcasts'] },
+  { label: 'Obchodní proces', pages: ['leads', 'prospects', 'clients', 'contacts', 'engagements', 'modifications', 'broadcasts'] },
   { label: 'Práce & dodávka', pages: ['extra-work', 'upsells', 'creative-boost', 'meetings', 'services'] },
   { label: 'Finance', pages: ['invoicing'] },
   { label: 'Tým & interní', pages: ['colleagues', 'recruitment', 'feedback', 'academy', 'sop', 'bug-reports'] },

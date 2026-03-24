@@ -37,6 +37,7 @@ import {
   BarChart3,
   Settings,
   Bug,
+  UserSearch,
   type LucideIcon,
 } from 'lucide-react';
 import { useBugReports } from '@/hooks/useBugReports';
@@ -66,6 +67,7 @@ const navGroups: NavGroup[] = [
     label: 'Obchod',
     items: [
       { title: 'Leady', url: '/leads', page: 'leads', icon: Target },
+      { title: 'Zájemci', url: '/prospects', page: 'prospects', icon: UserSearch },
       { title: 'Klienti', url: '/clients', page: 'clients', icon: Building2 },
       { title: 'Kontakty', url: '/contacts', page: 'contacts', icon: Contact },
       { title: 'Zakázky', url: '/engagements', page: 'engagements', icon: ClipboardList },
