@@ -175,7 +175,7 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[440px] flex flex-col bg-background border-l shadow-2xl animate-in slide-in-from-right duration-300">
+    <div className="fixed bottom-20 md:bottom-6 right-4 z-50 w-[calc(100%-2rem)] sm:w-[440px] h-[70vh] max-h-[600px] flex flex-col bg-background border rounded-xl shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-primary/5">
         <div className="flex items-center gap-2">
