@@ -1,47 +1,70 @@
 
+# Modul "Zájemci" (Prospects) — databáze kontaktů z lead magnetů
 
-## Plan: Kontrola přefakturace víceprací klientům
+## Přehled
+Nový modul oddělený od lead pipeline, který slouží jako databáze potenciálních zájemců přicházejících přes lead magnety (webináře, stažení materiálů). Kontakty přicházejí přes webhook a lze je převést na lead.
 
-### Problém
+## Datový model
 
-Kolegové si fakturují vícepráce (stav `invoiced`), ale není jasné, zda se tyto vícepráce následně přefakturovaly klientovi. Některé se přefakturovat nemají (interní náklady), některé ano — a chybí kontrola.
+### Nová tabulka: `prospects`
+| Sloupec | Typ | Popis |
+|---------|-----|-------|
+| id | uuid PK | |
+| name | text | Jméno kontaktu |
+| email | text | E-mail |
+| phone | text? | Telefon (volitelné) |
+| company | text? | Firma (volitelné) |
+| status | enum | `new`, `contacted`, `qualified`, `converted`, `irrelevant` |
+| converted_to_lead_id | uuid? | Odkaz na lead po konverzi |
+| notes | jsonb | Pole poznámek (stejný vzor jako u leadů) |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
-### Řešení
+### Nová tabulka: `prospect_interactions`
+| Sloupec | Typ | Popis |
+|---------|-----|-------|
+| id | uuid PK | |
+| prospect_id | uuid FK | |
+| type | enum | `webinar_registration`, `lead_magnet_download`, `webinar_attended`, `other` |
+| title | text | Název webináře / lead magnetu |
+| metadata | jsonb? | Další data z webhooku |
+| occurred_at | timestamptz | Kdy se to stalo |
+| created_at | timestamptz | |
 
-Přidat na `extra_works` tabulku nový sloupec `client_reinvoice_status` s hodnotami:
-- `expected` — vícepráce se má přefakturovat klientovi (default)
-- `reinvoiced` — přefakturováno klientovi
-- `not_expected` — nepředpokládá se přefakturace klientovi
+### Edge Function: `prospect-webhook`
+Přijímá POST requesty s daty kontaktu. Pokud kontakt s daným emailem existuje, přidá novou interakci. Pokud ne, vytvoří nový prospect + interakci.
 
-Plus volitelný sloupec `client_invoice_note` (text) pro poznámku k fakturaci klientovi.
+## Frontend komponenty
 
-### Databázové změny
+### Stránka `/prospects` (Zájemci)
+- **KPI karty**: Celkem zájemců, Nových tento měsíc, Převedených na lead
+- **Tabulka** se sloupci: Jméno, E-mail, Firma, Počet interakcí, Poslední aktivita, Status
+- **Filtrování** podle statusu a vyhledávání
+- **Detail sheet** (boční panel po kliknutí):
+  - Základní info (jméno, email, firma)
+  - **Timeline interakcí** — chronologický seznam webinářů, stažených materiálů
+  - **Poznámky** — stejný vzor jako `LeadNotesTab` (general, internal, call)
+  - **Tlačítko "Převést na lead"** — otevře předvyplněný `AddLeadDialog`
 
-```sql
-CREATE TYPE client_reinvoice_status AS ENUM ('expected', 'reinvoiced', 'not_expected');
-ALTER TABLE extra_works ADD COLUMN client_reinvoice_status client_reinvoice_status DEFAULT 'expected';
-ALTER TABLE extra_works ADD COLUMN client_invoice_note text;
-```
+### Navigace
+- Nová položka "Zájemci" v sidebaru v sekci "Obchod" (ikona `UserSearch`)
+- Přidání do permissions systému (`prospects` page)
 
-### UI změny
+## Implementační kroky
 
-**1. `src/components/extra-work/ExtraWorkCard.tsx` + `ExtraWorkTable.tsx`**
-- Na kartách/tabulce víceprací zobrazit badge s přefakturačním statusem (zelená = přefakturováno, oranžová = čeká na přefakturaci, šedá = nepředpokládá se)
-- Zobrazovat pouze u víceprací ve stavu `ready_to_invoice` nebo `invoiced`
+1. **DB migrace** — vytvoření tabulek `prospects`, `prospect_interactions` + RLS + enum typy
+2. **Edge Function** `prospect-webhook` — příjem webhooků, upsert prospect + insert interakce
+3. **Typy** — `Prospect`, `ProspectInteraction`, `ProspectStatus` v `types/crm.ts`
+4. **Hook** `useProspectsData` — CRUD operace, přidávání poznámek
+5. **Stránka** `Prospects.tsx` — tabulka s KPI, filtry, vyhledávání
+6. **Detail** `ProspectDetailSheet.tsx` — boční panel s timeline a poznámkami
+7. **Konverze** — dialog pro převod zájemce na lead s předvyplněnými daty
+8. **Routing + navigace** — route `/prospects`, sidebar, permissions
 
-**2. `src/components/extra-work/EditExtraWorkDialog.tsx`**
-- Přidat select pro `client_reinvoice_status` a textové pole pro `client_invoice_note`
-- Admin/PM může označit vícepráci jako "nepředpokládá se přefakturace" nebo "přefakturováno"
+## Technické detaily
 
-**3. Nová sekce v `src/pages/ExtraWork.tsx` nebo dashboard**
-- Přidat kontrolní přehled / filtr: "Vyfakturováno kolegou, ale nepřefakturováno klientovi" — seznam víceprací ve stavu `invoiced` kde `client_reinvoice_status = 'expected'` (= potenciální problém)
-- Barevné zvýraznění: červená = kolega vyfakturoval, ale klient ještě ne; zelená = přefakturováno; šedá = nepředpokládá se
-
-**4. `src/types/crm.ts`**
-- Přidat typ `ClientReinvoiceStatus` a rozšířit `ExtraWork` interface
-
-### Technické detaily
-- Default `expected` zajistí, že všechny existující vícepráce budou automaticky flagnuté jako "čeká na přefakturaci"
-- Kontrolní přehled bude jednoduchý filtr na stávající stránce víceprací — žádná nová stránka
-- Badge se zobrazí vedle existujícího status badge
-
+- Webhook endpoint: `POST /functions/v1/prospect-webhook` s API klíčem pro ověření
+- Webhook payload: `{ name, email, phone?, company?, interaction_type, interaction_title, metadata? }`
+- Deduplikace přes email — stejný email = stejný prospect, nová interakce
+- RLS: stejný vzor jako ostatní tabulky (`is_crm_user`)
+- Poznámky: jsonb pole se stejnou strukturou jako u leadů (`{ id, text, note_type, author_name, created_at }`)
