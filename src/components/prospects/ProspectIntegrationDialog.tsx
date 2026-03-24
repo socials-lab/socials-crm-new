@@ -176,8 +176,8 @@ console.log(data);`;
   }, null, 2);
 
   const handleTest = async () => {
-    if (!testName || !testEmail || !testTitle) {
-      toast.error('Vyplňte jméno, e-mail a název aktivity');
+    if (!testName || !testEmail || !interactionTitle) {
+      toast.error('Vyplňte jméno, e-mail a název zdroje');
       return;
     }
     setTesting(true);
