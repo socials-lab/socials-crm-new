@@ -43,7 +43,16 @@ export default function Prospects() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Zájemci" description="Kontakty z lead magnetů a webinářů" />
+      <PageHeader
+        title="Zájemci"
+        description="Kontakty z lead magnetů a webinářů"
+        actions={
+          <Button variant="outline" onClick={() => setIntegrationOpen(true)} className="gap-1.5">
+            <Code className="h-4 w-4" />
+            Napojení
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KPICard title="Celkem zájemců" value={prospects.length} icon={Users} />
