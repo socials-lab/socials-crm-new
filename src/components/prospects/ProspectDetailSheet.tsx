@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowRight, Plus, Phone, MessageSquare, Lock } from 'lucide-react';
+import { ArrowRight, Plus, Phone, MessageSquare, Lock, ExternalLink } from 'lucide-react';
 import { useProspectsData } from '@/hooks/useProspectsData';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -33,6 +33,19 @@ const NOTE_TYPES: { value: LeadNoteType; label: string; icon: React.ReactNode }[
   { value: 'internal', label: 'Interní', icon: <Lock className="h-3.5 w-3.5" /> },
 ];
 
+const FREE_EMAIL_DOMAINS = new Set([
+  'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.cz', 'outlook.com', 'hotmail.com',
+  'seznam.cz', 'email.cz', 'post.cz', 'centrum.cz', 'volny.cz', 'atlas.cz',
+  'icloud.com', 'me.com', 'mac.com', 'protonmail.com', 'proton.me',
+  'live.com', 'msn.com', 'aol.com', 'mail.com', 'zoho.com',
+]);
+
+export function getCompanyUrl(email: string): string | null {
+  const domain = email.split('@')[1]?.toLowerCase();
+  if (!domain || FREE_EMAIL_DOMAINS.has(domain)) return null;
+  return `https://${domain}`;
+}
+
 export function ProspectDetailSheet({ prospect, onClose }: Props) {
   const { updateStatus, addNote } = useProspectsData();
   const { user } = useAuth();
@@ -42,6 +55,8 @@ export function ProspectDetailSheet({ prospect, onClose }: Props) {
   const [showConvert, setShowConvert] = useState(false);
 
   if (!prospect) return null;
+
+  const companyUrl = getCompanyUrl(prospect.email);
 
   const handleAddNote = () => {
     if (!noteText.trim()) return;
@@ -80,6 +95,15 @@ export function ProspectDetailSheet({ prospect, onClose }: Props) {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Firma</span>
                   <span>{prospect.company}</span>
+                </div>
+              )}
+              {companyUrl && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Web</span>
+                  <a href={companyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 text-sm">
+                    {companyUrl.replace('https://', '')}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
                 </div>
               )}
               <div className="flex justify-between items-center">

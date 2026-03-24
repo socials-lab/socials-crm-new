@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Users, UserPlus, ArrowRightLeft, Search, ExternalLink, Code, Download } from 'lucide-react';
 import { ProspectIntegrationDialog } from '@/components/prospects/ProspectIntegrationDialog';
 import { useProspectsData } from '@/hooks/useProspectsData';
-import { ProspectDetailSheet } from '@/components/prospects/ProspectDetailSheet';
+import { ProspectDetailSheet, getCompanyUrl } from '@/components/prospects/ProspectDetailSheet';
 import { PROSPECT_STATUS_LABELS, PROSPECT_STATUS_COLORS } from '@/types/prospect';
 import type { ProspectStatus, ProspectWithInteractions } from '@/types/prospect';
 import { cn } from '@/lib/utils';
@@ -141,6 +141,7 @@ export default function Prospects() {
               <TableHead>Jméno</TableHead>
               <TableHead>E-mail</TableHead>
               <TableHead>Firma</TableHead>
+              <TableHead>Web</TableHead>
               <TableHead className="text-center">Interakce</TableHead>
               <TableHead>Poslední aktivita</TableHead>
               <TableHead>Status</TableHead>
@@ -149,16 +150,18 @@ export default function Prospects() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Načítání...</TableCell>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Načítání...</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-               <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+               <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                    {search || statusFilter !== 'all' || interactionFilter !== 'all' ? 'Žádní zájemci neodpovídají filtru' : 'Zatím žádní zájemci'}
                  </TableCell>
               </TableRow>
             ) : (
-              filtered.map(prospect => (
+              filtered.map(prospect => {
+                const url = getCompanyUrl(prospect.email);
+                return (
                 <TableRow
                   key={prospect.id}
                   className="cursor-pointer"
@@ -167,6 +170,20 @@ export default function Prospects() {
                   <TableCell className="font-medium">{prospect.name}</TableCell>
                   <TableCell className="text-muted-foreground">{prospect.email}</TableCell>
                   <TableCell>{prospect.company || '—'}</TableCell>
+                  <TableCell>
+                    {url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
+                      >
+                        {url.replace('https://', '')}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : '—'}
+                  </TableCell>
                   <TableCell className="text-center">
                     <Badge variant="secondary">{prospect.interaction_count}</Badge>
                   </TableCell>
@@ -181,7 +198,8 @@ export default function Prospects() {
                     </Badge>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
