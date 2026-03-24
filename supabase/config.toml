@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.get-users-auth-info]
 verify_jwt = false
+
+[functions.prospect-webhook]
+verify_jwt = false
