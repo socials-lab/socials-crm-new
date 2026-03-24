@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@ta
 import { toast } from "sonner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import { supabase } from "@/integrations/supabase/client";
+import { refreshSessionSafely } from "@/lib/authSession";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -70,8 +70,8 @@ async function handleAuthError(error: unknown) {
   if (window.location.pathname.startsWith('/auth')) return;
   authErrorRedirecting = true;
   try {
-    const { data, error: refreshError } = await supabase.auth.refreshSession();
-    if (!refreshError && data.session) {
+    const { session, error: refreshError } = await refreshSessionSafely();
+    if (!refreshError && session) {
       return;
     }
     toast.error('Session refresh failed. Please sign in again.');

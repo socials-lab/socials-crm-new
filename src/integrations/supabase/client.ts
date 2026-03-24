@@ -37,14 +37,26 @@ async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): P
   }
 }
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  global: {
-    fetch: fetchWithTimeout,
-  },
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  }
-});
+const SUPABASE_CLIENT_KEY = '__socials_supabase_client__';
+type SupabaseClientSingleton = ReturnType<typeof createClient<Database>>;
+type SupabaseGlobal = typeof globalThis & {
+  [SUPABASE_CLIENT_KEY]?: SupabaseClientSingleton;
+};
+
+const supabaseGlobal = globalThis as SupabaseGlobal;
+
+if (!supabaseGlobal[SUPABASE_CLIENT_KEY]) {
+  supabaseGlobal[SUPABASE_CLIENT_KEY] = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: {
+      fetch: fetchWithTimeout,
+    },
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    }
+  });
+}
+
+export const supabase = supabaseGlobal[SUPABASE_CLIENT_KEY]!;

@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { getSessionEnsuringFresh } from '@/lib/authSession';
 import { withAbortTimeout, withTimeout } from '@/utils/asyncUtils';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -77,39 +78,14 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       }
 
       async function ensureSessionReady() {
-        const { data: sessionData, error: sessionError } = await withTimeout(
-          supabase.auth.getSession(),
-          4000,
-          'Timeout while checking auth session'
+        const { session, error: sessionError } = await withTimeout(
+          getSessionEnsuringFresh(120),
+          6000,
+          'Timeout while checking auth session',
         );
 
-        if (sessionError) {
-          throw sessionError;
-        }
-
-        if (!sessionData.session) {
-          const { data: refreshed, error: refreshError } = await withTimeout(
-            supabase.auth.refreshSession(),
-            6000,
-            'Timeout while refreshing auth session'
-          );
-          if (refreshError || !refreshed.session) {
-            throw refreshError || new Error('Session expired. Please sign in again.');
-          }
-          return;
-        }
-
-        const sessionExpiresAt = sessionData.session.expires_at ?? 0;
-        const nowSec = Math.floor(Date.now() / 1000);
-        if (sessionExpiresAt - nowSec < 120) {
-          const { data: refreshed, error: refreshError } = await withTimeout(
-            supabase.auth.refreshSession(),
-            6000,
-            'Timeout while refreshing auth session'
-          );
-          if (refreshError || !refreshed.session) {
-            throw refreshError || new Error('Session refresh failed');
-          }
+        if (sessionError || !session) {
+          throw sessionError || new Error('Session expired. Please sign in again.');
         }
       }
 

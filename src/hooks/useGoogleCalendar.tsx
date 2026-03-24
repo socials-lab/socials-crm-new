@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getSessionEnsuringFresh, refreshSessionSafely } from '@/lib/authSession';
 import { toast } from '@/components/ui/sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
@@ -350,7 +351,7 @@ export function useGoogleCalendar() {
   }): Promise<GoogleCalendarEvent[]> => {
     try {
       // Check current session
-      const { data: { session } } = await supabase.auth.getSession();
+      const { session } = await getSessionEnsuringFresh(120);
       console.log('Current session:', session ? 'exists' : 'null', session?.user?.email);
 
       if (!session) {
@@ -389,8 +390,7 @@ export function useGoogleCalendar() {
         console.warn('Calendar fetch auth error detected, trying session recovery flow', error);
 
         // 1) Re-read current session and retry once with explicit latest token
-        const { data: latestData, error: latestError } = await supabase.auth.getSession();
-        const latestSession = latestData.session;
+        const { session: latestSession, error: latestError } = await getSessionEnsuringFresh(60);
 
         if (!latestError && latestSession) {
           if (await handleProjectRefMismatch(latestSession.access_token)) {
@@ -405,8 +405,7 @@ export function useGoogleCalendar() {
             // Recovery succeeded
           } else {
             // 2) If still auth failing, force refresh and retry once more
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            const refreshedSession = refreshData.session;
+            const { session: refreshedSession, error: refreshError } = await refreshSessionSafely();
 
             if (!refreshError && refreshedSession) {
               if (await handleProjectRefMismatch(refreshedSession.access_token)) {
@@ -420,8 +419,7 @@ export function useGoogleCalendar() {
           }
         } else {
           // 2b) No session from getSession() — try refresh once
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-          const refreshedSession = refreshData.session;
+          const { session: refreshedSession, error: refreshError } = await refreshSessionSafely();
 
           if (!refreshError && refreshedSession) {
             if (await handleProjectRefMismatch(refreshedSession.access_token)) {

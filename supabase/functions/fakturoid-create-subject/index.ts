@@ -83,15 +83,34 @@ serve(async (req) => {
   );
 
   try {
-    // Authenticate user (optional - for logging purposes)
+    // Require authenticated user for all operations.
     const authHeader = req.headers.get("Authorization");
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-      if (user) {
-        userId = user.id;
-      }
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new HttpError(401, {
+        success: false,
+        error: "Unauthorized",
+        message: "Missing or invalid authorization header",
+      });
     }
+
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (!token) {
+      throw new HttpError(401, {
+        success: false,
+        error: "Unauthorized",
+        message: "Missing bearer token",
+      });
+    }
+
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !user) {
+      throw new HttpError(401, {
+        success: false,
+        error: "Unauthorized",
+        message: "User session is invalid or expired",
+      });
+    }
+    userId = user.id;
 
     // Parse request - supports two modes:
     // Mode 1: client_id provided - look up client data from DB

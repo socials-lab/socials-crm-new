@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCRMData } from '@/hooks/useCRMData';
+import { getSessionEnsuringFresh } from '@/lib/authSession';
 import { toast } from 'sonner';
 import { withAbortTimeout, withTimeout } from '@/utils/asyncUtils';
 import type {
@@ -181,27 +182,14 @@ export function useModificationRequests() {
       if (!user) throw new Error('User not authenticated');
 
       // Ensure we have a fresh session before write operations.
-      const { data: sessionData, error: sessionError } = await withTimeout(
-        supabase.auth.getSession(),
+      const { session, error: sessionError } = await withTimeout(
+        getSessionEnsuringFresh(120),
         4000,
-        'Timeout while checking session'
+        'Timeout while checking session',
       );
       if (sessionError) throw sessionError;
-      if (!sessionData.session) {
+      if (!session) {
         throw new Error('Session expired. Please sign in again.');
-      }
-
-      const sessionExpiresAt = sessionData.session.expires_at ?? 0;
-      const nowSec = Math.floor(Date.now() / 1000);
-      if (sessionExpiresAt - nowSec < 120) {
-        const { data: refreshed, error: refreshError } = await withTimeout(
-          supabase.auth.refreshSession(),
-          6000,
-          'Timeout while refreshing session'
-        );
-        if (refreshError || !refreshed.session) {
-          throw refreshError || new Error('Session refresh failed');
-        }
       }
 
       // Get engagement and client info
@@ -216,8 +204,8 @@ export function useModificationRequests() {
         : null;
 
       const { error } = await withAbortTimeout(
-        (signal) => (supabase
-          .from('modification_requests') as any)
+        (signal) => supabase
+          .from('modification_requests')
           .insert({
             engagement_id: params.engagement_id,
             request_type: params.request_type,
@@ -423,8 +411,8 @@ export function useModificationRequests() {
         upsell_commission_percent?: number;
       };
     }) => {
-      const { data, error } = await (supabase
-        .from('modification_requests') as any)
+      const { data, error } = await supabase
+        .from('modification_requests')
         .update({
           ...(params.updates.proposed_changes && {
             proposed_changes: params.updates.proposed_changes as unknown as Record<string, unknown>,
@@ -554,8 +542,8 @@ export function useModificationRequests() {
         if (!canApplyDirectly) {
           throw new Error('Požadavek nelze aktivovat v aktuálním stavu');
         }
-        const { error } = await (supabase
-          .from('modification_requests') as any)
+        const { error } = await supabase
+          .from('modification_requests')
           .update({
             status: 'applied',
             reviewed_by: user?.id || null,

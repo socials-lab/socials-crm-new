@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import * as Sentry from '@sentry/react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { getSessionEnsuringFresh, refreshSessionSafely } from '@/lib/authSession';
 import { withTimeout } from '@/utils/asyncUtils';
 
 interface AuthContextType {
@@ -41,7 +42,6 @@ function isHardAuthFailure(error: unknown): boolean {
   return (
     message.includes('invalid refresh token') ||
     message.includes('refresh_token_not_found') ||
-    message.includes('jwt expired') ||
     message.includes('session refresh returned no session') ||
     message.includes('auth session missing')
   );
@@ -89,35 +89,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       syncInFlightRef.current = true;
 
       try {
-        const { data, error } = await withTimeout(
-          supabase.auth.getSession(),
+        const { session: ensuredSession, error: ensuredError } = await withTimeout(
+          getSessionEnsuringFresh(120),
           7000,
-          'Timeout while loading auth session'
+          'Timeout while loading auth session',
         );
 
-        if (error) {
-          throw error;
+        if (ensuredError) {
+          throw ensuredError;
         }
 
-        if (data.session) {
-          setAuthState(data.session);
+        if (ensuredSession) {
+          setAuthState(ensuredSession);
           sessionLossToastShownRef.current = false;
           return;
         }
 
         // If we previously had a session but now don't, try one refresh.
         if (sessionRef.current) {
-          const { data: refreshed, error: refreshError } = await withTimeout(
-            supabase.auth.refreshSession(),
+          const { session: refreshedSession, error: refreshError } = await withTimeout(
+            refreshSessionSafely(),
             8000,
-            'Timeout while refreshing auth session'
+            'Timeout while refreshing auth session',
           );
 
-          if (refreshError || !refreshed.session) {
+          if (refreshError || !refreshedSession) {
             throw refreshError || new Error('Auth session missing after refresh');
           }
 
-          setAuthState(refreshed.session);
+          setAuthState(refreshedSession);
           sessionLossToastShownRef.current = false;
           return;
         }
@@ -202,13 +202,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (expiresInMs > 5 * 60 * 1000) return;
 
       try {
-        const { data, error } = await withTimeout(
-          supabase.auth.refreshSession(),
+        const { session: refreshedSession, error } = await withTimeout(
+          refreshSessionSafely(),
           8000,
-          'Timeout while proactively refreshing auth session'
+          'Timeout while proactively refreshing auth session',
         );
-        if (!error && data.session) {
-          setAuthState(data.session);
+        if (!error && refreshedSession) {
+          setAuthState(refreshedSession);
           sessionLossToastShownRef.current = false;
         }
       } catch (error) {

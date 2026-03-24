@@ -1,3 +1,4 @@
+import { getSessionEnsuringFresh, refreshSessionSafely } from '@/lib/authSession';
 import { supabase } from '@/integrations/supabase/client';
 
 async function normalizeInvokeError(error: unknown): Promise<Error> {
@@ -5,7 +6,7 @@ async function normalizeInvokeError(error: unknown): Promise<Error> {
     return new Error('Neznámá chyba');
   }
 
-  const maybeContext = (error as any)?.context;
+  const maybeContext = (error as { context?: unknown })?.context;
   if (maybeContext && typeof maybeContext === 'object' && typeof maybeContext.text === 'function') {
     try {
       const response = maybeContext as Response;
@@ -49,8 +50,7 @@ export async function invokeWithTimeout<T = unknown>(
   timeoutMs: number = 30000
 ): Promise<{ data: T | null; error: Error | null }> {
   const invokeOnce = async (
-    invokeOptions?: { body?: unknown; headers?: Record<string, string> },
-    accessToken?: string | null
+    invokeOptions?: { body?: unknown; headers?: Record<string, string> }
   ): Promise<{ data: T | null; error: Error | null }> => {
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
@@ -60,52 +60,20 @@ export async function invokeWithTimeout<T = unknown>(
     });
 
     const invokePromise = (async (): Promise<{ data: T | null; error: Error | null }> => {
-      if (!accessToken) {
-        return {
-          data: null,
-          error: new Error(`Neplatná relace uživatele (${functionName}). Přihlaste se prosím znovu.`),
-        };
-      }
-
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}`;
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${accessToken}`,
-        ...(invokeOptions?.headers || {}),
-      };
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: invokeOptions?.body !== undefined ? JSON.stringify(invokeOptions.body) : undefined,
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: invokeOptions?.body,
+        headers: invokeOptions?.headers,
       });
 
-      const bodyText = await response.text();
-      let parsedBody: unknown = null;
-      if (bodyText) {
-        try {
-          parsedBody = JSON.parse(bodyText);
-        } catch {
-          parsedBody = bodyText;
-        }
-      }
-
-      if (!response.ok) {
-        const payload = parsedBody as { error?: string; message?: string } | string | null;
-        const apiError =
-          typeof payload === 'string'
-            ? payload
-            : payload?.error || payload?.message || `Edge function error (${response.status})`;
+      if (error) {
         return {
           data: null,
-          error: new Error(`${apiError} [HTTP ${response.status}]`),
+          error: await normalizeInvokeError(error),
         };
       }
 
       return {
-        data: (parsedBody as T) ?? null,
+        data: (data as T) ?? null,
         error: null,
       };
     })();
@@ -129,62 +97,102 @@ export async function invokeWithTimeout<T = unknown>(
     const msg = (err.message || '').toLowerCase();
     return (
       msg.includes('invalid jwt') ||
-      msg.includes('neplatná autorizace') ||
-      msg.includes('neplatná relace') ||
-      msg.includes('401') ||
+      msg.includes('jwt expired') ||
+      msg.includes('missing authorization header') ||
+      msg.includes('authorization header') ||
+      msg.includes('unauthorized') ||
       msg.includes('http 401') ||
-      msg.includes('non-2xx')
+      msg.includes('neplatná autorizace') ||
+      msg.includes('neplatná relace')
     );
   };
 
-  const getFreshAccessToken = async (forceRefresh = false): Promise<string | null> => {
+  const getFreshAccessToken = async (forceRefresh = false): Promise<{ token: string | null; errorMessage: string | null }> => {
     if (forceRefresh) {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError || !refreshData.session?.access_token) {
-        return null;
+      const { session, error } = await refreshSessionSafely();
+      if (error || !session?.access_token) {
+        return {
+          token: null,
+          errorMessage: error?.message || 'Session refresh failed',
+        };
       }
-      return refreshData.session.access_token;
+      return {
+        token: session.access_token,
+        errorMessage: null,
+      };
     }
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData.session;
-    if (!session?.access_token) {
-      return null;
+    const { session, error } = await getSessionEnsuringFresh(120);
+    if (error || !session?.access_token) {
+      return {
+        token: null,
+        errorMessage: error?.message || 'Session missing',
+      };
     }
 
-    const expiresAtMs = session.expires_at ? session.expires_at * 1000 : null;
-    const isNearExpiry = !!expiresAtMs && expiresAtMs - Date.now() < 2 * 60 * 1000;
-    if (isNearExpiry) {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      if (!refreshError && refreshData.session?.access_token) {
-        return refreshData.session.access_token;
-      }
-    }
-
-    return session.access_token;
+    return {
+      token: session.access_token,
+      errorMessage: null,
+    };
   };
 
   try {
-    const initialAccessToken = await getFreshAccessToken(false);
-    let result = await invokeOnce(options, initialAccessToken);
+    const initialTokenState = await getFreshAccessToken(false);
+    if (!initialTokenState.token) {
+      console.error('[invokeWithTimeout] Missing valid session token before invoke', {
+        functionName,
+        reason: initialTokenState.errorMessage,
+      });
+      return {
+        data: null,
+        error: new Error(`Neplatná relace uživatele (${functionName}). Přihlaste se prosím znovu.`),
+      };
+    }
+
+    const firstAttemptOptions = {
+      ...(options || {}),
+      headers: {
+        ...(options?.headers || {}),
+        Authorization: `Bearer ${initialTokenState.token}`,
+      },
+    };
+
+    let result = await invokeOnce(firstAttemptOptions);
 
     if (!isInvalidJwtError(result.error)) {
       return await normalizeResultError(result);
     }
 
-    // Retry exactly once with a forced session refresh and explicit fresh token.
-    const refreshedAccessToken = await getFreshAccessToken(true);
-    if (refreshedAccessToken) {
-      const retriedAfterRefresh = await invokeOnce(options, refreshedAccessToken);
-      if (!isInvalidJwtError(retriedAfterRefresh.error)) {
-        return await normalizeResultError(retriedAfterRefresh);
-      }
-      result = retriedAfterRefresh;
+    const firstErrorMessage = result.error?.message || null;
+    const refreshedTokenState = await getFreshAccessToken(true);
+    if (!refreshedTokenState.token) {
+      console.error('[invokeWithTimeout] Session refresh failed after auth error', {
+        functionName,
+        firstErrorMessage,
+        refreshErrorMessage: refreshedTokenState.errorMessage,
+      });
+      return {
+        data: result.data,
+        error: new Error(`Neplatná relace uživatele (${functionName}). Přihlaste se prosím znovu.`),
+      };
     }
 
-    // Do not fall back to anon token for edge functions.
-    // If user JWT is invalid even after refresh, fail loudly with actionable message.
+    const retryOptions = {
+      ...(options || {}),
+      headers: {
+        ...(options?.headers || {}),
+        Authorization: `Bearer ${refreshedTokenState.token}`,
+      },
+    };
+
+    result = await invokeOnce(retryOptions);
+
     if (isInvalidJwtError(result.error)) {
+      console.error('[invokeWithTimeout] Auth still failing after forced refresh', {
+        functionName,
+        firstErrorMessage,
+        secondErrorMessage: result.error?.message || null,
+      });
       return {
         data: result.data,
         error: new Error(`Neplatná relace uživatele (${functionName}). Přihlaste se prosím znovu.`),
