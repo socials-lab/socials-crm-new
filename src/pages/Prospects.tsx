@@ -19,6 +19,7 @@ export default function Prospects() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProspectStatus | 'all'>('all');
   const [selectedProspect, setSelectedProspect] = useState<ProspectWithInteractions | null>(null);
+  const [integrationOpen, setIntegrationOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return prospects.filter(p => {
