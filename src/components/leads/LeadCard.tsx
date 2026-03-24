@@ -112,6 +112,11 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
                           +{serviceCount - 1}
                         </Badge>
                       )}
+                      {lead.potential_services.some(s => s.intro_discount_percent) && (
+                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-amber-500/10 text-amber-700 border-amber-500/30">
+                          Sleva
+                        </Badge>
+                      )}
                     </>
                   ) : (
                     <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 text-muted-foreground">
