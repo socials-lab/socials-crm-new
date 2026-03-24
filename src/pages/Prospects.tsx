@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, UserPlus, ArrowRightLeft, Search, ExternalLink } from 'lucide-react';
+import { Users, UserPlus, ArrowRightLeft, Search, ExternalLink, Code } from 'lucide-react';
+import { ProspectIntegrationDialog } from '@/components/prospects/ProspectIntegrationDialog';
 import { useProspectsData } from '@/hooks/useProspectsData';
 import { ProspectDetailSheet } from '@/components/prospects/ProspectDetailSheet';
 import { PROSPECT_STATUS_LABELS, PROSPECT_STATUS_COLORS } from '@/types/prospect';
@@ -18,6 +19,7 @@ export default function Prospects() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProspectStatus | 'all'>('all');
   const [selectedProspect, setSelectedProspect] = useState<ProspectWithInteractions | null>(null);
+  const [integrationOpen, setIntegrationOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return prospects.filter(p => {
@@ -41,7 +43,16 @@ export default function Prospects() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Zájemci" description="Kontakty z lead magnetů a webinářů" />
+      <PageHeader
+        title="Zájemci"
+        description="Kontakty z lead magnetů a webinářů"
+        actions={
+          <Button variant="outline" onClick={() => setIntegrationOpen(true)} className="gap-1.5">
+            <Code className="h-4 w-4" />
+            Napojení
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KPICard title="Celkem zájemců" value={prospects.length} icon={Users} />
@@ -128,6 +139,11 @@ export default function Prospects() {
       <ProspectDetailSheet
         prospect={selectedProspect}
         onClose={() => setSelectedProspect(null)}
+      />
+
+      <ProspectIntegrationDialog
+        open={integrationOpen}
+        onOpenChange={setIntegrationOpen}
       />
     </div>
   );
