@@ -184,6 +184,7 @@ export default function Prospects() {
                       </a>
                     ) : '—'}
                   </TableCell>
+                  <TableCell className="text-center">
                     <Badge variant="secondary">{prospect.interaction_count}</Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
@@ -197,7 +198,8 @@ export default function Prospects() {
                     </Badge>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
