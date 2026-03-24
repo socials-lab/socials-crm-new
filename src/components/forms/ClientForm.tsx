@@ -22,13 +22,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AlertTriangle, Loader2, Search } from 'lucide-react';
-import type { Client, ClientStatus, LeadSource } from '@/types/crm';
+import type { Client, LeadSource } from '@/types/crm';
 import { useAuth } from '@/hooks/useAuth';
 import { useAresLookup } from '@/hooks/useAresLookup';
 import type { CompanySearchResult } from '@/hooks/useAresSearch';
 import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
 import { toast } from 'sonner';
-import { getAvailableClientStatuses, CLIENT_STATUS_LABELS } from '@/lib/statusTransitions';
 import { optionalEmail, czechIco, czechDic, isValidUrlInput, normalizeUrlProtocol } from '@/lib/validation';
 import { toDateOnlyString } from '@/lib/dbNormalize';
 
@@ -131,19 +130,15 @@ interface ClientFormProps {
   client?: Client;
   hasActiveEngagements?: boolean;
   hasEngagements?: boolean;
-  isSuperAdmin?: boolean;
   onSubmit: (data: ClientFormData & { end_date: string | null; created_by: string }) => void;
   onCancel: () => void;
 }
 
-export function ClientForm({ client, hasActiveEngagements = false, hasEngagements = false, isSuperAdmin = false, onSubmit, onCancel }: ClientFormProps) {
+export function ClientForm({ client, hasActiveEngagements = false, hasEngagements = false, onSubmit, onCancel }: ClientFormProps) {
   const { user } = useAuth();
   const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get available status options based on current status and user role
-  const currentStatus = client?.status || 'lead';
-  const availableStatuses = getAvailableClientStatuses(currentStatus, isSuperAdmin);
   const isCurrencyLocked = hasEngagements || hasActiveEngagements;
 
   const normalizeClientCurrency = (value: string | undefined): 'CZK' | 'EUR' | 'USD' => {
@@ -418,36 +413,6 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
             />
           </div>
 
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Vyberte status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {availableStatuses.map(status => (
-                      <SelectItem key={status} value={status}>
-                        {CLIENT_STATUS_LABELS[status]}
-                        {status === currentStatus && ' (aktuální)'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {client && currentStatus === 'lost' && !isSuperAdmin && (
-                  <p className="text-xs text-muted-foreground">
-                    Ztracený klient nelze reaktivovat. Kontaktujte administrátora.
-                  </p>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
 
         {/* Fakturační údaje */}

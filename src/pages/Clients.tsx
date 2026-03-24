@@ -1143,7 +1143,6 @@ export default function Clients() {
                     )
                   : false
               }
-              isSuperAdmin={superAdmin}
               onSubmit={handleFormSubmit}
               onCancel={() => setIsFormOpen(false)}
             />
