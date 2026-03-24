@@ -93,6 +93,17 @@ export default function Prospects() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={interactionFilter} onValueChange={v => setInteractionFilter(v)}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Lead magnet / webinář" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Všechny lead magnety</SelectItem>
+            {interactionTitles.map(title => (
+              <SelectItem key={title} value={title}>{title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-lg border bg-card">
