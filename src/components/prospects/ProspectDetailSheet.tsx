@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowRight, Plus, Phone, MessageSquare, Lock, ExternalLink } from 'lucide-react';
+import { ArrowRight, Plus, Phone, MessageSquare, Lock, ExternalLink, Building2, Loader2 } from 'lucide-react';
+import { searchAresByName, type AresSearchResult } from '@/utils/aresUtils';
 import { useProspectsData } from '@/hooks/useProspectsData';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -53,10 +54,19 @@ export function ProspectDetailSheet({ prospect, onClose }: Props) {
   const [noteType, setNoteType] = useState<LeadNoteType>('general');
   const [callDate, setCallDate] = useState('');
   const [showConvert, setShowConvert] = useState(false);
+  const [aresResults, setAresResults] = useState<AresSearchResult[]>([]);
+  const [aresLoading, setAresLoading] = useState(false);
+
+  const companyUrl = prospect ? getCompanyUrl(prospect.email) : null;
+  const searchName = prospect?.company || (companyUrl ? companyUrl.replace('https://', '').replace('www.', '').split('.')[0] : null);
+
+  useEffect(() => {
+    if (!searchName) { setAresResults([]); return; }
+    setAresLoading(true);
+    searchAresByName(searchName).then(r => { setAresResults(r); setAresLoading(false); });
+  }, [searchName]);
 
   if (!prospect) return null;
-
-  const companyUrl = getCompanyUrl(prospect.email);
 
   const handleAddNote = () => {
     if (!noteText.trim()) return;
@@ -104,6 +114,33 @@ export function ProspectDetailSheet({ prospect, onClose }: Props) {
                     {companyUrl.replace('https://', '')}
                     <ExternalLink className="h-3 w-3" />
                   </a>
+                </div>
+              )}
+              {/* ARES lookup section */}
+              {(aresLoading || aresResults.length > 0) && (
+                <div className="pt-1">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <Building2 className="h-3 w-3" /> ARES
+                    {aresLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                  </span>
+                  {aresResults.map(r => (
+                    <div key={r.ico} className="flex items-center justify-between text-sm mt-1 pl-4">
+                      <div className="min-w-0">
+                        <span className="font-medium">{r.companyName}</span>
+                        <span className="text-muted-foreground text-xs ml-2">IČO: {r.ico}</span>
+                        {r.address && <span className="text-muted-foreground text-xs block">{r.address}</span>}
+                      </div>
+                      <a
+                        href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${r.ico}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-primary hover:underline text-xs whitespace-nowrap inline-flex items-center gap-1 ml-2"
+                      >
+                        ARES <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  ))}
                 </div>
               )}
               <div className="flex justify-between items-center">
