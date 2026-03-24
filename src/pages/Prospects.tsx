@@ -125,9 +125,9 @@ export default function Prospects() {
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  {search || statusFilter !== 'all' ? 'Žádní zájemci neodpovídají filtru' : 'Zatím žádní zájemci'}
-                </TableCell>
+               <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                   {search || statusFilter !== 'all' || interactionFilter !== 'all' ? 'Žádní zájemci neodpovídají filtru' : 'Zatím žádní zájemci'}
+                 </TableCell>
               </TableRow>
             ) : (
               filtered.map(prospect => (
