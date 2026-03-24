@@ -383,6 +383,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             upsold_by_id: null,
             upsell_commission_percent: null,
             effective_from: null,
+            intro_discount_percent: offerSvc.intro_discount_percent ?? null,
+            intro_discount_months: offerSvc.intro_discount_months ?? null,
+            intro_discount_start_date: offerSvc.intro_discount_percent && offerSvc.intro_discount_months
+              ? new Date().toISOString().split('T')[0]
+              : null,
           });
           createdServiceIds.push(created.id);
         } catch (e) {

@@ -57,6 +57,9 @@ export function PendingModificationsSection() {
             upsold_by_id: request.upsold_by_id,
             upsell_commission_percent: request.upsell_commission_percent,
             effective_from: request.effective_from,
+            intro_discount_percent: null,
+            intro_discount_months: null,
+            intro_discount_start_date: null,
           });
           break;
         }

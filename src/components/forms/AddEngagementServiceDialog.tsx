@@ -221,6 +221,9 @@ export function AddEngagementServiceDialog({
       upsold_by_id: upsoldById,
       upsell_commission_percent: upsoldById ? 10 : null,
       effective_from: data.effective_from ? format(data.effective_from, 'yyyy-MM-dd') : null,
+      intro_discount_percent: null,
+      intro_discount_months: null,
+      intro_discount_start_date: null,
     });
     form.reset();
     setUpsoldById(null);
