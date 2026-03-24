@@ -59,8 +59,6 @@ export function ProspectIntegrationDialog({ open, onOpenChange }: Props) {
   // Test tab state
   const [testName, setTestName] = useState('');
   const [testEmail, setTestEmail] = useState('');
-  const [testType, setTestType] = useState<ProspectInteractionType>('webinar_registration');
-  const [testTitle, setTestTitle] = useState('');
   const [testing, setTesting] = useState(false);
 
   const titlePlaceholder = interactionType === 'webinar_registration' || interactionType === 'webinar_attended'
