@@ -79,10 +79,11 @@ export function BugReportFAB() {
       <Button
         onClick={handleFabClick}
         disabled={capturing}
-        className="fixed bottom-5 right-5 z-50 h-12 w-12 rounded-full shadow-lg p-0"
+        variant="ghost"
         size="icon"
+        className="h-9 w-9"
       >
-        {capturing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Lightbulb className="h-5 w-5" />}
+        {capturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lightbulb className="h-4 w-4" />}
       </Button>
 
       <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>

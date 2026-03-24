@@ -93,8 +93,8 @@ export function AppLayout() {
             <div className="flex items-center gap-2">
               <MobileMenuButton />
             </div>
-            <div className="flex items-center gap-2">
-              
+            <div className="flex items-center gap-1">
+              <BugReportFAB />
               <NotificationsDropdown />
               <UserMenu />
             </div>
@@ -103,7 +103,6 @@ export function AppLayout() {
           {/* Main content - add bottom padding on mobile for bottom nav */}
           <main className="flex-1 overflow-auto bg-background pb-16 md:pb-0 relative">
             <Outlet />
-            <BugReportFAB />
             <AssistantFAB />
           </main>
           
