@@ -234,7 +234,7 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
                     <ReactMarkdown
                       components={{
                         a: ({ href, children, ...props }) => {
-                          if (href?.startsWith('/sop/')) {
+                          if (href?.startsWith('/sop/') || href === '/feedback') {
                             return (
                               <a
                                 {...props}
