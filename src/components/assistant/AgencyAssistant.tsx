@@ -17,6 +17,8 @@ import {
   deleteConversation as deleteConv,
   type Conversation,
 } from '@/services/assistantHistory';
+import { parseActionsFromContent, type CrmAction } from '@/services/crmActions';
+import { ActionCard } from './ActionCard';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
