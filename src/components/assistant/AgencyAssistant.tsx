@@ -106,6 +106,7 @@ interface AgencyAssistantProps {
 }
 
 export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
