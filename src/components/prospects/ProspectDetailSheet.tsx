@@ -145,6 +145,13 @@ export function ProspectDetailSheet({ prospect, onClose }: Props) {
               )}
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Status</span>
+                <Select value={prospect.status} onValueChange={v => updateStatus(prospect.id, v as ProspectStatus)}>
+                  <SelectTrigger className="w-[160px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.entries(PROSPECT_STATUS_LABELS) as [ProspectStatus, string][]).map(([k, l]) => (
+                      <SelectItem key={k} value={k}>{l}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
