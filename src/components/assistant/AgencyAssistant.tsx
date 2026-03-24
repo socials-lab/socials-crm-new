@@ -203,8 +203,8 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
               🤖
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium">Jak ti můžu pomoct?</p>
-              <p className="text-xs text-muted-foreground mt-1">Pomůžu ti s nabídkami, ceníkem i interními procesy.</p>
+              <p className="text-sm font-medium">Čau! Jak ti můžu pomoct? 👋</p>
+              <p className="text-xs text-muted-foreground mt-1">Poradím s nabídkami, cenami, odměnami i interními procesy.</p>
             </div>
             <div className="grid grid-cols-1 gap-2 w-full max-w-xs">
               {QUICK_ACTIONS.map((qa) => (
