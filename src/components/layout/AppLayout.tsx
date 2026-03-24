@@ -4,6 +4,7 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { Outlet } from 'react-router-dom';
 import { BugReportFAB } from '@/components/bug-reports/BugReportFAB';
+import { AssistantFAB } from '@/components/assistant/AssistantFAB';
 import { Menu, LogOut } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -103,6 +104,7 @@ export function AppLayout() {
           <main className="flex-1 overflow-auto bg-background pb-16 md:pb-0 relative">
             <Outlet />
             <BugReportFAB />
+            <AssistantFAB />
           </main>
           
           {/* Mobile bottom navigation */}
