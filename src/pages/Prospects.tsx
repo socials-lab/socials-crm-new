@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Users, UserPlus, ArrowRightLeft, Search, ExternalLink, Code, Download } from 'lucide-react';
 import { ProspectIntegrationDialog } from '@/components/prospects/ProspectIntegrationDialog';
 import { useProspectsData } from '@/hooks/useProspectsData';
-import { ProspectDetailSheet } from '@/components/prospects/ProspectDetailSheet';
+import { ProspectDetailSheet, getCompanyUrl } from '@/components/prospects/ProspectDetailSheet';
 import { PROSPECT_STATUS_LABELS, PROSPECT_STATUS_COLORS } from '@/types/prospect';
 import type { ProspectStatus, ProspectWithInteractions } from '@/types/prospect';
 import { cn } from '@/lib/utils';
