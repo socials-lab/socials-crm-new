@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, UserPlus, ArrowRightLeft, Search, ExternalLink, Code } from 'lucide-react';
+import { Users, UserPlus, ArrowRightLeft, Search, ExternalLink, Code, Download } from 'lucide-react';
 import { ProspectIntegrationDialog } from '@/components/prospects/ProspectIntegrationDialog';
 import { useProspectsData } from '@/hooks/useProspectsData';
 import { ProspectDetailSheet } from '@/components/prospects/ProspectDetailSheet';
@@ -53,16 +53,44 @@ export default function Prospects() {
   const newThisMonth = prospects.filter(p => p.created_at.startsWith(thisMonth)).length;
   const convertedCount = prospects.filter(p => p.status === 'converted').length;
 
+  const handleExportCSV = () => {
+    const headers = ['Jméno', 'E-mail', 'Telefon', 'Firma', 'Status', 'Počet interakcí', 'Poslední aktivita', 'Interakce'];
+    const rows = filtered.map(p => [
+      p.name,
+      p.email,
+      p.phone || '',
+      p.company || '',
+      PROSPECT_STATUS_LABELS[p.status],
+      p.interaction_count,
+      p.last_interaction_at ? new Date(p.last_interaction_at).toLocaleDateString('cs-CZ') : '',
+      p.interactions.map(i => i.title).join('; '),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zajemci-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Zájemci"
         description="Kontakty z lead magnetů a webinářů"
         actions={
-          <Button variant="outline" onClick={() => setIntegrationOpen(true)} className="gap-1.5">
-            <Code className="h-4 w-4" />
-            Napojení
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-1.5" disabled={filtered.length === 0}>
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button variant="outline" onClick={() => setIntegrationOpen(true)} className="gap-1.5">
+              <Code className="h-4 w-4" />
+              Napojení
+            </Button>
+          </div>
         }
       />
 
