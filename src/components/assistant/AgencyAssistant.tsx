@@ -6,18 +6,19 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import {
+  fetchConversations,
+  fetchConversationMessages,
+  createConversation,
+  saveMessage,
+  updateConversationTimestamp,
+  deleteConversation as deleteConv,
+  type Conversation,
+} from '@/services/assistantHistory';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
-
-type Conversation = {
-  id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
-};
 
 const CHAT_URL = `https://empndmpeyrdycjdesoxr.supabase.co/functions/v1/agency-assistant`;
 
@@ -144,85 +145,27 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
 
   const loadConversations = useCallback(async () => {
     setLoadingHistory(true);
-    try {
-      const { data, error } = await supabase
-        .from('assistant_conversations')
-        .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      setConversations((data as Conversation[]) || []);
-    } catch {
-      // Tables might not exist yet — silently ignore
-      setConversations([]);
-    } finally {
-      setLoadingHistory(false);
-    }
+    const data = await fetchConversations();
+    setConversations(data);
+    setLoadingHistory(false);
   }, []);
 
   const loadConversationMessages = useCallback(async (conversationId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('assistant_messages')
-        .select('role, content')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      setMessages((data as Msg[]) || []);
-      setActiveConversationId(conversationId);
-      setView('chat');
-    } catch {
-      toast.error('Nepodařilo se načíst konverzaci');
-    }
+    const data = await fetchConversationMessages(conversationId);
+    setMessages(data);
+    setActiveConversationId(conversationId);
+    setView('chat');
   }, []);
 
-  const saveMessage = useCallback(async (conversationId: string, msg: Msg) => {
-    try {
-      await supabase
-        .from('assistant_messages')
-        .insert({ conversation_id: conversationId, role: msg.role, content: msg.content });
-    } catch { /* silent */ }
-  }, []);
-
-  const createConversation = useCallback(async (firstMessage: string): Promise<string | null> => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const title = firstMessage.slice(0, 60) + (firstMessage.length > 60 ? '…' : '');
-      const { data, error } = await supabase
-        .from('assistant_conversations')
-        .insert({ user_id: user.id, title })
-        .select('id')
-        .single();
-      if (error) throw error;
-      return data?.id || null;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const updateConversationTimestamp = useCallback(async (id: string) => {
-    try {
-      await supabase
-        .from('assistant_conversations')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', id);
-    } catch { /* silent */ }
-  }, []);
-
-  const deleteConversation = useCallback(async (id: string) => {
-    try {
-      await supabase
-        .from('assistant_conversations')
-        .delete()
-        .eq('id', id);
+  const handleDeleteConversation = useCallback(async (id: string) => {
+    const ok = await deleteConv(id);
+    if (ok) {
       setConversations(prev => prev.filter(c => c.id !== id));
       if (activeConversationId === id) {
         setActiveConversationId(null);
         setMessages([]);
       }
-    } catch {
+    } else {
       toast.error('Nepodařilo se smazat konverzaci');
     }
   }, [activeConversationId]);
@@ -272,7 +215,6 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
         onDelta: (chunk) => upsertAssistant(chunk),
         onDone: () => {
           setIsLoading(false);
-          // Save assistant message
           if (convId && assistantSoFar) {
             saveMessage(convId, { role: 'assistant', content: assistantSoFar });
           }
@@ -285,7 +227,7 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
       });
     } catch (e: any) {
       if (e.name !== 'AbortError') {
-        toast.error('Nepodařilo se spojit s AI asistentem');
+        toast.error('Nepodařilo se spojit s Dandroidem');
       }
       setIsLoading(false);
     }
@@ -346,7 +288,6 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
       </div>
 
       {view === 'history' ? (
-        /* History View */
         <ScrollArea className="flex-1">
           {loadingHistory ? (
             <div className="flex items-center justify-center py-12">
@@ -382,7 +323,7 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
                     className="h-7 w-7 opacity-0 group-hover:opacity-100 shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteConversation(conv.id);
+                      handleDeleteConversation(conv.id);
                     }}
                   >
                     <Trash2 className="h-3 w-3 text-muted-foreground" />
