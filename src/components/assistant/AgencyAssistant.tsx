@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -105,6 +106,7 @@ interface AgencyAssistantProps {
 }
 
 export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -229,7 +231,31 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
               >
                 {msg.role === 'assistant' ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none [&_table]:text-xs [&_th]:px-2 [&_td]:px-2 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    <ReactMarkdown
+                      components={{
+                        a: ({ href, children, ...props }) => {
+                          if (href?.startsWith('/sop/')) {
+                            return (
+                              <a
+                                {...props}
+                                href={href}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  navigate(href);
+                                  onClose();
+                                }}
+                                className="text-primary underline cursor-pointer hover:text-primary/80"
+                              >
+                                {children}
+                              </a>
+                            );
+                          }
+                          return <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline" {...props}>{children}</a>;
+                        },
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
                   </div>
                 ) : (
                   <p className="whitespace-pre-wrap">{msg.content}</p>

@@ -11,9 +11,9 @@ const corsHeaders = {
  * Build the system prompt with all agency knowledge baked in.
  * SOP articles are fetched from DB and injected dynamically.
  */
-async function buildSystemPrompt(sopArticles: { title: string; content: string; category_title?: string }[]): Promise<string> {
+async function buildSystemPrompt(sopArticles: { id: string; title: string; content: string; category_title?: string }[]): Promise<string> {
   const sopSection = sopArticles.length > 0
-    ? sopArticles.map(a => `### ${a.category_title ? `[${a.category_title}] ` : ''}${a.title}\n${a.content}`).join('\n\n')
+    ? sopArticles.map(a => `### ${a.category_title ? `[${a.category_title}] ` : ''}${a.title}\nID: ${a.id}\nOdkaz: /sop/${a.id}\n${a.content}`).join('\n\n')
     : 'Žádné SOP články nejsou k dispozici.';
 
   return `Jsi AI asistent agentury zaměřené na výkonnostní marketing pro e-shopy. Odpovídáš česky.
@@ -22,7 +22,13 @@ Tvůj hlavní účel je pomáhat s:
 2. SOP – jak co v agentuře děláme, jaké jsou procesy
 3. Odměny kolegů – doporučené hodiny a odměny dle pozice a služby
 
-Buď stručný, praktický a konkrétní. Když radíš s cenou, vždy uváděj i doporučené odměny kolegů a cílovou marži.
+## PRAVIDLA FORMÁTOVÁNÍ ODPOVĚDÍ
+
+1. **Vždy strukturuj odpovědi** pomocí nadpisů (##, ###), odrážek, tabulek a tučného textu
+2. **Když odpovídáš na SOP dotaz**, vždy na konci odpovědi přidej odkaz na příslušný SOP článek ve formátu: 📖 [Název článku](/sop/ID_ČLÁNKU)
+3. **Při kalkulaci cen** vždy použij tabulku s řádky: Cena klientovi, Odměny kolegů (breakdown dle role), Celkové interní náklady, Marže (%), Hodnocení marže (✅/⚠️/🔴)
+4. **Buď konkrétní** – uvádej čísla, hodiny, částky v Kč
+5. **Používej emoji** pro lepší orientaci: 💰 ceny, 👤 role, ⏱️ hodiny, 📊 marže, 📖 SOP odkaz
 
 ---
 
@@ -168,16 +174,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    let sopArticles: { title: string; content: string; category_title?: string }[] = [];
+    let sopArticles: { id: string; title: string; content: string; category_title?: string }[] = [];
     try {
       const { data: articles } = await supabase
         .from("sop_articles")
-        .select("title, content, search_text, category_id")
+        .select("id, title, content, search_text, category_id")
         .eq("is_published", true)
         .order("sort_order");
 
       if (articles && articles.length > 0) {
-        // Fetch categories for labels
         const { data: categories } = await supabase
           .from("sop_categories")
           .select("id, title")
@@ -185,6 +190,7 @@ serve(async (req) => {
 
         const catMap = new Map((categories || []).map(c => [c.id, c.title]));
         sopArticles = articles.map(a => ({
+          id: a.id,
           title: a.title,
           content: a.search_text || a.content || '',
           category_title: catMap.get(a.category_id) || undefined,
