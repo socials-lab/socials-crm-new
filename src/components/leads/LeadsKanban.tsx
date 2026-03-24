@@ -223,11 +223,11 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials 
   return (
     <>
       <div className="space-y-4">
-        {/* Active Stages - Horizontal scroll on mobile, grid on larger screens */}
-        <div className="overflow-x-auto -mx-2 px-2 pb-2 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
-          <div className="flex gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-6 min-w-max sm:min-w-0">
+        {/* Active Stages - Fixed-width columns with horizontal scroll */}
+        <div className="overflow-x-auto -mx-2 px-2 pb-2">
+          <div className="flex gap-3 min-w-max">
             {ACTIVE_STAGES.map(stage => (
-              <div key={stage} className="w-[160px] sm:w-auto flex-shrink-0 sm:flex-shrink">
+              <div key={stage} className="w-[280px] flex-shrink-0">
                 {renderStageColumn(stage)}
               </div>
             ))}
@@ -260,10 +260,10 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials 
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="overflow-x-auto -mx-2 px-2 pb-2 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0 mt-3">
-              <div className="flex gap-3 sm:grid sm:grid-cols-3 min-w-max sm:min-w-0">
+            <div className="overflow-x-auto -mx-2 px-2 pb-2 mt-3">
+              <div className="flex gap-3 min-w-max">
                 {CLOSED_STAGES.map(stage => (
-                  <div key={stage} className="w-[160px] sm:w-auto flex-shrink-0 sm:flex-shrink">
+                  <div key={stage} className="w-[280px] flex-shrink-0">
                     {renderStageColumn(stage, true)}
                   </div>
                 ))}
