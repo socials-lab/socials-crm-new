@@ -1,4 +1,5 @@
 import type { EngagementService } from '@/types/crm';
+import { getEffectiveServicePrice } from '@/utils/introDiscountUtils';
 
 function assertCreativeBoostPricing(service: EngagementService): { maxCredits: number; pricePerCredit: number } {
   if (service.creative_boost_max_credits === null || service.creative_boost_price_per_credit === null) {
@@ -39,6 +40,11 @@ export function getEngagementMonthlyRevenue(
     if (isCreativeBoostService) {
       return sum + getCreativeBoostExpectedMonthlyRevenue(service);
     }
-    return sum + service.price;
+    return sum + getEffectiveServicePrice(
+      service.price,
+      service.intro_discount_percent,
+      service.intro_discount_months,
+      service.intro_discount_start_date,
+    );
   }, 0);
 }

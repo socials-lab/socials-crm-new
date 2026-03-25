@@ -268,6 +268,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         billing_type: ls.billing_type,
         currency: ls.currency,
         selected_tier: ls.selected_tier,
+        intro_discount_percent: ls.intro_discount_percent ?? null,
+        intro_discount_months: ls.intro_discount_months ?? null,
+        intro_discount_start_date: ls.intro_discount_percent && ls.intro_discount_months
+          ? toDateOnlyString(new Date())
+          : null,
         creative_boost_fixed_billing: true,
         notes: '',
       }));

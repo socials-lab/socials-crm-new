@@ -15,7 +15,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/sonner';
+import { Percent } from 'lucide-react';
 import type { Service, LeadService, ServiceTier } from '@/types/crm';
 import { SERVICE_TIER_CONFIGS } from '@/constants/services';
 
@@ -37,6 +40,9 @@ export function AddLeadServiceDialog({
   const [priceInput, setPriceInput] = useState('0');
   const [currency, setCurrency] = useState('');
   const [billingType, setBillingType] = useState<'monthly' | 'one_off'>('monthly');
+  const [hasIntroDiscount, setHasIntroDiscount] = useState(false);
+  const [introDiscountPercent, setIntroDiscountPercent] = useState(10);
+  const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const normalizedServices = services.filter((service): service is Service => (
@@ -104,6 +110,8 @@ export function AddLeadServiceDialog({
         price: parsedPrice,
         currency,
         billing_type: billingType,
+        intro_discount_percent: hasIntroDiscount && billingType === 'monthly' ? introDiscountPercent : null,
+        intro_discount_months: hasIntroDiscount && billingType === 'monthly' ? introDiscountMonths : null,
       });
 
       // Reset form
@@ -112,6 +120,9 @@ export function AddLeadServiceDialog({
       setPriceInput('0');
       setCurrency('');
       setBillingType('monthly');
+      setHasIntroDiscount(false);
+      setIntroDiscountPercent(10);
+      setIntroDiscountMonths(3);
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to add service:', error);
@@ -120,6 +131,12 @@ export function AddLeadServiceDialog({
       setIsSubmitting(false);
     }
   };
+
+  const numericPrice = Number(priceInput);
+  const effectivePrice = Number.isFinite(numericPrice) && numericPrice >= 0 ? numericPrice : 0;
+  const discountedPrice = hasIntroDiscount
+    ? Math.round(effectivePrice * (1 - introDiscountPercent / 100))
+    : effectivePrice;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -200,6 +217,72 @@ export function AddLeadServiceDialog({
               </Select>
             </div>
           </div>
+
+          {billingType === 'monthly' && (
+            <div className="space-y-3 rounded-lg border border-dashed p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Percent className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-medium">Úvodní sleva</Label>
+                </div>
+                <Switch
+                  checked={hasIntroDiscount}
+                  onCheckedChange={setHasIntroDiscount}
+                />
+              </div>
+
+              {hasIntroDiscount && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Sleva (%)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={introDiscountPercent}
+                        onChange={(e) => {
+                          const parsed = Number(e.target.value);
+                          if (!Number.isFinite(parsed)) return;
+                          setIntroDiscountPercent(Math.min(100, Math.max(1, Math.round(parsed))));
+                        }}
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Počet měsíců</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={24}
+                        value={introDiscountMonths}
+                        onChange={(e) => {
+                          const parsed = Number(e.target.value);
+                          if (!Number.isFinite(parsed)) return;
+                          setIntroDiscountMonths(Math.min(24, Math.max(1, Math.round(parsed))));
+                        }}
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded bg-muted/50 p-2">
+                    <span className="text-xs text-muted-foreground">
+                      Prvních {introDiscountMonths} měs. za:
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground line-through">
+                        {effectivePrice.toLocaleString('cs-CZ')} {currency}
+                      </span>
+                      <Badge variant="secondary" className="text-xs">
+                        {discountedPrice.toLocaleString('cs-CZ')} {currency}/měs
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Měna</Label>

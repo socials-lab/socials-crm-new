@@ -1385,6 +1385,9 @@ export type Database = {
           engagement_id: string
           id: string
           invoice_id: string | null
+          intro_discount_months: number | null
+          intro_discount_percent: number | null
+          intro_discount_start_date: string | null
           invoiced_at: string | null
           invoiced_in_period: string | null
           invoicing_status:
@@ -1413,6 +1416,9 @@ export type Database = {
           engagement_id: string
           id?: string
           invoice_id?: string | null
+          intro_discount_months?: number | null
+          intro_discount_percent?: number | null
+          intro_discount_start_date?: string | null
           invoiced_at?: string | null
           invoiced_in_period?: string | null
           invoicing_status?:
@@ -1441,6 +1447,9 @@ export type Database = {
           engagement_id?: string
           id?: string
           invoice_id?: string | null
+          intro_discount_months?: number | null
+          intro_discount_percent?: number | null
+          intro_discount_start_date?: string | null
           invoiced_at?: string | null
           invoiced_in_period?: string | null
           invoicing_status?:

@@ -232,6 +232,9 @@ export default function Modifications() {
           effective_from: request.client_chosen_effective_from || request.effective_from || null,
           upsold_by_id: request.upsold_by_id,
           upsell_commission_percent: request.upsell_commission_percent,
+          intro_discount_percent: null,
+          intro_discount_months: null,
+          intro_discount_start_date: null,
         });
       } else if (request.request_type === 'new_engagement') {
         const changes = request.proposed_changes as any;
@@ -290,6 +293,9 @@ export default function Modifications() {
             effective_from: request.client_chosen_effective_from || request.effective_from || null,
             upsold_by_id: request.upsold_by_id,
             upsell_commission_percent: request.upsell_commission_percent,
+            intro_discount_percent: null,
+            intro_discount_months: null,
+            intro_discount_start_date: null,
           });
         }
       }
@@ -435,6 +441,9 @@ export default function Modifications() {
           upsold_by_id: request.upsold_by_id || null,
           upsell_commission_percent: request.upsell_commission_percent || 0,
           effective_from: request.client_chosen_effective_from || request.effective_from || null,
+          intro_discount_percent: null,
+          intro_discount_months: null,
+          intro_discount_start_date: null,
         });
       }
 

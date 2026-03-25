@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Pencil, Trash2, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, UserPlus, ChevronDown, ChevronUp, Percent, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TierBadge } from '@/components/shared/TierBadge';
+import { getIntroDiscountInfo } from '@/utils/introDiscountUtils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +47,12 @@ export function EngagementServiceCard({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const totalAssignmentCost = assignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
+  const discountInfo = getIntroDiscountInfo(
+    engagementService.price,
+    engagementService.intro_discount_percent,
+    engagementService.intro_discount_months,
+    engagementService.intro_discount_start_date,
+  );
 
   return (
     <>
@@ -69,6 +76,23 @@ export function EngagementServiceCard({
                     {tierLabels[engagementService.selected_tier]}
                   </TierBadge>
                 )}
+                {discountInfo && (
+                  <Badge
+                    variant="outline"
+                    className={discountInfo.isActive
+                      ? 'text-[10px] h-4 px-1 bg-amber-500/10 text-amber-700 border-amber-500/30'
+                      : 'text-[10px] h-4 px-1'}
+                  >
+                    {discountInfo.isActive ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Percent className="h-3 w-3" />
+                        -{discountInfo.percent}% <Clock className="h-3 w-3" /> {discountInfo.remainingDays} dn.
+                      </span>
+                    ) : (
+                      'Sleva ukončena'
+                    )}
+                  </Badge>
+                )}
                 {canSeeFinancials && (
                   <span className="text-xs text-muted-foreground">
                     {assignments.length} kolegů
@@ -80,10 +104,24 @@ export function EngagementServiceCard({
 
           <div className="flex items-center gap-2">
             {canSeeFinancials && (
-              <span className="text-sm font-semibold whitespace-nowrap">
-                {engagementService.price.toLocaleString()} {engagementService.currency}
-                {engagementService.billing_type === 'monthly' && '/měs'}
-              </span>
+              <div className="flex flex-col items-end">
+                {discountInfo?.isActive && engagementService.billing_type === 'monthly' ? (
+                  <>
+                    <span className="text-xs line-through text-muted-foreground whitespace-nowrap">
+                      {engagementService.price.toLocaleString()} {engagementService.currency}
+                    </span>
+                    <span className="text-sm font-semibold whitespace-nowrap text-amber-700">
+                      {discountInfo.discountedPrice.toLocaleString()} {engagementService.currency}
+                      /měs
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-semibold whitespace-nowrap">
+                    {engagementService.price.toLocaleString()} {engagementService.currency}
+                    {engagementService.billing_type === 'monthly' && '/měs'}
+                  </span>
+                )}
+              </div>
             )}
             <Button 
               variant="ghost" 

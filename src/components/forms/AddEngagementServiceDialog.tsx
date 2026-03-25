@@ -400,6 +400,10 @@ export function AddEngagementServiceDialog({
           // Upsell tracking
           upsold_by_id: upsoldById,
           upsell_commission_percent: upsoldById ? 10 : null,
+          // Intro discount is intentionally not set in this flow
+          intro_discount_percent: null,
+          intro_discount_months: null,
+          intro_discount_start_date: null,
         }),
         timeoutPromise
       ]);

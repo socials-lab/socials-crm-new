@@ -74,6 +74,7 @@ import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 import { isEngagementServiceActiveInMonth } from '@/lib/engagementServiceLifecycle';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
 import { getCreativeBoostExpectedMonthlyRevenue } from '@/utils/engagementRevenueUtils';
+import { getEffectiveServicePrice } from '@/utils/introDiscountUtils';
 
 // Dynamic lookup for Creative Boost service ID
 const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
@@ -793,6 +794,14 @@ function EngagementsContent() {
                       .reduce((sum, s) => {
                         if (isCreativeBoostEngagementService(s, CREATIVE_BOOST_SERVICE_ID)) {
                           return sum + getCreativeBoostExpectedMonthlyRevenue(s);
+                        }
+                        if (s.billing_type === 'monthly') {
+                          return sum + getEffectiveServicePrice(
+                            s.price,
+                            s.intro_discount_percent,
+                            s.intro_discount_months,
+                            s.intro_discount_start_date,
+                          );
                         }
                         return sum + s.price;
                       }, 0);
