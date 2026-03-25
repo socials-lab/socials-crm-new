@@ -11,6 +11,7 @@ const ROUTE_TO_PAGE: Record<string, string> = {
   '/': 'dashboard',
   '/my-work': 'my-work',
   '/leads': 'leads',
+  '/prospects': 'prospects',
   '/clients': 'clients',
   '/contacts': 'contacts',
   '/engagements': 'engagements',

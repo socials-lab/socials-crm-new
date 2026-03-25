@@ -52,6 +52,7 @@ import Academy from "./pages/Academy";
 import SOP from "./pages/SOP";
 import PublicSOPPage from "./pages/PublicSOPPage";
 import BugReports from "./pages/BugReports";
+import Prospects from "./pages/Prospects";
 
 function isAuthError(error: unknown): boolean {
   if (error && typeof error === 'object') {
@@ -141,6 +142,7 @@ const App = () => (
                               <Route path="/my-work" element={<MyWork />} />
                               <Route path="/my-profile" element={<MyProfile />} />
                               <Route path="/leads" element={<Leads />} />
+                              <Route path="/prospects" element={<Prospects />} />
                               <Route path="/clients" element={<Clients />} />
                               <Route path="/contacts" element={<Contacts />} />
                               <Route path="/engagements" element={<Engagements />} />

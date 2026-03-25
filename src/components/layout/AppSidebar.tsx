@@ -35,6 +35,7 @@ import {
   BookOpen,
   FileText,
   Bug,
+  UserSearch,
   BarChart3,
   Settings,
   type LucideIcon,
@@ -67,6 +68,7 @@ const navGroups: NavGroup[] = [
     label: 'Obchod',
     items: [
       { title: 'Leady', url: '/leads', page: 'leads', icon: Target },
+      { title: 'Zájemci', url: '/prospects', page: 'prospects', icon: UserSearch },
       { title: 'Klienti', url: '/clients', page: 'clients', icon: Building2 },
       { title: 'Kontakty', url: '/contacts', page: 'contacts', icon: Contact },
       { title: 'Zakázky', url: '/engagements', page: 'engagements', icon: ClipboardList },
