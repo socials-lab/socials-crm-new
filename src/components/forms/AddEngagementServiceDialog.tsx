@@ -419,7 +419,7 @@ export function AddEngagementServiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Upravit službu zakázky' : 'Přidat službu k zakázce'}</DialogTitle>
         </DialogHeader>
