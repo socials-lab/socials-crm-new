@@ -1073,23 +1073,25 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <section className="space-y-6">
           <ContactSection offer={offer} />
           
-          <div className="text-center py-10">
+          <div className="text-center pt-6 pb-10">
             <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
               Pojďme do toho
             </h2>
             <p className="mb-8 text-muted-foreground text-sm max-w-sm mx-auto">
               Společně posuneme váš byznys na další úroveň.
             </p>
-            <Button 
-              asChild 
-              size="lg" 
-              className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-bold px-10 py-6 text-base rounded-xl"
-            >
-              <Link to={onboardingUrl}>
-                Začít spolupráci
-                <ArrowRight className="h-5 w-5 ml-2" />
-              </Link>
-            </Button>
+            <div className="flex justify-center">
+              <Button 
+                asChild 
+                size="lg" 
+                className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-bold px-10 py-6 text-base rounded-xl"
+              >
+                <Link to={onboardingUrl}>
+                  Začít spolupráci
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Link>
+              </Button>
+            </div>
             <p className="mt-4 text-xs text-muted-foreground/50">
               Smlouva do 24 hodin · Bez závazků na minimální dobu
             </p>
@@ -1127,14 +1129,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         "fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t border-foreground/[0.06] sm:hidden safe-area-bottom",
         isDark ? "bg-black/95" : "bg-white/95"
       )}>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="font-bold text-[#94e700]">{(totalMonthly + totalOneOff).toLocaleString('cs-CZ')} {offer.currency}</p>
-            <p className="text-[10px] text-muted-foreground">
-              {totalMonthly > 0 ? '/měsíc bez DPH' : 'celkem bez DPH'}
-            </p>
-          </div>
-          <Button asChild className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-semibold flex-1 max-w-[180px]">
+        <div className="flex justify-center">
+          <Button asChild className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-semibold w-full max-w-xs">
             <Link to={onboardingUrl}>
               Začít spolupráci
               <ArrowRight className="h-4 w-4 ml-1" />
