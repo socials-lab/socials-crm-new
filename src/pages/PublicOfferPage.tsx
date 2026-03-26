@@ -146,11 +146,11 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300 overflow-hidden">
+      <div className="rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-foreground/[0.12] transition-all duration-300 overflow-hidden">
         <CollapsibleTrigger className="w-full">
           <div className="flex items-center justify-between p-5 md:p-6">
             <div className="flex items-center gap-4 text-left">
-              <div className="w-11 h-11 rounded-lg bg-white/[0.05] flex items-center justify-center shrink-0 text-xl">
+              <div className="w-11 h-11 rounded-lg bg-foreground/[0.05] flex items-center justify-center shrink-0 text-xl">
                 {getServiceEmoji(service.name)}
               </div>
               <div>
@@ -170,7 +170,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                     </Badge>
                   )}
                   {service.service_type === 'addon' && (
-                    <Badge variant="outline" className="text-[10px] border-white/20 text-white/60">
+                    <Badge variant="outline" className="text-[10px] border-foreground/20 text-muted-foreground">
                       Doplněk
                     </Badge>
                   )}
@@ -189,7 +189,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                   )}
                 </div>
                 {service.description && (
-                  <p className="text-sm text-white/50 mt-1">{service.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
                 )}
               </div>
             </div>
@@ -198,12 +198,12 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                 <span className="font-bold text-sm text-[#94e700]">
                   {service.price.toLocaleString('cs-CZ')} {service.currency}
                 </span>
-                <span className="text-xs text-white/40 ml-1">
+                <span className="text-xs text-muted-foreground/70 ml-1">
                   {service.billing_type === 'monthly' ? '/měs' : ''}
                 </span>
               </div>
               {hasDetails && (
-                <ChevronDown className={cn('h-5 w-5 text-white/30 transition-transform', isOpen && 'rotate-180')} />
+                <ChevronDown className={cn('h-5 w-5 text-muted-foreground/50 transition-transform', isOpen && 'rotate-180')} />
               )}
             </div>
           </div>
@@ -235,14 +235,14 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
               {(service.frequency || service.turnaround) && (
                 <div className="flex flex-wrap gap-3">
                   {service.frequency && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-sm text-white/70">
-                      <Clock className="h-4 w-4 text-white/40" />
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-foreground/[0.03] border border-foreground/[0.06] text-sm text-foreground/70">
+                      <Clock className="h-4 w-4 text-muted-foreground/70" />
                       <span>{service.frequency}</span>
                     </div>
                   )}
                   {service.turnaround && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-sm text-white/70">
-                      <Rocket className="h-4 w-4 text-white/40" />
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-foreground/[0.03] border border-foreground/[0.06] text-sm text-foreground/70">
+                      <Rocket className="h-4 w-4 text-muted-foreground/70" />
                       <span>{service.turnaround}</span>
                     </div>
                   )}
@@ -276,13 +276,13 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
               {hasDetailedSections && (
                 <Collapsible open={showDetailedSections} onOpenChange={setShowDetailedSections}>
                   <CollapsibleTrigger className="w-full">
-                    <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-dashed border-white/10 hover:border-[#94e700]/30 hover:bg-[#94e700]/5 transition-colors text-sm text-white/50 hover:text-[#94e700] cursor-pointer">
+                    <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-dashed border-foreground/10 hover:border-[#94e700]/30 hover:bg-[#94e700]/5 transition-colors text-sm text-muted-foreground hover:text-[#94e700] cursor-pointer">
                       <span>{showDetailedSections ? 'Skrýt podrobnosti' : 'Zobrazit podrobný rozpis služby'}</span>
                       <ChevronDown className={cn('h-4 w-4 transition-transform', showDetailedSections && 'rotate-180')} />
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="mt-4 p-4 rounded-lg bg-white/[0.02] border border-white/[0.06] space-y-5">
+                    <div className="mt-4 p-4 rounded-lg bg-foreground/[0.02] border border-foreground/[0.06] space-y-5">
                       {service.detailed_sections!.map((section, sIdx) => (
                         <div key={sIdx}>
                           <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
@@ -291,7 +291,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                           </h4>
                           <ul className="space-y-1.5 ml-6">
                             {section.items.map((item, iIdx) => (
-                              <li key={iIdx} className="flex items-start gap-2 text-sm text-white/50">
+                              <li key={iIdx} className="flex items-start gap-2 text-sm text-muted-foreground">
                                 <span className="shrink-0 mt-1.5 w-1 h-1 rounded-full bg-white/30" />
                                 <span>{item}</span>
                               </li>
@@ -313,8 +313,8 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
 
 function ServiceStructureExplanation() {
   return (
-    <div className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.06] mb-6">
-      <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-white/70">
+    <div className="p-5 rounded-xl bg-foreground/[0.02] border border-foreground/[0.06] mb-6">
+      <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-foreground/70">
         Jak strukturujeme naše služby
       </h3>
       
@@ -322,8 +322,8 @@ function ServiceStructureExplanation() {
         <div className="flex items-start gap-3">
           <Badge className="bg-[#94e700]/10 text-[#94e700] border-[#94e700]/30 shrink-0 mt-0.5 w-[70px] justify-center text-[10px]">Core</Badge>
           <div>
-            <p className="font-medium text-white/90">Hlavní služby</p>
-            <p className="text-white/40 text-xs leading-relaxed mt-0.5">
+            <p className="font-medium text-foreground">Hlavní služby</p>
+            <p className="text-muted-foreground/70 text-xs leading-relaxed mt-0.5">
               Základní pilíře vaší online strategie. Core služby jsou rozděleny do úrovní{' '}
               <span className="font-medium text-emerald-400">GROWTH</span>,{' '}
               <span className="font-medium text-[#94e700]">PRO</span> a{' '}
@@ -334,12 +334,12 @@ function ServiceStructureExplanation() {
         </div>
         
         <div className="flex items-start gap-3">
-          <Badge variant="outline" className="shrink-0 mt-0.5 w-[70px] justify-center text-[10px] border-white/20 text-white/60">Doplněk</Badge>
+          <Badge variant="outline" className="shrink-0 mt-0.5 w-[70px] justify-center text-[10px] border-foreground/20 text-muted-foreground">Doplněk</Badge>
           <div>
-            <p className="font-medium text-white/90">Doplňkové služby</p>
-            <p className="text-white/40 text-xs leading-relaxed mt-0.5">
+            <p className="font-medium text-foreground">Doplňkové služby</p>
+            <p className="text-muted-foreground/70 text-xs leading-relaxed mt-0.5">
               Rozšíření k hlavním službám pro maximální efektivitu.{' '}
-              <span className="font-medium text-white/70">Doplňky nelze využívat samostatně</span> – 
+              <span className="font-medium text-foreground/70">Doplňky nelze využívat samostatně</span> – 
               vždy fungují jako rozšíření k některé z Core služeb.
             </p>
           </div>
@@ -365,20 +365,20 @@ function OnboardingProcessSection() {
           {ONBOARDING_STEPS.map((step, idx) => (
             <div
               key={idx}
-              className="group flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-white/[0.06] hover:bg-white/[0.02] transition-all duration-300 cursor-default"
+              className="group flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-foreground/[0.06] hover:bg-foreground/[0.02] transition-all duration-300 cursor-default"
             >
-              <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shrink-0 relative z-10 transition-all duration-300 group-hover:bg-[#94e700]/10 group-hover:border-[#94e700]/30">
-                <step.icon className="h-5 w-5 text-white/50 group-hover:text-[#94e700] transition-colors" />
+              <div className="w-12 h-12 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] flex items-center justify-center shrink-0 relative z-10 transition-all duration-300 group-hover:bg-[#94e700]/10 group-hover:border-[#94e700]/30">
+                <step.icon className="h-5 w-5 text-muted-foreground group-hover:text-[#94e700] transition-colors" />
               </div>
 
               <div className="flex-1 pb-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-sm text-white/90 group-hover:text-[#94e700] transition-colors">{step.title}</h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] text-white/40 font-medium">
+                  <h3 className="font-semibold text-sm text-foreground group-hover:text-[#94e700] transition-colors">{step.title}</h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-foreground/[0.05] text-muted-foreground/70 font-medium">
                     {step.timeline}
                   </span>
                 </div>
-                <p className="text-sm text-white/40 mt-1 leading-relaxed">
+                <p className="text-sm text-muted-foreground/70 mt-1 leading-relaxed">
                   {step.description}
                 </p>
               </div>
@@ -453,11 +453,11 @@ function WhyUsSection() {
         {WHY_US_ITEMS.map((item, i) => (
           <div
             key={i}
-            className="group p-5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-[#94e700]/20 transition-all duration-300 cursor-default"
+            className="group p-5 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-[#94e700]/20 transition-all duration-300 cursor-default"
           >
             <p className="text-2xl md:text-3xl font-bold text-[#94e700] mb-1 group-hover:scale-105 transition-transform origin-left">{item.stat}</p>
-            <p className="text-xs font-medium text-white/70 uppercase tracking-wider mb-3">{item.label}</p>
-            <p className="text-xs text-white/40 leading-relaxed">{item.description}</p>
+            <p className="text-xs font-medium text-foreground/70 uppercase tracking-wider mb-3">{item.label}</p>
+            <p className="text-xs text-muted-foreground/70 leading-relaxed">{item.description}</p>
           </div>
         ))}
       </div>
@@ -469,13 +469,13 @@ function WhyUsSection() {
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex-1 flex items-center gap-3 p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-[#94e700]/30 hover:bg-[#94e700]/5 transition-all duration-300"
+            className="group flex-1 flex items-center gap-3 p-4 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:border-[#94e700]/30 hover:bg-[#94e700]/5 transition-all duration-300"
           >
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm text-white/90 group-hover:text-[#94e700] transition-colors">{link.label}</p>
-              <p className="text-xs text-white/40 mt-0.5">{link.description}</p>
+              <p className="font-medium text-sm text-foreground group-hover:text-[#94e700] transition-colors">{link.label}</p>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">{link.description}</p>
             </div>
-            <ExternalLink className="h-4 w-4 text-white/20 group-hover:text-[#94e700] shrink-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            <ExternalLink className="h-4 w-4 text-muted-foreground/40 group-hover:text-[#94e700] shrink-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </a>
         ))}
       </div>
@@ -492,13 +492,13 @@ function ReportingSection() {
         title="Reporting až na úroveň zisku"
         subtitle="Pro Shoptet klienty dodáváme reporting až na úroveň contribution margin. Budete přesně vědět, kolik peněz vám vydělá jaký produkt."
       />
-      <p className="text-sm text-white/40 italic -mt-6 mb-8">
+      <p className="text-sm text-muted-foreground/70 italic -mt-6 mb-8">
         (Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)
       </p>
 
       <div className="mb-6">
-        <p className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">Interaktivní ukázka reportu</p>
-        <div className="rounded-xl overflow-hidden border border-white/[0.08]" style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Interaktivní ukázka reportu</p>
+        <div className="rounded-xl overflow-hidden border border-foreground/[0.08]" style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
           <iframe
             src={DEMO_REPORT_URL}
             frameBorder="0"
@@ -584,7 +584,7 @@ function CreativePortfolioSection() {
           <div
             key={i}
             onClick={() => setSelectedIndex(i)}
-            className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.06] cursor-pointer hover:border-[#94e700]/30 hover:shadow-[0_0_30px_-10px_rgba(200,255,0,0.15)] transition-all duration-300"
+            className="group relative aspect-square rounded-lg overflow-hidden border border-foreground/[0.06] cursor-pointer hover:border-[#94e700]/30 hover:shadow-[0_0_30px_-10px_rgba(200,255,0,0.15)] transition-all duration-300"
           >
             {item.type === 'video' ? (
               <>
@@ -611,7 +611,7 @@ function CreativePortfolioSection() {
               />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2.5">
-              <p className="text-[10px] font-medium text-white/90">{item.alt}</p>
+              <p className="text-[10px] font-medium text-foreground">{item.alt}</p>
             </div>
           </div>
         ))}
@@ -630,7 +630,7 @@ function CreativePortfolioSection() {
             {/* Left arrow */}
             <button
               onClick={goPrev}
-              className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors backdrop-blur-sm"
+              className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-foreground/70 hover:text-white transition-colors backdrop-blur-sm"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
@@ -656,15 +656,15 @@ function CreativePortfolioSection() {
             {/* Right arrow */}
             <button
               onClick={goNext}
-              className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors backdrop-blur-sm"
+              className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-foreground/70 hover:text-white transition-colors backdrop-blur-sm"
             >
               <ChevronRight className="h-6 w-6" />
             </button>
 
             {/* Bottom info */}
             <div className="absolute bottom-6 flex flex-col items-center gap-2">
-              <p className="text-sm font-medium text-white/80">{current.alt}</p>
-              <p className="text-xs text-white/40">{selectedIndex + 1} / {displayItems.length} · Klikněte kamkoliv pro zavření</p>
+              <p className="text-sm font-medium text-foreground/80">{current.alt}</p>
+              <p className="text-xs text-muted-foreground/70">{selectedIndex + 1} / {displayItems.length} · Klikněte kamkoliv pro zavření</p>
             </div>
           </div>
         );
@@ -677,20 +677,20 @@ function ContactSection({ offer }: { offer: PublicOffer }) {
   if (!offer.owner_name && !offer.owner_email) return null;
   
   return (
-    <div className="flex items-start gap-4 p-5 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+    <div className="flex items-start gap-4 p-5 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02]">
       <div className="w-10 h-10 rounded-full bg-[#94e700]/10 flex items-center justify-center shrink-0">
         <MessageCircle className="h-5 w-5 text-[#94e700]" />
       </div>
       <div className="flex-1">
-        <h3 className="font-semibold text-sm mb-1 text-white/90">
+        <h3 className="font-semibold text-sm mb-1 text-foreground">
           Máte dotaz? Ozvěte se mi
         </h3>
-        <p className="text-xs text-white/40 mb-3">
+        <p className="text-xs text-muted-foreground/70 mb-3">
           Pokud vám cokoliv není jasné nebo potřebujete něco upřesnit, neváhejte mě kontaktovat.
         </p>
         <div className="space-y-1.5">
           {offer.owner_name && (
-            <p className="text-sm font-medium text-white/90">{offer.owner_name}</p>
+            <p className="text-sm font-medium text-foreground">{offer.owner_name}</p>
           )}
           {offer.owner_email && (
             <a href={`mailto:${offer.owner_email}`} className="text-sm text-[#94e700] hover:underline flex items-center gap-1.5">
@@ -809,33 +809,23 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
     <div className={cn(isDark ? "offer-dark" : "offer-light", "min-h-screen bg-background transition-colors duration-300")}>
       {/* Sticky Header */}
       <header className={cn(
-        "border-b backdrop-blur-md sticky top-0 z-10 transition-colors duration-300",
-        isDark ? "border-white/[0.06] bg-black/80" : "border-black/[0.06] bg-white/80"
+        "border-b border-foreground/[0.06] backdrop-blur-md sticky top-0 z-10 transition-colors duration-300",
+        isDark ? "bg-black/80" : "bg-white/80"
       )}>
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <img src={isDark ? socialsLogoDark : socialsLogo} alt="Socials" className="h-6" />
+          <img src={isDark ? socialsLogo : socialsLogoDark} alt="Socials" className="h-6" />
           <div className="flex items-center gap-2">
             {/* Theme toggle */}
             <button
               onClick={() => setIsDark(!isDark)}
-              className={cn(
-                "inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors",
-                isDark 
-                  ? "text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]" 
-                  : "text-black/50 hover:text-black bg-black/[0.04] hover:bg-black/[0.08] border border-black/[0.06]"
-              )}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors text-muted-foreground hover:text-foreground bg-foreground/[0.04] hover:bg-foreground/[0.08] border border-foreground/[0.06]"
               title={isDark ? "Přepnout na světlý režim" : "Přepnout na tmavý režim"}
             >
               {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
             </button>
             <button
               onClick={handleCopyLink}
-              className={cn(
-                "hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full transition-colors border",
-                isDark 
-                  ? "text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.06]" 
-                  : "text-black/50 hover:text-black bg-black/[0.04] hover:bg-black/[0.08] border-black/[0.06]"
-              )}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full transition-colors border text-muted-foreground hover:text-foreground bg-foreground/[0.04] hover:bg-foreground/[0.08] border-foreground/[0.06]"
             >
               {copied ? (
                 <><Check className="h-3 w-3 text-[#94e700]" /><span>Zkopírováno</span></>
@@ -858,7 +848,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         
         {/* ===== 1. HERO ===== */}
         <section className="text-center mb-6">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/40 mb-4">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/70 mb-4">
             Návrh spolupráce
           </p>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
@@ -869,13 +859,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 : offer.company_name}
             </span>
           </h1>
-          <p className="text-white/50 text-sm">
+          <p className="text-muted-foreground text-sm">
             Připraveno pro {offer.contact_name}
           </p>
         </section>
 
         {/* Credibility badges */}
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-white/30 font-medium mb-16">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground/50 font-medium mb-16">
           <span>Meta Business Partner</span>
           <span className="text-white/10">·</span>
           <span>Google Partner</span>
@@ -899,7 +889,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <>
             <section>
               {offer.loom_url && (
-                <div className="rounded-xl overflow-hidden border border-white/[0.08] mb-6">
+                <div className="rounded-xl overflow-hidden border border-foreground/[0.08] mb-6">
                   <AspectRatio ratio={16 / 9}>
                     <iframe
                       src={offer.loom_url}
@@ -914,11 +904,11 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               )}
 
               {offer.audit_summary && (
-                <div className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                  <h2 className="text-sm font-semibold mb-3 text-white/70 uppercase tracking-wider">
+                <div className="p-5 rounded-xl bg-foreground/[0.02] border border-foreground/[0.06]">
+                  <h2 className="text-sm font-semibold mb-3 text-foreground/70 uppercase tracking-wider">
                     Co jsme zjistili & doporučení
                   </h2>
-                  <p className="text-sm text-white/50 whitespace-pre-line leading-relaxed">
+                  <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
                     {offer.audit_summary}
                   </p>
                 </div>
@@ -975,7 +965,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Badge className="bg-[#94e700]/10 text-[#94e700] border-[#94e700]/30 text-[10px]">Core</Badge>
-                      <span className="text-sm font-medium text-white/50">Hlavní služby</span>
+                      <span className="text-sm font-medium text-muted-foreground">Hlavní služby</span>
                     </div>
                     <div className="space-y-3">
                       {coreServices.map((service, idx) => (
@@ -988,8 +978,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 {addonServices.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <Badge variant="outline" className="text-[10px] border-white/20 text-white/60">Doplněk</Badge>
-                      <span className="text-sm font-medium text-white/50">Doplňkové služby</span>
+                      <Badge variant="outline" className="text-[10px] border-foreground/20 text-muted-foreground">Doplněk</Badge>
+                      <span className="text-sm font-medium text-muted-foreground">Doplňkové služby</span>
                     </div>
                     <div className="space-y-3">
                       {addonServices.map((service, idx) => (
@@ -1028,11 +1018,11 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             return (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/60">Měsíční cena</span>
+                  <span className="text-sm text-muted-foreground">Měsíční cena</span>
                   <div className="text-right">
                     {discountPercent > 0 ? (
                       <>
-                        <span className="text-base text-white/40 line-through mr-2">
+                        <span className="text-base text-muted-foreground/70 line-through mr-2">
                           {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                         </span>
                         <span className="text-3xl font-bold text-[#94e700]">
@@ -1044,7 +1034,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                         {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                       </span>
                     )}
-                    <span className="text-sm text-white/40 ml-1">/měsíc</span>
+                    <span className="text-sm text-muted-foreground/70 ml-1">/měsíc</span>
                   </div>
                 </div>
                 {discountPercent > 0 && (
@@ -1058,17 +1048,17 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           })()}
           {totalOneOff > 0 && (
             <>
-              {totalMonthly > 0 && <div className="border-t border-white/[0.08] my-3" />}
+              {totalMonthly > 0 && <div className="border-t border-foreground/[0.08] my-3" />}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white/60">Jednorázově</span>
-                <span className="text-lg font-semibold text-white/90">
+                <span className="text-sm text-muted-foreground">Jednorázově</span>
+                <span className="text-lg font-semibold text-foreground">
                   {totalOneOff.toLocaleString('cs-CZ')} {offer.currency}
                 </span>
               </div>
             </>
           )}
-          <p className="text-[10px] text-white/30 text-right mt-2">Ceny jsou uvedeny bez DPH</p>
-          <p className="text-[10px] text-white/30 text-right">Měsíční položky fakturujeme v prvním měsíci poměrně ode dne zahájení služby.</p>
+          <p className="text-[10px] text-muted-foreground/50 text-right mt-2">Ceny jsou uvedeny bez DPH</p>
+          <p className="text-[10px] text-muted-foreground/50 text-right">Měsíční položky fakturujeme v prvním měsíci poměrně ode dne zahájení služby.</p>
         </div>
 
 
@@ -1087,7 +1077,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
               Pojďme do toho
             </h2>
-            <p className="mb-8 text-white/50 text-sm max-w-sm mx-auto">
+            <p className="mb-8 text-muted-foreground text-sm max-w-sm mx-auto">
               Společně posuneme váš byznys na další úroveň.
             </p>
             <Button 
@@ -1100,47 +1090,47 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 <ArrowRight className="h-5 w-5 ml-2" />
               </Link>
             </Button>
-            <p className="mt-4 text-xs text-white/30">
+            <p className="mt-4 text-xs text-muted-foreground/50">
               Smlouva do 24 hodin · Bez závazků na minimální dobu
             </p>
           </div>
         </section>
 
         {/* ===== 9. FOOTER ===== */}
-        <footer className="pt-8 mt-16 border-t border-white/[0.06]">
+        <footer className="pt-8 mt-16 border-t border-foreground/[0.06]">
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
               <a href="https://www.socials.cz/pripadove-studie" target="_blank" rel="noopener noreferrer"
-                className="text-white/40 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
+                className="text-muted-foreground/70 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
                 Případové studie <ExternalLink className="h-3 w-3" />
               </a>
               <a href="https://partneri.shoptet.cz/profesionalove/socials-advertising/" target="_blank" rel="noopener noreferrer"
-                className="text-white/40 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
+                className="text-muted-foreground/70 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
                 Recenze klientů <ExternalLink className="h-3 w-3" />
               </a>
               <a href="https://www.socials.cz/o-nas" target="_blank" rel="noopener noreferrer"
-                className="text-white/40 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
+                className="text-muted-foreground/70 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
                 O nás <ExternalLink className="h-3 w-3" />
               </a>
               <a href="https://www.socials.cz/socials-podcast" target="_blank" rel="noopener noreferrer"
-                className="text-white/40 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
+                className="text-muted-foreground/70 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
                 Podcast <ExternalLink className="h-3 w-3" />
               </a>
             </div>
-            <img src={isDark ? socialsLogoDark : socialsLogo} alt="Socials" className="h-5 opacity-30" />
+            <img src={isDark ? socialsLogo : socialsLogoDark} alt="Socials" className="h-5 opacity-30" />
           </div>
         </footer>
       </main>
 
       {/* Sticky CTA for mobile */}
       <div className={cn(
-        "fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t sm:hidden safe-area-bottom",
-        isDark ? "bg-black/95 border-white/[0.06]" : "bg-white/95 border-black/[0.06]"
+        "fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t border-foreground/[0.06] sm:hidden safe-area-bottom",
+        isDark ? "bg-black/95" : "bg-white/95"
       )}>
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="font-bold text-[#94e700]">{(totalMonthly + totalOneOff).toLocaleString('cs-CZ')} {offer.currency}</p>
-            <p className={cn("text-[10px]", isDark ? "text-white/40" : "text-black/40")}>
+            <p className="text-[10px] text-muted-foreground">
               {totalMonthly > 0 ? '/měsíc bez DPH' : 'celkem bez DPH'}
             </p>
           </div>
