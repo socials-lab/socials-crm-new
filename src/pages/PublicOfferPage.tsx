@@ -448,6 +448,50 @@ function OnboardingProcessSection() {
   );
 }
 
+const WHY_US_ITEMS = [
+  {
+    emoji: '💰',
+    title: '30+ mil. Kč měsíčně',
+    description: 'Spravujeme reklamní rozpočty přes 30 milionů Kč měsíčně. Máme zkušenosti s velkými i středními e-shopy a víme, co funguje – a aplikujeme to i na váš business.',
+  },
+  {
+    emoji: '👨‍💻',
+    title: 'Výhradně seniorní specialisté',
+    description: 'Každý náš specialista má 5+ let zkušeností. Žádní junioři. Každý ví, jak z kampaní vytěžit maximum.',
+  },
+  {
+    emoji: '🏅',
+    title: 'Certifikovaní partneři platforem',
+    description: 'Meta, Google, TikTok, Sklik a zlatý Shoptet partner. Máme přímé kontakty, přístup k betám a možnost řešit složitější věci přímo s platformami.',
+  },
+  {
+    emoji: '🤝',
+    title: 'Pečlivý výběr klientů',
+    description: 'Jdeme do spolupráce jen s firmami, u kterých jsme přesvědčeni, že jim dokážeme zlepšit obchodní výsledky díky výkonnostní reklamě.',
+  },
+];
+
+const WHY_US_LINKS = [
+  {
+    emoji: '📊',
+    label: 'Případové studie',
+    description: 'Prohlédněte si reálné dopady na tržby klientů',
+    url: 'https://www.socials.cz/pripadove-studie',
+  },
+  {
+    emoji: '🎙️',
+    label: 'Socials Podcast',
+    description: 'Otevřeně mluvíme o marketingu, výkonu a vedení agentury',
+    url: 'https://www.socials.cz/socials-podcast',
+  },
+  {
+    emoji: '⭐',
+    label: 'Hodnocení na Shoptet Partner Portálu',
+    description: 'Co o nás říkají naši klienti',
+    url: 'https://partneri.shoptet.cz/profesionalove/socials-advertising/',
+  },
+];
+
 function WhyUsSection() {
   return (
     <section className="mb-16 p-6 md:p-8 rounded-2xl border bg-card/50 backdrop-blur-sm">
