@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef, type ReactNode } from 'react';
+import React, { useEffect, useState, useRef, type ReactNode } from 'react';
+import { DEFAULT_OFFER_CONTENT } from '@/hooks/useOfferContent';
 import { useParams, Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
@@ -1011,15 +1012,21 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         </ScrollReveal>
 
         {/* Credibility badges */}
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground/50 font-medium mb-16">
-          <span>Meta Business Partner</span>
-          <span className="text-white/10">·</span>
-          <span>Google Partner</span>
-          <span className="text-white/10">·</span>
-          <span className="text-amber-500/70">Shoptet Zlatý Partner</span>
-          <span className="text-white/10">·</span>
-          <span>30 mil. Kč/měsíc ve správě</span>
-        </div>
+        {(() => {
+          const badgesBlock = DEFAULT_OFFER_CONTENT['credibility_badges'];
+          const items = badgesBlock?.content?.items as string[] | undefined;
+          if (!items || items.length === 0) return null;
+          return (
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-muted-foreground/70 font-medium mb-16">
+              {items.map((item, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <span className="text-white/10">·</span>}
+                  <span>{item}</span>
+                </React.Fragment>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Validity warning */}
         {isExpired && (
