@@ -879,6 +879,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* Onboarding process timeline */}
         <OnboardingProcessSection />
 
+        {/* Why us section */}
+        <WhyUsSection />
 
         {/* Loom video */}
         {offer.loom_url && (
