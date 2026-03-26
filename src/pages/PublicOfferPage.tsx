@@ -158,7 +158,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                       className={cn(
                         "text-[10px] uppercase font-medium tracking-wider",
                         service.selected_tier === 'elite' && "border-amber-500/50 text-amber-400 bg-amber-500/10",
-                        service.selected_tier === 'pro' && "border-[#C8FF00]/50 text-[#C8FF00] bg-[#C8FF00]/10",
+                        service.selected_tier === 'pro' && "border-[#94e700]/50 text-[#94e700] bg-[#94e700]/10",
                         service.selected_tier === 'growth' && "border-emerald-500/50 text-emerald-400 bg-emerald-500/10",
                       )}
                     >
@@ -176,7 +176,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                       className={cn(
                         "text-[10px] uppercase font-medium tracking-wider",
                         service.selected_tier === 'elite' && "border-amber-500/50 text-amber-400 bg-amber-500/10",
-                        service.selected_tier === 'pro' && "border-[#C8FF00]/50 text-[#C8FF00] bg-[#C8FF00]/10",
+                        service.selected_tier === 'pro' && "border-[#94e700]/50 text-[#94e700] bg-[#94e700]/10",
                         service.selected_tier === 'growth' && "border-emerald-500/50 text-emerald-400 bg-emerald-500/10",
                       )}
                     >
@@ -191,7 +191,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <span className="font-bold text-sm text-[#C8FF00]">
+                <span className="font-bold text-sm text-[#94e700]">
                   {service.price.toLocaleString('cs-CZ')} {service.currency}
                 </span>
                 <span className="text-xs text-white/40 ml-1">
@@ -246,9 +246,9 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
               )}
 
               {service.start_timeline && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#C8FF00]/5 border border-[#C8FF00]/10 text-sm">
-                  <Calendar className="h-4 w-4 text-[#C8FF00]" />
-                  <span className="font-medium text-[#C8FF00]">Start: {service.start_timeline}</span>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#94e700]/5 border border-[#94e700]/10 text-sm">
+                  <Calendar className="h-4 w-4 text-[#94e700]" />
+                  <span className="font-medium text-[#94e700]">Start: {service.start_timeline}</span>
                 </div>
               )}
 
@@ -272,7 +272,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
               {hasDetailedSections && (
                 <Collapsible open={showDetailedSections} onOpenChange={setShowDetailedSections}>
                   <CollapsibleTrigger className="w-full">
-                    <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-dashed border-white/10 hover:border-[#C8FF00]/30 hover:bg-[#C8FF00]/5 transition-colors text-sm text-white/50 hover:text-[#C8FF00] cursor-pointer">
+                    <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-dashed border-white/10 hover:border-[#94e700]/30 hover:bg-[#94e700]/5 transition-colors text-sm text-white/50 hover:text-[#94e700] cursor-pointer">
                       <span>{showDetailedSections ? 'Skrýt podrobnosti' : 'Zobrazit podrobný rozpis služby'}</span>
                       <ChevronDown className={cn('h-4 w-4 transition-transform', showDetailedSections && 'rotate-180')} />
                     </div>
@@ -316,13 +316,13 @@ function ServiceStructureExplanation() {
       
       <div className="space-y-4 text-sm">
         <div className="flex items-start gap-3">
-          <Badge className="bg-[#C8FF00]/10 text-[#C8FF00] border-[#C8FF00]/30 shrink-0 mt-0.5 w-[70px] justify-center text-[10px]">Core</Badge>
+          <Badge className="bg-[#94e700]/10 text-[#94e700] border-[#94e700]/30 shrink-0 mt-0.5 w-[70px] justify-center text-[10px]">Core</Badge>
           <div>
             <p className="font-medium text-white/90">Hlavní služby</p>
             <p className="text-white/40 text-xs leading-relaxed mt-0.5">
               Základní pilíře vaší online strategie. Core služby jsou rozděleny do úrovní{' '}
               <span className="font-medium text-emerald-400">GROWTH</span>,{' '}
-              <span className="font-medium text-[#C8FF00]">PRO</span> a{' '}
+              <span className="font-medium text-[#94e700]">PRO</span> a{' '}
               <span className="font-medium text-amber-400">ELITE</span>{' '}
               podle rozsahu správy, výše spravovaného rozpočtu a očekávané náročnosti.
             </p>
@@ -355,7 +355,7 @@ function OnboardingProcessSection() {
 
       <div className="relative">
         {/* Vertical lime line */}
-        <div className="absolute left-[23px] top-8 bottom-8 w-px bg-gradient-to-b from-[#C8FF00]/60 via-[#C8FF00]/20 to-transparent hidden sm:block" />
+        <div className="absolute left-[23px] top-8 bottom-8 w-px bg-gradient-to-b from-[#94e700]/60 via-[#94e700]/20 to-transparent hidden sm:block" />
 
         <div className="space-y-2">
           {ONBOARDING_STEPS.map((step, idx) => (
@@ -363,13 +363,13 @@ function OnboardingProcessSection() {
               key={idx}
               className="group flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-white/[0.06] hover:bg-white/[0.02] transition-all duration-300 cursor-default"
             >
-              <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shrink-0 relative z-10 transition-all duration-300 group-hover:bg-[#C8FF00]/10 group-hover:border-[#C8FF00]/30">
-                <step.icon className="h-5 w-5 text-white/50 group-hover:text-[#C8FF00] transition-colors" />
+              <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shrink-0 relative z-10 transition-all duration-300 group-hover:bg-[#94e700]/10 group-hover:border-[#94e700]/30">
+                <step.icon className="h-5 w-5 text-white/50 group-hover:text-[#94e700] transition-colors" />
               </div>
 
               <div className="flex-1 pb-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-sm text-white/90 group-hover:text-[#C8FF00] transition-colors">{step.title}</h3>
+                  <h3 className="font-semibold text-sm text-white/90 group-hover:text-[#94e700] transition-colors">{step.title}</h3>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] text-white/40 font-medium">
                     {step.timeline}
                   </span>
@@ -449,9 +449,9 @@ function WhyUsSection() {
         {WHY_US_ITEMS.map((item, i) => (
           <div
             key={i}
-            className="group p-5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-[#C8FF00]/20 transition-all duration-300 cursor-default"
+            className="group p-5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-[#94e700]/20 transition-all duration-300 cursor-default"
           >
-            <p className="text-2xl md:text-3xl font-bold text-[#C8FF00] mb-1 group-hover:scale-105 transition-transform origin-left">{item.stat}</p>
+            <p className="text-2xl md:text-3xl font-bold text-[#94e700] mb-1 group-hover:scale-105 transition-transform origin-left">{item.stat}</p>
             <p className="text-xs font-medium text-white/70 uppercase tracking-wider mb-3">{item.label}</p>
             <p className="text-xs text-white/40 leading-relaxed">{item.description}</p>
           </div>
@@ -465,13 +465,13 @@ function WhyUsSection() {
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex-1 flex items-center gap-3 p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-[#C8FF00]/30 hover:bg-[#C8FF00]/5 transition-all duration-300"
+            className="group flex-1 flex items-center gap-3 p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-[#94e700]/30 hover:bg-[#94e700]/5 transition-all duration-300"
           >
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm text-white/90 group-hover:text-[#C8FF00] transition-colors">{link.label}</p>
+              <p className="font-medium text-sm text-white/90 group-hover:text-[#94e700] transition-colors">{link.label}</p>
               <p className="text-xs text-white/40 mt-0.5">{link.description}</p>
             </div>
-            <ExternalLink className="h-4 w-4 text-white/20 group-hover:text-[#C8FF00] shrink-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            <ExternalLink className="h-4 w-4 text-white/20 group-hover:text-[#94e700] shrink-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </a>
         ))}
       </div>
@@ -510,7 +510,7 @@ function ReportingSection() {
           href={DEMO_REPORT_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#C8FF00] text-black font-semibold hover:bg-[#d4ff33] transition-colors text-sm"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#94e700] text-black font-semibold hover:bg-[#a8f01a] transition-colors text-sm"
         >
           Otevřít demo report
           <ExternalLink className="w-4 h-4" />
@@ -567,7 +567,7 @@ function CreativePortfolioSection() {
           <div
             key={i}
             onClick={() => setSelectedItem({ url: item.src, type: item.type })}
-            className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.06] cursor-pointer hover:border-[#C8FF00]/30 hover:shadow-[0_0_30px_-10px_rgba(200,255,0,0.15)] transition-all duration-300"
+            className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.06] cursor-pointer hover:border-[#94e700]/30 hover:shadow-[0_0_30px_-10px_rgba(200,255,0,0.15)] transition-all duration-300"
           >
             {item.type === 'video' ? (
               <>
@@ -581,7 +581,7 @@ function CreativePortfolioSection() {
                 />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
                   <div className="p-2 rounded-full bg-black/60 backdrop-blur-sm">
-                    <Play className="h-4 w-4 text-[#C8FF00] fill-[#C8FF00]" />
+                    <Play className="h-4 w-4 text-[#94e700] fill-[#94e700]" />
                   </div>
                 </div>
               </>
@@ -633,8 +633,8 @@ function ContactSection({ offer }: { offer: PublicOffer }) {
   
   return (
     <div className="flex items-start gap-4 p-5 rounded-xl border border-white/[0.06] bg-white/[0.02]">
-      <div className="w-10 h-10 rounded-full bg-[#C8FF00]/10 flex items-center justify-center shrink-0">
-        <MessageCircle className="h-5 w-5 text-[#C8FF00]" />
+      <div className="w-10 h-10 rounded-full bg-[#94e700]/10 flex items-center justify-center shrink-0">
+        <MessageCircle className="h-5 w-5 text-[#94e700]" />
       </div>
       <div className="flex-1">
         <h3 className="font-semibold text-sm mb-1 text-white/90">
@@ -648,13 +648,13 @@ function ContactSection({ offer }: { offer: PublicOffer }) {
             <p className="text-sm font-medium text-white/90">{offer.owner_name}</p>
           )}
           {offer.owner_email && (
-            <a href={`mailto:${offer.owner_email}`} className="text-sm text-[#C8FF00] hover:underline flex items-center gap-1.5">
+            <a href={`mailto:${offer.owner_email}`} className="text-sm text-[#94e700] hover:underline flex items-center gap-1.5">
               <Mail className="h-3.5 w-3.5" />
               {offer.owner_email}
             </a>
           )}
           {offer.owner_phone && (
-            <a href={`tel:${offer.owner_phone}`} className="text-sm text-[#C8FF00] hover:underline flex items-center gap-1.5">
+            <a href={`tel:${offer.owner_phone}`} className="text-sm text-[#94e700] hover:underline flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5" />
               {offer.owner_phone}
             </a>
@@ -771,12 +771,12 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded-full transition-colors border border-white/[0.06]"
             >
               {copied ? (
-                <><Check className="h-3 w-3 text-[#C8FF00]" /><span>Zkopírováno</span></>
+                <><Check className="h-3 w-3 text-[#94e700]" /><span>Zkopírováno</span></>
               ) : (
                 <><Share2 className="h-3 w-3" /><span>Sdílet</span></>
               )}
             </button>
-            <Button asChild size="sm" className="bg-[#C8FF00] text-black hover:bg-[#d4ff33] font-semibold text-xs px-4 hidden sm:inline-flex">
+            <Button asChild size="sm" className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-semibold text-xs px-4 hidden sm:inline-flex">
               <Link to={onboardingUrl}>
                 Začít spolupráci
                 <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
@@ -796,7 +796,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           </p>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
             Strategická nabídka pro{' '}
-            <span className="text-[#C8FF00]">
+            <span className="text-[#94e700]">
               {offer.website 
                 ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
                 : offer.company_name}
@@ -902,7 +902,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 {coreServices.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <Badge className="bg-[#C8FF00]/10 text-[#C8FF00] border-[#C8FF00]/30 text-[10px]">Core</Badge>
+                      <Badge className="bg-[#94e700]/10 text-[#94e700] border-[#94e700]/30 text-[10px]">Core</Badge>
                       <span className="text-sm font-medium text-white/50">Hlavní služby</span>
                     </div>
                     <div className="space-y-3">
@@ -940,7 +940,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         </section>
 
         {/* Pricing Summary */}
-        <div className="mt-8 p-6 rounded-xl border border-[#C8FF00]/20 bg-[#C8FF00]/5">
+        <div className="mt-8 p-6 rounded-xl border border-[#94e700]/20 bg-[#94e700]/5">
           {totalMonthly > 0 && (() => {
             const discountPercent = offer.monthly_discount_percent || 0;
             const scope = offer.discount_scope || 'core_only';
@@ -963,12 +963,12 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                         <span className="text-base text-white/40 line-through mr-2">
                           {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                         </span>
-                        <span className="text-3xl font-bold text-[#C8FF00]">
+                        <span className="text-3xl font-bold text-[#94e700]">
                           {totalAfterDiscount.toLocaleString('cs-CZ')} {offer.currency}
                         </span>
                       </>
                     ) : (
-                      <span className="text-3xl font-bold text-[#C8FF00]">
+                      <span className="text-3xl font-bold text-[#94e700]">
                         {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                       </span>
                     )}
@@ -1025,7 +1025,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             <Button 
               asChild 
               size="lg" 
-              className="bg-[#C8FF00] text-black hover:bg-[#d4ff33] font-bold px-10 py-6 text-base rounded-xl"
+              className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-bold px-10 py-6 text-base rounded-xl"
             >
               <Link to={onboardingUrl}>
                 Začít spolupráci
@@ -1043,19 +1043,19 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
               <a href="https://www.socials.cz/pripadove-studie" target="_blank" rel="noopener noreferrer"
-                className="text-white/40 hover:text-[#C8FF00] transition-colors inline-flex items-center gap-1">
+                className="text-white/40 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
                 Případové studie <ExternalLink className="h-3 w-3" />
               </a>
               <a href="https://partneri.shoptet.cz/profesionalove/socials-advertising/" target="_blank" rel="noopener noreferrer"
-                className="text-white/40 hover:text-[#C8FF00] transition-colors inline-flex items-center gap-1">
+                className="text-white/40 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
                 Recenze klientů <ExternalLink className="h-3 w-3" />
               </a>
               <a href="https://www.socials.cz/o-nas" target="_blank" rel="noopener noreferrer"
-                className="text-white/40 hover:text-[#C8FF00] transition-colors inline-flex items-center gap-1">
+                className="text-white/40 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
                 O nás <ExternalLink className="h-3 w-3" />
               </a>
               <a href="https://www.socials.cz/socials-podcast" target="_blank" rel="noopener noreferrer"
-                className="text-white/40 hover:text-[#C8FF00] transition-colors inline-flex items-center gap-1">
+                className="text-white/40 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
                 Podcast <ExternalLink className="h-3 w-3" />
               </a>
             </div>
@@ -1068,12 +1068,12 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-black/95 backdrop-blur-md border-t border-white/[0.06] sm:hidden safe-area-bottom">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="font-bold text-[#C8FF00]">{(totalMonthly + totalOneOff).toLocaleString('cs-CZ')} {offer.currency}</p>
+            <p className="font-bold text-[#94e700]">{(totalMonthly + totalOneOff).toLocaleString('cs-CZ')} {offer.currency}</p>
             <p className="text-[10px] text-white/40">
               {totalMonthly > 0 ? '/měsíc bez DPH' : 'celkem bez DPH'}
             </p>
           </div>
-          <Button asChild className="bg-[#C8FF00] text-black hover:bg-[#d4ff33] font-semibold flex-1 max-w-[180px]">
+          <Button asChild className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-semibold flex-1 max-w-[180px]">
             <Link to={onboardingUrl}>
               Začít spolupráci
               <ArrowRight className="h-4 w-4 ml-1" />
