@@ -393,6 +393,21 @@ const WHY_US_ITEMS = [
     description: 'Spravujeme reklamní rozpočty přes 30 milionů Kč měsíčně. Máme zkušenosti s velkými i středními e-shopy.',
   },
   {
+    stat: 'AI-first',
+    label: 'přístup ke správě',
+    description: 'Využíváme AI ve všem — od tvorby grafik na míru, přes analýzu dat, až po optimalizaci kampaní. Díky tomu jsme rychlejší a efektivnější.',
+  },
+  {
+    stat: 'Zisk',
+    label: 'ne jen revenue',
+    description: 'Neřešíme jen revenue a PNO. Díky naší unikátní technologii měříme váš skutečný zisk — contribution margin na úrovni produktu (náhled níže).',
+  },
+  {
+    stat: 'Unikátní',
+    label: 'interní nástroje',
+    description: 'Máme vlastní interní nástroje na správu kampaní, které jsou na trhu zcela unikátní. Nonstop monitoring, grafika na míru a efektivní škálování.',
+  },
+  {
     stat: '5+ let',
     label: 'zkušeností na specialistu',
     description: 'Každý náš specialista má 5+ let zkušeností. Žádní junioři. Každý ví, jak z kampaní vytěžit maximum.',
@@ -401,11 +416,6 @@ const WHY_US_ITEMS = [
     stat: '3×',
     label: 'certifikovaný partner',
     description: 'Meta, Google, TikTok, Sklik a zlatý Shoptet partner. Přímé kontakty a přístup k betám.',
-  },
-  {
-    stat: '100%',
-    label: 'selektivní výběr',
-    description: 'Jdeme do spolupráce jen s firmami, u kterých jsme přesvědčeni, že jim dokážeme zlepšit obchodní výsledky.',
   },
 ];
 
@@ -435,7 +445,7 @@ function WhyUsSection() {
         subtitle="Ne sliby, ale skutečný business dopad. Pečlivě si vybíráme, s kým spolupracujeme."
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
         {WHY_US_ITEMS.map((item, i) => (
           <div
             key={i}
