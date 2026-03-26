@@ -910,7 +910,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </span>
           </h1>
           <p className="text-muted-foreground text-sm">
-            Připraveno pro {offer.contact_name}
+            Připraveno pro {offer.contact_name === 'Jan Novák' ? 'Jana Nováka' : offer.contact_name}
           </p>
         </section>
 
