@@ -404,7 +404,7 @@ const WHY_US_ITEMS = [
   {
     stat: 'Zisk',
     label: 'ne jen revenue',
-    description: 'Neřešíme jen revenue a PNO. Díky naší unikátní technologii měříme váš skutečný zisk — contribution margin na úrovni produktu (náhled níže).',
+    description: 'Neřešíme jen revenue a PNO. Díky naší unikátní technologii měříme váš skutečný zisk na úrovni produktu a contribution margin (náhled níže).',
   },
   {
     stat: 'Unikátní',
