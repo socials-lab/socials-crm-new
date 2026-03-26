@@ -71,6 +71,7 @@ import cl9 from '@/assets/clients/client-9.avif';
 import cl10 from '@/assets/clients/client-10.avif';
 import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
 import { usePublicPortfolio } from '@/hooks/usePortfolioData';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const usePublicPortfolioLocal = usePublicPortfolio;
 
@@ -657,26 +658,32 @@ function ReportingSection() {
 
 function VideoThumbnail({ src, alt, onClick }: { src: string; alt: string; onClick: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isMobile = useIsMobile();
 
   return (
     <div
       className="group relative aspect-square rounded-lg overflow-hidden border border-foreground/[0.06] cursor-pointer hover:border-[#94e700]/30 hover:shadow-[0_0_30px_-10px_rgba(200,255,0,0.15)] transition-all duration-300"
       onClick={onClick}
-      onMouseEnter={() => videoRef.current?.play()}
-      onMouseLeave={() => { const v = videoRef.current; if (v) { v.pause(); v.currentTime = 0; } }}
+      onMouseEnter={() => !isMobile && videoRef.current?.play()}
+      onMouseLeave={() => { if (!isMobile) { const v = videoRef.current; if (v) { v.pause(); v.currentTime = 0; } } }}
     >
-      <video
-        ref={videoRef}
-        src={src}
-        className="w-full h-full object-cover"
-        muted
-        playsInline
-        preload="metadata"
-      />
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
+      {isMobile ? (
+        <div className="w-full h-full bg-gradient-to-br from-foreground/[0.06] to-foreground/[0.02]" />
+      ) : (
+        <video
+          ref={videoRef}
+          src={src}
+          className="w-full h-full object-cover"
+          muted
+          playsInline
+          preload="metadata"
+        />
+      )}
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity gap-1.5">
         <div className="p-2 rounded-full bg-black/60 backdrop-blur-sm">
           <Play className="h-4 w-4 text-[#94e700] fill-[#94e700]" />
         </div>
+        {isMobile && <p className="text-[10px] text-muted-foreground text-center px-2 line-clamp-2">{alt}</p>}
       </div>
     </div>
   );
