@@ -1152,11 +1152,12 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           )}
           
           {(() => {
-            const coreServices = offer.services.filter(s => s.service_type === 'core');
-            const addonServices = offer.services.filter(s => s.service_type === 'addon');
-            const otherServices = offer.services.filter(s => !s.service_type);
+            const coreServices = offer.services.filter(s => s.service_type === 'core' && s.billing_type !== 'one_off');
+            const addonServices = offer.services.filter(s => s.service_type === 'addon' && s.billing_type !== 'one_off');
+            const oneOffServices = offer.services.filter(s => s.billing_type === 'one_off');
+            const otherServices = offer.services.filter(s => !s.service_type && s.billing_type !== 'one_off');
             
-            if (coreServices.length === 0) {
+            if (coreServices.length === 0 && addonServices.length === 0 && oneOffServices.length === 0) {
               return (
                 <div className="space-y-3">
                   {offer.services.map((service, idx) => (
@@ -1200,6 +1201,25 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                     </div>
                     <div className="space-y-4">
                       {addonServices.map((service, idx) => (
+                        <ServiceCard key={service.id || idx} service={service} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {oneOffServices.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-foreground/[0.06]">
+                      <div className="w-8 h-8 rounded-lg bg-foreground/[0.05] flex items-center justify-center">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-foreground">Jednorázové služby</span>
+                        <p className="text-xs text-muted-foreground">Jednorázové projekty a nastavení</p>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      {oneOffServices.map((service, idx) => (
                         <ServiceCard key={service.id || idx} service={service} />
                       ))}
                     </div>
