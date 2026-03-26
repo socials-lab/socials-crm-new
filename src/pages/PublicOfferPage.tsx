@@ -1279,7 +1279,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         </section>
 
         {/* ===== REFERENCE KLIENTŮ ===== */}
-        <section className="mt-16 rounded-2xl bg-gray-900 dark:bg-gray-800 py-10 px-6">
+        <section className="mt-16 rounded-2xl bg-black py-10 px-6">
           <h2 className="text-lg font-semibold text-center mb-2 text-white">Značky, které nám důvěřují</h2>
           <p className="text-sm text-gray-400 text-center mb-8">Pomáháme růst firmám napříč odvětvími</p>
           <div className="grid grid-cols-5 gap-6 items-center justify-items-center">
