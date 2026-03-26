@@ -44,6 +44,10 @@ import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/pub
 import socialsLogoDark from '@/assets/socials-logo-dark.svg';
 import socialsLogo from '@/assets/socials-logo.svg';
 import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
+import { usePublicPortfolio } from '@/hooks/usePortfolioData';
+
+// Alias for use inside the file
+const usePublicPortfolioLocal = usePublicPortfolio;
 
 // Portfolio icon by type
 function getPortfolioIcon(type: PortfolioLink['type']) {
