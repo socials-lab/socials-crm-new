@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { DEFAULT_OFFER_CONTENT } from '@/hooks/useOfferContent';
 import { useParams, Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -766,7 +767,7 @@ function PortfolioGrid({ items, label }: { items: { src: string; alt: string; ty
       </div>
 
       {/* Lightbox */}
-      {selectedIndex !== null && (() => {
+      {selectedIndex !== null && createPortal((() => {
         const current = items[selectedIndex];
         const goNext = (e: React.MouseEvent) => { e.stopPropagation(); setSelectedIndex((selectedIndex + 1) % items.length); };
         const goPrev = (e: React.MouseEvent) => { e.stopPropagation(); setSelectedIndex((selectedIndex - 1 + items.length) % items.length); };
@@ -812,7 +813,7 @@ function PortfolioGrid({ items, label }: { items: { src: string; alt: string; ty
             </div>
           </div>
         );
-      })()}
+      })(), document.body)}
     </div>
   );
 }
