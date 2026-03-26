@@ -38,6 +38,7 @@ import {
   Settings,
   Bug,
   UserSearch,
+  ImageIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { useBugReports } from '@/hooks/useBugReports';
@@ -100,6 +101,7 @@ const navGroups: NavGroup[] = [
       { title: 'Akademie', url: '/academy', page: 'academy', icon: BookOpen },
       { title: 'SOP', url: '/sop', page: 'sop', icon: FileText },
       { title: 'Bug Reports', url: '/bug-reports', page: 'bug-reports', icon: Bug },
+      { title: 'Portfolio', url: '/portfolio', page: 'portfolio', icon: ImageIcon },
     ],
   },
   {
