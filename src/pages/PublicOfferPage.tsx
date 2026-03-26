@@ -701,14 +701,14 @@ function VideoThumbnail({ src, alt, onClick }: { src: string; alt: string; onCli
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovering ? 'opacity-0' : 'opacity-100'}`}
         />
       )}
-      {/* Lazy video - only loads src on hover or when poster fails */}
+      {/* Video - preloads metadata for poster, plays on hover */}
       <video
         ref={videoRef}
-        src={isHovering ? src : undefined}
+        src={src}
         className="w-full h-full object-cover"
         muted
         playsInline
-        preload="none"
+        preload="metadata"
         poster={poster || undefined}
       />
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
