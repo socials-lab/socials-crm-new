@@ -1018,9 +1018,17 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* ===== 6. SLUŽBY + CENÍK ===== */}
         <section>
-          <SectionHeading
-            title={`📋 Služby navržené pro ${offer.website ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : offer.company_name}`}
-          />
+          <div className="rounded-2xl bg-gradient-to-br from-[#94e700]/10 via-[#94e700]/5 to-transparent border border-[#94e700]/20 p-6 md:p-8 mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold">
+              🎯 Nabídka na míru pro{' '}
+              <span className="text-[#94e700]">
+                {offer.website ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : offer.company_name}
+              </span>
+            </h2>
+            <p className="text-muted-foreground mt-2">
+              Na základě analýzy jsme připravili balíček služeb přesně pro vaše potřeby.
+            </p>
+          </div>
           
           {offer.services.some(s => s.service_type === 'core') && offer.services.some(s => s.service_type === 'addon') && (
             <ServiceStructureExplanation />
