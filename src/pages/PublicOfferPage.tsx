@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { DEFAULT_OFFER_CONTENT } from '@/hooks/useOfferContent';
 import { useParams, Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
