@@ -71,6 +71,7 @@ import cl9 from '@/assets/clients/client-9.avif';
 import cl10 from '@/assets/clients/client-10.avif';
 import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
 import { usePublicPortfolio } from '@/hooks/usePortfolioData';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const usePublicPortfolioLocal = usePublicPortfolio;
 
