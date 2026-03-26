@@ -11,7 +11,9 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { 
-  ChevronDown, 
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink, 
   Calendar, 
   FileText, 
@@ -523,7 +525,7 @@ function ReportingSection() {
 }
 
 function CreativePortfolioSection() {
-  const [selectedItem, setSelectedItem] = useState<{ url: string; type: string } | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const { items: portfolioItems, isLoading: portfolioLoading } = usePublicPortfolioLocal();
 
   const FALLBACK_IMAGES = [
@@ -557,6 +559,19 @@ function CreativePortfolioSection() {
     ? portfolioItems.map(i => ({ src: i.file_url, alt: i.title, type: i.type }))
     : FALLBACK_IMAGES;
 
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (selectedIndex === null) return;
+    const total = displayItems.length;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') setSelectedIndex(i => i !== null ? (i + 1) % total : null);
+      if (e.key === 'ArrowLeft') setSelectedIndex(i => i !== null ? (i - 1 + total) % total : null);
+      if (e.key === 'Escape') setSelectedIndex(null);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [selectedIndex, displayItems.length]);
+
   return (
     <section>
       <SectionHeading
@@ -568,7 +583,7 @@ function CreativePortfolioSection() {
         {displayItems.map((item, i) => (
           <div
             key={i}
-            onClick={() => setSelectedItem({ url: item.src, type: item.type })}
+            onClick={() => setSelectedIndex(i)}
             className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.06] cursor-pointer hover:border-[#94e700]/30 hover:shadow-[0_0_30px_-10px_rgba(200,255,0,0.15)] transition-all duration-300"
           >
             {item.type === 'video' ? (
@@ -603,29 +618,57 @@ function CreativePortfolioSection() {
       </div>
 
       {/* Lightbox */}
-      {selectedItem && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setSelectedItem(null)}
-        >
-          {selectedItem.type === 'video' ? (
-            <video
-              src={selectedItem.url}
-              className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl"
-              controls
-              autoPlay
-              onClick={e => e.stopPropagation()}
-            />
-          ) : (
-            <img
-              src={selectedItem.url}
-              alt="Portfolio detail"
-              className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain"
-            />
-          )}
-          <p className="absolute bottom-6 text-xs text-white/40">Klikněte kamkoliv pro zavření</p>
-        </div>
-      )}
+      {selectedIndex !== null && (() => {
+        const current = displayItems[selectedIndex];
+        const goNext = (e: React.MouseEvent) => { e.stopPropagation(); setSelectedIndex((selectedIndex + 1) % displayItems.length); };
+        const goPrev = (e: React.MouseEvent) => { e.stopPropagation(); setSelectedIndex((selectedIndex - 1 + displayItems.length) % displayItems.length); };
+        return (
+          <div
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+            onClick={() => setSelectedIndex(null)}
+          >
+            {/* Left arrow */}
+            <button
+              onClick={goPrev}
+              className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors backdrop-blur-sm"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+
+            {/* Content */}
+            {current.type === 'video' ? (
+              <video
+                src={current.src}
+                className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl"
+                controls
+                autoPlay
+                onClick={e => e.stopPropagation()}
+              />
+            ) : (
+              <img
+                src={current.src}
+                alt={current.alt}
+                className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain"
+                onClick={e => e.stopPropagation()}
+              />
+            )}
+
+            {/* Right arrow */}
+            <button
+              onClick={goNext}
+              className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors backdrop-blur-sm"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+
+            {/* Bottom info */}
+            <div className="absolute bottom-6 flex flex-col items-center gap-2">
+              <p className="text-sm font-medium text-white/80">{current.alt}</p>
+              <p className="text-xs text-white/40">{selectedIndex + 1} / {displayItems.length} · Klikněte kamkoliv pro zavření</p>
+            </div>
+          </div>
+        );
+      })()}
     </section>
   );
 }
