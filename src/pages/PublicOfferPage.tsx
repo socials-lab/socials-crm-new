@@ -989,14 +989,19 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             }
             
             return (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {coreServices.length > 0 && (
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Badge className="bg-[#94e700]/10 text-[#94e700] border-[#94e700]/30 text-[10px]">Core</Badge>
-                      <span className="text-sm font-medium text-muted-foreground">Hlavní služby</span>
+                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-foreground/[0.06]">
+                      <div className="w-8 h-8 rounded-lg bg-[#94e700]/10 flex items-center justify-center">
+                        <Star className="h-4 w-4 text-[#94e700]" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-foreground">Hlavní služby</span>
+                        <p className="text-xs text-muted-foreground">Klíčové služby pro růst vašeho byznysu</p>
+                      </div>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {coreServices.map((service, idx) => (
                         <ServiceCard key={service.id || idx} service={service} />
                       ))}
@@ -1006,11 +1011,16 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 
                 {addonServices.length > 0 && (
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Badge variant="outline" className="text-[10px] border-foreground/20 text-muted-foreground">Doplněk</Badge>
-                      <span className="text-sm font-medium text-muted-foreground">Doplňkové služby</span>
+                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-foreground/[0.06]">
+                      <div className="w-8 h-8 rounded-lg bg-foreground/[0.05] flex items-center justify-center">
+                        <Plus className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-foreground">Doplňkové služby</span>
+                        <p className="text-xs text-muted-foreground">Rozšíření pro maximální výkon</p>
+                      </div>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {addonServices.map((service, idx) => (
                         <ServiceCard key={service.id || idx} service={service} />
                       ))}
@@ -1019,7 +1029,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 )}
                 
                 {otherServices.length > 0 && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {otherServices.map((service, idx) => (
                       <ServiceCard key={service.id || idx} service={service} />
                     ))}
