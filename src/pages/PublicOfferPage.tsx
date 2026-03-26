@@ -114,25 +114,52 @@ function getServiceEmoji(serviceName: string): string {
   return '✨';
 }
 
-// Process steps for "How it works" section - compact version
-const PROCESS_STEPS = [
+// Onboarding process steps
+const ONBOARDING_STEPS = [
   {
-    number: 1,
-    icon: ClipboardList,
-    title: 'Vyplníte formulář',
-    description: '5 minut',
-  },
-  {
-    number: 2,
     icon: FileSignature,
-    title: 'Smlouva k podpisu',
-    description: 'Do 24 hodin',
+    title: 'Digitální podpis smlouvy',
+    description: 'Pošleme vám k digitálnímu podpisu smlouvu o propagaci a zpracování osobních údajů přes nástroj DigiSign.',
+    timeline: 'Do 24 hodin',
+    color: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-100 dark:bg-blue-900/40',
+    borderColor: 'border-blue-200 dark:border-blue-800',
   },
   {
-    number: 3,
+    icon: ClipboardList,
+    title: 'Přístupy do Freela',
+    description: 'Pošleme vám přístupy do Freela – nástroje na projektové řízení, kde budete mít přehled o všem, co děláme.',
+    timeline: 'Do 24 h od podpisu',
+    color: 'text-violet-600 dark:text-violet-400',
+    bg: 'bg-violet-100 dark:bg-violet-900/40',
+    borderColor: 'border-violet-200 dark:border-violet-800',
+  },
+  {
     icon: Phone,
-    title: 'Onboarding a start',
-    description: 'Jdeme na to',
+    title: 'Onboardingový telefonát',
+    description: 'Spojí se s vámi projektový manažer ohledně onboardingového telefonátu, kde si projdete všechny potřebné další kroky.',
+    timeline: 'Do 24 hodin',
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-100 dark:bg-emerald-900/40',
+    borderColor: 'border-emerald-200 dark:border-emerald-800',
+  },
+  {
+    icon: UserCheck,
+    title: 'Navýšení přístupů',
+    description: 'Navýšíte nám přístupy do reklamních platforem – zašleme vám přesné instrukce s potřebnými úrovněmi oprávnění.',
+    timeline: 'Cca 24 hodin',
+    color: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-100 dark:bg-amber-900/40',
+    borderColor: 'border-amber-200 dark:border-amber-800',
+  },
+  {
+    icon: Rocket,
+    title: 'Pustíme se do práce!',
+    description: 'Začneme s optimalizací stávajících kampaní a následně spustíme vlastní strategie šité na míru vašemu byznysu.',
+    timeline: 'Let\'s go 🚀',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
+    borderColor: 'border-primary/20',
   },
 ];
 
@@ -371,27 +398,47 @@ function ServiceStructureExplanation() {
   );
 }
 
-function NextStepsSection() {
+function OnboardingProcessSection() {
   return (
     <section className="mb-10">
-      <p className="text-xs text-muted-foreground text-center mb-3">Jak to probíhá?</p>
-      
-      {/* Compact horizontal timeline */}
-      <div className="flex items-center justify-between gap-2 px-2">
-        {PROCESS_STEPS.map((step, idx) => (
-          <div key={idx} className="flex items-center gap-2 flex-1">
-            <div className="flex flex-col items-center text-center flex-1">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center mb-1">
-                <step.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+      <h2 className="text-base font-semibold mb-2 text-center">
+        🤝 Jak bude vypadat začátek spolupráce
+      </h2>
+      <p className="text-sm text-muted-foreground text-center mb-6">
+        Celý proces zvládneme obvykle do 48 hodin od vašeho rozhodnutí.
+      </p>
+
+      <div className="relative">
+        {/* Vertical line */}
+        <div className="absolute left-[23px] top-6 bottom-6 w-px bg-border hidden sm:block" />
+
+        <div className="space-y-4">
+          {ONBOARDING_STEPS.map((step, idx) => (
+            <div key={idx} className="flex gap-4 items-start">
+              {/* Icon circle */}
+              <div className={cn(
+                "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 relative z-10 border",
+                step.bg,
+                step.borderColor,
+              )}>
+                <step.icon className={cn("h-5 w-5", step.color)} />
               </div>
-              <p className="text-xs font-medium leading-tight">{step.title}</p>
-              <p className="text-[10px] text-muted-foreground">{step.description}</p>
+
+              {/* Content */}
+              <div className="flex-1 pb-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-semibold text-sm">{step.title}</h3>
+                  <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 font-normal">
+                    {step.timeline}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">
+                  {step.description}
+                </p>
+              </div>
             </div>
-            {idx < PROCESS_STEPS.length - 1 && (
-              <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0 hidden sm:block" />
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -828,8 +875,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           </div>
         </section>
 
-        {/* How it works - Compact */}
-        <NextStepsSection />
+        {/* Onboarding process timeline */}
+        <OnboardingProcessSection />
 
 
         {/* Loom video */}
