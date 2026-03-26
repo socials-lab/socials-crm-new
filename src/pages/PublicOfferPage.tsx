@@ -611,7 +611,7 @@ function WhyUsSection() {
 }
 
 function ReportingSection() {
-  const DEMO_REPORT_URL = 'https://68bb7487-e1f5-44d2-a8a4-9044e8cf5438.lovableproject.com/shared-report/376158d883246f2ecfec54891d03e0a3c0ae4090e0c5dda9';
+  const DEMO_REPORT_URL = 'https://id-preview--68bb7487-e1f5-44d2-a8a4-9044e8cf5438.lovable.app/shared-report/376158d883246f2ecfec54891d03e0a3c0ae4090e0c5dda9';
   
   return (
     <section>
