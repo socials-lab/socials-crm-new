@@ -1272,11 +1272,6 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         <SectionDivider />
 
-        {/* ===== 7. ONBOARDING ===== */}
-        <ScrollReveal><OnboardingProcessSection /></ScrollReveal>
-
-        <SectionDivider />
-
         {/* ===== CO ZÍSKÁTE NAVÍC ===== */}
         <ScrollReveal>
           <section className="space-y-6">
@@ -1328,6 +1323,11 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </div>
           </section>
         </ScrollReveal>
+
+        <SectionDivider />
+
+        {/* ===== 7. ONBOARDING ===== */}
+        <ScrollReveal><OnboardingProcessSection /></ScrollReveal>
 
         <SectionDivider />
 
