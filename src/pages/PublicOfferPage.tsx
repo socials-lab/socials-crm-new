@@ -528,18 +528,6 @@ function CreativePortfolioSection() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const { items: portfolioItems, isLoading: portfolioLoading } = usePublicPortfolioLocal();
 
-  // Keyboard navigation
-  useEffect(() => {
-    if (selectedIndex === null) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') setSelectedIndex(i => i !== null ? (i + 1) % displayItems.length : null);
-      if (e.key === 'ArrowLeft') setSelectedIndex(i => i !== null ? (i - 1 + displayItems.length) % displayItems.length : null);
-      if (e.key === 'Escape') setSelectedIndex(null);
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [selectedIndex]);
-
   const FALLBACK_IMAGES = [
     { src: '/images/portfolio/banner1.jpg', alt: 'Teen Wear – kreativní banner', type: 'image' as const },
     { src: '/images/portfolio/doprava_zdarma1.png', alt: 'Super Zoo – doprava zdarma', type: 'image' as const },
