@@ -1206,7 +1206,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
       {/* Sticky CTA for mobile */}
       <div className={cn(
-        "fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t border-foreground/[0.06] sm:hidden safe-area-bottom",
+        "fixed bottom-0 left-0 right-0 p-3 pb-6 backdrop-blur-md border-t border-foreground/[0.06] sm:hidden safe-area-bottom",
         isDark ? "bg-black/95" : "bg-white/95"
       )}>
         <div className="flex justify-center">
