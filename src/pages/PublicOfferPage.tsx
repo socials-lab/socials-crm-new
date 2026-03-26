@@ -550,25 +550,31 @@ function WhyUsSection() {
   );
 }
 
-const PORTFOLIO_IMAGES = [
-  { src: '/images/portfolio/banner1.jpg', alt: 'Teen Wear – kreativní banner' },
-  { src: '/images/portfolio/doprava_zdarma1.png', alt: 'Super Zoo – doprava zdarma' },
-  { src: '/images/portfolio/sleepking.jpg', alt: 'SleepKing – produktová reklama' },
-  { src: '/images/portfolio/puella.png', alt: 'Puella – vánoční kampaň' },
-  { src: '/images/portfolio/cyber_monday.png', alt: 'Puella – Cyber Monday' },
-  { src: '/images/portfolio/onlinemedical.jpg', alt: 'Online Medical – longevity' },
-  { src: '/images/portfolio/nutworld.png', alt: 'Nut World – prémiové kešu' },
-  { src: '/images/portfolio/naturapura.jpg', alt: 'Pontina – Essentials set' },
-  { src: '/images/portfolio/halloween.png', alt: 'Natima – Halloween kampaň' },
-  { src: '/images/portfolio/magnesium.png', alt: 'Natima – Magnesium duo' },
-  { src: '/images/portfolio/cbdway.jpg', alt: 'CBDway – Tutti Frutti medvídci' },
-  { src: '/images/portfolio/dmania.jpg', alt: 'Dmania – listopadová sleva' },
-  { src: '/images/portfolio/k2moto.png', alt: 'K2 Moto – airbagová vesta' },
-  { src: '/images/portfolio/beewood.png', alt: 'Beewood – dřevěné kryty' },
-];
-
 function CreativePortfolioSection() {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ url: string; type: string } | null>(null);
+  const { items: portfolioItems, isLoading: portfolioLoading } = usePublicPortfolioLocal();
+
+  // Fallback to static images if DB is empty
+  const FALLBACK_IMAGES = [
+    { src: '/images/portfolio/banner1.jpg', alt: 'Teen Wear – kreativní banner', type: 'image' as const },
+    { src: '/images/portfolio/doprava_zdarma1.png', alt: 'Super Zoo – doprava zdarma', type: 'image' as const },
+    { src: '/images/portfolio/sleepking.jpg', alt: 'SleepKing – produktová reklama', type: 'image' as const },
+    { src: '/images/portfolio/puella.png', alt: 'Puella – vánoční kampaň', type: 'image' as const },
+    { src: '/images/portfolio/cyber_monday.png', alt: 'Puella – Cyber Monday', type: 'image' as const },
+    { src: '/images/portfolio/onlinemedical.jpg', alt: 'Online Medical – longevity', type: 'image' as const },
+    { src: '/images/portfolio/nutworld.png', alt: 'Nut World – prémiové kešu', type: 'image' as const },
+    { src: '/images/portfolio/naturapura.jpg', alt: 'Pontina – Essentials set', type: 'image' as const },
+    { src: '/images/portfolio/halloween.png', alt: 'Natima – Halloween kampaň', type: 'image' as const },
+    { src: '/images/portfolio/magnesium.png', alt: 'Natima – Magnesium duo', type: 'image' as const },
+    { src: '/images/portfolio/cbdway.jpg', alt: 'CBDway – Tutti Frutti medvídci', type: 'image' as const },
+    { src: '/images/portfolio/dmania.jpg', alt: 'Dmania – listopadová sleva', type: 'image' as const },
+    { src: '/images/portfolio/k2moto.png', alt: 'K2 Moto – airbagová vesta', type: 'image' as const },
+    { src: '/images/portfolio/beewood.png', alt: 'Beewood – dřevěné kryty', type: 'image' as const },
+  ];
+
+  const displayItems = portfolioItems.length > 0
+    ? portfolioItems.map(i => ({ src: i.file_url, alt: i.title, type: i.type }))
+    : FALLBACK_IMAGES;
 
   return (
     <section className="mb-16 p-6 md:p-8 rounded-2xl border bg-card/50 backdrop-blur-sm">
@@ -582,38 +588,66 @@ function CreativePortfolioSection() {
         Díky <span className="font-semibold text-foreground">AI nástrojům</span> od vás nepotřebujeme žádné podklady navíc — stačí fotka produktu na bílém pozadí a z toho vytvoříme kompletní kreativní bannery i videa.
       </p>
 
-      {/* Image grid */}
+      {/* Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {PORTFOLIO_IMAGES.map((img, i) => (
+        {displayItems.map((item, i) => (
           <div
             key={i}
-            onClick={() => setSelectedImage(img.src)}
+            onClick={() => setSelectedItem({ url: item.src, type: item.type })}
             className="group relative aspect-square rounded-xl overflow-hidden border bg-muted/30 cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300"
           >
-            <img
-              src={img.src}
-              alt={img.alt}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              loading="lazy"
-            />
+            {item.type === 'video' ? (
+              <>
+                <video
+                  src={item.src}
+                  className="w-full h-full object-cover"
+                  muted
+                  preload="metadata"
+                  onMouseEnter={e => (e.target as HTMLVideoElement).play()}
+                  onMouseLeave={e => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
+                  <div className="p-2.5 rounded-full bg-background/80 backdrop-blur-sm">
+                    <Play className="h-5 w-5 text-primary fill-primary" />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <img
+                src={item.src}
+                alt={item.alt}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                loading="lazy"
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-              <p className="text-xs font-medium text-foreground">{img.alt}</p>
+              <p className="text-xs font-medium text-foreground">{item.alt}</p>
             </div>
           </div>
         ))}
       </div>
 
       {/* Lightbox */}
-      {selectedImage && (
+      {selectedItem && (
         <div
           className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setSelectedImage(null)}
+          onClick={() => setSelectedItem(null)}
         >
-          <img
-            src={selectedImage}
-            alt="Portfolio detail"
-            className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain"
-          />
+          {selectedItem.type === 'video' ? (
+            <video
+              src={selectedItem.url}
+              className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl"
+              controls
+              autoPlay
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={selectedItem.url}
+              alt="Portfolio detail"
+              className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain"
+            />
+          )}
           <p className="absolute bottom-6 text-xs text-muted-foreground">Klikněte kamkoliv pro zavření</p>
         </div>
       )}
