@@ -338,7 +338,7 @@ export default function OfferContentEditor() {
   if (isLoading) {
     return (
       <div className="p-6">
-        <PageHeader title="📝 Editor nabídky" subtitle="Správa fixních textů veřejné nabídky" />
+        <PageHeader title="📝 Editor nabídky" description="Správa fixních textů veřejné nabídky" />
         <div className="animate-pulse space-y-4 mt-6">
           <div className="h-10 bg-muted rounded" />
           <div className="h-64 bg-muted rounded" />
@@ -351,7 +351,7 @@ export default function OfferContentEditor() {
     <div className="p-6 space-y-6 animate-fade-in">
       <PageHeader 
         title="📝 Editor nabídky" 
-        subtitle="Upravte fixní texty, které se zobrazují na veřejné stránce nabídky"
+        description="Upravte fixní texty, které se zobrazují na veřejné stránce nabídky"
       />
 
       <div className="flex gap-2 flex-wrap mb-2">
