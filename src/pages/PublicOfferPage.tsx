@@ -1028,12 +1028,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <p className="text-[10px] text-white/30 text-right">Měsíční položky fakturujeme v prvním měsíci poměrně ode dne zahájení služby.</p>
         </div>
 
-        <SectionDivider />
 
-        {/* ===== 6. REPORTING ===== */}
-        <ReportingSection />
 
-        <SectionDivider />
 
         {/* ===== 7. ONBOARDING ===== */}
         <OnboardingProcessSection />
