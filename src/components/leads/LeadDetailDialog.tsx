@@ -388,328 +388,182 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
             </div>
           </div>
 
-          {/* 2-column layout */}
-          <div className="flex-1 flex min-h-0">
-            {/* Left column: Flow + Info */}
-            <ScrollArea className="flex-1 border-r">
-              <div className="p-6 space-y-6">
-                {/* Stage selector */}
-                <div className="flex items-center gap-3">
-                  <label className="text-xs text-muted-foreground whitespace-nowrap">Stav:</label>
-                  <Select value={lead.stage} onValueChange={handleStageChange}>
-                    <SelectTrigger className="h-8 w-auto">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(STAGE_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select 
-                    value={lead.owner_id} 
-                    onValueChange={(id) => {
-                      updateLead(lead.id, { owner_id: id });
-                      toast.success('Majitel leadu byl změněn');
-                    }}
-                  >
-                    <SelectTrigger className="h-8 w-auto">
-                      <SelectValue placeholder="Odpovědná osoba" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background">
-                      {colleagues.filter(c => c.status === 'active').map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Single scrollable content area */}
+          <ScrollArea className="flex-1">
+            <div className="p-6 space-y-5">
 
-                {/* Flow stepper */}
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-3">Proces</h4>
-                  <LeadFlowStepper
-                    lead={lead}
-                    onSendMeetingRequest={() => setIsMeetingRequestOpen(true)}
-                    onRequestAccess={() => setIsRequestAccessOpen(true)}
-                    onMarkAccessReceived={() => {
-                      updateLead(lead.id, { 
-                        access_received_at: new Date().toISOString(),
-                        stage: 'access_received' as LeadStage 
-                      });
-                      toast.success('🔑 Přístupy byly přijaty!');
-                    }}
-                    onAddService={() => setIsAddServiceOpen(true)}
-                    onCreateOffer={() => setIsCreateOfferOpen(true)}
-                    onSendOffer={() => setIsSendOfferOpen(true)}
-                    onSendOnboarding={() => setIsOnboardingFormOpen(true)}
-                    onMarkContractSent={() => {
-                      updateLead(lead.id, { contract_sent_at: new Date().toISOString() });
-                      toast.success('✉️ Smlouva byla označena jako odeslaná');
-                    }}
-                    onMarkContractSigned={() => {
-                      updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
-                      toast.success('✅ Smlouva byla podepsána!');
-                    }}
-                    onConvert={handleConvertClick}
-                    onRemoveService={(index) => {
-                      const currentServices = [...(lead.potential_services || [])];
-                      currentServices.splice(index, 1);
-                      const newEstimatedPrice = currentServices.reduce((sum, s) => sum + s.price, 0);
-                      updateLead(lead.id, {
-                        potential_services: currentServices,
-                        estimated_price: newEstimatedPrice,
-                      });
-                      toast.success('Služba byla odebrána');
-                    }}
-                  />
-                </div>
+              {/* === TOP: Key Info in 2-column grid === */}
+              <div className="grid grid-cols-2 gap-5">
 
-                <Separator />
-
-                {/* Collapsible: Company Info */}
-                <Collapsible defaultOpen={isNewLead}>
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Firemní údaje</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-6 pt-3">
-                    <div className="space-y-2 text-sm">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <span className="text-muted-foreground text-xs">IČO</span>
-                          <div className="flex items-center gap-2">
-                            <InlineEditField
-                              value={lead.ico}
-                              onSave={async (v) => {
-                                const cleanIco = v.replace(/\s/g, '');
-                                if (cleanIco.length === 8 && /^\d{8}$/.test(cleanIco)) {
-                                  // If IČO already exists and is different, ask for confirmation
-                                  if (lead.ico && lead.ico !== v && lead.ico.replace(/\s/g, '') !== cleanIco) {
-                                    setPendingIcoChange(v);
-                                    return;
-                                  }
-                                  // First time or same IČO - fetch ARES directly
-                                  setIsLoadingAres(true);
-                                  const data = await fetchAresData(cleanIco);
-                                  const updates: Partial<Lead> = { ico: v };
-                                  if (data) {
-                                    if (data.street) updates.billing_street = data.street;
-                                    if (data.city) updates.billing_city = data.city;
-                                    if (data.zip) updates.billing_zip = data.zip;
-                                    if (data.companyName && !lead.company_name) updates.company_name = data.companyName;
-                                    if (data.dic) updates.dic = data.dic;
-                                    if (data.legalForm) (updates as any).legal_form = data.legalForm;
-                                    if (data.foundedDate) (updates as any).founded_date = data.foundedDate;
-                                    if (data.nace) (updates as any).ares_nace = data.nace;
-                                    if (data.directors?.length) (updates as any).directors = data.directors;
-                                    if (data.spisovaZnacka) updates.court_registration = data.spisovaZnacka;
-                                  }
-                                  updateLead(lead.id, updates);
-                                  if (data) {
-                                    toast.success('IČO uloženo, údaje doplněny z ARES');
-                                  } else {
-                                    toast.error('IČO uloženo, ale subjekt nebyl nalezen v ARES');
-                                  }
-                                  setIsLoadingAres(false);
-                                } else {
-                                  updateLead(lead.id, { ico: v });
-                                  toast.success('IČO uloženo');
-                                }
-                              }}
-                              placeholder="Zadat IČO"
-                              displayClassName="font-medium"
-                            />
-                            {isLoadingAres && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                            {lead.ico && (
-                              <a
-                                href={`https://www.hlidacstatu.cz/subjekt/${lead.ico}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                Hlídač státu
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">DIČ</span>
+                {/* Company Info */}
+                <div className="space-y-2 text-sm">
+                  <h4 className="font-medium text-xs flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Firma
+                  </h4>
+                  <div className="p-3 rounded-lg border bg-card space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-muted-foreground text-xs">IČO</span>
+                        <div className="flex items-center gap-2">
                           <InlineEditField
-                            value={lead.dic}
-                            onSave={(v) => { updateLead(lead.id, { dic: v }); toast.success('Uloženo'); }}
-                            placeholder="Zadat DIČ"
+                            value={lead.ico}
+                            onSave={async (v) => {
+                              const cleanIco = v.replace(/\s/g, '');
+                              if (cleanIco.length === 8 && /^\d{8}$/.test(cleanIco)) {
+                                if (lead.ico && lead.ico !== v && lead.ico.replace(/\s/g, '') !== cleanIco) {
+                                  setPendingIcoChange(v);
+                                  return;
+                                }
+                                setIsLoadingAres(true);
+                                const data = await fetchAresData(cleanIco);
+                                const updates: Partial<Lead> = { ico: v };
+                                if (data) {
+                                  if (data.street) updates.billing_street = data.street;
+                                  if (data.city) updates.billing_city = data.city;
+                                  if (data.zip) updates.billing_zip = data.zip;
+                                  if (data.companyName && !lead.company_name) updates.company_name = data.companyName;
+                                  if (data.dic) updates.dic = data.dic;
+                                  if (data.legalForm) (updates as any).legal_form = data.legalForm;
+                                  if (data.foundedDate) (updates as any).founded_date = data.foundedDate;
+                                  if (data.nace) (updates as any).ares_nace = data.nace;
+                                  if (data.directors?.length) (updates as any).directors = data.directors;
+                                  if (data.spisovaZnacka) updates.court_registration = data.spisovaZnacka;
+                                }
+                                updateLead(lead.id, updates);
+                                toast.success(data ? 'IČO uloženo, údaje doplněny z ARES' : 'IČO uloženo, ale subjekt nebyl nalezen v ARES');
+                                setIsLoadingAres(false);
+                              } else {
+                                updateLead(lead.id, { ico: v });
+                                toast.success('IČO uloženo');
+                              }
+                            }}
+                            placeholder="Zadat IČO"
                             displayClassName="font-medium"
                           />
+                          {isLoadingAres && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                          {lead.ico && (
+                            <a href={`https://www.hlidacstatu.cz/subjekt/${lead.ico}`} target="_blank" rel="noopener noreferrer"
+                              className="text-primary hover:underline inline-flex items-center gap-1 text-xs">
+                              <ExternalLink className="h-3 w-3" /> Hlídač
+                            </a>
+                          )}
                         </div>
                       </div>
-                      {/* VAT Payer Reliability Badge */}
-                      {lead.dic && (
-                        <div className="mt-1">
-                          {isLoadingVat ? (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              Ověřuji spolehlivost plátce DPH…
-                            </div>
-                          ) : vatData?.vatStatus === 'reliable' || lead.vat_payer_status === 'reliable' ? (
-                            <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
-                              <ShieldCheck className="h-3 w-3 mr-1" />
-                              Spolehlivý plátce DPH
-                            </Badge>
-                          ) : vatData?.vatStatus === 'unreliable' || lead.vat_payer_status === 'unreliable' ? (
-                            <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive font-medium flex items-center gap-2">
-                              <ShieldAlert className="h-4 w-4" />
-                              ⚠️ NESPOLEHLIVÝ PLÁTCE DPH — Ručení příjemce za nezaplacenou daň!
-                            </div>
-                          ) : vatData?.vatStatus === 'not_found' || lead.vat_payer_status === 'not_found' ? (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <ShieldX className="h-3 w-3" />
-                              Není plátce DPH
-                            </span>
-                          ) : null}
-                        </div>
-                      )}
-                      {lead.legal_form && (
-                        <p className="text-muted-foreground">Právní forma: <span className="font-medium text-foreground">{lead.legal_form}</span></p>
-                      )}
-                      {lead.founded_date && (
-                        <p className="text-muted-foreground">Datum vzniku: <span className="font-medium text-foreground">{new Date(lead.founded_date).toLocaleDateString('cs-CZ')}</span></p>
-                      )}
-                      {lead.ares_nace && (
-                        <p className="text-muted-foreground">CZ-NACE: <span className="font-medium text-foreground">{lead.ares_nace}</span></p>
-                      )}
-                      {lead.court_registration && (
-                        <p className="text-muted-foreground flex items-center gap-1.5">
-                          <Scale className="h-3.5 w-3.5" />
-                          Spisová značka: <span className="font-medium text-foreground">{lead.court_registration}</span>
-                        </p>
-                      )}
-                      {lead.directors && lead.directors.length > 0 && (
-                        <div>
-                          <span className="text-muted-foreground text-xs">Jednatelé / společníci</span>
-                          <div className="flex flex-wrap gap-1.5 mt-1">
-                            {lead.directors.map((d, i) => {
-                              const dir = typeof d === 'string' ? { name: d, role: 'jednatel', ownership_percent: null } : d;
-                              const isTopOwner = i === 0 && dir.ownership_percent !== null && dir.ownership_percent > 0;
-                              const label = dir.ownership_percent !== null
-                                ? `${dir.name} (${dir.role}, ${dir.ownership_percent}%)`
-                                : `${dir.name} (${dir.role})`;
-                              return (
-                                <Badge 
-                                  key={i} 
-                                  variant={isTopOwner ? "default" : "secondary"} 
-                                  className={cn("text-xs", isTopOwner && "bg-amber-500/90 hover:bg-amber-500 text-white border-amber-600")}
-                                >
-                                  {isTopOwner && '👑 '}{label}
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
                       <div>
-                        <span className="text-muted-foreground text-xs">Web</span>
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4 text-muted-foreground" />
-                          <InlineEditField
-                            value={lead.website}
-                            onSave={(v) => { updateLead(lead.id, { website: v }); toast.success('Uloženo'); }}
-                            type="url"
-                            placeholder="Zadat web"
-                          />
+                        <span className="text-muted-foreground text-xs">DIČ</span>
+                        <InlineEditField
+                          value={lead.dic}
+                          onSave={(v) => { updateLead(lead.id, { dic: v }); toast.success('Uloženo'); }}
+                          placeholder="Zadat DIČ"
+                          displayClassName="font-medium"
+                        />
+                      </div>
+                    </div>
+                    {/* VAT Badge */}
+                    {lead.dic && (
+                      <div>
+                        {isLoadingVat ? (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" /> Ověřuji DPH…
+                          </div>
+                        ) : vatData?.vatStatus === 'reliable' || lead.vat_payer_status === 'reliable' ? (
+                          <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
+                            <ShieldCheck className="h-3 w-3 mr-1" /> Spolehlivý plátce DPH
+                          </Badge>
+                        ) : vatData?.vatStatus === 'unreliable' || lead.vat_payer_status === 'unreliable' ? (
+                          <div className="rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-xs text-destructive font-medium flex items-center gap-1">
+                            <ShieldAlert className="h-3 w-3" /> NESPOLEHLIVÝ PLÁTCE DPH
+                          </div>
+                        ) : vatData?.vatStatus === 'not_found' || lead.vat_payer_status === 'not_found' ? (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <ShieldX className="h-3 w-3" /> Není plátce DPH
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-muted-foreground text-xs">Web</span>
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        <InlineEditField
+                          value={lead.website}
+                          onSave={(v) => { updateLead(lead.id, { website: v }); toast.success('Uloženo'); }}
+                          type="url"
+                          placeholder="Zadat web"
+                        />
+                      </div>
+                    </div>
+                    {lead.legal_form && (
+                      <p className="text-xs text-muted-foreground">Právní forma: <span className="font-medium text-foreground">{lead.legal_form}</span></p>
+                    )}
+                    {lead.directors && lead.directors.length > 0 && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">Jednatelé</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {lead.directors.map((d, i) => {
+                            const dir = typeof d === 'string' ? { name: d, role: 'jednatel', ownership_percent: null } : d;
+                            const isTopOwner = i === 0 && dir.ownership_percent !== null && dir.ownership_percent > 0;
+                            const label = dir.ownership_percent !== null
+                              ? `${dir.name} (${dir.ownership_percent}%)`
+                              : dir.name;
+                            return (
+                              <Badge key={i} variant={isTopOwner ? "default" : "secondary"} 
+                                className={cn("text-xs", isTopOwner && "bg-amber-500/90 hover:bg-amber-500 text-white border-amber-600")}>
+                                {isTopOwner && '👑 '}{label}
+                              </Badge>
+                            );
+                          })}
                         </div>
                       </div>
-                      {lead.ico && (
-                        <CompanyFinancials ico={lead.ico} />
-                      )}
-
-                      {/* Address - inline editable */}
-                      <div className="flex items-start gap-2 pt-1">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div className="space-y-1">
-                          <InlineEditField
-                            value={lead.billing_street}
-                            onSave={(v) => { updateLead(lead.id, { billing_street: v }); toast.success('Uloženo'); }}
-                            placeholder="Ulice"
-                            emptyText="Zadat ulici"
-                          />
-                          <div className="flex items-center gap-2">
-                            <InlineEditField
-                              value={lead.billing_zip}
-                              onSave={(v) => { updateLead(lead.id, { billing_zip: v }); toast.success('Uloženo'); }}
-                              placeholder="PSČ"
-                              emptyText="PSČ"
-                            />
-                            <InlineEditField
-                              value={lead.billing_city}
-                              onSave={(v) => { updateLead(lead.id, { billing_city: v }); toast.success('Uloženo'); }}
-                              placeholder="Město"
-                              emptyText="Město"
-                            />
-                          </div>
+                    )}
+                    {/* Address */}
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
+                      <div className="space-y-0.5">
+                        <InlineEditField value={lead.billing_street} onSave={(v) => { updateLead(lead.id, { billing_street: v }); toast.success('Uloženo'); }} placeholder="Ulice" emptyText="Ulice" />
+                        <div className="flex items-center gap-2">
+                          <InlineEditField value={lead.billing_zip} onSave={(v) => { updateLead(lead.id, { billing_zip: v }); toast.success('Uloženo'); }} placeholder="PSČ" emptyText="PSČ" />
+                          <InlineEditField value={lead.billing_city} onSave={(v) => { updateLead(lead.id, { billing_city: v }); toast.success('Uloženo'); }} placeholder="Město" emptyText="Město" />
                         </div>
                       </div>
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                    {lead.ico && <CompanyFinancials ico={lead.ico} />}
+                  </div>
+                </div>
 
-                {/* Collapsible: Contact */}
-                <Collapsible defaultOpen={isNewLead}>
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Kontaktní osoba</span>
-                    <span className="text-xs text-muted-foreground ml-1">{lead.contact_name}</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-6 pt-3">
-                    <div className="space-y-2 text-sm">
+                {/* Contact + Sales Info */}
+                <div className="space-y-4">
+                  {/* Contact */}
+                  <div className="space-y-2 text-sm">
+                    <h4 className="font-medium text-xs flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                      <User className="h-3.5 w-3.5" />
+                      Kontakt
+                    </h4>
+                    <div className="p-3 rounded-lg border bg-card space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <InlineEditField
-                          value={lead.contact_name}
-                          onSave={(v) => { updateLead(lead.id, { contact_name: v }); toast.success('Uloženo'); }}
-                          placeholder="Jméno kontaktu"
-                          displayClassName="font-medium"
-                        />
+                        <InlineEditField value={lead.contact_name} onSave={(v) => { updateLead(lead.id, { contact_name: v }); toast.success('Uloženo'); }} placeholder="Jméno" displayClassName="font-medium" />
                         <span className="text-muted-foreground">–</span>
-                        <InlineEditField
-                          value={lead.contact_position}
-                          onSave={(v) => { updateLead(lead.id, { contact_position: v }); toast.success('Uloženo'); }}
-                          placeholder="Pozice"
-                          emptyText="Zadat pozici"
-                        />
+                        <InlineEditField value={lead.contact_position} onSave={(v) => { updateLead(lead.id, { contact_position: v }); toast.success('Uloženo'); }} placeholder="Pozice" emptyText="Pozice" />
                       </div>
                       <div className="flex items-center gap-2">
                         <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                        <InlineEditField
-                          value={lead.contact_email}
-                          onSave={(v) => { updateLead(lead.id, { contact_email: v }); toast.success('Uloženo'); }}
-                          placeholder="E-mail"
-                          emptyText="Zadat e-mail"
-                        />
+                        <InlineEditField value={lead.contact_email} onSave={(v) => { updateLead(lead.id, { contact_email: v }); toast.success('Uloženo'); }} placeholder="E-mail" emptyText="E-mail" />
                       </div>
                       <div className="flex items-center gap-2">
                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        <InlineEditField
-                          value={lead.contact_phone}
-                          onSave={(v) => { updateLead(lead.id, { contact_phone: v }); toast.success('Uloženo'); }}
-                          placeholder="Telefon"
-                          emptyText="Zadat telefon"
-                        />
+                        <InlineEditField value={lead.contact_phone} onSave={(v) => { updateLead(lead.id, { contact_phone: v }); toast.success('Uloženo'); }} placeholder="Telefon" emptyText="Telefon" />
                       </div>
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                  </div>
 
-                {/* Collapsible: Sales info */}
-                <Collapsible defaultOpen={isNewLead}>
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Obchodní info</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-6 pt-3">
-                    <div className="space-y-3 text-sm">
+                  {/* Sales Info */}
+                  <div className="space-y-2 text-sm">
+                    <h4 className="font-medium text-xs flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                      <TrendingUp className="h-3.5 w-3.5" />
+                      Obchod
+                    </h4>
+                    <div className="p-3 rounded-lg border bg-card space-y-2">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <span className="text-xs text-muted-foreground">Zdroj</span>
@@ -725,160 +579,144 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                           <InlineEditField
                             value={lead.probability_percent}
                             onSave={(v) => { updateLead(lead.id, { probability_percent: Number(v) || 0 }); toast.success('Uloženo'); }}
-                            type="number"
-                            suffix="%"
-                            placeholder="0"
-                            displayClassName="font-medium"
+                            type="number" suffix="%" placeholder="0" displayClassName="font-medium"
                           />
                         </div>
                       </div>
                       <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                         <Coins className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Měsíční investice:</span>
+                        <span className="text-muted-foreground text-xs">Ad spend:</span>
                         <InlineEditField
                           value={lead.ad_spend_monthly}
                           onSave={(v) => { updateLead(lead.id, { ad_spend_monthly: Number(v) || 0 }); toast.success('Uloženo'); }}
-                          type="number"
-                          suffix="Kč"
-                          placeholder="0"
-                          displayClassName="font-medium"
-                          emptyText="Zadat"
+                          type="number" suffix="Kč" placeholder="0" displayClassName="font-medium" emptyText="Zadat"
                         />
                       </div>
-                      <div className="p-3 rounded-lg border-l-4 border-primary/50 bg-muted/30">
-                        <span className="text-xs text-muted-foreground block mb-1">Zpráva od klienta:</span>
-                        <InlineEditField
-                          value={lead.client_message}
-                          onSave={(v) => { updateLead(lead.id, { client_message: v }); toast.success('Uloženo'); }}
-                          type="textarea"
-                          placeholder="Zadat zprávu od klienta..."
-                          emptyText="Klikni pro přidání zprávy"
-                        />
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30">
-                        <span className="text-xs text-muted-foreground block mb-1">Shrnutí:</span>
-                        <InlineEditField
-                          value={lead.summary}
-                          onSave={(v) => { updateLead(lead.id, { summary: v }); toast.success('Uloženo'); }}
-                          type="textarea"
-                          placeholder="Zadat shrnutí..."
-                          emptyText="Klikni pro přidání shrnutí"
-                        />
-                      </div>
+                      {lead.client_message && (
+                        <div className="p-2 rounded border-l-2 border-primary/50 bg-muted/30">
+                          <span className="text-xs text-muted-foreground block mb-0.5">Zpráva:</span>
+                          <InlineEditField value={lead.client_message} onSave={(v) => { updateLead(lead.id, { client_message: v }); toast.success('Uloženo'); }} type="textarea" placeholder="Zpráva" emptyText="" />
+                        </div>
+                      )}
+                      {(lead.summary || !lead.client_message) && (
+                        <div className="p-2 rounded bg-muted/30">
+                          <span className="text-xs text-muted-foreground block mb-0.5">Shrnutí:</span>
+                          <InlineEditField value={lead.summary} onSave={(v) => { updateLead(lead.id, { summary: v }); toast.success('Uloženo'); }} type="textarea" placeholder="Shrnutí" emptyText="Přidat shrnutí" />
+                        </div>
+                      )}
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* Enrichment Data */}
-                <LeadEnrichmentSection lead={lead} />
-
-
-                {/* Conversion status */}
-                {lead.converted_to_client_id && (
-                  <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10">
-                    <p className="text-sm text-emerald-700 font-medium">
-                      ✓ Lead byl převeden na zakázku
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {lead.converted_at && new Date(lead.converted_at).toLocaleDateString('cs-CZ')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Meta */}
-                <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>Vytvořeno: {new Date(lead.created_at).toLocaleDateString('cs-CZ')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>Poslední aktivita: {new Date(lead.updated_at).toLocaleDateString('cs-CZ')}</span>
                   </div>
                 </div>
               </div>
-            </ScrollArea>
 
-            {/* Right column: Notes + Collapsible Timeline */}
-            <div className="w-[380px] flex flex-col min-h-0">
-              <ScrollArea className="flex-1">
-                <div className="p-5 space-y-4">
+              {/* Enrichment Data - full width */}
+              <LeadEnrichmentSection lead={lead} />
+
+              {/* Conversion status */}
+              {lead.converted_to_client_id && (
+                <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+                  <p className="text-sm text-emerald-700 font-medium">✓ Lead byl převeden na zakázku</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {lead.converted_at && new Date(lead.converted_at).toLocaleDateString('cs-CZ')}
+                  </p>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* === BOTTOM: Workflow + Notes in 2 columns === */}
+              <div className="grid grid-cols-2 gap-5">
+                {/* Left: Stage + Flow Stepper */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-muted-foreground whitespace-nowrap">Stav:</label>
+                    <Select value={lead.stage} onValueChange={handleStageChange}>
+                      <SelectTrigger className="h-8 w-auto">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(STAGE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select 
+                      value={lead.owner_id} 
+                      onValueChange={(id) => { updateLead(lead.id, { owner_id: id }); toast.success('Majitel leadu byl změněn'); }}
+                    >
+                      <SelectTrigger className="h-8 w-auto">
+                        <SelectValue placeholder="Odpovědná osoba" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background">
+                        {colleagues.filter(c => c.status === 'active').map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <h4 className="text-sm font-medium text-muted-foreground">Proces odbavení</h4>
+                  <LeadFlowStepper
+                    lead={lead}
+                    onSendMeetingRequest={() => setIsMeetingRequestOpen(true)}
+                    onRequestAccess={() => setIsRequestAccessOpen(true)}
+                    onMarkAccessReceived={() => {
+                      updateLead(lead.id, { access_received_at: new Date().toISOString(), stage: 'access_received' as LeadStage });
+                      toast.success('🔑 Přístupy byly přijaty!');
+                    }}
+                    onAddService={() => setIsAddServiceOpen(true)}
+                    onCreateOffer={() => setIsCreateOfferOpen(true)}
+                    onSendOffer={() => setIsSendOfferOpen(true)}
+                    onSendOnboarding={() => setIsOnboardingFormOpen(true)}
+                    onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
+                    onMarkContractSigned={() => { updateLead(lead.id, { contract_signed_at: new Date().toISOString() }); toast.success('✅ Smlouva podepsána!'); }}
+                    onConvert={handleConvertClick}
+                    onRemoveService={(index) => {
+                      const currentServices = [...(lead.potential_services || [])];
+                      currentServices.splice(index, 1);
+                      const newEstimatedPrice = currentServices.reduce((sum, s) => sum + s.price, 0);
+                      updateLead(lead.id, { potential_services: currentServices, estimated_price: newEstimatedPrice });
+                      toast.success('Služba odebrána');
+                    }}
+                  />
+                </div>
+
+                {/* Right: Notes + Timeline */}
+                <div className="space-y-4">
                   {/* Inline note form */}
                   <div className="space-y-2 p-3 rounded-lg border bg-card">
                     <div className="flex gap-1 flex-wrap">
                       {([
                         { type: 'general' as const, icon: <MessageSquare className="h-3 w-3" />, label: 'Poznámka' },
                         { type: 'call' as const, icon: <Phone className="h-3 w-3" />, label: 'Hovor' },
-                        { type: 'email_sent' as const, icon: <Send className="h-3 w-3" />, label: 'Odeslaný e-mail' },
-                        { type: 'email_received' as const, icon: <Mail className="h-3 w-3" />, label: 'Přijatý e-mail' },
+                        { type: 'email_sent' as const, icon: <Send className="h-3 w-3" />, label: 'Odeslaný' },
+                        { type: 'email_received' as const, icon: <Mail className="h-3 w-3" />, label: 'Přijatý' },
                         { type: 'internal' as const, icon: <Lock className="h-3 w-3" />, label: 'Interní' },
                       ]).map(({ type, icon, label }) => (
-                        <Button
-                          key={type}
-                          variant={noteType === type ? 'default' : 'outline'}
-                          size="sm"
-                          className="gap-1 text-xs h-7"
-                          onClick={() => setNoteType(type)}
-                        >
-                          {icon}
-                          {label}
+                        <Button key={type} variant={noteType === type ? 'default' : 'outline'} size="sm" className="gap-1 text-xs h-7" onClick={() => setNoteType(type)}>
+                          {icon} {label}
                         </Button>
                       ))}
                     </div>
                     {noteType === 'call' && (
-                      <Input
-                        type="datetime-local"
-                        value={callDate}
-                        onChange={(e) => setCallDate(e.target.value)}
-                        className="h-8 text-xs"
-                        placeholder="Datum hovoru"
-                      />
+                      <Input type="datetime-local" value={callDate} onChange={(e) => setCallDate(e.target.value)} className="h-8 text-xs" />
                     )}
                     {(noteType === 'email_sent' || noteType === 'email_received') && (
                       <>
-                        <Input
-                          value={emailSubject}
-                          onChange={(e) => setEmailSubject(e.target.value)}
-                          className="h-8 text-xs"
-                          placeholder="Předmět e-mailu"
-                        />
-                        <Input
-                          value={emailRecipients}
-                          onChange={(e) => setEmailRecipients(e.target.value)}
-                          className="h-8 text-xs"
-                          placeholder={noteType === 'email_sent' ? 'Příjemci (oddělte čárkou)' : 'Od koho (e-mail)'}
-                        />
+                        <Input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="h-8 text-xs" placeholder="Předmět" />
+                        <Input value={emailRecipients} onChange={(e) => setEmailRecipients(e.target.value)} className="h-8 text-xs" placeholder={noteType === 'email_sent' ? 'Příjemci' : 'Od koho'} />
                       </>
                     )}
                     <Textarea
-                      placeholder={
-                        noteType === 'call' 
-                          ? 'Co bylo probíráno...' 
-                          : noteType === 'internal'
-                            ? 'Interní poznámka...'
-                            : noteType === 'email_sent'
-                              ? 'Obsah odeslaného e-mailu...'
-                              : noteType === 'email_received'
-                                ? 'Obsah přijatého e-mailu...'
-                                : 'Přidat poznámku...'
-                      }
-                      value={noteText}
-                      onChange={(e) => setNoteText(e.target.value)}
-                      rows={3}
-                      className="text-sm min-h-[60px]"
+                      placeholder={noteType === 'call' ? 'Co bylo probíráno...' : noteType === 'internal' ? 'Interní poznámka...' : 'Přidat poznámku...'}
+                      value={noteText} onChange={(e) => setNoteText(e.target.value)} rows={3} className="text-sm min-h-[60px]"
                     />
-                    <Button 
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={handleInlineNoteSubmit}
-                      disabled={!noteText.trim()}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Přidat
+                    <Button size="sm" className="h-7 text-xs" onClick={handleInlineNoteSubmit} disabled={!noteText.trim()}>
+                      <Plus className="h-3 w-3 mr-1" /> Přidat
                     </Button>
                   </div>
 
-                  {/* Collapsible Timeline */}
+                  {/* Timeline */}
                   <Collapsible defaultOpen>
                     <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
                       <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
@@ -896,27 +734,28 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                         onSendOffer={() => setIsSendOfferOpen(true)}
                         onCreateOffer={() => setIsCreateOfferOpen(true)}
                         onMarkAccessReceived={() => {
-                          updateLead(lead.id, { 
-                            access_received_at: new Date().toISOString(),
-                            stage: 'access_received' as LeadStage 
-                          });
+                          updateLead(lead.id, { access_received_at: new Date().toISOString(), stage: 'access_received' as LeadStage });
                           toast.success('🔑 Přístupy byly přijaty!');
                         }}
-                        onMarkContractSent={() => {
-                          updateLead(lead.id, { contract_sent_at: new Date().toISOString() });
-                          toast.success('✉️ Smlouva byla označena jako odeslaná');
-                        }}
-                        onMarkContractSigned={() => {
-                          updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
-                          toast.success('✅ Smlouva byla podepsána!');
-                        }}
+                        onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
+                        onMarkContractSigned={() => { updateLead(lead.id, { contract_signed_at: new Date().toISOString() }); toast.success('✅ Smlouva podepsána!'); }}
                       />
                     </CollapsibleContent>
                   </Collapsible>
                 </div>
-              </ScrollArea>
+              </div>
+
+              {/* Meta */}
+              <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Vytvořeno: {new Date(lead.created_at).toLocaleDateString('cs-CZ')}</span>
+                  <span>•</span>
+                  <span>Aktualizace: {new Date(lead.updated_at).toLocaleDateString('cs-CZ')}</span>
+                </div>
+              </div>
             </div>
-          </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
