@@ -107,31 +107,37 @@ export function LeadSummaryBar({ lead }: LeadEnrichmentSectionProps) {
 
   return (
     <div className="rounded-lg border bg-card overflow-x-auto">
-      <div className="grid grid-cols-10 min-w-[900px]">
-        {/* Headers */}
-        {fields.map(f => (
-          <div key={f.label} className="px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-b">
-            {f.label}
-          </div>
-        ))}
-        {/* Values */}
-        {fields.map(f => (
-          <div key={`v-${f.label}`} className="px-3 py-2.5 text-sm">
-            {f.isLink && f.value ? (
-              <a href={f.value.startsWith('http') ? f.value : `https://${f.value}`} target="_blank" rel="noopener noreferrer"
-                className="text-primary hover:underline truncate block">
-                {f.value}
-              </a>
-            ) : f.label === 'Kvalifikace' && f.value ? (
-              <TierBadge tier={f.value} />
-            ) : (
-              <span className={cn("truncate block", !f.value && "text-muted-foreground")}>
-                {f.value || '–'}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
+      <table className="w-full min-w-[900px] text-sm">
+        <thead>
+          <tr className="border-b">
+            {fields.map(f => (
+              <th key={f.label} className="px-3 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-left whitespace-nowrap">
+                {f.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            {fields.map(f => (
+              <td key={`v-${f.label}`} className="px-3 py-2.5 whitespace-nowrap">
+                {f.isLink && f.value ? (
+                  <a href={f.value.startsWith('http') ? f.value : `https://${f.value}`} target="_blank" rel="noopener noreferrer"
+                    className="text-primary hover:underline">
+                    {f.value}
+                  </a>
+                ) : f.label === 'Kvalifikace' && f.value ? (
+                  <TierBadge tier={f.value} />
+                ) : (
+                  <span className={cn(!f.value && "text-muted-foreground")}>
+                    {f.value || '–'}
+                  </span>
+                )}
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
