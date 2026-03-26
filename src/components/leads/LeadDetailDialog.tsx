@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Loader2, ShieldCheck, ShieldAlert, ShieldX } from 'lucide-react';
+import { Loader2, ShieldCheck, ShieldAlert, ShieldX, Sparkles } from 'lucide-react';
 import { 
   Building2, 
   Globe, 
@@ -66,6 +66,7 @@ import { LeadCommunicationTimeline } from './LeadCommunicationTimeline';
 import { InlineEditField } from './InlineEditField';
 import { CompanyFinancials } from './CompanyFinancials';
 import type { Lead, LeadStage, LeadService, LeadNoteType } from '@/types/crm';
+import { LeadEnrichmentSection } from './LeadEnrichmentSection';
 import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -767,6 +768,9 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+
+                {/* Enrichment Data */}
+                <LeadEnrichmentSection lead={lead} />
 
 
                 {/* Conversion status */}
