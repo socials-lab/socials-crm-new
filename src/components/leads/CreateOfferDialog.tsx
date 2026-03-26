@@ -234,19 +234,37 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   }, [open, lead.potential_services, services]);
 
   // Calculate totals + profitability
+  const CB_DEFAULT_CREDITS = 30;
+  const CB_PRICE_PER_CREDIT = 400;
+
   const totals = useMemo(() => {
+    // Helper: get effective monthly price for a service (handles CB credit-based pricing)
+    const getEffectiveMonthlyPrice = (s: PublicOfferService) => {
+      const catalogService = services.find(cs => cs.id === s.service_id);
+      if (catalogService?.code === 'CREATIVE_BOOST') {
+        return CB_DEFAULT_CREDITS * CB_PRICE_PER_CREDIT;
+      }
+      return s.price;
+    };
+
     const coreMonthly = editableServices
       .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
-      .reduce((sum, s) => sum + s.price, 0);
+      .reduce((sum, s) => sum + getEffectiveMonthlyPrice(s), 0);
     const addonMonthly = editableServices
       .filter(s => s.billing_type === 'monthly' && s.service_type !== 'core')
-      .reduce((sum, s) => sum + s.price, 0);
+      .reduce((sum, s) => sum + getEffectiveMonthlyPrice(s), 0);
     const monthly = coreMonthly + addonMonthly;
     const oneOff = editableServices
       .filter(s => s.billing_type === 'one_off')
       .reduce((sum, s) => sum + s.price, 0);
-    const totalOriginal = editableServices.reduce((sum, s) => sum + (s.original_price || s.price), 0);
-    const totalFinal = editableServices.reduce((sum, s) => sum + s.price, 0);
+    const totalOriginal = editableServices.reduce((sum, s) => {
+      const catalogService = services.find(cs => cs.id === s.service_id);
+      if (catalogService?.code === 'CREATIVE_BOOST') {
+        return sum + CB_DEFAULT_CREDITS * CB_PRICE_PER_CREDIT;
+      }
+      return sum + (s.original_price || s.price);
+    }, 0);
+    const totalFinal = editableServices.reduce((sum, s) => sum + getEffectiveMonthlyPrice(s), 0);
     const totalDiscount = totalOriginal - totalFinal;
     // Discount based on scope
     const discountBase = discountScope === 'all_services' ? monthly : coreMonthly;
@@ -260,11 +278,14 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
     // Calculate internal costs from reward configs
     let totalInternalCost = 0;
-    const serviceCosts: { name: string; cost: number; roles: { role: string; reward: number }[] }[] = [];
+    const serviceCosts: { name: string; cost: number; revenue: number; roles: { role: string; reward: number }[] }[] = [];
     
     editableServices.forEach(es => {
       const catalogService = services.find(s => s.id === es.service_id);
       if (!catalogService) return;
+      
+      const isCB = catalogService.code === 'CREATIVE_BOOST';
+      const serviceRevenue = getEffectiveMonthlyPrice(es);
       
       const enriched = enrichServiceWithDemoRewards(catalogService);
       const roles = getRewardsFromServiceConfig(
@@ -276,13 +297,15 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         let svcCost = 0;
         const roleDetails: { role: string; reward: number }[] = [];
         roles.forEach(r => {
-          // For per_credit, estimate based on Creative Boost defaults (30 credits)
-          const reward = r.rewardType === 'per_credit' ? r.reward * 30 : r.reward;
+          // For per_credit (Creative Boost), estimate based on default credits
+          const reward = r.rewardType === 'per_credit' ? r.reward * CB_DEFAULT_CREDITS : r.reward;
           svcCost += reward;
           roleDetails.push({ role: r.role, reward });
         });
         totalInternalCost += svcCost;
-        serviceCosts.push({ name: es.name, cost: svcCost, roles: roleDetails });
+        serviceCosts.push({ name: isCB ? `${es.name} (${CB_DEFAULT_CREDITS} kreditů)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
+      } else {
+        serviceCosts.push({ name: isCB ? `${es.name} (${CB_DEFAULT_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
       }
     });
 
