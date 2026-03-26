@@ -1102,21 +1102,22 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         )}
 
         {/* ===== 3. PROČ S NÁMI ===== */}
-        <WhyUsSection />
+        <ScrollReveal><WhyUsSection /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 4. PORTFOLIO ===== */}
-        <CreativePortfolioSection />
+        <ScrollReveal><CreativePortfolioSection /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 5. REPORTING ===== */}
-        <ReportingSection />
+        <ScrollReveal><ReportingSection /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 6. SLUŽBY + CENÍK ===== */}
+        <ScrollReveal>
         <section>
           <div className="rounded-2xl bg-gradient-to-br from-[#94e700]/10 via-[#94e700]/5 to-transparent border border-[#94e700]/20 p-6 md:p-8 mb-8">
             <h2 className="text-2xl md:text-3xl font-bold">
