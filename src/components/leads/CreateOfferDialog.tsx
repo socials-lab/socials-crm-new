@@ -171,12 +171,13 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
   // Initialize editable services when dialog opens
   useEffect(() => {
-    if (open && lead.potential_services) {
+    if (!open) return;
+    
+    // If lead already has potential_services, use those
+    if (lead.potential_services && lead.potential_services.length > 0) {
       const initialServices: PublicOfferService[] = lead.potential_services.map(ls => {
         const serviceDetails = services.find(s => s.id === ls.service_id);
-        
 
-        // Resolve price: use lead price, but if it looks wrong, fall back to SERVICE_DETAILS
         let resolvedPrice = ls.price;
         let resolvedOriginalPrice = ls.price;
         const constantDetail = serviceDetails ? getServiceDetail(serviceDetails.code) : undefined;
@@ -189,10 +190,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           }
         }
 
-        // Get description from SERVICE_DETAILS tagline as fallback
         const description = serviceDetails?.description || constantDetail?.tagline || '';
-
-        // Get merged defaults (deliverables, frequency, turnaround, requirements, detailed_sections)
         const merged = mergeWithDefaults(ls.name, 
           serviceDetails?.default_deliverables, null, null, null, null);
 
@@ -218,6 +216,20 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         };
       });
       setEditableServices(initialServices);
+      return;
+    }
+    
+    // Otherwise, auto-suggest services based on lead's channels/platforms
+    const suggestedCodes = suggestServiceCodes(lead);
+    if (suggestedCodes.length > 0) {
+      const suggested: PublicOfferService[] = [];
+      for (const code of suggestedCodes) {
+        const catalogService = services.find(s => s.code === code && s.is_active);
+        if (catalogService) {
+          suggested.push(buildServiceFromCatalog(catalogService, lead));
+        }
+      }
+      setEditableServices(suggested);
     }
   }, [open, lead.potential_services, services]);
 
