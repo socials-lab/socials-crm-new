@@ -376,15 +376,6 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
               <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                 {lead.ico && <span>IČO: {lead.ico}</span>}
                 {owner && <span>• {owner.full_name}</span>}
-                <span>•</span>
-                <InlineEditField
-                  value={lead.estimated_price}
-                  onSave={(v) => { updateLead(lead.id, { estimated_price: Number(v) || 0 }); toast.success('Uloženo'); }}
-                  type="number"
-                  suffix={lead.currency}
-                  placeholder="Cena"
-                  emptyText="Zadat cenu"
-                />
               </div>
             </div>
           </div>
