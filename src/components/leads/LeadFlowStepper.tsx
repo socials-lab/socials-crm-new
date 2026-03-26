@@ -169,36 +169,18 @@ export function LeadFlowStepper({
       ] : undefined,
     },
     {
-      id: 'services',
-      label: 'Služby v nabídce',
-      isComplete: servicesCount > 0,
-      completedAt: null,
-      detail: servicesCount > 0 ? `${servicesCount} služeb` : undefined,
-      actions: [{
-        label: servicesCount > 0 ? 'Přidat další' : 'Přidat službu',
-        onClick: onAddService,
-        variant: 'outline',
-      }],
-      customContent: servicesCount > 0 ? (
-        <ServicesInlineList
-          services={lead.potential_services!}
-          currency={lead.currency}
-          onRemove={onRemoveService}
-        />
-      ) : undefined,
-    },
-    {
       id: 'offer-created',
       label: 'Nabídka vytvořena',
       isComplete: !!lead.offer_created_at,
       completedAt: lead.offer_created_at,
-      actions: servicesCount > 0 ? [
+      detail: servicesCount > 0 ? `${servicesCount} služeb` : undefined,
+      actions: [
         ...(hasOffer ? [
           { label: 'Upravit nabídku', onClick: onCreateOffer, variant: 'outline' as const },
         ] : [
           { label: 'Vytvořit nabídku', onClick: onCreateOffer, variant: 'outline' as const },
         ]),
-      ] : undefined,
+      ],
       customContent: lead.offer_url ? (
         <a
           href={lead.offer_url}
