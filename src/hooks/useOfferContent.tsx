@@ -105,7 +105,7 @@ export const DEFAULT_OFFER_CONTENT: Record<string, Omit<OfferContentBlock, 'id' 
     title: null,
     subtitle: null,
     content: {
-      items: ['Meta Business Partner', 'Google Partner', 'Shoptet Zlatý Partner', '30 mil. Kč/měsíc ve správě'],
+      items: ['✅ 13 seniorních specialistů', '🤖 Enhanced by AI', '📈 30 mil. Kč/měsíc v reklamách', '⭐ 5/5 hodnocení', '🚀 7 let na trhu'],
     },
   },
 };
