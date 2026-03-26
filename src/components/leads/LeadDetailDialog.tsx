@@ -769,6 +769,9 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                   </CollapsibleContent>
                 </Collapsible>
 
+                {/* Enrichment Data */}
+                <LeadEnrichmentSection lead={lead} />
+
 
                 {/* Conversion status */}
                 {lead.converted_to_client_id && (
