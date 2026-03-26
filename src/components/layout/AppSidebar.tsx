@@ -39,6 +39,7 @@ import {
   Bug,
   UserSearch,
   ImageIcon,
+  PenLine,
   type LucideIcon,
 } from 'lucide-react';
 import { useBugReports } from '@/hooks/useBugReports';
@@ -113,6 +114,7 @@ const navGroups: NavGroup[] = [
 ];
 
 const managementNavItems: NavItem[] = [
+  { title: 'Editor nabídky', url: '/offer-editor', page: 'settings', icon: PenLine },
   { title: 'Nastavení', url: '/settings', page: 'settings', icon: Settings },
 ];
 

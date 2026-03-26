@@ -53,6 +53,7 @@ import PublicSOPPage from "./pages/PublicSOPPage";
 import BugReports from "./pages/BugReports";
 import Prospects from "./pages/Prospects";
 import Portfolio from "./pages/Portfolio";
+import OfferContentEditor from "./pages/OfferContentEditor";
 
 const queryClient = new QueryClient();
 
@@ -118,6 +119,7 @@ const App = () => (
                               <Route path="/bug-reports" element={<BugReports />} />
                               <Route path="/prospects" element={<Prospects />} />
                               <Route path="/portfolio" element={<Portfolio />} />
+                              <Route path="/offer-editor" element={<OfferContentEditor />} />
                             </Route>
                             <Route path="*" element={<NotFound />} />
                           </Routes>
