@@ -1096,24 +1096,24 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             
             return (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <span className="text-base text-muted-foreground font-medium">Měsíční cena</span>
-                  <div className="text-right">
+                  <div className="text-right flex flex-wrap items-baseline justify-end gap-x-2">
                     {discountPercent > 0 ? (
                       <>
-                        <span className="text-base text-muted-foreground/70 line-through mr-3">
+                        <span className="text-sm text-muted-foreground/70 line-through">
                           {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                         </span>
-                        <span className="text-4xl font-extrabold text-[#94e700] tracking-tight">
+                        <span className="text-2xl md:text-4xl font-extrabold text-[#94e700] tracking-tight whitespace-nowrap">
                           {totalAfterDiscount.toLocaleString('cs-CZ')} {offer.currency}
                         </span>
                       </>
                     ) : (
-                      <span className="text-4xl font-extrabold text-[#94e700] tracking-tight">
+                      <span className="text-2xl md:text-4xl font-extrabold text-[#94e700] tracking-tight whitespace-nowrap">
                         {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                       </span>
                     )}
-                    <span className="text-sm text-muted-foreground/70 ml-1">/měsíc</span>
+                    <span className="text-sm text-muted-foreground/70">/měsíc</span>
                   </div>
                 </div>
                 {discountPercent > 0 && (
