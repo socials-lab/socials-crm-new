@@ -151,6 +151,7 @@ const DEFAULT_PORTFOLIO_OPTIONS: Omit<PortfolioLink, 'id'>[] = [
 export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: CreateOfferDialogProps) {
   const { services, colleagues } = useCRMData();
   const [auditSummary, setAuditSummary] = useState('');
+  const [recommendationIntro, setRecommendationIntro] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [loomUrl, setLoomUrl] = useState('');
   const [validUntil, setValidUntil] = useState('');
@@ -356,7 +357,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         website: lead.website || null,
         contact_name: lead.contact_name,
         audit_summary: auditSummary.trim() || null,
-        recommendation_intro: null,
+        recommendation_intro: recommendationIntro.trim() || null,
         custom_note: customNote.trim() || null,
         loom_url: loomUrl.trim() || null,
         services: editableServices,
@@ -403,6 +404,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
   const handleClose = () => {
     setAuditSummary('');
+    setRecommendationIntro('');
     setCustomNote('');
     setLoomUrl('');
     setValidUntil('');
@@ -477,15 +479,30 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                   </p>
                 </div>
 
-                {/* Audit summary */}
+                {/* Audit summary - Co jsme zjistili */}
                 <div className="space-y-2">
-                  <Label htmlFor="audit">📊 Výstup z auditu (volitelné)</Label>
+                  <Label htmlFor="audit">🔍 Co jsme zjistili (volitelné)</Label>
+                  <p className="text-xs text-muted-foreground">Každý řádek se zobrazí jako samostatný finding. Můžete psát i souvislý text.</p>
                   <Textarea
                     id="audit"
                     value={auditSummary}
                     onChange={(e) => setAuditSummary(e.target.value)}
-                    placeholder="Na základě analýzy vašich reklamních účtů jsme identifikovali..."
-                    rows={3}
+                    placeholder={"Reklamní účty nejsou optimálně nastaveny — chybí remarketing a audience segmentace.\nKampaně nemají strukturu podle fáze nákupního cyklu.\nKreativy se neobměňují dostatečně často, dochází k ad fatigue."}
+                    rows={6}
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                {/* Recommendation intro */}
+                <div className="space-y-2">
+                  <Label htmlFor="recommendation">✅ Naše doporučení (volitelné)</Label>
+                  <p className="text-xs text-muted-foreground">Souvislý text s doporučením — zobrazí se pod findings v zelené kartě.</p>
+                  <Textarea
+                    id="recommendation"
+                    value={recommendationIntro}
+                    onChange={(e) => setRecommendationIntro(e.target.value)}
+                    placeholder="Na základě auditu doporučujeme začít s kompletní restrukturalizací kampaní a nasazením nových kreativ..."
+                    rows={4}
                   />
                 </div>
 
