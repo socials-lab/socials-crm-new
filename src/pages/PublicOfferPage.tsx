@@ -740,35 +740,21 @@ function PortfolioGrid({ items, label }: { items: { src: string; alt: string; ty
       <h3 className="text-lg font-semibold text-foreground">{label}</h3>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
         {items.map((item, i) => (
-          <div
-            key={i}
-            onClick={() => setSelectedIndex(i)}
-            className="group relative aspect-square rounded-lg overflow-hidden border border-foreground/[0.06] cursor-pointer hover:border-[#94e700]/30 hover:shadow-[0_0_30px_-10px_rgba(200,255,0,0.15)] transition-all duration-300"
-          >
+          <div key={i}>
             {item.type === 'video' ? (
-              <>
-                <video
-                  src={item.src}
-                  className="w-full h-full object-cover"
-                  muted
-                  preload="auto"
-                  playsInline
-                  onMouseEnter={e => (e.target as HTMLVideoElement).play()}
-                  onMouseLeave={e => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
-                  <div className="p-2 rounded-full bg-black/60 backdrop-blur-sm">
-                    <Play className="h-4 w-4 text-[#94e700] fill-[#94e700]" />
-                  </div>
-                </div>
-              </>
+              <VideoThumbnail src={item.src} alt={item.alt} onClick={() => setSelectedIndex(i)} />
             ) : (
-              <img
-                src={item.src}
-                alt={item.alt}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                loading="lazy"
-              />
+              <div
+                onClick={() => setSelectedIndex(i)}
+                className="group relative aspect-square rounded-lg overflow-hidden border border-foreground/[0.06] cursor-pointer hover:border-[#94e700]/30 hover:shadow-[0_0_30px_-10px_rgba(200,255,0,0.15)] transition-all duration-300"
+              >
+                <img
+                  src={item.src}
+                  alt={item.alt}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  loading="lazy"
+                />
+              </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2.5">
               <p className="text-[10px] font-medium text-foreground">{item.alt}</p>
