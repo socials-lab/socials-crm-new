@@ -572,7 +572,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
   if (loading) {
     return (
-      <div className="dark min-h-screen bg-background" style={{ colorScheme: 'dark' }}>
+      <div className="offer-dark min-h-screen bg-background">
         <div className="max-w-4xl mx-auto px-4 py-12">
           <div className="flex justify-center mb-8">
             <Skeleton className="h-12 w-32" />
@@ -589,7 +589,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
   if (error || !offer) {
     return (
-      <div className="dark min-h-screen bg-background flex items-center justify-center" style={{ colorScheme: 'dark' }}>
+      <div className="offer-dark min-h-screen bg-background flex items-center justify-center">
         <div className="text-center p-8 max-w-md">
           <div className="mb-6">
             <img src={socialsLogoDark} alt="Socials" className="h-10 mx-auto" />
@@ -635,7 +635,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const onboardingUrl = `/onboarding/${offer.lead_id}`;
 
   return (
-    <div className="dark min-h-screen bg-gradient-to-b from-background via-background to-muted/30" style={{ colorScheme: 'dark' }}>
+    <div className="offer-dark min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
       {/* Header */}
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
