@@ -1124,13 +1124,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
       {/* Sticky CTA for mobile */}
       <div className={cn(
-        "fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t sm:hidden safe-area-bottom",
-        isDark ? "bg-black/95 border-foreground/[0.06]" : "bg-white/95 border-foreground/[0.06]"
+        "fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t border-foreground/[0.06] sm:hidden safe-area-bottom",
+        isDark ? "bg-black/95" : "bg-white/95"
       )}>
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="font-bold text-[#94e700]">{(totalMonthly + totalOneOff).toLocaleString('cs-CZ')} {offer.currency}</p>
-            <p className={cn("text-[10px]", isDark ? "text-muted-foreground/70" : "text-foreground/40")}>
+            <p className="text-[10px] text-muted-foreground">
               {totalMonthly > 0 ? '/měsíc bez DPH' : 'celkem bez DPH'}
             </p>
           </div>
