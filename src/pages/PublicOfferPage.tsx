@@ -1033,23 +1033,24 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* ===== 2. LOOM VIDEO & AUDIT ===== */}
         {(offer.audit_summary || offer.loom_url) && (
           <>
-            <section>
-              {offer.loom_url && (
-                <div className="rounded-xl overflow-hidden border border-foreground/[0.08] mb-6">
-                  <AspectRatio ratio={16 / 9}>
-                    <iframe
-                      src={offer.loom_url}
-                      title="Video k nabídce"
-                      className="w-full h-full"
-                      frameBorder="0"
-                      allowFullScreen
-                      allow="autoplay; fullscreen"
-                    />
-                  </AspectRatio>
-                </div>
-              )}
-
-            </section>
+            <ScrollReveal>
+              <section>
+                {offer.loom_url && (
+                  <div className="rounded-xl overflow-hidden border border-foreground/[0.08] mb-6">
+                    <AspectRatio ratio={16 / 9}>
+                      <iframe
+                        src={offer.loom_url}
+                        title="Video k nabídce"
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allowFullScreen
+                        allow="autoplay; fullscreen"
+                      />
+                    </AspectRatio>
+                  </div>
+                )}
+              </section>
+            </ScrollReveal>
 
             <SectionDivider />
           </>
