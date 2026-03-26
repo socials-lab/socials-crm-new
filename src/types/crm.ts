@@ -664,6 +664,45 @@ export interface Lead {
   // VAT payer reliability
   vat_payer_status: 'reliable' | 'unreliable' | 'not_found' | null;
   
+  // Enrichment: Marketing info
+  enrichment_platform: string | null;
+  enrichment_ad_spend_range: string | null;
+  enrichment_services_needed: string | null;
+  marketing_experience: string | null;
+  marketing_maturity: string | null;
+  has_creative_team: string | null;
+  pain_point: string | null;
+  
+  // Enrichment: Tracking & scoring
+  has_ga4: boolean | null;
+  has_gtm: boolean | null;
+  has_meta_pixel: boolean | null;
+  has_google_ads: boolean | null;
+  tracking_detected: boolean | null;
+  lead_score: number | null;
+  credibility_score: number | null;
+  enrichment_qualification_tier: string | null;
+  
+  // Enrichment: Company
+  is_vat_payer: boolean | null;
+  is_ecommerce: boolean | null;
+  business_type: string | null;
+  company_address: string | null;
+  
+  // Enrichment: Social
+  facebook_url: string | null;
+  instagram_url: string | null;
+  
+  // Enrichment: Booking
+  booking_status: string | null;
+  booking_datetime: string | null;
+  booking_meet_link: string | null;
+  
+  // Enrichment: AI research & meta
+  company_research: string | null;
+  enrichment_completed: boolean | null;
+  enrichment_id: string | null;
+  
   // Meta
   created_at: string;
   updated_at: string;
