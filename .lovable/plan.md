@@ -1,59 +1,22 @@
 
 
-## Portfolio management — centrální správa bannerů a videí
+## Přidat sekci "Reporting až na úroveň zisku" do veřejné nabídky
 
-### Problém
-Portfolio ukázky (bannery, videa) jsou nyní hardcoded v `PublicOfferPage.tsx`. Při každé nabídce se duplikují a nelze je snadno spravovat.
+### Umístění
+Nová sekce `ReportingSection` se vloží **za CreativePortfolioSection (řádek 1082) a před Loom video (řádek 1084)**.
 
-### Řešení
+### Obsah sekce
 
-#### 1. Supabase Storage bucket `portfolio`
-- Veřejný bucket pro nahrávání obrázků a MP4 videí
-- Soubory budou dostupné přes public URL bez autentizace
+1. **Nadpis** — "📊 Reporting až na úroveň zisku" 
+2. **Popis** — Text o tom, že pro Shoptet klienty dodáváme reporting až na úroveň contribution margin, s přesným přehledem kolik vydělá jaký produkt. V závorce poznámka: *(Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)*
+3. **Interaktivní iframe náhled** — embed demo reportu z URL `https://68bb7487-e1f5-44d2-a8a4-9044e8cf5438.lovableproject.com/shared-report/...` přímo v nabídce, aby si klient mohl report proklikat
+4. **CTA tlačítko** — "Otevřít demo report" s ikonou ExternalLink, otevře URL v novém tabu
 
-#### 2. Nová tabulka `portfolio_items`
-```text
-id              UUID PK
-title           TEXT          — popisek (alt text)
-file_url        TEXT          — URL ze Storage
-type            TEXT          — 'image' | 'video'
-sort_order      INTEGER       — pořadí zobrazení
-is_active       BOOLEAN       — možnost skrýt bez mazání
-created_at      TIMESTAMPTZ
-```
-- RLS: CRM users full access, anon SELECT pro aktivní položky (veřejná nabídka)
+### Vizuální styl
+- Konzistentní s ostatními sekcemi (`mb-16 p-6 md:p-8 rounded-2xl border bg-card/50 backdrop-blur-sm`)
+- Iframe v `rounded-xl overflow-hidden border` kontejneru s aspect ratio 16:9
+- Hover efekt na kartě s popisem
 
-#### 3. Nová stránka `Portfolio` v CRM
-- Route: `/portfolio`
-- Přidání do sidebar navigace
-- Funkce:
-  - Grid náhledů aktuálních položek (obrázky + videa)
-  - Upload nových souborů (drag & drop nebo file picker)
-  - Editace popisku, změna pořadí, aktivace/deaktivace
-  - Mazání položek (smaže i ze Storage)
-  - Filtr: všechny / obrázky / videa
-
-#### 4. Úprava `PublicOfferPage.tsx`
-- Odstranit hardcoded `PORTFOLIO_IMAGES`
-- Fetch `portfolio_items` z databáze (WHERE `is_active = true`, ORDER BY `sort_order`)
-- V `CreativePortfolioSection`:
-  - Obrázky: zobrazit jako dosud (grid + lightbox)
-  - Videa: zobrazit jako `<video>` s poster frame, autoplay on hover, lightbox s přehráváním
-  - Rozlišit vizuálně karty obrázků a videí (play ikona overlay na videu)
-
-#### 5. Migrace existujících bannerů
-- Existující obrázky z `public/images/portfolio/` nahrát do Storage bucketu
-- Vložit záznamy do `portfolio_items` tabulky
-- Po migraci odstranit statické soubory
-
-### Soubory k vytvoření/úpravě
-- **Migrace SQL** — bucket `portfolio` + tabulka `portfolio_items` + RLS
-- `src/pages/Portfolio.tsx` — nová stránka pro správu
-- `src/hooks/usePortfolioData.tsx` — hook pro CRUD
-- `src/components/layout/AppSidebar.tsx` — nový odkaz
-- `src/App.tsx` — nová route
-- `src/pages/PublicOfferPage.tsx` — dynamické načítání místo hardcoded dat
-
-### Postup nahrání videí
-Po implementaci nahraješ MP4 soubory přímo přes novou Portfolio stránku v CRM (drag & drop).
+### Soubory k úpravě
+- `src/pages/PublicOfferPage.tsx` — přidat funkci `ReportingSection()` a vložit ji za `CreativePortfolioSection`
 
