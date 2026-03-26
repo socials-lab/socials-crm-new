@@ -401,11 +401,11 @@ function ServiceStructureExplanation() {
 
 function OnboardingProcessSection() {
   return (
-    <section className="mb-10">
+    <section className="mb-16 p-6 md:p-8 rounded-2xl border bg-card/50 backdrop-blur-sm">
       <h2 className="text-base font-semibold mb-2 text-center">
         🤝 Jak bude vypadat začátek spolupráce
       </h2>
-      <p className="text-sm text-muted-foreground text-center mb-6">
+      <p className="text-sm text-muted-foreground text-center mb-8">
         Celý proces zvládneme obvykle do 48 hodin od vašeho rozhodnutí.
       </p>
 
@@ -413,12 +413,15 @@ function OnboardingProcessSection() {
         {/* Vertical line */}
         <div className="absolute left-[23px] top-6 bottom-6 w-px bg-border hidden sm:block" />
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {ONBOARDING_STEPS.map((step, idx) => (
-            <div key={idx} className="flex gap-4 items-start">
+            <div
+              key={idx}
+              className="group flex gap-4 items-start p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/40 transition-all duration-200 cursor-default"
+            >
               {/* Icon circle */}
               <div className={cn(
-                "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 relative z-10 border",
+                "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 relative z-10 border transition-transform duration-200 group-hover:scale-110",
                 step.bg,
                 step.borderColor,
               )}>
@@ -428,7 +431,7 @@ function OnboardingProcessSection() {
               {/* Content */}
               <div className="flex-1 pb-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-sm">{step.title}</h3>
+                  <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">{step.title}</h3>
                   <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 font-normal">
                     {step.timeline}
                   </Badge>
@@ -442,35 +445,6 @@ function OnboardingProcessSection() {
         </div>
       </div>
     </section>
-  );
-}
-
-function PortfolioCard({ link }: { link: PortfolioLink }) {
-  const Icon = getPortfolioIcon(link.type);
-  
-  return (
-    <a
-      href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 hover:shadow-md transition-all"
-    >
-      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-        <Icon className="h-6 w-6 text-primary" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium truncate group-hover:text-primary transition-colors">
-          {link.title}
-        </p>
-        <p className="text-xs text-muted-foreground capitalize">
-          {link.type === 'case_study' && 'Case Study'}
-          {link.type === 'presentation' && 'Prezentace'}
-          {link.type === 'reference' && 'Reference'}
-          {link.type === 'video' && 'Video'}
-        </p>
-      </div>
-      <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-    </a>
   );
 }
 
@@ -520,30 +494,39 @@ const WHY_US_LINKS = [
 
 function WhyUsSection() {
   return (
-    <section className="mb-10">
+    <section className="mb-16 p-6 md:p-8 rounded-2xl border bg-card/50 backdrop-blur-sm">
       <h2 className="text-base font-semibold mb-2 text-center">
         🏆 Proč spolupracovat právě s námi?
       </h2>
       <p className="text-sm text-muted-foreground text-center mb-2">
         Chceme, aby pro vás byla spolupráce se Socials jasná a hlavně postavená na skvělých výsledcích.
       </p>
-      <p className="text-sm text-muted-foreground text-center mb-6 font-medium">
+      <p className="text-sm text-muted-foreground text-center mb-8 font-medium">
         Ne sliby, ale skutečný business dopad.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
         {WHY_US_ITEMS.map((item, i) => (
-          <div key={i} className="p-4 rounded-xl border bg-muted/50">
+          <div
+            key={i}
+            className="group p-4 rounded-xl border bg-muted/30 hover:bg-muted/60 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 cursor-default"
+          >
             <div className="flex items-start gap-3">
-              <span className="text-2xl shrink-0">{item.emoji}</span>
+              <span className="text-2xl shrink-0 transition-transform duration-200 group-hover:scale-125">{item.emoji}</span>
               <div>
-                <p className="font-semibold text-sm mb-1">{item.title}</p>
+                <p className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors">{item.title}</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      <Separator className="mb-6" />
+
+      <p className="text-xs text-muted-foreground text-center mb-4 font-medium uppercase tracking-wider">
+        Poznejte nás blíže
+      </p>
 
       <div className="space-y-2">
         {WHY_US_LINKS.map((link, i) => (
@@ -552,14 +535,14 @@ function WhyUsSection() {
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-3 p-3 rounded-xl border bg-card hover:border-primary/50 hover:shadow-md transition-all"
+            className="group flex items-center gap-3 p-3 rounded-xl border bg-card hover:border-primary/50 hover:bg-primary/5 hover:shadow-md transition-all duration-200"
           >
-            <span className="text-xl shrink-0">{link.emoji}</span>
+            <span className="text-xl shrink-0 transition-transform duration-200 group-hover:scale-110">{link.emoji}</span>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm group-hover:text-primary transition-colors">{link.label}</p>
               <p className="text-xs text-muted-foreground">{link.description}</p>
             </div>
-            <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+            <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200 shrink-0" />
           </a>
         ))}
       </div>
