@@ -57,7 +57,9 @@ function ScoreBadge({ score, label, max = 100 }: { score: number | null; label: 
         <span className="text-xs text-muted-foreground">{label}</span>
         <span className={cn("text-sm font-bold", color)}>{score}/{max}</span>
       </div>
-      <Progress value={percent} className="h-1.5" indicatorClassName={bg} />
+      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        <div className={cn("h-full rounded-full transition-all", bg)} style={{ width: `${percent}%` }} />
+      </div>
     </div>
   );
 }
