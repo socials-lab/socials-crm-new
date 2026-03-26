@@ -687,7 +687,15 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                   <LeadFlowStepper
                     lead={lead}
                     onSendMeetingRequest={() => setIsMeetingRequestOpen(true)}
+                    onQuickConfirmMeetingSent={() => {
+                      updateLead(lead.id, { meeting_request_sent_at: new Date().toISOString() });
+                      toast.success('✓ Žádost o schůzku označena jako odeslaná');
+                    }}
                     onRequestAccess={() => setIsRequestAccessOpen(true)}
+                    onQuickConfirmAccessSent={() => {
+                      updateLead(lead.id, { access_request_sent_at: new Date().toISOString(), stage: 'waiting_access' as LeadStage });
+                      toast.success('✓ Žádost o přístupy označena jako odeslaná');
+                    }}
                     onMarkAccessReceived={() => {
                       updateLead(lead.id, { access_received_at: new Date().toISOString(), stage: 'access_received' as LeadStage });
                       toast.success('🔑 Přístupy byly přijaty!');
