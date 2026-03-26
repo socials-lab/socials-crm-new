@@ -404,7 +404,7 @@ const WHY_US_ITEMS = [
   {
     stat: 'Zisk',
     label: 'ne jen revenue',
-    description: 'Neřešíme jen revenue a PNO. Díky naší unikátní technologii měříme váš skutečný zisk — contribution margin na úrovni produktu (náhled níže).',
+    description: 'Neřešíme jen revenue a PNO. Díky naší unikátní technologii měříme váš skutečný zisk na úrovni produktu a contribution margin (náhled níže).',
   },
   {
     stat: 'Unikátní',
@@ -446,7 +446,7 @@ function WhyUsSection() {
     <section>
       <SectionHeading
         title="Proč právě my"
-        subtitle="Ne sliby, ale skutečný business dopad. Pečlivě si vybíráme, s kým spolupracujeme."
+        subtitle="Ne sliby, ale skutečný business dopad. Podobnou agenturu na trhu nenajdete."
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
