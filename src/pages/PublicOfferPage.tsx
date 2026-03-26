@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
+import socialsLogoDark from '@/assets/socials-logo-dark.svg';
 import socialsLogo from '@/assets/socials-logo.svg';
 import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
 
@@ -571,7 +572,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="offer-dark min-h-screen bg-background">
         <div className="max-w-4xl mx-auto px-4 py-12">
           <div className="flex justify-center mb-8">
             <Skeleton className="h-12 w-32" />
@@ -588,10 +589,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
   if (error || !offer) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="offer-dark min-h-screen bg-background flex items-center justify-center">
         <div className="text-center p-8 max-w-md">
           <div className="mb-6">
-            <img src={socialsLogo} alt="Socials" className="h-10 mx-auto" />
+            <img src={socialsLogoDark} alt="Socials" className="h-10 mx-auto" />
           </div>
           <h1 className="text-2xl font-semibold mb-2">Nabídka není dostupná</h1>
           <p className="text-muted-foreground mb-4">
@@ -634,11 +635,11 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const onboardingUrl = `/onboarding/${offer.lead_id}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
+    <div className="offer-dark min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
       {/* Header */}
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <img src={socialsLogo} alt="Socials" className="h-8" />
+          <img src={socialsLogoDark} alt="Socials" className="h-8" />
           <Button asChild size="sm" className="hidden sm:inline-flex">
             <Link to={onboardingUrl}>
               Vyplnit onboarding formulář
@@ -972,7 +973,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
-            <img src={socialsLogo} alt="Socials" className="h-5 opacity-50" />
+            <img src={socialsLogoDark} alt="Socials" className="h-5 opacity-50" />
           </div>
         </footer>
       </main>
