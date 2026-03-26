@@ -154,7 +154,7 @@ export default function OnboardingForm() {
   const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
 
   // Owner info from lead data
-  const ownerEmail = lead?.owner_email || 'info@socials.cz';
+  const ownerEmail = lead?.owner_email || 'hello@socials.cz';
   const ownerName = lead?.owner_name || 'tým Socials';
   
   const form = useForm<OnboardingFormData>({
@@ -519,8 +519,8 @@ export default function OnboardingForm() {
           <CardContent className="text-center">
             <p className="text-muted-foreground">
               Pokud máte otázky, kontaktujte nás na{' '}
-              <a href="mailto:info@socials.cz" className="text-primary hover:underline">
-                info@socials.cz
+              <a href="mailto:hello@socials.cz" className="text-primary hover:underline">
+                hello@socials.cz
               </a>
             </p>
           </CardContent>
@@ -1418,7 +1418,7 @@ export default function OnboardingForm() {
           {/* Footer */}
           <p className="text-center text-sm text-muted-foreground mt-8">
             Potřebujete pomoct?{' '}
-            <a href="mailto:info@socials.cz" className="text-primary hover:underline">
+            <a href="mailto:hello@socials.cz" className="text-primary hover:underline">
               Kontaktujte nás
             </a>
           </p>

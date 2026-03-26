@@ -134,7 +134,7 @@ serve(async (req) => {
 
     // Get owner info for contact display
     let ownerName = "tým Socials";
-    let ownerEmail = "info@socials.cz";
+    let ownerEmail = "hello@socials.cz";
 
     if (lead.owner_id) {
       const { data: owner } = await supabaseAdmin

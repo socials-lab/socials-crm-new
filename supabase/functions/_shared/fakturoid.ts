@@ -32,7 +32,7 @@ export interface FakturoidInvoice {
 // Token cache (persists for the lifetime of the edge function instance)
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-const USER_AGENT = "SocialsCRM (info@socials.cz)";
+const USER_AGENT = "SocialsCRM (hello@socials.cz)";
 const MAX_RETRIES = 3;
 const DEFAULT_RATE_LIMIT_WAIT_MS = 60000;
 
