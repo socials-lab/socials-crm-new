@@ -393,17 +393,32 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
           <ScrollArea className="flex-1">
             <div className="p-6 space-y-5">
 
-              {/* === TOP: Key Info in 2-column grid === */}
-              <div className="grid grid-cols-2 gap-5">
+              {/* === SUMMARY BAR === */}
+              <LeadSummaryBar lead={lead} />
 
-                {/* Company Info */}
-                <div className="space-y-2 text-sm">
-                  <h4 className="font-medium text-xs flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+              {/* === THREE INFO CARDS === */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                {/* FIRMA Card */}
+                <div className="p-4 rounded-lg border bg-card space-y-3">
+                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
                     <Building2 className="h-3.5 w-3.5" />
                     Firma
                   </h4>
-                  <div className="p-3 rounded-lg border bg-card space-y-2">
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold">{lead.company_name}</span>
+                      {lead.ico && (
+                        <a href={`https://or.justice.cz/ias/ui/rejstrik-firma.vysledky?ico=${lead.ico}`} target="_blank" rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline">📋 Rejstřík</a>
+                      )}
+                      {(lead.is_vat_payer || lead.vat_payer_status === 'reliable') && (
+                        <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
+                          ✅ DPH
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                       <div>
                         <span className="text-muted-foreground text-xs">IČO</span>
                         <div className="flex items-center gap-2">
@@ -443,175 +458,171 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                             displayClassName="font-medium"
                           />
                           {isLoadingAres && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                          {lead.ico && (
-                            <a href={`https://www.hlidacstatu.cz/subjekt/${lead.ico}`} target="_blank" rel="noopener noreferrer"
-                              className="text-primary hover:underline inline-flex items-center gap-1 text-xs">
-                              <ExternalLink className="h-3 w-3" /> Hlídač
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Adresa</span>
+                        <p className="font-medium text-sm">
+                          {lead.company_address || [lead.billing_street, lead.billing_city, lead.billing_zip].filter(Boolean).join(', ') || '–'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">E-shop</span>
+                        <p className="font-medium">{lead.is_ecommerce !== null && lead.is_ecommerce !== undefined ? (lead.is_ecommerce ? 'Ano' : 'Ne') : '–'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Kredibilita</span>
+                        <p className="font-medium">{lead.credibility_score !== null && lead.credibility_score !== undefined ? lead.credibility_score : '–'}</p>
+                      </div>
+                    </div>
+                    {/* Social */}
+                    {(lead.facebook_url || lead.instagram_url) && (
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1 border-t">
+                        {lead.facebook_url && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">Facebook</span>
+                            <a href={lead.facebook_url.startsWith('http') ? lead.facebook_url : `https://facebook.com/${lead.facebook_url}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline block truncate">
+                              {lead.facebook_url.replace(/https?:\/\/(www\.)?facebook\.com\/?/, '')}
                             </a>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground text-xs">DIČ</span>
-                        <InlineEditField
-                          value={lead.dic}
-                          onSave={(v) => { updateLead(lead.id, { dic: v }); toast.success('Uloženo'); }}
-                          placeholder="Zadat DIČ"
-                          displayClassName="font-medium"
-                        />
-                      </div>
-                    </div>
-                    {/* VAT Badge */}
-                    {lead.dic && (
-                      <div>
-                        {isLoadingVat ? (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Loader2 className="h-3 w-3 animate-spin" /> Ověřuji DPH…
                           </div>
-                        ) : vatData?.vatStatus === 'reliable' || lead.vat_payer_status === 'reliable' ? (
-                          <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
-                            <ShieldCheck className="h-3 w-3 mr-1" /> Spolehlivý plátce DPH
-                          </Badge>
-                        ) : vatData?.vatStatus === 'unreliable' || lead.vat_payer_status === 'unreliable' ? (
-                          <div className="rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-xs text-destructive font-medium flex items-center gap-1">
-                            <ShieldAlert className="h-3 w-3" /> NESPOLEHLIVÝ PLÁTCE DPH
+                        )}
+                        {lead.instagram_url && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">Instagram</span>
+                            <a href={lead.instagram_url.startsWith('http') ? lead.instagram_url : `https://instagram.com/${lead.instagram_url}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline block truncate">
+                              {lead.instagram_url.replace(/https?:\/\/(www\.)?instagram\.com\/?/, '')}
+                            </a>
                           </div>
-                        ) : vatData?.vatStatus === 'not_found' || lead.vat_payer_status === 'not_found' ? (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <ShieldX className="h-3 w-3" /> Není plátce DPH
-                          </span>
-                        ) : null}
+                        )}
                       </div>
                     )}
-                    <div>
-                      <span className="text-muted-foreground text-xs">Web</span>
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                        <InlineEditField
-                          value={lead.website}
-                          onSave={(v) => { updateLead(lead.id, { website: v }); toast.success('Uloženo'); }}
-                          type="url"
-                          placeholder="Zadat web"
-                        />
-                      </div>
-                    </div>
-                    {lead.legal_form && (
-                      <p className="text-xs text-muted-foreground">Právní forma: <span className="font-medium text-foreground">{lead.legal_form}</span></p>
-                    )}
-                    {lead.directors && lead.directors.length > 0 && (
-                      <div>
-                        <span className="text-muted-foreground text-xs">Jednatelé</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {lead.directors.map((d, i) => {
-                            const dir = typeof d === 'string' ? { name: d, role: 'jednatel', ownership_percent: null } : d;
-                            const isTopOwner = i === 0 && dir.ownership_percent !== null && dir.ownership_percent > 0;
-                            const label = dir.ownership_percent !== null
-                              ? `${dir.name} (${dir.ownership_percent}%)`
-                              : dir.name;
-                            return (
-                              <Badge key={i} variant={isTopOwner ? "default" : "secondary"} 
-                                className={cn("text-xs", isTopOwner && "bg-amber-500/90 hover:bg-amber-500 text-white border-amber-600")}>
-                                {isTopOwner && '👑 '}{label}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    {/* Address */}
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
-                      <div className="space-y-0.5">
-                        <InlineEditField value={lead.billing_street} onSave={(v) => { updateLead(lead.id, { billing_street: v }); toast.success('Uloženo'); }} placeholder="Ulice" emptyText="Ulice" />
-                        <div className="flex items-center gap-2">
-                          <InlineEditField value={lead.billing_zip} onSave={(v) => { updateLead(lead.id, { billing_zip: v }); toast.success('Uloženo'); }} placeholder="PSČ" emptyText="PSČ" />
-                          <InlineEditField value={lead.billing_city} onSave={(v) => { updateLead(lead.id, { billing_city: v }); toast.success('Uloženo'); }} placeholder="Město" emptyText="Město" />
-                        </div>
-                      </div>
-                    </div>
                     {lead.ico && <CompanyFinancials ico={lead.ico} />}
                   </div>
                 </div>
 
-                {/* Contact + Sales Info */}
-                <div className="space-y-4">
-                  {/* Contact */}
-                  <div className="space-y-2 text-sm">
-                    <h4 className="font-medium text-xs flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
-                      <User className="h-3.5 w-3.5" />
-                      Kontakt
-                    </h4>
-                    <div className="p-3 rounded-lg border bg-card space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <InlineEditField value={lead.contact_name} onSave={(v) => { updateLead(lead.id, { contact_name: v }); toast.success('Uloženo'); }} placeholder="Jméno" displayClassName="font-medium" />
-                        <span className="text-muted-foreground">–</span>
-                        <InlineEditField value={lead.contact_position} onSave={(v) => { updateLead(lead.id, { contact_position: v }); toast.success('Uloženo'); }} placeholder="Pozice" emptyText="Pozice" />
+                {/* WEB & TRACKING Card */}
+                <div className="p-4 rounded-lg border bg-card space-y-3">
+                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                    <Globe className="h-3.5 w-3.5" />
+                    Web & Tracking
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <div>
+                        <span className="text-muted-foreground text-xs">Typ webu</span>
+                        <p className="font-medium">{lead.is_ecommerce ? 'E-shop' : lead.business_type || '–'}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                        <InlineEditField value={lead.contact_email} onSave={(v) => { updateLead(lead.id, { contact_email: v }); toast.success('Uloženo'); }} placeholder="E-mail" emptyText="E-mail" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Platforma</span>
+                        <p className="font-medium">{lead.enrichment_platform || '–'}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        <InlineEditField value={lead.contact_phone} onSave={(v) => { updateLead(lead.id, { contact_phone: v }); toast.success('Uloženo'); }} placeholder="Telefon" emptyText="Telefon" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Vyspělost</span>
+                        <p className="font-medium">{lead.marketing_maturity || '–'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Web</span>
+                        <div className="flex items-center gap-1">
+                          <InlineEditField
+                            value={lead.website}
+                            onSave={(v) => { updateLead(lead.id, { website: v }); toast.success('Uloženo'); }}
+                            type="url"
+                            placeholder="Zadat web"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Sales Info */}
-                  <div className="space-y-2 text-sm">
-                    <h4 className="font-medium text-xs flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
-                      <TrendingUp className="h-3.5 w-3.5" />
-                      Obchod
-                    </h4>
-                    <div className="p-3 rounded-lg border bg-card space-y-2">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <span className="text-xs text-muted-foreground">Zdroj</span>
-                          <InlineEditField
-                            value={lead.source}
-                            onSave={(v) => { updateLead(lead.id, { source: v as Lead['source'] }); toast.success('Uloženo'); }}
-                            type="select"
-                            options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label }))}
-                          />
-                        </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground">Pravděpodobnost</span>
-                          <InlineEditField
-                            value={lead.probability_percent}
-                            onSave={(v) => { updateLead(lead.id, { probability_percent: Number(v) || 0 }); toast.success('Uloženo'); }}
-                            type="number" suffix="%" placeholder="0" displayClassName="font-medium"
-                          />
-                        </div>
+                    {/* Tracking badges */}
+                    {(lead.has_ga4 !== null || lead.has_gtm !== null || lead.has_meta_pixel !== null || lead.has_google_ads !== null) && (
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                        {[
+                          { value: lead.has_gtm, label: 'GTM' },
+                          { value: lead.has_meta_pixel, label: 'Meta Pixel' },
+                          { value: lead.has_google_ads, label: 'Google Ads' },
+                          { value: lead.has_ga4, label: 'GA4' },
+                        ].filter(b => b.value !== null && b.value !== undefined).map(b => (
+                          <div key={b.label} className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">{b.label}</span>
+                            <div className={cn(
+                              "h-5 w-5 rounded flex items-center justify-center",
+                              b.value ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"
+                            )}>
+                              {b.value ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                        <Coins className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground text-xs">Ad spend:</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* MARKETING Card */}
+                <div className="p-4 rounded-lg border bg-card space-y-3">
+                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    Marketing
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <div>
+                        <span className="text-muted-foreground text-xs">Kanály</span>
+                        <p className="font-medium">{lead.enrichment_services_needed || '–'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Kdo řeší reklamu</span>
+                        <p className="font-medium">{lead.marketing_experience || '–'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Grafický tým</span>
+                        <p className="font-medium">{lead.has_creative_team || '–'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Ad spend</span>
                         <InlineEditField
                           value={lead.ad_spend_monthly}
                           onSave={(v) => { updateLead(lead.id, { ad_spend_monthly: Number(v) || 0 }); toast.success('Uloženo'); }}
-                          type="number" suffix="Kč" placeholder="0" displayClassName="font-medium" emptyText="Zadat"
+                          type="number" suffix="Kč" placeholder="0" displayClassName="font-medium" emptyText="–"
                         />
                       </div>
-                      {lead.client_message && (
-                        <div className="p-2 rounded border-l-2 border-primary/50 bg-muted/30">
-                          <span className="text-xs text-muted-foreground block mb-0.5">Zpráva:</span>
-                          <InlineEditField value={lead.client_message} onSave={(v) => { updateLead(lead.id, { client_message: v }); toast.success('Uloženo'); }} type="textarea" placeholder="Zpráva" emptyText="" />
-                        </div>
-                      )}
-                      {(lead.summary || !lead.client_message) && (
-                        <div className="p-2 rounded bg-muted/30">
-                          <span className="text-xs text-muted-foreground block mb-0.5">Shrnutí:</span>
-                          <InlineEditField value={lead.summary} onSave={(v) => { updateLead(lead.id, { summary: v }); toast.success('Uloženo'); }} type="textarea" placeholder="Shrnutí" emptyText="Přidat shrnutí" />
-                        </div>
-                      )}
                     </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Zdroj</span>
+                      <InlineEditField
+                        value={lead.source}
+                        onSave={(v) => { updateLead(lead.id, { source: v as Lead['source'] }); toast.success('Uloženo'); }}
+                        type="select"
+                        options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label }))}
+                      />
+                    </div>
+                    {lead.pain_point && (
+                      <div className="p-2.5 rounded-lg border-l-4 border-red-400 bg-red-500/5">
+                        <span className="text-xs text-muted-foreground block mb-0.5">🎯 Pain point</span>
+                        <p className="text-sm font-medium">{lead.pain_point}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Enrichment Data - full width */}
-              <LeadEnrichmentSection lead={lead} />
+              {/* RESEARCH SECTION - full width */}
+              {lead.company_research && (
+                <Collapsible defaultOpen>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+                    <Sparkles className="h-4 w-4 text-violet-500" />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Research firmy (Perplexity)</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-3">
+                    <div className="p-4 rounded-lg border bg-card text-sm leading-relaxed whitespace-pre-wrap">
+                      {lead.company_research}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
 
               {/* Conversion status */}
               {lead.converted_to_client_id && (
