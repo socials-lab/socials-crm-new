@@ -1059,41 +1059,43 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* ===== AUDIT FINDINGS ===== */}
         {offer.audit_summary && (
           <>
-            <section>
-              <SectionHeading
-                title="🔍 Co jsme zjistili"
-                subtitle="Na základě analýzy vašich reklamních účtů a webu jsme identifikovali klíčové oblasti pro zlepšení."
-              />
-              <div className="space-y-3">
-                {offer.audit_summary.split('\n').filter(line => line.trim().length > 0).map((finding, idx) => {
-                  const cleanFinding = finding.replace(/^[-•*]\s*/, '').trim();
-                  if (!cleanFinding) return null;
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-4 p-4 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-foreground/[0.1] transition-all duration-300"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-sm">💡</span>
+            <ScrollReveal>
+              <section>
+                <SectionHeading
+                  title="🔍 Co jsme zjistili"
+                  subtitle="Na základě analýzy vašich reklamních účtů a webu jsme identifikovali klíčové oblasti pro zlepšení."
+                />
+                <div className="space-y-3">
+                  {offer.audit_summary.split('\n').filter(line => line.trim().length > 0).map((finding, idx) => {
+                    const cleanFinding = finding.replace(/^[-•*]\s*/, '').trim();
+                    if (!cleanFinding) return null;
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-4 p-4 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-foreground/[0.1] transition-all duration-300"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-sm">💡</span>
+                        </div>
+                        <p className="text-sm text-foreground/80 leading-relaxed">{cleanFinding}</p>
                       </div>
-                      <p className="text-sm text-foreground/80 leading-relaxed">{cleanFinding}</p>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              {offer.recommendation_intro && (
-                <div className="mt-6 p-5 rounded-xl bg-[#94e700]/[0.05] border border-[#94e700]/20">
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg mt-0.5">✅</span>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground mb-1">Naše doporučení</p>
-                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{offer.recommendation_intro}</p>
+                {offer.recommendation_intro && (
+                  <div className="mt-6 p-5 rounded-xl bg-[#94e700]/[0.05] border border-[#94e700]/20">
+                    <div className="flex items-start gap-3">
+                      <span className="text-lg mt-0.5">✅</span>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground mb-1">Naše doporučení</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{offer.recommendation_intro}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </section>
+                )}
+              </section>
+            </ScrollReveal>
 
             <SectionDivider />
           </>
