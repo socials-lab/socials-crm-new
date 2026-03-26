@@ -1,68 +1,30 @@
 
 
-# AI Chatbot for Agency Knowledge Base
+## Přidat sekci "Proč spolupracovat právě s námi?" do veřejné nabídky
 
-## Overview
-Create an AI-powered chatbot accessible from the CRM sidebar that answers questions about agency SOPs, pricing/offers, and colleague rewards. The chatbot will use Lovable AI (Gemini) with a rich system prompt containing all agency knowledge (services, pricing, rewards, SOPs).
+### Umístění
+Sekce se vloží **za OnboardingProcessSection (řádek 880) a před Loom video (řádek 883)** — tedy mezi timeline onboardingu a video/kontakt.
 
-## Architecture
+### Struktura sekce `WhyUsSection`
 
-```text
-┌─────────────────┐     ┌──────────────────────┐     ┌──────────────┐
-│  Chat UI (FAB)  │────▶│  Edge Function        │────▶│  Lovable AI  │
-│  Bottom-right   │◀────│  /agency-assistant    │◀────│  Gateway     │
-│  Slide-out panel│     │  (system prompt with  │     └──────────────┘
-└─────────────────┘     │   agency knowledge)   │
-                        └──────────────────────┘
-```
+Nová komponenta uvnitř `PublicOfferPage.tsx` obsahující:
 
-## What the chatbot will know (baked into system prompt)
+1. **Hlavní nadpis** — "🏆 Proč spolupracovat právě s námi?"
+2. **Úvodní odstavec** — "Chceme, aby pro vás byla spolupráce..." + "Ne sliby, ale skutečný business dopad..."
+3. **4 karty s klíčovými argumenty** (grid 1 col mobile, 2 col desktop):
+   - 💰 **30+ mil. Kč** reklamních rozpočtů měsíčně — zkušenosti s velkými i středními e-shopy
+   - 👨‍💻 **Výhradně seniorní specialisté** s 5+ lety zkušeností — žádní junioři
+   - 🏅 **Certifikovaní partneři** Meta, Google, TikTok, Sklik + zlatý Shoptet partner — přímé kontakty, přístup k betám
+   - 🤝 **Pečlivý výběr klientů** — jdeme jen do spolupráce, kde jsme přesvědčeni o výsledcích
+4. **Případové studie CTA** — odkaz na socials.cz/pripadove-studie
+5. **Podcast CTA** — odkaz na socials.cz/socials-podcast
+6. **Recenze klientů** — odkaz na Shoptet Partner Portál
 
-1. **Service catalog** — all services, tier pricing (Growth/Pro/Elite), spend thresholds
-2. **Reward configurations** — colleague compensation per role per service per tier (from `serviceRewards.ts`)
-3. **Service defaults** — deliverables, requirements, frequency, turnaround (from `serviceDefaults.ts`)
-4. **Service details** — benefits, setup steps, tier comparison (from `serviceDetails.ts`)
-5. **Pricing rules** — target margin 66%, expansion multipliers, intro discount logic
-6. **SOP articles** — fetched from Supabase `sop_articles` table at query time
+### Styl
+- Konzistentní s existujícím dark mode designem (`bg-muted/50`, `border`, `rounded-xl`)
+- Karty s emoji ikonou, tučným číslem/tvrzením a popisem pod ním
+- Odkazy jako `text-primary hover:underline` s `ExternalLink` ikonou
 
-## Implementation Steps
-
-### 1. Create Edge Function `agency-assistant`
-- Accepts `{ messages, sopContext? }` from frontend
-- Builds a comprehensive system prompt containing:
-  - Full service catalog with pricing tiers
-  - Reward table per role/service/tier
-  - Pricing rules (margin targets, multipliers, discounts)
-  - Deliverables and requirements per service
-- Fetches SOP articles from DB to include as context
-- Streams response from Lovable AI Gateway
-- Uses `google/gemini-3-flash-preview` model
-
-### 2. Create Chat UI Component
-- Floating action button (bottom-right) with a chat icon
-- Slide-out panel with conversation history
-- Markdown rendering for responses (react-markdown)
-- Streaming token-by-token display
-- Pre-built quick action buttons: "Jak nacenit nabídku?", "Jaké jsou odměny?", "Co potřebuji k onboardingu?"
-
-### 3. Add to App Layout
-- Render the chat FAB in `AppLayout.tsx` (visible on all pages, only for authenticated CRM users)
-- Conversation state persisted in React state (no DB storage needed initially)
-
-### 4. Register Edge Function
-- Add `[functions.agency-assistant]` to `supabase/config.toml`
-
-## Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| `supabase/functions/agency-assistant/index.ts` | Create — edge function with system prompt + SOP query |
-| `src/components/assistant/AgencyAssistant.tsx` | Create — chat panel UI |
-| `src/components/assistant/AssistantFAB.tsx` | Create — floating button |
-| `src/components/layout/AppLayout.tsx` | Modify — add AssistantFAB |
-| `supabase/config.toml` | Modify — register function |
-
-## System Prompt Strategy
-
-The system prompt will be built from hardcoded constants (serviceRewards, serviceDefaults, serviceDetails, services) serialized as structured text. SOP content will be fetched from `sop_articles` + `sop_categories` tables. This avoids needing embeddings or vector search — the full context fits within Gemini's large context window.
+### Soubory k úpravě
+- `src/pages/PublicOfferPage.tsx` — přidat `WhyUsSection` komponentu a vložit ji za `OnboardingProcessSection`
 
