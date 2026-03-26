@@ -52,6 +52,7 @@ import PublicCreativeBoostPage from "./pages/PublicCreativeBoostPage";
 import PublicSOPPage from "./pages/PublicSOPPage";
 import BugReports from "./pages/BugReports";
 import Prospects from "./pages/Prospects";
+import Portfolio from "./pages/Portfolio";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,7 @@ const App = () => (
                               <Route path="/sop/:articleId" element={<SOP />} />
                               <Route path="/bug-reports" element={<BugReports />} />
                               <Route path="/prospects" element={<Prospects />} />
+                              <Route path="/portfolio" element={<Portfolio />} />
                             </Route>
                             <Route path="*" element={<NotFound />} />
                           </Routes>
