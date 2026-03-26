@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef, type ReactNode } from 'react';
+import React, { useEffect, useState, useRef, type ReactNode } from 'react';
+import { DEFAULT_OFFER_CONTENT } from '@/hooks/useOfferContent';
 import { useParams, Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
@@ -1012,7 +1013,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* Credibility badges */}
         {(() => {
-          const badgesBlock = getBlock('credibility_badges');
+          const badgesBlock = DEFAULT_OFFER_CONTENT['credibility_badges'];
           const items = badgesBlock?.content?.items as string[] | undefined;
           if (!items || items.length === 0) return null;
           return (
