@@ -676,6 +676,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
   const handleCopyLink = async () => {
     const url = window.location.href;
