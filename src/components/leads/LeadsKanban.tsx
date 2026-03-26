@@ -164,7 +164,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
           "rounded-lg border transition-all flex flex-col",
           config.bgColor,
           isDropTarget && "ring-2 ring-primary shadow-lg",
-          compact ? "min-h-[120px]" : "min-h-[200px]"
+          compact ? "min-h-[120px]" : "min-h-[140px]"
         )}
       >
         {/* Column Header */}
@@ -185,8 +185,8 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
 
         {/* Cards */}
         <div className={cn(
-          "p-1.5 space-y-1.5 flex-1 overflow-y-auto",
-          compact ? "max-h-[150px]" : "max-h-[calc(100vh-500px)]"
+          "p-1.5 space-y-1.5 flex-1",
+          compact && "max-h-[150px] overflow-y-auto"
         )}>
           {stageLeads.map(lead => (
             <div
