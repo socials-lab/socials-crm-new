@@ -516,7 +516,7 @@ function ReportingSection() {
 
       <div className="mb-6">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Interaktivní ukázka reportu</p>
-        <div className="rounded-xl overflow-hidden border border-foreground/[0.08]" style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+        <div className="rounded-xl overflow-hidden border border-foreground/[0.08]" style={{ position: 'relative', paddingBottom: '84.375%', height: 0 }}>
           <iframe
             src={DEMO_REPORT_URL}
             frameBorder="0"
