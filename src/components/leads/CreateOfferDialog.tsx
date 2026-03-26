@@ -728,16 +728,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                   </p>
                 </div>
 
-                {/* Valid until */}
-                <div className="space-y-2">
-                  <Label htmlFor="validUntil">📅 Platnost nabídky do</Label>
-                  <Input
-                    id="validUntil"
-                    type="date"
-                    value={validUntil || defaultValidUntil}
-                    onChange={(e) => setValidUntil(e.target.value)}
-                  />
-                </div>
               </div>
             </ScrollArea>
 
