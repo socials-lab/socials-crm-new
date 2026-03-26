@@ -140,7 +140,9 @@ export function LeadFlowStepper({
       actions: !lead.meeting_request_sent_at ? [
         { label: 'Odeslat e-mail', onClick: onSendMeetingRequest, variant: 'outline' },
         { label: '✓ Potvrdil ručně', onClick: onQuickConfirmMeetingSent, variant: 'ghost' },
-      ] : undefined,
+      ] : [
+        { label: 'Odeslat znovu', onClick: onSendMeetingRequest, variant: 'ghost' },
+      ],
     },
     {
       id: 'access-sent',
@@ -153,7 +155,9 @@ export function LeadFlowStepper({
       actions: !lead.access_request_sent_at ? [
         { label: 'Odeslat e-mail', onClick: onRequestAccess, variant: 'outline' },
         { label: '✓ Potvrdil ručně', onClick: onQuickConfirmAccessSent, variant: 'ghost' },
-      ] : undefined,
+      ] : [
+        { label: 'Odeslat znovu', onClick: onRequestAccess, variant: 'ghost' },
+      ],
     },
     {
       id: 'access-received',
@@ -214,6 +218,10 @@ export function LeadFlowStepper({
         label: 'Odeslat nabídku',
         onClick: onSendOffer,
         variant: 'outline',
+      }] : lead.offer_sent_at ? [{
+        label: 'Odeslat znovu',
+        onClick: onSendOffer,
+        variant: 'ghost',
       }] : undefined,
     },
     {
@@ -230,7 +238,11 @@ export function LeadFlowStepper({
         label: 'Odeslat formulář',
         onClick: onSendOnboarding,
         variant: 'outline',
-      }] : undefined,
+      }] : [{
+        label: 'Odeslat znovu',
+        onClick: onSendOnboarding,
+        variant: 'ghost',
+      }],
     },
     {
       id: 'contract',
