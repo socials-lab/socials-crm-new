@@ -446,7 +446,7 @@ function WhyUsSection() {
     <section>
       <SectionHeading
         title="Proč právě my"
-        subtitle="Ne sliby, ale skutečný business dopad. Pečlivě si vybíráme, s kým spolupracujeme."
+        subtitle="Ne sliby, ale skutečný business dopad. Podobnou agenturu na trhu nenajdete."
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
