@@ -550,6 +550,73 @@ function WhyUsSection() {
   );
 }
 
+const PORTFOLIO_IMAGES = [
+  { src: '/images/portfolio/banner1.jpg', alt: 'Teen Wear – kreativní banner' },
+  { src: '/images/portfolio/doprava_zdarma1.png', alt: 'Super Zoo – doprava zdarma' },
+  { src: '/images/portfolio/sleepking.jpg', alt: 'SleepKing – produktová reklama' },
+  { src: '/images/portfolio/puella.png', alt: 'Puella – vánoční kampaň' },
+  { src: '/images/portfolio/cyber_monday.png', alt: 'Puella – Cyber Monday' },
+  { src: '/images/portfolio/onlinemedical.jpg', alt: 'Online Medical – longevity' },
+  { src: '/images/portfolio/nutworld.png', alt: 'Nut World – prémiové kešu' },
+  { src: '/images/portfolio/naturapura.jpg', alt: 'Pontina – Essentials set' },
+  { src: '/images/portfolio/halloween.png', alt: 'Natima – Halloween kampaň' },
+  { src: '/images/portfolio/magnesium.png', alt: 'Natima – Magnesium duo' },
+];
+
+function CreativePortfolioSection() {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  return (
+    <section className="mb-16 p-6 md:p-8 rounded-2xl border bg-card/50 backdrop-blur-sm">
+      <h2 className="text-base font-semibold mb-2 text-center">
+        🎨 Grafika, která prodává
+      </h2>
+      <p className="text-sm text-muted-foreground text-center mb-2">
+        Specializujeme se na grafiku pro výkonnostní reklamy. Tvoříme kreativy, které nejen vypadají skvěle, ale hlavně konvertují.
+      </p>
+      <p className="text-sm text-muted-foreground text-center mb-8">
+        Díky <span className="font-semibold text-foreground">AI nástrojům</span> od vás nepotřebujeme žádné podklady navíc — stačí fotka produktu na bílém pozadí a z toho vytvoříme kompletní kreativní bannery i videa.
+      </p>
+
+      {/* Image grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {PORTFOLIO_IMAGES.map((img, i) => (
+          <div
+            key={i}
+            onClick={() => setSelectedImage(img.src)}
+            className="group relative aspect-square rounded-xl overflow-hidden border bg-muted/30 cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300"
+          >
+            <img
+              src={img.src}
+              alt={img.alt}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+              <p className="text-xs font-medium text-foreground">{img.alt}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Lightbox */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img
+            src={selectedImage}
+            alt="Portfolio detail"
+            className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain"
+          />
+          <p className="absolute bottom-6 text-xs text-muted-foreground">Klikněte kamkoliv pro zavření</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 // Contact section - shows lead owner's contact info
 function ContactSection({ offer }: { offer: PublicOffer }) {
   if (!offer.owner_name && !offer.owner_email) return null;
@@ -957,6 +1024,9 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* Why us section */}
         <WhyUsSection />
+
+        {/* Creative portfolio */}
+        <CreativePortfolioSection />
 
         {/* Loom video */}
         {offer.loom_url && (
