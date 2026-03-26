@@ -690,49 +690,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                   )}
                 </div>
 
-                <Separator />
-
-                {/* Audit summary */}
-                <div className="space-y-2">
-                  <Label htmlFor="audit">📊 Výstup z auditu (volitelné)</Label>
-                  <Textarea
-                    id="audit"
-                    value={auditSummary}
-                    onChange={(e) => setAuditSummary(e.target.value)}
-                    placeholder="Na základě analýzy vašich reklamních účtů jsme identifikovali..."
-                    rows={4}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Krátké shrnutí zjištění z auditu účtů klienta
-                  </p>
-                </div>
-
-                {/* Custom note */}
-                <div className="space-y-2">
-                  <Label htmlFor="note">📝 Poznámka pro klienta (volitelné)</Label>
-                  <Textarea
-                    id="note"
-                    value={customNote}
-                    onChange={(e) => setCustomNote(e.target.value)}
-                    placeholder="Těšíme se na spolupráci! V případě dotazů se neváhejte obrátit..."
-                    rows={3}
-                  />
-                </div>
-
-                {/* Loom video */}
-                <div className="space-y-2">
-                  <Label htmlFor="loom">🎥 Loom video k nabídce / auditu (volitelné)</Label>
-                  <Input
-                    id="loom"
-                    type="url"
-                    value={loomUrl}
-                    onChange={(e) => setLoomUrl(e.target.value)}
-                    placeholder="https://www.loom.com/share/..."
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Odkaz na Loom video, kde klientovi popisujete nabídku nebo výsledky auditu
-                  </p>
-                </div>
 
               </div>
             </ScrollArea>
