@@ -875,8 +875,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           </div>
         </section>
 
-        {/* How it works - Compact */}
-        <NextStepsSection />
+        {/* Onboarding process timeline */}
+        <OnboardingProcessSection />
 
 
         {/* Loom video */}
