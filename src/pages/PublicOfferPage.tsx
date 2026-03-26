@@ -524,45 +524,12 @@ function ReportingSection() {
   );
 }
 
-function CreativePortfolioSection() {
+function PortfolioGrid({ items, label }: { items: { src: string; alt: string; type: 'image' | 'video' }[]; label: string }) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const { items: portfolioItems, isLoading: portfolioLoading } = usePublicPortfolioLocal();
 
-  const FALLBACK_IMAGES = [
-    { src: '/images/portfolio/banner1.jpg', alt: 'Teen Wear – kreativní banner', type: 'image' as const },
-    { src: '/images/portfolio/doprava_zdarma1.png', alt: 'Super Zoo – doprava zdarma', type: 'image' as const },
-    { src: '/images/portfolio/sleepking.jpg', alt: 'SleepKing – produktová reklama', type: 'image' as const },
-    { src: '/images/portfolio/puella.png', alt: 'Puella – vánoční kampaň', type: 'image' as const },
-    { src: '/images/portfolio/cyber_monday.png', alt: 'Puella – Cyber Monday', type: 'image' as const },
-    { src: '/images/portfolio/onlinemedical.jpg', alt: 'Online Medical – longevity', type: 'image' as const },
-    { src: '/images/portfolio/nutworld.png', alt: 'Nut World – prémiové kešu', type: 'image' as const },
-    { src: '/images/portfolio/naturapura.jpg', alt: 'Pontina – Essentials set', type: 'image' as const },
-    { src: '/images/portfolio/halloween.png', alt: 'Natima – Halloween kampaň', type: 'image' as const },
-    { src: '/images/portfolio/magnesium.png', alt: 'Natima – Magnesium duo', type: 'image' as const },
-    { src: '/images/portfolio/cbdway.jpg', alt: 'CBDway – Tutti Frutti medvídci', type: 'image' as const },
-    { src: '/images/portfolio/dmania.jpg', alt: 'Dmania – listopadová sleva', type: 'image' as const },
-    { src: '/images/portfolio/k2moto.png', alt: 'K2 Moto – airbagová vesta', type: 'image' as const },
-    { src: '/images/portfolio/beewood.png', alt: 'Beewood – dřevěné kryty', type: 'image' as const },
-    { src: '/images/portfolio/antistress.mp4', alt: 'Antistress – produktové video', type: 'video' as const },
-    { src: '/images/portfolio/firefly.mp4', alt: 'Adobe Firefly – AI video', type: 'video' as const },
-    { src: '/images/portfolio/penezenka.mp4', alt: 'Business peněženka – produkt', type: 'video' as const },
-    { src: '/images/portfolio/ioniq.mp4', alt: 'Hyundai IONIQ – reklama', type: 'video' as const },
-    { src: '/images/portfolio/hyundai.mp4', alt: 'Hyundai – video spot', type: 'video' as const },
-    { src: '/images/portfolio/cbdway_sleep.mp4', alt: 'CBDway Sleep – produkt', type: 'video' as const },
-    { src: '/images/portfolio/final_video.mp4', alt: 'Kreativní video spot', type: 'video' as const },
-    { src: '/images/portfolio/nutworld_video.mp4', alt: 'Nut World – video reklama', type: 'video' as const },
-    { src: '/images/portfolio/teenwear_video.mp4', alt: 'Teen Wear – video', type: 'video' as const },
-    { src: '/images/portfolio/natima_video.mp4', alt: 'Natima – klientské video', type: 'video' as const },
-  ];
-
-  const displayItems = portfolioItems.length > 0
-    ? portfolioItems.map(i => ({ src: i.file_url, alt: i.title, type: i.type }))
-    : FALLBACK_IMAGES;
-
-  // Keyboard navigation for lightbox
   useEffect(() => {
     if (selectedIndex === null) return;
-    const total = displayItems.length;
+    const total = items.length;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') setSelectedIndex(i => i !== null ? (i + 1) % total : null);
       if (e.key === 'ArrowLeft') setSelectedIndex(i => i !== null ? (i - 1 + total) % total : null);
@@ -570,17 +537,15 @@ function CreativePortfolioSection() {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [selectedIndex, displayItems.length]);
+  }, [selectedIndex, items.length]);
+
+  if (items.length === 0) return null;
 
   return (
-    <section>
-      <SectionHeading
-        title="Grafika, která prodává"
-        subtitle="Specializujeme se na kreativy pro výkonnostní reklamy. Díky AI nástrojům stačí fotka produktu na bílém pozadí — z toho vytvoříme kompletní bannery i videa."
-      />
-
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-foreground">{label}</h3>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-        {displayItems.map((item, i) => (
+        {items.map((item, i) => (
           <div
             key={i}
             onClick={() => setSelectedIndex(i)}
@@ -619,15 +584,14 @@ function CreativePortfolioSection() {
 
       {/* Lightbox */}
       {selectedIndex !== null && (() => {
-        const current = displayItems[selectedIndex];
-        const goNext = (e: React.MouseEvent) => { e.stopPropagation(); setSelectedIndex((selectedIndex + 1) % displayItems.length); };
-        const goPrev = (e: React.MouseEvent) => { e.stopPropagation(); setSelectedIndex((selectedIndex - 1 + displayItems.length) % displayItems.length); };
+        const current = items[selectedIndex];
+        const goNext = (e: React.MouseEvent) => { e.stopPropagation(); setSelectedIndex((selectedIndex + 1) % items.length); };
+        const goPrev = (e: React.MouseEvent) => { e.stopPropagation(); setSelectedIndex((selectedIndex - 1 + items.length) % items.length); };
         return (
           <div
             className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
             onClick={() => setSelectedIndex(null)}
           >
-            {/* Left arrow */}
             <button
               onClick={goPrev}
               className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-foreground/70 hover:text-white transition-colors backdrop-blur-sm"
@@ -635,7 +599,6 @@ function CreativePortfolioSection() {
               <ChevronLeft className="h-6 w-6" />
             </button>
 
-            {/* Content */}
             {current.type === 'video' ? (
               <video
                 src={current.src}
@@ -653,7 +616,6 @@ function CreativePortfolioSection() {
               />
             )}
 
-            {/* Right arrow */}
             <button
               onClick={goNext}
               className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-foreground/70 hover:text-white transition-colors backdrop-blur-sm"
@@ -661,14 +623,65 @@ function CreativePortfolioSection() {
               <ChevronRight className="h-6 w-6" />
             </button>
 
-            {/* Bottom info */}
             <div className="absolute bottom-6 flex flex-col items-center gap-2">
               <p className="text-sm font-medium text-foreground/80">{current.alt}</p>
-              <p className="text-xs text-muted-foreground/70">{selectedIndex + 1} / {displayItems.length} · Klikněte kamkoliv pro zavření</p>
+              <p className="text-xs text-muted-foreground/70">{selectedIndex + 1} / {items.length} · Klikněte kamkoliv pro zavření</p>
             </div>
           </div>
         );
       })()}
+    </div>
+  );
+}
+
+function CreativePortfolioSection() {
+  const { items: portfolioItems, isLoading: portfolioLoading } = usePublicPortfolioLocal();
+
+  const FALLBACK_IMAGES = [
+    { src: '/images/portfolio/banner1.jpg', alt: 'Teen Wear – kreativní banner', type: 'image' as const },
+    { src: '/images/portfolio/doprava_zdarma1.png', alt: 'Super Zoo – doprava zdarma', type: 'image' as const },
+    { src: '/images/portfolio/sleepking.jpg', alt: 'SleepKing – produktová reklama', type: 'image' as const },
+    { src: '/images/portfolio/puella.png', alt: 'Puella – vánoční kampaň', type: 'image' as const },
+    { src: '/images/portfolio/cyber_monday.png', alt: 'Puella – Cyber Monday', type: 'image' as const },
+    { src: '/images/portfolio/onlinemedical.jpg', alt: 'Online Medical – longevity', type: 'image' as const },
+    { src: '/images/portfolio/nutworld.png', alt: 'Nut World – prémiové kešu', type: 'image' as const },
+    { src: '/images/portfolio/naturapura.jpg', alt: 'Pontina – Essentials set', type: 'image' as const },
+    { src: '/images/portfolio/halloween.png', alt: 'Natima – Halloween kampaň', type: 'image' as const },
+    { src: '/images/portfolio/magnesium.png', alt: 'Natima – Magnesium duo', type: 'image' as const },
+    { src: '/images/portfolio/cbdway.jpg', alt: 'CBDway – Tutti Frutti medvídci', type: 'image' as const },
+    { src: '/images/portfolio/dmania.jpg', alt: 'Dmania – listopadová sleva', type: 'image' as const },
+    { src: '/images/portfolio/k2moto.png', alt: 'K2 Moto – airbagová vesta', type: 'image' as const },
+    { src: '/images/portfolio/beewood.png', alt: 'Beewood – dřevěné kryty', type: 'image' as const },
+    { src: '/images/portfolio/antistress.mp4', alt: 'Antistress – produktové video', type: 'video' as const },
+    { src: '/images/portfolio/firefly.mp4', alt: 'Adobe Firefly – AI video', type: 'video' as const },
+    { src: '/images/portfolio/penezenka.mp4', alt: 'Business peněženka – produkt', type: 'video' as const },
+    { src: '/images/portfolio/ioniq.mp4', alt: 'Hyundai IONIQ – reklama', type: 'video' as const },
+    { src: '/images/portfolio/hyundai.mp4', alt: 'Hyundai – video spot', type: 'video' as const },
+    { src: '/images/portfolio/cbdway_sleep.mp4', alt: 'CBDway Sleep – produkt', type: 'video' as const },
+    { src: '/images/portfolio/final_video.mp4', alt: 'Kreativní video spot', type: 'video' as const },
+    { src: '/images/portfolio/nutworld_video.mp4', alt: 'Nut World – video reklama', type: 'video' as const },
+    { src: '/images/portfolio/teenwear_video.mp4', alt: 'Teen Wear – video', type: 'video' as const },
+    { src: '/images/portfolio/natima_video.mp4', alt: 'Natima – klientské video', type: 'video' as const },
+  ];
+
+  const displayItems = portfolioItems.length > 0
+    ? portfolioItems.map(i => ({ src: i.file_url, alt: i.title, type: i.type }))
+    : FALLBACK_IMAGES;
+
+  const banners = displayItems.filter(i => i.type === 'image');
+  const videos = displayItems.filter(i => i.type === 'video');
+
+  return (
+    <section>
+      <SectionHeading
+        title="Grafika, která prodává"
+        subtitle="Specializujeme se na kreativy pro výkonnostní reklamy. Díky AI nástrojům stačí fotka produktu na bílém pozadí — z toho vytvoříme kompletní bannery i videa."
+      />
+
+      <div className="space-y-10">
+        <PortfolioGrid items={banners} label="Bannery" />
+        <PortfolioGrid items={videos} label="Videa" />
+      </div>
     </section>
   );
 }
