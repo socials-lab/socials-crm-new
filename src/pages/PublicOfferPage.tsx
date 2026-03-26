@@ -1229,6 +1229,11 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 title: 'Celý výkonnostní marketing pod jednou střechou',
                 desc: 'Meta, Google, Shoptet, analytika — vše řešíme my. Ušetříte čas i nervy s koordinací více dodavatelů a máte jednoho partnera pro vše.'
               },
+              {
+                icon: '🧠',
+                title: 'Strategická podpora rozvoje vašeho businessu',
+                desc: 'Nejsme jen specialisté na reklamu — rozumíme e-commerce, maržím a obchodním modelům. Pomůžeme vám najít nové příležitosti, optimalizovat nabídku a škálovat byznys, nejen kampaně.'
+              },
             ].map((item, i) => (
               <div key={i} className="rounded-xl border border-foreground/[0.06] bg-muted/30 p-5 space-y-2">
                 <div className="text-2xl">{item.icon}</div>
