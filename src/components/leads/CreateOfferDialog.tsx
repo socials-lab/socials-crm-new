@@ -12,10 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Copy, ExternalLink, Check, TrendingUp } from 'lucide-react';
+import { Loader2, Copy, ExternalLink, Check, TrendingUp, Plus, X } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
-import type { Lead } from '@/types/crm';
+import type { Lead, Service } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
 import { addPublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
@@ -23,6 +23,107 @@ import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { getServiceDetail } from '@/constants/serviceDetails';
 import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
 import { getRewardsFromServiceConfig } from '@/constants/serviceRewards';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+// Map enrichment platform keywords to service codes
+const PLATFORM_TO_SERVICE_CODES: Record<string, string[]> = {
+  'meta': ['SOCIALS_BOOST'],
+  'facebook': ['SOCIALS_BOOST'],
+  'instagram': ['SOCIALS_BOOST'],
+  'google ads': ['PPC_BOOST'],
+  'google': ['PPC_BOOST'],
+  'sklik': ['PPC_BOOST'],
+  'seznam': ['PPC_BOOST'],
+  'tiktok': ['TIKTOK_ADS'],
+  'heureka': ['HEUREKA_ZBOZI'],
+  'zbozi': ['HEUREKA_ZBOZI'],
+  'zboží': ['HEUREKA_ZBOZI'],
+  'glami': ['GLAMI'],
+  'favi': ['FAVI'],
+  'seo': ['AI_SEO'],
+  'creative': ['CREATIVE_BOOST'],
+  'kreativa': ['CREATIVE_BOOST'],
+  'video': ['VIDEO_BOOST'],
+  'performance': ['PERFORMANCE_BOOST'],
+};
+
+function suggestServiceCodes(lead: Lead): string[] {
+  const codes = new Set<string>();
+  
+  // Check enrichment_platform
+  const platform = (lead.enrichment_platform || '').toLowerCase();
+  // Check enrichment_services_needed
+  const servicesNeeded = (lead.enrichment_services_needed || '').toLowerCase();
+  // Check access_request_platforms
+  const accessPlatforms = (lead.access_request_platforms || []).map(p => p.toLowerCase());
+  
+  const allText = [platform, servicesNeeded, ...accessPlatforms].join(' ');
+  
+  for (const [keyword, serviceCodes] of Object.entries(PLATFORM_TO_SERVICE_CODES)) {
+    if (allText.includes(keyword)) {
+      serviceCodes.forEach(c => codes.add(c));
+    }
+  }
+  
+  // If both Meta and Google are detected, suggest Performance Boost instead of individual
+  if (codes.has('SOCIALS_BOOST') && codes.has('PPC_BOOST')) {
+    codes.delete('SOCIALS_BOOST');
+    codes.delete('PPC_BOOST');
+    codes.add('PERFORMANCE_BOOST');
+  }
+  
+  // Always suggest Creative Boost if any core service is present
+  if (codes.has('SOCIALS_BOOST') || codes.has('PPC_BOOST') || codes.has('PERFORMANCE_BOOST')) {
+    codes.add('CREATIVE_BOOST');
+  }
+  
+  return Array.from(codes);
+}
+
+function buildServiceFromCatalog(catalogService: Service, lead: Lead): PublicOfferService {
+  const constantDetail = getServiceDetail(catalogService.code);
+  const defaultTier = catalogService.service_type === 'core' ? 'growth' : null;
+  
+  let price = catalogService.base_price || 0;
+  let originalPrice = price;
+  if (constantDetail?.tierPricing && defaultTier) {
+    const tierPrice = constantDetail.tierPricing[defaultTier as keyof typeof constantDetail.tierPricing];
+    if (tierPrice?.price !== null && tierPrice?.price !== undefined) {
+      price = tierPrice.price;
+      originalPrice = tierPrice.originalPrice ?? tierPrice.price;
+    }
+  }
+
+  const description = catalogService.description || constantDetail?.tagline || '';
+  const merged = mergeWithDefaults(catalogService.name, null, null, null, null, null);
+
+  return {
+    id: crypto.randomUUID(),
+    service_id: catalogService.id,
+    name: catalogService.name,
+    description,
+    offer_description: null,
+    selected_tier: defaultTier as any,
+    price,
+    original_price: originalPrice,
+    discount_reason: '',
+    currency: lead.currency,
+    billing_type: 'monthly',
+    service_type: catalogService.service_type,
+    deliverables: merged.deliverables,
+    frequency: merged.frequency,
+    turnaround: merged.turnaround,
+    requirements: merged.requirements,
+    start_timeline: '',
+    detailed_sections: merged.detailed_sections,
+  };
+}
 
 interface CreateOfferDialogProps {
   open: boolean;
@@ -70,12 +171,13 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
   // Initialize editable services when dialog opens
   useEffect(() => {
-    if (open && lead.potential_services) {
+    if (!open) return;
+    
+    // If lead already has potential_services, use those
+    if (lead.potential_services && lead.potential_services.length > 0) {
       const initialServices: PublicOfferService[] = lead.potential_services.map(ls => {
         const serviceDetails = services.find(s => s.id === ls.service_id);
-        
 
-        // Resolve price: use lead price, but if it looks wrong, fall back to SERVICE_DETAILS
         let resolvedPrice = ls.price;
         let resolvedOriginalPrice = ls.price;
         const constantDetail = serviceDetails ? getServiceDetail(serviceDetails.code) : undefined;
@@ -88,10 +190,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           }
         }
 
-        // Get description from SERVICE_DETAILS tagline as fallback
         const description = serviceDetails?.description || constantDetail?.tagline || '';
-
-        // Get merged defaults (deliverables, frequency, turnaround, requirements, detailed_sections)
         const merged = mergeWithDefaults(ls.name, 
           serviceDetails?.default_deliverables, null, null, null, null);
 
@@ -117,6 +216,20 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         };
       });
       setEditableServices(initialServices);
+      return;
+    }
+    
+    // Otherwise, auto-suggest services based on lead's channels/platforms
+    const suggestedCodes = suggestServiceCodes(lead);
+    if (suggestedCodes.length > 0) {
+      const suggested: PublicOfferService[] = [];
+      for (const code of suggestedCodes) {
+        const catalogService = services.find(s => s.code === code && s.is_active);
+        if (catalogService) {
+          suggested.push(buildServiceFromCatalog(catalogService, lead));
+        }
+      }
+      setEditableServices(suggested);
     }
   }, [open, lead.potential_services, services]);
 
@@ -349,9 +462,43 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                     ))}
                   </div>
                   
+                  {/* Add service button */}
+                  {(() => {
+                    const availableToAdd = services.filter(s => 
+                      s.is_active && !editableServices.some(es => es.service_id === s.id)
+                    );
+                    if (availableToAdd.length === 0) return null;
+                    return (
+                      <Select
+                        value=""
+                        onValueChange={(serviceId) => {
+                          const catalogService = services.find(s => s.id === serviceId);
+                          if (catalogService) {
+                            const newService = buildServiceFromCatalog(catalogService, lead);
+                            setEditableServices(prev => [...prev, newService]);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="border-dashed text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Plus className="h-4 w-4" />
+                            <span>Přidat službu</span>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableToAdd.map(s => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name} {s.service_type === 'core' ? '(Core)' : '(Addon)'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
+
                   {editableServices.length === 0 && (
                     <div className="p-4 text-center text-muted-foreground border rounded-lg border-dashed">
-                      Žádné služby v nabídce. Přidejte služby k leadu před vytvořením nabídky.
+                      Žádné služby v nabídce. Použijte tlačítko výše pro přidání služeb.
                     </div>
                   )}
                   
