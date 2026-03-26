@@ -1332,6 +1332,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <SectionDivider />
 
         {/* ===== 8. KONTAKT + CTA ===== */}
+        <ScrollReveal>
         <section className="space-y-6">
           <ContactSection offer={offer} />
           
@@ -1362,8 +1363,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </p>
           </div>
         </section>
+        </ScrollReveal>
 
         {/* ===== REFERENCE KLIENTŮ ===== */}
+        <ScrollReveal>
         <section className="mt-16 rounded-2xl bg-black py-10 px-6">
           <h2 className="text-lg font-semibold text-center mb-2 text-white">❤️ Značky, které jsme pomohli posunout</h2>
           <p className="text-sm text-gray-400 text-center mb-8">Pomáháme růst firmám napříč odvětvími</p>
@@ -1373,8 +1376,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             ))}
           </div>
         </section>
+        </ScrollReveal>
 
         {/* ===== CERTIFIKACE ===== */}
+        <ScrollReveal>
         <section className="mt-16 rounded-2xl bg-black py-10 px-6">
           <h2 className="text-lg font-semibold text-center mb-2 text-white">🏆 Certifikace & partnerství</h2>
           <p className="text-sm text-gray-400 text-center mb-8">Oficiálně certifikovaný tým s přístupem k nejnovějším nástrojům a beta funkcím</p>
@@ -1384,6 +1389,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             ))}
           </div>
         </section>
+        </ScrollReveal>
 
         {/* ===== 9. FOOTER ===== */}
         <footer className="pt-8 mt-16 border-t border-foreground/[0.06]">
