@@ -809,8 +809,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
     <div className={cn(isDark ? "offer-dark" : "offer-light", "min-h-screen bg-background transition-colors duration-300")}>
       {/* Sticky Header */}
       <header className={cn(
-        "border-b backdrop-blur-md sticky top-0 z-10 transition-colors duration-300",
-        isDark ? "border-foreground/[0.06] bg-black/80" : "border-foreground/[0.06] bg-white/80"
+        "border-b border-foreground/[0.06] backdrop-blur-md sticky top-0 z-10 transition-colors duration-300",
+        isDark ? "bg-black/80" : "bg-white/80"
       )}>
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <img src={isDark ? socialsLogo : socialsLogoDark} alt="Socials" className="h-6" />
@@ -818,12 +818,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             {/* Theme toggle */}
             <button
               onClick={() => setIsDark(!isDark)}
-              className={cn(
-                "inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors",
-                isDark 
-                  ? "text-muted-foreground hover:text-white bg-foreground/[0.04] hover:bg-foreground/[0.08] border border-foreground/[0.06]" 
-                  : "text-foreground/50 hover:text-black bg-foreground/[0.04] hover:bg-foreground/[0.08] border border-foreground/[0.06]"
-              )}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors text-muted-foreground hover:text-foreground bg-foreground/[0.04] hover:bg-foreground/[0.08] border border-foreground/[0.06]"
               title={isDark ? "Přepnout na světlý režim" : "Přepnout na tmavý režim"}
             >
               {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
