@@ -355,7 +355,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
       </AlertDialog>
 
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] flex flex-col p-0 gap-0">
           {/* Header */}
           <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b flex-shrink-0">
             <div className="flex-1 min-w-0">
