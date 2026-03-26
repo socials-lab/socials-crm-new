@@ -1083,17 +1083,20 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 Podcast <ExternalLink className="h-3 w-3" />
               </a>
             </div>
-            <img src={socialsLogoDark} alt="Socials" className="h-5 opacity-30" />
+            <img src={isDark ? socialsLogoDark : socialsLogo} alt="Socials" className="h-5 opacity-30" />
           </div>
         </footer>
       </main>
 
       {/* Sticky CTA for mobile */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-black/95 backdrop-blur-md border-t border-white/[0.06] sm:hidden safe-area-bottom">
+      <div className={cn(
+        "fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t sm:hidden safe-area-bottom",
+        isDark ? "bg-black/95 border-white/[0.06]" : "bg-white/95 border-black/[0.06]"
+      )}>
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="font-bold text-[#94e700]">{(totalMonthly + totalOneOff).toLocaleString('cs-CZ')} {offer.currency}</p>
-            <p className="text-[10px] text-white/40">
+            <p className={cn("text-[10px]", isDark ? "text-white/40" : "text-black/40")}>
               {totalMonthly > 0 ? '/měsíc bez DPH' : 'celkem bez DPH'}
             </p>
           </div>
