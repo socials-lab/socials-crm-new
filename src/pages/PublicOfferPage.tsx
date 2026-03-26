@@ -559,6 +559,19 @@ function CreativePortfolioSection() {
     ? portfolioItems.map(i => ({ src: i.file_url, alt: i.title, type: i.type }))
     : FALLBACK_IMAGES;
 
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (selectedIndex === null) return;
+    const total = displayItems.length;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') setSelectedIndex(i => i !== null ? (i + 1) % total : null);
+      if (e.key === 'ArrowLeft') setSelectedIndex(i => i !== null ? (i - 1 + total) % total : null);
+      if (e.key === 'Escape') setSelectedIndex(null);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [selectedIndex, displayItems.length]);
+
   return (
     <section>
       <SectionHeading
