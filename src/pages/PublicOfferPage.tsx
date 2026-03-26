@@ -371,7 +371,7 @@ function OnboardingProcessSection() {
   return (
     <section>
       <SectionHeading 
-        title="Jak to bude probíhat" 
+        title="🚀 Jak to bude probíhat" 
         subtitle="Celý proces zvládneme obvykle do 48 hodin od vašeho rozhodnutí."
       />
 
@@ -463,7 +463,7 @@ function WhyUsSection() {
   return (
     <section>
       <SectionHeading
-        title="Proč právě my"
+        title="💪 Proč právě my"
         subtitle="Ne sliby, ale skutečný business dopad. Podobnou agenturu na trhu nenajdete."
       />
 
@@ -507,7 +507,7 @@ function ReportingSection() {
   return (
     <section>
       <SectionHeading
-        title="Reporting až na úroveň zisku"
+        title="📊 Reporting až na úroveň zisku"
         subtitle="Pro Shoptet klienty dodáváme reporting až na úroveň contribution margin. Budete přesně vědět, kolik peněz vám vydělá jaký produkt."
       />
       <p className="text-sm text-muted-foreground/70 italic -mt-6 mb-8">
@@ -692,7 +692,7 @@ function CreativePortfolioSection() {
   return (
     <section>
       <SectionHeading
-        title="Grafika, která prodává"
+        title="🎨 Grafika, která prodává"
         subtitle="Specializujeme se na kreativy pro výkonnostní reklamy. Díky AI nástrojům stačí fotka produktu na bílém pozadí — z toho vytvoříme kompletní bannery i videa."
       />
 
@@ -968,7 +968,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* ===== 6. SLUŽBY + CENÍK ===== */}
         <section>
           <SectionHeading
-            title={`Služby navržené pro ${offer.website ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : offer.company_name}`}
+            title={`📋 Služby navržené pro ${offer.website ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : offer.company_name}`}
           />
           
           {offer.services.some(s => s.service_type === 'core') && offer.services.some(s => s.service_type === 'addon') && (
