@@ -656,66 +656,20 @@ function ReportingSection() {
 }
 
 function VideoThumbnail({ src, alt, onClick }: { src: string; alt: string; onClick: () => void }) {
-  const [poster, setPoster] = useState<string | null>(null);
-  const [isHovering, setIsHovering] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    // Generate poster from first frame
-    const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = 'metadata';
-    video.src = src;
-    video.currentTime = 0.1;
-    video.addEventListener('seeked', () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 320;
-        canvas.height = video.videoHeight || 320;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          setPoster(canvas.toDataURL('image/jpeg', 0.7));
-        }
-      } catch { /* cross-origin fallback: no poster */ }
-      video.src = '';
-      video.load();
-    }, { once: true });
-    video.addEventListener('error', () => {}, { once: true });
-    video.load();
-  }, [src]);
-
   return (
     <div
-      className="group relative aspect-square rounded-lg overflow-hidden border border-foreground/[0.06] cursor-pointer hover:border-[#94e700]/30 hover:shadow-[0_0_30px_-10px_rgba(200,255,0,0.15)] transition-all duration-300"
+      className="group relative aspect-square rounded-lg overflow-hidden border border-foreground/[0.06] cursor-pointer hover:border-[#94e700]/30 hover:shadow-[0_0_30px_-10px_rgba(200,255,0,0.15)] transition-all duration-300 bg-foreground/[0.03]"
       onClick={onClick}
-      onMouseEnter={() => { setIsHovering(true); videoRef.current?.play(); }}
-      onMouseLeave={() => { setIsHovering(false); const v = videoRef.current; if (v) { v.pause(); v.currentTime = 0; } }}
     >
-      {/* Poster image for instant display */}
-      {poster && (
-        <img
-          src={poster}
-          alt={alt}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovering ? 'opacity-0' : 'opacity-100'}`}
-        />
-      )}
-      {/* Video - preloads metadata for poster, plays on hover */}
-      <video
-        ref={videoRef}
-        src={src}
-        className="w-full h-full object-cover"
-        muted
-        playsInline
-        preload="metadata"
-        poster={poster || undefined}
-      />
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
-        <div className="p-2 rounded-full bg-black/60 backdrop-blur-sm">
-          <Play className="h-4 w-4 text-[#94e700] fill-[#94e700]" />
+      {/* Gradient background as placeholder */}
+      <div className="absolute inset-0 bg-gradient-to-br from-foreground/[0.06] to-foreground/[0.02]" />
+      
+      {/* Video name label */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3">
+        <div className="p-3 rounded-full bg-black/60 backdrop-blur-sm group-hover:bg-[#94e700]/20 transition-colors">
+          <Play className="h-5 w-5 text-[#94e700] fill-[#94e700]" />
         </div>
+        <p className="text-[10px] text-muted-foreground/60 text-center line-clamp-2 font-medium">{alt}</p>
       </div>
     </div>
   );
