@@ -57,6 +57,16 @@ import cert5 from '@/assets/certs/cert-5.avif';
 import cert6 from '@/assets/certs/cert-6.avif';
 import cert7 from '@/assets/certs/cert-7.avif';
 import cert8 from '@/assets/certs/cert-8.avif';
+import cl1 from '@/assets/clients/client-1.avif';
+import cl2 from '@/assets/clients/client-2.avif';
+import cl3 from '@/assets/clients/client-3.avif';
+import cl4 from '@/assets/clients/client-4.avif';
+import cl5 from '@/assets/clients/client-5.avif';
+import cl6 from '@/assets/clients/client-6.avif';
+import cl7 from '@/assets/clients/client-7.avif';
+import cl8 from '@/assets/clients/client-8.avif';
+import cl9 from '@/assets/clients/client-9.avif';
+import cl10 from '@/assets/clients/client-10.avif';
 import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
 import { usePublicPortfolio } from '@/hooks/usePortfolioData';
 
@@ -1213,6 +1223,17 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             <p className="mt-5 text-xs text-muted-foreground/50">
               ✅ Smlouva do 24 hodin
             </p>
+          </div>
+        </section>
+
+        {/* ===== REFERENCE KLIENTŮ ===== */}
+        <section className="mt-16">
+          <h2 className="text-lg font-semibold text-center mb-2">Značky, které nám důvěřují</h2>
+          <p className="text-sm text-muted-foreground text-center mb-8">Pomáháme růst firmám napříč odvětvími</p>
+          <div className="grid grid-cols-5 md:grid-cols-10 gap-4 items-center justify-items-center">
+            {[cl1, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10].map((logo, i) => (
+              <img key={i} src={logo} alt={`Klient ${i + 1}`} className="h-10 md:h-14 object-contain opacity-70 hover:opacity-100 transition-opacity dark:invert" />
+            ))}
           </div>
         </section>
 
