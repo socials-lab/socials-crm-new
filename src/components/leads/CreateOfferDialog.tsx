@@ -12,10 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Copy, ExternalLink, Check, TrendingUp } from 'lucide-react';
+import { Loader2, Copy, ExternalLink, Check, TrendingUp, Plus, X } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
-import type { Lead } from '@/types/crm';
+import type { Lead, Service } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
 import { addPublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
@@ -23,6 +23,107 @@ import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { getServiceDetail } from '@/constants/serviceDetails';
 import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
 import { getRewardsFromServiceConfig } from '@/constants/serviceRewards';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+// Map enrichment platform keywords to service codes
+const PLATFORM_TO_SERVICE_CODES: Record<string, string[]> = {
+  'meta': ['SOCIALS_BOOST'],
+  'facebook': ['SOCIALS_BOOST'],
+  'instagram': ['SOCIALS_BOOST'],
+  'google ads': ['PPC_BOOST'],
+  'google': ['PPC_BOOST'],
+  'sklik': ['PPC_BOOST'],
+  'seznam': ['PPC_BOOST'],
+  'tiktok': ['TIKTOK_ADS'],
+  'heureka': ['HEUREKA_ZBOZI'],
+  'zbozi': ['HEUREKA_ZBOZI'],
+  'zboží': ['HEUREKA_ZBOZI'],
+  'glami': ['GLAMI'],
+  'favi': ['FAVI'],
+  'seo': ['AI_SEO'],
+  'creative': ['CREATIVE_BOOST'],
+  'kreativa': ['CREATIVE_BOOST'],
+  'video': ['VIDEO_BOOST'],
+  'performance': ['PERFORMANCE_BOOST'],
+};
+
+function suggestServiceCodes(lead: Lead): string[] {
+  const codes = new Set<string>();
+  
+  // Check enrichment_platform
+  const platform = (lead.enrichment_platform || '').toLowerCase();
+  // Check enrichment_services_needed
+  const servicesNeeded = (lead.enrichment_services_needed || '').toLowerCase();
+  // Check access_request_platforms
+  const accessPlatforms = (lead.access_request_platforms || []).map(p => p.toLowerCase());
+  
+  const allText = [platform, servicesNeeded, ...accessPlatforms].join(' ');
+  
+  for (const [keyword, serviceCodes] of Object.entries(PLATFORM_TO_SERVICE_CODES)) {
+    if (allText.includes(keyword)) {
+      serviceCodes.forEach(c => codes.add(c));
+    }
+  }
+  
+  // If both Meta and Google are detected, suggest Performance Boost instead of individual
+  if (codes.has('SOCIALS_BOOST') && codes.has('PPC_BOOST')) {
+    codes.delete('SOCIALS_BOOST');
+    codes.delete('PPC_BOOST');
+    codes.add('PERFORMANCE_BOOST');
+  }
+  
+  // Always suggest Creative Boost if any core service is present
+  if (codes.has('SOCIALS_BOOST') || codes.has('PPC_BOOST') || codes.has('PERFORMANCE_BOOST')) {
+    codes.add('CREATIVE_BOOST');
+  }
+  
+  return Array.from(codes);
+}
+
+function buildServiceFromCatalog(catalogService: Service, lead: Lead): PublicOfferService {
+  const constantDetail = getServiceDetail(catalogService.code);
+  const defaultTier = catalogService.service_type === 'core' ? 'growth' : null;
+  
+  let price = catalogService.base_price || 0;
+  let originalPrice = price;
+  if (constantDetail?.tierPricing && defaultTier) {
+    const tierPrice = constantDetail.tierPricing[defaultTier as keyof typeof constantDetail.tierPricing];
+    if (tierPrice?.price !== null && tierPrice?.price !== undefined) {
+      price = tierPrice.price;
+      originalPrice = tierPrice.originalPrice ?? tierPrice.price;
+    }
+  }
+
+  const description = catalogService.description || constantDetail?.tagline || '';
+  const merged = mergeWithDefaults(catalogService.name, null, null, null, null, null);
+
+  return {
+    id: crypto.randomUUID(),
+    service_id: catalogService.id,
+    name: catalogService.name,
+    description,
+    offer_description: null,
+    selected_tier: defaultTier as any,
+    price,
+    original_price: originalPrice,
+    discount_reason: '',
+    currency: lead.currency,
+    billing_type: 'monthly',
+    service_type: catalogService.service_type,
+    deliverables: merged.deliverables,
+    frequency: merged.frequency,
+    turnaround: merged.turnaround,
+    requirements: merged.requirements,
+    start_timeline: '',
+    detailed_sections: merged.detailed_sections,
+  };
+}
 
 interface CreateOfferDialogProps {
   open: boolean;
