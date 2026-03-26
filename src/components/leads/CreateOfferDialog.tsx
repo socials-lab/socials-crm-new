@@ -462,9 +462,43 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                     ))}
                   </div>
                   
+                  {/* Add service button */}
+                  {(() => {
+                    const availableToAdd = services.filter(s => 
+                      s.is_active && !editableServices.some(es => es.service_id === s.id)
+                    );
+                    if (availableToAdd.length === 0) return null;
+                    return (
+                      <Select
+                        value=""
+                        onValueChange={(serviceId) => {
+                          const catalogService = services.find(s => s.id === serviceId);
+                          if (catalogService) {
+                            const newService = buildServiceFromCatalog(catalogService, lead);
+                            setEditableServices(prev => [...prev, newService]);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="border-dashed text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Plus className="h-4 w-4" />
+                            <span>Přidat službu</span>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableToAdd.map(s => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name} {s.service_type === 'core' ? '(Core)' : '(Addon)'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
+
                   {editableServices.length === 0 && (
                     <div className="p-4 text-center text-muted-foreground border rounded-lg border-dashed">
-                      Žádné služby v nabídce. Přidejte služby k leadu před vytvořením nabídky.
+                      Žádné služby v nabídce. Použijte tlačítko výše pro přidání služeb.
                     </div>
                   )}
                   
