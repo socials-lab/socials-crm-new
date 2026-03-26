@@ -701,14 +701,14 @@ function VideoThumbnail({ src, alt, onClick }: { src: string; alt: string; onCli
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovering ? 'opacity-0' : 'opacity-100'}`}
         />
       )}
-      {/* Lazy video - only loads src on hover or when poster fails */}
+      {/* Video - preloads metadata for poster, plays on hover */}
       <video
         ref={videoRef}
-        src={isHovering ? src : undefined}
+        src={src}
         className="w-full h-full object-cover"
         muted
         playsInline
-        preload="none"
+        preload="metadata"
         poster={poster || undefined}
       />
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
@@ -742,7 +742,7 @@ function PortfolioGrid({ items, label }: { items: { src: string; alt: string; ty
       <h3 className="text-lg font-semibold text-foreground">{label}</h3>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
         {items.map((item, i) => (
-          <div key={i}>
+          <div key={i} className="relative">
             {item.type === 'video' ? (
               <VideoThumbnail src={item.src} alt={item.alt} onClick={() => setSelectedIndex(i)} />
             ) : (
@@ -756,11 +756,11 @@ function PortfolioGrid({ items, label }: { items: { src: string; alt: string; ty
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   loading="lazy"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2.5">
+                  <p className="text-[10px] font-medium text-foreground">{item.alt}</p>
+                </div>
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2.5">
-              <p className="text-[10px] font-medium text-foreground">{item.alt}</p>
-            </div>
           </div>
         ))}
       </div>
