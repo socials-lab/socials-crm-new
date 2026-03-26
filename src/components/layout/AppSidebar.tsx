@@ -39,6 +39,7 @@ import {
   Bug,
   UserSearch,
   ImageIcon,
+  PenLine,
   type LucideIcon,
 } from 'lucide-react';
 import { useBugReports } from '@/hooks/useBugReports';
