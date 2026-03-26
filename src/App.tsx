@@ -53,6 +53,7 @@ import PublicSOPPage from "./pages/PublicSOPPage";
 import BugReports from "./pages/BugReports";
 import Prospects from "./pages/Prospects";
 import Portfolio from "./pages/Portfolio";
+import OfferContentEditor from "./pages/OfferContentEditor";
 
 const queryClient = new QueryClient();
 
