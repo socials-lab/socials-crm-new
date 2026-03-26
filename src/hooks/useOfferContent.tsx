@@ -69,7 +69,7 @@ export const DEFAULT_OFFER_CONTENT: Record<string, Omit<OfferContentBlock, 'id' 
     subtitle: 'Pro Shoptet klienty dodáváme reporting až na úroveň contribution margin. Budete přesně vědět, kolik peněz vám vydělá jaký produkt.',
     content: {
       note: '(Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)',
-      demo_report_url: 'https://68bb7487-e1f5-44d2-a8a4-9044e8cf5438.lovableproject.com/shared-report/376158d883246f2ecfec54891d03e0a3c0ae4090e0c5dda9',
+      demo_report_url: 'https://id-preview--68bb7487-e1f5-44d2-a8a4-9044e8cf5438.lovable.app/shared-report/376158d883246f2ecfec54891d03e0a3c0ae4090e0c5dda9',
     },
   },
   creative_portfolio: {
