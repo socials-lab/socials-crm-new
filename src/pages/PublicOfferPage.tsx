@@ -1295,7 +1295,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <p className="text-sm text-gray-400 text-center mb-8">Oficiálně certifikovaný tým s přístupem k nejnovějším nástrojům a beta funkcím</p>
           <div className="grid grid-cols-4 md:grid-cols-8 gap-4 items-center justify-items-center">
             {[cert8, cert7, cert6, cert1, cert2, cert3, cert4, cert5].map((cert, i) => (
-              <img key={i} src={cert} alt={`Certifikace ${i + 1}`} className="h-12 md:h-16 object-contain opacity-80 hover:opacity-100 transition-opacity" />
+              <img key={i} src={cert} alt={`Certifikace ${i + 1}`} className={`object-contain opacity-80 hover:opacity-100 transition-opacity ${[1, 6, 7].includes(i) ? 'h-16 md:h-24' : 'h-12 md:h-16'}`} />
             ))}
           </div>
         </section>
