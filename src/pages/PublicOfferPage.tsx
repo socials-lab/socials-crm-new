@@ -1043,7 +1043,12 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         </section>
 
         {/* Pricing Summary */}
-        <div className="mt-8 p-6 rounded-xl border border-[#94e700]/20 bg-[#94e700]/5">
+        <div className="mt-10 p-8 md:p-10 rounded-2xl border-2 border-[#94e700]/30 bg-gradient-to-br from-[#94e700]/[0.08] to-[#94e700]/[0.02] shadow-[0_0_60px_-20px_rgba(148,231,0,0.15)] relative overflow-hidden">
+          {/* Decorative glow */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#94e700]/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <h3 className="text-lg font-bold text-foreground mb-6">💰 Cenový souhrn</h3>
+          
           {totalMonthly > 0 && (() => {
             const discountPercent = offer.monthly_discount_percent || 0;
             const scope = offer.discount_scope || 'core_only';
@@ -1057,21 +1062,21 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               : discountedBase + addonMonthly;
             
             return (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Měsíční cena</span>
+                  <span className="text-base text-muted-foreground font-medium">Měsíční cena</span>
                   <div className="text-right">
                     {discountPercent > 0 ? (
                       <>
-                        <span className="text-base text-muted-foreground/70 line-through mr-2">
+                        <span className="text-base text-muted-foreground/70 line-through mr-3">
                           {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                         </span>
-                        <span className="text-3xl font-bold text-[#94e700]">
+                        <span className="text-4xl font-extrabold text-[#94e700] tracking-tight">
                           {totalAfterDiscount.toLocaleString('cs-CZ')} {offer.currency}
                         </span>
                       </>
                     ) : (
-                      <span className="text-3xl font-bold text-[#94e700]">
+                      <span className="text-4xl font-extrabold text-[#94e700] tracking-tight">
                         {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                       </span>
                     )}
@@ -1079,9 +1084,9 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   </div>
                 </div>
                 {discountPercent > 0 && (
-                  <div className="flex items-center justify-between text-sm text-emerald-400">
-                    <span>Sleva {discountPercent}% {scope === 'all_services' ? 'na všechny služby' : 'na core služby'} při odběru všech služeb</span>
-                    <span className="font-medium">-{discountAmount.toLocaleString('cs-CZ')} {offer.currency}/měs</span>
+                  <div className="flex items-center justify-between text-sm bg-emerald-500/10 rounded-lg px-4 py-2.5 border border-emerald-500/20">
+                    <span className="text-emerald-500 font-medium">✨ Sleva {discountPercent}% {scope === 'all_services' ? 'na všechny služby' : 'na core služby'} při odběru všech služeb</span>
+                    <span className="font-bold text-emerald-500">-{discountAmount.toLocaleString('cs-CZ')} {offer.currency}/měs</span>
                   </div>
                 )}
               </div>
@@ -1089,17 +1094,19 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           })()}
           {totalOneOff > 0 && (
             <>
-              {totalMonthly > 0 && <div className="border-t border-foreground/[0.08] my-3" />}
+              {totalMonthly > 0 && <div className="border-t border-foreground/[0.1] my-5" />}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Jednorázově</span>
-                <span className="text-lg font-semibold text-foreground">
+                <span className="text-base text-muted-foreground font-medium">Jednorázově</span>
+                <span className="text-2xl font-bold text-foreground">
                   {totalOneOff.toLocaleString('cs-CZ')} {offer.currency}
                 </span>
               </div>
             </>
           )}
-          <p className="text-[10px] text-muted-foreground/50 text-right mt-2">Ceny jsou uvedeny bez DPH</p>
-          <p className="text-[10px] text-muted-foreground/50 text-right">Měsíční položky fakturujeme v prvním měsíci poměrně ode dne zahájení služby.</p>
+          <div className="mt-5 pt-4 border-t border-foreground/[0.06]">
+            <p className="text-[11px] text-muted-foreground/60 text-right">Ceny jsou uvedeny bez DPH</p>
+            <p className="text-[11px] text-muted-foreground/60 text-right">Měsíční položky fakturujeme v prvním měsíci poměrně ode dne zahájení služby.</p>
+          </div>
         </div>
 
         <SectionDivider />
