@@ -301,13 +301,13 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         let svcCost = 0;
         const roleDetails: { role: string; reward: number }[] = [];
         roles.forEach(r => {
-          // For per_credit (Creative Boost), estimate based on default credits
+          // For per_credit (Creative Boost), estimate 100% utilization of credits
           const reward = r.rewardType === 'per_credit' ? r.reward * CB_DEFAULT_CREDITS : r.reward;
           svcCost += reward;
           roleDetails.push({ role: r.role, reward });
         });
         totalInternalCost += svcCost;
-        serviceCosts.push({ name: isCB ? `${es.name} (${CB_DEFAULT_CREDITS} kreditů)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
+        serviceCosts.push({ name: isCB ? `${es.name} (${CB_DEFAULT_CREDITS} kr. × ${CB_PRICE_PER_CREDIT} Kč)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
       } else {
         serviceCosts.push({ name: isCB ? `${es.name} (${CB_DEFAULT_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
       }
