@@ -49,6 +49,14 @@ import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
 import socialsLogoDark from '@/assets/socials-logo-dark.svg';
 import socialsLogo from '@/assets/socials-logo.svg';
+import cert1 from '@/assets/certs/cert-1.avif';
+import cert2 from '@/assets/certs/cert-2.avif';
+import cert3 from '@/assets/certs/cert-3.avif';
+import cert4 from '@/assets/certs/cert-4.avif';
+import cert5 from '@/assets/certs/cert-5.avif';
+import cert6 from '@/assets/certs/cert-6.avif';
+import cert7 from '@/assets/certs/cert-7.avif';
+import cert8 from '@/assets/certs/cert-8.avif';
 import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
 import { usePublicPortfolio } from '@/hooks/usePortfolioData';
 
@@ -1205,6 +1213,17 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             <p className="mt-5 text-xs text-muted-foreground/50">
               ✅ Smlouva do 24 hodin
             </p>
+          </div>
+        </section>
+
+        {/* ===== CERTIFIKACE ===== */}
+        <section className="mt-16">
+          <h2 className="text-lg font-semibold text-center mb-2">🏆 Certifikace & partnerství</h2>
+          <p className="text-sm text-muted-foreground text-center mb-8">Oficiálně certifikovaný tým s přístupem k nejnovějším nástrojům a beta funkcím</p>
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-4 items-center justify-items-center">
+            {[cert1, cert2, cert3, cert4, cert5, cert6, cert7, cert8].map((cert, i) => (
+              <img key={i} src={cert} alt={`Certifikace ${i + 1}`} className="h-12 md:h-16 object-contain opacity-80 hover:opacity-100 transition-opacity" />
+            ))}
           </div>
         </section>
 
