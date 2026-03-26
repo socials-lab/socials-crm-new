@@ -1202,7 +1202,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               </Button>
             </div>
             <p className="mt-5 text-xs text-muted-foreground/50">
-              ✅ Smlouva do 24 hodin · 🔓 Bez závazků na minimální dobu
+              ✅ Smlouva do 24 hodin
             </p>
           </div>
         </section>
