@@ -693,13 +693,13 @@ function ContactSection({ offer }: { offer: PublicOffer }) {
             <p className="text-sm font-medium text-foreground">{offer.owner_name}</p>
           )}
           {offer.owner_email && (
-            <a href={`mailto:${offer.owner_email}`} className="text-sm text-[#94e700] hover:underline flex items-center gap-1.5">
+            <a href={`mailto:${offer.owner_email}`} className="text-sm text-foreground hover:text-[#94e700] hover:underline flex items-center gap-1.5">
               <Mail className="h-3.5 w-3.5" />
               {offer.owner_email}
             </a>
           )}
           {offer.owner_phone && (
-            <a href={`tel:${offer.owner_phone}`} className="text-sm text-[#94e700] hover:underline flex items-center gap-1.5">
+            <a href={`tel:${offer.owner_phone}`} className="text-sm text-foreground hover:text-[#94e700] hover:underline flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5" />
               {offer.owner_phone}
             </a>
