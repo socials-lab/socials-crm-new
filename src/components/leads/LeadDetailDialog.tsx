@@ -573,17 +573,15 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Ad spend</span>
-                        <InlineEditField
-                          value={lead.ad_spend_monthly}
-                          onSave={(v) => { updateLead(lead.id, { ad_spend_monthly: Number(v) || 0 }); toast.success('Uloženo'); }}
-                          type="number" suffix="Kč" placeholder="0" displayClassName="font-medium" emptyText="–"
-                        />
+                        <p className="font-medium">
+                          {lead.enrichment_ad_spend_range || (lead.ad_spend_monthly ? `${lead.ad_spend_monthly.toLocaleString('cs-CZ')} Kč` : '–')}
+                        </p>
                       </div>
                     </div>
                     <div>
                       <span className="text-muted-foreground text-xs">Zdroj</span>
                       <InlineEditField
-                        value={lead.source}
+                        value={lead.source || 'inbound'}
                         onSave={(v) => { updateLead(lead.id, { source: v as Lead['source'] }); toast.success('Uloženo'); }}
                         type="select"
                         options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label }))}
