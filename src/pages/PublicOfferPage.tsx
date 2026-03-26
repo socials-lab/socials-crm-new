@@ -443,17 +443,17 @@ const WHY_US_ITEMS = [
 
 const WHY_US_LINKS = [
   {
-    label: 'Případové studie',
+    label: '📈 Případové studie',
     description: 'Prohlédněte si reálné dopady na tržby klientů',
     url: 'https://www.socials.cz/pripadove-studie',
   },
   {
-    label: 'Socials Podcast',
+    label: '🎙️ Socials Podcast',
     description: 'Otevřeně mluvíme o marketingu, výkonu a vedení agentury',
     url: 'https://www.socials.cz/socials-podcast',
   },
   {
-    label: 'Recenze klientů',
+    label: '⭐ Recenze klientů',
     description: 'Co o nás říkají naši klienti na Shoptet Partner Portálu',
     url: 'https://partneri.shoptet.cz/profesionalove/socials-advertising/',
   },
