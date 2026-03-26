@@ -42,6 +42,8 @@ import {
   Share2,
   Sun,
   Moon,
+  Star,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
@@ -146,11 +148,16 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-foreground/[0.12] transition-all duration-300 overflow-hidden">
+      <div className={cn(
+        "rounded-xl border-2 transition-all duration-300 overflow-hidden",
+        isOpen
+          ? "border-[#94e700]/40 bg-[#94e700]/[0.03] shadow-[0_0_30px_-10px_rgba(148,231,0,0.15)]"
+          : "border-foreground/[0.08] bg-foreground/[0.02] hover:border-[#94e700]/25 hover:bg-foreground/[0.04] hover:shadow-[0_0_20px_-10px_rgba(148,231,0,0.1)]"
+      )}>
         <CollapsibleTrigger className="w-full">
           <div className="flex items-center justify-between p-5 md:p-6">
             <div className="flex items-center gap-4 text-left">
-              <div className="w-11 h-11 rounded-lg bg-foreground/[0.05] flex items-center justify-center shrink-0 text-xl">
+              <div className="w-12 h-12 rounded-xl bg-[#94e700]/10 border border-[#94e700]/20 flex items-center justify-center shrink-0 text-2xl">
                 {getServiceEmoji(service.name)}
               </div>
               <div>
@@ -191,11 +198,17 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                 {service.description && (
                   <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
                 )}
+                {hasDetails && !isOpen && (
+                  <p className="text-xs text-[#94e700]/70 mt-1.5 flex items-center gap-1">
+                    <ChevronDown className="h-3 w-3" />
+                    Klikněte pro zobrazení detailů
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <span className="font-bold text-sm text-[#94e700]">
+                <span className="font-bold text-lg text-[#94e700]">
                   {service.price.toLocaleString('cs-CZ')} {service.currency}
                 </span>
                 <span className="text-xs text-muted-foreground/70 ml-1">
@@ -203,7 +216,12 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                 </span>
               </div>
               {hasDetails && (
-                <ChevronDown className={cn('h-5 w-5 text-muted-foreground/50 transition-transform', isOpen && 'rotate-180')} />
+                <div className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                  isOpen ? "bg-[#94e700]/20 text-[#94e700]" : "bg-foreground/[0.05] text-muted-foreground/50"
+                )}>
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
+                </div>
               )}
             </div>
           </div>
@@ -973,14 +991,19 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             }
             
             return (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {coreServices.length > 0 && (
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Badge className="bg-[#94e700]/10 text-[#94e700] border-[#94e700]/30 text-[10px]">Core</Badge>
-                      <span className="text-sm font-medium text-muted-foreground">Hlavní služby</span>
+                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-foreground/[0.06]">
+                      <div className="w-8 h-8 rounded-lg bg-[#94e700]/10 flex items-center justify-center">
+                        <Star className="h-4 w-4 text-[#94e700]" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-foreground">Hlavní služby</span>
+                        <p className="text-xs text-muted-foreground">Klíčové služby pro růst vašeho byznysu</p>
+                      </div>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {coreServices.map((service, idx) => (
                         <ServiceCard key={service.id || idx} service={service} />
                       ))}
@@ -990,11 +1013,16 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 
                 {addonServices.length > 0 && (
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Badge variant="outline" className="text-[10px] border-foreground/20 text-muted-foreground">Doplněk</Badge>
-                      <span className="text-sm font-medium text-muted-foreground">Doplňkové služby</span>
+                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-foreground/[0.06]">
+                      <div className="w-8 h-8 rounded-lg bg-foreground/[0.05] flex items-center justify-center">
+                        <Plus className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-foreground">Doplňkové služby</span>
+                        <p className="text-xs text-muted-foreground">Rozšíření pro maximální výkon</p>
+                      </div>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {addonServices.map((service, idx) => (
                         <ServiceCard key={service.id || idx} service={service} />
                       ))}
@@ -1003,7 +1031,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 )}
                 
                 {otherServices.length > 0 && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {otherServices.map((service, idx) => (
                       <ServiceCard key={service.id || idx} service={service} />
                     ))}
