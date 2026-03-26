@@ -896,7 +896,12 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         <SectionDivider />
 
-        {/* ===== 5. SLUŽBY + CENÍK ===== */}
+        {/* ===== 5. REPORTING ===== */}
+        <ReportingSection />
+
+        <SectionDivider />
+
+        {/* ===== 6. SLUŽBY + CENÍK ===== */}
         <section>
           <SectionHeading
             title={`Služby navržené pro ${offer.website ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : offer.company_name}`}
