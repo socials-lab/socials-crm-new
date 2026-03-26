@@ -693,7 +693,7 @@ function CreativePortfolioSection() {
     <section>
       <SectionHeading
         title="🎨 Grafika, která prodává"
-        subtitle="Specializujeme se na kreativy pro výkonnostní reklamy. Díky AI nástrojům stačí fotka produktu na bílém pozadí — z toho vytvoříme kompletní bannery i videa."
+        subtitle="Všem klientům doporučujeme nechat si kreativy tvořit u nás. Specializujeme se na grafiku pro výkonnostní reklamy — díky AI nástrojům nám stačí fotka produktu na bílém pozadí a vytvoříme kompletní bannery i videa."
       />
 
       <div className="space-y-10">
