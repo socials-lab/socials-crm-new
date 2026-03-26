@@ -22,7 +22,7 @@ import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { getServiceDetail } from '@/constants/serviceDetails';
 import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
-import { getRewardsFromServiceConfig } from '@/constants/serviceRewards';
+import { getRewardsFromServiceConfig, getServiceRewardRecommendation } from '@/constants/serviceRewards';
 import {
   Select,
   SelectContent,
