@@ -763,15 +763,36 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const onboardingUrl = `/onboarding/${offer.lead_id}`;
 
   return (
-    <div className="offer-dark min-h-screen bg-background">
-      {/* Sticky Header — thin, dark, with lime CTA */}
-      <header className="border-b border-white/[0.06] bg-black/80 backdrop-blur-md sticky top-0 z-10">
+    <div className={cn(isDark ? "offer-dark" : "offer-light", "min-h-screen bg-background transition-colors duration-300")}>
+      {/* Sticky Header */}
+      <header className={cn(
+        "border-b backdrop-blur-md sticky top-0 z-10 transition-colors duration-300",
+        isDark ? "border-white/[0.06] bg-black/80" : "border-black/[0.06] bg-white/80"
+      )}>
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <img src={socialsLogoDark} alt="Socials" className="h-6" />
-          <div className="flex items-center gap-3">
+          <img src={isDark ? socialsLogoDark : socialsLogo} alt="Socials" className="h-6" />
+          <div className="flex items-center gap-2">
+            {/* Theme toggle */}
+            <button
+              onClick={() => setIsDark(!isDark)}
+              className={cn(
+                "inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors",
+                isDark 
+                  ? "text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]" 
+                  : "text-black/50 hover:text-black bg-black/[0.04] hover:bg-black/[0.08] border border-black/[0.06]"
+              )}
+              title={isDark ? "Přepnout na světlý režim" : "Přepnout na tmavý režim"}
+            >
+              {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            </button>
             <button
               onClick={handleCopyLink}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded-full transition-colors border border-white/[0.06]"
+              className={cn(
+                "hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full transition-colors border",
+                isDark 
+                  ? "text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.06]" 
+                  : "text-black/50 hover:text-black bg-black/[0.04] hover:bg-black/[0.08] border-black/[0.06]"
+              )}
             >
               {copied ? (
                 <><Check className="h-3 w-3 text-[#94e700]" /><span>Zkopírováno</span></>
