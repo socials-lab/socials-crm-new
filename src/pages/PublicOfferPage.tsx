@@ -445,7 +445,7 @@ function WhyUsSection() {
         subtitle="Ne sliby, ale skutečný business dopad. Pečlivě si vybíráme, s kým spolupracujeme."
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
         {WHY_US_ITEMS.map((item, i) => (
           <div
             key={i}
