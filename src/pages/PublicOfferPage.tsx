@@ -1153,18 +1153,21 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <section className="space-y-6">
           <ContactSection offer={offer} />
           
-          <div className="text-center pt-6 pb-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
-              Pojďme do toho
+          <div className="text-center pt-10 pb-12 px-4">
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight">
+              🚀 Pojďme do toho
             </h2>
-            <p className="mb-8 text-muted-foreground text-sm max-w-sm mx-auto">
-              Společně posuneme váš byznys na další úroveň.
+            <p className="mb-4 text-muted-foreground text-base max-w-md mx-auto">
+              Stačí vyplnit krátký formulář a můžeme začít.
+            </p>
+            <p className="mb-8 text-muted-foreground/70 text-sm max-w-md mx-auto">
+              Celý onboarding zvládneme do 48 hodin — smlouvu pošleme k digitálnímu podpisu, nastavíme přístupy a spustíme kampaně.
             </p>
             <div className="flex justify-center">
               <Button 
                 asChild 
                 size="lg" 
-                className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-bold px-10 py-6 text-base rounded-xl"
+                className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-bold px-12 py-7 text-lg rounded-xl shadow-[0_0_40px_-10px_rgba(148,231,0,0.4)] hover:shadow-[0_0_50px_-10px_rgba(148,231,0,0.5)] transition-all"
               >
                 <Link to={onboardingUrl}>
                   Začít spolupráci
@@ -1172,8 +1175,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 </Link>
               </Button>
             </div>
-            <p className="mt-4 text-xs text-muted-foreground/50">
-              Smlouva do 24 hodin · Bez závazků na minimální dobu
+            <p className="mt-5 text-xs text-muted-foreground/50">
+              ✅ Smlouva do 24 hodin · 🔓 Bez závazků na minimální dobu
             </p>
           </div>
         </section>
