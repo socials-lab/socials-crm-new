@@ -996,7 +996,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   <div>
                     <div className="flex items-center gap-3 mb-4 pb-3 border-b border-foreground/[0.06]">
                       <div className="w-8 h-8 rounded-lg bg-[#94e700]/10 flex items-center justify-center">
-                        <Star className="h-4 w-4 text-[#94e700]" />
+                        <StarIcon className="h-4 w-4 text-[#94e700]" />
                       </div>
                       <div>
                         <span className="text-sm font-semibold text-foreground">Hlavní služby</span>
@@ -1015,7 +1015,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   <div>
                     <div className="flex items-center gap-3 mb-4 pb-3 border-b border-foreground/[0.06]">
                       <div className="w-8 h-8 rounded-lg bg-foreground/[0.05] flex items-center justify-center">
-                        <Plus className="h-4 w-4 text-muted-foreground" />
+                        <PlusIcon className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div>
                         <span className="text-sm font-semibold text-foreground">Doplňkové služby</span>
