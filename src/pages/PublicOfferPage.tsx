@@ -1280,7 +1280,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* ===== REFERENCE KLIENTŮ ===== */}
         <section className="mt-16 rounded-2xl bg-black py-10 px-6">
-          <h2 className="text-lg font-semibold text-center mb-2 text-white">❤️ Značky, které nám důvěřují</h2>
+          <h2 className="text-lg font-semibold text-center mb-2 text-white">❤️ Značky, které jsme pomohli posunout</h2>
           <p className="text-sm text-gray-400 text-center mb-8">Pomáháme růst firmám napříč odvětvími</p>
           <div className="grid grid-cols-5 gap-6 items-center justify-items-center">
             {[cl1, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10].map((logo, i) => (
