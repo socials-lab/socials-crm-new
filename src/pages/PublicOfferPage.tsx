@@ -11,7 +11,9 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { 
-  ChevronDown, 
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink, 
   Calendar, 
   FileText, 
