@@ -199,7 +199,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                   <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
                 )}
                 {hasDetails && !isOpen && (
-                  <p className="text-xs text-[#94e700]/70 mt-1.5 flex items-center gap-1">
+                  <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
                     <ChevronDown className="h-3 w-3" />
                     Klikněte pro zobrazení detailů
                   </p>
