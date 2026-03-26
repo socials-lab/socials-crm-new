@@ -301,8 +301,10 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         let svcCost = 0;
         const roleDetails: { role: string; reward: number }[] = [];
         roles.forEach(r => {
+          // Handle both camelCase (rewardType) and snake_case (reward_type) from different sources
+          const rType = r.rewardType || (r as any).reward_type;
           // For per_credit (Creative Boost), estimate 100% utilization of credits
-          const reward = r.rewardType === 'per_credit' ? r.reward * CB_DEFAULT_CREDITS : r.reward;
+          const reward = rType === 'per_credit' ? r.reward * CB_DEFAULT_CREDITS : r.reward;
           svcCost += reward;
           roleDetails.push({ role: r.role, reward });
         });
