@@ -38,6 +38,8 @@ import {
   Copy,
   Check,
   Share2,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
@@ -674,6 +676,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
   const handleCopyLink = async () => {
     const url = window.location.href;
@@ -760,15 +763,36 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const onboardingUrl = `/onboarding/${offer.lead_id}`;
 
   return (
-    <div className="offer-dark min-h-screen bg-background">
-      {/* Sticky Header — thin, dark, with lime CTA */}
-      <header className="border-b border-white/[0.06] bg-black/80 backdrop-blur-md sticky top-0 z-10">
+    <div className={cn(isDark ? "offer-dark" : "offer-light", "min-h-screen bg-background transition-colors duration-300")}>
+      {/* Sticky Header */}
+      <header className={cn(
+        "border-b backdrop-blur-md sticky top-0 z-10 transition-colors duration-300",
+        isDark ? "border-white/[0.06] bg-black/80" : "border-black/[0.06] bg-white/80"
+      )}>
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <img src={socialsLogoDark} alt="Socials" className="h-6" />
-          <div className="flex items-center gap-3">
+          <img src={isDark ? socialsLogoDark : socialsLogo} alt="Socials" className="h-6" />
+          <div className="flex items-center gap-2">
+            {/* Theme toggle */}
+            <button
+              onClick={() => setIsDark(!isDark)}
+              className={cn(
+                "inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors",
+                isDark 
+                  ? "text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]" 
+                  : "text-black/50 hover:text-black bg-black/[0.04] hover:bg-black/[0.08] border border-black/[0.06]"
+              )}
+              title={isDark ? "Přepnout na světlý režim" : "Přepnout na tmavý režim"}
+            >
+              {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            </button>
             <button
               onClick={handleCopyLink}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded-full transition-colors border border-white/[0.06]"
+              className={cn(
+                "hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full transition-colors border",
+                isDark 
+                  ? "text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.06]" 
+                  : "text-black/50 hover:text-black bg-black/[0.04] hover:bg-black/[0.08] border-black/[0.06]"
+              )}
             >
               {copied ? (
                 <><Check className="h-3 w-3 text-[#94e700]" /><span>Zkopírováno</span></>
@@ -1059,17 +1083,20 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 Podcast <ExternalLink className="h-3 w-3" />
               </a>
             </div>
-            <img src={socialsLogoDark} alt="Socials" className="h-5 opacity-30" />
+            <img src={isDark ? socialsLogoDark : socialsLogo} alt="Socials" className="h-5 opacity-30" />
           </div>
         </footer>
       </main>
 
       {/* Sticky CTA for mobile */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-black/95 backdrop-blur-md border-t border-white/[0.06] sm:hidden safe-area-bottom">
+      <div className={cn(
+        "fixed bottom-0 left-0 right-0 p-3 backdrop-blur-md border-t sm:hidden safe-area-bottom",
+        isDark ? "bg-black/95 border-white/[0.06]" : "bg-white/95 border-black/[0.06]"
+      )}>
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="font-bold text-[#94e700]">{(totalMonthly + totalOneOff).toLocaleString('cs-CZ')} {offer.currency}</p>
-            <p className="text-[10px] text-white/40">
+            <p className={cn("text-[10px]", isDark ? "text-white/40" : "text-black/40")}>
               {totalMonthly > 0 ? '/měsíc bez DPH' : 'celkem bez DPH'}
             </p>
           </div>
