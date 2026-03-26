@@ -192,11 +192,13 @@ export function LeadFlowStepper({
       label: 'Nabídka vytvořena',
       isComplete: !!lead.offer_created_at,
       completedAt: lead.offer_created_at,
-      actions: servicesCount > 0 ? [{
-        label: hasOffer ? 'Nová nabídka' : 'Vytvořit nabídku',
-        onClick: onCreateOffer,
-        variant: 'outline' as const,
-      }] : undefined,
+      actions: servicesCount > 0 ? [
+        ...(hasOffer ? [
+          { label: 'Upravit nabídku', onClick: onCreateOffer, variant: 'outline' as const },
+        ] : [
+          { label: 'Vytvořit nabídku', onClick: onCreateOffer, variant: 'outline' as const },
+        ]),
+      ] : undefined,
       customContent: lead.offer_url ? (
         <a
           href={lead.offer_url}
