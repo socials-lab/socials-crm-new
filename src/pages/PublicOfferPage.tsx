@@ -825,12 +825,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </button>
             <button
               onClick={handleCopyLink}
-              className={cn(
-                "hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full transition-colors border",
-                isDark 
-                  ? "text-muted-foreground hover:text-white bg-foreground/[0.04] hover:bg-foreground/[0.08] border-foreground/[0.06]" 
-                  : "text-foreground/50 hover:text-black bg-foreground/[0.04] hover:bg-foreground/[0.08] border-foreground/[0.06]"
-              )}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full transition-colors border text-muted-foreground hover:text-foreground bg-foreground/[0.04] hover:bg-foreground/[0.08] border-foreground/[0.06]"
             >
               {copied ? (
                 <><Check className="h-3 w-3 text-[#94e700]" /><span>Zkopírováno</span></>
