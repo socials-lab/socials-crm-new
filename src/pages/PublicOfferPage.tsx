@@ -413,9 +413,9 @@ const WHY_US_ITEMS = [
     description: 'Každý náš specialista má 5+ let zkušeností. Žádní junioři. Každý ví, jak z kampaní vytěžit maximum.',
   },
   {
-    stat: '3×',
-    label: 'certifikovaný partner',
-    description: 'Meta, Google, TikTok, Sklik a zlatý Shoptet partner. Přímé kontakty a přístup k betám.',
+    stat: '7 let',
+    label: 'na trhu',
+    description: 'Od roku 2018 pomáháme e-shopům růst. Meta, Google, TikTok, Sklik a zlatý Shoptet partner s přímými kontakty na platformy.',
   },
 ];
 
