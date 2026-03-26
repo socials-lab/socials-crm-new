@@ -862,7 +862,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         isDark ? "bg-black/80" : "bg-white/80"
       )}>
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <img src={isDark ? socialsLogo : socialsLogoDark} alt="Socials" className="h-6" />
+          <img src={isDark ? socialsLogo : socialsLogoDark} alt="Socials" className="h-9" />
           <div className="flex items-center gap-2">
             {/* Theme toggle */}
             <button
