@@ -474,6 +474,99 @@ function PortfolioCard({ link }: { link: PortfolioLink }) {
   );
 }
 
+const WHY_US_ITEMS = [
+  {
+    emoji: '💰',
+    title: '30+ mil. Kč měsíčně',
+    description: 'Spravujeme reklamní rozpočty přes 30 milionů Kč měsíčně. Máme zkušenosti s velkými i středními e-shopy a víme, co funguje – a aplikujeme to i na váš business.',
+  },
+  {
+    emoji: '👨‍💻',
+    title: 'Výhradně seniorní specialisté',
+    description: 'Každý náš specialista má 5+ let zkušeností. Žádní junioři. Každý ví, jak z kampaní vytěžit maximum.',
+  },
+  {
+    emoji: '🏅',
+    title: 'Certifikovaní partneři platforem',
+    description: 'Meta, Google, TikTok, Sklik a zlatý Shoptet partner. Máme přímé kontakty, přístup k betám a možnost řešit složitější věci přímo s platformami.',
+  },
+  {
+    emoji: '🤝',
+    title: 'Pečlivý výběr klientů',
+    description: 'Jdeme do spolupráce jen s firmami, u kterých jsme přesvědčeni, že jim dokážeme zlepšit obchodní výsledky díky výkonnostní reklamě.',
+  },
+];
+
+const WHY_US_LINKS = [
+  {
+    emoji: '📊',
+    label: 'Případové studie',
+    description: 'Prohlédněte si reálné dopady na tržby klientů',
+    url: 'https://www.socials.cz/pripadove-studie',
+  },
+  {
+    emoji: '🎙️',
+    label: 'Socials Podcast',
+    description: 'Otevřeně mluvíme o marketingu, výkonu a vedení agentury',
+    url: 'https://www.socials.cz/socials-podcast',
+  },
+  {
+    emoji: '⭐',
+    label: 'Hodnocení na Shoptet Partner Portálu',
+    description: 'Co o nás říkají naši klienti',
+    url: 'https://partneri.shoptet.cz/profesionalove/socials-advertising/',
+  },
+];
+
+function WhyUsSection() {
+  return (
+    <section className="mb-10">
+      <h2 className="text-base font-semibold mb-2 text-center">
+        🏆 Proč spolupracovat právě s námi?
+      </h2>
+      <p className="text-sm text-muted-foreground text-center mb-2">
+        Chceme, aby pro vás byla spolupráce se Socials jasná a hlavně postavená na skvělých výsledcích.
+      </p>
+      <p className="text-sm text-muted-foreground text-center mb-6 font-medium">
+        Ne sliby, ale skutečný business dopad.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+        {WHY_US_ITEMS.map((item, i) => (
+          <div key={i} className="p-4 rounded-xl border bg-muted/50">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl shrink-0">{item.emoji}</span>
+              <div>
+                <p className="font-semibold text-sm mb-1">{item.title}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        {WHY_US_LINKS.map((link, i) => (
+          <a
+            key={i}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-3 p-3 rounded-xl border bg-card hover:border-primary/50 hover:shadow-md transition-all"
+          >
+            <span className="text-xl shrink-0">{link.emoji}</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm group-hover:text-primary transition-colors">{link.label}</p>
+              <p className="text-xs text-muted-foreground">{link.description}</p>
+            </div>
+            <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // Contact section - shows lead owner's contact info
 function ContactSection({ offer }: { offer: PublicOffer }) {
   if (!offer.owner_name && !offer.owner_email) return null;
