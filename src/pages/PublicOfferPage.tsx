@@ -991,22 +991,24 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
       <main className="max-w-5xl mx-auto px-6 md:px-10 py-12 md:py-20">
         
         {/* ===== 1. HERO ===== */}
-        <section className="text-center mb-6">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/70 mb-4">
-            Návrh spolupráce
-          </p>
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
-            Strategická nabídka pro{' '}
-            <span className="text-[#94e700]">
-              {offer.website 
-                ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
-                : offer.company_name}
-            </span>
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Připraveno pro {offer.contact_name === 'Jan Novák' ? 'Jana Nováka' : offer.contact_name}
-          </p>
-        </section>
+        <ScrollReveal>
+          <section className="text-center mb-6">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/70 mb-4">
+              Návrh spolupráce
+            </p>
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
+              Strategická nabídka pro{' '}
+              <span className="text-[#94e700]">
+                {offer.website 
+                  ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+                  : offer.company_name}
+              </span>
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Připraveno pro {offer.contact_name === 'Jan Novák' ? 'Jana Nováka' : offer.contact_name}
+            </p>
+          </section>
+        </ScrollReveal>
 
         {/* Credibility badges */}
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground/50 font-medium mb-16">
