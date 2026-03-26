@@ -447,52 +447,67 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                   )}
 
                   {/* Profitability / Internal costs */}
-                  {editableServices.length > 0 && totals.totalInternalCost > 0 && (
-                    <div className="p-3 rounded-lg border border-dashed space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <TrendingUp className="h-4 w-4" />
-                        <span>Interní ekonomika (odhad)</span>
+                  {editableServices.length > 0 && (
+                    <div className="rounded-lg border bg-muted/30 space-y-0 overflow-hidden">
+                      <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/50">
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Náklady na doručení & odměny
+                        </span>
                       </div>
                       
-                      {totals.serviceCosts.map((sc, idx) => (
-                        <div key={idx} className="text-xs space-y-0.5">
-                          <div className="flex items-center justify-between text-muted-foreground">
-                            <span>{sc.name}</span>
-                            <span>{sc.cost.toLocaleString('cs-CZ')} Kč</span>
-                          </div>
-                          {sc.roles.map((r, ri) => (
-                            <div key={ri} className="flex items-center justify-between pl-3 text-muted-foreground/70">
-                              <span>{r.role}</span>
-                              <span>{r.reward.toLocaleString('cs-CZ')} Kč</span>
+                      {totals.serviceCosts.length > 0 ? (
+                        <div className="divide-y divide-border/50">
+                          {totals.serviceCosts.map((sc, idx) => (
+                            <div key={idx} className="px-3 py-2">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-medium">{sc.name}</span>
+                                <span className="text-xs font-semibold tabular-nums">{sc.cost.toLocaleString('cs-CZ')} Kč</span>
+                              </div>
+                              {sc.roles.map((r, ri) => (
+                                <div key={ri} className="flex items-center justify-between pl-3 py-0.5">
+                                  <span className="text-xs text-muted-foreground">{r.role}</span>
+                                  <span className="text-xs text-muted-foreground tabular-nums">{r.reward.toLocaleString('cs-CZ')} Kč/měs</span>
+                                </div>
+                              ))}
                             </div>
                           ))}
                         </div>
-                      ))}
-                      
-                      <Separator />
-                      
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Interní náklady celkem:</span>
-                        <span className="font-medium">{totals.totalInternalCost.toLocaleString('cs-CZ')} Kč/měs</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Odhadovaná marže:</span>
-                        <span className={`font-bold ${
-                          totals.margin >= 66 ? 'text-green-600' : 
-                          totals.margin >= 50 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {totals.margin.toFixed(1)} %
-                          <span className="font-normal text-xs ml-1">
-                            ({Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč)
-                          </span>
-                        </span>
-                      </div>
-                      {totals.margin < 66 && (
-                        <div className="flex items-center gap-2 p-2 rounded bg-red-500/10 border border-red-500/20 mt-1">
-                          <TrendingUp className="h-3.5 w-3.5 text-red-600 shrink-0" />
-                          <p className="text-xs text-red-700 dark:text-red-400">
-                            ⚠️ Marže je pod minimální cílovou hodnotou 66 %. Zvažte úpravu ceny nebo rozsahu služeb.
-                          </p>
+                      ) : (
+                        <div className="px-3 py-3 text-xs text-muted-foreground text-center">
+                          Pro vybrané služby nejsou k dispozici data o odměnách.
+                        </div>
+                      )}
+
+                      {totals.totalInternalCost > 0 && (
+                        <div className="border-t bg-background px-3 py-2.5 space-y-1.5">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Interní náklady celkem</span>
+                            <span className="font-semibold tabular-nums">{totals.totalInternalCost.toLocaleString('cs-CZ')} Kč/měs</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Příjem po nákladech</span>
+                            <span className="font-semibold tabular-nums">
+                              {Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč/měs
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Odhadovaná marže</span>
+                            <span className={`font-bold tabular-nums ${
+                              totals.margin >= 66 ? 'text-emerald-600' : 
+                              totals.margin >= 50 ? 'text-amber-600' : 'text-destructive'
+                            }`}>
+                              {totals.margin.toFixed(1)} %
+                            </span>
+                          </div>
+                          {totals.margin < 66 && (
+                            <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20 mt-1">
+                              <TrendingUp className="h-3.5 w-3.5 text-destructive shrink-0" />
+                              <p className="text-xs text-destructive">
+                                Marže je pod cílovou hodnotou 66 %. Zvažte úpravu ceny nebo rozsahu služeb.
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
