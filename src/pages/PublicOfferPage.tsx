@@ -1273,7 +1273,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <SectionDivider />
 
         {/* ===== 7. ONBOARDING ===== */}
-        <OnboardingProcessSection />
+        <ScrollReveal><OnboardingProcessSection /></ScrollReveal>
 
         <SectionDivider />
 
