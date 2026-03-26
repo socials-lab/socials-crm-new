@@ -561,6 +561,10 @@ const PORTFOLIO_IMAGES = [
   { src: '/images/portfolio/naturapura.jpg', alt: 'Pontina – Essentials set' },
   { src: '/images/portfolio/halloween.png', alt: 'Natima – Halloween kampaň' },
   { src: '/images/portfolio/magnesium.png', alt: 'Natima – Magnesium duo' },
+  { src: '/images/portfolio/cbdway.jpg', alt: 'CBDway – Tutti Frutti medvídci' },
+  { src: '/images/portfolio/dmania.jpg', alt: 'Dmania – listopadová sleva' },
+  { src: '/images/portfolio/k2moto.png', alt: 'K2 Moto – airbagová vesta' },
+  { src: '/images/portfolio/beewood.png', alt: 'Beewood – dřevěné kryty' },
 ];
 
 function CreativePortfolioSection() {
