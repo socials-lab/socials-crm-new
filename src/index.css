@@ -159,6 +159,10 @@
   .offer-dark .text-primary {
     color: hsl(82 100% 37%) !important;
   }
+
+  .offer-light .text-primary {
+    color: hsl(82 100% 25%) !important;
+  }
 }
 
 @layer base {
