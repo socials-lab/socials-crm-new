@@ -554,6 +554,52 @@ function WhyUsSection() {
   );
 }
 
+function ReportingSection() {
+  const DEMO_REPORT_URL = 'https://68bb7487-e1f5-44d2-a8a4-9044e8cf5438.lovableproject.com/shared-report/8c10b8c2a68fb6c367178fe0e01bc1702f39c4b1af1c6389';
+  
+  return (
+    <section className="mb-16">
+      <div className="p-6 md:p-8 rounded-2xl border bg-card/50 backdrop-blur-sm">
+        <h2 className="text-2xl md:text-3xl font-bold mb-4">📊 Reporting až na úroveň zisku</h2>
+        
+        <div className="space-y-4 mb-8">
+          <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
+            Pokud máte platformu <span className="font-semibold text-foreground">Shoptet</span>, dodáme vám reporting až na úroveň <span className="font-semibold text-foreground">zisku a contribution margin</span>. Budete přesně vědět, kolik peněz vám vydělá jaký produkt.
+          </p>
+          <p className="text-sm text-muted-foreground italic">
+            (Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)
+          </p>
+        </div>
+
+        <div className="mb-6">
+          <p className="text-sm font-medium text-muted-foreground mb-3">Interaktivní ukázka reportu — můžete si ho přímo proklikat:</p>
+          <div className="rounded-xl overflow-hidden border border-border/50 shadow-lg" style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+            <iframe
+              src={DEMO_REPORT_URL}
+              frameBorder="0"
+              allowFullScreen
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+              title="Demo report – ukázka"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-center">
+          <a
+            href={DEMO_REPORT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors"
+          >
+            Otevřít demo report
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function CreativePortfolioSection() {
   const [selectedItem, setSelectedItem] = useState<{ url: string; type: string } | null>(null);
   const { items: portfolioItems, isLoading: portfolioLoading } = usePublicPortfolioLocal();
