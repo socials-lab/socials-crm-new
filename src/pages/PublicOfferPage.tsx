@@ -680,6 +680,9 @@ function CreativePortfolioSection() {
     { src: '/images/portfolio/nutworld_video.mp4', alt: 'Nut World – video reklama', type: 'video' as const },
     { src: '/images/portfolio/teenwear_video.mp4', alt: 'Teen Wear – video', type: 'video' as const },
     { src: '/images/portfolio/natima_video.mp4', alt: 'Natima – klientské video', type: 'video' as const },
+    { src: '/images/portfolio/nutworld-ai1.mp4', alt: 'Nut World – AI video', type: 'video' as const },
+    { src: '/images/portfolio/nutworld-hook1.mp4', alt: 'Nut World – hook video', type: 'video' as const },
+    { src: '/images/portfolio/natios-hook1.mp4', alt: 'Natios – hook video', type: 'video' as const },
   ];
 
   const displayItems = portfolioItems.length > 0
