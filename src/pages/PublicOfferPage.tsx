@@ -1081,6 +1081,9 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* Creative portfolio */}
         <CreativePortfolioSection />
 
+        {/* Reporting section */}
+        <ReportingSection />
+
         {/* Loom video */}
         {offer.loom_url && (
           <section className="mb-10">
