@@ -164,7 +164,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
           "rounded-lg border transition-all flex flex-col",
           config.bgColor,
           isDropTarget && "ring-2 ring-primary shadow-lg",
-          compact ? "min-h-[120px]" : "min-h-[200px]"
+          compact ? "min-h-[120px]" : "min-h-[140px]"
         )}
       >
         {/* Column Header */}
