@@ -574,6 +574,17 @@ function CreativePortfolioSection() {
     { src: '/images/portfolio/dmania.jpg', alt: 'Dmania – listopadová sleva', type: 'image' as const },
     { src: '/images/portfolio/k2moto.png', alt: 'K2 Moto – airbagová vesta', type: 'image' as const },
     { src: '/images/portfolio/beewood.png', alt: 'Beewood – dřevěné kryty', type: 'image' as const },
+    // Videa
+    { src: '/images/portfolio/antistress.mp4', alt: 'Antistress – produktové video', type: 'video' as const },
+    { src: '/images/portfolio/firefly.mp4', alt: 'Adobe Firefly – AI video', type: 'video' as const },
+    { src: '/images/portfolio/penezenka.mp4', alt: 'Business peněženka – produkt', type: 'video' as const },
+    { src: '/images/portfolio/ioniq.mp4', alt: 'Hyundai IONIQ – reklama', type: 'video' as const },
+    { src: '/images/portfolio/hyundai.mp4', alt: 'Hyundai – video spot', type: 'video' as const },
+    { src: '/images/portfolio/cbdway_sleep.mp4', alt: 'CBDway Sleep – produkt', type: 'video' as const },
+    { src: '/images/portfolio/final_video.mp4', alt: 'Kreativní video spot', type: 'video' as const },
+    { src: '/images/portfolio/nutworld_video.mp4', alt: 'Nut World – video reklama', type: 'video' as const },
+    { src: '/images/portfolio/teenwear_video.mp4', alt: 'Teen Wear – video', type: 'video' as const },
+    { src: '/images/portfolio/natima_video.mp4', alt: 'Natima – klientské video', type: 'video' as const },
   ];
 
   const displayItems = portfolioItems.length > 0
