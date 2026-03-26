@@ -155,74 +155,89 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
           : "border-foreground/[0.08] bg-foreground/[0.02] hover:border-[#94e700]/25 hover:bg-foreground/[0.04] hover:shadow-[0_0_20px_-10px_rgba(148,231,0,0.1)]"
       )}>
         <CollapsibleTrigger className="w-full">
-          <div className="flex items-center justify-between p-5 md:p-6">
-            <div className="flex items-center gap-4 text-left">
-              <div className="w-12 h-12 rounded-xl bg-[#94e700]/10 border border-[#94e700]/20 flex items-center justify-center shrink-0 text-2xl">
+          <div className="p-4 md:p-6">
+            {/* Mobile: stacked layout, Desktop: horizontal */}
+            <div className="flex items-start gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#94e700]/10 border border-[#94e700]/20 flex items-center justify-center shrink-0 text-xl md:text-2xl">
                 {getServiceEmoji(service.name)}
               </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-base">{service.name}</p>
-                  {service.service_type === 'core' && service.selected_tier && (
-                    <Badge 
-                      variant="outline" 
-                      className={cn(
-                        "text-[10px] uppercase font-medium tracking-wider",
-                        service.selected_tier === 'elite' && "border-amber-500/50 text-amber-400 bg-amber-500/10",
-                        service.selected_tier === 'pro' && "border-[#94e700]/50 text-[#94e700] bg-[#94e700]/10",
-                        service.selected_tier === 'growth' && "border-emerald-500/50 text-emerald-400 bg-emerald-500/10",
+              <div className="flex-1 min-w-0 text-left">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-base">{service.name}</p>
+                    {service.service_type === 'core' && service.selected_tier && (
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "text-[10px] uppercase font-medium tracking-wider",
+                          service.selected_tier === 'elite' && "border-amber-500/50 text-amber-400 bg-amber-500/10",
+                          service.selected_tier === 'pro' && "border-[#94e700]/50 text-[#94e700] bg-[#94e700]/10",
+                          service.selected_tier === 'growth' && "border-emerald-500/50 text-emerald-400 bg-emerald-500/10",
+                        )}
+                      >
+                        {service.selected_tier}
+                      </Badge>
+                    )}
+                    {service.service_type === 'addon' && (
+                      <Badge variant="outline" className="text-[10px] border-foreground/20 text-muted-foreground">
+                        Doplněk
+                      </Badge>
+                    )}
+                    {!service.service_type && service.selected_tier && (
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "text-[10px] uppercase font-medium tracking-wider",
+                          service.selected_tier === 'elite' && "border-amber-500/50 text-amber-400 bg-amber-500/10",
+                          service.selected_tier === 'pro' && "border-[#94e700]/50 text-[#94e700] bg-[#94e700]/10",
+                          service.selected_tier === 'growth' && "border-emerald-500/50 text-emerald-400 bg-emerald-500/10",
+                        )}
+                      >
+                        {service.selected_tier}
+                      </Badge>
+                    )}
+                  </div>
+                  {/* Desktop price inline */}
+                  <div className="hidden md:flex items-center gap-3">
+                    <div className="text-right whitespace-nowrap">
+                      <span className="font-bold text-lg text-[#94e700]">
+                        {service.price.toLocaleString('cs-CZ')} {service.currency}
+                      </span>
+                      {service.billing_type === 'monthly' && (
+                        <span className="text-xs text-muted-foreground/70 ml-1">/měs</span>
                       )}
-                    >
-                      {service.selected_tier}
-                    </Badge>
-                  )}
-                  {service.service_type === 'addon' && (
-                    <Badge variant="outline" className="text-[10px] border-foreground/20 text-muted-foreground">
-                      Doplněk
-                    </Badge>
-                  )}
-                  {!service.service_type && service.selected_tier && (
-                    <Badge 
-                      variant="outline" 
-                      className={cn(
-                        "text-[10px] uppercase font-medium tracking-wider",
-                        service.selected_tier === 'elite' && "border-amber-500/50 text-amber-400 bg-amber-500/10",
-                        service.selected_tier === 'pro' && "border-[#94e700]/50 text-[#94e700] bg-[#94e700]/10",
-                        service.selected_tier === 'growth' && "border-emerald-500/50 text-emerald-400 bg-emerald-500/10",
-                      )}
-                    >
-                      {service.selected_tier}
-                    </Badge>
-                  )}
+                    </div>
+                    {hasDetails && (
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                        isOpen ? "bg-[#94e700]/20 text-[#94e700]" : "bg-foreground/[0.05] text-muted-foreground/50"
+                      )}>
+                        <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {service.description && (
-                  <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2 md:line-clamp-none">{service.description}</p>
                 )}
-                {hasDetails && !isOpen && (
-                  <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-                    <ChevronDown className="h-3 w-3" />
-                    Klikněte pro zobrazení detailů
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right whitespace-nowrap">
-                <span className="font-bold text-lg text-[#94e700]">
-                  {service.price.toLocaleString('cs-CZ')} {service.currency}
-                </span>
-                {service.billing_type === 'monthly' && (
-                  <span className="text-xs text-muted-foreground/70 ml-1">/měs</span>
-                )}
-              </div>
-              {hasDetails && (
-                <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-                  isOpen ? "bg-[#94e700]/20 text-[#94e700]" : "bg-foreground/[0.05] text-muted-foreground/50"
-                )}>
-                  <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
+                {/* Mobile: price row */}
+                <div className="flex md:hidden items-center justify-between mt-2.5">
+                  <div className="whitespace-nowrap">
+                    <span className="font-bold text-base text-[#94e700]">
+                      {service.price.toLocaleString('cs-CZ')} {service.currency}
+                    </span>
+                    {service.billing_type === 'monthly' && (
+                      <span className="text-xs text-muted-foreground/70 ml-1">/měs</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {hasDetails && !isOpen && <span>Detaily</span>}
+                    {hasDetails && (
+                      <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isOpen && 'rotate-180')} />
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </CollapsibleTrigger>
