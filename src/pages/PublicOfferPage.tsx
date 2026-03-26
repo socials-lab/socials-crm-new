@@ -491,26 +491,27 @@ function OnboardingProcessSection() {
 
         <div className="space-y-2">
           {ONBOARDING_STEPS.map((step, idx) => (
-            <div
-              key={idx}
-              className="group flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-foreground/[0.06] hover:bg-foreground/[0.02] transition-all duration-300 cursor-default"
-            >
-              <div className="w-12 h-12 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] flex items-center justify-center shrink-0 relative z-10 transition-all duration-300 group-hover:bg-[#94e700]/10 group-hover:border-[#94e700]/30">
-                <step.icon className="h-5 w-5 text-muted-foreground group-hover:text-[#94e700] transition-colors" />
-              </div>
-
-              <div className="flex-1 pb-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-sm text-foreground group-hover:text-[#94e700] transition-colors">{step.title}</h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-foreground/[0.05] text-muted-foreground/70 font-medium">
-                    {step.timeline}
-                  </span>
+            <ScrollReveal key={idx} delay={idx * 120}>
+              <div
+                className="group flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-foreground/[0.06] hover:bg-foreground/[0.02] transition-all duration-300 cursor-default"
+              >
+                <div className="w-12 h-12 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] flex items-center justify-center shrink-0 relative z-10 transition-all duration-300 group-hover:bg-[#94e700]/10 group-hover:border-[#94e700]/30">
+                  <step.icon className="h-5 w-5 text-muted-foreground group-hover:text-[#94e700] transition-colors" />
                 </div>
-                <p className="text-sm text-muted-foreground/70 mt-1 leading-relaxed">
-                  {step.description}
-                </p>
+
+                <div className="flex-1 pb-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-sm text-foreground group-hover:text-[#94e700] transition-colors">{step.title}</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-foreground/[0.05] text-muted-foreground/70 font-medium">
+                      {step.timeline}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground/70 mt-1 leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
               </div>
-            </div>
+            </ScrollReveal>
           ))}
         </div>
       </div>
@@ -579,14 +580,15 @@ function WhyUsSection() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
         {WHY_US_ITEMS.map((item, i) => (
-          <div
-            key={i}
-            className="group p-5 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-[#94e700]/20 transition-all duration-300 cursor-default"
-          >
-            <p className="text-2xl md:text-3xl font-bold text-[#94e700] mb-1 group-hover:scale-105 transition-transform origin-left">{item.stat}</p>
-            <p className="text-xs font-medium text-foreground/70 uppercase tracking-wider mb-3">{item.label}</p>
-            <p className="text-xs text-muted-foreground/70 leading-relaxed">{item.description}</p>
-          </div>
+          <ScrollReveal key={i} delay={i * 100}>
+            <div
+              className="group p-5 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-[#94e700]/20 transition-all duration-300 cursor-default h-full"
+            >
+              <p className="text-2xl md:text-3xl font-bold text-[#94e700] mb-1 group-hover:scale-105 transition-transform origin-left">{item.stat}</p>
+              <p className="text-xs font-medium text-foreground/70 uppercase tracking-wider mb-3">{item.label}</p>
+              <p className="text-xs text-muted-foreground/70 leading-relaxed">{item.description}</p>
+            </div>
+          </ScrollReveal>
         ))}
       </div>
 
@@ -1373,11 +1375,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   desc: 'Nejsme jen specialisté na reklamu — rozumíme e-commerce, maržím a obchodním modelům. Pomůžeme vám najít nové příležitosti, optimalizovat nabídku a škálovat byznys, nejen kampaně.'
                 },
               ].map((item, i) => (
-                <div key={i} className="rounded-xl border border-foreground/[0.06] bg-muted/30 p-5 space-y-2">
-                  <div className="text-2xl">{item.icon}</div>
-                  <h3 className="font-semibold text-sm">{item.title}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-                </div>
+                <ScrollReveal key={i} delay={i * 100}>
+                  <div className="rounded-xl border border-foreground/[0.06] bg-muted/30 p-5 space-y-2 h-full">
+                    <div className="text-2xl">{item.icon}</div>
+                    <h3 className="font-semibold text-sm">{item.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                  </div>
+                </ScrollReveal>
               ))}
             </div>
           </section>
