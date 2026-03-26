@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
@@ -115,6 +115,82 @@ function SectionHeading({ title, subtitle, className }: { title: string; subtitl
 // Thin divider between sections
 function SectionDivider() {
   return <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent my-16" />;
+}
+
+// Scroll reveal wrapper
+function ScrollReveal({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(el);
+        }
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'transition-all duration-700 ease-out',
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8',
+        className
+      )}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Stagger children reveal
+function StaggerReveal({ children, className, staggerMs = 100 }: { children: ReactNode[]; className?: string; staggerMs?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(el);
+        }
+      },
+      { threshold: 0.05, rootMargin: '0px 0px -40px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className={className}>
+      {(children as ReactNode[]).map((child, i) => (
+        <div
+          key={i}
+          className="transition-all duration-500 ease-out"
+          style={{
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
+            transitionDelay: `${i * staggerMs}ms`,
+          }}
+        >
+          {child}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // Onboarding process steps
@@ -915,22 +991,24 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
       <main className="max-w-5xl mx-auto px-6 md:px-10 py-12 md:py-20">
         
         {/* ===== 1. HERO ===== */}
-        <section className="text-center mb-6">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/70 mb-4">
-            Návrh spolupráce
-          </p>
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
-            Strategická nabídka pro{' '}
-            <span className="text-[#94e700]">
-              {offer.website 
-                ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
-                : offer.company_name}
-            </span>
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Připraveno pro {offer.contact_name === 'Jan Novák' ? 'Jana Nováka' : offer.contact_name}
-          </p>
-        </section>
+        <ScrollReveal>
+          <section className="text-center mb-6">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/70 mb-4">
+              Návrh spolupráce
+            </p>
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
+              Strategická nabídka pro{' '}
+              <span className="text-[#94e700]">
+                {offer.website 
+                  ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+                  : offer.company_name}
+              </span>
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Připraveno pro {offer.contact_name === 'Jan Novák' ? 'Jana Nováka' : offer.contact_name}
+            </p>
+          </section>
+        </ScrollReveal>
 
         {/* Credibility badges */}
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground/50 font-medium mb-16">
@@ -955,23 +1033,24 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* ===== 2. LOOM VIDEO & AUDIT ===== */}
         {(offer.audit_summary || offer.loom_url) && (
           <>
-            <section>
-              {offer.loom_url && (
-                <div className="rounded-xl overflow-hidden border border-foreground/[0.08] mb-6">
-                  <AspectRatio ratio={16 / 9}>
-                    <iframe
-                      src={offer.loom_url}
-                      title="Video k nabídce"
-                      className="w-full h-full"
-                      frameBorder="0"
-                      allowFullScreen
-                      allow="autoplay; fullscreen"
-                    />
-                  </AspectRatio>
-                </div>
-              )}
-
-            </section>
+            <ScrollReveal>
+              <section>
+                {offer.loom_url && (
+                  <div className="rounded-xl overflow-hidden border border-foreground/[0.08] mb-6">
+                    <AspectRatio ratio={16 / 9}>
+                      <iframe
+                        src={offer.loom_url}
+                        title="Video k nabídce"
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allowFullScreen
+                        allow="autoplay; fullscreen"
+                      />
+                    </AspectRatio>
+                  </div>
+                )}
+              </section>
+            </ScrollReveal>
 
             <SectionDivider />
           </>
@@ -980,62 +1059,65 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* ===== AUDIT FINDINGS ===== */}
         {offer.audit_summary && (
           <>
-            <section>
-              <SectionHeading
-                title="🔍 Co jsme zjistili"
-                subtitle="Na základě analýzy vašich reklamních účtů a webu jsme identifikovali klíčové oblasti pro zlepšení."
-              />
-              <div className="space-y-3">
-                {offer.audit_summary.split('\n').filter(line => line.trim().length > 0).map((finding, idx) => {
-                  const cleanFinding = finding.replace(/^[-•*]\s*/, '').trim();
-                  if (!cleanFinding) return null;
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-4 p-4 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-foreground/[0.1] transition-all duration-300"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-sm">💡</span>
+            <ScrollReveal>
+              <section>
+                <SectionHeading
+                  title="🔍 Co jsme zjistili"
+                  subtitle="Na základě analýzy vašich reklamních účtů a webu jsme identifikovali klíčové oblasti pro zlepšení."
+                />
+                <div className="space-y-3">
+                  {offer.audit_summary.split('\n').filter(line => line.trim().length > 0).map((finding, idx) => {
+                    const cleanFinding = finding.replace(/^[-•*]\s*/, '').trim();
+                    if (!cleanFinding) return null;
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-4 p-4 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-foreground/[0.1] transition-all duration-300"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-sm">💡</span>
+                        </div>
+                        <p className="text-sm text-foreground/80 leading-relaxed">{cleanFinding}</p>
                       </div>
-                      <p className="text-sm text-foreground/80 leading-relaxed">{cleanFinding}</p>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              {offer.recommendation_intro && (
-                <div className="mt-6 p-5 rounded-xl bg-[#94e700]/[0.05] border border-[#94e700]/20">
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg mt-0.5">✅</span>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground mb-1">Naše doporučení</p>
-                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{offer.recommendation_intro}</p>
+                {offer.recommendation_intro && (
+                  <div className="mt-6 p-5 rounded-xl bg-[#94e700]/[0.05] border border-[#94e700]/20">
+                    <div className="flex items-start gap-3">
+                      <span className="text-lg mt-0.5">✅</span>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground mb-1">Naše doporučení</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{offer.recommendation_intro}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </section>
+                )}
+              </section>
+            </ScrollReveal>
 
             <SectionDivider />
           </>
         )}
 
         {/* ===== 3. PROČ S NÁMI ===== */}
-        <WhyUsSection />
+        <ScrollReveal><WhyUsSection /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 4. PORTFOLIO ===== */}
-        <CreativePortfolioSection />
+        <ScrollReveal><CreativePortfolioSection /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 5. REPORTING ===== */}
-        <ReportingSection />
+        <ScrollReveal><ReportingSection /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 6. SLUŽBY + CENÍK ===== */}
+        <ScrollReveal>
         <section>
           <div className="rounded-2xl bg-gradient-to-br from-[#94e700]/10 via-[#94e700]/5 to-transparent border border-[#94e700]/20 p-6 md:p-8 mb-8">
             <h2 className="text-2xl md:text-3xl font-bold">
@@ -1119,6 +1201,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             );
           })()}
         </section>
+        </ScrollReveal>
 
         {/* Pricing Summary */}
         <div className="mt-10 p-8 md:p-10 rounded-2xl border-2 border-[#94e700]/30 bg-gradient-to-br from-[#94e700]/[0.08] to-[#94e700]/[0.02] shadow-[0_0_60px_-20px_rgba(148,231,0,0.15)] relative overflow-hidden">
@@ -1190,63 +1273,66 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <SectionDivider />
 
         {/* ===== 7. ONBOARDING ===== */}
-        <OnboardingProcessSection />
+        <ScrollReveal><OnboardingProcessSection /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== CO ZÍSKÁTE NAVÍC ===== */}
-        <section className="space-y-6">
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-center">
-            🎁 Co od nás dostanete ke každé spolupráci
-          </h2>
-          <p className="text-sm text-muted-foreground text-center max-w-lg mx-auto">
-            Nejde jen o reklamu — stavíme partnerství, které vám pomůže růst
-          </p>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
-            {[
-              {
-                icon: '📞',
-                title: '1× měsíčně vyhodnocovací call + konzultace',
-                desc: 'Pravidelně spolu procházíme výsledky a hledáme nové příležitosti pro růst vašeho businessu. Žádné překvapení — vždy víte, co se děje a proč.'
-              },
-              {
-                icon: '📊',
-                title: '24/7 přístup k reportu výsledků',
-                desc: 'Živý report s aktuálními daty kdykoli potřebujete. Nemusíte čekat na měsíční PDF — vidíte výkon kampaní v reálném čase.'
-              },
-              {
-                icon: '💬',
-                title: 'Komunikace v projektovém nástroji Freelo',
-                desc: 'Veškerá komunikace na jednom místě, přehledně a dohledatelně. Žádné ztracené e-maily nebo zapomenuté požadavky.'
-              },
-              {
-                icon: '👤',
-                title: 'Komunikujete přímo se specialistou',
-                desc: 'Žádný prostředník ani account manager — mluvíte rovnou s člověkem, který vaše kampaně denně spravuje a zná je do detailu.'
-              },
-              {
-                icon: '🏠',
-                title: 'Celý výkonnostní marketing pod jednou střechou',
-                desc: 'Meta, Google, Shoptet, analytika — vše řešíme my. Ušetříte čas i nervy s koordinací více dodavatelů a máte jednoho partnera pro vše.'
-              },
-              {
-                icon: '🧠',
-                title: 'Strategická podpora rozvoje vašeho businessu',
-                desc: 'Nejsme jen specialisté na reklamu — rozumíme e-commerce, maržím a obchodním modelům. Pomůžeme vám najít nové příležitosti, optimalizovat nabídku a škálovat byznys, nejen kampaně.'
-              },
-            ].map((item, i) => (
-              <div key={i} className="rounded-xl border border-foreground/[0.06] bg-muted/30 p-5 space-y-2">
-                <div className="text-2xl">{item.icon}</div>
-                <h3 className="font-semibold text-sm">{item.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        <ScrollReveal>
+          <section className="space-y-6">
+            <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-center">
+              🎁 Co od nás dostanete ke každé spolupráci
+            </h2>
+            <p className="text-sm text-muted-foreground text-center max-w-lg mx-auto">
+              Nejde jen o reklamu — stavíme partnerství, které vám pomůže růst
+            </p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
+              {[
+                {
+                  icon: '📞',
+                  title: '1× měsíčně vyhodnocovací call + konzultace',
+                  desc: 'Pravidelně spolu procházíme výsledky a hledáme nové příležitosti pro růst vašeho businessu. Žádné překvapení — vždy víte, co se děje a proč.'
+                },
+                {
+                  icon: '📊',
+                  title: '24/7 přístup k reportu výsledků',
+                  desc: 'Živý report s aktuálními daty kdykoli potřebujete. Nemusíte čekat na měsíční PDF — vidíte výkon kampaní v reálném čase.'
+                },
+                {
+                  icon: '💬',
+                  title: 'Komunikace v projektovém nástroji Freelo',
+                  desc: 'Veškerá komunikace na jednom místě, přehledně a dohledatelně. Žádné ztracené e-maily nebo zapomenuté požadavky.'
+                },
+                {
+                  icon: '👤',
+                  title: 'Komunikujete přímo se specialistou',
+                  desc: 'Žádný prostředník ani account manager — mluvíte rovnou s člověkem, který vaše kampaně denně spravuje a zná je do detailu.'
+                },
+                {
+                  icon: '🏠',
+                  title: 'Celý výkonnostní marketing pod jednou střechou',
+                  desc: 'Meta, Google, Shoptet, analytika — vše řešíme my. Ušetříte čas i nervy s koordinací více dodavatelů a máte jednoho partnera pro vše.'
+                },
+                {
+                  icon: '🧠',
+                  title: 'Strategická podpora rozvoje vašeho businessu',
+                  desc: 'Nejsme jen specialisté na reklamu — rozumíme e-commerce, maržím a obchodním modelům. Pomůžeme vám najít nové příležitosti, optimalizovat nabídku a škálovat byznys, nejen kampaně.'
+                },
+              ].map((item, i) => (
+                <div key={i} className="rounded-xl border border-foreground/[0.06] bg-muted/30 p-5 space-y-2">
+                  <div className="text-2xl">{item.icon}</div>
+                  <h3 className="font-semibold text-sm">{item.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 8. KONTAKT + CTA ===== */}
+        <ScrollReveal>
         <section className="space-y-6">
           <ContactSection offer={offer} />
           
@@ -1277,8 +1363,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </p>
           </div>
         </section>
+        </ScrollReveal>
 
         {/* ===== REFERENCE KLIENTŮ ===== */}
+        <ScrollReveal>
         <section className="mt-16 rounded-2xl bg-black py-10 px-6">
           <h2 className="text-lg font-semibold text-center mb-2 text-white">❤️ Značky, které jsme pomohli posunout</h2>
           <p className="text-sm text-gray-400 text-center mb-8">Pomáháme růst firmám napříč odvětvími</p>
@@ -1288,8 +1376,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             ))}
           </div>
         </section>
+        </ScrollReveal>
 
         {/* ===== CERTIFIKACE ===== */}
+        <ScrollReveal>
         <section className="mt-16 rounded-2xl bg-black py-10 px-6">
           <h2 className="text-lg font-semibold text-center mb-2 text-white">🏆 Certifikace & partnerství</h2>
           <p className="text-sm text-gray-400 text-center mb-8">Oficiálně certifikovaný tým s přístupem k nejnovějším nástrojům a beta funkcím</p>
@@ -1299,6 +1389,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             ))}
           </div>
         </section>
+        </ScrollReveal>
 
         {/* ===== 9. FOOTER ===== */}
         <footer className="pt-8 mt-16 border-t border-foreground/[0.06]">
