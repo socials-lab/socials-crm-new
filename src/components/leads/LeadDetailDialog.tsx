@@ -66,7 +66,7 @@ import { LeadCommunicationTimeline } from './LeadCommunicationTimeline';
 import { InlineEditField } from './InlineEditField';
 import { CompanyFinancials } from './CompanyFinancials';
 import type { Lead, LeadStage, LeadService, LeadNoteType } from '@/types/crm';
-import { LeadEnrichmentSection } from './LeadEnrichmentSection';
+import { LeadEnrichmentSection, LeadSummaryBar, LeadScoreBadges } from './LeadEnrichmentSection';
 import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -355,9 +355,9 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
       </AlertDialog>
 
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 gap-0">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 pb-4 border-b flex-shrink-0">
+          <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b flex-shrink-0">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
                 <DialogTitle className="text-xl font-semibold">
@@ -371,6 +371,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                 <Badge variant="outline" className={cn("text-xs", STAGE_COLORS[lead.stage])}>
                   {STAGE_LABELS[lead.stage]}
                 </Badge>
+                <LeadScoreBadges lead={lead} />
               </div>
               <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                 {lead.ico && <span>IČO: {lead.ico}</span>}
