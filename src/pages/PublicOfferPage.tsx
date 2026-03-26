@@ -1201,6 +1201,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             );
           })()}
         </section>
+        </ScrollReveal>
 
         {/* Pricing Summary */}
         <div className="mt-10 p-8 md:p-10 rounded-2xl border-2 border-[#94e700]/30 bg-gradient-to-br from-[#94e700]/[0.08] to-[#94e700]/[0.02] shadow-[0_0_60px_-20px_rgba(148,231,0,0.15)] relative overflow-hidden">
