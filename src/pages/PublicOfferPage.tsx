@@ -42,6 +42,8 @@ import {
   Share2,
   Sun,
   Moon,
+  Star,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
