@@ -590,7 +590,8 @@ function PortfolioGrid({ items, label }: { items: { src: string; alt: string; ty
                   src={item.src}
                   className="w-full h-full object-cover"
                   muted
-                  preload="metadata"
+                  preload="auto"
+                  playsInline
                   onMouseEnter={e => (e.target as HTMLVideoElement).play()}
                   onMouseLeave={e => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }}
                 />
