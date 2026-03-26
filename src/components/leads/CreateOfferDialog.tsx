@@ -22,7 +22,7 @@ import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { getServiceDetail } from '@/constants/serviceDetails';
 import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
-import { getRewardsFromServiceConfig } from '@/constants/serviceRewards';
+import { getRewardsFromServiceConfig, getServiceRewardRecommendation } from '@/constants/serviceRewards';
 import {
   Select,
   SelectContent,
@@ -288,10 +288,14 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
       const serviceRevenue = getEffectiveMonthlyPrice(es);
       
       const enriched = enrichServiceWithDemoRewards(catalogService);
-      const roles = getRewardsFromServiceConfig(
+      let roles = getRewardsFromServiceConfig(
         enriched.reward_config as any,
         es.selected_tier
       );
+      // Fallback to hardcoded rewards if DB config is missing
+      if (!roles || roles.length === 0) {
+        roles = getServiceRewardRecommendation(es.name, es.selected_tier);
+      }
       
       if (roles && roles.length > 0) {
         let svcCost = 0;
