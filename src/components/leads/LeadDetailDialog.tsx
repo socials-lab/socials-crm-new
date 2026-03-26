@@ -599,7 +599,34 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                 </div>
               </div>
 
-              {/* RESEARCH SECTION - full width */}
+              {/* BOOKING / MEETING SECTION */}
+              {(lead.booking_datetime || lead.booking_meet_link || lead.booking_status) && (
+                <div className="p-4 rounded-lg border bg-card flex items-center gap-6 flex-wrap">
+                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                    📅 Schůzka
+                  </h4>
+                  {lead.booking_datetime && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
+                        ✓ {new Date(lead.booking_datetime).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </Badge>
+                    </div>
+                  )}
+                  {lead.booking_status && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground text-xs mr-1">Stav:</span>
+                      <span className="font-medium">{lead.booking_status}</span>
+                    </div>
+                  )}
+                  {lead.booking_meet_link && (
+                    <a href={lead.booking_meet_link} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-sm text-primary hover:underline font-medium">
+                      🎥 Google Meet
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                </div>
+              )}
               {lead.company_research && (
                 <Collapsible defaultOpen>
                   <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
