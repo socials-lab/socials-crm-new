@@ -794,14 +794,6 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           </h1>
           <p className="text-white/50 text-sm">
             Připraveno pro {offer.contact_name}
-            {offer.valid_until && !isExpired && (
-              <>
-                <span className="mx-2 text-white/20">·</span>
-                <span>
-                  Platí do {new Date(offer.valid_until).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long' })}
-                </span>
-              </>
-            )}
           </p>
         </section>
 
