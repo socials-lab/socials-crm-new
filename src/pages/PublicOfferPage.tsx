@@ -1227,12 +1227,12 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         </section>
 
         {/* ===== REFERENCE KLIENTŮ ===== */}
-        <section className="mt-16">
-          <h2 className="text-lg font-semibold text-center mb-2">Značky, které nám důvěřují</h2>
-          <p className="text-sm text-muted-foreground text-center mb-8">Pomáháme růst firmám napříč odvětvími</p>
+        <section className="mt-16 rounded-2xl bg-gray-900 dark:bg-gray-800 py-10 px-6">
+          <h2 className="text-lg font-semibold text-center mb-2 text-white">Značky, které nám důvěřují</h2>
+          <p className="text-sm text-gray-400 text-center mb-8">Pomáháme růst firmám napříč odvětvími</p>
           <div className="grid grid-cols-5 md:grid-cols-10 gap-4 items-center justify-items-center">
             {[cl1, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10].map((logo, i) => (
-              <img key={i} src={logo} alt={`Klient ${i + 1}`} className="h-10 md:h-14 object-contain opacity-70 hover:opacity-100 transition-opacity dark:invert" />
+              <img key={i} src={logo} alt={`Klient ${i + 1}`} className="h-10 md:h-14 object-contain opacity-70 hover:opacity-100 transition-opacity" />
             ))}
           </div>
         </section>
