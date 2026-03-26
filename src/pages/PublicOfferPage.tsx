@@ -777,7 +777,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
       </header>
 
       {/* Content */}
-      <main className="max-w-3xl mx-auto px-4 py-12 md:py-20">
+      <main className="max-w-5xl mx-auto px-6 md:px-10 py-12 md:py-20">
         
         {/* ===== 1. HERO ===== */}
         <section className="text-center mb-6">
