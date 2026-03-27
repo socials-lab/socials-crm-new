@@ -124,7 +124,10 @@ export function AddLeadServiceDialog({
                 <SelectValue placeholder="Vyberte službu" />
               </SelectTrigger>
               <SelectContent>
-                {services.filter(s => s.is_active).map(service => {
+                {[...services].filter(s => s.is_active).sort((a, b) => {
+                  if (a.service_type !== b.service_type) return a.service_type === 'core' ? -1 : 1;
+                  return a.name.localeCompare(b.name, 'cs');
+                }).map(service => {
                   const detail = getServiceDetail(service.code);
                   const platforms = detail?.platforms;
                   return (
