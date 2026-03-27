@@ -67,6 +67,8 @@ import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
+import { getOffersByLeadId } from '@/data/publicOffersMockData';
+import type { PublicOffer } from '@/types/publicOffer';
 import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
 import type { Lead, LeadStage, LeadService } from '@/types/crm';
 import type { PendingTransition } from '@/types/leadTransitions';
@@ -117,6 +119,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
   const [sharedOfferUrl, setSharedOfferUrl] = useState<string | null>(null);
+  const [editingOffer, setEditingOffer] = useState<PublicOffer | null>(null);
   const [showContractWarning, setShowContractWarning] = useState(false);
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
