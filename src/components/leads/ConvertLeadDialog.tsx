@@ -518,8 +518,29 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             📋 Souhrn převodu
           </h4>
 
-          {/* Contact & Documents */}
+          {/* Company & Contact */}
           <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Firma</p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  {lead.company_name}
+                </div>
+                {lead.ico && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Hash className="h-3 w-3" />
+                    IČO: {lead.ico}
+                  </div>
+                )}
+                {lead.dic && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Hash className="h-3 w-3" />
+                    DIČ: {lead.dic}
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Kontakt</p>
               <div className="space-y-1">
