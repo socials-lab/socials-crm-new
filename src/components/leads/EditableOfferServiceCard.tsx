@@ -152,6 +152,7 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
                   {service.price.toLocaleString('cs-CZ')} {service.currency}/{service.billing_type === 'monthly' ? 'měs' : 'jedn.'}
                 </span>
               )}
+            </div>
             <div className="flex items-center gap-1">
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm">
