@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
 import type { Lead, CostModel, ClientTier, BillingModel, LeadSource, LeadService, ServiceRewardTierConfig } from '@/types/crm';
+import { getOffersByLeadId } from '@/data/publicOffersMockData';
 import { toast } from 'sonner';
 
 const convertSchema = z.object({
@@ -167,17 +168,32 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       // Parse lead's potential_services
       const leadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
       
-      // Build editable offer services
-      const offerSvcs: OfferServiceEntry[] = leadServices.map(ls => ({
-        service_id: ls.service_id,
-        name: ls.name,
-        selected_tier: ls.selected_tier,
-        price: ls.price || 0,
-        currency: ls.currency || lead.currency || 'CZK',
-        billing_type: ls.billing_type || 'monthly',
-        intro_discount_percent: ls.intro_discount_percent ?? null,
-        intro_discount_months: ls.intro_discount_months ?? null,
-      }));
+      // Look up public offer for this lead to get offer-level intro discount
+      const publicOffers = getOffersByLeadId(lead.id);
+      const latestOffer = publicOffers.length > 0 ? publicOffers[publicOffers.length - 1] : null;
+      const offerIntroPercent = latestOffer?.intro_discount_percent || 0;
+      const offerIntroMonths = latestOffer?.intro_discount_months || 3;
+      
+      // Build editable offer services — apply offer-level intro discount to monthly services
+      const offerSvcs: OfferServiceEntry[] = leadServices.map(ls => {
+        // Per-service discount takes precedence, fallback to offer-level
+        const hasPerServiceDiscount = ls.intro_discount_percent && ls.intro_discount_percent > 0;
+        const introPercent = hasPerServiceDiscount ? ls.intro_discount_percent : 
+          (offerIntroPercent > 0 && (ls.billing_type || 'monthly') === 'monthly' ? offerIntroPercent : null);
+        const introMonths = hasPerServiceDiscount ? ls.intro_discount_months :
+          (offerIntroPercent > 0 && (ls.billing_type || 'monthly') === 'monthly' ? offerIntroMonths : null);
+        
+        return {
+          service_id: ls.service_id,
+          name: ls.name,
+          selected_tier: ls.selected_tier,
+          price: ls.price || 0,
+          currency: ls.currency || lead.currency || 'CZK',
+          billing_type: ls.billing_type || 'monthly',
+          intro_discount_percent: introPercent ?? null,
+          intro_discount_months: introMonths ?? null,
+        };
+      });
       setOfferServices(offerSvcs);
 
       // Calculate monthly_fee from offer services
@@ -519,29 +535,70 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             <div className="space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Služby z nabídky</p>
               <div className="rounded-lg border bg-background divide-y divide-border/50">
-                {offerServices.map((svc, idx) => (
-                  <div key={idx} className="flex items-center justify-between px-3 py-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm">{svc.name}</span>
-                      {svc.selected_tier && (
-                        <Badge variant="outline" className="text-[10px] uppercase">
-                          {svc.selected_tier}
-                        </Badge>
-                      )}
-                      <Badge variant="secondary" className="text-[10px]">
-                        {svc.billing_type === 'monthly' ? 'Měsíčně' : 'Jednorázově'}
-                      </Badge>
-                      {svc.intro_discount_percent && svc.intro_discount_percent > 0 && (
-                        <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-600">
-                          -{svc.intro_discount_percent}% / {svc.intro_discount_months || 3} měs.
-                        </Badge>
+                {offerServices.map((svc, idx) => {
+                  const hasDiscount = svc.intro_discount_percent && svc.intro_discount_percent > 0 && svc.billing_type === 'monthly';
+                  const discountedPrice = hasDiscount 
+                    ? Math.round(svc.price * (1 - (svc.intro_discount_percent || 0) / 100))
+                    : svc.price;
+                  return (
+                    <div key={idx} className="px-3 py-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm">{svc.name}</span>
+                          {svc.selected_tier && (
+                            <Badge variant="outline" className="text-[10px] uppercase">
+                              {svc.selected_tier}
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="text-[10px]">
+                            {svc.billing_type === 'monthly' ? 'Měsíčně' : 'Jednorázově'}
+                          </Badge>
+                        </div>
+                        <span className="text-sm font-semibold tabular-nums whitespace-nowrap ml-2">
+                          {svc.price.toLocaleString('cs-CZ')} {svc.currency}{svc.billing_type === 'monthly' ? '/měs' : ''}
+                        </span>
+                      </div>
+                      {/* Intro discount row — editable */}
+                      {svc.billing_type === 'monthly' && (
+                        <div className="flex items-center gap-2 pl-1">
+                          <Percent className="h-3 w-3 text-amber-500 shrink-0" />
+                          <span className="text-[11px] text-muted-foreground">Úvodní sleva:</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={svc.intro_discount_percent || ''}
+                            onChange={(e) => {
+                              const val = Math.min(100, Math.max(0, Number(e.target.value)));
+                              setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, intro_discount_percent: val || null } : s));
+                            }}
+                            placeholder="0"
+                            className="w-14 h-6 text-xs text-right"
+                          />
+                          <span className="text-[11px] text-muted-foreground">% na</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={24}
+                            value={svc.intro_discount_months || ''}
+                            onChange={(e) => {
+                              const val = Math.min(24, Math.max(1, Number(e.target.value)));
+                              setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, intro_discount_months: val } : s));
+                            }}
+                            placeholder="3"
+                            className="w-12 h-6 text-xs text-right"
+                          />
+                          <span className="text-[11px] text-muted-foreground">měs.</span>
+                          {hasDiscount && (
+                            <span className="text-[11px] font-medium text-amber-600 ml-auto tabular-nums">
+                              → {discountedPrice.toLocaleString('cs-CZ')} {svc.currency}/měs
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
-                    <span className="text-sm font-semibold tabular-nums whitespace-nowrap ml-2">
-                      {svc.price.toLocaleString('cs-CZ')} {svc.currency}{svc.billing_type === 'monthly' ? '/měs' : ''}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/50">
                   <span className="text-sm font-semibold">Celkem měsíčně</span>
                   <span className="text-sm font-bold tabular-nums text-primary">
