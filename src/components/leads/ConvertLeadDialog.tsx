@@ -434,9 +434,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             invoiced_at: null,
             invoice_id: null,
             invoiced_in_period: null,
-            creative_boost_min_credits: null,
-            creative_boost_max_credits: null,
-            creative_boost_price_per_credit: null,
+            creative_boost_min_credits: offerSvc.is_creative_boost ? (offerSvc.cb_credits || null) : null,
+            creative_boost_max_credits: offerSvc.is_creative_boost ? (offerSvc.cb_credits || null) : null,
+            creative_boost_price_per_credit: offerSvc.is_creative_boost ? (offerSvc.cb_price_per_credit || null) : null,
             creative_boost_fixed_billing: true,
             upsold_by_id: null,
             upsell_commission_percent: null,
@@ -1313,28 +1313,63 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   </h5>
                   <div className="space-y-2">
                     {offerServices.map((svc, index) => (
-                      <div key={index} className="flex items-center gap-3 p-2 rounded-md bg-background border">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium truncate">{svc.name}</span>
-                            {svc.selected_tier && (
-                              <Badge variant="secondary" className="text-xs shrink-0">
-                                {tierLabel(svc.selected_tier)}
-                              </Badge>
-                            )}
+                      <div key={index} className="p-2 rounded-md bg-background border space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate">{svc.name}</span>
+                              {svc.selected_tier && (
+                                <Badge variant="secondary" className="text-xs shrink-0">
+                                  {tierLabel(svc.selected_tier)}
+                                </Badge>
+                              )}
+                              {svc.is_creative_boost && (
+                                <Badge variant="outline" className="text-xs shrink-0">CB</Badge>
+                              )}
+                            </div>
                           </div>
+                          {!svc.is_creative_boost && (
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Input
+                                type="number"
+                                className="w-28 text-right"
+                                value={svc.price}
+                                onChange={(e) => updateOfferServicePrice(index, Number(e.target.value))}
+                              />
+                              <span className="text-xs text-muted-foreground w-16">
+                                {svc.currency} /{svc.billing_type === 'monthly' ? 'měs' : 'jednor.'}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Input
-                            type="number"
-                            className="w-28 text-right"
-                            value={svc.price}
-                            onChange={(e) => updateOfferServicePrice(index, Number(e.target.value))}
-                          />
-                          <span className="text-xs text-muted-foreground w-16">
-                            {svc.currency} /{svc.billing_type === 'monthly' ? 'měs' : 'jednor.'}
-                          </span>
-                        </div>
+                        {/* Creative Boost: credits × price inputs */}
+                        {svc.is_creative_boost && (
+                          <div className="flex items-center gap-3 pl-1">
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-xs text-muted-foreground whitespace-nowrap">Kreditů/měs</label>
+                              <Input
+                                type="number"
+                                className="w-20 text-right"
+                                value={svc.cb_credits || ''}
+                                onChange={(e) => updateCBField(index, 'cb_credits', Number(e.target.value))}
+                              />
+                            </div>
+                            <span className="text-muted-foreground">×</span>
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-xs text-muted-foreground whitespace-nowrap">Cena/kredit</label>
+                              <Input
+                                type="number"
+                                className="w-20 text-right"
+                                value={svc.cb_price_per_credit || ''}
+                                onChange={(e) => updateCBField(index, 'cb_price_per_credit', Number(e.target.value))}
+                              />
+                              <span className="text-xs text-muted-foreground">Kč</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              = <span className="font-semibold text-foreground">{svc.price.toLocaleString('cs-CZ')} {svc.currency}/měs</span>
+                            </span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
