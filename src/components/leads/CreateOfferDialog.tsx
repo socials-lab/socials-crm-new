@@ -340,6 +340,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     });
 
     const revenue = monthlyAfterDiscount;
+    // Waterfall: intro discount applies ON TOP of bundle discount
     const introAdjustedRevenue = introDiscountPercent > 0
       ? Math.round(revenue * (1 - introDiscountPercent / 100))
       : revenue;
@@ -786,7 +787,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                           <Separator />
                           <div className="px-3 py-2.5 space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Sleva při odběru všech služeb:{introDiscountPercent > 0 && <span className="text-[10px] ml-1 text-amber-600">(nelze kombinovat s úvodní slevou)</span>}</span>
+                              <span className="text-muted-foreground">Sleva při odběru všech služeb:</span>
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"
@@ -796,7 +797,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                   onChange={(e) => {
                                     const val = Math.min(100, Math.max(0, Number(e.target.value)));
                                     setMonthlyDiscountPercent(val);
-                                    if (val > 0) setIntroDiscountPercent(0);
                                   }}
                                   placeholder="0"
                                   className="w-16 h-7 text-sm text-right"
@@ -842,7 +842,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                           <Separator />
                           <div className="px-3 py-2.5 space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Úvodní sleva (první měsíce):{monthlyDiscountPercent > 0 && <span className="text-[10px] ml-1 text-amber-600">(nelze kombinovat se slevou za balíček)</span>}</span>
+                              <span className="text-muted-foreground">Úvodní sleva (první měsíce):{monthlyDiscountPercent > 0 && introDiscountPercent > 0 && <span className="text-[10px] ml-1 text-amber-500">(aplikuje se na cenu po slevě za balíček)</span>}</span>
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"
@@ -852,7 +852,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                   onChange={(e) => {
                                     const val = Math.min(100, Math.max(0, Number(e.target.value)));
                                     setIntroDiscountPercent(val);
-                                    if (val > 0) setMonthlyDiscountPercent(0);
                                   }}
                                   placeholder="0"
                                   className="w-16 h-7 text-sm text-right"
