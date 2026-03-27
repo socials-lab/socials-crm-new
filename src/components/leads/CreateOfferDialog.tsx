@@ -160,6 +160,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   );
   const [monthlyDiscountPercent, setMonthlyDiscountPercent] = useState(0);
   const [discountScope, setDiscountScope] = useState<'core_only' | 'all_services'>('core_only');
+  const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
+  const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
   const [isCreating, setIsCreating] = useState(false);
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
