@@ -494,10 +494,23 @@ export default function OnboardingForm() {
     const daysInMonth = startDate ? getDaysInMonth(startDate) : 30;
     const remainingDays = isProrated ? daysInMonth - startDay + 1 : daysInMonth;
 
-    const proratedServices = monthlyServices.map(s => ({
-      ...s,
-      proratedPrice: isProrated ? Math.round((s.price / daysInMonth) * remainingDays) : s.price,
-    }));
+    const proratedServices = monthlyServices.map(s => {
+      const hasIntroDiscount = (s as any).intro_discount_percent && (s as any).intro_discount_percent > 0 && (s as any).intro_discount_months && (s as any).intro_discount_months > 0;
+      const introPercent = hasIntroDiscount ? (s as any).intro_discount_percent : 0;
+      const introMonths = hasIntroDiscount ? (s as any).intro_discount_months : 0;
+      const discountedPrice = hasIntroDiscount
+        ? Math.round(s.price * (1 - introPercent / 100))
+        : s.price;
+      const effectivePrice = hasIntroDiscount ? discountedPrice : s.price;
+      return {
+        ...s,
+        introDiscountPercent: introPercent,
+        introDiscountMonths: introMonths,
+        discountedPrice,
+        effectivePrice,
+        proratedPrice: isProrated ? Math.round((effectivePrice / daysInMonth) * remainingDays) : effectivePrice,
+      };
+    });
 
     const proratedMonthlyTotal = proratedServices.reduce((sum, s) => sum + s.proratedPrice, 0);
     const monthName = startDate ? format(startDate, 'LLLL', { locale: cs }) : '';
@@ -1393,42 +1406,93 @@ export default function OnboardingForm() {
                           <div className="border rounded-lg overflow-hidden">
                             <div className="divide-y">
                               {monthlyServices.map((service, index) => (
-                                <div key={index} className="flex items-center justify-between p-3 bg-background">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-lg">📦</span>
-                                    <div>
-                                      <p className="font-medium">{service.name}</p>
-                                      {service.selected_tier && (
-                                        <p className="text-xs text-muted-foreground uppercase">{service.selected_tier}</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    {isProrated ? (
-                                      <>
-                                        <p className="text-sm text-muted-foreground line-through">{formatPrice(service.price, service.currency)}/měs</p>
-                                        <p className="font-medium">{formatPrice(service.proratedPrice, service.currency)} <span className="text-muted-foreground text-xs">za {monthName} ({remainingDays} z {daysInMonth} dnů)</span></p>
-                                      </>
-                                    ) : (
-                                      <p className="font-medium">
-                                        {formatPrice(service.price, service.currency)}<span className="text-muted-foreground">/měs</span>
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
+                                 <div key={index} className="flex items-center justify-between p-3 bg-background">
+                                   <div className="flex items-center gap-2">
+                                     <span className="text-lg">📦</span>
+                                     <div>
+                                       <p className="font-medium">{service.name}</p>
+                                       {service.selected_tier && (
+                                         <p className="text-xs text-muted-foreground uppercase">{service.selected_tier}</p>
+                                       )}
+                                       {service.introDiscountPercent > 0 && (
+                                         <p className="text-xs text-amber-600 font-medium">
+                                           🎁 Sleva {service.introDiscountPercent} % na prvních {service.introDiscountMonths} měs.
+                                         </p>
+                                       )}
+                                     </div>
+                                   </div>
+                                   <div className="text-right">
+                                     {service.introDiscountPercent > 0 ? (
+                                       <>
+                                         <p className="text-sm text-muted-foreground line-through">{formatPrice(service.price, service.currency)}/měs</p>
+                                         <p className="font-medium text-amber-600">
+                                           {formatPrice(service.discountedPrice, service.currency)}<span className="text-muted-foreground text-xs">/měs (prvních {service.introDiscountMonths} měs.)</span>
+                                         </p>
+                                         {isProrated && (
+                                           <p className="text-xs text-muted-foreground">
+                                             Za {monthName}: {formatPrice(service.proratedPrice, service.currency)} ({remainingDays} z {daysInMonth} dnů)
+                                           </p>
+                                         )}
+                                       </>
+                                     ) : isProrated ? (
+                                       <>
+                                         <p className="text-sm text-muted-foreground line-through">{formatPrice(service.price, service.currency)}/měs</p>
+                                         <p className="font-medium">{formatPrice(service.proratedPrice, service.currency)} <span className="text-muted-foreground text-xs">za {monthName} ({remainingDays} z {daysInMonth} dnů)</span></p>
+                                       </>
+                                     ) : (
+                                       <p className="font-medium">
+                                         {formatPrice(service.price, service.currency)}<span className="text-muted-foreground">/měs</span>
+                                       </p>
+                                     )}
+                                   </div>
+                                 </div>
                               ))}
                             </div>
-                            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 border-t">
-                              {isProrated ? (
-                                <div>
-                                  <p className="font-medium">První faktura (poměrná část)</p>
-                                  <p className="text-xs text-muted-foreground">Od dalšího měsíce: {formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs</p>
-                                </div>
-                              ) : (
-                                <p className="font-medium">Měsíční platba celkem</p>
-                              )}
-                              <p className="font-bold text-lg">{formatPrice(isProrated ? proratedMonthlyTotal : monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
-                            </div>
+                            {(() => {
+                              const hasAnyDiscount = monthlyServices.some(s => s.introDiscountPercent > 0);
+                              const fullMonthlyTotal = monthlyServices.reduce((sum, s) => sum + s.price, 0);
+                              const discountedMonthlyTotal = monthlyServices.reduce((sum, s) => sum + s.effectivePrice, 0);
+                              return (
+                                <>
+                                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 border-t">
+                                    {isProrated ? (
+                                      <div>
+                                        <p className="font-medium">První faktura (poměrná část)</p>
+                                        {hasAnyDiscount ? (
+                                          <p className="text-xs text-muted-foreground">
+                                            Plná cena od {monthlyServices[0]?.introDiscountMonths + 1}. měsíce: {formatPrice(fullMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs
+                                          </p>
+                                        ) : (
+                                          <p className="text-xs text-muted-foreground">Od dalšího měsíce: {formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs</p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <p className="font-medium">Měsíční platba celkem</p>
+                                        {hasAnyDiscount && (
+                                          <p className="text-xs text-muted-foreground">
+                                            Po uplynutí slevy: {formatPrice(fullMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                    <div className="text-right">
+                                      {hasAnyDiscount && !isProrated && (
+                                        <p className="text-sm text-muted-foreground line-through">{formatPrice(fullMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                                      )}
+                                      <p className="font-bold text-lg">{formatPrice(isProrated ? proratedMonthlyTotal : discountedMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                                    </div>
+                                  </div>
+                                  {hasAnyDiscount && (
+                                    <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/20 border-t border-amber-200 dark:border-amber-800">
+                                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                                        🎁 Úvodní sleva je platná na prvních {monthlyServices.find(s => s.introDiscountMonths > 0)?.introDiscountMonths} měsíců spolupráce. Po uplynutí se fakturuje plná cena.
+                                      </p>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                           {isProrated && (
                             <p className="text-xs text-muted-foreground mt-2 italic">
