@@ -786,7 +786,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                             return { ...prev, [sc.serviceId]: roles };
                                           });
                                         }}
-                                        className="w-20 h-6 text-xs text-right tabular-nums"
+                                        className="w-28 h-6 text-xs text-right tabular-nums"
                                       />
                                       <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                                         {isPerCredit ? 'Kč/kr.' : 'Kč/měs'}
@@ -948,7 +948,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                     setMonthlyDiscountPercent(val);
                                   }}
                                   placeholder="0"
-                                  className="w-16 h-7 text-sm text-right"
+                                  className="w-20 h-7 text-sm text-right"
                                 />
                                 <span className="text-muted-foreground">%</span>
                               </div>
@@ -1003,7 +1003,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                     setIntroDiscountPercent(val);
                                   }}
                                   placeholder="0"
-                                  className="w-16 h-7 text-sm text-right"
+                                  className="w-20 h-7 text-sm text-right"
                                 />
                                 <span className="text-muted-foreground">%</span>
                               </div>
@@ -1019,7 +1019,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                       max={24}
                                       value={introDiscountMonths}
                                       onChange={(e) => setIntroDiscountMonths(Math.min(24, Math.max(1, Number(e.target.value))))}
-                                      className="w-16 h-7 text-sm text-right"
+                                      className="w-20 h-7 text-sm text-right"
                                     />
                                     <span className="text-muted-foreground">měs.</span>
                                   </div>
