@@ -591,10 +591,20 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                           <Badge variant="secondary" className="text-[10px]">
                             {svc.billing_type === 'monthly' ? 'Měsíčně' : 'Jednorázově'}
                           </Badge>
+                          {svc.is_creative_boost && (
+                            <Badge variant="outline" className="text-[10px]">CB</Badge>
+                          )}
                         </div>
-                        <span className="text-sm font-semibold tabular-nums whitespace-nowrap ml-2">
-                          {svc.price.toLocaleString('cs-CZ')} {svc.currency}{svc.billing_type === 'monthly' ? '/měs' : ''}
-                        </span>
+                        <div className="text-right">
+                          <span className="text-sm font-semibold tabular-nums whitespace-nowrap">
+                            {svc.price.toLocaleString('cs-CZ')} {svc.currency}{svc.billing_type === 'monthly' ? '/měs' : ''}
+                          </span>
+                          {svc.is_creative_boost && svc.cb_credits && svc.cb_price_per_credit && (
+                            <p className="text-[10px] text-muted-foreground tabular-nums">
+                              {svc.cb_credits} × {svc.cb_price_per_credit} Kč
+                            </p>
+                          )}
+                        </div>
                       </div>
                       {/* Intro discount row — editable */}
                       {svc.billing_type === 'monthly' && (
