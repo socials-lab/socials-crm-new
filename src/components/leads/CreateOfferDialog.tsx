@@ -707,6 +707,50 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                             )}
                           </div>
 
+                          {/* Intro Discount */}
+                          <Separator />
+                          <div className="px-3 py-2.5 space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Úvodní sleva (první měsíce):</span>
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={introDiscountPercent || ''}
+                                  onChange={(e) => setIntroDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                                  placeholder="0"
+                                  className="w-16 h-7 text-sm text-right"
+                                />
+                                <span className="text-muted-foreground">%</span>
+                              </div>
+                            </div>
+                            {introDiscountPercent > 0 && (
+                              <>
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Počet měsíců:</span>
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={24}
+                                      value={introDiscountMonths}
+                                      onChange={(e) => setIntroDiscountMonths(Math.min(24, Math.max(1, Number(e.target.value))))}
+                                      className="w-16 h-7 text-sm text-right"
+                                    />
+                                    <span className="text-muted-foreground">měs.</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-amber-600">
+                                  <span>Prvních {introDiscountMonths} měs. za:</span>
+                                  <span className="font-medium">
+                                    {Math.round(totals.monthlyAfterDiscount * (1 - introDiscountPercent / 100)).toLocaleString('cs-CZ')} Kč/měs
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+
                           {/* Final Summary */}
                           <Separator />
                           <div className="px-3 py-2.5 space-y-1.5">
