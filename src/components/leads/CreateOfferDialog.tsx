@@ -368,56 +368,86 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     setIsCreating(true);
 
     try {
-      const token = generateToken();
-      const offerUrl = `${window.location.origin}/offer/${token}`;
+      const leadOwner = colleagues.find(c => c.id === lead.owner_id);
       const now = new Date().toISOString();
 
-      // Find lead owner for contact info
-      const leadOwner = colleagues.find(c => c.id === lead.owner_id);
+      if (isEditMode && existingOffer) {
+        // Edit mode: update existing offer with history
+        const changedParts: string[] = [];
+        if (existingOffer.services.length !== editableServices.length) changedParts.push('služby');
+        if (existingOffer.total_price !== totals.monthlyAfterDiscount + totals.oneOff) changedParts.push('ceny');
+        if (existingOffer.monthly_discount_percent !== monthlyDiscountPercent) changedParts.push('sleva');
+        if (existingOffer.audit_summary !== (auditSummary.trim() || null)) changedParts.push('audit');
+        if (changedParts.length === 0) changedParts.push('drobné úpravy');
+        
+        updatePublicOffer(existingOffer.token, {
+          audit_summary: auditSummary.trim() || null,
+          recommendation_intro: recommendationIntro.trim() || null,
+          custom_note: customNote.trim() || null,
+          loom_url: loomUrl.trim() || null,
+          services: editableServices,
+          portfolio_links: portfolioLinks,
+          total_price: totals.monthlyAfterDiscount + totals.oneOff,
+          monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
+          discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
+          intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+          intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+          valid_until: validUntil || null,
+          owner_name: leadOwner?.full_name || undefined,
+          owner_email: leadOwner?.email || undefined,
+          owner_phone: leadOwner?.phone || undefined,
+          created_by: currentColleague?.id || null,
+        }, `Změna: ${changedParts.join(', ')}`);
 
-      // Create offer object for mock store
-      const newOffer: PublicOffer = {
-        id: crypto.randomUUID(),
-        lead_id: lead.id,
-        token,
-        company_name: lead.company_name,
-        website: lead.website || null,
-        contact_name: lead.contact_name,
-        audit_summary: auditSummary.trim() || null,
-        recommendation_intro: recommendationIntro.trim() || null,
-        custom_note: customNote.trim() || null,
-        loom_url: loomUrl.trim() || null,
-        services: editableServices,
-        portfolio_links: portfolioLinks,
-        total_price: totals.monthlyAfterDiscount + totals.oneOff,
-        monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
-        discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
-        intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
-        intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
-        currency: lead.currency,
-        offer_type: lead.offer_type as 'retainer' | 'one_off',
-        valid_until: validUntil || null,
-        is_active: true,
-        viewed_at: null,
-        view_count: 0,
-        created_by: currentColleague?.id || null,
-        created_at: now,
-        updated_at: now,
-        // Contact person info (lead owner)
-        owner_name: leadOwner?.full_name || undefined,
-        owner_email: leadOwner?.email || undefined,
-        owner_phone: leadOwner?.phone || undefined,
-      };
+        const offerUrl = `${window.location.origin}/offer/${existingOffer.token}`;
+        setCreatedOfferUrl(offerUrl);
+        toast.success('Nabídka byla aktualizována!');
+        onSuccess(existingOffer.token, offerUrl);
+      } else {
+        // Create mode
+        const token = generateToken();
+        const offerUrl = `${window.location.origin}/offer/${token}`;
 
-      // Add to mock store
-      addPublicOffer(newOffer);
+        const newOffer: PublicOffer = {
+          id: crypto.randomUUID(),
+          lead_id: lead.id,
+          token,
+          company_name: lead.company_name,
+          website: lead.website || null,
+          contact_name: lead.contact_name,
+          audit_summary: auditSummary.trim() || null,
+          recommendation_intro: recommendationIntro.trim() || null,
+          custom_note: customNote.trim() || null,
+          loom_url: loomUrl.trim() || null,
+          services: editableServices,
+          portfolio_links: portfolioLinks,
+          total_price: totals.monthlyAfterDiscount + totals.oneOff,
+          monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
+          discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
+          intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+          intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+          currency: lead.currency,
+          offer_type: lead.offer_type as 'retainer' | 'one_off',
+          valid_until: validUntil || null,
+          is_active: true,
+          viewed_at: null,
+          view_count: 0,
+          created_by: currentColleague?.id || null,
+          created_at: now,
+          updated_at: now,
+          owner_name: leadOwner?.full_name || undefined,
+          owner_email: leadOwner?.email || undefined,
+          owner_phone: leadOwner?.phone || undefined,
+        };
 
-      setCreatedOfferUrl(offerUrl);
-      toast.success('Nabídka byla vytvořena!');
-      onSuccess(token, offerUrl);
+        addPublicOffer(newOffer);
+        setCreatedOfferUrl(offerUrl);
+        toast.success('Nabídka byla vytvořena!');
+        onSuccess(token, offerUrl);
+      }
     } catch (err) {
-      console.error('Error creating offer:', err);
-      toast.error('Chyba při vytváření nabídky');
+      console.error('Error saving offer:', err);
+      toast.error('Chyba při ukládání nabídky');
     } finally {
       setIsCreating(false);
     }
