@@ -164,6 +164,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   const [discountScope, setDiscountScope] = useState<'core_only' | 'all_services'>('core_only');
   const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
   const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
+  const [cbCredits, setCbCredits] = useState(30);
+  const [cbPricePerCredit, setCbPricePerCredit] = useState(400);
   const [isCreating, setIsCreating] = useState(false);
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
