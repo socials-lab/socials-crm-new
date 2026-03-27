@@ -17,7 +17,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
 import type { Lead, Service } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
-import { addPublicOffer } from '@/data/publicOffersMockData';
+import { addPublicOffer, updatePublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { getServiceDetail } from '@/constants/serviceDetails';
