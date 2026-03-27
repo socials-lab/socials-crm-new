@@ -167,6 +167,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   const [cbCredits, setCbCredits] = useState(30);
   const [cbPricePerCredit, setCbPricePerCredit] = useState(400);
   const [isCreating, setIsCreating] = useState(false);
+  // Editable reward overrides per service: keyed by service_id
+  const [rewardOverrides, setRewardOverrides] = useState<Record<string, { role: string; reward: number; rewardType?: string }[]>>({});
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
