@@ -626,8 +626,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             </div>
           )}
 
-          {/* Documents */}
-          <div className="grid gap-3 sm:grid-cols-2">
+          {/* Documents & Onboarding */}
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Nabídka</p>
               {lead.offer_url ? (
@@ -652,7 +652,56 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 <span className="text-xs text-muted-foreground">Nebyla podepsána</span>
               )}
             </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Onboarding formulář</p>
+              {lead.onboarding_form_completed_at ? (
+                <div className="flex items-center gap-1.5 text-sm text-emerald-600">
+                  <ClipboardCheck className="h-3.5 w-3.5" />
+                  <span className="font-medium">Vyplněn</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    ({new Date(lead.onboarding_form_completed_at).toLocaleDateString('cs-CZ')})
+                  </span>
+                </div>
+              ) : lead.onboarding_form_sent_at ? (
+                <div className="flex items-center gap-1.5 text-sm text-amber-600">
+                  <ClipboardX className="h-3.5 w-3.5" />
+                  <span className="font-medium">Čeká na vyplnění</span>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Nebyl odeslán</span>
+              )}
+            </div>
           </div>
+
+          {/* Billing data from onboarding form */}
+          {lead.onboarding_form_completed_at && (lead.billing_street || lead.billing_city || lead.billing_email || lead.dic) && (
+            <div className="rounded-lg border border-emerald-300/40 bg-emerald-500/5 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Fakturační údaje z onboarding formuláře</span>
+              </div>
+              <div className="grid gap-1 sm:grid-cols-2 text-xs">
+                {lead.dic && (
+                  <div><span className="text-muted-foreground">DIČ:</span> {lead.dic}</div>
+                )}
+                {lead.billing_email && (
+                  <div><span className="text-muted-foreground">Email:</span> {lead.billing_email}</div>
+                )}
+                {lead.billing_street && (
+                  <div><span className="text-muted-foreground">Ulice:</span> {lead.billing_street}</div>
+                )}
+                {lead.billing_city && (
+                  <div><span className="text-muted-foreground">Město:</span> {lead.billing_city} {lead.billing_zip}</div>
+                )}
+                {lead.billing_country && (
+                  <div><span className="text-muted-foreground">Země:</span> {lead.billing_country}</div>
+                )}
+              </div>
+              <p className="text-[10px] text-emerald-600/80">
+                ↓ Tyto údaje jsou předvyplněny ve formuláři níže.
+              </p>
+            </div>
+          )}
 
           <p className="text-[10px] text-muted-foreground">
             Tyto údaje budou automaticky přeneseny do nové zakázky. Níže můžete detaily upravit.
