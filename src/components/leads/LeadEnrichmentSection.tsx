@@ -94,7 +94,6 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
 export function LeadSummaryBar({ lead }: LeadEnrichmentSectionProps) {
   const fields = [
     { label: 'Jméno', value: lead.contact_name },
-    { label: 'Firma', value: lead.company_name },
     { label: 'E-mail', value: lead.contact_email },
     { label: 'Telefon', value: lead.contact_phone },
     { label: 'Web', value: lead.website, isLink: true },
