@@ -170,9 +170,16 @@ export default function Services() {
         }))
       : undefined;
 
+    const storedPlatforms = (() => {
+      try {
+        const stored = localStorage.getItem(`service-platforms-${service.code}`);
+        return stored ? JSON.parse(stored) as string[] : null;
+      } catch { return null; }
+    })();
+
     const serviceDetailData: ServiceDetailData | undefined = constantDetail ? {
       tagline: constantDetail.tagline,
-      platforms: constantDetail.platforms,
+      platforms: storedPlatforms ?? constantDetail.platforms,
       target_audience: constantDetail.targetAudience,
       benefits: constantDetail.benefits,
       setup_items: constantDetail.setup,
@@ -392,6 +399,12 @@ export default function Services() {
                 defaultDeliverables={service.default_deliverables}
                 onDeliverablesUpdate={(deliverables) => {
                   updateService(service.id, { default_deliverables: deliverables.length > 0 ? deliverables : null } as Partial<Service>);
+                }}
+                onPlatformsUpdate={(platforms) => {
+                  localStorage.setItem(`service-platforms-${service.code}`, JSON.stringify(platforms));
+                  toast.success('Platformy byly aktualizovány');
+                  // Force re-render
+                  updateService(service.id, { updated_at: new Date().toISOString() } as Partial<Service>);
                 }}
                 onCreditPricingUpdate={service.code === 'CREATIVE_BOOST' ? (updatedTypes) => {
                   // Sync with the global CB output types

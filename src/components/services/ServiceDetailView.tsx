@@ -70,9 +70,47 @@ interface ServiceDetailViewProps {
   onDescriptionUpdate?: (description: string) => void;
   defaultDeliverables?: string[] | null;
   onDeliverablesUpdate?: (deliverables: string[]) => void;
+  // Platforms inline editing
+  onPlatformsUpdate?: (platforms: string[]) => void;
 }
 
-export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, tierPricing, onTierPricingUpdate, rewardConfig, onRewardConfigUpdate, description, onDescriptionUpdate, defaultDeliverables, onDeliverablesUpdate }: ServiceDetailViewProps) {
+function PlatformAddButton({ onAdd }: { onAdd: (name: string) => void }) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [value, setValue] = useState('');
+  
+  if (!isAdding) {
+    return (
+      <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => setIsAdding(true)}>
+        <Plus className="h-3 w-3 mr-1" /> Platforma
+      </Button>
+    );
+  }
+  
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Název platformy"
+        className="h-6 text-xs w-32"
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && value.trim()) {
+            onAdd(value.trim());
+            setValue('');
+            setIsAdding(false);
+          }
+          if (e.key === 'Escape') setIsAdding(false);
+        }}
+      />
+      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setIsAdding(false)}>
+        <X className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+}
+
+export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, tierPricing, onTierPricingUpdate, rewardConfig, onRewardConfigUpdate, description, onDescriptionUpdate, defaultDeliverables, onDeliverablesUpdate, onPlatformsUpdate }: ServiceDetailViewProps) {
   // Guard against undefined or null data
   if (!data) {
     return (
@@ -112,12 +150,33 @@ export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, ti
             <p className="text-sm font-medium">{data.tagline}</p>
           )}
           {data.platforms && data.platforms.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               {data.platforms.map((platform) => (
-                <Badge key={platform} variant="outline" className="text-xs">
+                <Badge key={platform} variant="outline" className="text-xs flex items-center gap-1">
                   {platform}
+                  {onPlatformsUpdate && (
+                    <button
+                      onClick={() => onPlatformsUpdate(data.platforms!.filter(p => p !== platform))}
+                      className="ml-0.5 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
                 </Badge>
               ))}
+              {onPlatformsUpdate && (
+                <PlatformAddButton
+                  onAdd={(name) => onPlatformsUpdate([...(data.platforms || []), name])}
+                />
+              )}
+            </div>
+          )}
+          {(!data.platforms || data.platforms.length === 0) && onPlatformsUpdate && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground italic">Žádné platformy</span>
+              <PlatformAddButton
+                onAdd={(name) => onPlatformsUpdate([...(data.platforms || []), name])}
+              />
             </div>
           )}
           {data.target_audience && (
