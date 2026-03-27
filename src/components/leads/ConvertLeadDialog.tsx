@@ -36,6 +36,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
 import type { Lead, CostModel, ClientTier, BillingModel, LeadSource, LeadService, ServiceRewardTierConfig } from '@/types/crm';
+import { getOffersByLeadId } from '@/data/publicOffersMockData';
 import { toast } from 'sonner';
 
 const convertSchema = z.object({
