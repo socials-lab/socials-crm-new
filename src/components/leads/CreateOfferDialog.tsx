@@ -322,7 +322,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     const margin = revenue > 0 ? ((revenue - totalInternalCost) / revenue) * 100 : 0;
 
     return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount, totalInternalCost, serviceCosts, margin };
-  }, [editableServices, monthlyDiscountPercent, discountScope, services]);
+  }, [editableServices, monthlyDiscountPercent, discountScope, introDiscountPercent, introDiscountMonths, services]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
     setEditableServices(prev => 
