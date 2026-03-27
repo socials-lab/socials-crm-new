@@ -31,7 +31,10 @@ const DEMO_REWARD_CONFIGS: Record<string, ServiceRewardTierConfig[]> = {
     ]},
   ],
   CREATIVE_BOOST: [
-    { roles: [{ role: 'Graphic Designer', hours: 0, reward: 150, reward_type: 'per_credit' }] },
+    { roles: [
+      { role: 'Graphic Designer', hours: 0, reward: 150, reward_type: 'per_credit' },
+      { role: 'Video Editor', hours: 0, reward: 100, reward_type: 'per_credit' },
+    ] },
   ],
   TIKTOK_ADS: [
     { roles: [{ role: 'Meta Ads Specialist', hours: 7, reward: 4900, reward_type: 'fixed_monthly' }] },
