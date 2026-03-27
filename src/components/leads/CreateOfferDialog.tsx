@@ -732,12 +732,63 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                 <span className="text-xs font-medium">{sc.name}</span>
                                 <span className="text-xs font-semibold tabular-nums">{sc.cost.toLocaleString('cs-CZ')} Kč</span>
                               </div>
-                              {sc.roles.map((r, ri) => (
-                                <div key={ri} className="flex items-center justify-between pl-3 py-0.5">
-                                  <span className="text-xs text-muted-foreground">{r.role}</span>
-                                  <span className="text-xs text-muted-foreground tabular-nums">{r.reward.toLocaleString('cs-CZ')} Kč/měs</span>
-                                </div>
-                              ))}
+                              {(rewardOverrides[sc.serviceId] || []).map((r, ri) => {
+                                const isPerCredit = r.rewardType === 'per_credit';
+                                return (
+                                  <div key={ri} className="flex items-center justify-between pl-3 py-0.5 gap-2">
+                                    <span className="text-xs text-muted-foreground flex-1 min-w-0">{r.role}</span>
+                                    <div className="flex items-center gap-1">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={r.reward}
+                                        onChange={(e) => {
+                                          const val = Math.max(0, Number(e.target.value));
+                                          setRewardOverrides(prev => {
+                                            const roles = [...(prev[sc.serviceId] || [])];
+                                            roles[ri] = { ...roles[ri], reward: val };
+                                            return { ...prev, [sc.serviceId]: roles };
+                                          });
+                                        }}
+                                        className="w-20 h-6 text-xs text-right tabular-nums"
+                                      />
+                                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                        {isPerCredit ? 'Kč/kr.' : 'Kč/měs'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {(rewardOverrides[sc.serviceId] || []).length === 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-xs text-muted-foreground pl-3"
+                                  onClick={() => {
+                                    setRewardOverrides(prev => ({
+                                      ...prev,
+                                      [sc.serviceId]: [{ role: 'Specialista', reward: 0 }],
+                                    }));
+                                  }}
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Přidat odměnu
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 text-[10px] text-muted-foreground pl-3 mt-0.5"
+                                onClick={() => {
+                                  setRewardOverrides(prev => ({
+                                    ...prev,
+                                    [sc.serviceId]: [...(prev[sc.serviceId] || []), { role: 'Nová role', reward: 0 }],
+                                  }));
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Role
+                              </Button>
                             </div>
                           ))}
                         </div>
