@@ -786,7 +786,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                           <Separator />
                           <div className="px-3 py-2.5 space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Sleva při odběru všech služeb:</span>
+                              <span className="text-muted-foreground">Sleva při odběru všech služeb:{introDiscountPercent > 0 && <span className="text-[10px] ml-1 text-amber-600">(nelze kombinovat s úvodní slevou)</span>}</span>
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"
@@ -842,7 +842,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                           <Separator />
                           <div className="px-3 py-2.5 space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Úvodní sleva (první měsíce):</span>
+                              <span className="text-muted-foreground">Úvodní sleva (první měsíce):{monthlyDiscountPercent > 0 && <span className="text-[10px] ml-1 text-amber-600">(nelze kombinovat se slevou za balíček)</span>}</span>
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"
