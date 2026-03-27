@@ -1406,29 +1406,46 @@ export default function OnboardingForm() {
                           <div className="border rounded-lg overflow-hidden">
                             <div className="divide-y">
                               {monthlyServices.map((service, index) => (
-                                <div key={index} className="flex items-center justify-between p-3 bg-background">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-lg">📦</span>
-                                    <div>
-                                      <p className="font-medium">{service.name}</p>
-                                      {service.selected_tier && (
-                                        <p className="text-xs text-muted-foreground uppercase">{service.selected_tier}</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    {isProrated ? (
-                                      <>
-                                        <p className="text-sm text-muted-foreground line-through">{formatPrice(service.price, service.currency)}/měs</p>
-                                        <p className="font-medium">{formatPrice(service.proratedPrice, service.currency)} <span className="text-muted-foreground text-xs">za {monthName} ({remainingDays} z {daysInMonth} dnů)</span></p>
-                                      </>
-                                    ) : (
-                                      <p className="font-medium">
-                                        {formatPrice(service.price, service.currency)}<span className="text-muted-foreground">/měs</span>
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
+                                 <div key={index} className="flex items-center justify-between p-3 bg-background">
+                                   <div className="flex items-center gap-2">
+                                     <span className="text-lg">📦</span>
+                                     <div>
+                                       <p className="font-medium">{service.name}</p>
+                                       {service.selected_tier && (
+                                         <p className="text-xs text-muted-foreground uppercase">{service.selected_tier}</p>
+                                       )}
+                                       {service.introDiscountPercent > 0 && (
+                                         <p className="text-xs text-amber-600 font-medium">
+                                           🎁 Sleva {service.introDiscountPercent} % na prvních {service.introDiscountMonths} měs.
+                                         </p>
+                                       )}
+                                     </div>
+                                   </div>
+                                   <div className="text-right">
+                                     {service.introDiscountPercent > 0 ? (
+                                       <>
+                                         <p className="text-sm text-muted-foreground line-through">{formatPrice(service.price, service.currency)}/měs</p>
+                                         <p className="font-medium text-amber-600">
+                                           {formatPrice(service.discountedPrice, service.currency)}<span className="text-muted-foreground text-xs">/měs (prvních {service.introDiscountMonths} měs.)</span>
+                                         </p>
+                                         {isProrated && (
+                                           <p className="text-xs text-muted-foreground">
+                                             Za {monthName}: {formatPrice(service.proratedPrice, service.currency)} ({remainingDays} z {daysInMonth} dnů)
+                                           </p>
+                                         )}
+                                       </>
+                                     ) : isProrated ? (
+                                       <>
+                                         <p className="text-sm text-muted-foreground line-through">{formatPrice(service.price, service.currency)}/měs</p>
+                                         <p className="font-medium">{formatPrice(service.proratedPrice, service.currency)} <span className="text-muted-foreground text-xs">za {monthName} ({remainingDays} z {daysInMonth} dnů)</span></p>
+                                       </>
+                                     ) : (
+                                       <p className="font-medium">
+                                         {formatPrice(service.price, service.currency)}<span className="text-muted-foreground">/měs</span>
+                                       </p>
+                                     )}
+                                   </div>
+                                 </div>
                               ))}
                             </div>
                             <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 border-t">
