@@ -29,7 +29,7 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
     template_key: 'send_onboarding_form',
     name: 'Onboarding formulář',
     subject_template: 'Onboarding formulář - {domain} / Socials',
-    body_template: 'Dobrý den {contact_name},\n\nděkujeme za Váš zájem o spolupráci s agenturou Socials.\n\nPro zahájení spolupráce prosím vyplňte náš onboarding formulář.\n\n👉 Odkaz na formulář: {url}\n\n{signature}',
+    body_template: 'Dobrý den,\n\ntěší nás, že jste se rozhodli pro spolupráci s agenturou Socials! 🎉\n\nAbychom mohli vše připravit a hladce nastartovat, potřebujeme od Vás doplnit pár údajů. Zabere to maximálně 2 minuty.\n\n👉 Vyplnit formulář: {url}\n\nCo budeme potřebovat:\n• Fakturační údaje (IČO, DIČ, adresa)\n• Kontaktní osobu pro komunikaci\n• Případné poznámky k projektu\n\nPokud si s čímkoli nebudete vědět rady, klidně napište — rádi pomůžeme.\n\nTěšíme se na spolupráci!\n\n{signature}',
     description: 'Onboarding formulář pro nového klienta',
     available_variables: ['contact_name', 'company', 'domain', 'url', 'signature'],
   },
