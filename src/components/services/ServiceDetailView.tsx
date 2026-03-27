@@ -74,7 +74,42 @@ interface ServiceDetailViewProps {
   onPlatformsUpdate?: (platforms: string[]) => void;
 }
 
-export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, tierPricing, onTierPricingUpdate, rewardConfig, onRewardConfigUpdate, description, onDescriptionUpdate, defaultDeliverables, onDeliverablesUpdate, onPlatformsUpdate }: ServiceDetailViewProps) {
+function PlatformAddButton({ onAdd }: { onAdd: (name: string) => void }) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [value, setValue] = useState('');
+  
+  if (!isAdding) {
+    return (
+      <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => setIsAdding(true)}>
+        <Plus className="h-3 w-3 mr-1" /> Platforma
+      </Button>
+    );
+  }
+  
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Název platformy"
+        className="h-6 text-xs w-32"
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && value.trim()) {
+            onAdd(value.trim());
+            setValue('');
+            setIsAdding(false);
+          }
+          if (e.key === 'Escape') setIsAdding(false);
+        }}
+      />
+      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setIsAdding(false)}>
+        <X className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+}
+
   // Guard against undefined or null data
   if (!data) {
     return (
