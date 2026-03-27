@@ -34,10 +34,10 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
             <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <span className="font-medium text-sm">{lead.company_name}</span>
             {lead.qualification_status === 'qualified' && (
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" title="Kvalifikovaný" />
+              <span title="Kvalifikovaný"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" /></span>
             )}
             {lead.qualification_status === 'bad_fit' && (
-              <ShieldX className="h-3.5 w-3.5 text-red-500 shrink-0" title="Bad Fit" />
+              <span title="Bad Fit"><ShieldX className="h-3.5 w-3.5 text-red-500 shrink-0" /></span>
             )}
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
