@@ -735,9 +735,31 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                               {(rewardOverrides[sc.serviceId] || []).map((r, ri) => {
                                 const isPerCredit = r.rewardType === 'per_credit';
                                 return (
-                                  <div key={ri} className="flex items-center justify-between pl-3 py-0.5 gap-2">
-                                    <span className="text-xs text-muted-foreground flex-1 min-w-0">{r.role}</span>
-                                    <div className="flex items-center gap-1">
+                                  <div key={ri} className="flex items-center pl-3 py-0.5 gap-1.5">
+                                    <button
+                                      onClick={() => {
+                                        setRewardOverrides(prev => {
+                                          const roles = [...(prev[sc.serviceId] || [])];
+                                          roles.splice(ri, 1);
+                                          return { ...prev, [sc.serviceId]: roles };
+                                        });
+                                      }}
+                                      className="text-muted-foreground/40 hover:text-destructive shrink-0"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                    <Input
+                                      value={r.role}
+                                      onChange={(e) => {
+                                        setRewardOverrides(prev => {
+                                          const roles = [...(prev[sc.serviceId] || [])];
+                                          roles[ri] = { ...roles[ri], role: e.target.value };
+                                          return { ...prev, [sc.serviceId]: roles };
+                                        });
+                                      }}
+                                      className="h-6 text-xs flex-1 min-w-0 border-none shadow-none p-0 bg-transparent"
+                                    />
+                                    <div className="flex items-center gap-1 ml-auto">
                                       <Input
                                         type="number"
                                         min={0}
