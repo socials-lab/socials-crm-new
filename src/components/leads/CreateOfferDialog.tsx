@@ -489,7 +489,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       <DialogContent className="sm:max-w-[700px] max-h-[95vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>
-            {createdOfferUrl ? '✅ Nabídka vytvořena' : 'Vytvořit sdílenou nabídku'}
+            {createdOfferUrl 
+              ? (isEditMode ? '✅ Nabídka aktualizována' : '✅ Nabídka vytvořena')
+              : (isEditMode ? 'Upravit nabídku' : 'Vytvořit sdílenou nabídku')}
           </DialogTitle>
         </DialogHeader>
 
