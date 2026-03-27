@@ -331,9 +331,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       ? discountedBase 
       : discountedBase + addonMonthly;
 
-    // Calculate internal costs from reward configs
+    // Calculate internal costs from editable reward overrides
     let totalInternalCost = 0;
-    const serviceCosts: { name: string; cost: number; revenue: number; roles: { role: string; reward: number }[] }[] = [];
+    const serviceCosts: { serviceId: string; name: string; cost: number; revenue: number; roles: { role: string; reward: number; rewardType?: string }[] }[] = [];
     
     editableServices.forEach(es => {
       const catalogService = services.find(s => s.id === es.service_id);
@@ -341,32 +341,20 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       
       const isCB = catalogService.code === 'CREATIVE_BOOST';
       const serviceRevenue = getEffectiveMonthlyPrice(es);
+      const overrides = rewardOverrides[es.service_id] || [];
       
-      const enriched = enrichServiceWithDemoRewards(catalogService);
-      let roles = getRewardsFromServiceConfig(
-        enriched.reward_config as any,
-        es.selected_tier
-      );
-      // Fallback to hardcoded rewards if DB config is missing
-      if (!roles || roles.length === 0) {
-        roles = getServiceRewardRecommendation(es.name, es.selected_tier);
-      }
-      
-      if (roles && roles.length > 0) {
+      if (overrides.length > 0) {
         let svcCost = 0;
-        const roleDetails: { role: string; reward: number }[] = [];
-        roles.forEach(r => {
-          // Handle both camelCase (rewardType) and snake_case (reward_type) from different sources
-          const rType = r.rewardType || (r as any).reward_type;
-          // For per_credit (Creative Boost), estimate 100% utilization of credits
-          const reward = rType === 'per_credit' ? r.reward * CB_CREDITS : r.reward;
-          svcCost += reward;
-          roleDetails.push({ role: r.role, reward });
+        const roleDetails: { role: string; reward: number; rewardType?: string }[] = [];
+        overrides.forEach(r => {
+          const effectiveReward = r.rewardType === 'per_credit' ? r.reward * CB_CREDITS : r.reward;
+          svcCost += effectiveReward;
+          roleDetails.push({ role: r.role, reward: effectiveReward, rewardType: r.rewardType });
         });
         totalInternalCost += svcCost;
-        serviceCosts.push({ name: isCB ? `${es.name} (${CB_CREDITS} kr. × ${CB_PRICE} Kč)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
+        serviceCosts.push({ serviceId: es.service_id, name: isCB ? `${es.name} (${CB_CREDITS} kr. × ${CB_PRICE} Kč)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
       } else {
-        serviceCosts.push({ name: isCB ? `${es.name} (${CB_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
+        serviceCosts.push({ serviceId: es.service_id, name: isCB ? `${es.name} (${CB_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
       }
     });
 
