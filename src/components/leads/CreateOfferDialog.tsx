@@ -603,7 +603,10 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                   {(() => {
                     const availableToAdd = services.filter(s => 
                       s.is_active && !editableServices.some(es => es.service_id === s.id)
-                    );
+                    ).sort((a, b) => {
+                      if (a.service_type !== b.service_type) return a.service_type === 'core' ? -1 : 1;
+                      return a.name.localeCompare(b.name, 'cs');
+                    });
                     if (availableToAdd.length === 0) return null;
                     return (
                       <Select
@@ -623,11 +626,22 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                           </div>
                         </SelectTrigger>
                         <SelectContent>
-                          {availableToAdd.map(s => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name} {s.service_type === 'core' ? '(Core)' : '(Addon)'}
-                            </SelectItem>
-                          ))}
+                          {availableToAdd.map(s => {
+                            const detail = getServiceDetail(s.code);
+                            const platforms = detail?.platforms;
+                            return (
+                              <SelectItem key={s.id} value={s.id}>
+                                <div className="flex flex-col">
+                                  <span>{s.name} <span className="text-muted-foreground">({s.service_type === 'core' ? 'Core' : 'Addon'})</span></span>
+                                  {platforms && platforms.length > 0 && (
+                                    <span className="text-[11px] text-muted-foreground leading-tight">
+                                      {platforms.join(', ')}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     );
