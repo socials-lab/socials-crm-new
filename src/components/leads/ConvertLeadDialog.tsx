@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -457,56 +457,145 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           </DialogDescription>
         </DialogHeader>
 
-        {/* Dokumenty z leadu - info sekce */}
-        <div className="p-4 rounded-lg bg-muted/50 border space-y-3">
-          <h4 className="font-medium text-sm flex items-center gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            📄 Dokumenty k převodu
+        {/* ===== SUMMARY CARD: What's being converted ===== */}
+        <div className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] p-4 space-y-4">
+          <h4 className="font-semibold text-sm flex items-center gap-2">
+            <Package className="h-4 w-4 text-primary" />
+            📋 Souhrn převodu
           </h4>
+
+          {/* Company & Contact */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Firma</p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  {lead.company_name}
+                </div>
+                {lead.ico && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Hash className="h-3 w-3" />
+                    IČO: {lead.ico}
+                  </div>
+                )}
+                {lead.website && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Globe className="h-3 w-3" />
+                    {lead.website}
+                  </div>
+                )}
+                {lead.industry && (
+                  <div className="text-xs text-muted-foreground">Obor: {lead.industry}</div>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Kontakt</p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  {lead.contact_name}
+                  {lead.contact_position && <span className="text-xs text-muted-foreground font-normal">({lead.contact_position})</span>}
+                </div>
+                {lead.contact_email && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Mail className="h-3 w-3" />
+                    {lead.contact_email}
+                  </div>
+                )}
+                {lead.contact_phone && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    {lead.contact_phone}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Services from offer */}
+          {offerServices.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Služby z nabídky</p>
+              <div className="rounded-lg border bg-background divide-y divide-border/50">
+                {offerServices.map((svc, idx) => (
+                  <div key={idx} className="flex items-center justify-between px-3 py-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm">{svc.name}</span>
+                      {svc.selected_tier && (
+                        <Badge variant="outline" className="text-[10px] uppercase">
+                          {svc.selected_tier}
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className="text-[10px]">
+                        {svc.billing_type === 'monthly' ? 'Měsíčně' : 'Jednorázově'}
+                      </Badge>
+                      {svc.intro_discount_percent && svc.intro_discount_percent > 0 && (
+                        <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-600">
+                          -{svc.intro_discount_percent}% / {svc.intro_discount_months || 3} měs.
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold tabular-nums whitespace-nowrap ml-2">
+                      {svc.price.toLocaleString('cs-CZ')} {svc.currency}{svc.billing_type === 'monthly' ? '/měs' : ''}
+                    </span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between px-3 py-2 bg-muted/50">
+                  <span className="text-sm font-semibold">Celkem měsíčně</span>
+                  <span className="text-sm font-bold tabular-nums text-primary">
+                    {offerServices
+                      .filter(s => s.billing_type === 'monthly')
+                      .reduce((sum, s) => sum + s.price, 0)
+                      .toLocaleString('cs-CZ')} {lead.currency}/měs
+                  </span>
+                </div>
+                {offerServices.some(s => s.billing_type === 'one_off') && (
+                  <div className="flex items-center justify-between px-3 py-2 bg-muted/50">
+                    <span className="text-sm font-semibold">Celkem jednorázově</span>
+                    <span className="text-sm font-bold tabular-nums">
+                      {offerServices
+                        .filter(s => s.billing_type === 'one_off')
+                        .reduce((sum, s) => sum + s.price, 0)
+                        .toLocaleString('cs-CZ')} {lead.currency}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Documents */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Nabídka v Notion</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Nabídka</p>
               {lead.offer_url ? (
-                <a
-                  href={lead.offer_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-primary hover:underline"
-                >
+                <a href={lead.offer_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
                   <FileText className="h-3.5 w-3.5" />
                   Otevřít nabídku
                   <ExternalLink className="h-3 w-3" />
                 </a>
               ) : (
-                <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  Nabídka nebyla vytvořena
-                </div>
+                <span className="text-xs text-muted-foreground">Nebyla vytvořena</span>
               )}
             </div>
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Smlouva v DigiSign</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Smlouva</p>
               {lead.contract_url ? (
-                <a
-                  href={lead.contract_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-primary hover:underline"
-                >
+                <a href={lead.contract_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
                   <FileText className="h-3.5 w-3.5" />
                   Otevřít smlouvu
                   <ExternalLink className="h-3 w-3" />
                 </a>
               ) : (
-                <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  Smlouva nebyla podepsána
-                </div>
+                <span className="text-xs text-muted-foreground">Nebyla podepsána</span>
               )}
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Tyto odkazy budou automaticky přeneseny do nové zakázky.
+
+          <p className="text-[10px] text-muted-foreground">
+            Tyto údaje budou automaticky přeneseny do nové zakázky. Níže můžete detaily upravit.
           </p>
         </div>
 
