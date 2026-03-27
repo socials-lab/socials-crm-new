@@ -22,7 +22,7 @@ const tierLabels: Record<string, { label: string; color: string }> = {
 };
 
 export function EditableOfferServiceCard({ service, onUpdate, onRemove }: EditableOfferServiceCardProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   
   const tierInfo = service.selected_tier ? tierLabels[service.selected_tier] : null;
   
@@ -130,7 +130,7 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <CardTitle className="text-base">{service.name}</CardTitle>
               {tierInfo && (
                 <Badge variant="secondary" className={tierInfo.color}>
@@ -140,6 +140,18 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
               <Badge variant="outline" className="text-xs">
                 {service.billing_type === 'monthly' ? 'Měsíčně' : 'Jednorázově'}
               </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              {!isOpen && (
+                <span className="text-sm font-semibold tabular-nums whitespace-nowrap">
+                  {hasDiscount && (
+                    <span className="line-through text-muted-foreground font-normal mr-1.5 text-xs">
+                      {service.original_price!.toLocaleString('cs-CZ')}
+                    </span>
+                  )}
+                  {service.price.toLocaleString('cs-CZ')} {service.currency}/{service.billing_type === 'monthly' ? 'měs' : 'jedn.'}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <CollapsibleTrigger asChild>
