@@ -164,6 +164,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   const [discountScope, setDiscountScope] = useState<'core_only' | 'all_services'>('core_only');
   const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
   const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
+  const [cbCredits, setCbCredits] = useState(30);
+  const [cbPricePerCredit, setCbPricePerCredit] = useState(400);
   const [isCreating, setIsCreating] = useState(false);
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -257,16 +259,16 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     }
   }, [open, lead.potential_services, services, existingOffer]);
 
-  // Calculate totals + profitability
-  const CB_DEFAULT_CREDITS = 30;
-  const CB_PRICE_PER_CREDIT = 400;
+  // Calculate totals + profitability (CB values from state)
+  const CB_CREDITS = cbCredits;
+  const CB_PRICE = cbPricePerCredit;
 
   const totals = useMemo(() => {
     // Helper: get effective monthly price for a service (handles CB credit-based pricing)
     const getEffectiveMonthlyPrice = (s: PublicOfferService) => {
       const catalogService = services.find(cs => cs.id === s.service_id);
       if (catalogService?.code === 'CREATIVE_BOOST') {
-        return CB_DEFAULT_CREDITS * CB_PRICE_PER_CREDIT;
+        return CB_CREDITS * CB_PRICE;
       }
       return s.price;
     };
@@ -284,7 +286,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     const totalOriginal = editableServices.reduce((sum, s) => {
       const catalogService = services.find(cs => cs.id === s.service_id);
       if (catalogService?.code === 'CREATIVE_BOOST') {
-        return sum + CB_DEFAULT_CREDITS * CB_PRICE_PER_CREDIT;
+        return sum + CB_CREDITS * CB_PRICE;
       }
       return sum + (s.original_price || s.price);
     }, 0);
@@ -328,14 +330,14 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           // Handle both camelCase (rewardType) and snake_case (reward_type) from different sources
           const rType = r.rewardType || (r as any).reward_type;
           // For per_credit (Creative Boost), estimate 100% utilization of credits
-          const reward = rType === 'per_credit' ? r.reward * CB_DEFAULT_CREDITS : r.reward;
+          const reward = rType === 'per_credit' ? r.reward * CB_CREDITS : r.reward;
           svcCost += reward;
           roleDetails.push({ role: r.role, reward });
         });
         totalInternalCost += svcCost;
-        serviceCosts.push({ name: isCB ? `${es.name} (${CB_DEFAULT_CREDITS} kr. × ${CB_PRICE_PER_CREDIT} Kč)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
+        serviceCosts.push({ name: isCB ? `${es.name} (${CB_CREDITS} kr. × ${CB_PRICE} Kč)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
       } else {
-        serviceCosts.push({ name: isCB ? `${es.name} (${CB_DEFAULT_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
+        serviceCosts.push({ name: isCB ? `${es.name} (${CB_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
       }
     });
 
@@ -348,7 +350,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     const introMargin = introAdjustedRevenue > 0 ? ((introAdjustedRevenue - totalInternalCost) / introAdjustedRevenue) * 100 : 0;
 
     return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount, totalInternalCost, serviceCosts, margin, introMargin, introAdjustedRevenue };
-  }, [editableServices, monthlyDiscountPercent, discountScope, introDiscountPercent, introDiscountMonths, services]);
+  }, [editableServices, monthlyDiscountPercent, discountScope, introDiscountPercent, introDiscountMonths, services, cbCredits, cbPricePerCredit]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
     setEditableServices(prev => 
@@ -654,8 +656,48 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                     </div>
                   )}
                   
+                  {/* Creative Boost credit config */}
+                  {editableServices.some(s => {
+                    const cat = services.find(cs => cs.id === s.service_id);
+                    return cat?.code === 'CREATIVE_BOOST';
+                  }) && (
+                    <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🎨</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Creative Boost — nastavení kreditů</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Počet kreditů / měsíc</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={cbCredits}
+                            onChange={(e) => setCbCredits(Math.max(1, Number(e.target.value)))}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Cena za kredit pro klienta</Label>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={cbPricePerCredit}
+                              onChange={(e) => setCbPricePerCredit(Math.max(0, Number(e.target.value)))}
+                              className="h-8 text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground shrink-0">Kč</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Celkem za Creative Boost: <span className="font-semibold">{(cbCredits * cbPricePerCredit).toLocaleString('cs-CZ')} Kč/měs</span>
+                      </div>
+                    </div>
+                  )}
 
-                  {/* Profitability / Internal costs */}
+
                   {editableServices.length > 0 && (
                     <div className="rounded-lg border bg-muted/30 space-y-0 overflow-hidden">
                       <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/50">
