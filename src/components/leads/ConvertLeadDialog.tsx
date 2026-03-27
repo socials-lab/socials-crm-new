@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -239,11 +239,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       });
       setTeamMembers(suggestedTeam);
 
+      // Check if onboarding form was completed — use billing data from lead
+      const formCompleted = !!lead.onboarding_form_completed_at;
+
       form.reset({
         client_name: lead.company_name,
         brand_name: lead.company_name,
         ico: lead.ico,
-        dic: '',
+        dic: lead.dic || '',
         website: lead.website || '',
         industry: lead.industry || '',
         country: 'Czech Republic',
@@ -251,11 +254,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         acquisition_channel: lead.source === 'other' ? (lead.source_custom || 'Jiný') : lead.source,
         pinned_notes: '',
         client_notes: '',
-        billing_street: '',
-        billing_city: '',
-        billing_zip: '',
-        billing_country: 'Czech Republic',
-        billing_email: lead.contact_email || '',
+        billing_street: lead.billing_street || '',
+        billing_city: lead.billing_city || '',
+        billing_zip: lead.billing_zip || '',
+        billing_country: lead.billing_country || 'Czech Republic',
+        billing_email: lead.billing_email || lead.contact_email || '',
         contact_name: lead.contact_name,
         contact_position: lead.contact_position || '',
         contact_email: lead.contact_email || '',
@@ -623,8 +626,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             </div>
           )}
 
-          {/* Documents */}
-          <div className="grid gap-3 sm:grid-cols-2">
+          {/* Documents & Onboarding */}
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Nabídka</p>
               {lead.offer_url ? (
@@ -649,7 +652,56 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 <span className="text-xs text-muted-foreground">Nebyla podepsána</span>
               )}
             </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Onboarding formulář</p>
+              {lead.onboarding_form_completed_at ? (
+                <div className="flex items-center gap-1.5 text-sm text-emerald-600">
+                  <ClipboardCheck className="h-3.5 w-3.5" />
+                  <span className="font-medium">Vyplněn</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    ({new Date(lead.onboarding_form_completed_at).toLocaleDateString('cs-CZ')})
+                  </span>
+                </div>
+              ) : lead.onboarding_form_sent_at ? (
+                <div className="flex items-center gap-1.5 text-sm text-amber-600">
+                  <ClipboardX className="h-3.5 w-3.5" />
+                  <span className="font-medium">Čeká na vyplnění</span>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Nebyl odeslán</span>
+              )}
+            </div>
           </div>
+
+          {/* Billing data from onboarding form */}
+          {lead.onboarding_form_completed_at && (lead.billing_street || lead.billing_city || lead.billing_email || lead.dic) && (
+            <div className="rounded-lg border border-emerald-300/40 bg-emerald-500/5 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Fakturační údaje z onboarding formuláře</span>
+              </div>
+              <div className="grid gap-1 sm:grid-cols-2 text-xs">
+                {lead.dic && (
+                  <div><span className="text-muted-foreground">DIČ:</span> {lead.dic}</div>
+                )}
+                {lead.billing_email && (
+                  <div><span className="text-muted-foreground">Email:</span> {lead.billing_email}</div>
+                )}
+                {lead.billing_street && (
+                  <div><span className="text-muted-foreground">Ulice:</span> {lead.billing_street}</div>
+                )}
+                {lead.billing_city && (
+                  <div><span className="text-muted-foreground">Město:</span> {lead.billing_city} {lead.billing_zip}</div>
+                )}
+                {lead.billing_country && (
+                  <div><span className="text-muted-foreground">Země:</span> {lead.billing_country}</div>
+                )}
+              </div>
+              <p className="text-[10px] text-emerald-600/80">
+                ↓ Tyto údaje jsou předvyplněny ve formuláři níže.
+              </p>
+            </div>
+          )}
 
           <p className="text-[10px] text-muted-foreground">
             Tyto údaje budou automaticky přeneseny do nové zakázky. Níže můžete detaily upravit.
@@ -710,7 +762,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   name="dic"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>DIČ</FormLabel>
+                      <FormLabel className="flex items-center gap-1.5">
+                        DIČ
+                        {lead.onboarding_form_completed_at && lead.dic && (
+                          <span className="text-[9px] text-emerald-600 font-normal">(z formuláře)</span>
+                        )}
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="CZ12345678" {...field} />
                       </FormControl>
@@ -841,7 +898,15 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
               {/* Billing Address */}
               <div className="space-y-2">
-                <h5 className="text-sm text-muted-foreground font-medium">Fakturační adresa</h5>
+                <h5 className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+                  Fakturační adresa
+                  {lead.onboarding_form_completed_at && (lead.billing_street || lead.billing_city || lead.billing_email) && (
+                    <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-600 gap-1">
+                      <ClipboardCheck className="h-3 w-3" />
+                      Z formuláře
+                    </Badge>
+                  )}
+                </h5>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
