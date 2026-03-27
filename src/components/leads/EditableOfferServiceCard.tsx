@@ -143,14 +143,18 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
             </div>
             <div className="flex items-center gap-2 ml-auto">
               {!isOpen && (
-                <span className="text-sm font-semibold tabular-nums whitespace-nowrap">
-                  {hasDiscount && (
-                    <span className="line-through text-muted-foreground font-normal mr-1.5 text-xs">
-                      {service.original_price!.toLocaleString('cs-CZ')}
-                    </span>
-                  )}
-                  {service.price.toLocaleString('cs-CZ')} {service.currency}/{service.billing_type === 'monthly' ? 'měs' : 'jedn.'}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    value={service.price}
+                    onChange={(e) => handlePriceChange(e.target.value)}
+                    className="w-28 h-7 text-sm text-right tabular-nums"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {service.currency}/{service.billing_type === 'monthly' ? 'měs' : 'jedn.'}
+                  </span>
+                </div>
               )}
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm">
