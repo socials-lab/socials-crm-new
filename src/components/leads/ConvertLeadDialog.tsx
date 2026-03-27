@@ -762,7 +762,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   name="dic"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>DIČ</FormLabel>
+                      <FormLabel className="flex items-center gap-1.5">
+                        DIČ
+                        {lead.onboarding_form_completed_at && lead.dic && (
+                          <span className="text-[9px] text-emerald-600 font-normal">(z formuláře)</span>
+                        )}
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="CZ12345678" {...field} />
                       </FormControl>
