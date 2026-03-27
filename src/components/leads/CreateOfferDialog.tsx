@@ -841,6 +841,41 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                   )}
                 </div>
 
+                {/* History section (edit mode only) */}
+                {isEditMode && existingOffer?.history && existingOffer.history.length > 0 && (
+                  <div className="rounded-lg border bg-muted/30 overflow-hidden">
+                    <button
+                      onClick={() => setShowHistory(!showHistory)}
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <History className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Historie změn ({existingOffer.history.length})
+                        </span>
+                      </div>
+                      {showHistory ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                    </button>
+                    {showHistory && (
+                      <div className="border-t divide-y divide-border/50 max-h-[200px] overflow-y-auto">
+                        {[...existingOffer.history].reverse().map((entry, idx) => (
+                          <div key={idx} className="px-3 py-2 space-y-0.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium">{entry.summary}</span>
+                              <span className="text-[10px] text-muted-foreground tabular-nums">
+                                {new Date(entry.timestamp).toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              Celková cena: {entry.snapshot.total_price?.toLocaleString('cs-CZ')} Kč · {entry.snapshot.services?.length || 0} služeb
+                              {entry.snapshot.monthly_discount_percent ? ` · Sleva ${entry.snapshot.monthly_discount_percent}%` : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
               </div>
             </ScrollArea>
