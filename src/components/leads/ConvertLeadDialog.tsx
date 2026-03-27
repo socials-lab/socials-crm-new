@@ -103,6 +103,9 @@ interface OfferServiceEntry {
   billing_type: 'monthly' | 'one_off';
   intro_discount_percent?: number | null;
   intro_discount_months?: number | null;
+  is_creative_boost?: boolean;
+  cb_credits?: number | null;
+  cb_price_per_credit?: number | null;
 }
 
 interface ConvertLeadDialogProps {
@@ -183,15 +186,29 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         const introMonths = hasPerServiceDiscount ? ls.intro_discount_months :
           (offerIntroPercent > 0 && (ls.billing_type || 'monthly') === 'monthly' ? offerIntroMonths : null);
         
+        // Detect Creative Boost
+        const catalogSvc = services.find(s => s.id === ls.service_id);
+        const isCB = catalogSvc?.code === 'CREATIVE_BOOST';
+        const cbCredits = (ls as any).creative_boost_credits || (isCB ? 30 : null);
+        const cbPricePerCredit = (ls as any).creative_boost_price_per_credit || (isCB ? 400 : null);
+        
+        // For CB, price = credits × price_per_credit
+        const effectivePrice = isCB && cbCredits && cbPricePerCredit
+          ? cbCredits * cbPricePerCredit
+          : (ls.price || 0);
+        
         return {
           service_id: ls.service_id,
           name: ls.name,
           selected_tier: ls.selected_tier,
-          price: ls.price || 0,
+          price: effectivePrice,
           currency: ls.currency || lead.currency || 'CZK',
           billing_type: ls.billing_type || 'monthly',
           intro_discount_percent: introPercent ?? null,
           intro_discount_months: introMonths ?? null,
+          is_creative_boost: isCB,
+          cb_credits: cbCredits,
+          cb_price_per_credit: cbPricePerCredit,
         };
       });
       setOfferServices(offerSvcs);
@@ -284,7 +301,25 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const updateOfferServicePrice = (index: number, price: number) => {
     setOfferServices(prev => {
       const updated = prev.map((s, i) => i === index ? { ...s, price } : s);
-      // Recalculate monthly_fee
+      const monthlyTotal = updated
+        .filter(s => s.billing_type === 'monthly')
+        .reduce((sum, s) => sum + s.price, 0);
+      form.setValue('monthly_fee', monthlyTotal);
+      return updated;
+    });
+  };
+
+  const updateCBField = (index: number, field: 'cb_credits' | 'cb_price_per_credit', value: number) => {
+    setOfferServices(prev => {
+      const updated = prev.map((s, i) => {
+        if (i !== index) return s;
+        const newS = { ...s, [field]: value };
+        // Recalculate price from credits × price_per_credit
+        if (newS.is_creative_boost && newS.cb_credits && newS.cb_price_per_credit) {
+          newS.price = newS.cb_credits * newS.cb_price_per_credit;
+        }
+        return newS;
+      });
       const monthlyTotal = updated
         .filter(s => s.billing_type === 'monthly')
         .reduce((sum, s) => sum + s.price, 0);
@@ -399,9 +434,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             invoiced_at: null,
             invoice_id: null,
             invoiced_in_period: null,
-            creative_boost_min_credits: null,
-            creative_boost_max_credits: null,
-            creative_boost_price_per_credit: null,
+            creative_boost_min_credits: offerSvc.is_creative_boost ? (offerSvc.cb_credits || null) : null,
+            creative_boost_max_credits: offerSvc.is_creative_boost ? (offerSvc.cb_credits || null) : null,
+            creative_boost_price_per_credit: offerSvc.is_creative_boost ? (offerSvc.cb_price_per_credit || null) : null,
             creative_boost_fixed_billing: true,
             upsold_by_id: null,
             upsell_commission_percent: null,
@@ -556,10 +591,20 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                           <Badge variant="secondary" className="text-[10px]">
                             {svc.billing_type === 'monthly' ? 'Měsíčně' : 'Jednorázově'}
                           </Badge>
+                          {svc.is_creative_boost && (
+                            <Badge variant="outline" className="text-[10px]">CB</Badge>
+                          )}
                         </div>
-                        <span className="text-sm font-semibold tabular-nums whitespace-nowrap ml-2">
-                          {svc.price.toLocaleString('cs-CZ')} {svc.currency}{svc.billing_type === 'monthly' ? '/měs' : ''}
-                        </span>
+                        <div className="text-right">
+                          <span className="text-sm font-semibold tabular-nums whitespace-nowrap">
+                            {svc.price.toLocaleString('cs-CZ')} {svc.currency}{svc.billing_type === 'monthly' ? '/měs' : ''}
+                          </span>
+                          {svc.is_creative_boost && svc.cb_credits && svc.cb_price_per_credit && (
+                            <p className="text-[10px] text-muted-foreground tabular-nums">
+                              {svc.cb_credits} × {svc.cb_price_per_credit} Kč
+                            </p>
+                          )}
+                        </div>
                       </div>
                       {/* Intro discount row — editable */}
                       {svc.billing_type === 'monthly' && (
@@ -1278,28 +1323,63 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   </h5>
                   <div className="space-y-2">
                     {offerServices.map((svc, index) => (
-                      <div key={index} className="flex items-center gap-3 p-2 rounded-md bg-background border">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium truncate">{svc.name}</span>
-                            {svc.selected_tier && (
-                              <Badge variant="secondary" className="text-xs shrink-0">
-                                {tierLabel(svc.selected_tier)}
-                              </Badge>
-                            )}
+                      <div key={index} className="p-2 rounded-md bg-background border space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate">{svc.name}</span>
+                              {svc.selected_tier && (
+                                <Badge variant="secondary" className="text-xs shrink-0">
+                                  {tierLabel(svc.selected_tier)}
+                                </Badge>
+                              )}
+                              {svc.is_creative_boost && (
+                                <Badge variant="outline" className="text-xs shrink-0">CB</Badge>
+                              )}
+                            </div>
                           </div>
+                          {!svc.is_creative_boost && (
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Input
+                                type="number"
+                                className="w-28 text-right"
+                                value={svc.price}
+                                onChange={(e) => updateOfferServicePrice(index, Number(e.target.value))}
+                              />
+                              <span className="text-xs text-muted-foreground w-16">
+                                {svc.currency} /{svc.billing_type === 'monthly' ? 'měs' : 'jednor.'}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Input
-                            type="number"
-                            className="w-28 text-right"
-                            value={svc.price}
-                            onChange={(e) => updateOfferServicePrice(index, Number(e.target.value))}
-                          />
-                          <span className="text-xs text-muted-foreground w-16">
-                            {svc.currency} /{svc.billing_type === 'monthly' ? 'měs' : 'jednor.'}
-                          </span>
-                        </div>
+                        {/* Creative Boost: credits × price inputs */}
+                        {svc.is_creative_boost && (
+                          <div className="flex items-center gap-3 pl-1">
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-xs text-muted-foreground whitespace-nowrap">Kreditů/měs</label>
+                              <Input
+                                type="number"
+                                className="w-20 text-right"
+                                value={svc.cb_credits || ''}
+                                onChange={(e) => updateCBField(index, 'cb_credits', Number(e.target.value))}
+                              />
+                            </div>
+                            <span className="text-muted-foreground">×</span>
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-xs text-muted-foreground whitespace-nowrap">Cena/kredit</label>
+                              <Input
+                                type="number"
+                                className="w-20 text-right"
+                                value={svc.cb_price_per_credit || ''}
+                                onChange={(e) => updateCBField(index, 'cb_price_per_credit', Number(e.target.value))}
+                              />
+                              <span className="text-xs text-muted-foreground">Kč</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              = <span className="font-semibold text-foreground">{svc.price.toLocaleString('cs-CZ')} {svc.currency}/měs</span>
+                            </span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
