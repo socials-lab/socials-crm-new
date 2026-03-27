@@ -1356,7 +1356,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                               <label className="text-xs text-muted-foreground whitespace-nowrap">Kreditů/měs</label>
                               <Input
                                 type="number"
-                                className="w-20 text-right"
+                                className="w-28 text-right"
                                 value={svc.cb_credits || ''}
                                 onChange={(e) => updateCBField(index, 'cb_credits', Number(e.target.value))}
                               />
@@ -1366,7 +1366,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                               <label className="text-xs text-muted-foreground whitespace-nowrap">Cena/kredit</label>
                               <Input
                                 type="number"
-                                className="w-20 text-right"
+                                className="w-28 text-right"
                                 value={svc.cb_price_per_credit || ''}
                                 onChange={(e) => updateCBField(index, 'cb_price_per_credit', Number(e.target.value))}
                               />
