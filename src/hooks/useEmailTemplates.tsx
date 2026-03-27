@@ -37,8 +37,8 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
     template_key: 'request_access',
     name: 'Žádost o přístupy',
     subject_template: 'Žádost o nasdílení přístupů - {company} / Socials',
-    body_template: 'Dobrý den,\n\nNa základě našeho telefonátu Vás prosíme o nasdílení přístupů...\n\n{signature}',
-    description: 'Žádost o nasdílení přístupů',
+    body_template: 'Dobrý den,\n\nNa základě našeho telefonátu Vás prosíme o nasdílení přístupů do níže uvedených marketingových nástrojů. Uděláme audit a připravíme pro vás nabídku na případnou spolupráci.\n\nGoogle Analytics 4 - Přístup na úrovni celého účtu s oprávněním "Čtení" pošlete na e-mail analytics@socials.cz\n\nFacebook Business Manager - Přidejte nás jako partnery (ID našeho účtu: 1196977750459552) s nejnižší úrovní přístupů k těmto položkám: Reklamní účet, Katalog produktů, Meta Pixel (Datový set), FB stránka.\n\nGoogle Ads - Zašlete nám ID reklamního účtu. Zašleme žádost o přístup která dorazí na e-mail, na který máte Google Ads účet vedený.\n\nS-klik - Nasdílejte na e-mail mysocials@seznam.cz\n\nPokud si nebudete vědět rady, zde naleznete návod. Případně klidně napište a pomůžeme :)\n\nDěkujeme a přejeme hezký den,\n\n{signature}',
+    description: 'Žádost o nasdílení přístupů k marketingovým nástrojům',
     available_variables: ['company', 'signature'],
   },
   send_approval: {
