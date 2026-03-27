@@ -679,39 +679,93 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                             <span className="text-muted-foreground">Interní náklady celkem</span>
                             <span className="font-semibold tabular-nums">{totals.totalInternalCost.toLocaleString('cs-CZ')} Kč/měs</span>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Příjem po nákladech</span>
-                            <span className="font-semibold tabular-nums">
-                              {Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč/měs
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Marže</span>
-                            <span className={`font-bold tabular-nums ${
-                              totals.margin >= 66 ? 'text-emerald-600' : 
-                              totals.margin >= 50 ? 'text-amber-600' : 'text-destructive'
-                            }`}>
-                              {totals.margin.toFixed(1)} %
-                            </span>
-                          </div>
-                          {introDiscountPercent > 0 && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Marže (prvních {introDiscountMonths} měs.)</span>
-                              <span className={`font-bold tabular-nums ${
-                                totals.introMargin >= 66 ? 'text-emerald-600' : 
-                                totals.introMargin >= 50 ? 'text-amber-600' : 'text-destructive'
-                              }`}>
-                                {totals.introMargin.toFixed(1)} %
-                              </span>
-                            </div>
-                          )}
-                          {(introDiscountPercent > 0 ? totals.introMargin : totals.margin) < 66 && (
-                            <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20 mt-1">
-                              <TrendingUp className="h-3.5 w-3.5 text-destructive shrink-0" />
-                              <p className="text-xs text-destructive">
-                                Marže je pod cílovou hodnotou 66 %. Zvažte úpravu ceny nebo rozsahu služeb.
-                              </p>
-                            </div>
+                          {introDiscountPercent > 0 ? (
+                            <>
+                              {/* Intro period */}
+                              <div className="rounded-md border border-amber-300/50 bg-amber-500/5 p-2 space-y-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                                  Prvních {introDiscountMonths} měsíců (se slevou {introDiscountPercent} %)
+                                </p>
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Příjem</span>
+                                  <span className="font-semibold tabular-nums">{totals.introAdjustedRevenue.toLocaleString('cs-CZ')} Kč/měs</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Po nákladech</span>
+                                  <span className="font-semibold tabular-nums">
+                                    {Math.round(totals.introAdjustedRevenue - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč/měs
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Marže</span>
+                                  <span className={`font-bold tabular-nums ${
+                                    totals.introMargin >= 66 ? 'text-emerald-600' : 
+                                    totals.introMargin >= 50 ? 'text-amber-600' : 'text-destructive'
+                                  }`}>
+                                    {totals.introMargin.toFixed(1)} %
+                                  </span>
+                                </div>
+                              </div>
+                              {/* Regular period */}
+                              <div className="rounded-md border border-emerald-300/50 bg-emerald-500/5 p-2 space-y-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                                  Od {introDiscountMonths + 1}. měsíce (plná cena)
+                                </p>
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Příjem</span>
+                                  <span className="font-semibold tabular-nums">{totals.monthlyAfterDiscount.toLocaleString('cs-CZ')} Kč/měs</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Po nákladech</span>
+                                  <span className="font-semibold tabular-nums">
+                                    {Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč/měs
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Marže</span>
+                                  <span className={`font-bold tabular-nums ${
+                                    totals.margin >= 66 ? 'text-emerald-600' : 
+                                    totals.margin >= 50 ? 'text-amber-600' : 'text-destructive'
+                                  }`}>
+                                    {totals.margin.toFixed(1)} %
+                                  </span>
+                                </div>
+                              </div>
+                              {totals.introMargin < 66 && (
+                                <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                                  <TrendingUp className="h-3.5 w-3.5 text-destructive shrink-0" />
+                                  <p className="text-xs text-destructive">
+                                    Marže v úvodním období je pod 66 %. Zvažte nižší slevu nebo kratší období.
+                                  </p>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Příjem po nákladech</span>
+                                <span className="font-semibold tabular-nums">
+                                  {Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč/měs
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Marže</span>
+                                <span className={`font-bold tabular-nums ${
+                                  totals.margin >= 66 ? 'text-emerald-600' : 
+                                  totals.margin >= 50 ? 'text-amber-600' : 'text-destructive'
+                                }`}>
+                                  {totals.margin.toFixed(1)} %
+                                </span>
+                              </div>
+                              {totals.margin < 66 && (
+                                <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20 mt-1">
+                                  <TrendingUp className="h-3.5 w-3.5 text-destructive shrink-0" />
+                                  <p className="text-xs text-destructive">
+                                    Marže je pod cílovou hodnotou 66 %. Zvažte úpravu ceny nebo rozsahu služeb.
+                                  </p>
+                                </div>
+                              )}
+                            </>
                           )}
 
                           {/* Bundle Discount */}
