@@ -168,17 +168,32 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       // Parse lead's potential_services
       const leadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
       
-      // Build editable offer services
-      const offerSvcs: OfferServiceEntry[] = leadServices.map(ls => ({
-        service_id: ls.service_id,
-        name: ls.name,
-        selected_tier: ls.selected_tier,
-        price: ls.price || 0,
-        currency: ls.currency || lead.currency || 'CZK',
-        billing_type: ls.billing_type || 'monthly',
-        intro_discount_percent: ls.intro_discount_percent ?? null,
-        intro_discount_months: ls.intro_discount_months ?? null,
-      }));
+      // Look up public offer for this lead to get offer-level intro discount
+      const publicOffers = getOffersByLeadId(lead.id);
+      const latestOffer = publicOffers.length > 0 ? publicOffers[publicOffers.length - 1] : null;
+      const offerIntroPercent = latestOffer?.intro_discount_percent || 0;
+      const offerIntroMonths = latestOffer?.intro_discount_months || 3;
+      
+      // Build editable offer services — apply offer-level intro discount to monthly services
+      const offerSvcs: OfferServiceEntry[] = leadServices.map(ls => {
+        // Per-service discount takes precedence, fallback to offer-level
+        const hasPerServiceDiscount = ls.intro_discount_percent && ls.intro_discount_percent > 0;
+        const introPercent = hasPerServiceDiscount ? ls.intro_discount_percent : 
+          (offerIntroPercent > 0 && (ls.billing_type || 'monthly') === 'monthly' ? offerIntroPercent : null);
+        const introMonths = hasPerServiceDiscount ? ls.intro_discount_months :
+          (offerIntroPercent > 0 && (ls.billing_type || 'monthly') === 'monthly' ? offerIntroMonths : null);
+        
+        return {
+          service_id: ls.service_id,
+          name: ls.name,
+          selected_tier: ls.selected_tier,
+          price: ls.price || 0,
+          currency: ls.currency || lead.currency || 'CZK',
+          billing_type: ls.billing_type || 'monthly',
+          intro_discount_percent: introPercent ?? null,
+          intro_discount_months: introMonths ?? null,
+        };
+      });
       setOfferServices(offerSvcs);
 
       // Calculate monthly_fee from offer services
