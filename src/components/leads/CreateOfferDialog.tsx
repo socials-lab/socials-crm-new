@@ -129,7 +129,7 @@ interface CreateOfferDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead;
-  onSuccess: (token: string, offerUrl: string) => void;
+  onSuccess: (token: string, offerUrl: string, syncData?: { services: PublicOfferService[]; introDiscountPercent?: number; introDiscountMonths?: number; cbCredits?: number; cbPricePerCredit?: number }) => void;
   existingOffer?: PublicOffer;
 }
 
@@ -422,7 +422,14 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         const offerUrl = `${window.location.origin}/offer/${existingOffer.token}`;
         setCreatedOfferUrl(offerUrl);
         toast.success('Nabídka byla aktualizována!');
-        onSuccess(existingOffer.token, offerUrl);
+        const syncData = {
+          services: editableServices,
+          introDiscountPercent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+          introDiscountMonths: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+          cbCredits: cbCredits,
+          cbPricePerCredit: cbPricePerCredit,
+        };
+        onSuccess(existingOffer.token, offerUrl, syncData);
       } else {
         // Create mode
         const token = generateToken();
@@ -463,7 +470,14 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         addPublicOffer(newOffer);
         setCreatedOfferUrl(offerUrl);
         toast.success('Nabídka byla vytvořena!');
-        onSuccess(token, offerUrl);
+        const syncData = {
+          services: editableServices,
+          introDiscountPercent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+          introDiscountMonths: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+          cbCredits: cbCredits,
+          cbPricePerCredit: cbPricePerCredit,
+        };
+        onSuccess(token, offerUrl, syncData);
       }
     } catch (err) {
       console.error('Error saving offer:', err);
