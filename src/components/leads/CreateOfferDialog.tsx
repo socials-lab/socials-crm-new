@@ -319,7 +319,11 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     });
 
     const revenue = monthlyAfterDiscount;
+    const introAdjustedRevenue = introDiscountPercent > 0
+      ? Math.round(revenue * (1 - introDiscountPercent / 100))
+      : revenue;
     const margin = revenue > 0 ? ((revenue - totalInternalCost) / revenue) * 100 : 0;
+    const introMargin = introAdjustedRevenue > 0 ? ((introAdjustedRevenue - totalInternalCost) / introAdjustedRevenue) * 100 : 0;
 
     return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount, totalInternalCost, serviceCosts, margin };
   }, [editableServices, monthlyDiscountPercent, discountScope, introDiscountPercent, introDiscountMonths, services]);
