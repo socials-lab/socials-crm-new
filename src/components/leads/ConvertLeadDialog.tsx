@@ -893,7 +893,15 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
               {/* Billing Address */}
               <div className="space-y-2">
-                <h5 className="text-sm text-muted-foreground font-medium">Fakturační adresa</h5>
+                <h5 className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+                  Fakturační adresa
+                  {lead.onboarding_form_completed_at && (lead.billing_street || lead.billing_city || lead.billing_email) && (
+                    <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-600 gap-1">
+                      <ClipboardCheck className="h-3 w-3" />
+                      Z formuláře
+                    </Badge>
+                  )}
+                </h5>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
