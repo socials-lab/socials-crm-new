@@ -129,8 +129,8 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
     <Card className="border-2">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0 shrink-0">
               <CardTitle className="text-base">{service.name}</CardTitle>
               {tierInfo && (
                 <Badge variant="secondary" className={tierInfo.color}>
@@ -141,7 +141,7 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
                 {service.billing_type === 'monthly' ? 'Měsíčně' : 'Jednorázově'}
               </Badge>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ml-auto">
               {!isOpen && (
                 <span className="text-sm font-semibold tabular-nums whitespace-nowrap">
                   {hasDiscount && (
@@ -152,8 +152,6 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
                   {service.price.toLocaleString('cs-CZ')} {service.currency}/{service.billing_type === 'monthly' ? 'měs' : 'jedn.'}
                 </span>
               )}
-            </div>
-            <div className="flex items-center gap-1">
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm">
                   {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
