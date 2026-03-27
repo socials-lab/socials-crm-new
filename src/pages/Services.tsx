@@ -400,6 +400,12 @@ export default function Services() {
                 onDeliverablesUpdate={(deliverables) => {
                   updateService(service.id, { default_deliverables: deliverables.length > 0 ? deliverables : null } as Partial<Service>);
                 }}
+                onPlatformsUpdate={(platforms) => {
+                  localStorage.setItem(`service-platforms-${service.code}`, JSON.stringify(platforms));
+                  toast.success('Platformy byly aktualizovány');
+                  // Force re-render
+                  updateService(service.id, { updated_at: new Date().toISOString() } as Partial<Service>);
+                }}
                 onCreditPricingUpdate={service.code === 'CREATIVE_BOOST' ? (updatedTypes) => {
                   // Sync with the global CB output types
                   const currentIds = cbOutputTypes.filter(t => t.isActive).map(t => t.id);
