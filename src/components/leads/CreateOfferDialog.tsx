@@ -259,9 +259,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     }
   }, [open, lead.potential_services, services, existingOffer]);
 
-  // Calculate totals + profitability
-  const CB_DEFAULT_CREDITS = 30;
-  const CB_PRICE_PER_CREDIT = 400;
+  // Calculate totals + profitability (CB values from state)
+  const CB_CREDITS = cbCredits;
+  const CB_PRICE = cbPricePerCredit;
 
   const totals = useMemo(() => {
     // Helper: get effective monthly price for a service (handles CB credit-based pricing)
