@@ -103,6 +103,9 @@ interface OfferServiceEntry {
   billing_type: 'monthly' | 'one_off';
   intro_discount_percent?: number | null;
   intro_discount_months?: number | null;
+  is_creative_boost?: boolean;
+  cb_credits?: number | null;
+  cb_price_per_credit?: number | null;
 }
 
 interface ConvertLeadDialogProps {
@@ -183,15 +186,29 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         const introMonths = hasPerServiceDiscount ? ls.intro_discount_months :
           (offerIntroPercent > 0 && (ls.billing_type || 'monthly') === 'monthly' ? offerIntroMonths : null);
         
+        // Detect Creative Boost
+        const catalogSvc = services.find(s => s.id === ls.service_id);
+        const isCB = catalogSvc?.code === 'CREATIVE_BOOST';
+        const cbCredits = (ls as any).creative_boost_credits || (isCB ? 30 : null);
+        const cbPricePerCredit = (ls as any).creative_boost_price_per_credit || (isCB ? 400 : null);
+        
+        // For CB, price = credits × price_per_credit
+        const effectivePrice = isCB && cbCredits && cbPricePerCredit
+          ? cbCredits * cbPricePerCredit
+          : (ls.price || 0);
+        
         return {
           service_id: ls.service_id,
           name: ls.name,
           selected_tier: ls.selected_tier,
-          price: ls.price || 0,
+          price: effectivePrice,
           currency: ls.currency || lead.currency || 'CZK',
           billing_type: ls.billing_type || 'monthly',
           intro_discount_percent: introPercent ?? null,
           intro_discount_months: introMonths ?? null,
+          is_creative_boost: isCB,
+          cb_credits: cbCredits,
+          cb_price_per_credit: cbPricePerCredit,
         };
       });
       setOfferServices(offerSvcs);
@@ -284,7 +301,25 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const updateOfferServicePrice = (index: number, price: number) => {
     setOfferServices(prev => {
       const updated = prev.map((s, i) => i === index ? { ...s, price } : s);
-      // Recalculate monthly_fee
+      const monthlyTotal = updated
+        .filter(s => s.billing_type === 'monthly')
+        .reduce((sum, s) => sum + s.price, 0);
+      form.setValue('monthly_fee', monthlyTotal);
+      return updated;
+    });
+  };
+
+  const updateCBField = (index: number, field: 'cb_credits' | 'cb_price_per_credit', value: number) => {
+    setOfferServices(prev => {
+      const updated = prev.map((s, i) => {
+        if (i !== index) return s;
+        const newS = { ...s, [field]: value };
+        // Recalculate price from credits × price_per_credit
+        if (newS.is_creative_boost && newS.cb_credits && newS.cb_price_per_credit) {
+          newS.price = newS.cb_credits * newS.cb_price_per_credit;
+        }
+        return newS;
+      });
       const monthlyTotal = updated
         .filter(s => s.billing_type === 'monthly')
         .reduce((sum, s) => sum + s.price, 0);
