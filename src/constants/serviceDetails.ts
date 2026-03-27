@@ -667,7 +667,17 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
   },
 };
 
-// Helper function to get service detail by code
+// Helper function to get service detail by code (with localStorage overrides for platforms)
 export const getServiceDetail = (code: string): ServiceDetail | undefined => {
-  return SERVICE_DETAILS[code];
+  const detail = SERVICE_DETAILS[code];
+  if (!detail) return undefined;
+  
+  try {
+    const storedPlatforms = localStorage.getItem(`service-platforms-${code}`);
+    if (storedPlatforms) {
+      return { ...detail, platforms: JSON.parse(storedPlatforms) };
+    }
+  } catch { /* ignore */ }
+  
+  return detail;
 };
