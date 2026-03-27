@@ -124,11 +124,22 @@ export function AddLeadServiceDialog({
                 <SelectValue placeholder="Vyberte službu" />
               </SelectTrigger>
               <SelectContent>
-                {services.filter(s => s.is_active).map(service => (
-                  <SelectItem key={service.id} value={service.id}>
-                    {service.name}
-                  </SelectItem>
-                ))}
+                {services.filter(s => s.is_active).map(service => {
+                  const detail = getServiceDetail(service.code);
+                  const platforms = detail?.platforms;
+                  return (
+                    <SelectItem key={service.id} value={service.id}>
+                      <div className="flex flex-col">
+                        <span>{service.name} <span className="text-muted-foreground">({service.service_type === 'core' ? 'Core' : 'Addon'})</span></span>
+                        {platforms && platforms.length > 0 && (
+                          <span className="text-[11px] text-muted-foreground leading-tight">
+                            {platforms.join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
