@@ -367,7 +367,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     const introMargin = introAdjustedRevenue > 0 ? ((introAdjustedRevenue - totalInternalCost) / introAdjustedRevenue) * 100 : 0;
 
     return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount, totalInternalCost, serviceCosts, margin, introMargin, introAdjustedRevenue };
-  }, [editableServices, monthlyDiscountPercent, discountScope, introDiscountPercent, introDiscountMonths, services, cbCredits, cbPricePerCredit]);
+  }, [editableServices, monthlyDiscountPercent, discountScope, introDiscountPercent, introDiscountMonths, services, cbCredits, cbPricePerCredit, rewardOverrides]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
     setEditableServices(prev => 
