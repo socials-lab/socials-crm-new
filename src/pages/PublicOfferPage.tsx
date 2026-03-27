@@ -1261,43 +1261,69 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <h3 className="text-lg font-bold text-foreground mb-6">💰 Cenový souhrn</h3>
           
           {totalMonthly > 0 && (() => {
-            const discountPercent = offer.monthly_discount_percent || 0;
+            const bundlePercent = offer.monthly_discount_percent || 0;
+            const introPercent = offer.intro_discount_percent || 0;
+            const introMonths = offer.intro_discount_months || 3;
             const scope = offer.discount_scope || 'core_only';
-            const discountBase = scope === 'all_services' ? totalMonthly : coreMonthly;
-            const discountedBase = discountPercent > 0 
-              ? Math.round(discountBase * (1 - discountPercent / 100)) 
-              : discountBase;
-            const discountAmount = discountBase - discountedBase;
-            const totalAfterDiscount = scope === 'all_services' 
-              ? discountedBase 
-              : discountedBase + addonMonthly;
+            
+            // Step 1: Bundle discount
+            const bundleBase = scope === 'all_services' ? totalMonthly : coreMonthly;
+            const bundleDiscounted = bundlePercent > 0 
+              ? Math.round(bundleBase * (1 - bundlePercent / 100)) 
+              : bundleBase;
+            const bundleDiscountAmount = bundleBase - bundleDiscounted;
+            const afterBundle = scope === 'all_services' 
+              ? bundleDiscounted 
+              : bundleDiscounted + addonMonthly;
+            
+            // Step 2: Intro discount (waterfall — on top of bundle)
+            const afterIntro = introPercent > 0 
+              ? Math.round(afterBundle * (1 - introPercent / 100)) 
+              : afterBundle;
+            
+            const hasAnyDiscount = bundlePercent > 0 || introPercent > 0;
+            const finalPrice = hasAnyDiscount ? afterBundle : totalMonthly;
             
             return (
               <div className="space-y-3">
+                {/* Main monthly price */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <span className="text-base text-muted-foreground font-medium">Měsíční cena</span>
                   <div className="text-right flex flex-wrap items-baseline justify-end gap-x-2">
-                    {discountPercent > 0 ? (
-                      <>
-                        <span className="text-sm text-muted-foreground/70 line-through">
-                          {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
-                        </span>
-                        <span className="text-2xl md:text-4xl font-extrabold text-[#94e700] tracking-tight whitespace-nowrap">
-                          {totalAfterDiscount.toLocaleString('cs-CZ')} {offer.currency}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-2xl md:text-4xl font-extrabold text-[#94e700] tracking-tight whitespace-nowrap">
+                    {bundlePercent > 0 && (
+                      <span className="text-sm text-muted-foreground/70 line-through">
                         {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
                       </span>
                     )}
+                    <span className="text-2xl md:text-4xl font-extrabold text-[#94e700] tracking-tight whitespace-nowrap">
+                      {finalPrice.toLocaleString('cs-CZ')} {offer.currency}
+                    </span>
                     <span className="text-sm text-muted-foreground/70">/měsíc</span>
                   </div>
                 </div>
-                {discountPercent > 0 && (
-                  <div className="flex items-center justify-between text-sm bg-emerald-500/10 rounded-lg px-4 py-2.5 border border-emerald-500/20">
-                    <span className="text-emerald-500 font-medium">✨ Sleva {discountPercent}% {scope === 'all_services' ? 'na všechny služby' : 'na core služby'} při odběru všech služeb</span>
-                    <span className="font-bold text-emerald-500">-{discountAmount.toLocaleString('cs-CZ')} {offer.currency}/měs</span>
+                
+                {/* Bundle discount badge */}
+                {bundlePercent > 0 && (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-sm bg-emerald-500/10 rounded-lg px-4 py-2.5 border border-emerald-500/20">
+                    <span className="text-emerald-500 font-medium">✨ Sleva {bundlePercent}% {scope === 'all_services' ? 'na všechny služby' : 'na core služby'} při odběru všech služeb</span>
+                    <span className="font-bold text-emerald-500 whitespace-nowrap">-{bundleDiscountAmount.toLocaleString('cs-CZ')} {offer.currency}/měs</span>
+                  </div>
+                )}
+                
+                {/* Intro discount badge */}
+                {introPercent > 0 && (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-sm bg-amber-500/10 rounded-lg px-4 py-2.5 border border-amber-500/20">
+                    <span className="text-amber-500 font-medium">🎁 Úvodní sleva {introPercent}% na prvních {introMonths} {introMonths === 1 ? 'měsíc' : introMonths < 5 ? 'měsíce' : 'měsíců'}</span>
+                    <span className="font-bold text-amber-500 whitespace-nowrap">
+                      {afterIntro.toLocaleString('cs-CZ')} {offer.currency}/měs
+                    </span>
+                  </div>
+                )}
+                
+                {/* Combined summary when both discounts active */}
+                {bundlePercent > 0 && introPercent > 0 && (
+                  <div className="text-xs text-muted-foreground/60 px-1">
+                    Prvních {introMonths} měs. platíte {afterIntro.toLocaleString('cs-CZ')} {offer.currency}/měs, poté {afterBundle.toLocaleString('cs-CZ')} {offer.currency}/měs
                   </div>
                 )}
               </div>
