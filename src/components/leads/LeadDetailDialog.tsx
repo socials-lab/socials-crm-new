@@ -911,6 +911,21 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         onSkip={handleSkipTransition}
         isConfirming={isConfirming}
       />
+
+      <SendContractDialog
+        open={isContractDialogOpen}
+        onOpenChange={setIsContractDialogOpen}
+        lead={lead}
+        onSend={(data) => {
+          updateLead(lead.id, {
+            contract_url: data.contract_url,
+            digisign_envelope_id: data.digisign_envelope_id,
+            digisign_document_url: data.digisign_document_url,
+            contract_sent_at: data.contract_sent_at,
+          });
+          toast.success('📄 Smlouva připravena a odeslána via DigiSign');
+        }}
+      />
     </>
   );
 }
