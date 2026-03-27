@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Copy, ExternalLink, Check, TrendingUp, Plus, X } from 'lucide-react';
+import { Loader2, Copy, ExternalLink, Check, TrendingUp, Plus, X, History, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
 import type { Lead, Service } from '@/types/crm';
@@ -130,6 +130,7 @@ interface CreateOfferDialogProps {
   onOpenChange: (open: boolean) => void;
   lead: Lead;
   onSuccess: (token: string, offerUrl: string) => void;
+  existingOffer?: PublicOffer;
 }
 
 function generateToken(): string {
@@ -148,8 +149,9 @@ const DEFAULT_PORTFOLIO_OPTIONS: Omit<PortfolioLink, 'id'>[] = [
   { title: 'Reference od klientů', url: 'https://socials.cz/reference', type: 'reference' },
 ];
 
-export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: CreateOfferDialogProps) {
+export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existingOffer }: CreateOfferDialogProps) {
   const { services, colleagues } = useCRMData();
+  const isEditMode = !!existingOffer;
   const [auditSummary, setAuditSummary] = useState('');
   const [recommendationIntro, setRecommendationIntro] = useState('');
   const [customNote, setCustomNote] = useState('');
@@ -165,6 +167,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const [isCreating, setIsCreating] = useState(false);
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   
   // Editable services state
   const [editableServices, setEditableServices] = useState<PublicOfferService[]>([]);
