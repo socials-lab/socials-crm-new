@@ -633,7 +633,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Odhadovaná marže</span>
+                            <span className="text-muted-foreground">Marže</span>
                             <span className={`font-bold tabular-nums ${
                               totals.margin >= 66 ? 'text-emerald-600' : 
                               totals.margin >= 50 ? 'text-amber-600' : 'text-destructive'
@@ -641,7 +641,18 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                               {totals.margin.toFixed(1)} %
                             </span>
                           </div>
-                          {totals.margin < 66 && (
+                          {introDiscountPercent > 0 && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Marže (prvních {introDiscountMonths} měs.)</span>
+                              <span className={`font-bold tabular-nums ${
+                                totals.introMargin >= 66 ? 'text-emerald-600' : 
+                                totals.introMargin >= 50 ? 'text-amber-600' : 'text-destructive'
+                              }`}>
+                                {totals.introMargin.toFixed(1)} %
+                              </span>
+                            </div>
+                          )}
+                          {(introDiscountPercent > 0 ? totals.introMargin : totals.margin) < 66 && (
                             <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20 mt-1">
                               <TrendingUp className="h-3.5 w-3.5 text-destructive shrink-0" />
                               <p className="text-xs text-destructive">
