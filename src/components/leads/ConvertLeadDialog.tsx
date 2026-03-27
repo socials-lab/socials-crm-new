@@ -239,11 +239,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       });
       setTeamMembers(suggestedTeam);
 
+      // Check if onboarding form was completed — use billing data from lead
+      const formCompleted = !!lead.onboarding_form_completed_at;
+
       form.reset({
         client_name: lead.company_name,
         brand_name: lead.company_name,
         ico: lead.ico,
-        dic: '',
+        dic: lead.dic || '',
         website: lead.website || '',
         industry: lead.industry || '',
         country: 'Czech Republic',
@@ -251,11 +254,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         acquisition_channel: lead.source === 'other' ? (lead.source_custom || 'Jiný') : lead.source,
         pinned_notes: '',
         client_notes: '',
-        billing_street: '',
-        billing_city: '',
-        billing_zip: '',
-        billing_country: 'Czech Republic',
-        billing_email: lead.contact_email || '',
+        billing_street: lead.billing_street || '',
+        billing_city: lead.billing_city || '',
+        billing_zip: lead.billing_zip || '',
+        billing_country: lead.billing_country || 'Czech Republic',
+        billing_email: lead.billing_email || lead.contact_email || '',
         contact_name: lead.contact_name,
         contact_position: lead.contact_position || '',
         contact_email: lead.contact_email || '',
