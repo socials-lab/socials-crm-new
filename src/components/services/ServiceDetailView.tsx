@@ -70,9 +70,11 @@ interface ServiceDetailViewProps {
   onDescriptionUpdate?: (description: string) => void;
   defaultDeliverables?: string[] | null;
   onDeliverablesUpdate?: (deliverables: string[]) => void;
+  // Platforms inline editing
+  onPlatformsUpdate?: (platforms: string[]) => void;
 }
 
-export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, tierPricing, onTierPricingUpdate, rewardConfig, onRewardConfigUpdate, description, onDescriptionUpdate, defaultDeliverables, onDeliverablesUpdate }: ServiceDetailViewProps) {
+export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, tierPricing, onTierPricingUpdate, rewardConfig, onRewardConfigUpdate, description, onDescriptionUpdate, defaultDeliverables, onDeliverablesUpdate, onPlatformsUpdate }: ServiceDetailViewProps) {
   // Guard against undefined or null data
   if (!data) {
     return (
