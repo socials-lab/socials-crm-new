@@ -110,6 +110,7 @@ function PlatformAddButton({ onAdd }: { onAdd: (name: string) => void }) {
   );
 }
 
+export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, tierPricing, onTierPricingUpdate, rewardConfig, onRewardConfigUpdate, description, onDescriptionUpdate, defaultDeliverables, onDeliverablesUpdate, onPlatformsUpdate }: ServiceDetailViewProps) {
   // Guard against undefined or null data
   if (!data) {
     return (
