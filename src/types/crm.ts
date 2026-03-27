@@ -544,6 +544,11 @@ export interface LeadService {
   // Introductory discount (optional)
   intro_discount_percent?: number | null;
   intro_discount_months?: number | null;
+  // Creative Boost specific
+  creative_boost_credits?: number | null;
+  creative_boost_price_per_credit?: number | null;
+  creative_boost_graphic_reward?: number | null;
+  creative_boost_editor_reward?: number | null;
 }
 
 export type LeadNoteType = 'general' | 'call' | 'internal' | 'email_sent' | 'email_received';

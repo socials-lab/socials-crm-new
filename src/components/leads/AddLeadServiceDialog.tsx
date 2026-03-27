@@ -17,10 +17,12 @@ import {
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Percent } from 'lucide-react';
+import { Percent, Palette, Video, Sparkles } from 'lucide-react';
 import type { Service, LeadService, ServiceTier } from '@/types/crm';
 import { SERVICE_TIER_CONFIGS } from '@/constants/services';
 import { getServiceDetail } from '@/constants/serviceDetails';
+
+const CREATIVE_BOOST_CODE = 'CREATIVE_BOOST';
 
 interface AddLeadServiceDialogProps {
   open: boolean;
@@ -44,15 +46,30 @@ export function AddLeadServiceDialog({
   const [introDiscountPercent, setIntroDiscountPercent] = useState(10);
   const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
 
+  // Creative Boost fields
+  const [cbCredits, setCbCredits] = useState(30);
+  const [cbPricePerCredit, setCbPricePerCredit] = useState(400);
+  const [cbGraphicReward, setCbGraphicReward] = useState(150);
+  const [cbEditorReward, setCbEditorReward] = useState(100);
+
   const selectedService = services.find(s => s.id === selectedServiceId);
   const isCoreService = selectedService?.service_type === 'core';
+  const isCreativeBoost = selectedService?.code === CREATIVE_BOOST_CODE;
 
   const handleServiceChange = (serviceId: string) => {
     setSelectedServiceId(serviceId);
     const service = services.find(s => s.id === serviceId);
       if (service) {
         setCurrency(service.currency);
-        if (service.service_type === 'core') {
+        if (service.code === CREATIVE_BOOST_CODE) {
+          // Creative Boost: price = credits * price_per_credit
+          setSelectedTier(null);
+          setCbCredits(30);
+          setCbPricePerCredit(400);
+          setCbGraphicReward(150);
+          setCbEditorReward(100);
+          setPrice(30 * 400);
+        } else if (service.service_type === 'core') {
           setSelectedTier('growth');
           const growthPricing = service.tier_pricing?.find(p => p.tier === 'growth');
           const constantDetail = getServiceDetail(service.code);
@@ -78,9 +95,22 @@ export function AddLeadServiceDialog({
     }
   };
 
+  const handleCbCreditsChange = (credits: number) => {
+    setCbCredits(credits);
+    setPrice(credits * cbPricePerCredit);
+  };
+
+  const handleCbPriceChange = (pricePerCredit: number) => {
+    setCbPricePerCredit(pricePerCredit);
+    setPrice(cbCredits * pricePerCredit);
+  };
+
   const discountedPrice = hasIntroDiscount 
     ? Math.round(price * (1 - introDiscountPercent / 100)) 
     : price;
+
+  const cbTotalCost = cbCredits * (cbGraphicReward + cbEditorReward);
+  const cbMargin = price > 0 ? Math.round((1 - cbTotalCost / price) * 100) : 0;
 
   const handleSubmit = () => {
     if (!selectedService) return;
@@ -89,12 +119,18 @@ export function AddLeadServiceDialog({
       id: `lead-svc-${Date.now()}`,
       service_id: selectedServiceId,
       name: selectedService.name,
-      selected_tier: isCoreService ? selectedTier : null,
+      selected_tier: isCoreService && !isCreativeBoost ? selectedTier : null,
       price,
       currency,
       billing_type: billingType,
       intro_discount_percent: hasIntroDiscount ? introDiscountPercent : null,
       intro_discount_months: hasIntroDiscount ? introDiscountMonths : null,
+      ...(isCreativeBoost && {
+        creative_boost_credits: cbCredits,
+        creative_boost_price_per_credit: cbPricePerCredit,
+        creative_boost_graphic_reward: cbGraphicReward,
+        creative_boost_editor_reward: cbEditorReward,
+      }),
     });
     
     // Reset form
@@ -106,6 +142,10 @@ export function AddLeadServiceDialog({
     setHasIntroDiscount(false);
     setIntroDiscountPercent(10);
     setIntroDiscountMonths(3);
+    setCbCredits(30);
+    setCbPricePerCredit(400);
+    setCbGraphicReward(150);
+    setCbEditorReward(100);
     onOpenChange(false);
   };
 
@@ -147,7 +187,82 @@ export function AddLeadServiceDialog({
             </Select>
           </div>
 
-          {isCoreService && (
+          {/* Creative Boost Configuration */}
+          {isCreativeBoost && (
+            <div className="space-y-3 p-4 rounded-lg bg-muted/50 border">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Konfigurace Creative Boost
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Počet kreditů / měs.</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={cbCredits}
+                    onChange={(e) => handleCbCreditsChange(Number(e.target.value))}
+                    className="h-8"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Cena za kredit (Kč)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={cbPricePerCredit}
+                    onChange={(e) => handleCbPriceChange(Number(e.target.value))}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1">
+                    <Palette className="h-3 w-3" />
+                    Odměna grafik / kredit
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={cbGraphicReward}
+                    onChange={(e) => setCbGraphicReward(Number(e.target.value))}
+                    className="h-8"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1">
+                    <Video className="h-3 w-3" />
+                    Odměna editor / kredit
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={cbEditorReward}
+                    onChange={(e) => setCbEditorReward(Number(e.target.value))}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="flex items-center justify-between p-2 rounded bg-background border text-xs">
+                <span className="text-muted-foreground">
+                  {cbCredits} kreditů × {cbPricePerCredit} Kč = <span className="font-semibold text-foreground">{price.toLocaleString('cs-CZ')} Kč/měs</span>
+                </span>
+                <Badge 
+                  variant="outline" 
+                  className={`text-[10px] ${cbMargin >= 40 ? 'text-emerald-700 border-emerald-500/30' : cbMargin >= 20 ? 'text-amber-700 border-amber-500/30' : 'text-red-700 border-red-500/30'}`}
+                >
+                  Marže {cbMargin} %
+                </Badge>
+              </div>
+            </div>
+          )}
+
+          {isCoreService && !isCreativeBoost && (
             <div className="space-y-2 p-4 rounded-lg bg-muted/50 border">
               <Label>Úroveň služby (dle spendu klienta)</Label>
               <Select 
@@ -184,32 +299,34 @@ export function AddLeadServiceDialog({
             </div>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Cena</Label>
-              <Input 
-                type="number" 
-                min={0} 
-                value={price}
-                onChange={(e) => setPrice(Number(e.target.value))}
-              />
+          {!isCreativeBoost && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Cena</Label>
+                <Input 
+                  type="number" 
+                  min={0} 
+                  value={price}
+                  onChange={(e) => setPrice(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Typ fakturace</Label>
+                <Select value={billingType} onValueChange={(v) => setBillingType(v as 'monthly' | 'one_off')}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Měsíčně</SelectItem>
+                    <SelectItem value="one_off">Jednorázově</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Typ fakturace</Label>
-              <Select value={billingType} onValueChange={(v) => setBillingType(v as 'monthly' | 'one_off')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Měsíčně</SelectItem>
-                  <SelectItem value="one_off">Jednorázově</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          )}
 
           {/* Intro Discount Section */}
-          {billingType === 'monthly' && (
+          {billingType === 'monthly' && !isCreativeBoost && (
             <div className="space-y-3 p-3 rounded-lg border border-dashed">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -267,19 +384,21 @@ export function AddLeadServiceDialog({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label>Měna</Label>
-            <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="CZK">CZK</SelectItem>
-                <SelectItem value="EUR">EUR</SelectItem>
-                <SelectItem value="USD">USD</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!isCreativeBoost && (
+            <div className="space-y-2">
+              <Label>Měna</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CZK">CZK</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
