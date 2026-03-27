@@ -498,9 +498,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         {createdOfferUrl ? (
           // Success state
           <div className="space-y-4 px-6 pb-6">
-            <div className="p-4 rounded-lg border bg-green-500/10 border-green-500/30">
-              <p className="text-sm text-green-700 font-medium mb-3">
-                Nabídka byla úspěšně vytvořena! Zkopírujte odkaz a odešlete klientovi:
+            <div className="p-4 rounded-lg border bg-emerald-500/10 border-emerald-500/30">
+              <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium mb-3">
+                {isEditMode ? 'Nabídka byla aktualizována! Klient uvidí novou verzi na stejném odkazu:' : 'Nabídka byla úspěšně vytvořena! Zkopírujte odkaz a odešlete klientovi:'}
               </p>
               <div className="flex items-center gap-2">
                 <Input
@@ -856,10 +856,10 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                 {isCreating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Vytvářím...
+                    {isEditMode ? 'Ukládám...' : 'Vytvářím...'}
                   </>
                 ) : (
-                  'Vytvořit nabídku'
+                  isEditMode ? 'Uložit změny' : 'Vytvořit nabídku'
                 )}
               </Button>
             </DialogFooter>
