@@ -30,6 +30,7 @@ interface LeadFlowStepperProps {
   onCreateOffer: () => void;
   onSendOffer: () => void;
   onSendOnboarding: () => void;
+  onSendContract: () => void;
   onMarkContractSent: () => void;
   onMarkContractSigned: () => void;
   onConvert: () => void;
