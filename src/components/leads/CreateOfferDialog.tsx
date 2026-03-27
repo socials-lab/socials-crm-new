@@ -475,15 +475,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           <>
             <ScrollArea className="max-h-[calc(95vh-180px)]">
               <div className="space-y-4 px-6 pb-4">
-                {/* Company info */}
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Pro:</span>{' '}
-                    <span className="font-medium">{lead.company_name}</span>
-                    {' · '}
-                    <span className="text-muted-foreground">{lead.contact_name}</span>
-                  </p>
-                </div>
 
                 {/* Audit summary - Co jsme zjistili */}
                 <div className="space-y-2">
