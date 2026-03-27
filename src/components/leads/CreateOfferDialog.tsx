@@ -585,96 +585,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                     </div>
                   )}
                   
-                  {/* Price Summary */}
-                  {editableServices.length > 0 && (
-                    <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                     <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">Měsíčně celkem:</span>
-                        <span className="font-medium">
-                          {monthlyDiscountPercent > 0 ? (
-                            <>
-                              <span className="line-through text-muted-foreground mr-2">
-                                {totals.monthly.toLocaleString('cs-CZ')}
-                              </span>
-                              {totals.monthlyAfterDiscount.toLocaleString('cs-CZ')} {lead.currency}/měs
-                            </>
-                          ) : (
-                            <>{totals.monthly.toLocaleString('cs-CZ')} {lead.currency}/měs</>
-                          )}
-                        </span>
-                      </div>
-                      {/* Monthly discount */}
-                      {totals.monthly > 0 && (
-                        <div className="space-y-1.5 mb-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground text-xs">
-                              Sleva při odběru všech služeb:
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <Input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={monthlyDiscountPercent || ''}
-                                onChange={(e) => setMonthlyDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
-                                placeholder="0"
-                                className="w-16 h-7 text-sm text-right"
-                              />
-                              <span className="text-muted-foreground">%</span>
-                            </div>
-                          </div>
-                          {monthlyDiscountPercent > 0 && totals.addonMonthly > 0 && (
-                            <div className="flex items-center gap-3 text-xs">
-                              <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name="discountScope"
-                                  checked={discountScope === 'core_only'}
-                                  onChange={() => setDiscountScope('core_only')}
-                                  className="accent-primary"
-                                />
-                                <span className="text-muted-foreground">Jen core služby</span>
-                              </label>
-                              <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name="discountScope"
-                                  checked={discountScope === 'all_services'}
-                                  onChange={() => setDiscountScope('all_services')}
-                                  className="accent-primary"
-                                />
-                                <span className="text-muted-foreground">Všechny služby</span>
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {monthlyDiscountPercent > 0 && (
-                        <div className="flex items-center justify-between text-sm text-green-600 mb-1">
-                          <span>Sleva {monthlyDiscountPercent}% na {discountScope === 'all_services' ? 'všechny služby' : 'core služby'}:</span>
-                          <span className="font-medium">
-                            -{totals.monthlyDiscountAmount.toLocaleString('cs-CZ')} {lead.currency}/měs
-                          </span>
-                        </div>
-                      )}
-                      {totals.oneOff > 0 && (
-                        <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="text-muted-foreground">Jednorázově:</span>
-                          <span className="font-medium">
-                            {totals.oneOff.toLocaleString('cs-CZ')} {lead.currency}
-                          </span>
-                        </div>
-                      )}
-                      {totals.totalDiscount > 0 && (
-                        <div className="flex items-center justify-between text-sm text-green-600">
-                          <span>Celková sleva na služby:</span>
-                          <span className="font-medium">
-                            -{totals.totalDiscount.toLocaleString('cs-CZ')} {lead.currency}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   {/* Profitability / Internal costs */}
                   {editableServices.length > 0 && (
@@ -738,6 +648,84 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                               </p>
                             </div>
                           )}
+
+                          {/* Bundle Discount */}
+                          <Separator />
+                          <div className="px-3 py-2.5 space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Sleva při odběru všech služeb:</span>
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={monthlyDiscountPercent || ''}
+                                  onChange={(e) => setMonthlyDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                                  placeholder="0"
+                                  className="w-16 h-7 text-sm text-right"
+                                />
+                                <span className="text-muted-foreground">%</span>
+                              </div>
+                            </div>
+                            {monthlyDiscountPercent > 0 && totals.addonMonthly > 0 && (
+                              <div className="flex items-center gap-3 text-xs">
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name="discountScope"
+                                    checked={discountScope === 'core_only'}
+                                    onChange={() => setDiscountScope('core_only')}
+                                    className="accent-primary"
+                                  />
+                                  <span className="text-muted-foreground">Jen core služby</span>
+                                </label>
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name="discountScope"
+                                    checked={discountScope === 'all_services'}
+                                    onChange={() => setDiscountScope('all_services')}
+                                    className="accent-primary"
+                                  />
+                                  <span className="text-muted-foreground">Všechny služby</span>
+                                </label>
+                              </div>
+                            )}
+                            {monthlyDiscountPercent > 0 && (
+                              <div className="flex items-center justify-between text-sm text-emerald-600">
+                                <span>Sleva {monthlyDiscountPercent}% na {discountScope === 'all_services' ? 'všechny služby' : 'core služby'}:</span>
+                                <span className="font-medium">
+                                  -{totals.monthlyDiscountAmount.toLocaleString('cs-CZ')} Kč/měs
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Final Summary */}
+                          <Separator />
+                          <div className="px-3 py-2.5 space-y-1.5">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Měsíčně celkem</span>
+                              <span className="font-semibold tabular-nums">
+                                {monthlyDiscountPercent > 0 ? (
+                                  <>
+                                    <span className="line-through text-muted-foreground mr-2 font-normal">
+                                      {totals.monthly.toLocaleString('cs-CZ')}
+                                    </span>
+                                    {totals.monthlyAfterDiscount.toLocaleString('cs-CZ')} Kč/měs
+                                  </>
+                                ) : (
+                                  <>{totals.monthly.toLocaleString('cs-CZ')} Kč/měs</>
+                                )}
+                              </span>
+                            </div>
+                            {totals.oneOff > 0 && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Jednorázově</span>
+                                <span className="font-semibold tabular-nums">{totals.oneOff.toLocaleString('cs-CZ')} Kč</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
