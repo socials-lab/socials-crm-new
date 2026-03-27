@@ -709,10 +709,17 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            {/* Client Section */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm border-b pb-2">Klient</h4>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            
+            {/* ── SECTION 1: Klient ── */}
+            <div className="rounded-lg border bg-card p-4 space-y-4">
+              <div className="flex items-center gap-3 pb-2 border-b">
+                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">1</div>
+                <div>
+                  <h4 className="font-semibold text-sm">Klient</h4>
+                  <p className="text-xs text-muted-foreground">Základní údaje o firmě</p>
+                </div>
+              </div>
               
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
@@ -895,93 +902,105 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   )}
                 />
               </div>
+            </div>
 
-              {/* Billing Address */}
-              <div className="space-y-2">
-                <h5 className="text-sm text-muted-foreground font-medium flex items-center gap-2">
-                  Fakturační adresa
+            {/* ── SECTION 2: Fakturace ── */}
+            <div className="rounded-lg border bg-card p-4 space-y-4">
+              <div className="flex items-center gap-3 pb-2 border-b">
+                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">2</div>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h4 className="font-semibold text-sm">Fakturační adresa</h4>
+                    <p className="text-xs text-muted-foreground">Údaje pro fakturaci</p>
+                  </div>
                   {lead.onboarding_form_completed_at && (lead.billing_street || lead.billing_city || lead.billing_email) && (
                     <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-600 gap-1">
                       <ClipboardCheck className="h-3 w-3" />
                       Z formuláře
                     </Badge>
                   )}
-                </h5>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="billing_street"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Ulice a číslo</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Příkladná 123" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="billing_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fakturační email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="fakturace@firma.cz" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="billing_city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Město</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Praha" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="billing_zip"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>PSČ</FormLabel>
-                        <FormControl>
-                          <Input placeholder="110 00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="billing_country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fakturační země</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="billing_street"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ulice a číslo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Příkladná 123" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="billing_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fakturační email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="fakturace@firma.cz" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="billing_city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Město</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Praha" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="billing_zip"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PSČ</FormLabel>
+                      <FormControl>
+                        <Input placeholder="110 00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="billing_country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fakturační země</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
-            {/* Contact Section */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm border-b pb-2">Kontaktní osoba</h4>
+            {/* ── SECTION 3: Kontakt ── */}
+            <div className="rounded-lg border bg-card p-4 space-y-4">
+              <div className="flex items-center gap-3 pb-2 border-b">
+                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">3</div>
+                <div>
+                  <h4 className="font-semibold text-sm">Kontaktní osoba</h4>
+                  <p className="text-xs text-muted-foreground">Hlavní kontakt na klientovi</p>
+                </div>
+              </div>
               
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
@@ -1092,9 +1111,15 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               />
             </div>
 
-            {/* Engagement Section */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm border-b pb-2">Zakázka</h4>
+            {/* ── SECTION 4: Zakázka ── */}
+            <div className="rounded-lg border bg-card p-4 space-y-4">
+              <div className="flex items-center gap-3 pb-2 border-b">
+                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">4</div>
+                <div>
+                  <h4 className="font-semibold text-sm">Zakázka</h4>
+                  <p className="text-xs text-muted-foreground">Parametry spolupráce a služby</p>
+                </div>
+              </div>
               
               <FormField
                 control={form.control}
@@ -1337,18 +1362,22 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               </div>
             </div>
 
-            {/* Team Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-2">
-                <h4 className="font-medium text-sm flex items-center gap-2">
-                  Tým na zakázce
-                  {teamMembers.length > 0 && offerServices.length > 0 && (
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      Navrženo automaticky
-                    </Badge>
-                  )}
-                </h4>
+            {/* ── SECTION 5: Tým ── */}
+            <div className="rounded-lg border bg-card p-4 space-y-4">
+              <div className="flex items-center gap-3 pb-2 border-b">
+                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">5</div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-sm flex items-center gap-2">
+                    Tým na zakázce
+                    {teamMembers.length > 0 && offerServices.length > 0 && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        Navrženo automaticky
+                      </Badge>
+                    )}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">Přiřazení kolegů a jejich odměny</p>
+                </div>
                 <Button type="button" variant="outline" size="sm" onClick={addTeamMember}>
                   <Plus className="h-4 w-4 mr-1" />
                   Přidat člena
@@ -1447,7 +1476,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               const monthlyFee = form.watch('monthly_fee') || 0;
               const totalTeamCost = teamMembers.reduce((sum, m) => {
                 if (m.cost_model === 'fixed_monthly') return sum + (m.monthly_cost || 0);
-                if (m.cost_model === 'hourly') return sum + (m.hourly_cost || 0) * 160 / 12; // rough estimate
+                if (m.cost_model === 'hourly') return sum + (m.hourly_cost || 0) * 160 / 12;
                 return sum;
               }, 0);
               const margin = monthlyFee > 0 ? ((monthlyFee - totalTeamCost) / monthlyFee) * 100 : 0;
