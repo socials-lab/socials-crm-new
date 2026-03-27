@@ -102,6 +102,7 @@ export function LeadFlowStepper({
   onCreateOffer,
   onSendOffer,
   onSendOnboarding,
+  onSendContract,
   onMarkContractSent,
   onMarkContractSigned,
   onConvert,
