@@ -167,6 +167,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   const [cbCredits, setCbCredits] = useState(30);
   const [cbPricePerCredit, setCbPricePerCredit] = useState(400);
   const [isCreating, setIsCreating] = useState(false);
+  // Editable reward overrides per service: keyed by service_id
+  const [rewardOverrides, setRewardOverrides] = useState<Record<string, { role: string; reward: number; rewardType?: string }[]>>({});
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -259,7 +261,34 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     }
   }, [open, lead.potential_services, services, existingOffer]);
 
-  // Calculate totals + profitability (CB values from state)
+  // Initialize reward overrides from catalog when services change
+  useEffect(() => {
+    if (editableServices.length === 0) return;
+    setRewardOverrides(prev => {
+      const next = { ...prev };
+      editableServices.forEach(es => {
+        if (next[es.service_id]) return; // already has overrides
+        const catalogService = services.find(s => s.id === es.service_id);
+        if (!catalogService) return;
+        const enriched = enrichServiceWithDemoRewards(catalogService);
+        let roles = getRewardsFromServiceConfig(enriched.reward_config as any, es.selected_tier);
+        if (!roles || roles.length === 0) {
+          roles = getServiceRewardRecommendation(es.name, es.selected_tier);
+        }
+        if (roles && roles.length > 0) {
+          next[es.service_id] = roles.map(r => ({
+            role: r.role,
+            reward: r.reward,
+            rewardType: r.rewardType || (r as any).reward_type,
+          }));
+        } else {
+          next[es.service_id] = [];
+        }
+      });
+      return next;
+    });
+  }, [editableServices, services]);
+
   const CB_CREDITS = cbCredits;
   const CB_PRICE = cbPricePerCredit;
 
@@ -302,9 +331,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       ? discountedBase 
       : discountedBase + addonMonthly;
 
-    // Calculate internal costs from reward configs
+    // Calculate internal costs from editable reward overrides
     let totalInternalCost = 0;
-    const serviceCosts: { name: string; cost: number; revenue: number; roles: { role: string; reward: number }[] }[] = [];
+    const serviceCosts: { serviceId: string; name: string; cost: number; revenue: number; roles: { role: string; reward: number; rewardType?: string }[] }[] = [];
     
     editableServices.forEach(es => {
       const catalogService = services.find(s => s.id === es.service_id);
@@ -312,32 +341,20 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       
       const isCB = catalogService.code === 'CREATIVE_BOOST';
       const serviceRevenue = getEffectiveMonthlyPrice(es);
+      const overrides = rewardOverrides[es.service_id] || [];
       
-      const enriched = enrichServiceWithDemoRewards(catalogService);
-      let roles = getRewardsFromServiceConfig(
-        enriched.reward_config as any,
-        es.selected_tier
-      );
-      // Fallback to hardcoded rewards if DB config is missing
-      if (!roles || roles.length === 0) {
-        roles = getServiceRewardRecommendation(es.name, es.selected_tier);
-      }
-      
-      if (roles && roles.length > 0) {
+      if (overrides.length > 0) {
         let svcCost = 0;
-        const roleDetails: { role: string; reward: number }[] = [];
-        roles.forEach(r => {
-          // Handle both camelCase (rewardType) and snake_case (reward_type) from different sources
-          const rType = r.rewardType || (r as any).reward_type;
-          // For per_credit (Creative Boost), estimate 100% utilization of credits
-          const reward = rType === 'per_credit' ? r.reward * CB_CREDITS : r.reward;
-          svcCost += reward;
-          roleDetails.push({ role: r.role, reward });
+        const roleDetails: { role: string; reward: number; rewardType?: string }[] = [];
+        overrides.forEach(r => {
+          const effectiveReward = r.rewardType === 'per_credit' ? r.reward * CB_CREDITS : r.reward;
+          svcCost += effectiveReward;
+          roleDetails.push({ role: r.role, reward: effectiveReward, rewardType: r.rewardType });
         });
         totalInternalCost += svcCost;
-        serviceCosts.push({ name: isCB ? `${es.name} (${CB_CREDITS} kr. × ${CB_PRICE} Kč)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
+        serviceCosts.push({ serviceId: es.service_id, name: isCB ? `${es.name} (${CB_CREDITS} kr. × ${CB_PRICE} Kč)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
       } else {
-        serviceCosts.push({ name: isCB ? `${es.name} (${CB_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
+        serviceCosts.push({ serviceId: es.service_id, name: isCB ? `${es.name} (${CB_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
       }
     });
 
@@ -350,7 +367,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     const introMargin = introAdjustedRevenue > 0 ? ((introAdjustedRevenue - totalInternalCost) / introAdjustedRevenue) * 100 : 0;
 
     return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount, totalInternalCost, serviceCosts, margin, introMargin, introAdjustedRevenue };
-  }, [editableServices, monthlyDiscountPercent, discountScope, introDiscountPercent, introDiscountMonths, services, cbCredits, cbPricePerCredit]);
+  }, [editableServices, monthlyDiscountPercent, discountScope, introDiscountPercent, introDiscountMonths, services, cbCredits, cbPricePerCredit, rewardOverrides]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
     setEditableServices(prev => 
@@ -715,12 +732,85 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                 <span className="text-xs font-medium">{sc.name}</span>
                                 <span className="text-xs font-semibold tabular-nums">{sc.cost.toLocaleString('cs-CZ')} Kč</span>
                               </div>
-                              {sc.roles.map((r, ri) => (
-                                <div key={ri} className="flex items-center justify-between pl-3 py-0.5">
-                                  <span className="text-xs text-muted-foreground">{r.role}</span>
-                                  <span className="text-xs text-muted-foreground tabular-nums">{r.reward.toLocaleString('cs-CZ')} Kč/měs</span>
-                                </div>
-                              ))}
+                              {(rewardOverrides[sc.serviceId] || []).map((r, ri) => {
+                                const isPerCredit = r.rewardType === 'per_credit';
+                                return (
+                                  <div key={ri} className="flex items-center pl-3 py-0.5 gap-1.5">
+                                    <button
+                                      onClick={() => {
+                                        setRewardOverrides(prev => {
+                                          const roles = [...(prev[sc.serviceId] || [])];
+                                          roles.splice(ri, 1);
+                                          return { ...prev, [sc.serviceId]: roles };
+                                        });
+                                      }}
+                                      className="text-muted-foreground/40 hover:text-destructive shrink-0"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                    <Input
+                                      value={r.role}
+                                      onChange={(e) => {
+                                        setRewardOverrides(prev => {
+                                          const roles = [...(prev[sc.serviceId] || [])];
+                                          roles[ri] = { ...roles[ri], role: e.target.value };
+                                          return { ...prev, [sc.serviceId]: roles };
+                                        });
+                                      }}
+                                      className="h-6 text-xs flex-1 min-w-0 border-none shadow-none p-0 bg-transparent"
+                                    />
+                                    <div className="flex items-center gap-1 ml-auto">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={r.reward}
+                                        onChange={(e) => {
+                                          const val = Math.max(0, Number(e.target.value));
+                                          setRewardOverrides(prev => {
+                                            const roles = [...(prev[sc.serviceId] || [])];
+                                            roles[ri] = { ...roles[ri], reward: val };
+                                            return { ...prev, [sc.serviceId]: roles };
+                                          });
+                                        }}
+                                        className="w-20 h-6 text-xs text-right tabular-nums"
+                                      />
+                                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                        {isPerCredit ? 'Kč/kr.' : 'Kč/měs'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {(rewardOverrides[sc.serviceId] || []).length === 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-xs text-muted-foreground pl-3"
+                                  onClick={() => {
+                                    setRewardOverrides(prev => ({
+                                      ...prev,
+                                      [sc.serviceId]: [{ role: 'Specialista', reward: 0 }],
+                                    }));
+                                  }}
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Přidat odměnu
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 text-[10px] text-muted-foreground pl-3 mt-0.5"
+                                onClick={() => {
+                                  setRewardOverrides(prev => ({
+                                    ...prev,
+                                    [sc.serviceId]: [...(prev[sc.serviceId] || []), { role: 'Nová role', reward: 0 }],
+                                  }));
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Role
+                              </Button>
                             </div>
                           ))}
                         </div>
