@@ -58,6 +58,7 @@ import { AddLeadServiceDialog } from './AddLeadServiceDialog';
 import { RequestAccessDialog } from './RequestAccessDialog';
 import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
+import { SendContractDialog } from './SendContractDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
 import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
