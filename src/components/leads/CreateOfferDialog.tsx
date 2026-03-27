@@ -261,7 +261,34 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     }
   }, [open, lead.potential_services, services, existingOffer]);
 
-  // Calculate totals + profitability (CB values from state)
+  // Initialize reward overrides from catalog when services change
+  useEffect(() => {
+    if (editableServices.length === 0) return;
+    setRewardOverrides(prev => {
+      const next = { ...prev };
+      editableServices.forEach(es => {
+        if (next[es.service_id]) return; // already has overrides
+        const catalogService = services.find(s => s.id === es.service_id);
+        if (!catalogService) return;
+        const enriched = enrichServiceWithDemoRewards(catalogService);
+        let roles = getRewardsFromServiceConfig(enriched.reward_config as any, es.selected_tier);
+        if (!roles || roles.length === 0) {
+          roles = getServiceRewardRecommendation(es.name, es.selected_tier);
+        }
+        if (roles && roles.length > 0) {
+          next[es.service_id] = roles.map(r => ({
+            role: r.role,
+            reward: r.reward,
+            rewardType: r.rewardType || (r as any).reward_type,
+          }));
+        } else {
+          next[es.service_id] = [];
+        }
+      });
+      return next;
+    });
+  }, [editableServices, services]);
+
   const CB_CREDITS = cbCredits;
   const CB_PRICE = cbPricePerCredit;
 
