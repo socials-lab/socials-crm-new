@@ -268,7 +268,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     const getEffectiveMonthlyPrice = (s: PublicOfferService) => {
       const catalogService = services.find(cs => cs.id === s.service_id);
       if (catalogService?.code === 'CREATIVE_BOOST') {
-        return CB_DEFAULT_CREDITS * CB_PRICE_PER_CREDIT;
+        return CB_CREDITS * CB_PRICE;
       }
       return s.price;
     };
@@ -286,7 +286,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     const totalOriginal = editableServices.reduce((sum, s) => {
       const catalogService = services.find(cs => cs.id === s.service_id);
       if (catalogService?.code === 'CREATIVE_BOOST') {
-        return sum + CB_DEFAULT_CREDITS * CB_PRICE_PER_CREDIT;
+        return sum + CB_CREDITS * CB_PRICE;
       }
       return sum + (s.original_price || s.price);
     }, 0);
@@ -330,14 +330,14 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           // Handle both camelCase (rewardType) and snake_case (reward_type) from different sources
           const rType = r.rewardType || (r as any).reward_type;
           // For per_credit (Creative Boost), estimate 100% utilization of credits
-          const reward = rType === 'per_credit' ? r.reward * CB_DEFAULT_CREDITS : r.reward;
+          const reward = rType === 'per_credit' ? r.reward * CB_CREDITS : r.reward;
           svcCost += reward;
           roleDetails.push({ role: r.role, reward });
         });
         totalInternalCost += svcCost;
-        serviceCosts.push({ name: isCB ? `${es.name} (${CB_DEFAULT_CREDITS} kr. × ${CB_PRICE_PER_CREDIT} Kč)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
+        serviceCosts.push({ name: isCB ? `${es.name} (${CB_CREDITS} kr. × ${CB_PRICE} Kč)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
       } else {
-        serviceCosts.push({ name: isCB ? `${es.name} (${CB_DEFAULT_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
+        serviceCosts.push({ name: isCB ? `${es.name} (${CB_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
       }
     });
 
