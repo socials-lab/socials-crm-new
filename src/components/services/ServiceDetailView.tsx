@@ -114,12 +114,33 @@ export function ServiceDetailView({ data, onCreditPricingUpdate, serviceType, ti
             <p className="text-sm font-medium">{data.tagline}</p>
           )}
           {data.platforms && data.platforms.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               {data.platforms.map((platform) => (
-                <Badge key={platform} variant="outline" className="text-xs">
+                <Badge key={platform} variant="outline" className="text-xs flex items-center gap-1">
                   {platform}
+                  {onPlatformsUpdate && (
+                    <button
+                      onClick={() => onPlatformsUpdate(data.platforms!.filter(p => p !== platform))}
+                      className="ml-0.5 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
                 </Badge>
               ))}
+              {onPlatformsUpdate && (
+                <PlatformAddButton
+                  onAdd={(name) => onPlatformsUpdate([...(data.platforms || []), name])}
+                />
+              )}
+            </div>
+          )}
+          {(!data.platforms || data.platforms.length === 0) && onPlatformsUpdate && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground italic">Žádné platformy</span>
+              <PlatformAddButton
+                onAdd={(name) => onPlatformsUpdate([...(data.platforms || []), name])}
+              />
             </div>
           )}
           {data.target_audience && (
