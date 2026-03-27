@@ -46,7 +46,7 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
   SOCIALS_BOOST: {
     code: 'SOCIALS_BOOST',
     tagline: 'Komplexní správa Meta Ads pro e-shopy – více objednávek z Facebooku a Instagramu',
-    platforms: ['Meta Ads (Facebook, Instagram, Messenger)'],
+    platforms: ['Meta Ads'],
     targetAudience: 'E-shopy, které chtějí zvýšit tržby pomocí reklam na Facebooku a Instagramu',
     benefits: [
       'Více objednávek a vyšší tržby – reklamy nastavíme tak, aby přiváděly zákazníky, kteří nakupují.',
@@ -137,7 +137,7 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
   PPC_BOOST: {
     code: 'PPC_BOOST',
     tagline: 'Správa Google Ads a S-kliku – více zakázek a vyšší zisk',
-    platforms: ['Google Ads (Search, Shopping, Display, PMax, DSA)', 'Sklik (Seznam.cz)'],
+    platforms: ['Google Ads', 'Sklik'],
     targetAudience: 'E-shopy a firmy, které chtějí více zakázek z Google a Seznamu',
     benefits: [
       'Více zakázek a vyšší zisk – reklamy nastavíme tak, aby vám přinášely zákazníky, kteří nakupují.',
@@ -236,7 +236,7 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
   PERFORMANCE_BOOST: {
     code: 'PERFORMANCE_BOOST',
     tagline: 'Kombinace Meta Ads + Google Ads + Sklik pro maximální dosah',
-    platforms: ['Meta Ads (Facebook, Instagram)', 'Google Ads', 'Sklik (Seznam.cz)'],
+    platforms: ['Meta Ads', 'Google Ads', 'Sklik'],
     targetAudience: 'E-shopy a služby, které chtějí komplexní pokrytí všech klíčových reklamních platforem',
     benefits: [
       'Kompletní pokrytí všech hlavních reklamních platforem.',
@@ -284,7 +284,7 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
   CREATIVE_BOOST: {
     code: 'CREATIVE_BOOST',
     tagline: 'Příprava reklamních kreativ – systém, jak váš produkt prodat pomocí strategické výkonnostní kreativy',
-    platforms: ['Meta Ads kreativy', 'PPC bannery', 'Výkonnostní videa (Reels/Stories/Shorts)', 'AI foto'],
+    platforms: ['Meta Ads', 'Google Ads', 'TikTok Ads'],
     targetAudience: 'Klienti s výkonnostními kampaněmi, kteří potřebují pravidelnou tvorbu bannerů a videí',
     benefits: [
       'Hledáme správné úhly komunikace (problém → řešení, emoce, racionalita, USP).',
@@ -336,7 +336,7 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
   VIDEO_BOOST: {
     code: 'VIDEO_BOOST',
     tagline: 'Výkonnostní videa pro Meta Ads / TikTok Ads',
-    platforms: ['Meta Ads (Reels, Stories)', 'TikTok Ads (Shorts)'],
+    platforms: ['Meta Ads', 'TikTok Ads'],
     targetAudience: 'Firmy a e-shopy, které chtějí výkonnostní videa pro reklamy na sociálních sítích',
     benefits: [
       'Videa, která prodávají – zaměřujeme se na jasnou nabídku, benefit a silné CTA.',
@@ -614,7 +614,7 @@ export const SERVICE_DETAILS: Record<string, ServiceDetail> = {
   AI_SEO: {
     code: 'AI_SEO',
     tagline: 'Měsíční optimalizace webu pro AI vyhledávání – ChatGPT, Google AI Overview, Perplexity',
-    platforms: ['ChatGPT', 'Google AI Overview', 'Perplexity', 'AI vyhledávače'],
+    platforms: ['ChatGPT', 'Google AI Overview', 'Perplexity'],
     targetAudience: 'E-shopy a firmy, které chtějí být viditelné v AI vyhledávačích a připravit se na novou éru vyhledávání',
     benefits: [
       'Analýza, jak AI váš web chápe a využívá – identifikace slabých míst a příležitostí.',
