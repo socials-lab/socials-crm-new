@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
+  ShieldCheck,
+  ShieldX,
 } from 'lucide-react';
 import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
@@ -94,14 +96,28 @@ export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps
           <span className="truncate">{lead.contact_name}</span>
         </div>
 
-        {/* Middle row: Stage + Owner */}
+        {/* Middle row: Stage + Qualification + Owner */}
         <div className="flex items-center justify-between gap-2">
-          <Badge 
-            variant="outline" 
-            className={cn("text-xs", STAGE_COLORS[lead.stage])}
-          >
-            {STAGE_LABELS[lead.stage]}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge 
+              variant="outline" 
+              className={cn("text-xs", STAGE_COLORS[lead.stage])}
+            >
+              {STAGE_LABELS[lead.stage]}
+            </Badge>
+            {lead.qualification_status === 'qualified' && (
+              <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30 gap-1">
+                <ShieldCheck className="h-3 w-3" />
+                Kvalifikovaný
+              </Badge>
+            )}
+            {lead.qualification_status === 'bad_fit' && (
+              <Badge variant="outline" className="text-xs bg-red-500/10 text-red-700 border-red-500/30 gap-1">
+                <ShieldX className="h-3 w-3" />
+                Bad Fit
+              </Badge>
+            )}
+          </div>
           <span className="text-xs text-muted-foreground truncate">{ownerName}</span>
         </div>
 
