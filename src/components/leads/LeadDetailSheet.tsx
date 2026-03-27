@@ -313,7 +313,25 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         <SheetContent className="sm:max-w-lg overflow-y-auto">
           <SheetHeader className="space-y-1">
             <div className="flex items-center justify-between">
-              <SheetTitle className="text-xl">{lead.company_name}</SheetTitle>
+              <div className="flex items-center gap-2">
+                <SheetTitle className="text-xl">{lead.company_name}</SheetTitle>
+                {lead.qualification_status === 'qualified' && (
+                  <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30 gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Kvalifikovaný
+                  </Badge>
+                )}
+                {lead.qualification_status === 'bad_fit' && (
+                  <Badge variant="outline" className="text-xs bg-red-500/10 text-red-700 border-red-500/30">
+                    Bad Fit
+                  </Badge>
+                )}
+                {lead.qualification_status === 'pending' && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                    Čeká na posouzení
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setIsHistoryOpen(true)}>
                   <Clock className="h-4 w-4" />
