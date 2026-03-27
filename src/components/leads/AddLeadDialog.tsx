@@ -259,6 +259,8 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       contract_created_at: lead?.contract_created_at || null,
       contract_sent_at: lead?.contract_sent_at || null,
       contract_signed_at: lead?.contract_signed_at || null,
+      digisign_envelope_id: lead?.digisign_envelope_id || null,
+      digisign_document_url: lead?.digisign_document_url || null,
       offer_sent_at: lead?.offer_sent_at || null,
       offer_sent_by_id: lead?.offer_sent_by_id || null,
       qualification_status: lead?.qualification_status || 'pending',

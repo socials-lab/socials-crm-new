@@ -58,6 +58,7 @@ import { AddLeadServiceDialog } from './AddLeadServiceDialog';
 import { RequestAccessDialog } from './RequestAccessDialog';
 import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
+import { SendContractDialog } from './SendContractDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
 import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
@@ -126,6 +127,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
   const [sharedOfferUrl, setSharedOfferUrl] = useState<string | null>(null);
+  const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [showContractWarning, setShowContractWarning] = useState(false);
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
@@ -704,6 +706,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                     onCreateOffer={() => setIsCreateOfferOpen(true)}
                     onSendOffer={() => setIsSendOfferOpen(true)}
                     onSendOnboarding={() => setIsOnboardingFormOpen(true)}
+                    onSendContract={() => setIsContractDialogOpen(true)}
                     onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
                     onMarkContractSigned={() => { updateLead(lead.id, { contract_signed_at: new Date().toISOString() }); toast.success('✅ Smlouva podepsána!'); }}
                     onConvert={handleConvertClick}
@@ -907,6 +910,21 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         onConfirm={handleConfirmTransition}
         onSkip={handleSkipTransition}
         isConfirming={isConfirming}
+      />
+
+      <SendContractDialog
+        open={isContractDialogOpen}
+        onOpenChange={setIsContractDialogOpen}
+        lead={lead}
+        onSend={(data) => {
+          updateLead(lead.id, {
+            contract_url: data.contract_url,
+            digisign_envelope_id: data.digisign_envelope_id,
+            digisign_document_url: data.digisign_document_url,
+            contract_sent_at: data.contract_sent_at,
+          });
+          toast.success('📄 Smlouva připravena a odeslána via DigiSign');
+        }}
       />
     </>
   );

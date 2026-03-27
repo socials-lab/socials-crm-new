@@ -660,11 +660,13 @@ export interface Lead {
   onboarding_form_url: string | null;
   onboarding_form_completed_at: string | null;
   
-  // Contract tracking
+  // Contract tracking (DigiSign)
   contract_url: string | null;
   contract_created_at: string | null;
   contract_sent_at: string | null;
   contract_signed_at: string | null;
+  digisign_envelope_id: string | null;
+  digisign_document_url: string | null;
   
   // VAT payer reliability
   vat_payer_status: 'reliable' | 'unreliable' | 'not_found' | null;

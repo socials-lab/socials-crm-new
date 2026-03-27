@@ -121,6 +121,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
             contract_created_at: '2024-12-29T08:00:00Z',
             contract_sent_at: '2024-12-29T09:00:00Z',
             contract_signed_at: '2024-12-30T15:00:00Z',
+            digisign_envelope_id: 'env-abc123-def456',
+            digisign_document_url: 'https://app.digisign.org/document/signed-abc123',
             // Notes
             summary: 'Klient hledá komplexní správu sociálních sítí a kreativní výstupy. Měsíční budget na reklamu cca 50 000 CZK.',
             client_message: 'Máme zájem o dlouhodobou spolupráci na správě našich sociálních sítí. Rádi bychom začali od února.',
@@ -197,6 +199,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         contract_created_at: null,
         contract_sent_at: null,
         contract_signed_at: null,
+        digisign_envelope_id: null,
+        digisign_document_url: null,
         converted_to_client_id: null,
         converted_to_engagement_id: null,
         converted_at: null,
@@ -329,6 +333,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         contract_created_at: null,
         contract_sent_at: null,
         contract_signed_at: null,
+        digisign_envelope_id: null,
+        digisign_document_url: null,
         // Not converted
         converted_to_client_id: null,
         converted_to_engagement_id: null,
