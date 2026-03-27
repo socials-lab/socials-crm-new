@@ -894,12 +894,39 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         open={isCreateOfferOpen}
         onOpenChange={setIsCreateOfferOpen}
         lead={lead}
-        onSuccess={(token, offerUrl) => {
+        onSuccess={(token, offerUrl, syncData) => {
           setSharedOfferUrl(offerUrl);
-          updateLead(lead.id, {
+          const updateData: Partial<Lead> = {
             offer_url: offerUrl,
             offer_created_at: new Date().toISOString(),
-          });
+          };
+          // Sync services from offer back to lead's potential_services
+          if (syncData?.services) {
+            const syncedServices: LeadService[] = syncData.services.map(s => {
+              const catalogService = services.find(cs => cs.id === s.service_id);
+              const isCB = catalogService?.code === 'CREATIVE_BOOST';
+              return {
+                id: s.id,
+                service_id: s.service_id,
+                name: s.name,
+                selected_tier: s.selected_tier,
+                price: isCB && syncData.cbCredits && syncData.cbPricePerCredit
+                  ? syncData.cbCredits * syncData.cbPricePerCredit
+                  : s.price,
+                currency: s.currency,
+                billing_type: s.billing_type,
+                intro_discount_percent: syncData.introDiscountPercent && s.billing_type === 'monthly'
+                  ? syncData.introDiscountPercent : null,
+                intro_discount_months: syncData.introDiscountMonths && s.billing_type === 'monthly'
+                  ? syncData.introDiscountMonths : null,
+                creative_boost_credits: isCB ? syncData.cbCredits || null : null,
+                creative_boost_price_per_credit: isCB ? syncData.cbPricePerCredit || null : null,
+              };
+            });
+            updateData.potential_services = syncedServices;
+            updateData.estimated_price = syncedServices.reduce((sum, s) => sum + s.price, 0);
+          }
+          updateLead(lead.id, updateData);
         }}
       />
 
