@@ -656,8 +656,48 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                     </div>
                   )}
                   
+                  {/* Creative Boost credit config */}
+                  {editableServices.some(s => {
+                    const cat = services.find(cs => cs.id === s.service_id);
+                    return cat?.code === 'CREATIVE_BOOST';
+                  }) && (
+                    <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🎨</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Creative Boost — nastavení kreditů</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Počet kreditů / měsíc</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={cbCredits}
+                            onChange={(e) => setCbCredits(Math.max(1, Number(e.target.value)))}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Cena za kredit pro klienta</Label>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={cbPricePerCredit}
+                              onChange={(e) => setCbPricePerCredit(Math.max(0, Number(e.target.value)))}
+                              className="h-8 text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground shrink-0">Kč</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Celkem za Creative Boost: <span className="font-semibold">{(cbCredits * cbPricePerCredit).toLocaleString('cs-CZ')} Kč/měs</span>
+                      </div>
+                    </div>
+                  )}
 
-                  {/* Profitability / Internal costs */}
+
                   {editableServices.length > 0 && (
                     <div className="rounded-lg border bg-muted/30 space-y-0 overflow-hidden">
                       <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/50">
