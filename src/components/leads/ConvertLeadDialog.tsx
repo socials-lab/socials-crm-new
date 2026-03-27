@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
