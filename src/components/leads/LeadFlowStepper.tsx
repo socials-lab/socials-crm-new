@@ -231,24 +231,40 @@ export function LeadFlowStepper({
     },
     {
       id: 'contract',
-      label: 'Smlouva',
+      label: 'Smlouva (DigiSign)',
       isComplete: !!lead.contract_signed_at,
       completedAt: lead.contract_signed_at,
       detail: lead.contract_signed_at 
-        ? 'Podepsána' 
+        ? `Podepsána${lead.digisign_envelope_id ? ' via DigiSign' : ''}`
         : lead.contract_sent_at 
-          ? 'Odeslána, čeká na podpis'
+          ? `Odeslána${lead.digisign_envelope_id ? ' via DigiSign' : ''}, čeká na podpis`
           : lead.contract_url 
             ? 'Vytvořena'
             : undefined,
-      actions: lead.contract_url && !lead.contract_sent_at ? [{
+      actions: !lead.contract_url && !lead.digisign_envelope_id ? [{
+        label: 'Připravit smlouvu',
+        onClick: onSendContract,
+        variant: 'outline',
+      }] : lead.contract_url && !lead.contract_sent_at ? [{
         label: 'Označit jako odeslanou',
         onClick: onMarkContractSent,
         variant: 'outline',
+      }, {
+        label: 'Upravit',
+        onClick: onSendContract,
+        variant: 'ghost',
       }] : lead.contract_sent_at && !lead.contract_signed_at ? [{
         label: 'Potvrdit podpis',
         onClick: onMarkContractSigned,
         variant: 'default',
+      }, {
+        label: 'Detail',
+        onClick: onSendContract,
+        variant: 'ghost',
+      }] : lead.contract_signed_at ? [{
+        label: 'Detail smlouvy',
+        onClick: onSendContract,
+        variant: 'ghost',
       }] : undefined,
     },
     {
