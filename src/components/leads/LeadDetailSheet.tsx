@@ -1393,8 +1393,12 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
 
       <CreateOfferDialog
         open={isCreateOfferOpen}
-        onOpenChange={setIsCreateOfferOpen}
+        onOpenChange={(open) => {
+          setIsCreateOfferOpen(open);
+          if (!open) setEditingOffer(null);
+        }}
         lead={lead}
+        existingOffer={editingOffer || undefined}
         onSuccess={(token, offerUrl) => {
           setSharedOfferUrl(offerUrl);
           updateLead(lead.id, {
