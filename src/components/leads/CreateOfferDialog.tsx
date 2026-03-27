@@ -160,6 +160,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   );
   const [monthlyDiscountPercent, setMonthlyDiscountPercent] = useState(0);
   const [discountScope, setDiscountScope] = useState<'core_only' | 'all_services'>('core_only');
+  const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
+  const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
   const [isCreating, setIsCreating] = useState(false);
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -365,6 +367,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         total_price: totals.monthlyAfterDiscount + totals.oneOff,
         monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
         discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
+        intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+        intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
         currency: lead.currency,
         offer_type: lead.offer_type as 'retainer' | 'one_off',
         valid_until: validUntil || null,
@@ -413,6 +417,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     setEditableServices([]);
     setMonthlyDiscountPercent(0);
     setDiscountScope('core_only');
+    setIntroDiscountPercent(0);
+    setIntroDiscountMonths(3);
     onOpenChange(false);
   };
 
@@ -698,6 +704,50 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                                   -{totals.monthlyDiscountAmount.toLocaleString('cs-CZ')} Kč/měs
                                 </span>
                               </div>
+                            )}
+                          </div>
+
+                          {/* Intro Discount */}
+                          <Separator />
+                          <div className="px-3 py-2.5 space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Úvodní sleva (první měsíce):</span>
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={introDiscountPercent || ''}
+                                  onChange={(e) => setIntroDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                                  placeholder="0"
+                                  className="w-16 h-7 text-sm text-right"
+                                />
+                                <span className="text-muted-foreground">%</span>
+                              </div>
+                            </div>
+                            {introDiscountPercent > 0 && (
+                              <>
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Počet měsíců:</span>
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={24}
+                                      value={introDiscountMonths}
+                                      onChange={(e) => setIntroDiscountMonths(Math.min(24, Math.max(1, Number(e.target.value))))}
+                                      className="w-16 h-7 text-sm text-right"
+                                    />
+                                    <span className="text-muted-foreground">měs.</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-amber-600">
+                                  <span>Prvních {introDiscountMonths} měs. za:</span>
+                                  <span className="font-medium">
+                                    {Math.round(totals.monthlyAfterDiscount * (1 - introDiscountPercent / 100)).toLocaleString('cs-CZ')} Kč/měs
+                                  </span>
+                                </div>
+                              </>
                             )}
                           </div>
 
