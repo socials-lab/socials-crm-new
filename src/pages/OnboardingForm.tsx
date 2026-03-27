@@ -494,10 +494,23 @@ export default function OnboardingForm() {
     const daysInMonth = startDate ? getDaysInMonth(startDate) : 30;
     const remainingDays = isProrated ? daysInMonth - startDay + 1 : daysInMonth;
 
-    const proratedServices = monthlyServices.map(s => ({
-      ...s,
-      proratedPrice: isProrated ? Math.round((s.price / daysInMonth) * remainingDays) : s.price,
-    }));
+    const proratedServices = monthlyServices.map(s => {
+      const hasIntroDiscount = (s as any).intro_discount_percent && (s as any).intro_discount_percent > 0 && (s as any).intro_discount_months && (s as any).intro_discount_months > 0;
+      const introPercent = hasIntroDiscount ? (s as any).intro_discount_percent : 0;
+      const introMonths = hasIntroDiscount ? (s as any).intro_discount_months : 0;
+      const discountedPrice = hasIntroDiscount
+        ? Math.round(s.price * (1 - introPercent / 100))
+        : s.price;
+      const effectivePrice = hasIntroDiscount ? discountedPrice : s.price;
+      return {
+        ...s,
+        introDiscountPercent: introPercent,
+        introDiscountMonths: introMonths,
+        discountedPrice,
+        effectivePrice,
+        proratedPrice: isProrated ? Math.round((effectivePrice / daysInMonth) * remainingDays) : effectivePrice,
+      };
+    });
 
     const proratedMonthlyTotal = proratedServices.reduce((sum, s) => sum + s.proratedPrice, 0);
     const monthName = startDate ? format(startDate, 'LLLL', { locale: cs }) : '';
