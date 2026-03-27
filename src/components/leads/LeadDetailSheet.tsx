@@ -345,7 +345,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                 </Button>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">IČO: {lead.ico}</p>
+            
           </SheetHeader>
 
 
