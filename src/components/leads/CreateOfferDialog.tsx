@@ -175,9 +175,27 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   // Get current user's colleague record
   const currentColleague = colleagues.find(c => c.status === 'active');
 
-  // Initialize editable services when dialog opens
+  // Initialize from existing offer (edit mode) or lead services
   useEffect(() => {
     if (!open) return;
+    
+    // Edit mode: populate from existing offer
+    if (existingOffer) {
+      setAuditSummary(existingOffer.audit_summary || '');
+      setRecommendationIntro(existingOffer.recommendation_intro || '');
+      setCustomNote(existingOffer.custom_note || '');
+      setLoomUrl(existingOffer.loom_url || '');
+      setValidUntil(existingOffer.valid_until || '');
+      setEditableServices(existingOffer.services);
+      setMonthlyDiscountPercent(existingOffer.monthly_discount_percent || 0);
+      setDiscountScope(existingOffer.discount_scope || 'core_only');
+      setIntroDiscountPercent(existingOffer.intro_discount_percent || 0);
+      setIntroDiscountMonths(existingOffer.intro_discount_months || 3);
+      if (existingOffer.portfolio_links?.length > 0) {
+        setPortfolioLinks(existingOffer.portfolio_links);
+      }
+      return;
+    }
     
     // If lead already has potential_services, use those
     if (lead.potential_services && lead.potential_services.length > 0) {
@@ -237,7 +255,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       }
       setEditableServices(suggested);
     }
-  }, [open, lead.potential_services, services]);
+  }, [open, lead.potential_services, services, existingOffer]);
 
   // Calculate totals + profitability
   const CB_DEFAULT_CREDITS = 30;
