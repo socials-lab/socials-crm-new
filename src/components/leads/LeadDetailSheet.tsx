@@ -822,14 +822,36 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                         Vytvořeno: {new Date(lead.offer_created_at).toLocaleDateString('cs-CZ')}
                       </p>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => setIsCreateOfferOpen(true)}
-                    >
-                      Vytvořit novou nabídku
-                    </Button>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          const offers = getOffersByLeadId(lead.id);
+                          const latestOffer = offers.length > 0 ? offers[offers.length - 1] : null;
+                          if (latestOffer) {
+                            setEditingOffer(latestOffer);
+                            setIsCreateOfferOpen(true);
+                          } else {
+                            toast.error('Nabídka nebyla nalezena');
+                          }
+                        }}
+                      >
+                        Editovat nabídku
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setEditingOffer(null);
+                          setIsCreateOfferOpen(true);
+                        }}
+                      >
+                        Nová nabídka
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <>
