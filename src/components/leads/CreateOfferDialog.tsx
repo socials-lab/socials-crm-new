@@ -367,6 +367,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
         total_price: totals.monthlyAfterDiscount + totals.oneOff,
         monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
         discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
+        intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+        intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
         currency: lead.currency,
         offer_type: lead.offer_type as 'retainer' | 'one_off',
         valid_until: validUntil || null,
@@ -415,6 +417,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     setEditableServices([]);
     setMonthlyDiscountPercent(0);
     setDiscountScope('core_only');
+    setIntroDiscountPercent(0);
+    setIntroDiscountMonths(3);
     onOpenChange(false);
   };
 
