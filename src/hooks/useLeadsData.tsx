@@ -197,6 +197,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         contract_created_at: null,
         contract_sent_at: null,
         contract_signed_at: null,
+        digisign_envelope_id: null,
+        digisign_document_url: null,
         converted_to_client_id: null,
         converted_to_engagement_id: null,
         converted_at: null,
@@ -329,6 +331,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         contract_created_at: null,
         contract_sent_at: null,
         contract_signed_at: null,
+        digisign_envelope_id: null,
+        digisign_document_url: null,
         // Not converted
         converted_to_client_id: null,
         converted_to_engagement_id: null,
