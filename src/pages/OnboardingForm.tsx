@@ -1448,17 +1448,51 @@ export default function OnboardingForm() {
                                  </div>
                               ))}
                             </div>
-                            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 border-t">
-                              {isProrated ? (
-                                <div>
-                                  <p className="font-medium">První faktura (poměrná část)</p>
-                                  <p className="text-xs text-muted-foreground">Od dalšího měsíce: {formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs</p>
-                                </div>
-                              ) : (
-                                <p className="font-medium">Měsíční platba celkem</p>
-                              )}
-                              <p className="font-bold text-lg">{formatPrice(isProrated ? proratedMonthlyTotal : monthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
-                            </div>
+                            {(() => {
+                              const hasAnyDiscount = monthlyServices.some(s => s.introDiscountPercent > 0);
+                              const fullMonthlyTotal = monthlyServices.reduce((sum, s) => sum + s.price, 0);
+                              const discountedMonthlyTotal = monthlyServices.reduce((sum, s) => sum + s.effectivePrice, 0);
+                              return (
+                                <>
+                                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 border-t">
+                                    {isProrated ? (
+                                      <div>
+                                        <p className="font-medium">První faktura (poměrná část)</p>
+                                        {hasAnyDiscount ? (
+                                          <p className="text-xs text-muted-foreground">
+                                            Plná cena od {monthlyServices[0]?.introDiscountMonths + 1}. měsíce: {formatPrice(fullMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs
+                                          </p>
+                                        ) : (
+                                          <p className="text-xs text-muted-foreground">Od dalšího měsíce: {formatPrice(monthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs</p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <p className="font-medium">Měsíční platba celkem</p>
+                                        {hasAnyDiscount && (
+                                          <p className="text-xs text-muted-foreground">
+                                            Po uplynutí slevy: {formatPrice(fullMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}/měs
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                    <div className="text-right">
+                                      {hasAnyDiscount && !isProrated && (
+                                        <p className="text-sm text-muted-foreground line-through">{formatPrice(fullMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                                      )}
+                                      <p className="font-bold text-lg">{formatPrice(isProrated ? proratedMonthlyTotal : discountedMonthlyTotal, monthlyServices[0]?.currency || 'Kč')}</p>
+                                    </div>
+                                  </div>
+                                  {hasAnyDiscount && (
+                                    <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/20 border-t border-amber-200 dark:border-amber-800">
+                                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                                        🎁 Úvodní sleva je platná na prvních {monthlyServices.find(s => s.introDiscountMonths > 0)?.introDiscountMonths} měsíců spolupráce. Po uplynutí se fakturuje plná cena.
+                                      </p>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                           {isProrated && (
                             <p className="text-xs text-muted-foreground mt-2 italic">
