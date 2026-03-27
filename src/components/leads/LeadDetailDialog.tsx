@@ -706,6 +706,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                     onCreateOffer={() => setIsCreateOfferOpen(true)}
                     onSendOffer={() => setIsSendOfferOpen(true)}
                     onSendOnboarding={() => setIsOnboardingFormOpen(true)}
+                    onSendContract={() => setIsContractDialogOpen(true)}
                     onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
                     onMarkContractSigned={() => { updateLead(lead.id, { contract_signed_at: new Date().toISOString() }); toast.success('✅ Smlouva podepsána!'); }}
                     onConvert={handleConvertClick}
