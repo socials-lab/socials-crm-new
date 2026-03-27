@@ -12,12 +12,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Copy, ExternalLink, Check, TrendingUp, Plus, X } from 'lucide-react';
+import { Loader2, Copy, ExternalLink, Check, TrendingUp, Plus, X, History, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
 import type { Lead, Service } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
-import { addPublicOffer } from '@/data/publicOffersMockData';
+import { addPublicOffer, updatePublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { getServiceDetail } from '@/constants/serviceDetails';
@@ -130,6 +130,7 @@ interface CreateOfferDialogProps {
   onOpenChange: (open: boolean) => void;
   lead: Lead;
   onSuccess: (token: string, offerUrl: string) => void;
+  existingOffer?: PublicOffer;
 }
 
 function generateToken(): string {
@@ -148,8 +149,9 @@ const DEFAULT_PORTFOLIO_OPTIONS: Omit<PortfolioLink, 'id'>[] = [
   { title: 'Reference od klientů', url: 'https://socials.cz/reference', type: 'reference' },
 ];
 
-export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: CreateOfferDialogProps) {
+export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existingOffer }: CreateOfferDialogProps) {
   const { services, colleagues } = useCRMData();
+  const isEditMode = !!existingOffer;
   const [auditSummary, setAuditSummary] = useState('');
   const [recommendationIntro, setRecommendationIntro] = useState('');
   const [customNote, setCustomNote] = useState('');
@@ -165,6 +167,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   const [isCreating, setIsCreating] = useState(false);
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   
   // Editable services state
   const [editableServices, setEditableServices] = useState<PublicOfferService[]>([]);
@@ -172,9 +175,27 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   // Get current user's colleague record
   const currentColleague = colleagues.find(c => c.status === 'active');
 
-  // Initialize editable services when dialog opens
+  // Initialize from existing offer (edit mode) or lead services
   useEffect(() => {
     if (!open) return;
+    
+    // Edit mode: populate from existing offer
+    if (existingOffer) {
+      setAuditSummary(existingOffer.audit_summary || '');
+      setRecommendationIntro(existingOffer.recommendation_intro || '');
+      setCustomNote(existingOffer.custom_note || '');
+      setLoomUrl(existingOffer.loom_url || '');
+      setValidUntil(existingOffer.valid_until || '');
+      setEditableServices(existingOffer.services);
+      setMonthlyDiscountPercent(existingOffer.monthly_discount_percent || 0);
+      setDiscountScope(existingOffer.discount_scope || 'core_only');
+      setIntroDiscountPercent(existingOffer.intro_discount_percent || 0);
+      setIntroDiscountMonths(existingOffer.intro_discount_months || 3);
+      if (existingOffer.portfolio_links?.length > 0) {
+        setPortfolioLinks(existingOffer.portfolio_links);
+      }
+      return;
+    }
     
     // If lead already has potential_services, use those
     if (lead.potential_services && lead.potential_services.length > 0) {
@@ -234,7 +255,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
       }
       setEditableServices(suggested);
     }
-  }, [open, lead.potential_services, services]);
+  }, [open, lead.potential_services, services, existingOffer]);
 
   // Calculate totals + profitability
   const CB_DEFAULT_CREDITS = 30;
@@ -347,56 +368,86 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     setIsCreating(true);
 
     try {
-      const token = generateToken();
-      const offerUrl = `${window.location.origin}/offer/${token}`;
+      const leadOwner = colleagues.find(c => c.id === lead.owner_id);
       const now = new Date().toISOString();
 
-      // Find lead owner for contact info
-      const leadOwner = colleagues.find(c => c.id === lead.owner_id);
+      if (isEditMode && existingOffer) {
+        // Edit mode: update existing offer with history
+        const changedParts: string[] = [];
+        if (existingOffer.services.length !== editableServices.length) changedParts.push('služby');
+        if (existingOffer.total_price !== totals.monthlyAfterDiscount + totals.oneOff) changedParts.push('ceny');
+        if (existingOffer.monthly_discount_percent !== monthlyDiscountPercent) changedParts.push('sleva');
+        if (existingOffer.audit_summary !== (auditSummary.trim() || null)) changedParts.push('audit');
+        if (changedParts.length === 0) changedParts.push('drobné úpravy');
+        
+        updatePublicOffer(existingOffer.token, {
+          audit_summary: auditSummary.trim() || null,
+          recommendation_intro: recommendationIntro.trim() || null,
+          custom_note: customNote.trim() || null,
+          loom_url: loomUrl.trim() || null,
+          services: editableServices,
+          portfolio_links: portfolioLinks,
+          total_price: totals.monthlyAfterDiscount + totals.oneOff,
+          monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
+          discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
+          intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+          intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+          valid_until: validUntil || null,
+          owner_name: leadOwner?.full_name || undefined,
+          owner_email: leadOwner?.email || undefined,
+          owner_phone: leadOwner?.phone || undefined,
+          created_by: currentColleague?.id || null,
+        }, `Změna: ${changedParts.join(', ')}`);
 
-      // Create offer object for mock store
-      const newOffer: PublicOffer = {
-        id: crypto.randomUUID(),
-        lead_id: lead.id,
-        token,
-        company_name: lead.company_name,
-        website: lead.website || null,
-        contact_name: lead.contact_name,
-        audit_summary: auditSummary.trim() || null,
-        recommendation_intro: recommendationIntro.trim() || null,
-        custom_note: customNote.trim() || null,
-        loom_url: loomUrl.trim() || null,
-        services: editableServices,
-        portfolio_links: portfolioLinks,
-        total_price: totals.monthlyAfterDiscount + totals.oneOff,
-        monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
-        discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
-        intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
-        intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
-        currency: lead.currency,
-        offer_type: lead.offer_type as 'retainer' | 'one_off',
-        valid_until: validUntil || null,
-        is_active: true,
-        viewed_at: null,
-        view_count: 0,
-        created_by: currentColleague?.id || null,
-        created_at: now,
-        updated_at: now,
-        // Contact person info (lead owner)
-        owner_name: leadOwner?.full_name || undefined,
-        owner_email: leadOwner?.email || undefined,
-        owner_phone: leadOwner?.phone || undefined,
-      };
+        const offerUrl = `${window.location.origin}/offer/${existingOffer.token}`;
+        setCreatedOfferUrl(offerUrl);
+        toast.success('Nabídka byla aktualizována!');
+        onSuccess(existingOffer.token, offerUrl);
+      } else {
+        // Create mode
+        const token = generateToken();
+        const offerUrl = `${window.location.origin}/offer/${token}`;
 
-      // Add to mock store
-      addPublicOffer(newOffer);
+        const newOffer: PublicOffer = {
+          id: crypto.randomUUID(),
+          lead_id: lead.id,
+          token,
+          company_name: lead.company_name,
+          website: lead.website || null,
+          contact_name: lead.contact_name,
+          audit_summary: auditSummary.trim() || null,
+          recommendation_intro: recommendationIntro.trim() || null,
+          custom_note: customNote.trim() || null,
+          loom_url: loomUrl.trim() || null,
+          services: editableServices,
+          portfolio_links: portfolioLinks,
+          total_price: totals.monthlyAfterDiscount + totals.oneOff,
+          monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
+          discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
+          intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+          intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+          currency: lead.currency,
+          offer_type: lead.offer_type as 'retainer' | 'one_off',
+          valid_until: validUntil || null,
+          is_active: true,
+          viewed_at: null,
+          view_count: 0,
+          created_by: currentColleague?.id || null,
+          created_at: now,
+          updated_at: now,
+          owner_name: leadOwner?.full_name || undefined,
+          owner_email: leadOwner?.email || undefined,
+          owner_phone: leadOwner?.phone || undefined,
+        };
 
-      setCreatedOfferUrl(offerUrl);
-      toast.success('Nabídka byla vytvořena!');
-      onSuccess(token, offerUrl);
+        addPublicOffer(newOffer);
+        setCreatedOfferUrl(offerUrl);
+        toast.success('Nabídka byla vytvořena!');
+        onSuccess(token, offerUrl);
+      }
     } catch (err) {
-      console.error('Error creating offer:', err);
-      toast.error('Chyba při vytváření nabídky');
+      console.error('Error saving offer:', err);
+      toast.error('Chyba při ukládání nabídky');
     } finally {
       setIsCreating(false);
     }
@@ -438,16 +489,18 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
       <DialogContent className="sm:max-w-[700px] max-h-[95vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>
-            {createdOfferUrl ? '✅ Nabídka vytvořena' : 'Vytvořit sdílenou nabídku'}
+            {createdOfferUrl 
+              ? (isEditMode ? '✅ Nabídka aktualizována' : '✅ Nabídka vytvořena')
+              : (isEditMode ? 'Upravit nabídku' : 'Vytvořit sdílenou nabídku')}
           </DialogTitle>
         </DialogHeader>
 
         {createdOfferUrl ? (
           // Success state
           <div className="space-y-4 px-6 pb-6">
-            <div className="p-4 rounded-lg border bg-green-500/10 border-green-500/30">
-              <p className="text-sm text-green-700 font-medium mb-3">
-                Nabídka byla úspěšně vytvořena! Zkopírujte odkaz a odešlete klientovi:
+            <div className="p-4 rounded-lg border bg-emerald-500/10 border-emerald-500/30">
+              <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium mb-3">
+                {isEditMode ? 'Nabídka byla aktualizována! Klient uvidí novou verzi na stejném odkazu:' : 'Nabídka byla úspěšně vytvořena! Zkopírujte odkaz a odešlete klientovi:'}
               </p>
               <div className="flex items-center gap-2">
                 <Input
@@ -788,6 +841,41 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                   )}
                 </div>
 
+                {/* History section (edit mode only) */}
+                {isEditMode && existingOffer?.history && existingOffer.history.length > 0 && (
+                  <div className="rounded-lg border bg-muted/30 overflow-hidden">
+                    <button
+                      onClick={() => setShowHistory(!showHistory)}
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <History className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Historie změn ({existingOffer.history.length})
+                        </span>
+                      </div>
+                      {showHistory ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                    </button>
+                    {showHistory && (
+                      <div className="border-t divide-y divide-border/50 max-h-[200px] overflow-y-auto">
+                        {[...existingOffer.history].reverse().map((entry, idx) => (
+                          <div key={idx} className="px-3 py-2 space-y-0.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium">{entry.summary}</span>
+                              <span className="text-[10px] text-muted-foreground tabular-nums">
+                                {new Date(entry.timestamp).toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              Celková cena: {entry.snapshot.total_price?.toLocaleString('cs-CZ')} Kč · {entry.snapshot.services?.length || 0} služeb
+                              {entry.snapshot.monthly_discount_percent ? ` · Sleva ${entry.snapshot.monthly_discount_percent}%` : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
               </div>
             </ScrollArea>
@@ -803,10 +891,10 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                 {isCreating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Vytvářím...
+                    {isEditMode ? 'Ukládám...' : 'Vytvářím...'}
                   </>
                 ) : (
-                  'Vytvořit nabídku'
+                  isEditMode ? 'Uložit změny' : 'Vytvořit nabídku'
                 )}
               </Button>
             </DialogFooter>

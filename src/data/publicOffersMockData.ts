@@ -615,3 +615,35 @@ export function incrementOfferView(token: string): void {
 export function getAllOffers(): PublicOffer[] {
   return getStoredOffers();
 }
+
+export function getOffersByLeadId(leadId: string): PublicOffer[] {
+  return getStoredOffers().filter(o => o.lead_id === leadId);
+}
+
+export function updatePublicOffer(token: string, updatedOffer: Partial<PublicOffer>, changeSummary?: string): void {
+  const offers = getStoredOffers();
+  const index = offers.findIndex(o => o.token === token);
+  if (index === -1) return;
+
+  const currentOffer = offers[index];
+  
+  // Save current state as history entry
+  const { history, ...snapshot } = currentOffer;
+  const historyEntry = {
+    timestamp: new Date().toISOString(),
+    changed_by: updatedOffer.created_by || currentOffer.created_by || null,
+    summary: changeSummary || 'Úprava nabídky',
+    snapshot: snapshot as any,
+  };
+
+  const existingHistory = currentOffer.history || [];
+
+  offers[index] = {
+    ...currentOffer,
+    ...updatedOffer,
+    updated_at: new Date().toISOString(),
+    history: [...existingHistory, historyEntry],
+  };
+  
+  saveOffers(offers);
+}

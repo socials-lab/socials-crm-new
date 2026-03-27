@@ -39,6 +39,13 @@ export interface ServiceDetailSection {
 }
 
 // Public offer for clients
+export interface PublicOfferHistoryEntry {
+  timestamp: string;
+  changed_by: string | null;
+  summary: string;  // e.g. "Změna cen, přidána služba Creative Boost"
+  snapshot: Omit<PublicOffer, 'history'>;  // Full snapshot of the offer at that point
+}
+
 export interface PublicOffer {
   id: string;
   lead_id: string;
@@ -47,7 +54,7 @@ export interface PublicOffer {
   website: string | null;
   contact_name: string;
   audit_summary: string | null;
-  recommendation_intro: string | null;  // Why we recommend these services
+  recommendation_intro: string | null;
   custom_note: string | null;
   loom_url: string | null;
   services: PublicOfferService[];
@@ -68,9 +75,11 @@ export interface PublicOffer {
   intro_discount_percent?: number;
   intro_discount_months?: number;
   // Contact person info (lead owner)
-  owner_name?: string;       // Name of assigned colleague
-  owner_email?: string;      // Email of assigned colleague
-  owner_phone?: string;      // Phone (optional)
+  owner_name?: string;
+  owner_email?: string;
+  owner_phone?: string;
+  // Edit history
+  history?: PublicOfferHistoryEntry[];
 }
 
 // Form data for creating offer
