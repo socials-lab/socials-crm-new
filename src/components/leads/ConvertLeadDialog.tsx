@@ -1115,6 +1115,69 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   </FormItem>
                 )}
               />
+
+              {/* Additional contacts */}
+              {additionalContacts.length > 0 && (
+                <div className="space-y-3 pt-3 border-t">
+                  <p className="text-xs font-medium text-muted-foreground">Další kontaktní osoby</p>
+                  {additionalContacts.map((ac, idx) => (
+                    <div key={idx} className="rounded-md border p-3 space-y-3 relative">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6"
+                        onClick={() => setAdditionalContacts(prev => prev.filter((_, i) => i !== idx))}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                      <div className="grid gap-3 sm:grid-cols-2 pr-6">
+                        <Input
+                          placeholder="Jméno *"
+                          value={ac.name}
+                          onChange={e => setAdditionalContacts(prev => prev.map((c, i) => i === idx ? { ...c, name: e.target.value } : c))}
+                        />
+                        <Input
+                          placeholder="Pozice"
+                          value={ac.position}
+                          onChange={e => setAdditionalContacts(prev => prev.map((c, i) => i === idx ? { ...c, position: e.target.value } : c))}
+                        />
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Input
+                          placeholder="Email"
+                          type="email"
+                          value={ac.email}
+                          onChange={e => setAdditionalContacts(prev => prev.map((c, i) => i === idx ? { ...c, email: e.target.value } : c))}
+                        />
+                        <Input
+                          placeholder="Telefon"
+                          value={ac.phone}
+                          onChange={e => setAdditionalContacts(prev => prev.map((c, i) => i === idx ? { ...c, phone: e.target.value } : c))}
+                        />
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          checked={ac.is_decision_maker}
+                          onCheckedChange={(v) => setAdditionalContacts(prev => prev.map((c, i) => i === idx ? { ...c, is_decision_maker: !!v } : c))}
+                        />
+                        <span className="text-xs">Rozhodovatel</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setAdditionalContacts(prev => [...prev, { name: '', position: '', email: '', phone: '', is_decision_maker: false }])}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Přidat další kontakt
+              </Button>
             </div>
 
             {/* ── SECTION 4: Zakázka ── */}
