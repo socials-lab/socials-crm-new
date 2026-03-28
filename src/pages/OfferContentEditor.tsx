@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Save, Plus, Trash2, GripVertical, ExternalLink } from 'lucide-react';
+import { Save, Plus, Trash2, GripVertical, ExternalLink, Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { useOfferContent, DEFAULT_OFFER_CONTENT, type OfferContentBlock } from '@/hooks/useOfferContent';
 
 // Generic section editor for title + subtitle
@@ -315,6 +316,104 @@ function BadgesEditor({ block, onSave }: { block: OfferContentBlock; onSave: (up
   );
 }
 
+// Image grid editor for logos / certifications
+function ImageGridEditor({ block, onSave, folder }: { block: OfferContentBlock; onSave: (updates: any) => Promise<boolean>; folder: string }) {
+  const [title, setTitle] = useState(block.title || '');
+  const [subtitle, setSubtitle] = useState(block.subtitle || '');
+  const [images, setImages] = useState<string[]>(block.content?.images || []);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadImage = async (file: File) => {
+    const ext = file.name.split('.').pop();
+    const fileName = `${folder}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from('offer-assets')
+      .upload(fileName, file, { cacheControl: '31536000', upsert: false });
+
+    if (error) {
+      toast.error('Chyba při nahrávání: ' + error.message);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('offer-assets').getPublicUrl(fileName);
+    return urlData.publicUrl;
+  };
+
+  const handleFiles = async (files: FileList) => {
+    setUploading(true);
+    const newUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const url = await uploadImage(file);
+      if (url) newUrls.push(url);
+    }
+    if (newUrls.length > 0) {
+      setImages(prev => [...prev, ...newUrls]);
+    }
+    setUploading(false);
+  };
+
+  const removeImage = (idx: number) => {
+    setImages(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave({ title, subtitle, content: { ...block.content, images } });
+    setSaving(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <SectionHeaderEditor title={title} subtitle={subtitle} onChange={(f, v) => f === 'title' ? setTitle(v) : setSubtitle(v)} />
+      
+      <Separator />
+
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <Label className="font-semibold">Obrázky ({images.length})</Label>
+          <div className="flex gap-2">
+            {uploading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <Upload className="h-3 w-3 mr-1" />Nahrát
+            </Button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={e => e.target.files && handleFiles(e.target.files)}
+          />
+        </div>
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+          {images.map((url, i) => (
+            <div key={i} className="relative group aspect-square rounded-lg border border-border/50 bg-muted/20 flex items-center justify-center overflow-hidden">
+              <img src={url} alt={`Image ${i + 1}`} className="max-h-full max-w-full object-contain p-1" />
+              <button
+                onClick={() => removeImage(i)}
+                className="absolute top-0.5 right-0.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+        {images.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-6">
+            Zatím žádné obrázky. Klikněte na „Nahrát" pro přidání.
+          </p>
+        )}
+      </div>
+
+      <Button onClick={handleSave} disabled={saving} className="w-full">
+        <Save className="h-4 w-4 mr-2" />{saving ? 'Ukládám...' : 'Uložit změny'}
+      </Button>
+    </div>
+  );
+}
+
 const SECTION_TABS = [
   { key: 'credibility_badges', label: 'Odznaky', emoji: '🏅' },
   { key: 'why_us', label: 'Proč my', emoji: '💪' },
@@ -448,14 +547,14 @@ export default function OfferContentEditor({ embedded }: { embedded?: boolean })
               <TabsContent value="clients_logos" className="mt-0">
                 {(() => {
                   const block = getBlock('clients_logos');
-                  return block ? <SimpleBlockEditor block={block} onSave={u => handleSave('clients_logos', u)} /> : null;
+                  return block ? <ImageGridEditor block={block} onSave={u => handleSave('clients_logos', u)} folder="clients" /> : null;
                 })()}
               </TabsContent>
 
               <TabsContent value="certifications" className="mt-0">
                 {(() => {
                   const block = getBlock('certifications');
-                  return block ? <SimpleBlockEditor block={block} onSave={u => handleSave('certifications', u)} /> : null;
+                  return block ? <ImageGridEditor block={block} onSave={u => handleSave('certifications', u)} folder="certifications" /> : null;
                 })()}
               </TabsContent>
 
