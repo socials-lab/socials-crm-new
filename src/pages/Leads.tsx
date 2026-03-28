@@ -50,7 +50,7 @@ type ViewMode = 'kanban' | 'table';
 const STAGE_ORDER: LeadStage[] = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'won', 'lost', 'postponed'];
 
 export default function Leads() {
-  const { leads, updateLeadStage, addNote } = useLeadsData();
+  const { leads, updateLeadStage, addNote, deleteLead } = useLeadsData();
   const { colleagues } = useCRMData();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -295,6 +295,11 @@ export default function Leads() {
         lead={selectedLead}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
+        onDelete={(leadId) => {
+          deleteLead(leadId);
+          setIsDetailOpen(false);
+          setSelectedLeadId(null);
+        }}
       />
 
       {/* Add/Edit Dialog */}

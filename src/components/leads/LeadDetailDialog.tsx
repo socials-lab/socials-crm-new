@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Loader2, ShieldCheck, ShieldAlert, ShieldX, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, ShieldCheck, ShieldAlert, ShieldX, Sparkles, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 import { 
   Building2, 
   Globe, 
@@ -78,6 +78,7 @@ interface LeadDetailDialogProps {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDelete?: (leadId: string) => void;
 }
 
 const STAGE_LABELS: Record<LeadStage, string> = {
@@ -116,7 +117,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
   other: 'Jiný',
 };
 
-export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDetailDialogProps) {
+export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete }: LeadDetailDialogProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services, engagements, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
@@ -134,6 +135,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   // Inline note form state
   const [noteText, setNoteText] = useState('');
   const [noteType, setNoteType] = useState<LeadNoteType>('general');
@@ -281,6 +283,30 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
 
   return (
     <>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete smazat tento lead? Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                onDelete?.(lead.id);
+                onOpenChange(false);
+              }}
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Onboarding Form Warning Dialog */}
       <AlertDialog open={showOnboardingWarning} onOpenChange={setShowOnboardingWarning}>
         <AlertDialogContent>
@@ -403,6 +429,11 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                 {owner && <span>• {owner.full_name}</span>}
               </div>
             </div>
+            {onDelete && (
+              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive shrink-0" onClick={() => setShowDeleteConfirm(true)} title="Smazat lead">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
           {/* Single scrollable content area */}

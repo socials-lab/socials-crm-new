@@ -80,6 +80,7 @@ interface LeadDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit: (lead: Lead) => void;
+  onDelete?: (leadId: string) => void;
 }
 
 const STAGE_LABELS: Record<LeadStage, string> = {
@@ -105,7 +106,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
   other: 'Jiný',
 };
 
-export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
+export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, onDelete }: LeadDetailSheetProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
@@ -126,6 +127,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   const [showOnboardingData, setShowOnboardingData] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isProcessingWarning = useRef(false);
 
   // Use fresh lead data from context to reflect updates immediately
@@ -265,6 +267,30 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
 
   return (
     <>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete smazat tento lead? Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                onDelete?.(lead.id);
+                onOpenChange(false);
+              }}
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Onboarding Form Warning Dialog */}
       <AlertDialog open={showOnboardingWarning} onOpenChange={setShowOnboardingWarning}>
         <AlertDialogContent>
@@ -352,6 +378,11 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                   <Pencil className="h-4 w-4 mr-1" />
                   Upravit
                 </Button>
+                {onDelete && (
+                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
 
