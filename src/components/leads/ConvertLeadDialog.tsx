@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX, Check, X } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX, Check, X, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -1887,18 +1887,32 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
 
             <div className="pt-4 border-t space-y-3">
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-                <Sparkles className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                <span>
-                  Při převodu se automaticky vytvoří <strong>Freelo projekt</strong> a <strong>Slack kanál</strong>. Přiřazení kolegové budou pozváni do obou platforem.
-                </span>
-              </div>
+              {isConverting ? (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span className="text-sm font-medium text-foreground">{conversionStep}</span>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                  <Sparkles className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                  <span>
+                    Při převodu se automaticky vytvoří <strong>Freelo projekt</strong> a <strong>Slack kanál</strong>. Přiřazení kolegové budou pozváni do obou platforem.
+                  </span>
+                </div>
+              )}
               <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isConverting}>
                   Zrušit
                 </Button>
-                <Button type="submit">
-                  Převést na zakázku
+                <Button type="submit" disabled={isConverting}>
+                  {isConverting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Převádím...
+                    </>
+                  ) : (
+                    'Převést na zakázku'
+                  )}
                 </Button>
               </div>
             </div>
