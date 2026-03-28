@@ -403,30 +403,56 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
             </div>
 
             <div className="rounded-lg border p-4 space-y-3">
-              <div className="rounded-md bg-muted/50 p-3 space-y-1.5">
-                <p className="text-xs font-medium">Automatizace provede:</p>
-                <ol className="text-[11px] text-muted-foreground space-y-0.5 list-decimal list-inside">
-                  <li>Stáhne Google Doc jako PDF</li>
-                  <li>Vytvoří draft envelope v DigiSign s přiloženým PDF</li>
-                  <li>Nastaví podepisující osobu: <span className="font-medium text-foreground">{lead.contact_name}</span></li>
-                </ol>
-                <div className="mt-2 rounded border border-amber-300/40 bg-amber-500/5 px-2.5 py-1.5">
-                  <p className="text-[11px] font-medium" style={{ color: 'hsl(var(--warning, 45 93% 47%))' }}>
-                    ⚠️ Smlouva se odešle pouze jako <strong>draft</strong> — podpisové archy doplníte a odešlete ručně v DigiSign.
-                  </p>
+              {draftCreated ? (
+                <div className="space-y-3">
+                  <div className="rounded-md border border-emerald-300/40 bg-emerald-500/5 p-3 space-y-2">
+                    <p className="text-sm font-medium flex items-center gap-2" style={{ color: 'hsl(var(--success, 142 76% 36%))' }}>
+                      <Check className="h-4 w-4" />
+                      Draft smlouvy vytvořen v DigiSign
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Doplňte podpisové archy a odešlete smlouvu k podpisu přímo v DigiSign.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="gap-2 w-full"
+                    onClick={() => {
+                      // In production, this would be the real DigiSign envelope URL
+                      const digisignUrl = `https://app.digisign.org/envelope/${draftEnvelopeId}`;
+                      window.open(digisignUrl, '_blank');
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Otevřít draft v DigiSign
+                  </Button>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="rounded-md bg-muted/50 p-3 space-y-1.5">
+                    <p className="text-xs font-medium">Automatizace provede:</p>
+                    <ol className="text-[11px] text-muted-foreground space-y-0.5 list-decimal list-inside">
+                      <li>Stáhne Google Doc jako PDF</li>
+                      <li>Vytvoří draft envelope v DigiSign s přiloženým PDF</li>
+                      <li>Nastaví podepisující osobu: <span className="font-medium text-foreground">{lead.contact_name}</span></li>
+                    </ol>
+                    <div className="mt-2 rounded border border-amber-300/40 bg-amber-500/5 px-2.5 py-1.5">
+                      <p className="text-[11px] font-medium" style={{ color: 'hsl(var(--warning, 45 93% 47%))' }}>
+                        ⚠️ Smlouva se odešle pouze jako <strong>draft</strong> — podpisové archy doplníte a odešlete ručně v DigiSign.
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  className="gap-2"
-                  onClick={handleSendDraftToDigisign}
-                  disabled={!hasGoogleDocsUrl || leadServices.length === 0 || isSendingToDraft}
-                >
-                  <Send className="h-4 w-4" />
-                  {isSendingToDraft ? 'Vytvářím draft…' : 'Vytvořit draft v DigiSign'}
-                </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleSendDraftToDigisign}
+                      disabled={!hasGoogleDocsUrl || leadServices.length === 0 || isSendingToDraft}
+                    >
+                      <Send className="h-4 w-4" />
+                      {isSendingToDraft ? 'Vytvářím draft…' : 'Vytvořit draft v DigiSign'}
+                    </Button>
 
                 {/* Expandable payload preview */}
                 <button
