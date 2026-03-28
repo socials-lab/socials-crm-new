@@ -130,9 +130,14 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [displayedContent, setDisplayedContent] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const typeQueueRef = useRef<string[]>([]);
+  const typeTimerRef = useRef<number | null>(null);
+  const fullContentRef = useRef('');
 
   useEffect(() => {
     if (open && inputRef.current && view === 'chat') {
@@ -201,8 +206,32 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
     abortRef.current = controller;
 
     let assistantSoFar = '';
+    fullContentRef.current = '';
+    setDisplayedContent('');
+    setIsTyping(true);
+    typeQueueRef.current = [];
+
+    const processQueue = () => {
+      if (typeQueueRef.current.length === 0) {
+        typeTimerRef.current = null;
+        return;
+      }
+      const batch = typeQueueRef.current.splice(0, Math.min(3, typeQueueRef.current.length));
+      setDisplayedContent(prev => prev + batch.join(''));
+      typeTimerRef.current = window.setTimeout(processQueue, 15);
+    };
+
     const upsertAssistant = (chunk: string) => {
       assistantSoFar += chunk;
+      fullContentRef.current = assistantSoFar;
+      // Queue characters for typing effect
+      for (const char of chunk) {
+        typeQueueRef.current.push(char);
+      }
+      if (!typeTimerRef.current) {
+        processQueue();
+      }
+      // Update actual messages with full content (for history saving)
       setMessages(prev => {
         const last = prev[prev.length - 1];
         if (last?.role === 'assistant') {
@@ -217,6 +246,13 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
         messages: [...messages, userMsg],
         onDelta: (chunk) => upsertAssistant(chunk),
         onDone: () => {
+          // Flush remaining queue instantly
+          if (typeTimerRef.current) {
+            clearTimeout(typeTimerRef.current);
+            typeTimerRef.current = null;
+          }
+          setDisplayedContent(fullContentRef.current);
+          setIsTyping(false);
           setIsLoading(false);
           if (convId && assistantSoFar) {
             saveMessage(convId, { role: 'assistant', content: assistantSoFar });
@@ -366,10 +402,11 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
             <div className="space-y-4">
               {messages.map((msg, i) => {
                 const isLastAssistant = msg.role === 'assistant' && i === messages.length - 1;
-                const isStreaming = isLastAssistant && isLoading;
+                const isStreaming = isLastAssistant && isTyping;
                 
                 if (msg.role === 'assistant') {
-                  const { text, actions } = parseActionsFromContent(msg.content);
+                  const contentToRender = isLastAssistant && isTyping ? displayedContent : msg.content;
+                  const { text, actions } = parseActionsFromContent(contentToRender);
                   return (
                     <div key={i} className="flex justify-start animate-in fade-in-0 duration-200">
                       <div className="max-w-[85%]">
