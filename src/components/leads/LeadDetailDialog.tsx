@@ -385,9 +385,9 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
               <div className="flex items-center gap-3 flex-wrap">
                 <DialogTitle className="text-xl font-semibold">
                   <InlineEditField
-                    value={lead.company_name}
-                    onSave={(v) => { updateLead(lead.id, { company_name: v }); toast.success('Uloženo'); }}
-                    placeholder="Název firmy"
+                    value={lead.website || lead.company_name}
+                    onSave={(v) => { updateLead(lead.id, { website: v }); toast.success('Uloženo'); }}
+                    placeholder="URL webu"
                     displayClassName="text-xl font-semibold"
                   />
                 </DialogTitle>

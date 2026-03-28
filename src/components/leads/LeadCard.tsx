@@ -1,4 +1,4 @@
-import { Building2, User, TrendingUp, CheckCircle2, Mail, ClipboardList, FileCheck2, FileSignature, Send, AlertTriangle, Clock, ShieldCheck, ShieldX, ShieldQuestion } from 'lucide-react';
+import { Globe, User, TrendingUp, CheckCircle2, Mail, ClipboardList, FileCheck2, FileSignature, Send, AlertTriangle, Clock, ShieldCheck, ShieldX, ShieldQuestion } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Lead } from '@/types/crm';
@@ -31,8 +31,8 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
         {/* Company */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
-            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="font-medium text-sm">{lead.company_name}</span>
+            <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="font-medium text-sm truncate">{lead.website || lead.company_name}</span>
             {lead.qualification_status === 'qualified' && (
               <span title="Kvalifikovaný"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" /></span>
             )}
