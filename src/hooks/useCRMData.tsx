@@ -715,6 +715,12 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
       logActivity('assignment_added', 'engagement_assignment', result.id);
+      // Notify assigned colleague
+      const eng = engagements.find(e => e.id === result.engagement_id);
+      const col = colleagues.find(c => c.id === result.colleague_id);
+      if (eng && col) {
+        notifyEngagementAssigned(eng.id, eng.name, col.id, col.full_name);
+      }
     },
   });
 
