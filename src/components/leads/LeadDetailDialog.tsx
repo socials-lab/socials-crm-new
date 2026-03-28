@@ -822,7 +822,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                           toast.success('🔑 Přístupy byly přijaty!');
                         }}
                         onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
-                        onMarkContractSigned={() => { updateLead(lead.id, { contract_signed_at: new Date().toISOString() }); toast.success('✅ Smlouva podepsána!'); }}
+                        onMarkContractSigned={handleMarkContractSigned}
                       />
                     </CollapsibleContent>
                   </Collapsible>
