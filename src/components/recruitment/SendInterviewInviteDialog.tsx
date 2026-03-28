@@ -38,17 +38,21 @@ export function SendInterviewInviteDialog({
   const [emailTo, setEmailTo] = useState(applicant.email);
   const [subject, setSubject] = useState(defaultSubject);
   const [message, setMessage] = useState(defaultMessage);
-  const [isSending, setIsSending] = useState(false);
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
 
-  const handleSend = async () => {
-    setIsSending(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  const handleSendEmail = () => {
+    const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+    window.open(mailtoLink, '_blank');
     onSend({ subject, message, recipients: [emailTo] });
     toast.success('Pozvánka na pohovor byla odeslána');
     onOpenChange(false);
-    setIsSending(false);
+  };
+
+  const handleMarkAsSent = () => {
+    onSend({ subject, message, recipients: [emailTo] });
+    toast.success('Označeno jako odesláno');
+    onOpenChange(false);
   };
 
   return (
@@ -105,13 +109,13 @@ export function SendInterviewInviteDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Zrušit
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={handleMarkAsSent}>
+            Pouze označit jako odesláno
           </Button>
-          <Button onClick={handleSend} disabled={isSending}>
-            <Send className="mr-2 h-4 w-4" />
-            {isSending ? 'Odesílání...' : 'Odeslat pozvánku'}
+          <Button onClick={handleSendEmail} className="gap-2">
+            <Send className="h-4 w-4" />
+            Otevřít v emailu
           </Button>
         </DialogFooter>
       </DialogContent>
