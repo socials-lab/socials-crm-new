@@ -102,7 +102,6 @@ const navGroups: NavGroup[] = [
       { title: 'Akademie', url: '/academy', page: 'academy', icon: BookOpen },
       { title: 'SOP', url: '/sop', page: 'sop', icon: FileText },
       { title: 'Bug Reports', url: '/bug-reports', page: 'bug-reports', icon: Bug },
-      { title: 'Portfolio', url: '/portfolio', page: 'portfolio', icon: ImageIcon },
     ],
   },
   {
@@ -114,7 +113,7 @@ const navGroups: NavGroup[] = [
 ];
 
 const managementNavItems: NavItem[] = [
-  { title: 'Editor nabídky', url: '/offer-editor', page: 'settings', icon: PenLine },
+  { title: 'Nabídka', url: '/offer-management', page: 'settings', icon: PenLine },
   { title: 'Nastavení', url: '/settings', page: 'settings', icon: Settings },
 ];
 
