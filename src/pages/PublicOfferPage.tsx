@@ -1097,17 +1097,17 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         )}
 
         {/* ===== 3. PROČ S NÁMI ===== */}
-        <ScrollReveal><WhyUsSection /></ScrollReveal>
+        <ScrollReveal><WhyUsSection offer={offer} /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 4. PORTFOLIO ===== */}
-        <ScrollReveal><CreativePortfolioSection /></ScrollReveal>
+        <ScrollReveal><CreativePortfolioSection offer={offer} /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 5. REPORTING ===== */}
-        <ScrollReveal><ReportingSection /></ScrollReveal>
+        <ScrollReveal><ReportingSection offer={offer} /></ScrollReveal>
 
         <SectionDivider />
 
@@ -1370,7 +1370,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <SectionDivider />
 
         {/* ===== 7. ONBOARDING ===== */}
-        <ScrollReveal><OnboardingProcessSection /></ScrollReveal>
+        <ScrollReveal><OnboardingProcessSection offer={offer} /></ScrollReveal>
 
         <SectionDivider />
 
