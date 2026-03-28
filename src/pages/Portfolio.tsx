@@ -29,6 +29,31 @@ import { cn } from '@/lib/utils';
 
 type FilterType = 'all' | 'image' | 'video';
 
+const DEMO_ITEMS: PortfolioItem[] = [
+  { id: 'demo-1', title: 'Teen Wear – kreativní banner', file_url: '/images/portfolio/banner1.jpg', type: 'image', sort_order: 0, is_active: true, created_at: '' },
+  { id: 'demo-2', title: 'Super Zoo – doprava zdarma', file_url: '/images/portfolio/doprava_zdarma1.png', type: 'image', sort_order: 1, is_active: true, created_at: '' },
+  { id: 'demo-3', title: 'SleepKing – produktová reklama', file_url: '/images/portfolio/sleepking.jpg', type: 'image', sort_order: 2, is_active: true, created_at: '' },
+  { id: 'demo-4', title: 'Puella – vánoční kampaň', file_url: '/images/portfolio/puella.png', type: 'image', sort_order: 3, is_active: true, created_at: '' },
+  { id: 'demo-5', title: 'Cyber Monday', file_url: '/images/portfolio/cyber_monday.png', type: 'image', sort_order: 4, is_active: true, created_at: '' },
+  { id: 'demo-6', title: 'Online Medical – longevity', file_url: '/images/portfolio/onlinemedical.jpg', type: 'image', sort_order: 5, is_active: true, created_at: '' },
+  { id: 'demo-7', title: 'Nut World – prémiové kešu', file_url: '/images/portfolio/nutworld.png', type: 'image', sort_order: 6, is_active: true, created_at: '' },
+  { id: 'demo-8', title: 'Pontina – Essentials set', file_url: '/images/portfolio/naturapura.jpg', type: 'image', sort_order: 7, is_active: true, created_at: '' },
+  { id: 'demo-9', title: 'Natima – Halloween kampaň', file_url: '/images/portfolio/halloween.png', type: 'image', sort_order: 8, is_active: true, created_at: '' },
+  { id: 'demo-10', title: 'CBDway – Tutti Frutti', file_url: '/images/portfolio/cbdway.jpg', type: 'image', sort_order: 9, is_active: true, created_at: '' },
+  { id: 'demo-11', title: 'Dmania – listopadová sleva', file_url: '/images/portfolio/dmania.jpg', type: 'image', sort_order: 10, is_active: true, created_at: '' },
+  { id: 'demo-12', title: 'K2 Moto – airbagová vesta', file_url: '/images/portfolio/k2moto.png', type: 'image', sort_order: 11, is_active: true, created_at: '' },
+  { id: 'demo-13', title: 'Beewood – dřevěné kryty', file_url: '/images/portfolio/beewood.png', type: 'image', sort_order: 12, is_active: true, created_at: '' },
+  { id: 'demo-14', title: 'Magnesium duo', file_url: '/images/portfolio/magnesium.png', type: 'image', sort_order: 13, is_active: true, created_at: '' },
+  { id: 'demo-15', title: 'Antistress – produktové video', file_url: '/images/portfolio/antistress.mp4', type: 'video', sort_order: 14, is_active: true, created_at: '' },
+  { id: 'demo-16', title: 'Adobe Firefly – AI video', file_url: '/images/portfolio/firefly.mp4', type: 'video', sort_order: 15, is_active: true, created_at: '' },
+  { id: 'demo-17', title: 'Hyundai IONIQ – reklama', file_url: '/images/portfolio/ioniq.mp4', type: 'video', sort_order: 16, is_active: true, created_at: '' },
+  { id: 'demo-18', title: 'Hyundai – video spot', file_url: '/images/portfolio/hyundai.mp4', type: 'video', sort_order: 17, is_active: true, created_at: '' },
+  { id: 'demo-19', title: 'CBDway Sleep – produkt', file_url: '/images/portfolio/cbdway_sleep.mp4', type: 'video', sort_order: 18, is_active: true, created_at: '' },
+  { id: 'demo-20', title: 'Nut World – video reklama', file_url: '/images/portfolio/nutworld_video.mp4', type: 'video', sort_order: 19, is_active: true, created_at: '' },
+  { id: 'demo-21', title: 'Teen Wear – video', file_url: '/images/portfolio/teenwear_video.mp4', type: 'video', sort_order: 20, is_active: true, created_at: '' },
+  { id: 'demo-22', title: 'Natios – hook video', file_url: '/images/portfolio/natios-hook1.mp4', type: 'video', sort_order: 21, is_active: true, created_at: '' },
+];
+
 export default function Portfolio() {
   const { items, isLoading, addItem, updateItem, deleteItem } = usePortfolioData();
   const [filter, setFilter] = useState<FilterType>('all');
@@ -42,7 +67,10 @@ export default function Portfolio() {
   const [editTitle, setEditTitle] = useState('');
   const [editOrder, setEditOrder] = useState(0);
 
-  const filteredItems = items.filter(item => filter === 'all' || item.type === filter);
+  // Show demo items when DB is empty (not loading)
+  const displayItems = !isLoading && items.length === 0 ? DEMO_ITEMS : items;
+  const isDemo = !isLoading && items.length === 0;
+  const filteredItems = displayItems.filter(item => filter === 'all' || item.type === filter);
 
   const handleUpload = async () => {
     if (uploadFiles.length === 0) return;
@@ -80,8 +108,8 @@ export default function Portfolio() {
     setEditItem(null);
   };
 
-  const imageCount = items.filter(i => i.type === 'image').length;
-  const videoCount = items.filter(i => i.type === 'video').length;
+  const imageCount = displayItems.filter(i => i.type === 'image').length;
+  const videoCount = displayItems.filter(i => i.type === 'video').length;
 
   return (
     <div className="space-y-6">
@@ -89,6 +117,13 @@ export default function Portfolio() {
         title="Portfolio"
         description="Správa bannerů a videí zobrazených ve veřejných nabídkách"
       />
+
+      {isDemo && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary flex items-center gap-2">
+          <Image className="h-4 w-4 shrink-0" />
+          <span>Zobrazují se vzorová data. Nahrajte vlastní položky do Supabase storage pro reálný obsah.</span>
+        </div>
+      )}
 
       {/* Stats + actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
