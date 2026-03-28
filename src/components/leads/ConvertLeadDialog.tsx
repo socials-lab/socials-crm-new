@@ -457,9 +457,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             upsold_by_id: null,
             upsell_commission_percent: null,
             effective_from: null,
-            intro_discount_percent: offerSvc.discount_type !== 'none' ? offerSvc.discount_percent : null,
-            intro_discount_months: offerSvc.discount_type === 'intro' ? offerSvc.intro_months : null,
-            intro_discount_start_date: offerSvc.discount_type !== 'none' && offerSvc.discount_percent > 0
+            // Per-service discount takes precedence, then global intro discount
+            intro_discount_percent: offerSvc.discount_type !== 'none' 
+              ? offerSvc.discount_percent 
+              : (introDiscountPercent > 0 ? introDiscountPercent : null),
+            intro_discount_months: offerSvc.discount_type === 'intro' 
+              ? offerSvc.intro_months 
+              : (introDiscountPercent > 0 ? introDiscountMonths : null),
+            intro_discount_start_date: (offerSvc.discount_type !== 'none' || introDiscountPercent > 0)
               ? new Date().toISOString().split('T')[0]
               : null,
           });
