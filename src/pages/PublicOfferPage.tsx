@@ -1026,7 +1026,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         )}
 
         {/* ===== 2. LOOM VIDEO & AUDIT ===== */}
-        {(offer.audit_summary || offer.loom_url) && (
+        {(offer.audit_summary || offer.loom_url || offer.custom_note) && (
           <>
             <ScrollReveal>
               <section>
