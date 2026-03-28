@@ -2,6 +2,7 @@ import { createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/services/activityLogger';
+import { notifyExtraWorkCreated, notifyExtraWorkApproved, notifyEngagementAssigned, notifyEngagementServiceAdded, notifyInvoiceIssued } from '@/services/notificationTriggers';
 import { enrichServicesWithDemoRewards } from '@/utils/serviceRewardDemoData';
 import type { 
   Client, 
@@ -646,6 +647,11 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
       logActivity('engagement_service_added', 'engagement_service', result.id, result.name);
+      // Notify team about new service
+      const eng = engagements.find(e => e.id === result.engagement_id);
+      if (eng) {
+        notifyEngagementServiceAdded(eng.id, eng.name, result.name, null);
+      }
     },
   });
 
@@ -714,6 +720,12 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
       logActivity('assignment_added', 'engagement_assignment', result.id);
+      // Notify assigned colleague
+      const eng = engagements.find(e => e.id === result.engagement_id);
+      const col = colleagues.find(c => c.id === result.colleague_id);
+      if (eng && col) {
+        notifyEngagementAssigned(eng.id, eng.name, col.id, col.full_name);
+      }
     },
   });
 
@@ -751,6 +763,9 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['extra_works'] });
       logActivity('extra_work_created', 'extra_work', result.id, result.name);
+      // Notify admins about new extra work
+      const client = clients.find(c => c.id === result.client_id);
+      notifyExtraWorkCreated(result.id, result.name, client?.name || '', result.amount);
     },
   });
 
@@ -762,6 +777,13 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (_, { id, data }) => {
       queryClient.invalidateQueries({ queryKey: ['extra_works'] });
       logActivity('extra_work_updated', 'extra_work', id, undefined, data);
+      // Notify on approval
+      if (data.status === 'in_progress' || data.status === 'ready_to_invoice') {
+        const ew = extraWorks.find(e => e.id === id);
+        if (ew && data.status === 'in_progress') {
+          notifyExtraWorkApproved(id, ew.name, ew.colleague_id);
+        }
+      }
     },
   });
 
@@ -819,6 +841,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['issued_invoices'] });
       logActivity('invoice_issued', 'issued_invoice', result.id, result.invoice_number);
+      notifyInvoiceIssued(result.invoice_number, result.client_name || '', result.total_amount);
     },
   });
 

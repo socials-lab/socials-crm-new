@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
+import { notifyModificationCreated, notifyModificationApproved, notifyClientApprovedModification } from '@/services/notificationTriggers';
 import {
   getModificationRequests,
   createModificationRequest,
@@ -92,9 +93,13 @@ export function useModificationRequests() {
         status: params.status || 'pending',
       } as any);
       
-      toast.success(params.status === 'draft' 
-        ? 'Návrh byl uložen jako draft' 
-        : 'Požadavek na úpravu byl odeslán ke schválení');
+      if (params.status !== 'draft') {
+        toast.success('Požadavek na úpravu byl odeslán ke schválení');
+        const eng = engagements.find(e => e.id === params.engagement_id);
+        notifyModificationCreated(eng?.name || '', params.request_type, (params.proposed_changes as any)?.service_name || params.request_type);
+      } else {
+        toast.success('Návrh byl uložen jako draft');
+      }
       refresh();
       return result;
     } catch (error) {
@@ -116,6 +121,10 @@ export function useModificationRequests() {
       if (!result) throw new Error('Request not found');
       
       toast.success('Požadavek byl schválen');
+      // Notify the requester
+      if (result.requested_by) {
+        notifyModificationApproved(result.requested_by, result.engagement_name || '');
+      }
       refresh();
       return result;
     } catch (error) {
