@@ -528,19 +528,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           .map(m => colleagues.find(c => c.id === m.colleague_id)?.email)
           .filter(Boolean) as string[];
 
-        // Collect client contact emails (main + additional)
-        const clientEmails: string[] = [];
-        if (data.contact_email) clientEmails.push(data.contact_email);
-        for (const ac of additionalContacts) {
-          if (ac.email && ac.email.includes('@')) clientEmails.push(ac.email);
-        }
-
         const { data: freeloResult, error: freeloError } = await supabase.functions.invoke('create-freelo-project', {
           body: {
             project_name: data.engagement_name,
             currency: data.currency,
             team_emails: teamEmails,
-            client_emails: clientEmails,
           },
         });
 
