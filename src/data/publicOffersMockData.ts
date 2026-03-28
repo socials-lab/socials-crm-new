@@ -794,7 +794,15 @@ export function getAllOffers(): PublicOffer[] {
 }
 
 export function getOffersByLeadId(leadId: string): PublicOffer[] {
-  return getStoredOffers().filter(o => o.lead_id === leadId);
+  const stored = getStoredOffers().filter(o => o.lead_id === leadId);
+  // Include demo offer for Socials Advertising
+  if (leadId === '20000000-0000-0000-0000-000000000002') {
+    const hasDemo = stored.some(o => o.id === 'demo-socials-adv-id');
+    if (!hasDemo) {
+      return [DEMO_SOCIALS_ADV_OFFER, ...stored];
+    }
+  }
+  return stored;
 }
 
 export function updatePublicOffer(token: string, updatedOffer: Partial<PublicOffer>, changeSummary?: string): void {
