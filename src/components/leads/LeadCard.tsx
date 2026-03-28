@@ -5,6 +5,9 @@ import type { Lead } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { getLeadLastActivity } from '@/utils/leadActivityUtils';
 
+const cleanDomain = (url: string) =>
+  url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+
 interface LeadCardProps {
   lead: Lead;
   onClick: () => void;
@@ -32,7 +35,7 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="font-medium text-sm truncate">{lead.website || lead.company_name}</span>
+            <span className="font-medium text-sm truncate">{lead.website ? cleanDomain(lead.website) : lead.company_name}</span>
             {lead.qualification_status === 'qualified' && (
               <span title="Kvalifikovaný"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" /></span>
             )}

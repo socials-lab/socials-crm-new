@@ -19,6 +19,9 @@ import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { getLeadLastActivity } from '@/utils/leadActivityUtils';
 
+const cleanDomain = (url: string) =>
+  url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+
 interface LeadMobileCardProps {
   lead: Lead;
   ownerName: string;
@@ -66,7 +69,7 @@ export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="font-medium text-sm truncate">{lead.website || lead.company_name}</span>
+            <span className="font-medium text-sm truncate">{lead.website ? cleanDomain(lead.website) : lead.company_name}</span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {lead.access_request_sent_at && (
