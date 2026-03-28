@@ -425,6 +425,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       }
 
       // 3. Create Engagement — calculate fees with global discounts
+      setConversionStep('Vytvářím zakázku...');
       const rawMonthlyFee = offerServices
         .filter(s => s.billing_type === 'monthly')
         .reduce((sum, s) => sum + s.price, 0);
@@ -508,6 +509,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       }
 
       // 6. Create Freelo project from template
+      setConversionStep('Zakládám Freelo projekt...');
       try {
         // Collect emails of assigned team members
         const teamEmails = teamMembers
@@ -543,6 +545,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       }
 
       // 6b. Create Slack channel and invite team
+      setConversionStep('Zakládám Slack kanál...');
       try {
         const teamEmails2 = teamMembers
           .filter(m => m.colleague_id)
