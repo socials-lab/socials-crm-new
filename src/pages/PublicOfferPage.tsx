@@ -1089,6 +1089,18 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                     </div>
                   </div>
                 )}
+
+                {offer.custom_note && (
+                  <div className="mt-6 p-5 rounded-xl bg-blue-500/[0.05] border border-blue-500/20">
+                    <div className="flex items-start gap-3">
+                      <span className="text-lg mt-0.5">📝</span>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground mb-1">Poznámka pro vás</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{offer.custom_note}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </section>
             </ScrollReveal>
 
