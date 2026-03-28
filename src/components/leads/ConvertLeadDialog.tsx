@@ -1740,6 +1740,110 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               ))}
             </div>
 
+            {/* ===== SUMMARY CARD: What's being converted ===== */}
+            <div className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] p-4 space-y-4">
+              <h4 className="font-semibold text-sm flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
+                📋 Souhrn převodu
+              </h4>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Firma</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      {form.watch('client_name') || lead.company_name}
+                    </div>
+                    {form.watch('brand_name') && (
+                      <div className="text-xs text-muted-foreground">Brand: {form.watch('brand_name')}</div>
+                    )}
+                    {form.watch('ico') && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Hash className="h-3 w-3" />
+                        IČO: {form.watch('ico')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Kontakt</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                      {form.watch('contact_name') || lead.contact_name}
+                    </div>
+                    {form.watch('contact_email') && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Mail className="h-3 w-3" />
+                        {form.watch('contact_email')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {offerServices.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Služby</p>
+                  <p className="text-xs text-muted-foreground">
+                    {offerServices.length} {offerServices.length === 1 ? 'služba' : offerServices.length < 5 ? 'služby' : 'služeb'}
+                    {' · '}
+                    {form.watch('currency')} {offerServices.reduce((sum, s) => sum + (s.price || 0), 0).toLocaleString('cs-CZ')} / měsíc
+                  </p>
+                </div>
+              )}
+
+              {teamMembers.filter(m => m.colleague_id).length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tým</p>
+                  <p className="text-xs text-muted-foreground">
+                    {teamMembers.filter(m => m.colleague_id).map(m => {
+                      const c = colleagues.find(col => col.id === m.colleague_id);
+                      return c ? `${c.full_name} (${m.role})` : m.role;
+                    }).join(', ')}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Nabídka</p>
+                  {lead.offer_url ? (
+                    <a href={lead.offer_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
+                      <FileText className="h-3.5 w-3.5" />
+                      Otevřít
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Smlouva</p>
+                  {lead.contract_url ? (
+                    <a href={lead.contract_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
+                      <FileText className="h-3.5 w-3.5" />
+                      Otevřít
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Onboarding</p>
+                  {lead.onboarding_form_completed_at ? (
+                    <div className="flex items-center gap-1.5 text-sm text-emerald-600">
+                      <ClipboardCheck className="h-3.5 w-3.5" />
+                      Vyplněn
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </div>
+              </div>
+            </div>
 
             <div className="pt-4 border-t space-y-3">
               {isConverting ? (
