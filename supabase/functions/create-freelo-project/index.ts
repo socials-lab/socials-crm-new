@@ -19,7 +19,7 @@ serve(async (req) => {
     if (!FREELO_USER_EMAIL) throw new Error('FREELO_USER_EMAIL is not configured');
     if (!FREELO_TEMPLATE_PROJECT_ID) throw new Error('FREELO_TEMPLATE_PROJECT_ID is not configured');
 
-    const { project_name, currency, team_emails } = await req.json();
+    const { project_name, currency, team_emails, client_emails } = await req.json();
 
     if (!project_name || typeof project_name !== 'string') {
       return new Response(
@@ -63,37 +63,64 @@ serve(async (req) => {
     const freeloProject = await freeloResponse.json();
     const projectUrl = `https://app.freelo.io/project/${freeloProject.id}`;
 
-    // 2. Invite team members by email
-    let invitedCount = 0;
-    const validEmails = Array.isArray(team_emails) 
-      ? team_emails.filter((e: string) => e && typeof e === 'string' && e.includes('@'))
-      : [];
+    const filterEmails = (emails: unknown): string[] =>
+      Array.isArray(emails) ? emails.filter((e: string) => e && typeof e === 'string' && e.includes('@')) : [];
 
-    if (validEmails.length > 0) {
+    // 2. Invite team members by email
+    let invitedTeamCount = 0;
+    const validTeamEmails = filterEmails(team_emails);
+
+    if (validTeamEmails.length > 0) {
       try {
-        const inviteResponse = await fetch(
-          `https://api.freelo.io/v1/users/manage-workers`,
-          {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              projects_ids: [freeloProject.id],
-              emails: validEmails,
-            }),
-          }
-        );
+        const inviteResponse = await fetch(`https://api.freelo.io/v1/users/manage-workers`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            projects_ids: [freeloProject.id],
+            emails: validTeamEmails,
+          }),
+        });
 
         if (inviteResponse.ok) {
           const inviteResult = await inviteResponse.json();
-          invitedCount = (inviteResult.newly_invited_users?.length || 0) + 
-                         (inviteResult.newly_created_users?.length || 0);
-          console.log(`Invited ${invitedCount} users to Freelo project ${freeloProject.id}`);
+          invitedTeamCount = (inviteResult.newly_invited_users?.length || 0) + 
+                             (inviteResult.newly_created_users?.length || 0);
+          console.log(`Invited ${invitedTeamCount} team members to Freelo project ${freeloProject.id}`);
         } else {
           const inviteError = await inviteResponse.text();
-          console.error(`Freelo invite error [${inviteResponse.status}]: ${inviteError}`);
+          console.error(`Freelo team invite error [${inviteResponse.status}]: ${inviteError}`);
         }
       } catch (inviteErr) {
         console.error('Error inviting team to Freelo:', inviteErr);
+      }
+    }
+
+    // 3. Invite client contacts by email
+    let invitedClientCount = 0;
+    const validClientEmails = filterEmails(client_emails);
+
+    if (validClientEmails.length > 0) {
+      try {
+        const clientInviteResponse = await fetch(`https://api.freelo.io/v1/users/manage-workers`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            projects_ids: [freeloProject.id],
+            emails: validClientEmails,
+          }),
+        });
+
+        if (clientInviteResponse.ok) {
+          const clientResult = await clientInviteResponse.json();
+          invitedClientCount = (clientResult.newly_invited_users?.length || 0) + 
+                               (clientResult.newly_created_users?.length || 0);
+          console.log(`Invited ${invitedClientCount} client contacts to Freelo project ${freeloProject.id}`);
+        } else {
+          const clientError = await clientInviteResponse.text();
+          console.error(`Freelo client invite error [${clientInviteResponse.status}]: ${clientError}`);
+        }
+      } catch (clientErr) {
+        console.error('Error inviting client contacts to Freelo:', clientErr);
       }
     }
 
@@ -103,7 +130,8 @@ serve(async (req) => {
         project_id: freeloProject.id,
         project_name: freeloProject.name,
         project_url: projectUrl,
-        invited_count: invitedCount,
+        invited_team_count: invitedTeamCount,
+        invited_client_count: invitedClientCount,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
