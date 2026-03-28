@@ -578,14 +578,16 @@ function WhyUsSection({ offer }: { offer: PublicOffer }) {
   );
 }
 
-function ReportingSection() {
-  const DEMO_REPORT_URL = 'https://adfactory.socials.cz/shared-report/376158d883246f2ecfec54891d03e0a3c0ae4090e0c5dda9';
+function ReportingSection({ offer }: { offer: PublicOffer }) {
+  const block = getOfferContent(offer, 'reporting');
+  const DEMO_REPORT_URL = block.content?.demo_report_url || 'https://adfactory.socials.cz/shared-report/376158d883246f2ecfec54891d03e0a3c0ae4090e0c5dda9';
+  const note = block.content?.note || '(Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)';
   
   return (
     <section>
       <SectionHeading
-        title="📊 Reporting až na úroveň zisku"
-        subtitle="Pro Shoptet klienty dodáváme reporting až na úroveň contribution margin. Budete přesně vědět, kolik peněz vám vydělá jaký produkt."
+        title={block.title || '📊 Reporting až na úroveň zisku'}
+        subtitle={block.subtitle || ''}
       />
       <p className="text-sm text-muted-foreground/70 italic -mt-6 mb-8">
         (Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)
