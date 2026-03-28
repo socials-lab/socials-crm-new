@@ -21,7 +21,7 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
     template_key: 'send_offer',
     name: 'Nabídka spolupráce',
     subject_template: 'Nabídka spolupráce - {domain} / Socials',
-    body_template: 'Dobrý den {contact_name},\n\nděkuji za náš nedávný rozhovor ohledně spolupráce se společností {company}.\n\nNa základě našeho jednání jsem pro Vás připravil/a nabídku:\n\n{services_list}\n\n{price_summary}\n\n{offer_url_line}\n\nBudu rád/a, když se mi ozvete s případnými dotazy.\n\n{signature}',
+    body_template: 'Dobrý den {contact_name},\n\nděkuji za náš nedávný rozhovor ohledně spolupráce se společností {company}. Moc si vážím Vašeho času a zájmu.\n\nNa základě našeho jednání a analýzy Vašich potřeb jsem pro Vás připravil/a nabídku služeb na míru:\n\n── Přehled služeb ──\n\n{services_list}\n\n{price_summary}\n\n{offer_url_line}\n\n── Co od nás můžete čekat ──\n\n• Dedikovaný tým specialistů s jasně přiděleným project managerem\n• Pravidelný reporting a transparentní komunikace\n• Flexibilitu — rozsah spolupráce lze kdykoli upravit\n\n── Další kroky ──\n\n1. Projděte si nabídku a dejte mi vědět, zda máte jakékoli dotazy\n2. Po odsouhlasení Vám zašleme smlouvu k podpisu\n3. Následně Vás provedeme onboardingem a nastartujeme spolupráci\n\nPokud byste chtěl/a cokoli probrat osobně, rád/a se s Vámi spojím na krátkém callu.\n\nTěším se na spolupráci!\n\n{signature}',
     description: 'Email s nabídkou spolupráce',
     available_variables: ['contact_name', 'company', 'domain', 'services_list', 'price_summary', 'offer_url_line', 'signature'],
   },
