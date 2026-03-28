@@ -106,7 +106,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
   other: 'Jiný',
 };
 
-export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
+export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, onDelete }: LeadDetailSheetProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
@@ -127,6 +127,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   const [showOnboardingData, setShowOnboardingData] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isProcessingWarning = useRef(false);
 
   // Use fresh lead data from context to reflect updates immediately
