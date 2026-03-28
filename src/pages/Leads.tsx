@@ -295,6 +295,11 @@ export default function Leads() {
         lead={selectedLead}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
+        onDelete={(leadId) => {
+          deleteLead(leadId);
+          setIsDetailOpen(false);
+          setSelectedLeadId(null);
+        }}
       />
 
       {/* Add/Edit Dialog */}
