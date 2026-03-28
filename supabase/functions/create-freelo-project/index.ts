@@ -19,7 +19,7 @@ serve(async (req) => {
     if (!FREELO_USER_EMAIL) throw new Error('FREELO_USER_EMAIL is not configured');
     if (!FREELO_TEMPLATE_PROJECT_ID) throw new Error('FREELO_TEMPLATE_PROJECT_ID is not configured');
 
-    const { project_name, currency, team_emails, client_emails } = await req.json();
+    const { project_name, currency, team_emails } = await req.json();
 
     if (!project_name || typeof project_name !== 'string') {
       return new Response(
