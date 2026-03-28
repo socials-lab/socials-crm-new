@@ -135,6 +135,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   }>>([]);
   const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
   const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
+  const [isConverting, setIsConverting] = useState(false);
+  const [conversionStep, setConversionStep] = useState('');
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   const activeServices = services.filter(s => s.is_active);
