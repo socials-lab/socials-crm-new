@@ -153,7 +153,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         contact_position: 'Jednatel',
         contact_email: 'danny@socials.cz',
         contact_phone: '+420 774 536 699',
-        stage: 'preparing_offer',
+        stage: 'offer_sent',
         source: 'inbound',
         source_custom: null,
         client_message: 'Zajímá nás spolupráce na správě kampaní pro naše klienty – white-label model.',
