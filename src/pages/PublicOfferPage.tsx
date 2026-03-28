@@ -75,7 +75,15 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 const usePublicPortfolioLocal = usePublicPortfolio;
 
-// Portfolio icon by type
+// Helper to get content block from offer snapshot or fallback to hardcoded defaults
+function getOfferContent(offer: PublicOffer | null, sectionKey: string) {
+  if (offer?.content_blocks_snapshot?.[sectionKey]) {
+    return offer.content_blocks_snapshot[sectionKey];
+  }
+  const fallback = DEFAULT_OFFER_CONTENT[sectionKey];
+  if (fallback) return fallback;
+  return { section_key: sectionKey, title: null, subtitle: null, content: {} };
+}
 function getPortfolioIcon(type: PortfolioLink['type']) {
   switch (type) {
     case 'case_study': return BookOpen;
