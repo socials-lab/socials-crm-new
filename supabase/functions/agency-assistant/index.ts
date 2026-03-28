@@ -43,7 +43,7 @@ Tvůj hlavní účel je pomáhat s:
 - Při kalkulaci nabídky uváděj pouze cenu pro klienta a cílovou marži, nikoliv rozpad na odměny kolegů
 - MŮŽEŠ sdílet: konkrétní info o jednotlivých klientech, zakázkách, leadech, vícepracích, pipeline stavu, kolegovi (jméno, pozice, kapacita – BEZ odměn)
 
-MÁŠ PŘÍSTUP K ŽIVÝM DATŮM Z CRM. Když se tě uživatel zeptá na konkrétního klienta, lead, zakázku nebo vícepráci, odpovídej na základě dat níže. Pokud data neobsahují to co uživatel hledá, řekni to.
+⚠️ DŮLEŽITÉ: MÁŠ PŘÍSTUP K ŽIVÝM DATŮM Z CRM – viz sekce níže. NIKDY neříkej že nemáš přístup k databázi nebo že nevidíš data. Vždy odpovídej na základě dat uvedených níže. Pokud konkrétní záznam v datech chybí, řekni "Tento záznam jsem v aktuálních datech nenašel" – ale NIKDY neříkej že nemáš přístup k CRM.
 
 ${crmContext}
 
@@ -300,8 +300,7 @@ serve(async (req) => {
 
       // Active engagements
       if (engagementsRes.data && engagementsRes.data.length > 0) {
-        const totalMRR = engagementsRes.data.reduce((sum: number, e: any) => sum + (e.monthly_fee || 0), 0);
-        sections.push(`## AKTIVNÍ ZAKÁZKY (${engagementsRes.data.length}, celkový MRR: ${totalMRR.toLocaleString('cs-CZ')} Kč)\n` +
+        sections.push(`## AKTIVNÍ ZAKÁZKY (${engagementsRes.data.length})\n` +
           engagementsRes.data.map((e: any) => {
             const clientName = (e as any).clients?.brand_name || (e as any).clients?.name || 'N/A';
             return `- **${e.name}** (${clientName}) – ${e.monthly_fee?.toLocaleString('cs-CZ') || 0} ${e.currency}/měs, typ: ${e.type}, platformy: ${(e.platforms || []).join(', ') || 'N/A'}`;
@@ -310,8 +309,7 @@ serve(async (req) => {
 
       // Pipeline leads
       if (leadsRes.data && leadsRes.data.length > 0) {
-        const pipelineValue = leadsRes.data.reduce((sum: number, l: any) => sum + (l.estimated_price || 0), 0);
-        sections.push(`## LEADY V PIPELINE (${leadsRes.data.length}, celková hodnota: ${pipelineValue.toLocaleString('cs-CZ')} Kč)\n` +
+        sections.push(`## LEADY V PIPELINE (${leadsRes.data.length})\n` +
           leadsRes.data.map((l: any) => `- **${l.company_name}** (${l.contact_name}) – stav: ${l.stage}, zdroj: ${l.source || 'N/A'}, odhad: ${(l.estimated_price || 0).toLocaleString('cs-CZ')} ${l.currency}, spend: ${(l.ad_spend_monthly || 0).toLocaleString('cs-CZ')} Kč/měs, služba: ${l.potential_service || 'N/A'}, vytvořeno: ${l.created_at?.slice(0, 10) || 'N/A'}`).join('\n'));
       }
 
@@ -339,6 +337,7 @@ serve(async (req) => {
       if (sections.length > 0) {
         crmContext = `---\n\n# ŽIVÁ DATA Z CRM (aktuální stav)\n\n${sections.join('\n\n')}\n\n---`;
       }
+      console.log(`CRM context loaded: ${sections.length} sections, clients=${clientsRes.data?.length || 0}, engagements=${engagementsRes.data?.length || 0}, leads=${leadsRes.data?.length || 0}, extra_works=${extraWorksRes.data?.length || 0}, colleagues=${colleaguesRes.data?.length || 0}, services=${servicesRes.data?.length || 0}`);
     } catch (e) {
       console.error("Failed to fetch CRM data:", e);
     }
