@@ -80,6 +80,13 @@ export interface PublicOffer {
   owner_phone?: string;
   // Edit history
   history?: PublicOfferHistoryEntry[];
+  // Snapshot of offer_content_blocks at creation time
+  content_blocks_snapshot?: Record<string, {
+    section_key: string;
+    title: string | null;
+    subtitle: string | null;
+    content: Record<string, any>;
+  }>;
 }
 
 // Form data for creating offer
