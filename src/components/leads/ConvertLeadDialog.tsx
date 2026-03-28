@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX, Check, X, Loader2 } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX, Check, X, Loader2, CheckCircle2, FolderKanban, MessageSquare, Users } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
