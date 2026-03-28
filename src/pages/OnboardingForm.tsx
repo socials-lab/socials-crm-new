@@ -470,6 +470,28 @@ export default function OnboardingForm() {
       } catch (summaryError) {
         console.error('Failed to send onboarding summary:', summaryError);
       }
+
+      // Create notification for lead owner / team
+      try {
+        const existingNotifs = JSON.parse(localStorage.getItem('crm_notifications') || '[]');
+        const newNotification = {
+          id: `form-completed-${lead.id}-${Date.now()}`,
+          type: 'form_completed',
+          title: '📋 Onboarding formulář vyplněn',
+          message: `${data.company_name} vyplnil onboarding formulář — fakturační údaje, kontaktní osoby a potvrzení služeb jsou k dispozici.`,
+          link: '/leads',
+          is_read: false,
+          entity_type: 'lead',
+          created_at: new Date().toISOString(),
+          metadata: {
+            lead_id: lead.id,
+            company_name: data.company_name,
+          },
+        };
+        localStorage.setItem('crm_notifications', JSON.stringify([newNotification, ...existingNotifs]));
+      } catch (notifError) {
+        console.error('Failed to create notification:', notifError);
+      }
       
       setIsSubmitted(true);
     } catch (error) {
