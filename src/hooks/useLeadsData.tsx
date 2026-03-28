@@ -573,6 +573,11 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   const markLeadAsConverted = useCallback(async (leadId: string, clientId: string, engagementId: string) => {
     addHistoryEntry(leadId, 'converted', null, null, 'Převedeno na zakázku');
     
+    const lead = leads.find(l => l.id === leadId);
+    if (lead) {
+      notifyLeadConverted(leadId, lead.company_name, engagementId);
+    }
+    
     await updateLeadMutation.mutateAsync({
       id: leadId,
       data: {
@@ -582,7 +587,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         converted_at: now(),
       },
     });
-  }, [updateLeadMutation, addHistoryEntry]);
+  }, [leads, updateLeadMutation, addHistoryEntry]);
 
   return (
     <LeadsDataContext.Provider value={{
