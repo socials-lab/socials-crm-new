@@ -42,13 +42,18 @@ export function SendRejectionEmailDialog({
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
 
-  const handleSend = async () => {
-    setIsSending(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    onSend({ subject, message, recipients: [emailTo] });
+  const handleSendEmail = () => {
+    const mailtoLink = `mailto:${applicant.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+    window.open(mailtoLink, '_blank');
+    onSend({ subject, message, recipients: [applicant.email] });
     toast.success('Odmítací email byl odeslán');
     onOpenChange(false);
-    setIsSending(false);
+  };
+
+  const handleMarkAsSent = () => {
+    onSend({ subject, message, recipients: [applicant.email] });
+    toast.success('Označeno jako odesláno');
+    onOpenChange(false);
   };
 
   return (
@@ -99,13 +104,13 @@ export function SendRejectionEmailDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Zrušit
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={handleMarkAsSent}>
+            Pouze označit jako odesláno
           </Button>
-          <Button variant="destructive" onClick={handleSend} disabled={isSending}>
-            <Send className="mr-2 h-4 w-4" />
-            {isSending ? 'Odesílání...' : 'Odeslat odmítnutí'}
+          <Button variant="destructive" onClick={handleSendEmail} className="gap-2">
+            <Send className="h-4 w-4" />
+            Otevřít v emailu
           </Button>
         </DialogFooter>
       </DialogContent>
