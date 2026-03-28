@@ -447,7 +447,10 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('leads').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      logActivity('lead_deleted', 'lead', id);
+    },
   });
 
   const addLead = useCallback(async (data: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'notes' | 'converted_to_client_id' | 'converted_to_engagement_id' | 'converted_at'>): Promise<Lead> => {
