@@ -463,9 +463,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             upsold_by_id: null,
             upsell_commission_percent: null,
             effective_from: null,
-            intro_discount_percent: offerSvc.intro_discount_percent ?? null,
-            intro_discount_months: offerSvc.intro_discount_months ?? null,
-            intro_discount_start_date: offerSvc.intro_discount_percent && offerSvc.intro_discount_months
+            intro_discount_percent: offerSvc.discount_type !== 'none' ? offerSvc.discount_percent : null,
+            intro_discount_months: offerSvc.discount_type === 'intro' ? offerSvc.intro_months : null,
+            intro_discount_start_date: offerSvc.discount_type !== 'none' && offerSvc.discount_percent > 0
               ? new Date().toISOString().split('T')[0]
               : null,
           });
@@ -1124,9 +1124,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Služby a ceny (editovatelné)</p>
                 <div className="rounded-lg border bg-background divide-y divide-border/50">
                   {offerServices.map((svc, idx) => {
-                    const hasDiscount = svc.intro_discount_percent && svc.intro_discount_percent > 0 && svc.billing_type === 'monthly';
+                    const hasDiscount = svc.discount_type !== 'none' && svc.discount_percent > 0 && svc.billing_type === 'monthly';
                     const discountedPrice = hasDiscount 
-                      ? Math.round(svc.price * (1 - (svc.intro_discount_percent || 0) / 100))
+                      ? Math.round(svc.price * (1 - svc.discount_percent / 100))
                       : svc.price;
                     return (
                       <div key={idx} className="px-3 py-2.5 space-y-1.5">
@@ -1173,40 +1173,64 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                             {svc.cb_credits} × {svc.cb_price_per_credit} Kč
                           </p>
                         )}
-                        {/* Intro discount row */}
+                        {/* Discount row — for monthly services */}
                         {svc.billing_type === 'monthly' && (
-                          <div className="flex items-center gap-2 pl-1">
+                          <div className="flex items-center gap-2 pl-1 flex-wrap">
                             <Percent className="h-3 w-3 text-amber-500 shrink-0" />
-                            <span className="text-[11px] text-muted-foreground">Úvodní sleva:</span>
-                            <Input
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={svc.intro_discount_percent || ''}
-                              onChange={(e) => {
-                                const val = Math.min(100, Math.max(0, Number(e.target.value)));
-                                setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, intro_discount_percent: val || null } : s));
+                            <Select
+                              value={svc.discount_type}
+                              onValueChange={(val: 'none' | 'permanent' | 'intro') => {
+                                setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, discount_type: val } : s));
                               }}
-                              placeholder="0"
-                              className="w-14 h-6 text-xs text-right"
-                            />
-                            <span className="text-[11px] text-muted-foreground">% na</span>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={24}
-                              value={svc.intro_discount_months || ''}
-                              onChange={(e) => {
-                                const val = Math.min(24, Math.max(1, Number(e.target.value)));
-                                setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, intro_discount_months: val } : s));
-                              }}
-                              placeholder="3"
-                              className="w-16 h-6 text-xs text-right"
-                            />
-                            <span className="text-[11px] text-muted-foreground">měs.</span>
+                            >
+                              <SelectTrigger className="h-6 w-[130px] text-[11px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none" className="text-xs">Bez slevy</SelectItem>
+                                <SelectItem value="permanent" className="text-xs">Trvalá sleva</SelectItem>
+                                <SelectItem value="intro" className="text-xs">Úvodní sleva</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {svc.discount_type !== 'none' && (
+                              <>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={svc.discount_percent || ''}
+                                  onChange={(e) => {
+                                    const val = Math.min(100, Math.max(0, Number(e.target.value)));
+                                    setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, discount_percent: val } : s));
+                                  }}
+                                  placeholder="0"
+                                  className="w-14 h-6 text-xs text-right"
+                                />
+                                <span className="text-[11px] text-muted-foreground">%</span>
+                              </>
+                            )}
+                            {svc.discount_type === 'intro' && (
+                              <>
+                                <span className="text-[11px] text-muted-foreground">na</span>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={24}
+                                  value={svc.intro_months || ''}
+                                  onChange={(e) => {
+                                    const val = Math.min(24, Math.max(1, Number(e.target.value)));
+                                    setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, intro_months: val } : s));
+                                  }}
+                                  placeholder="3"
+                                  className="w-16 h-6 text-xs text-right"
+                                />
+                                <span className="text-[11px] text-muted-foreground">měs.</span>
+                              </>
+                            )}
                             {hasDiscount && (
                               <span className="text-[11px] font-medium text-amber-600 ml-auto tabular-nums">
                                 → {discountedPrice.toLocaleString('cs-CZ')} {svc.currency}/měs
+                                {svc.discount_type === 'permanent' && ' (trvale)'}
                               </span>
                             )}
                           </div>
