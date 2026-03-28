@@ -502,13 +502,15 @@ function OnboardingProcessSection({ offer }: { offer: PublicOffer }) {
         <div className="absolute left-[23px] top-8 bottom-8 w-px bg-gradient-to-b from-[#94e700]/60 via-[#94e700]/20 to-transparent hidden sm:block" />
 
         <div className="space-y-2">
-          {ONBOARDING_STEPS.map((step, idx) => (
+          {steps.map((step: any, idx: number) => {
+            const IconComp = ICON_MAP[step.icon] || ONBOARDING_STEPS[idx]?.icon || Rocket;
+            return (
             <ScrollReveal key={idx} delay={idx * 120}>
               <div
                 className="group flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-foreground/[0.06] hover:bg-foreground/[0.02] transition-all duration-300 cursor-default"
               >
                 <div className="w-12 h-12 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] flex items-center justify-center shrink-0 relative z-10 transition-all duration-300 group-hover:bg-[#94e700]/10 group-hover:border-[#94e700]/30">
-                  <step.icon className="h-5 w-5 text-muted-foreground group-hover:text-[#94e700] transition-colors" />
+                  <IconComp className="h-5 w-5 text-muted-foreground group-hover:text-[#94e700] transition-colors" />
                 </div>
 
                 <div className="flex-1 pb-1">
