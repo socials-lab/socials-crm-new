@@ -8,10 +8,12 @@ const corsHeaders = {
 };
 
 /**
- * Build the system prompt with all agency knowledge baked in.
- * SOP articles are fetched from DB and injected dynamically.
+ * Build the system prompt with all agency knowledge + live CRM data.
  */
-async function buildSystemPrompt(sopArticles: { id: string; title: string; content: string; category_title?: string }[]): Promise<string> {
+async function buildSystemPrompt(
+  sopArticles: { id: string; title: string; content: string; category_title?: string }[],
+  crmContext: string,
+): Promise<string> {
   const sopSection = sopArticles.length > 0
     ? sopArticles.map(a => `### ${a.category_title ? `[${a.category_title}] ` : ''}${a.title}\nID: ${a.id}\nOdkaz: /sop/${a.id}\n${a.content}`).join('\n\n')
     : 'Žádné SOP články nejsou k dispozici.';
@@ -30,6 +32,11 @@ Tvůj hlavní účel je pomáhat s:
 1. Tvorbou nabídek (pricing) – kolik účtovat klientovi, jaký tier vybrat, jaké odměny nastavit kolegům
 2. SOP – jak co v agentuře děláme, jaké jsou procesy
 3. Odměny kolegů – doporučené hodiny a odměny dle pozice a služby
+4. Přehled CRM – aktivní klienti, zakázky, leady, vícepráce, pipeline
+
+MÁŠ PŘÍSTUP K ŽIVÝM DATŮM Z CRM. Když se tě uživatel zeptá na konkrétního klienta, lead, zakázku nebo vícepráci, odpovídej na základě dat níže. Pokud data neobsahují to co uživatel hledá, řekni to.
+
+${crmContext}
 
 PRAVIDLA FORMÁTOVÁNÍ ODPOVĚDÍ
 
@@ -268,7 +275,6 @@ Když ti uživatel řekne že potřebuje nacenit službu nebo vytvořit nabídku
 8. **Doporuč doplňkové služby** které by mohly klientovi pomoct
 
 Když odpovídáš na SOP dotazy, cituj konkrétní postup ze SOP článků a **vždy přidej odkaz** na konci: 📖 [Název článku](/sop/ID_ČLÁNKU)`;
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -286,7 +292,10 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     let sopArticles: { id: string; title: string; content: string; category_title?: string }[] = [];
+    let crmContext = '';
+
     try {
+      // SOP articles
       const { data: articles } = await supabase
         .from("sop_articles")
         .select("id, title, content, search_text, category_id")
@@ -311,7 +320,71 @@ serve(async (req) => {
       console.error("Failed to fetch SOP articles:", e);
     }
 
-    const systemPrompt = await buildSystemPrompt(sopArticles);
+    // Fetch live CRM data
+    try {
+      const [clientsRes, engagementsRes, leadsRes, extraWorksRes, colleaguesRes, servicesRes] = await Promise.all([
+        supabase.from("clients").select("id, name, brand_name, status, country, industry, start_date, monthly_fee:engagements(monthly_fee)").eq("status", "active").order("name").limit(100),
+        supabase.from("engagements").select("id, name, client_id, status, monthly_fee, currency, type, start_date, platforms, clients(name, brand_name)").eq("status", "active").order("created_at", { ascending: false }).limit(100),
+        supabase.from("leads").select("id, company_name, contact_name, contact_email, stage, source, estimated_price, currency, ad_spend_monthly, potential_service, created_at").not("stage", "in", "(won,lost)").order("created_at", { ascending: false }).limit(30),
+        supabase.from("extra_works").select("id, name, client_id, amount, currency, status, billing_period, hours_worked, hourly_rate, work_date, clients(name)").order("created_at", { ascending: false }).limit(30),
+        supabase.from("colleagues").select("id, full_name, position, email, status, seniority, capacity_hours_per_month").eq("status", "active").order("full_name"),
+        supabase.from("services").select("id, name, code, base_price, currency, category, service_type, tier_pricing, is_active").eq("is_active", true).order("name"),
+      ]);
+
+      const sections: string[] = [];
+
+      // Active clients
+      if (clientsRes.data && clientsRes.data.length > 0) {
+        sections.push(`## AKTIVNÍ KLIENTI (${clientsRes.data.length})\n` +
+          clientsRes.data.map((c: any) => `- **${c.brand_name || c.name}** (${c.name}) – ${c.country || 'CZ'}, ${c.industry || 'N/A'}`).join('\n'));
+      }
+
+      // Active engagements
+      if (engagementsRes.data && engagementsRes.data.length > 0) {
+        const totalMRR = engagementsRes.data.reduce((sum: number, e: any) => sum + (e.monthly_fee || 0), 0);
+        sections.push(`## AKTIVNÍ ZAKÁZKY (${engagementsRes.data.length}, celkový MRR: ${totalMRR.toLocaleString('cs-CZ')} Kč)\n` +
+          engagementsRes.data.map((e: any) => {
+            const clientName = (e as any).clients?.brand_name || (e as any).clients?.name || 'N/A';
+            return `- **${e.name}** (${clientName}) – ${e.monthly_fee?.toLocaleString('cs-CZ') || 0} ${e.currency}/měs, typ: ${e.type}, platformy: ${(e.platforms || []).join(', ') || 'N/A'}`;
+          }).join('\n'));
+      }
+
+      // Pipeline leads
+      if (leadsRes.data && leadsRes.data.length > 0) {
+        const pipelineValue = leadsRes.data.reduce((sum: number, l: any) => sum + (l.estimated_price || 0), 0);
+        sections.push(`## LEADY V PIPELINE (${leadsRes.data.length}, celková hodnota: ${pipelineValue.toLocaleString('cs-CZ')} Kč)\n` +
+          leadsRes.data.map((l: any) => `- **${l.company_name}** (${l.contact_name}) – stav: ${l.stage}, zdroj: ${l.source || 'N/A'}, odhad: ${(l.estimated_price || 0).toLocaleString('cs-CZ')} ${l.currency}, spend: ${(l.ad_spend_monthly || 0).toLocaleString('cs-CZ')} Kč/měs, služba: ${l.potential_service || 'N/A'}, vytvořeno: ${l.created_at?.slice(0, 10) || 'N/A'}`).join('\n'));
+      }
+
+      // Recent extra works
+      if (extraWorksRes.data && extraWorksRes.data.length > 0) {
+        sections.push(`## NEDÁVNÉ VÍCEPRÁCE (posledních ${extraWorksRes.data.length})\n` +
+          extraWorksRes.data.map((ew: any) => {
+            const clientName = (ew as any).clients?.name || 'N/A';
+            return `- **${ew.name}** (${clientName}) – ${ew.amount?.toLocaleString('cs-CZ')} ${ew.currency}, stav: ${ew.status}, období: ${ew.billing_period}, ${ew.hours_worked || 0}h za ${ew.hourly_rate || 0} Kč/h`;
+          }).join('\n'));
+      }
+
+      // Active colleagues
+      if (colleaguesRes.data && colleaguesRes.data.length > 0) {
+        sections.push(`## AKTIVNÍ KOLEGOVÉ (${colleaguesRes.data.length})\n` +
+          colleaguesRes.data.map((c: any) => `- **${c.full_name}** – ${c.position}, ${c.seniority}, kapacita: ${c.capacity_hours_per_month || 'N/A'}h/měs`).join('\n'));
+      }
+
+      // Services from DB
+      if (servicesRes.data && servicesRes.data.length > 0) {
+        sections.push(`## SLUŽBY V KATALOGU (${servicesRes.data.length})\n` +
+          servicesRes.data.map((s: any) => `- **${s.name}** (${s.code}) – ${s.base_price?.toLocaleString('cs-CZ') || 0} ${s.currency}, kategorie: ${s.category}, typ: ${s.service_type}`).join('\n'));
+      }
+
+      if (sections.length > 0) {
+        crmContext = `---\n\n# ŽIVÁ DATA Z CRM (aktuální stav)\n\n${sections.join('\n\n')}\n\n---`;
+      }
+    } catch (e) {
+      console.error("Failed to fetch CRM data:", e);
+    }
+
+    const systemPrompt = await buildSystemPrompt(sopArticles, crmContext);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
