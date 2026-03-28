@@ -80,6 +80,7 @@ interface LeadDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit: (lead: Lead) => void;
+  onDelete?: (leadId: string) => void;
 }
 
 const STAGE_LABELS: Record<LeadStage, string> = {
