@@ -9,6 +9,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLeadTransitions } from '@/hooks/useLeadTransitions';
+import { useCRMData } from '@/hooks/useCRMData';
 
 interface LeadsKanbanProps {
   leads: Lead[];
@@ -43,6 +44,7 @@ const ACTIVE_STAGES: LeadStage[] = [
 const CLOSED_STAGES: LeadStage[] = ['won', 'lost', 'postponed', 'bad_fit'];
 
 export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason }: LeadsKanbanProps) {
+  const { colleagues } = useCRMData();
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<LeadStage | null>(null);
   const [closedOpen, setClosedOpen] = useState(false);
@@ -210,6 +212,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason
             >
               <LeadCard
                 lead={lead}
+                ownerName={colleagues.find(c => c.id === lead.owner_id)?.full_name}
                 onClick={() => onLeadClick(lead)}
               />
             </div>

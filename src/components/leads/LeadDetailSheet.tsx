@@ -354,6 +354,34 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                 </Button>
               </div>
             </div>
+
+            {/* Prominent owner/resolver selector */}
+            <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-muted/50 border">
+              <User className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Řešitel:</span>
+              <Select 
+                value={lead.owner_id || '_none'} 
+                onValueChange={(val) => {
+                  const newOwnerId = val === '_none' ? null : val;
+                  updateLead(lead.id, { owner_id: newOwnerId } as any);
+                  toast.success('Řešitel leadu byl změněn');
+                }}
+              >
+                <SelectTrigger className="h-8 border-0 bg-transparent shadow-none p-0 pl-1 font-medium text-sm flex-1 min-w-0">
+                  <SelectValue placeholder="Nepřiřazeno" />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  <SelectItem value="_none">
+                    <span className="text-muted-foreground">Nepřiřazeno</span>
+                  </SelectItem>
+                  {colleagues.filter(c => c.status === 'active').map((colleague) => (
+                    <SelectItem key={colleague.id} value={colleague.id}>
+                      {colleague.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             
           </SheetHeader>
 
@@ -517,28 +545,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <label className="text-xs text-muted-foreground">Odpovědná osoba</label>
-                    <Select 
-                      value={lead.owner_id} 
-                      onValueChange={(newOwnerId) => {
-                        updateLead(lead.id, { owner_id: newOwnerId });
-                        toast.success('Majitel leadu byl změněn');
-                      }}
-                    >
-                      <SelectTrigger className="mt-1 h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background">
-                        {colleagues.filter(c => c.status === 'active').map((colleague) => (
-                          <SelectItem key={colleague.id} value={colleague.id}>
-                            {colleague.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="text-sm">
                   <div>
                     <span className="text-muted-foreground">Zdroj:</span>
                     <p className="font-medium">
