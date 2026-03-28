@@ -8,10 +8,12 @@ const corsHeaders = {
 };
 
 /**
- * Build the system prompt with all agency knowledge baked in.
- * SOP articles are fetched from DB and injected dynamically.
+ * Build the system prompt with all agency knowledge + live CRM data.
  */
-async function buildSystemPrompt(sopArticles: { id: string; title: string; content: string; category_title?: string }[]): Promise<string> {
+async function buildSystemPrompt(
+  sopArticles: { id: string; title: string; content: string; category_title?: string }[],
+  crmContext: string,
+): Promise<string> {
   const sopSection = sopArticles.length > 0
     ? sopArticles.map(a => `### ${a.category_title ? `[${a.category_title}] ` : ''}${a.title}\nID: ${a.id}\nOdkaz: /sop/${a.id}\n${a.content}`).join('\n\n')
     : 'Žádné SOP články nejsou k dispozici.';
@@ -30,6 +32,11 @@ Tvůj hlavní účel je pomáhat s:
 1. Tvorbou nabídek (pricing) – kolik účtovat klientovi, jaký tier vybrat, jaké odměny nastavit kolegům
 2. SOP – jak co v agentuře děláme, jaké jsou procesy
 3. Odměny kolegů – doporučené hodiny a odměny dle pozice a služby
+4. Přehled CRM – aktivní klienti, zakázky, leady, vícepráce, pipeline
+
+MÁŠ PŘÍSTUP K ŽIVÝM DATŮM Z CRM. Když se tě uživatel zeptá na konkrétního klienta, lead, zakázku nebo vícepráci, odpovídej na základě dat níže. Pokud data neobsahují to co uživatel hledá, řekni to.
+
+${crmContext}
 
 PRAVIDLA FORMÁTOVÁNÍ ODPOVĚDÍ
 
@@ -268,7 +275,6 @@ Když ti uživatel řekne že potřebuje nacenit službu nebo vytvořit nabídku
 8. **Doporuč doplňkové služby** které by mohly klientovi pomoct
 
 Když odpovídáš na SOP dotazy, cituj konkrétní postup ze SOP článků a **vždy přidej odkaz** na konci: 📖 [Název článku](/sop/ID_ČLÁNKU)`;
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
