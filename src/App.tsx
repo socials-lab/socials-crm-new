@@ -54,6 +54,7 @@ import BugReports from "./pages/BugReports";
 import Prospects from "./pages/Prospects";
 import Portfolio from "./pages/Portfolio";
 import OfferContentEditor from "./pages/OfferContentEditor";
+import OfferManagement from "./pages/OfferManagement";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +121,7 @@ const App = () => (
                               <Route path="/prospects" element={<Prospects />} />
                               <Route path="/portfolio" element={<Portfolio />} />
                               <Route path="/offer-editor" element={<OfferContentEditor />} />
+                              <Route path="/offer-management" element={<OfferManagement />} />
                             </Route>
                             <Route path="*" element={<NotFound />} />
                           </Routes>
