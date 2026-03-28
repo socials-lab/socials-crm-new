@@ -234,6 +234,7 @@ Když ti uživatel řekne že potřebuje nacenit službu nebo vytvořit nabídku
 8. **Doporuč doplňkové služby** které by mohly klientovi pomoct
 
 Když odpovídáš na SOP dotazy, cituj konkrétní postup ze SOP článků a **vždy přidej odkaz** na konci: 📖 [Název článku](/sop/ID_ČLÁNKU)`;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
