@@ -75,6 +75,7 @@ const navGroups: NavGroup[] = [
       { title: 'Zakázky', url: '/engagements', page: 'engagements', icon: ClipboardList },
       { title: 'Návrhy změn', url: '/modifications', page: 'modifications', icon: FilePenLine },
       { title: 'Rozesílky', url: '/broadcasts', page: 'broadcasts', icon: Send },
+      { title: 'Nabídka', url: '/offer-management', page: 'offer-management', icon: FileText },
     ],
   },
   {
@@ -113,7 +114,7 @@ const navGroups: NavGroup[] = [
 ];
 
 const managementNavItems: NavItem[] = [
-  { title: 'Nabídka', url: '/offer-management', page: 'settings', icon: PenLine },
+  
   { title: 'Nastavení', url: '/settings', page: 'settings', icon: Settings },
 ];
 
