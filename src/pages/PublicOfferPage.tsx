@@ -1351,24 +1351,18 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* ===== 8. KONTAKT + CTA ===== */}
         <ScrollReveal>
-        {(() => {
-          const ctaBlock = getOfferContent(offer, 'cta');
-          const clientsBlock = getOfferContent(offer, 'clients_logos');
-          const certsBlock = getOfferContent(offer, 'certifications');
-          return (
-        <>
         <section className="space-y-6">
           <ContactSection offer={offer} />
           
           <div className="text-center pt-10 pb-12 px-4">
             <h2 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight">
-              {ctaBlock.title || '🚀 Pojďme do toho'}
+              {getOfferContent(offer, 'cta').title || '🚀 Pojďme do toho'}
             </h2>
             <p className="mb-4 text-muted-foreground text-base max-w-md mx-auto">
-              {ctaBlock.subtitle || 'Stačí vyplnit krátký formulář a můžeme začít.'}
+              {getOfferContent(offer, 'cta').subtitle || 'Stačí vyplnit krátký formulář a můžeme začít.'}
             </p>
             <p className="mb-8 text-muted-foreground/70 text-sm max-w-md mx-auto">
-              {ctaBlock.content?.extended_subtitle || 'Celý onboarding zvládneme do 48 hodin — smlouvu pošleme k digitálnímu podpisu, nastavíme přístupy a spustíme kampaně.'}
+              {getOfferContent(offer, 'cta').content?.extended_subtitle || 'Celý onboarding zvládneme do 48 hodin — smlouvu pošleme k digitálnímu podpisu, nastavíme přístupy a spustíme kampaně.'}
             </p>
             <div className="flex justify-center">
               <Button 
@@ -1377,13 +1371,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-bold px-12 py-7 text-lg rounded-xl shadow-[0_0_40px_-10px_rgba(148,231,0,0.4)] hover:shadow-[0_0_50px_-10px_rgba(148,231,0,0.5)] transition-all"
               >
                 <Link to={onboardingUrl}>
-                  {ctaBlock.content?.button_text || 'Začít spolupráci'}
+                  {getOfferContent(offer, 'cta').content?.button_text || 'Začít spolupráci'}
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </Link>
               </Button>
             </div>
             <p className="mt-5 text-xs text-muted-foreground/50">
-              {ctaBlock.content?.footer_note || '✅ Smlouva do 24 hodin'}
+              {getOfferContent(offer, 'cta').content?.footer_note || '✅ Smlouva do 24 hodin'}
             </p>
           </div>
         </section>
@@ -1392,8 +1386,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* ===== REFERENCE KLIENTŮ ===== */}
         <ScrollReveal>
         <section className="mt-16 rounded-2xl bg-black py-10 px-6">
-          <h2 className="text-lg font-semibold text-center mb-2 text-white">{clientsBlock.title || '❤️ Značky, které jsme pomohli posunout'}</h2>
-          <p className="text-sm text-gray-400 text-center mb-8">{clientsBlock.subtitle || 'Pomáháme růst firmám napříč odvětvími'}</p>
+          <h2 className="text-lg font-semibold text-center mb-2 text-white">{getOfferContent(offer, 'clients_logos').title || '❤️ Značky, které jsme pomohli posunout'}</h2>
+          <p className="text-sm text-gray-400 text-center mb-8">{getOfferContent(offer, 'clients_logos').subtitle || 'Pomáháme růst firmám napříč odvětvími'}</p>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 sm:gap-6 items-center justify-items-center">
             {[cl1, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10].map((logo, i) => (
               <img key={i} src={logo} alt={`Klient ${i + 1}`} className="h-16 sm:h-14 md:h-20 w-full max-w-[120px] object-contain opacity-70 hover:opacity-100 transition-opacity" />
@@ -1405,8 +1399,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* ===== CERTIFIKACE ===== */}
         <ScrollReveal>
         <section className="mt-16 rounded-2xl bg-black py-10 px-6">
-          <h2 className="text-lg font-semibold text-center mb-2 text-white">{certsBlock.title || '🏆 Certifikace & partnerství'}</h2>
-          <p className="text-sm text-gray-400 text-center mb-8">{certsBlock.subtitle || 'Oficiálně certifikovaný tým s přístupem k nejnovějším nástrojům a beta funkcím'}</p>
+          <h2 className="text-lg font-semibold text-center mb-2 text-white">{getOfferContent(offer, 'certifications').title || '🏆 Certifikace & partnerství'}</h2>
+          <p className="text-sm text-gray-400 text-center mb-8">{getOfferContent(offer, 'certifications').subtitle || 'Oficiálně certifikovaný tým s přístupem k nejnovějším nástrojům a beta funkcím'}</p>
           <div className="grid grid-cols-4 md:grid-cols-8 gap-4 items-center justify-items-center">
             {[cert8, cert7, cert6, cert1, cert2, cert3, cert4, cert5].map((cert, i) => (
               <img key={i} src={cert} alt={`Certifikace ${i + 1}`} className={`object-contain opacity-80 hover:opacity-100 transition-opacity ${[1, 6, 7].includes(i) ? 'h-16 md:h-24' : 'h-12 md:h-16'}`} />
@@ -1414,9 +1408,6 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           </div>
         </section>
         </ScrollReveal>
-        </>
-          );
-        })()}
 
         {/* ===== 9. FOOTER ===== */}
         <footer className="pt-8 mt-16 border-t border-foreground/[0.06]">
