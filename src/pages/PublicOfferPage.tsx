@@ -547,7 +547,7 @@ function WhyUsSection({ offer }: { offer: PublicOffer }) {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
-        {WHY_US_ITEMS.map((item, i) => (
+        {items.map((item: any, i: number) => (
           <ScrollReveal key={i} delay={i * 100}>
             <div
               className="group p-5 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-[#94e700]/20 transition-all duration-300 cursor-default h-full"
@@ -561,7 +561,7 @@ function WhyUsSection({ offer }: { offer: PublicOffer }) {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        {WHY_US_LINKS.map((link, i) => (
+        {links.map((link: any, i: number) => (
           <a
             key={i}
             href={link.url}
