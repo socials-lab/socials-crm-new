@@ -654,6 +654,122 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
     return labels[tier] || tier.toUpperCase();
   };
 
+  const handleCloseSummary = () => {
+    const engagementId = conversionResult?.engagementId;
+    setConversionResult(null);
+    onOpenChange(false);
+    if (engagementId) {
+      navigate(`/engagements?highlight=${engagementId}`);
+    }
+  };
+
+  const formatFee = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('cs-CZ').format(amount) + ' ' + currency;
+  };
+
+  // Show conversion summary
+  if (conversionResult) {
+    return (
+      <Dialog open={open} onOpenChange={() => handleCloseSummary()}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <DialogTitle>Zakázka úspěšně vytvořena</DialogTitle>
+                <DialogDescription>
+                  Souhrn převodu leadu <span className="font-medium">{conversionResult.clientName}</span>
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-2">
+            {/* Client & Engagement */}
+            <div className="rounded-lg border bg-card p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                Klient: {conversionResult.clientName}
+                {conversionResult.brandName !== conversionResult.clientName && (
+                  <Badge variant="outline" className="text-xs">{conversionResult.brandName}</Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Zakázka: <span className="font-medium">{conversionResult.engagementName}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                Měsíční fee: <span className="font-medium">{formatFee(conversionResult.monthlyFee, conversionResult.currency)}</span>
+              </div>
+            </div>
+
+            {/* What was created */}
+            <div className="rounded-lg border bg-card p-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Co bylo vytvořeno</p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  {conversionResult.servicesCount} {conversionResult.servicesCount === 1 ? 'služba' : conversionResult.servicesCount < 5 ? 'služby' : 'služeb'}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  {conversionResult.teamCount} {conversionResult.teamCount === 1 ? 'člen' : conversionResult.teamCount < 5 ? 'členové' : 'členů'} týmu
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  {conversionResult.contactsCount} {conversionResult.contactsCount === 1 ? 'kontakt' : conversionResult.contactsCount < 5 ? 'kontakty' : 'kontaktů'}
+                </div>
+              </div>
+            </div>
+
+            {/* Integrations */}
+            <div className="rounded-lg border bg-card p-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Integrace</p>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-sm">
+                  <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                  Freelo:{' '}
+                  {conversionResult.freeloError ? (
+                    <span className="text-destructive">nepodařilo se vytvořit</span>
+                  ) : conversionResult.freeloUrl ? (
+                    <a href={conversionResult.freeloUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                      projekt vytvořen <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  Slack:{' '}
+                  {conversionResult.slackError ? (
+                    <span className="text-destructive">nepodařilo se vytvořit</span>
+                  ) : conversionResult.slackChannel ? (
+                    <span className="font-medium">#{conversionResult.slackChannel}</span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={handleCloseSummary}>
+              Zavřít
+            </Button>
+            <Button onClick={handleCloseSummary}>
+              Zobrazit zakázku
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
