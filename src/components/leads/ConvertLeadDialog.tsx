@@ -1099,116 +1099,161 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 )}
               />
 
-              {/* Editable services from offer */}
-              {offerServices.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Služby a ceny (editovatelné)</p>
-                  <div className="rounded-lg border bg-background divide-y divide-border/50">
-                    {offerServices.map((svc, idx) => {
-                      const hasDiscount = svc.intro_discount_percent && svc.intro_discount_percent > 0 && svc.billing_type === 'monthly';
-                      const discountedPrice = hasDiscount 
-                        ? Math.round(svc.price * (1 - (svc.intro_discount_percent || 0) / 100))
-                        : svc.price;
-                      return (
-                        <div key={idx} className="px-3 py-2.5 space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-sm">{svc.name}</span>
-                              {svc.selected_tier && (
-                                <Badge variant="outline" className="text-[10px] uppercase">{svc.selected_tier}</Badge>
-                              )}
-                              <Badge variant="secondary" className="text-[10px]">
-                                {svc.billing_type === 'monthly' ? 'Měsíčně' : 'Jednorázově'}
-                              </Badge>
-                              {svc.is_creative_boost && (
-                                <Badge variant="outline" className="text-[10px]">CB</Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Input
-                                type="number"
-                                min={0}
-                                value={svc.price}
-                                onChange={(e) => {
-                                  const val = Math.max(0, Number(e.target.value));
-                                  setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, price: val } : s));
-                                }}
-                                className="w-28 h-7 text-sm text-right font-semibold tabular-nums"
-                              />
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {svc.currency}{svc.billing_type === 'monthly' ? '/měs' : ''}
-                              </span>
-                            </div>
+              {/* Editable services */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Služby a ceny (editovatelné)</p>
+                <div className="rounded-lg border bg-background divide-y divide-border/50">
+                  {offerServices.map((svc, idx) => {
+                    const hasDiscount = svc.intro_discount_percent && svc.intro_discount_percent > 0 && svc.billing_type === 'monthly';
+                    const discountedPrice = hasDiscount 
+                      ? Math.round(svc.price * (1 - (svc.intro_discount_percent || 0) / 100))
+                      : svc.price;
+                    return (
+                      <div key={idx} className="px-3 py-2.5 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm">{svc.name}</span>
+                            {svc.selected_tier && (
+                              <Badge variant="outline" className="text-[10px] uppercase">{svc.selected_tier}</Badge>
+                            )}
+                            <Badge variant="secondary" className="text-[10px]">
+                              {svc.billing_type === 'monthly' ? 'Měsíčně' : 'Jednorázově'}
+                            </Badge>
+                            {svc.is_creative_boost && (
+                              <Badge variant="outline" className="text-[10px]">CB</Badge>
+                            )}
                           </div>
-                          {svc.is_creative_boost && svc.cb_credits && svc.cb_price_per_credit && (
-                            <p className="text-[10px] text-muted-foreground tabular-nums pl-1">
-                              {svc.cb_credits} × {svc.cb_price_per_credit} Kč
-                            </p>
-                          )}
-                          {/* Intro discount row */}
-                          {svc.billing_type === 'monthly' && (
-                            <div className="flex items-center gap-2 pl-1">
-                              <Percent className="h-3 w-3 text-amber-500 shrink-0" />
-                              <span className="text-[11px] text-muted-foreground">Úvodní sleva:</span>
-                              <Input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={svc.intro_discount_percent || ''}
-                                onChange={(e) => {
-                                  const val = Math.min(100, Math.max(0, Number(e.target.value)));
-                                  setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, intro_discount_percent: val || null } : s));
-                                }}
-                                placeholder="0"
-                                className="w-14 h-6 text-xs text-right"
-                              />
-                              <span className="text-[11px] text-muted-foreground">% na</span>
-                              <Input
-                                type="number"
-                                min={1}
-                                max={24}
-                                value={svc.intro_discount_months || ''}
-                                onChange={(e) => {
-                                  const val = Math.min(24, Math.max(1, Number(e.target.value)));
-                                  setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, intro_discount_months: val } : s));
-                                }}
-                                placeholder="3"
-                                className="w-16 h-6 text-xs text-right"
-                              />
-                              <span className="text-[11px] text-muted-foreground">měs.</span>
-                              {hasDiscount && (
-                                <span className="text-[11px] font-medium text-amber-600 ml-auto tabular-nums">
-                                  → {discountedPrice.toLocaleString('cs-CZ')} {svc.currency}/měs
-                                </span>
-                              )}
-                            </div>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={svc.price}
+                              onChange={(e) => {
+                                const val = Math.max(0, Number(e.target.value));
+                                setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, price: val } : s));
+                              }}
+                              className="w-28 h-7 text-sm text-right font-semibold tabular-nums"
+                            />
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {svc.currency}{svc.billing_type === 'monthly' ? '/měs' : ''}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => setOfferServices(prev => prev.filter((_, i) => i !== idx))}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
-                      );
-                    })}
-                    <div className="flex items-center justify-between px-3 py-2 bg-muted/50">
-                      <span className="text-sm font-semibold">Celkem měsíčně</span>
-                      <span className="text-sm font-bold tabular-nums text-primary">
-                        {offerServices
-                          .filter(s => s.billing_type === 'monthly')
-                          .reduce((sum, s) => sum + s.price, 0)
-                          .toLocaleString('cs-CZ')} {lead.currency}/měs
-                      </span>
-                    </div>
-                    {offerServices.some(s => s.billing_type === 'one_off') && (
+                        {svc.is_creative_boost && svc.cb_credits && svc.cb_price_per_credit && (
+                          <p className="text-[10px] text-muted-foreground tabular-nums pl-1">
+                            {svc.cb_credits} × {svc.cb_price_per_credit} Kč
+                          </p>
+                        )}
+                        {/* Intro discount row */}
+                        {svc.billing_type === 'monthly' && (
+                          <div className="flex items-center gap-2 pl-1">
+                            <Percent className="h-3 w-3 text-amber-500 shrink-0" />
+                            <span className="text-[11px] text-muted-foreground">Úvodní sleva:</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={svc.intro_discount_percent || ''}
+                              onChange={(e) => {
+                                const val = Math.min(100, Math.max(0, Number(e.target.value)));
+                                setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, intro_discount_percent: val || null } : s));
+                              }}
+                              placeholder="0"
+                              className="w-14 h-6 text-xs text-right"
+                            />
+                            <span className="text-[11px] text-muted-foreground">% na</span>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={24}
+                              value={svc.intro_discount_months || ''}
+                              onChange={(e) => {
+                                const val = Math.min(24, Math.max(1, Number(e.target.value)));
+                                setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, intro_discount_months: val } : s));
+                              }}
+                              placeholder="3"
+                              className="w-16 h-6 text-xs text-right"
+                            />
+                            <span className="text-[11px] text-muted-foreground">měs.</span>
+                            {hasDiscount && (
+                              <span className="text-[11px] font-medium text-amber-600 ml-auto tabular-nums">
+                                → {discountedPrice.toLocaleString('cs-CZ')} {svc.currency}/měs
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {offerServices.length > 0 && (
+                    <>
                       <div className="flex items-center justify-between px-3 py-2 bg-muted/50">
-                        <span className="text-sm font-semibold">Celkem jednorázově</span>
-                        <span className="text-sm font-bold tabular-nums">
+                        <span className="text-sm font-semibold">Celkem měsíčně</span>
+                        <span className="text-sm font-bold tabular-nums text-primary">
                           {offerServices
-                            .filter(s => s.billing_type === 'one_off')
+                            .filter(s => s.billing_type === 'monthly')
                             .reduce((sum, s) => sum + s.price, 0)
-                            .toLocaleString('cs-CZ')} {lead.currency}
+                            .toLocaleString('cs-CZ')} {lead.currency}/měs
                         </span>
                       </div>
-                    )}
-                  </div>
+                      {offerServices.some(s => s.billing_type === 'one_off') && (
+                        <div className="flex items-center justify-between px-3 py-2 bg-muted/50">
+                          <span className="text-sm font-semibold">Celkem jednorázově</span>
+                          <span className="text-sm font-bold tabular-nums">
+                            {offerServices
+                              .filter(s => s.billing_type === 'one_off')
+                              .reduce((sum, s) => sum + s.price, 0)
+                              .toLocaleString('cs-CZ')} {lead.currency}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-              )}
+                {/* Add service button */}
+                <div className="flex items-center gap-2">
+                  <Select
+                    onValueChange={(serviceId) => {
+                      const catalogSvc = services.find(s => s.id === serviceId);
+                      if (!catalogSvc) return;
+                      const newEntry: OfferServiceEntry = {
+                        service_id: catalogSvc.id,
+                        name: catalogSvc.name,
+                        selected_tier: null,
+                        price: catalogSvc.base_price || 0,
+                        currency: catalogSvc.currency || lead.currency || 'CZK',
+                        billing_type: 'monthly',
+                        intro_discount_percent: null,
+                        intro_discount_months: null,
+                      };
+                      setOfferServices(prev => [...prev, newEntry]);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="+ Přidat službu…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {services
+                        .filter(s => s.is_active)
+                        .sort((a, b) => (a.service_type === 'core' ? -1 : 1) - (b.service_type === 'core' ? -1 : 1))
+                        .map(s => (
+                          <SelectItem key={s.id} value={s.id} className="text-xs">
+                            {s.name} {s.base_price ? `· ${s.base_price.toLocaleString('cs-CZ')} ${s.currency || 'CZK'}` : ''}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-4">
                 <FormField
