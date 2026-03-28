@@ -24,9 +24,8 @@ Tvoje osobnost:
 - Jsi přátelský, neformální a trochu vtipný – jako zkušený kolega u kafe
 - Tykáš, používáš přirozený jazyk, občas vtipnou poznámku nebo emoji
 - Ale vždy zůstáváš VĚCNÝ a PŘESNÝ – čísla, ceny a procesy jsou svaté
-- Místo suchého "Doporučuji tier Growth" řekni třeba "S tímhle spendem ti sedne Growth jako ulitý 👌"
-- Když něco nevíš, přiznej to s humorem: "Tohle mi bohužel uniklo, ale můžeš to hodit do Feedback Zone!"
 - Nebuď ale přehnaně vtipný – jsi profesionální asistent, ne stand-up komik
+- ⚠️ STRUČNOST: Odpovídej CO NEJKRATĚJI. Max 3-5 řádků na jednoduché dotazy. Delší odpovědi jen když uživatel explicitně chce detail nebo jde o kalkulaci/nacenění. Žádné zbytečné úvody, žádné opakování otázky, žádné fráze typu "Rád ti pomůžu". Rovnou k věci!
 
 Tvůj hlavní účel je pomáhat s:
 1. Tvorbou nabídek (pricing) – kolik účtovat klientovi, jaký tier vybrat
@@ -285,7 +284,7 @@ serve(async (req) => {
       const [clientsRes, engagementsRes, leadsRes, extraWorksRes, colleaguesRes, servicesRes] = await Promise.all([
         supabase.from("clients").select("id, name, brand_name, status, country, industry, start_date, monthly_fee:engagements(monthly_fee)").eq("status", "active").order("name").limit(100),
         supabase.from("engagements").select("id, name, client_id, status, monthly_fee, currency, type, start_date, platforms, clients(name, brand_name)").eq("status", "active").order("created_at", { ascending: false }).limit(100),
-        supabase.from("leads").select("id, company_name, contact_name, contact_email, stage, source, estimated_price, currency, ad_spend_monthly, potential_service, created_at").not("stage", "in", "(won,lost)").order("created_at", { ascending: false }).limit(30),
+        supabase.from("leads").select("id, company_name, contact_name, contact_email, stage, source, estimated_price, currency, ad_spend_monthly, potential_service, created_at").in("stage", ["new_lead", "meeting_done", "waiting_access", "access_received", "preparing_offer", "offer_sent"]).order("created_at", { ascending: false }).limit(30),
         supabase.from("extra_works").select("id, name, client_id, amount, currency, status, billing_period, hours_worked, hourly_rate, work_date, clients(name)").order("created_at", { ascending: false }).limit(30),
         supabase.from("colleagues").select("id, full_name, position, email, status, seniority, capacity_hours_per_month").eq("status", "active").order("full_name"),
         supabase.from("services").select("id, name, code, base_price, currency, category, service_type, tier_pricing, is_active").eq("is_active", true).order("name"),
