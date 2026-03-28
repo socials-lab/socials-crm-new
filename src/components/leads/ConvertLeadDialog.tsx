@@ -320,35 +320,6 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
     }
   }, [lead, open, form, services]);
 
-  const updateOfferServicePrice = (index: number, price: number) => {
-    setOfferServices(prev => {
-      const updated = prev.map((s, i) => i === index ? { ...s, price } : s);
-      const monthlyTotal = updated
-        .filter(s => s.billing_type === 'monthly')
-        .reduce((sum, s) => sum + s.price, 0);
-      form.setValue('monthly_fee', monthlyTotal);
-      return updated;
-    });
-  };
-
-  const updateCBField = (index: number, field: 'cb_credits' | 'cb_price_per_credit', value: number) => {
-    setOfferServices(prev => {
-      const updated = prev.map((s, i) => {
-        if (i !== index) return s;
-        const newS = { ...s, [field]: value };
-        // Recalculate price from credits × price_per_credit
-        if (newS.is_creative_boost && newS.cb_credits && newS.cb_price_per_credit) {
-          newS.price = newS.cb_credits * newS.cb_price_per_credit;
-        }
-        return newS;
-      });
-      const monthlyTotal = updated
-        .filter(s => s.billing_type === 'monthly')
-        .reduce((sum, s) => sum + s.price, 0);
-      form.setValue('monthly_fee', monthlyTotal);
-      return updated;
-    });
-  };
 
   const addTeamMember = () => {
     setTeamMembers(prev => [...prev, {
