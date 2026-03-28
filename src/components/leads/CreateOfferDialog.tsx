@@ -977,7 +977,19 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                           <Separator />
                           <div className="px-3 py-2.5 space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Sleva při odběru všech služeb:</span>
+                              <span className="text-muted-foreground flex items-center gap-1">
+                                Sleva při odběru všech služeb:
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[280px] text-xs">
+                                      Trvalá sleva za odběr celého balíčku služeb najednou. Platí po celou dobu spolupráce a motivuje klienta k většímu rozsahu.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </span>
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"
@@ -1032,7 +1044,20 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                           <Separator />
                           <div className="px-3 py-2.5 space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Úvodní sleva (první měsíce):{monthlyDiscountPercent > 0 && introDiscountPercent > 0 && <span className="text-[10px] ml-1 text-amber-500">(aplikuje se na cenu po slevě za balíček)</span>}</span>
+                              <span className="text-muted-foreground flex items-center gap-1">
+                                Úvodní sleva (první měsíce):
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[280px] text-xs">
+                                      Časově omezená sleva na prvních X měsíců spolupráce. Po uplynutí se automaticky fakturuje plná cena (resp. cena po balíčkové slevě).
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                {monthlyDiscountPercent > 0 && introDiscountPercent > 0 && <span className="text-[10px] ml-1 text-amber-500">(aplikuje se na cenu po slevě za balíček)</span>}
+                              </span>
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"
