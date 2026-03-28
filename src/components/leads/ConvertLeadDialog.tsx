@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX, Check, X } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX, Check, X, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -135,6 +135,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   }>>([]);
   const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
   const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
+  const [isConverting, setIsConverting] = useState(false);
+  const [conversionStep, setConversionStep] = useState('');
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   const activeServices = services.filter(s => s.is_active);
@@ -366,6 +368,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
     try {
       // 1. Create Client
+      setConversionStep('Vytvářím klienta...');
       const newClient = await addClient({
         name: data.client_name,
         brand_name: data.brand_name,
@@ -422,6 +425,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       }
 
       // 3. Create Engagement — calculate fees with global discounts
+      setConversionStep('Vytvářím zakázku...');
       const rawMonthlyFee = offerServices
         .filter(s => s.billing_type === 'monthly')
         .reduce((sum, s) => sum + s.price, 0);
@@ -505,6 +509,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       }
 
       // 6. Create Freelo project from template
+      setConversionStep('Zakládám Freelo projekt...');
       try {
         // Collect emails of assigned team members
         const teamEmails = teamMembers
@@ -540,6 +545,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       }
 
       // 6b. Create Slack channel and invite team
+      setConversionStep('Zakládám Slack kanál...');
       try {
         const teamEmails2 = teamMembers
           .filter(m => m.colleague_id)
@@ -584,7 +590,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
   const handleSubmit = async (data: ConvertFormData) => {
     if (!lead) return;
-    await executeConversion(data);
+    setIsConverting(true);
+    setConversionStep('Vytvářím klienta...');
+    try {
+      await executeConversion(data);
+    } finally {
+      setIsConverting(false);
+      setConversionStep('');
+    }
   };
 
   if (!lead) return null;
@@ -1874,18 +1887,32 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
 
             <div className="pt-4 border-t space-y-3">
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-                <Sparkles className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                <span>
-                  Při převodu se automaticky vytvoří <strong>Freelo projekt</strong> a <strong>Slack kanál</strong>. Přiřazení kolegové budou pozváni do obou platforem.
-                </span>
-              </div>
+              {isConverting ? (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span className="text-sm font-medium text-foreground">{conversionStep}</span>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                  <Sparkles className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                  <span>
+                    Při převodu se automaticky vytvoří <strong>Freelo projekt</strong> a <strong>Slack kanál</strong>. Přiřazení kolegové budou pozváni do obou platforem.
+                  </span>
+                </div>
+              )}
               <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isConverting}>
                   Zrušit
                 </Button>
-                <Button type="submit">
-                  Převést na zakázku
+                <Button type="submit" disabled={isConverting}>
+                  {isConverting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Převádím...
+                    </>
+                  ) : (
+                    'Převést na zakázku'
+                  )}
                 </Button>
               </div>
             </div>
