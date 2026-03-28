@@ -123,6 +123,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const { user } = useAuth();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [offerServices, setOfferServices] = useState<OfferServiceEntry[]>([]);
+  const [bundleDiscountPercent, setBundleDiscountPercent] = useState(0);
+  const [bundleDiscountScope, setBundleDiscountScope] = useState<'core_only' | 'all_services'>('core_only');
+  const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
+  const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   const activeServices = services.filter(s => s.is_active);
