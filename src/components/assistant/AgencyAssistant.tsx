@@ -402,10 +402,11 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
             <div className="space-y-4">
               {messages.map((msg, i) => {
                 const isLastAssistant = msg.role === 'assistant' && i === messages.length - 1;
-                const isStreaming = isLastAssistant && isLoading;
+                const isStreaming = isLastAssistant && isTyping;
                 
                 if (msg.role === 'assistant') {
-                  const { text, actions } = parseActionsFromContent(msg.content);
+                  const contentToRender = isLastAssistant && isTyping ? displayedContent : msg.content;
+                  const { text, actions } = parseActionsFromContent(contentToRender);
                   return (
                     <div key={i} className="flex justify-start animate-in fade-in-0 duration-200">
                       <div className="max-w-[85%]">
