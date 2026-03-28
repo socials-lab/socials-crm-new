@@ -223,10 +223,7 @@ Když ti uživatel řekne že potřebuje nacenit službu nebo vytvořit nabídku
 | Položka | Hodnota |
 |---------|---------|
 | 💰 Cena klientovi | XX XXX Kč/měs |
-| 👤 Meta Ads Specialist | XX XXX Kč/měs (XXh) |
-| 👤 PPC Specialist | XX XXX Kč/měs (XXh) |
-| 📊 Celkové interní náklady | XX XXX Kč/měs |
-| 📊 Marže | XX % (✅/⚠️/🔴) |
+| 📊 Cílová marže | 66 % (✅/⚠️/🔴) |
 
 6. **Vždy uveď hodnocení marže**: ✅ nad 66 %, ⚠️ 63-66 %, 🔴 pod 63 %
 7. **Zmíň úvodní slevu** pokud je relevantní (typicky 10 % na 3 měsíce)
