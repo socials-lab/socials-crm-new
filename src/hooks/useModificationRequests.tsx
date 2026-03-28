@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
+import { notifyModificationCreated, notifyModificationApproved, notifyClientApprovedModification } from '@/services/notificationTriggers';
 import {
   getModificationRequests,
   createModificationRequest,
