@@ -546,7 +546,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             .update({ freelo_url: freeloResult.project_url })
             .eq('id', newEngagement.id);
           
-          toast.success(`Freelo projekt vytvořen: ${freeloResult.project_name}`);
+          toast.success(`Freelo projekt vytvořen${freeloResult.invited_count > 0 ? ` (pozváno ${freeloResult.invited_count} kolegů)` : ''}`);
         }
       } catch (freeloErr) {
         console.error('Error calling Freelo automation:', freeloErr);
