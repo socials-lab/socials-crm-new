@@ -73,14 +73,14 @@ serve(async (req) => {
     let invitedTeamCount = 0;
     const allTeamEmails = [...new Set([...alwaysInviteEmails, ...filterEmails(team_emails)])];
 
-    if (validTeamEmails.length > 0) {
+    if (allTeamEmails.length > 0) {
       try {
         const inviteResponse = await fetch(`https://api.freelo.io/v1/users/manage-workers`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
             projects_ids: [freeloProject.id],
-            emails: validTeamEmails,
+            emails: allTeamEmails,
           }),
         });
 
