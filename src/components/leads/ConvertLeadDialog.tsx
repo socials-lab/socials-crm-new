@@ -1274,10 +1274,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                         name: catalogSvc.name,
                         selected_tier: null,
                         price: catalogSvc.base_price || 0,
+                        original_price: catalogSvc.base_price || 0,
                         currency: catalogSvc.currency || lead.currency || 'CZK',
                         billing_type: 'monthly',
-                        intro_discount_percent: null,
-                        intro_discount_months: null,
+                        discount_type: 'none',
+                        discount_percent: 0,
+                        intro_months: 3,
                       };
                       setOfferServices(prev => [...prev, newEntry]);
                     }}
