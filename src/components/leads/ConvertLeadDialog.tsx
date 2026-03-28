@@ -634,8 +634,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           </DialogDescription>
         </DialogHeader>
 
-
-
+        <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             
             {/* ── SECTION 1: Klient ── */}
