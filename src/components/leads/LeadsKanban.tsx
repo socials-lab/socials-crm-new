@@ -128,7 +128,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
     setDragOverStage(null);
   };
 
-  const handleConfirmTransition = () => {
+  const handleConfirmTransition = (reason?: string) => {
     if (pendingTransition) {
       confirmTransition({
         leadId: pendingTransition.leadId,
@@ -136,13 +136,19 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
         toStage: pendingTransition.toStage,
         transitionValue: pendingTransition.leadValue,
       });
+      if (reason && onAddLostReason) {
+        onAddLostReason(pendingTransition.leadId, reason, pendingTransition.toStage);
+      }
       toast.success('Přechod byl potvrzen pro analytiku');
     }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
 
-  const handleSkipTransition = () => {
+  const handleSkipTransition = (reason?: string) => {
+    if (reason && pendingTransition && onAddLostReason) {
+      onAddLostReason(pendingTransition.leadId, reason, pendingTransition.toStage);
+    }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
