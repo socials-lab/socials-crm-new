@@ -54,7 +54,7 @@ const DEMO_ITEMS: PortfolioItem[] = [
   { id: 'demo-22', title: 'Natios – hook video', file_url: '/images/portfolio/natios-hook1.mp4', type: 'video', sort_order: 21, is_active: true, created_at: '' },
 ];
 
-export default function Portfolio() {
+export default function Portfolio({ embedded }: { embedded?: boolean }) {
   const { items, isLoading, addItem, updateItem, deleteItem } = usePortfolioData();
   const [filter, setFilter] = useState<FilterType>('all');
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -113,10 +113,12 @@ export default function Portfolio() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Portfolio"
-        description="Správa bannerů a videí zobrazených ve veřejných nabídkách"
-      />
+      {!embedded && (
+        <PageHeader
+          title="Portfolio"
+          description="Správa bannerů a videí zobrazených ve veřejných nabídkách"
+        />
+      )}
 
       {isDemo && (
         <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary flex items-center gap-2">
