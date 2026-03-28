@@ -522,10 +522,17 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
       // 6. Create Freelo project from template
       try {
+        // Collect emails of assigned team members
+        const teamEmails = teamMembers
+          .filter(m => m.colleague_id)
+          .map(m => colleagues.find(c => c.id === m.colleague_id)?.email)
+          .filter(Boolean) as string[];
+
         const { data: freeloResult, error: freeloError } = await supabase.functions.invoke('create-freelo-project', {
           body: {
             project_name: data.engagement_name,
             currency: data.currency,
+            team_emails: teamEmails,
           },
         });
 
@@ -539,7 +546,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             .update({ freelo_url: freeloResult.project_url })
             .eq('id', newEngagement.id);
           
-          toast.success(`Freelo projekt vytvořen: ${freeloResult.project_name}`);
+          toast.success(`Freelo projekt vytvořen${freeloResult.invited_count > 0 ? ` (pozváno ${freeloResult.invited_count} kolegů)` : ''}`);
         }
       } catch (freeloErr) {
         console.error('Error calling Freelo automation:', freeloErr);

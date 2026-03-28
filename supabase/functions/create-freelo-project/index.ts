@@ -19,7 +19,7 @@ serve(async (req) => {
     if (!FREELO_USER_EMAIL) throw new Error('FREELO_USER_EMAIL is not configured');
     if (!FREELO_TEMPLATE_PROJECT_ID) throw new Error('FREELO_TEMPLATE_PROJECT_ID is not configured');
 
-    const { project_name, currency } = await req.json();
+    const { project_name, currency, team_emails } = await req.json();
 
     if (!project_name || typeof project_name !== 'string') {
       return new Response(
@@ -28,18 +28,19 @@ serve(async (req) => {
       );
     }
 
-    // Basic Auth: email:api_key encoded as base64
     const basicAuth = btoa(`${FREELO_USER_EMAIL}:${FREELO_API_KEY}`);
+    const headers = {
+      'Authorization': `Basic ${basicAuth}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'SocialsAgencyCRM (crm@socials.cz)',
+    };
 
+    // 1. Create project from template
     const freeloResponse = await fetch(
       `https://api.freelo.io/v1/project/create-from-template/${FREELO_TEMPLATE_PROJECT_ID}`,
       {
         method: 'POST',
-        headers: {
-          'Authorization': `Basic ${basicAuth}`,
-          'Content-Type': 'application/json',
-          'User-Agent': 'SocialsAgencyCRM (crm@socials.cz)',
-        },
+        headers,
         body: JSON.stringify({
           name: project_name,
           currency_iso: currency || 'CZK',
@@ -62,12 +63,47 @@ serve(async (req) => {
     const freeloProject = await freeloResponse.json();
     const projectUrl = `https://app.freelo.io/project/${freeloProject.id}`;
 
+    // 2. Invite team members by email
+    let invitedCount = 0;
+    const validEmails = Array.isArray(team_emails) 
+      ? team_emails.filter((e: string) => e && typeof e === 'string' && e.includes('@'))
+      : [];
+
+    if (validEmails.length > 0) {
+      try {
+        const inviteResponse = await fetch(
+          `https://api.freelo.io/v1/users/manage-workers`,
+          {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              projects_ids: [freeloProject.id],
+              emails: validEmails,
+            }),
+          }
+        );
+
+        if (inviteResponse.ok) {
+          const inviteResult = await inviteResponse.json();
+          invitedCount = (inviteResult.newly_invited_users?.length || 0) + 
+                         (inviteResult.newly_created_users?.length || 0);
+          console.log(`Invited ${invitedCount} users to Freelo project ${freeloProject.id}`);
+        } else {
+          const inviteError = await inviteResponse.text();
+          console.error(`Freelo invite error [${inviteResponse.status}]: ${inviteError}`);
+        }
+      } catch (inviteErr) {
+        console.error('Error inviting team to Freelo:', inviteErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         project_id: freeloProject.id,
         project_name: freeloProject.name,
         project_url: projectUrl,
+        invited_count: invitedCount,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
