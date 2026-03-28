@@ -99,10 +99,12 @@ interface OfferServiceEntry {
   name: string;
   selected_tier: string | null;
   price: number;
+  original_price: number;
   currency: string;
   billing_type: 'monthly' | 'one_off';
-  intro_discount_percent?: number | null;
-  intro_discount_months?: number | null;
+  discount_type: 'none' | 'permanent' | 'intro';
+  discount_percent: number;
+  intro_months: number;
   is_creative_boost?: boolean;
   cb_credits?: number | null;
   cb_price_per_credit?: number | null;
