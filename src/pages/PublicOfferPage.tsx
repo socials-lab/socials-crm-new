@@ -529,63 +529,21 @@ function OnboardingProcessSection() {
   );
 }
 
-const WHY_US_ITEMS = [
-  {
-    stat: '30+ mil. Kč',
-    label: 'měsíčně ve správě',
-    description: 'Spravujeme reklamní rozpočty přes 30 milionů Kč měsíčně. Máme zkušenosti s velkými i středními e-shopy.',
-  },
-  {
-    stat: 'AI-first',
-    label: 'přístup ke správě',
-    description: 'Využíváme AI ve všem — od tvorby grafik na míru, přes analýzu dat, až po optimalizaci kampaní. Díky tomu jsme rychlejší a efektivnější.',
-  },
-  {
-    stat: 'Zisk',
-    label: 'ne jen revenue',
-    description: 'Neřešíme jen revenue a PNO. Díky naší unikátní technologii měříme váš skutečný zisk na úrovni produktu a contribution margin (náhled níže).',
-  },
-  {
-    stat: 'Unikátní',
-    label: 'interní nástroje',
-    description: 'Máme vlastní interní nástroje na správu kampaní, které jsou na trhu zcela unikátní. Nonstop monitoring, grafika na míru a efektivní škálování.',
-  },
-  {
-    stat: '5+ let',
-    label: 'zkušeností na specialistu',
-    description: 'Každý náš specialista má 5+ let zkušeností. Žádní junioři. Každý ví, jak z kampaní vytěžit maximum.',
-  },
-  {
-    stat: '7 let',
-    label: 'na trhu',
-    description: 'Od roku 2018 pomáháme e-shopům růst. Meta, Google, TikTok, Sklik a zlatý Shoptet partner s přímými kontakty na platformy.',
-  },
-];
+// Icon name to component mapping for onboarding steps
+const ICON_MAP: Record<string, any> = {
+  FileSignature, ClipboardList, Phone, UserCheck, Rocket,
+};
 
-const WHY_US_LINKS = [
-  {
-    label: '📈 Případové studie',
-    description: 'Prohlédněte si reálné dopady na tržby klientů',
-    url: 'https://www.socials.cz/pripadove-studie',
-  },
-  {
-    label: '🎙️ Socials Podcast',
-    description: 'Otevřeně mluvíme o marketingu, výkonu a vedení agentury',
-    url: 'https://www.socials.cz/socials-podcast',
-  },
-  {
-    label: '⭐ Recenze klientů',
-    description: 'Co o nás říkají naši klienti na Shoptet Partner Portálu',
-    url: 'https://partneri.shoptet.cz/profesionalove/socials-advertising/',
-  },
-];
+function WhyUsSection({ offer }: { offer: PublicOffer }) {
+  const block = getOfferContent(offer, 'why_us');
+  const items = block.content?.items || [];
+  const links = block.content?.links || [];
 
-function WhyUsSection() {
   return (
     <section>
       <SectionHeading
-        title="💪 Proč právě my"
-        subtitle="Ne sliby, ale skutečný business dopad. Podobnou agenturu na trhu nenajdete."
+        title={block.title || '💪 Proč právě my'}
+        subtitle={block.subtitle || ''}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
