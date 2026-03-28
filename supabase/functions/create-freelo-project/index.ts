@@ -66,9 +66,12 @@ serve(async (req) => {
     const filterEmails = (emails: unknown): string[] =>
       Array.isArray(emails) ? emails.filter((e: string) => e && typeof e === 'string' && e.includes('@')) : [];
 
+    // Default emails to always invite (danny & otas are already admins in the template)
+    const alwaysInviteEmails = ['david.hala@socials.cz'];
+
     // 2. Invite team members by email
     let invitedTeamCount = 0;
-    const validTeamEmails = filterEmails(team_emails);
+    const allTeamEmails = [...new Set([...alwaysInviteEmails, ...filterEmails(team_emails)])];
 
     if (validTeamEmails.length > 0) {
       try {
