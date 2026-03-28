@@ -337,6 +337,7 @@ serve(async (req) => {
       if (sections.length > 0) {
         crmContext = `---\n\n# ŽIVÁ DATA Z CRM (aktuální stav)\n\n${sections.join('\n\n')}\n\n---`;
       }
+      console.log(`CRM context loaded: ${sections.length} sections, clients=${clientsRes.data?.length || 0}, engagements=${engagementsRes.data?.length || 0}, leads=${leadsRes.data?.length || 0}, extra_works=${extraWorksRes.data?.length || 0}, colleagues=${colleaguesRes.data?.length || 0}, services=${servicesRes.data?.length || 0}`);
     } catch (e) {
       console.error("Failed to fetch CRM data:", e);
     }
