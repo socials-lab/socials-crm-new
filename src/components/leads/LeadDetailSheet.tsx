@@ -106,7 +106,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
 
 export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
-  const { colleagues, services } = useCRMData();
+  const { colleagues, services, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
   const [noteText, setNoteText] = useState('');
   const [isConvertOpen, setIsConvertOpen] = useState(false);
