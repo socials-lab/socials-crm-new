@@ -836,6 +836,7 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['issued_invoices'] });
       logActivity('invoice_issued', 'issued_invoice', result.id, result.invoice_number);
+      notifyInvoiceIssued(result.invoice_number, result.client_name || '', result.total_amount);
     },
   });
 
