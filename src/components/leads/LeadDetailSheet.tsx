@@ -545,28 +545,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <label className="text-xs text-muted-foreground">Odpovědná osoba</label>
-                    <Select 
-                      value={lead.owner_id} 
-                      onValueChange={(newOwnerId) => {
-                        updateLead(lead.id, { owner_id: newOwnerId });
-                        toast.success('Majitel leadu byl změněn');
-                      }}
-                    >
-                      <SelectTrigger className="mt-1 h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background">
-                        {colleagues.filter(c => c.status === 'active').map((colleague) => (
-                          <SelectItem key={colleague.id} value={colleague.id}>
-                            {colleague.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="text-sm">
                   <div>
                     <span className="text-muted-foreground">Zdroj:</span>
                     <p className="font-medium">
