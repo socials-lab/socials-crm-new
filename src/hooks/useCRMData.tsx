@@ -558,7 +558,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('clients').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    onSuccess: (_, { id, data }) => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      logActivity('client_updated', 'client', id, undefined, data);
+    },
   });
 
   const deleteClientMutation = useMutation({
@@ -566,7 +569,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('clients').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      logActivity('client_deleted', 'client', id);
+    },
   });
 
   const addContactMutation = useMutation({
@@ -575,7 +581,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['client_contacts'] }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['client_contacts'] });
+      logActivity('contact_added', 'client_contact', result.id, result.name);
+    },
   });
 
   const updateContactMutation = useMutation({
@@ -611,7 +620,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('engagements').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagements'] }),
+    onSuccess: (_, { id, data }) => {
+      queryClient.invalidateQueries({ queryKey: ['engagements'] });
+      logActivity('engagement_updated', 'engagement', id, undefined, data);
+    },
   });
 
   const deleteEngagementMutation = useMutation({
@@ -619,7 +631,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('engagements').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagements'] }),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['engagements'] });
+      logActivity('engagement_deleted', 'engagement', id);
+    },
   });
 
   const addEngagementServiceMutation = useMutation({
@@ -628,7 +643,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagement_services'] }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
+      logActivity('engagement_service_added', 'engagement_service', result.id, result.name);
+    },
   });
 
   const updateEngagementServiceMutation = useMutation({
@@ -636,7 +654,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('engagement_services').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagement_services'] }),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
+      logActivity('engagement_service_updated', 'engagement_service', id);
+    },
   });
 
   const deleteEngagementServiceMutation = useMutation({
@@ -644,7 +665,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('engagement_services').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagement_services'] }),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
+      logActivity('engagement_service_deleted', 'engagement_service', id);
+    },
   });
 
   const addColleagueMutation = useMutation({
@@ -664,7 +688,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('colleagues').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['colleagues'] }),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['colleagues'] });
+      logActivity('colleague_updated', 'colleague', id);
+    },
   });
 
   const deleteColleagueMutation = useMutation({
@@ -672,7 +699,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('colleagues').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['colleagues'] }),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['colleagues'] });
+      logActivity('colleague_deleted', 'colleague', id);
+    },
   });
 
   const addAssignmentMutation = useMutation({
@@ -681,7 +711,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
+      logActivity('assignment_added', 'engagement_assignment', result.id);
+    },
   });
 
   const updateAssignmentMutation = useMutation({
@@ -689,7 +722,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('engagement_assignments').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] }),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
+      logActivity('assignment_updated', 'engagement_assignment', id);
+    },
   });
 
   const removeAssignmentMutation = useMutation({
@@ -697,7 +733,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('engagement_assignments').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] }),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['engagement_assignments'] });
+      logActivity('assignment_removed', 'engagement_assignment', id);
+    },
   });
 
   const addExtraWorkMutation = useMutation({
@@ -709,7 +748,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['extra_works'] }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['extra_works'] });
+      logActivity('extra_work_created', 'extra_work', result.id, result.name);
+    },
   });
 
   const updateExtraWorkMutation = useMutation({
@@ -717,7 +759,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('extra_works').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['extra_works'] }),
+    onSuccess: (_, { id, data }) => {
+      queryClient.invalidateQueries({ queryKey: ['extra_works'] });
+      logActivity('extra_work_updated', 'extra_work', id, undefined, data);
+    },
   });
 
   const deleteExtraWorkMutation = useMutation({
@@ -725,7 +770,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('extra_works').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['extra_works'] }),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['extra_works'] });
+      logActivity('extra_work_deleted', 'extra_work', id);
+    },
   });
 
   const addServiceMutation = useMutation({
@@ -734,7 +782,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return transformService(result);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['services'] }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      logActivity('service_created', 'service', result.id, result.name);
+    },
   });
 
   const updateServiceMutation = useMutation({
@@ -742,7 +793,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('services').update(data).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['services'] }),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      logActivity('service_updated', 'service', id);
+    },
   });
 
   const deleteServiceMutation = useMutation({
@@ -750,7 +804,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       const { error } = await (supabase as any).from('services').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['services'] }),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      logActivity('service_deleted', 'service', id);
+    },
   });
 
   const addIssuedInvoiceMutation = useMutation({
@@ -759,7 +816,10 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issued_invoices'] }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['issued_invoices'] });
+      logActivity('invoice_issued', 'issued_invoice', result.id, result.invoice_number);
+    },
   });
 
   // Helper functions

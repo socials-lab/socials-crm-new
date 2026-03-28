@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { logActivity } from '@/services/activityLogger';
 import { toast } from 'sonner';
 import type { Prospect, ProspectInteraction, ProspectStatus, ProspectNote, ProspectWithInteractions } from '@/types/prospect';
 import type { LeadNoteType } from '@/types/crm';
@@ -134,6 +135,7 @@ export function useProspectsData() {
     }
     toast.success('Status změněn');
     queryClient.invalidateQueries({ queryKey: ['prospects'] });
+    logActivity('prospect_status_changed', 'prospect', prospectId, undefined, { status });
   }, [queryClient]);
 
   const addNote = useCallback(async (prospectId: string, text: string, noteType: LeadNoteType, authorName: string, callDate?: string | null) => {
@@ -162,6 +164,7 @@ export function useProspectsData() {
     }
     toast.success('Poznámka přidána');
     queryClient.invalidateQueries({ queryKey: ['prospects'] });
+    logActivity('prospect_note_added', 'prospect', prospectId);
   }, [prospects, queryClient]);
 
   const markConverted = useCallback(async (prospectId: string, leadId: string) => {
@@ -176,6 +179,7 @@ export function useProspectsData() {
     }
     toast.success('Zájemce převeden na lead');
     queryClient.invalidateQueries({ queryKey: ['prospects'] });
+    logActivity('prospect_converted', 'prospect', prospectId, undefined, { lead_id: leadId });
   }, [queryClient]);
 
   return {
