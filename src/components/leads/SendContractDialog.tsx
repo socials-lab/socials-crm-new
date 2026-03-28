@@ -482,6 +482,8 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
                   </Button>
                 </div>
               )}
+                </>
+              )}
             </div>
           </div>
 
