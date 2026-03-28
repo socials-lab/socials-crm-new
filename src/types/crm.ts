@@ -283,7 +283,7 @@ export interface EngagementService {
   creative_boost_min_credits: number | null;
   creative_boost_max_credits: number | null;
   creative_boost_price_per_credit: number | null;
-  creative_boost_fixed_billing: boolean; // true = fixed package, false = usage-based
+  creative_boost_fixed_billing?: boolean; // true = fixed package, false = usage-based
   // Note: Reward per credit for graphic designer/video editor is stored in frontend mock data (creativeBoostRewardsMockData.ts)
   // One-off invoicing tracking
   invoicing_status: OneOffInvoicingStatus;
@@ -291,14 +291,14 @@ export interface EngagementService {
   invoiced_in_period: string | null; // Format: "2025-02" (year-month)
   invoice_id: string | null;
   // Upsell tracking - who sold this service
-  upsold_by_id: string | null;
-  upsell_commission_percent: number | null;
+  upsold_by_id?: string | null;
+  upsell_commission_percent?: number | null;
   // Effective date for prorated billing
-  effective_from: string | null; // Date when this service starts (for mid-month proration)
+  effective_from?: string | null; // Date when this service starts (for mid-month proration)
   // Introductory discount fields
-  intro_discount_percent: number | null;
-  intro_discount_months: number | null;
-  intro_discount_start_date: string | null;
+  intro_discount_percent?: number | null;
+  intro_discount_months?: number | null;
+  intro_discount_start_date?: string | null;
   created_at: string;
   updated_at: string;
 }
