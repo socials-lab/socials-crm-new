@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -519,7 +520,32 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         });
       }
 
-      // 6. Mark lead as converted
+      // 6. Create Freelo project from template
+      try {
+        const { data: freeloResult, error: freeloError } = await supabase.functions.invoke('create-freelo-project', {
+          body: {
+            project_name: data.engagement_name,
+            currency: data.currency,
+          },
+        });
+
+        if (freeloError) {
+          console.error('Freelo project creation failed:', freeloError);
+          toast.error('Zakázka vytvořena, ale Freelo projekt se nepodařilo vytvořit');
+        } else if (freeloResult?.project_url) {
+          // Update engagement with Freelo URL
+          await supabase
+            .from('engagements')
+            .update({ freelo_url: freeloResult.project_url })
+            .eq('id', newEngagement.id);
+          
+          toast.success(`Freelo projekt vytvořen: ${freeloResult.project_name}`);
+        }
+      } catch (freeloErr) {
+        console.error('Error calling Freelo automation:', freeloErr);
+      }
+
+      // 7. Mark lead as converted
       await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
 
       toast.success('Lead byl úspěšně převeden na zakázku');
