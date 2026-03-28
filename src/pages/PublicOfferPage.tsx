@@ -527,11 +527,11 @@ function OnboardingProcessSection({ offer }: { offer: PublicOffer }) {
               </div>
             </ScrollReveal>
             );
-          })}
-        </div>
         </div>
       </div>
     </section>
+  );
+}
   );
 }
 
