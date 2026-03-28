@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Loader2, ShieldCheck, ShieldAlert, ShieldX, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, ShieldCheck, ShieldAlert, ShieldX, Sparkles, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 import { 
   Building2, 
   Globe, 
@@ -429,6 +429,11 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                 {owner && <span>• {owner.full_name}</span>}
               </div>
             </div>
+            {onDelete && (
+              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive shrink-0" onClick={() => setShowDeleteConfirm(true)} title="Smazat lead">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
           {/* Single scrollable content area */}
