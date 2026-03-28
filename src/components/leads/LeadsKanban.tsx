@@ -259,6 +259,10 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason
                   {leadsByStage.lost.length} lost
                 </span>
                 <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-orange-500" />
+                  {leadsByStage.bad_fit.length} bad fit
+                </span>
+                <span className="flex items-center gap-1">
                   <div className="w-2 h-2 rounded-full bg-gray-500" />
                   {leadsByStage.postponed.length} odloženo
                 </span>
@@ -267,7 +271,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-3">
               {CLOSED_STAGES.map(stage => renderStageColumn(stage, true))}
             </div>
           </CollapsibleContent>
