@@ -130,9 +130,14 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [displayedContent, setDisplayedContent] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const typeQueueRef = useRef<string[]>([]);
+  const typeTimerRef = useRef<number | null>(null);
+  const fullContentRef = useRef('');
 
   useEffect(() => {
     if (open && inputRef.current && view === 'chat') {
