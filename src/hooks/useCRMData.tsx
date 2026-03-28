@@ -758,6 +758,9 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['extra_works'] });
       logActivity('extra_work_created', 'extra_work', result.id, result.name);
+      // Notify admins about new extra work
+      const client = clients.find(c => c.id === result.client_id);
+      notifyExtraWorkCreated(result.id, result.name, client?.name || '', result.amount);
     },
   });
 
@@ -769,6 +772,13 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (_, { id, data }) => {
       queryClient.invalidateQueries({ queryKey: ['extra_works'] });
       logActivity('extra_work_updated', 'extra_work', id, undefined, data);
+      // Notify on approval
+      if (data.status === 'in_progress' || data.status === 'ready_to_invoice') {
+        const ew = extraWorks.find(e => e.id === id);
+        if (ew && data.status === 'in_progress') {
+          notifyExtraWorkApproved(id, ew.name, ew.colleague_id);
+        }
+      }
     },
   });
 
