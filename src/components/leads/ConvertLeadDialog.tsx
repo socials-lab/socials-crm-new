@@ -528,11 +528,19 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           .map(m => colleagues.find(c => c.id === m.colleague_id)?.email)
           .filter(Boolean) as string[];
 
+        // Collect client contact emails (main + additional)
+        const clientEmails: string[] = [];
+        if (data.contact_email) clientEmails.push(data.contact_email);
+        for (const ac of additionalContacts) {
+          if (ac.email && ac.email.includes('@')) clientEmails.push(ac.email);
+        }
+
         const { data: freeloResult, error: freeloError } = await supabase.functions.invoke('create-freelo-project', {
           body: {
             project_name: data.engagement_name,
             currency: data.currency,
             team_emails: teamEmails,
+            client_emails: clientEmails,
           },
         });
 
@@ -546,7 +554,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             .update({ freelo_url: freeloResult.project_url })
             .eq('id', newEngagement.id);
           
-          toast.success(`Freelo projekt vytvořen${freeloResult.invited_count > 0 ? ` (pozváno ${freeloResult.invited_count} kolegů)` : ''}`);
+          const parts: string[] = [];
+          if (freeloResult.invited_team_count > 0) parts.push(`${freeloResult.invited_team_count} kolegů`);
+          if (freeloResult.invited_client_count > 0) parts.push(`${freeloResult.invited_client_count} klientů`);
+          const inviteMsg = parts.length > 0 ? ` (pozváno: ${parts.join(', ')})` : '';
+          toast.success(`Freelo projekt vytvořen${inviteMsg}`);
         }
       } catch (freeloErr) {
         console.error('Error calling Freelo automation:', freeloErr);
