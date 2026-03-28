@@ -596,6 +596,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
   const handleSubmit = async (data: ConvertFormData) => {
     if (!lead) return;
+    
+    // Validate at least one team member is assigned
+    const assignedMembers = teamMembers.filter(m => m.colleague_id && m.role);
+    if (assignedMembers.length === 0) {
+      toast.error('Musí být přiřazen alespoň jeden člen týmu');
+      return;
+    }
+    
     setIsConverting(true);
     setConversionStep('Vytvářím klienta...');
     try {
