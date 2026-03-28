@@ -284,7 +284,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         contact_is_decision_maker: true,
         contact_notes: '',
         engagement_name: lead.website 
-          ? lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '')
+          ? lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').replace(/^./, c => c.toUpperCase())
           : lead.company_name,
         engagement_type: lead.offer_type,
         billing_model: 'fixed_fee',
