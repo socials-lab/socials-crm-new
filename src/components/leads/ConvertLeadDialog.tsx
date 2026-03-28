@@ -125,6 +125,13 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const [offerServices, setOfferServices] = useState<OfferServiceEntry[]>([]);
   const [bundleDiscountPercent, setBundleDiscountPercent] = useState(0);
   const [bundleDiscountScope, setBundleDiscountScope] = useState<'core_only' | 'all_services'>('core_only');
+  const [additionalContacts, setAdditionalContacts] = useState<Array<{
+    name: string;
+    position: string;
+    email: string;
+    phone: string;
+    is_decision_maker: boolean;
+  }>>([]);
   const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
   const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
 
