@@ -647,6 +647,11 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['engagement_services'] });
       logActivity('engagement_service_added', 'engagement_service', result.id, result.name);
+      // Notify team about new service
+      const eng = engagements.find(e => e.id === result.engagement_id);
+      if (eng) {
+        notifyEngagementServiceAdded(eng.id, eng.name, result.name, null);
+      }
     },
   });
 
