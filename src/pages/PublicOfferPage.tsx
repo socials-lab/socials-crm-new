@@ -75,7 +75,15 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 const usePublicPortfolioLocal = usePublicPortfolio;
 
-// Portfolio icon by type
+// Helper to get content block from offer snapshot or fallback to hardcoded defaults
+function getOfferContent(offer: PublicOffer | null, sectionKey: string) {
+  if (offer?.content_blocks_snapshot?.[sectionKey]) {
+    return offer.content_blocks_snapshot[sectionKey];
+  }
+  const fallback = DEFAULT_OFFER_CONTENT[sectionKey];
+  if (fallback) return fallback;
+  return { section_key: sectionKey, title: null, subtitle: null, content: {} };
+}
 function getPortfolioIcon(type: PortfolioLink['type']) {
   switch (type) {
     case 'case_study': return BookOpen;
@@ -479,109 +487,64 @@ function ServiceStructureExplanation() {
   );
 }
 
-function OnboardingProcessSection() {
+function OnboardingProcessSection({ offer }: { offer: PublicOffer }) {
+  const block = getOfferContent(offer, 'onboarding');
+  const steps = block.content?.steps || ONBOARDING_STEPS.map(s => ({ icon: '', title: s.title, description: s.description, timeline: s.timeline }));
   return (
     <section>
       <SectionHeading 
-        title="🚀 Jak to bude probíhat" 
-        subtitle="Celý proces zvládneme obvykle do 48 hodin od vašeho rozhodnutí."
+        title={block.title || '🚀 Jak to bude probíhat'}
+        subtitle={block.subtitle || 'Celý proces zvládneme obvykle do 48 hodin od vašeho rozhodnutí.'}
       />
-
       <div className="relative">
-        {/* Vertical lime line */}
         <div className="absolute left-[23px] top-8 bottom-8 w-px bg-gradient-to-b from-[#94e700]/60 via-[#94e700]/20 to-transparent hidden sm:block" />
-
         <div className="space-y-2">
-          {ONBOARDING_STEPS.map((step, idx) => (
-            <ScrollReveal key={idx} delay={idx * 120}>
-              <div
-                className="group flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-foreground/[0.06] hover:bg-foreground/[0.02] transition-all duration-300 cursor-default"
-              >
-                <div className="w-12 h-12 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] flex items-center justify-center shrink-0 relative z-10 transition-all duration-300 group-hover:bg-[#94e700]/10 group-hover:border-[#94e700]/30">
-                  <step.icon className="h-5 w-5 text-muted-foreground group-hover:text-[#94e700] transition-colors" />
-                </div>
-
-                <div className="flex-1 pb-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-sm text-foreground group-hover:text-[#94e700] transition-colors">{step.title}</h3>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-foreground/[0.05] text-muted-foreground/70 font-medium">
-                      {step.timeline}
-                    </span>
+          {steps.map((step: any, idx: number) => {
+            const IconComp = ICON_MAP[step.icon] || ONBOARDING_STEPS[idx]?.icon || Rocket;
+            return (
+              <ScrollReveal key={idx} delay={idx * 120}>
+                <div className="group flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-foreground/[0.06] hover:bg-foreground/[0.02] transition-all duration-300 cursor-default">
+                  <div className="w-12 h-12 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] flex items-center justify-center shrink-0 relative z-10 transition-all duration-300 group-hover:bg-[#94e700]/10 group-hover:border-[#94e700]/30">
+                    <IconComp className="h-5 w-5 text-muted-foreground group-hover:text-[#94e700] transition-colors" />
                   </div>
-                  <p className="text-sm text-muted-foreground/70 mt-1 leading-relaxed">
-                    {step.description}
-                  </p>
+                  <div className="flex-1 pb-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-sm text-foreground group-hover:text-[#94e700] transition-colors">{step.title}</h3>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-foreground/[0.05] text-muted-foreground/70 font-medium">
+                        {step.timeline}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground/70 mt-1 leading-relaxed">{step.description}</p>
+                  </div>
                 </div>
-              </div>
-            </ScrollReveal>
-          ))}
+              </ScrollReveal>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
 
-const WHY_US_ITEMS = [
-  {
-    stat: '30+ mil. Kč',
-    label: 'měsíčně ve správě',
-    description: 'Spravujeme reklamní rozpočty přes 30 milionů Kč měsíčně. Máme zkušenosti s velkými i středními e-shopy.',
-  },
-  {
-    stat: 'AI-first',
-    label: 'přístup ke správě',
-    description: 'Využíváme AI ve všem — od tvorby grafik na míru, přes analýzu dat, až po optimalizaci kampaní. Díky tomu jsme rychlejší a efektivnější.',
-  },
-  {
-    stat: 'Zisk',
-    label: 'ne jen revenue',
-    description: 'Neřešíme jen revenue a PNO. Díky naší unikátní technologii měříme váš skutečný zisk na úrovni produktu a contribution margin (náhled níže).',
-  },
-  {
-    stat: 'Unikátní',
-    label: 'interní nástroje',
-    description: 'Máme vlastní interní nástroje na správu kampaní, které jsou na trhu zcela unikátní. Nonstop monitoring, grafika na míru a efektivní škálování.',
-  },
-  {
-    stat: '5+ let',
-    label: 'zkušeností na specialistu',
-    description: 'Každý náš specialista má 5+ let zkušeností. Žádní junioři. Každý ví, jak z kampaní vytěžit maximum.',
-  },
-  {
-    stat: '7 let',
-    label: 'na trhu',
-    description: 'Od roku 2018 pomáháme e-shopům růst. Meta, Google, TikTok, Sklik a zlatý Shoptet partner s přímými kontakty na platformy.',
-  },
-];
+// Icon name to component mapping for onboarding steps
+const ICON_MAP: Record<string, any> = {
+  FileSignature, ClipboardList, Phone, UserCheck, Rocket,
+};
 
-const WHY_US_LINKS = [
-  {
-    label: '📈 Případové studie',
-    description: 'Prohlédněte si reálné dopady na tržby klientů',
-    url: 'https://www.socials.cz/pripadove-studie',
-  },
-  {
-    label: '🎙️ Socials Podcast',
-    description: 'Otevřeně mluvíme o marketingu, výkonu a vedení agentury',
-    url: 'https://www.socials.cz/socials-podcast',
-  },
-  {
-    label: '⭐ Recenze klientů',
-    description: 'Co o nás říkají naši klienti na Shoptet Partner Portálu',
-    url: 'https://partneri.shoptet.cz/profesionalove/socials-advertising/',
-  },
-];
+function WhyUsSection({ offer }: { offer: PublicOffer }) {
+  const block = getOfferContent(offer, 'why_us');
+  const items = block.content?.items || [];
+  const links = block.content?.links || [];
 
-function WhyUsSection() {
   return (
     <section>
       <SectionHeading
-        title="💪 Proč právě my"
-        subtitle="Ne sliby, ale skutečný business dopad. Podobnou agenturu na trhu nenajdete."
+        title={block.title || '💪 Proč právě my'}
+        subtitle={block.subtitle || ''}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
-        {WHY_US_ITEMS.map((item, i) => (
+        {items.map((item: any, i: number) => (
           <ScrollReveal key={i} delay={i * 100}>
             <div
               className="group p-5 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-[#94e700]/20 transition-all duration-300 cursor-default h-full"
@@ -595,7 +558,7 @@ function WhyUsSection() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        {WHY_US_LINKS.map((link, i) => (
+        {links.map((link: any, i: number) => (
           <a
             key={i}
             href={link.url}
@@ -615,17 +578,19 @@ function WhyUsSection() {
   );
 }
 
-function ReportingSection() {
-  const DEMO_REPORT_URL = 'https://adfactory.socials.cz/shared-report/376158d883246f2ecfec54891d03e0a3c0ae4090e0c5dda9';
+function ReportingSection({ offer }: { offer: PublicOffer }) {
+  const block = getOfferContent(offer, 'reporting');
+  const DEMO_REPORT_URL = block.content?.demo_report_url || 'https://adfactory.socials.cz/shared-report/376158d883246f2ecfec54891d03e0a3c0ae4090e0c5dda9';
+  const note = block.content?.note || '(Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)';
   
   return (
     <section>
       <SectionHeading
-        title="📊 Reporting až na úroveň zisku"
-        subtitle="Pro Shoptet klienty dodáváme reporting až na úroveň contribution margin. Budete přesně vědět, kolik peněz vám vydělá jaký produkt."
+        title={block.title || '📊 Reporting až na úroveň zisku'}
+        subtitle={block.subtitle || ''}
       />
       <p className="text-sm text-muted-foreground/70 italic -mt-6 mb-8">
-        (Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)
+        {note}
       </p>
 
       <div className="mb-6">
@@ -786,7 +751,7 @@ function PortfolioGrid({ items, label }: { items: { src: string; alt: string; ty
   );
 }
 
-function CreativePortfolioSection() {
+function CreativePortfolioSection({ offer }: { offer: PublicOffer }) {
   const { items: portfolioItems, isLoading: portfolioLoading } = usePublicPortfolioLocal();
 
   const FALLBACK_IMAGES = [
@@ -829,8 +794,8 @@ function CreativePortfolioSection() {
   return (
     <section>
       <SectionHeading
-        title="🎨 Grafika, která prodává"
-        subtitle="Všem klientům doporučujeme nechat si kreativy tvořit u nás. Specializujeme se na grafiku pro výkonnostní reklamy — díky AI nástrojům nám stačí fotka produktu na bílém pozadí a vytvoříme kompletní bannery i videa."
+        title={getOfferContent(offer, 'creative_portfolio').title || '🎨 Grafika, která prodává'}
+        subtitle={getOfferContent(offer, 'creative_portfolio').subtitle || ''}
       />
 
       <div className="space-y-10">
@@ -1036,7 +1001,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* Credibility badges */}
         {(() => {
-          const badgesBlock = DEFAULT_OFFER_CONTENT['credibility_badges'];
+          const badgesBlock = getOfferContent(offer, 'credibility_badges');
           const items = badgesBlock?.content?.items as string[] | undefined;
           if (!items || items.length === 0) return null;
           return (
@@ -1132,17 +1097,17 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         )}
 
         {/* ===== 3. PROČ S NÁMI ===== */}
-        <ScrollReveal><WhyUsSection /></ScrollReveal>
+        <ScrollReveal><WhyUsSection offer={offer} /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 4. PORTFOLIO ===== */}
-        <ScrollReveal><CreativePortfolioSection /></ScrollReveal>
+        <ScrollReveal><CreativePortfolioSection offer={offer} /></ScrollReveal>
 
         <SectionDivider />
 
         {/* ===== 5. REPORTING ===== */}
-        <ScrollReveal><ReportingSection /></ScrollReveal>
+        <ScrollReveal><ReportingSection offer={offer} /></ScrollReveal>
 
         <SectionDivider />
 
@@ -1349,47 +1314,20 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <SectionDivider />
 
         {/* ===== CO ZÍSKÁTE NAVÍC ===== */}
+        {(() => {
+          const benefitsBlock = getOfferContent(offer, 'benefits');
+          const benefitItems = benefitsBlock.content?.items || [];
+          return (
         <ScrollReveal>
           <section className="space-y-6">
             <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-center">
-              🎁 Co od nás dostanete ke každé spolupráci
+              {benefitsBlock.title || '🎁 Co od nás dostanete ke každé spolupráci'}
             </h2>
             <p className="text-sm text-muted-foreground text-center max-w-lg mx-auto">
-              Nejde jen o reklamu — stavíme partnerství, které vám pomůže růst
+              {benefitsBlock.subtitle || ''}
             </p>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
-              {[
-                {
-                  icon: '📞',
-                  title: '1× měsíčně vyhodnocovací call + konzultace',
-                  desc: 'Pravidelně spolu procházíme výsledky a hledáme nové příležitosti pro růst vašeho businessu. Žádné překvapení — vždy víte, co se děje a proč.'
-                },
-                {
-                  icon: '📊',
-                  title: '24/7 přístup k reportu výsledků',
-                  desc: 'Živý report s aktuálními daty kdykoli potřebujete. Nemusíte čekat na měsíční PDF — vidíte výkon kampaní v reálném čase.'
-                },
-                {
-                  icon: '💬',
-                  title: 'Komunikace v projektovém nástroji Freelo',
-                  desc: 'Veškerá komunikace na jednom místě, přehledně a dohledatelně. Žádné ztracené e-maily nebo zapomenuté požadavky.'
-                },
-                {
-                  icon: '👤',
-                  title: 'Komunikujete přímo se specialistou',
-                  desc: 'Žádný prostředník ani account manager — mluvíte rovnou s člověkem, který vaše kampaně denně spravuje a zná je do detailu.'
-                },
-                {
-                  icon: '🏠',
-                  title: 'Celý výkonnostní marketing pod jednou střechou',
-                  desc: 'Meta, Google, Shoptet, analytika — vše řešíme my. Ušetříte čas i nervy s koordinací více dodavatelů a máte jednoho partnera pro vše.'
-                },
-                {
-                  icon: '🧠',
-                  title: 'Strategická podpora rozvoje vašeho businessu',
-                  desc: 'Nejsme jen specialisté na reklamu — rozumíme e-commerce, maržím a obchodním modelům. Pomůžeme vám najít nové příležitosti, optimalizovat nabídku a škálovat byznys, nejen kampaně.'
-                },
-              ].map((item, i) => (
+              {benefitItems.map((item: any, i: number) => (
                 <ScrollReveal key={i} delay={i * 100}>
                   <div className="rounded-xl border border-foreground/[0.06] bg-muted/30 p-5 space-y-2 h-full">
                     <div className="text-2xl">{item.icon}</div>
@@ -1401,11 +1339,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </div>
           </section>
         </ScrollReveal>
+          );
+        })()}
 
         <SectionDivider />
 
         {/* ===== 7. ONBOARDING ===== */}
-        <ScrollReveal><OnboardingProcessSection /></ScrollReveal>
+        <ScrollReveal><OnboardingProcessSection offer={offer} /></ScrollReveal>
 
         <SectionDivider />
 
@@ -1416,13 +1356,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           
           <div className="text-center pt-10 pb-12 px-4">
             <h2 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight">
-              🚀 Pojďme do toho
+              {getOfferContent(offer, 'cta').title || '🚀 Pojďme do toho'}
             </h2>
             <p className="mb-4 text-muted-foreground text-base max-w-md mx-auto">
-              Stačí vyplnit krátký formulář a můžeme začít.
+              {getOfferContent(offer, 'cta').subtitle || 'Stačí vyplnit krátký formulář a můžeme začít.'}
             </p>
             <p className="mb-8 text-muted-foreground/70 text-sm max-w-md mx-auto">
-              Celý onboarding zvládneme do 48 hodin — smlouvu pošleme k digitálnímu podpisu, nastavíme přístupy a spustíme kampaně.
+              {getOfferContent(offer, 'cta').content?.extended_subtitle || 'Celý onboarding zvládneme do 48 hodin — smlouvu pošleme k digitálnímu podpisu, nastavíme přístupy a spustíme kampaně.'}
             </p>
             <div className="flex justify-center">
               <Button 
@@ -1431,13 +1371,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 className="bg-[#94e700] text-black hover:bg-[#a8f01a] font-bold px-12 py-7 text-lg rounded-xl shadow-[0_0_40px_-10px_rgba(148,231,0,0.4)] hover:shadow-[0_0_50px_-10px_rgba(148,231,0,0.5)] transition-all"
               >
                 <Link to={onboardingUrl}>
-                  Začít spolupráci
+                  {getOfferContent(offer, 'cta').content?.button_text || 'Začít spolupráci'}
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </Link>
               </Button>
             </div>
             <p className="mt-5 text-xs text-muted-foreground/50">
-              ✅ Smlouva do 24 hodin
+              {getOfferContent(offer, 'cta').content?.footer_note || '✅ Smlouva do 24 hodin'}
             </p>
           </div>
         </section>
@@ -1446,8 +1386,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* ===== REFERENCE KLIENTŮ ===== */}
         <ScrollReveal>
         <section className="mt-16 rounded-2xl bg-black py-10 px-6">
-          <h2 className="text-lg font-semibold text-center mb-2 text-white">❤️ Značky, které jsme pomohli posunout</h2>
-          <p className="text-sm text-gray-400 text-center mb-8">Pomáháme růst firmám napříč odvětvími</p>
+          <h2 className="text-lg font-semibold text-center mb-2 text-white">{getOfferContent(offer, 'clients_logos').title || '❤️ Značky, které jsme pomohli posunout'}</h2>
+          <p className="text-sm text-gray-400 text-center mb-8">{getOfferContent(offer, 'clients_logos').subtitle || 'Pomáháme růst firmám napříč odvětvími'}</p>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 sm:gap-6 items-center justify-items-center">
             {[cl1, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10].map((logo, i) => (
               <img key={i} src={logo} alt={`Klient ${i + 1}`} className="h-16 sm:h-14 md:h-20 w-full max-w-[120px] object-contain opacity-70 hover:opacity-100 transition-opacity" />
@@ -1459,8 +1399,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         {/* ===== CERTIFIKACE ===== */}
         <ScrollReveal>
         <section className="mt-16 rounded-2xl bg-black py-10 px-6">
-          <h2 className="text-lg font-semibold text-center mb-2 text-white">🏆 Certifikace & partnerství</h2>
-          <p className="text-sm text-gray-400 text-center mb-8">Oficiálně certifikovaný tým s přístupem k nejnovějším nástrojům a beta funkcím</p>
+          <h2 className="text-lg font-semibold text-center mb-2 text-white">{getOfferContent(offer, 'certifications').title || '🏆 Certifikace & partnerství'}</h2>
+          <p className="text-sm text-gray-400 text-center mb-8">{getOfferContent(offer, 'certifications').subtitle || 'Oficiálně certifikovaný tým s přístupem k nejnovějším nástrojům a beta funkcím'}</p>
           <div className="grid grid-cols-4 md:grid-cols-8 gap-4 items-center justify-items-center">
             {[cert8, cert7, cert6, cert1, cert2, cert3, cert4, cert5].map((cert, i) => (
               <img key={i} src={cert} alt={`Certifikace ${i + 1}`} className={`object-contain opacity-80 hover:opacity-100 transition-opacity ${[1, 6, 7].includes(i) ? 'h-16 md:h-24' : 'h-12 md:h-16'}`} />

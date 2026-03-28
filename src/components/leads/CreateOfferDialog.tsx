@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,8 @@ import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/pub
 import { addPublicOffer, updatePublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
+import { DEFAULT_OFFER_CONTENT } from '@/hooks/useOfferContent';
+import { supabase } from '@/integrations/supabase/client';
 import { getServiceDetail } from '@/constants/serviceDetails';
 import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
 import { getRewardsFromServiceConfig, getServiceRewardRecommendation } from '@/constants/serviceRewards';
@@ -435,6 +437,43 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         const token = generateToken();
         const offerUrl = `${window.location.origin}/offer/${token}`;
 
+        // Snapshot current content blocks from DB (or use defaults)
+        let contentSnapshot: Record<string, any> = {};
+        try {
+          const { data } = await supabase
+            .from('offer_content_blocks' as any)
+            .select('section_key, title, subtitle, content');
+          if (data && (data as any[]).length > 0) {
+            (data as any[]).forEach((row: any) => {
+              contentSnapshot[row.section_key] = {
+                section_key: row.section_key,
+                title: row.title,
+                subtitle: row.subtitle,
+                content: row.content,
+              };
+            });
+          } else {
+            // Use hardcoded defaults as snapshot
+            Object.entries(DEFAULT_OFFER_CONTENT).forEach(([key, block]) => {
+              contentSnapshot[key] = {
+                section_key: block.section_key,
+                title: block.title,
+                subtitle: block.subtitle,
+                content: block.content,
+              };
+            });
+          }
+        } catch {
+          Object.entries(DEFAULT_OFFER_CONTENT).forEach(([key, block]) => {
+            contentSnapshot[key] = {
+              section_key: block.section_key,
+              title: block.title,
+              subtitle: block.subtitle,
+              content: block.content,
+            };
+          });
+        }
+
         const newOffer: PublicOffer = {
           id: crypto.randomUUID(),
           lead_id: lead.id,
@@ -465,6 +504,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           owner_name: leadOwner?.full_name || undefined,
           owner_email: leadOwner?.email || undefined,
           owner_phone: leadOwner?.phone || undefined,
+          content_blocks_snapshot: contentSnapshot,
         };
 
         addPublicOffer(newOffer);
