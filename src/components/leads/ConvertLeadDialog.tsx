@@ -1889,13 +1889,21 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             </div>
 
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Zrušit
-              </Button>
-              <Button type="submit">
-                Převést na zakázku
-              </Button>
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                <Sparkles className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                <span>
+                  Při převodu se automaticky vytvoří <strong>Freelo projekt</strong> a <strong>Slack kanál</strong>. Přiřazení kolegové budou pozváni do obou platforem.
+                </span>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Zrušit
+                </Button>
+                <Button type="submit">
+                  Převést na zakázku
+                </Button>
+              </div>
             </div>
           </form>
         </Form>
