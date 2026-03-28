@@ -15,7 +15,7 @@ export default function OfferManagement() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <PageHeader
         title="Nabídka"
         description="Správa portfolia a obsahu veřejných nabídek"
