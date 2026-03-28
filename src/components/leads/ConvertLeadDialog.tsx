@@ -511,11 +511,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       // 6. Create Freelo project from template
       setConversionStep('Zakládám Freelo projekt...');
       try {
+        // Default emails that should always be invited
+        const defaultEmails = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
         // Collect emails of assigned team members
-        const teamEmails = teamMembers
+        const assignedEmails = teamMembers
           .filter(m => m.colleague_id)
           .map(m => colleagues.find(c => c.id === m.colleague_id)?.email)
           .filter(Boolean) as string[];
+        const teamEmails = [...new Set([...defaultEmails, ...assignedEmails])];
 
         const { data: freeloResult, error: freeloError } = await supabase.functions.invoke('create-freelo-project', {
           body: {
@@ -547,10 +550,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       // 6b. Create Slack channel and invite team
       setConversionStep('Zakládám Slack kanál...');
       try {
-        const teamEmails2 = teamMembers
+        const defaultEmails2 = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
+        const assignedEmails2 = teamMembers
           .filter(m => m.colleague_id)
           .map(m => colleagues.find(c => c.id === m.colleague_id)?.email)
           .filter(Boolean) as string[];
+        const teamEmails2 = [...new Set([...defaultEmails2, ...assignedEmails2])];
 
         const channelPrefix = 'c_';
         const channelName = channelPrefix + (data.brand_name || data.client_name)
