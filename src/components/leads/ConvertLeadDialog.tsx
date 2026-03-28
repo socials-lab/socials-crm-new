@@ -38,7 +38,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
 import type { Lead, CostModel, ClientTier, BillingModel, LeadSource, LeadService, ServiceRewardTierConfig } from '@/types/crm';
-import { getOffersByLeadId } from '@/data/publicOffersMockData';
+import { getOffersByLeadId } from '@/data/publicOffersData';
 import { toast } from 'sonner';
 
 const convertSchema = z.object({
@@ -201,11 +201,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   // Reset form when lead changes — auto-populate services and team from offer
   useEffect(() => {
     if (lead && open) {
+      (async () => {
       // Parse lead's potential_services
       const leadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
       
       // Look up public offer for this lead to get offer-level discounts
-      const publicOffers = getOffersByLeadId(lead.id);
+      const publicOffers = await getOffersByLeadId(lead.id);
       const latestOffer = publicOffers.length > 0 ? publicOffers[publicOffers.length - 1] : null;
       const offerBundlePercent = latestOffer?.monthly_discount_percent || 0;
       const offerDiscountScope = latestOffer?.discount_scope || 'core_only';
@@ -355,6 +356,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         primary_service_id: '',
         engagement_notes: lead.summary,
       });
+      })();
     }
   }, [lead, open, form, services]);
 

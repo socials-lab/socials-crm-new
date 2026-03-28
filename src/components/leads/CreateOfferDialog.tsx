@@ -18,7 +18,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
 import type { Lead, Service } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
-import { addPublicOffer, updatePublicOffer } from '@/data/publicOffersMockData';
+import { addPublicOffer, updatePublicOffer } from '@/data/publicOffersData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { DEFAULT_OFFER_CONTENT } from '@/hooks/useOfferContent';
@@ -403,7 +403,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         if (existingOffer.audit_summary !== (auditSummary.trim() || null)) changedParts.push('audit');
         if (changedParts.length === 0) changedParts.push('drobné úpravy');
         
-        updatePublicOffer(existingOffer.token, {
+        await updatePublicOffer(existingOffer.token, {
           audit_summary: auditSummary.trim() || null,
           recommendation_intro: recommendationIntro.trim() || null,
           custom_note: customNote.trim() || null,
@@ -508,7 +508,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           content_blocks_snapshot: contentSnapshot,
         };
 
-        addPublicOffer(newOffer);
+        await addPublicOffer(newOffer);
         setCreatedOfferUrl(offerUrl);
         toast.success('Nabídka byla vytvořena!');
         const syncData = {
