@@ -206,8 +206,32 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
     abortRef.current = controller;
 
     let assistantSoFar = '';
+    fullContentRef.current = '';
+    setDisplayedContent('');
+    setIsTyping(true);
+    typeQueueRef.current = [];
+
+    const processQueue = () => {
+      if (typeQueueRef.current.length === 0) {
+        typeTimerRef.current = null;
+        return;
+      }
+      const batch = typeQueueRef.current.splice(0, Math.min(3, typeQueueRef.current.length));
+      setDisplayedContent(prev => prev + batch.join(''));
+      typeTimerRef.current = window.setTimeout(processQueue, 15);
+    };
+
     const upsertAssistant = (chunk: string) => {
       assistantSoFar += chunk;
+      fullContentRef.current = assistantSoFar;
+      // Queue characters for typing effect
+      for (const char of chunk) {
+        typeQueueRef.current.push(char);
+      }
+      if (!typeTimerRef.current) {
+        processQueue();
+      }
+      // Update actual messages with full content (for history saving)
       setMessages(prev => {
         const last = prev[prev.length - 1];
         if (last?.role === 'assistant') {
