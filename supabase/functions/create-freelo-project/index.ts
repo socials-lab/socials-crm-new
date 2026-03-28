@@ -102,7 +102,6 @@ serve(async (req) => {
         project_name: freeloProject.name,
         project_url: projectUrl,
         invited_team_count: invitedTeamCount,
-        invited_client_count: invitedClientCount,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
