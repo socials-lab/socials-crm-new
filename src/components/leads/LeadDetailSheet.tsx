@@ -106,7 +106,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
 
 export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
-  const { colleagues, services } = useCRMData();
+  const { colleagues, services, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
   const [noteText, setNoteText] = useState('');
   const [isConvertOpen, setIsConvertOpen] = useState(false);
@@ -1189,7 +1189,13 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                           updateLead(lead.id, { 
                             contract_signed_at: new Date().toISOString()
                           });
-                          toast.success('✅ Smlouva byla podepsána!');
+                          // Propagate contract to converted engagement
+                          if (lead.converted_to_engagement_id && lead.contract_url) {
+                            updateEngagement(lead.converted_to_engagement_id, {
+                              contract_url: lead.contract_url
+                            });
+                          }
+                          toast.success('✅ Smlouva podepsána!' + (lead.converted_to_engagement_id ? ' Odkaz uložen i ke klientovi.' : ''));
                         }}
                       >
                         ✓ Podepsáno

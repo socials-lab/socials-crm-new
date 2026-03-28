@@ -116,7 +116,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
 
 export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDetailDialogProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
-  const { colleagues, services } = useCRMData();
+  const { colleagues, services, engagements, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -155,6 +155,19 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   }, [vatData?.vatStatus, lead?.id]);
 
   if (!lead) return null;
+
+  const handleMarkContractSigned = () => {
+    updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
+    
+    // Propagate contract_url to the converted engagement/client
+    if (lead.converted_to_engagement_id && lead.contract_url) {
+      updateEngagement(lead.converted_to_engagement_id, { 
+        contract_url: lead.contract_url 
+      });
+    }
+    
+    toast.success('✅ Smlouva podepsána! Odkaz uložen k leadu' + (lead.converted_to_engagement_id ? ' i ke klientovi.' : '.'));
+  };
 
   const owner = colleagues.find(c => c.id === lead.owner_id);
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
@@ -740,7 +753,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                     onSendOnboarding={() => setIsOnboardingFormOpen(true)}
                     onSendContract={() => setIsContractDialogOpen(true)}
                     onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
-                    onMarkContractSigned={() => { updateLead(lead.id, { contract_signed_at: new Date().toISOString() }); toast.success('✅ Smlouva podepsána!'); }}
+                    onMarkContractSigned={handleMarkContractSigned}
                     onConvert={handleConvertClick}
                     onRemoveService={(index) => {
                       const currentServices = [...(lead.potential_services || [])];
@@ -809,7 +822,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                           toast.success('🔑 Přístupy byly přijaty!');
                         }}
                         onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
-                        onMarkContractSigned={() => { updateLead(lead.id, { contract_signed_at: new Date().toISOString() }); toast.success('✅ Smlouva podepsána!'); }}
+                        onMarkContractSigned={handleMarkContractSigned}
                       />
                     </CollapsibleContent>
                   </Collapsible>
