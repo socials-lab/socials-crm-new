@@ -415,7 +415,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         notes: data.contact_notes || '',
       });
 
-      // 3. Create Engagement with document links from lead
+      // 3. Create Engagement — calculate fees from services
+      const calculatedMonthlyFee = offerServices
+        .filter(s => s.billing_type === 'monthly')
+        .reduce((sum, s) => sum + s.price, 0);
+      const calculatedOneOffFee = offerServices
+        .filter(s => s.billing_type === 'one_off')
+        .reduce((sum, s) => sum + s.price, 0);
+
       const newEngagement = await addEngagement({
         client_id: newClient.id,
         contact_person_id: newContact.id,
@@ -423,8 +430,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         type: data.engagement_type,
         billing_model: data.billing_model as BillingModel,
         currency: data.currency,
-        monthly_fee: data.monthly_fee,
-        one_off_fee: data.one_off_fee,
+        monthly_fee: calculatedMonthlyFee || data.monthly_fee,
+        one_off_fee: calculatedOneOffFee || data.one_off_fee,
         status: 'active',
         start_date: data.start_date,
         end_date: data.end_date || null,
