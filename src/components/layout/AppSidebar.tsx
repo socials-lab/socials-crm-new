@@ -114,7 +114,7 @@ const navGroups: NavGroup[] = [
 ];
 
 const managementNavItems: NavItem[] = [
-  { title: 'Nabídka', url: '/offer-management', page: 'settings', icon: PenLine },
+  
   { title: 'Nastavení', url: '/settings', page: 'settings', icon: Settings },
 ];
 
