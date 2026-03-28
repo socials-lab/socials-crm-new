@@ -368,6 +368,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
     try {
       // 1. Create Client
+      setConversionStep('Vytvářím klienta...');
       const newClient = await addClient({
         name: data.client_name,
         brand_name: data.brand_name,
@@ -586,7 +587,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
   const handleSubmit = async (data: ConvertFormData) => {
     if (!lead) return;
-    await executeConversion(data);
+    setIsConverting(true);
+    setConversionStep('Vytvářím klienta...');
+    try {
+      await executeConversion(data);
+    } finally {
+      setIsConverting(false);
+      setConversionStep('');
+    }
   };
 
   if (!lead) return null;
