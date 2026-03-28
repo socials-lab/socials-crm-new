@@ -397,10 +397,15 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         notes: data.contact_notes || '',
       });
 
-      // 3. Create Engagement — calculate fees from services
-      const calculatedMonthlyFee = offerServices
+      // 3. Create Engagement — calculate fees with global discounts
+      const rawMonthlyFee = offerServices
         .filter(s => s.billing_type === 'monthly')
         .reduce((sum, s) => sum + s.price, 0);
+      const bundleBase = bundleDiscountScope === 'all_services' 
+        ? rawMonthlyFee 
+        : offerServices.filter(s => s.billing_type === 'monthly' && !s.is_creative_boost).reduce((sum, s) => sum + s.price, 0);
+      const bundleAmount = bundleDiscountPercent > 0 ? Math.round(bundleBase * bundleDiscountPercent / 100) : 0;
+      const calculatedMonthlyFee = rawMonthlyFee - bundleAmount;
       const calculatedOneOffFee = offerServices
         .filter(s => s.billing_type === 'one_off')
         .reduce((sum, s) => sum + s.price, 0);
