@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.agency-assistant]
 verify_jwt = false
+
+[functions.create-slack-channel]
+verify_jwt = false

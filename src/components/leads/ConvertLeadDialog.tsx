@@ -555,6 +555,38 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         console.error('Error calling Freelo automation:', freeloErr);
       }
 
+      // 6b. Create Slack channel and invite team
+      try {
+        const teamEmails2 = teamMembers
+          .filter(m => m.colleague_id)
+          .map(m => colleagues.find(c => c.id === m.colleague_id)?.email)
+          .filter(Boolean) as string[];
+
+        const channelPrefix = 'c_';
+        const channelName = channelPrefix + (data.brand_name || data.client_name)
+          .toLowerCase()
+          .replace(/\s+/g, '-');
+
+        const { data: slackResult, error: slackError } = await supabase.functions.invoke('create-slack-channel', {
+          body: {
+            channel_name: channelName,
+            team_emails: teamEmails2,
+          },
+        });
+
+        if (slackError) {
+          console.error('Slack channel creation failed:', slackError);
+          toast.error('Zakázka vytvořena, ale Slack kanál se nepodařilo vytvořit');
+        } else if (slackResult?.success) {
+          const slackMsg = slackResult.already_existed
+            ? `Slack kanál #${slackResult.channel_name} již existoval`
+            : `Slack kanál #${slackResult.channel_name} vytvořen (pozváno ${slackResult.invited_count} kolegů)`;
+          toast.success(slackMsg);
+        }
+      } catch (slackErr) {
+        console.error('Error calling Slack automation:', slackErr);
+      }
+
       // 7. Mark lead as converted
       await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
 
