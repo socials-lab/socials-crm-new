@@ -283,6 +283,30 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
 
   return (
     <>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete smazat tento lead? Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                onDelete?.(lead.id);
+                onOpenChange(false);
+              }}
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Onboarding Form Warning Dialog */}
       <AlertDialog open={showOnboardingWarning} onOpenChange={setShowOnboardingWarning}>
         <AlertDialogContent>
