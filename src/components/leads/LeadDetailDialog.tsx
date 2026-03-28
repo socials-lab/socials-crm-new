@@ -117,7 +117,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
   other: 'Jiný',
 };
 
-export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDetailDialogProps) {
+export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete }: LeadDetailDialogProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services, engagements, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
@@ -135,6 +135,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   // Inline note form state
   const [noteText, setNoteText] = useState('');
   const [noteType, setNoteType] = useState<LeadNoteType>('general');
