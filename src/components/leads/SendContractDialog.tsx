@@ -199,19 +199,22 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
     // Simulate API call — will be replaced with actual Edge Function
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    toast.success('📋 Draft smlouvy vytvořen v DigiSign — doplňte podpisové archy a odešlete', {
+    const envelopeId = `draft_${Date.now()}`;
+    setDraftEnvelopeId(envelopeId);
+    setDraftCreated(true);
+
+    toast.success('📋 Draft vytvořen v DigiSign — klikněte na odkaz pro dokončení', {
       duration: 5000,
     });
 
     onSend({
       contract_url: googleDocsUrl.trim(),
-      digisign_envelope_id: `draft_${Date.now()}`,
+      digisign_envelope_id: envelopeId,
       digisign_document_url: null,
       contract_sent_at: new Date().toISOString(),
     });
 
     setIsSendingToDraft(false);
-    onOpenChange(false);
   };
 
   return (
