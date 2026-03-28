@@ -751,7 +751,7 @@ function PortfolioGrid({ items, label }: { items: { src: string; alt: string; ty
   );
 }
 
-function CreativePortfolioSection() {
+function CreativePortfolioSection({ offer }: { offer: PublicOffer }) {
   const { items: portfolioItems, isLoading: portfolioLoading } = usePublicPortfolioLocal();
 
   const FALLBACK_IMAGES = [
@@ -794,8 +794,8 @@ function CreativePortfolioSection() {
   return (
     <section>
       <SectionHeading
-        title="🎨 Grafika, která prodává"
-        subtitle="Všem klientům doporučujeme nechat si kreativy tvořit u nás. Specializujeme se na grafiku pro výkonnostní reklamy — díky AI nástrojům nám stačí fotka produktu na bílém pozadí a vytvoříme kompletní bannery i videa."
+        title={getOfferContent(offer, 'creative_portfolio').title || '🎨 Grafika, která prodává'}
+        subtitle={getOfferContent(offer, 'creative_portfolio').subtitle || ''}
       />
 
       <div className="space-y-10">
