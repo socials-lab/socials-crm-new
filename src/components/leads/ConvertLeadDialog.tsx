@@ -173,20 +173,36 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       // Parse lead's potential_services
       const leadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
       
-      // Look up public offer for this lead to get offer-level intro discount
+      // Look up public offer for this lead to get offer-level discounts
       const publicOffers = getOffersByLeadId(lead.id);
       const latestOffer = publicOffers.length > 0 ? publicOffers[publicOffers.length - 1] : null;
+      const offerBundlePercent = latestOffer?.monthly_discount_percent || 0;
       const offerIntroPercent = latestOffer?.intro_discount_percent || 0;
       const offerIntroMonths = latestOffer?.intro_discount_months || 3;
       
-      // Build editable offer services — apply offer-level intro discount to monthly services
+      // Build editable offer services — apply offer-level discounts to monthly services
       const offerSvcs: OfferServiceEntry[] = leadServices.map(ls => {
         // Per-service discount takes precedence, fallback to offer-level
         const hasPerServiceDiscount = ls.intro_discount_percent && ls.intro_discount_percent > 0;
-        const introPercent = hasPerServiceDiscount ? ls.intro_discount_percent : 
-          (offerIntroPercent > 0 && (ls.billing_type || 'monthly') === 'monthly' ? offerIntroPercent : null);
-        const introMonths = hasPerServiceDiscount ? ls.intro_discount_months :
-          (offerIntroPercent > 0 && (ls.billing_type || 'monthly') === 'monthly' ? offerIntroMonths : null);
+        
+        // Determine discount type and values
+        let discountType: 'none' | 'permanent' | 'intro' = 'none';
+        let discountPercent = 0;
+        let introMonthsVal = 3;
+        
+        if (hasPerServiceDiscount) {
+          discountType = 'intro';
+          discountPercent = ls.intro_discount_percent || 0;
+          introMonthsVal = ls.intro_discount_months || 3;
+        } else if (offerBundlePercent > 0 && (ls.billing_type || 'monthly') === 'monthly') {
+          // Offer has a permanent bundle discount
+          discountType = 'permanent';
+          discountPercent = offerBundlePercent;
+        } else if (offerIntroPercent > 0 && (ls.billing_type || 'monthly') === 'monthly') {
+          discountType = 'intro';
+          discountPercent = offerIntroPercent;
+          introMonthsVal = offerIntroMonths;
+        }
         
         // Detect Creative Boost
         const catalogSvc = services.find(s => s.id === ls.service_id);
@@ -204,10 +220,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           name: ls.name,
           selected_tier: ls.selected_tier,
           price: effectivePrice,
+          original_price: effectivePrice,
           currency: ls.currency || lead.currency || 'CZK',
           billing_type: ls.billing_type || 'monthly',
-          intro_discount_percent: introPercent ?? null,
-          intro_discount_months: introMonths ?? null,
+          discount_type: discountType,
+          discount_percent: discountPercent,
+          intro_months: introMonthsVal,
           is_creative_boost: isCB,
           cb_credits: cbCredits,
           cb_price_per_credit: cbPricePerCredit,
