@@ -365,14 +365,17 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
 
             <div className="space-y-4">
               {messages.map((msg, i) => {
+                const isLastAssistant = msg.role === 'assistant' && i === messages.length - 1;
+                const isStreaming = isLastAssistant && isLoading;
+                
                 if (msg.role === 'assistant') {
                   const { text, actions } = parseActionsFromContent(msg.content);
                   return (
-                    <div key={i} className="flex justify-start">
+                    <div key={i} className="flex justify-start animate-in fade-in-0 duration-200">
                       <div className="max-w-[85%]">
                         {text && (
-                          <div className="rounded-xl px-3 py-2 text-sm bg-muted">
-                            <div className="prose prose-sm dark:prose-invert max-w-none [&_table]:text-xs [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1 [&_th]:bg-muted/50 [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_hr]:my-2 [&_h2]:text-sm [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:mt-2 [&_h3]:mb-1">
+                          <div className="rounded-xl px-3.5 py-2.5 text-sm bg-muted/80 backdrop-blur-sm">
+                            <div className="dandroid-prose prose prose-sm dark:prose-invert max-w-none">
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
@@ -399,6 +402,9 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
                               >
                                 {text}
                               </ReactMarkdown>
+                              {isStreaming && (
+                                <span className="inline-block w-[2px] h-4 bg-primary/70 ml-0.5 animate-pulse align-text-bottom" />
+                              )}
                             </div>
                           </div>
                         )}
@@ -410,8 +416,8 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
                   );
                 }
                 return (
-                  <div key={i} className="flex justify-end">
-                    <div className="max-w-[85%] rounded-xl px-3 py-2 text-sm bg-primary text-primary-foreground">
+                  <div key={i} className="flex justify-end animate-in fade-in-0 slide-in-from-right-2 duration-200">
+                    <div className="max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm bg-primary text-primary-foreground shadow-sm">
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     </div>
                   </div>
@@ -419,9 +425,11 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
               })}
 
               {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-xl px-3 py-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <div className="flex justify-start animate-in fade-in-0 duration-300">
+                  <div className="bg-muted/80 rounded-xl px-4 py-3 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-foreground/40 animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-foreground/40 animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-foreground/40 animate-bounce [animation-delay:300ms]" />
                   </div>
                 </div>
               )}

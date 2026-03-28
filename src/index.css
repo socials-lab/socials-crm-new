@@ -249,3 +249,53 @@
     @apply snap-start shrink-0;
   }
 }
+
+/* Dandroid chat prose styling */
+.dandroid-prose {
+  @apply text-sm leading-relaxed;
+}
+.dandroid-prose p {
+  @apply my-1.5;
+}
+.dandroid-prose ul, .dandroid-prose ol {
+  @apply my-1.5 pl-4;
+}
+.dandroid-prose li {
+  @apply my-0.5;
+}
+.dandroid-prose li::marker {
+  @apply text-foreground/50;
+}
+.dandroid-prose strong {
+  @apply font-semibold text-foreground;
+}
+.dandroid-prose h2, .dandroid-prose h3 {
+  @apply font-semibold text-foreground mt-3 mb-1;
+}
+.dandroid-prose h2 {
+  @apply text-sm;
+}
+.dandroid-prose h3 {
+  @apply text-xs;
+}
+.dandroid-prose hr {
+  @apply my-2 border-border/50;
+}
+.dandroid-prose table {
+  @apply text-xs w-full border-collapse my-2 rounded-lg overflow-hidden;
+}
+.dandroid-prose th {
+  @apply border border-border/50 px-2.5 py-1.5 bg-background/50 text-left font-semibold text-foreground;
+}
+.dandroid-prose td {
+  @apply border border-border/50 px-2.5 py-1.5;
+}
+.dandroid-prose code {
+  @apply text-xs bg-background/50 px-1 py-0.5 rounded;
+}
+.dandroid-prose pre {
+  @apply bg-background/50 rounded-lg p-2 my-2 overflow-x-auto text-xs;
+}
+.dandroid-prose blockquote {
+  @apply border-l-2 border-primary/30 pl-3 my-2 italic text-muted-foreground;
+}
