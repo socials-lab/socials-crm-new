@@ -19,7 +19,7 @@ serve(async (req) => {
     if (!FREELO_USER_EMAIL) throw new Error('FREELO_USER_EMAIL is not configured');
     if (!FREELO_TEMPLATE_PROJECT_ID) throw new Error('FREELO_TEMPLATE_PROJECT_ID is not configured');
 
-    const { project_name, currency, team_emails, client_emails } = await req.json();
+    const { project_name, currency, team_emails } = await req.json();
 
     if (!project_name || typeof project_name !== 'string') {
       return new Response(
@@ -95,35 +95,6 @@ serve(async (req) => {
       }
     }
 
-    // 3. Invite client contacts by email
-    let invitedClientCount = 0;
-    const validClientEmails = filterEmails(client_emails);
-
-    if (validClientEmails.length > 0) {
-      try {
-        const clientInviteResponse = await fetch(`https://api.freelo.io/v1/users/manage-workers`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            projects_ids: [freeloProject.id],
-            emails: validClientEmails,
-          }),
-        });
-
-        if (clientInviteResponse.ok) {
-          const clientResult = await clientInviteResponse.json();
-          invitedClientCount = (clientResult.newly_invited_users?.length || 0) + 
-                               (clientResult.newly_created_users?.length || 0);
-          console.log(`Invited ${invitedClientCount} client contacts to Freelo project ${freeloProject.id}`);
-        } else {
-          const clientError = await clientInviteResponse.text();
-          console.error(`Freelo client invite error [${clientInviteResponse.status}]: ${clientError}`);
-        }
-      } catch (clientErr) {
-        console.error('Error inviting client contacts to Freelo:', clientErr);
-      }
-    }
-
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -131,7 +102,6 @@ serve(async (req) => {
         project_name: freeloProject.name,
         project_url: projectUrl,
         invited_team_count: invitedTeamCount,
-        invited_client_count: invitedClientCount,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
