@@ -1210,6 +1210,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 </div>
               )}
 
+              <div className="grid gap-4 sm:grid-cols-4">
                 <FormField
                   control={form.control}
                   name="engagement_type"
