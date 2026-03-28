@@ -1401,7 +1401,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 </div>
 
                 {/* Margin calculation */}
-                {offerServices.length > 0 && teamMembers.some(m => m.colleague_id) && (() => {
+                {offerServices.length > 0 && (() => {
                   // Revenue: sum of service prices
                   const rawMonthly = offerServices
                     .filter(s => s.billing_type === 'monthly')
