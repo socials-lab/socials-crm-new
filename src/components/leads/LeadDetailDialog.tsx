@@ -642,6 +642,38 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                 </Collapsible>
               )}
 
+              {/* Onboarding form completion status */}
+              {lead.onboarding_form_completed_at && (
+                <div className="p-3 rounded-lg border border-blue-500/30 bg-blue-500/10 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                    <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">
+                      📋 Onboarding formulář vyplněn
+                    </p>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {new Date(lead.onboarding_form_completed_at).toLocaleDateString('cs-CZ')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    Klient vyplnil fakturační údaje, kontaktní osoby a potvrdil služby. Údaje do smlouvy vychází z tohoto formuláře.
+                  </p>
+                </div>
+              )}
+
+              {lead.onboarding_form_sent_at && !lead.onboarding_form_completed_at && (
+                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                      📋 Onboarding formulář odeslán — čeká na vyplnění
+                    </p>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {new Date(lead.onboarding_form_sent_at).toLocaleDateString('cs-CZ')}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Conversion status */}
               {lead.converted_to_client_id && (
                 <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10">
