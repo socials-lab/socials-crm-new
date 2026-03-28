@@ -246,6 +246,13 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
         messages: [...messages, userMsg],
         onDelta: (chunk) => upsertAssistant(chunk),
         onDone: () => {
+          // Flush remaining queue instantly
+          if (typeTimerRef.current) {
+            clearTimeout(typeTimerRef.current);
+            typeTimerRef.current = null;
+          }
+          setDisplayedContent(fullContentRef.current);
+          setIsTyping(false);
           setIsLoading(false);
           if (convId && assistantSoFar) {
             saveMessage(convId, { role: 'assistant', content: assistantSoFar });
