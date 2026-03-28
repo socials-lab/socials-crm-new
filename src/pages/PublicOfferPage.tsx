@@ -1389,7 +1389,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <h2 className="text-lg font-semibold text-center mb-2 text-white">{getOfferContent(offer, 'clients_logos').title || '❤️ Značky, které jsme pomohli posunout'}</h2>
           <p className="text-sm text-gray-400 text-center mb-8">{getOfferContent(offer, 'clients_logos').subtitle || 'Pomáháme růst firmám napříč odvětvími'}</p>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 sm:gap-6 items-center justify-items-center">
-            {[cl1, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10].map((logo, i) => (
+            {(getOfferContent(offer, 'clients_logos').content?.images?.length > 0
+              ? getOfferContent(offer, 'clients_logos').content.images
+              : [cl1, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10]
+            ).map((logo: string, i: number) => (
               <img key={i} src={logo} alt={`Klient ${i + 1}`} className="h-16 sm:h-14 md:h-20 w-full max-w-[120px] object-contain opacity-70 hover:opacity-100 transition-opacity" />
             ))}
           </div>
@@ -1402,7 +1405,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <h2 className="text-lg font-semibold text-center mb-2 text-white">{getOfferContent(offer, 'certifications').title || '🏆 Certifikace & partnerství'}</h2>
           <p className="text-sm text-gray-400 text-center mb-8">{getOfferContent(offer, 'certifications').subtitle || 'Oficiálně certifikovaný tým s přístupem k nejnovějším nástrojům a beta funkcím'}</p>
           <div className="grid grid-cols-4 md:grid-cols-8 gap-4 items-center justify-items-center">
-            {[cert8, cert7, cert6, cert1, cert2, cert3, cert4, cert5].map((cert, i) => (
+            {(getOfferContent(offer, 'certifications').content?.images?.length > 0
+              ? getOfferContent(offer, 'certifications').content.images
+              : [cert8, cert7, cert6, cert1, cert2, cert3, cert4, cert5]
+            ).map((cert: string, i: number) => (
               <img key={i} src={cert} alt={`Certifikace ${i + 1}`} className={`object-contain opacity-80 hover:opacity-100 transition-opacity ${[1, 6, 7].includes(i) ? 'h-16 md:h-24' : 'h-12 md:h-16'}`} />
             ))}
           </div>
