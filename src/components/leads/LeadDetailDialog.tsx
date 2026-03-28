@@ -116,7 +116,7 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
 
 export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDetailDialogProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
-  const { colleagues, services } = useCRMData();
+  const { colleagues, services, engagements, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
