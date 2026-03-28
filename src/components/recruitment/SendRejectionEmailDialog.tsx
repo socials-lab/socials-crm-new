@@ -38,7 +38,7 @@ export function SendRejectionEmailDialog({
   const [emailTo, setEmailTo] = useState(applicant.email);
   const [subject, setSubject] = useState(defaultSubject);
   const [message, setMessage] = useState(defaultMessage);
-  const [isSending, setIsSending] = useState(false);
+  const [cc, setCc] = useState<string[]>([]);
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
 
