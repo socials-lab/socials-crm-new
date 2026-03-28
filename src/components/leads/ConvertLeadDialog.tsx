@@ -181,8 +181,15 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       const publicOffers = getOffersByLeadId(lead.id);
       const latestOffer = publicOffers.length > 0 ? publicOffers[publicOffers.length - 1] : null;
       const offerBundlePercent = latestOffer?.monthly_discount_percent || 0;
+      const offerDiscountScope = latestOffer?.discount_scope || 'core_only';
       const offerIntroPercent = latestOffer?.intro_discount_percent || 0;
       const offerIntroMonths = latestOffer?.intro_discount_months || 3;
+      
+      // Initialize global discount state from offer
+      setBundleDiscountPercent(offerBundlePercent);
+      setBundleDiscountScope(offerDiscountScope as 'core_only' | 'all_services');
+      setIntroDiscountPercent(offerIntroPercent);
+      setIntroDiscountMonths(offerIntroMonths);
       
       // Build editable offer services — apply offer-level discounts to monthly services
       const offerSvcs: OfferServiceEntry[] = leadServices.map(ls => {
