@@ -1001,7 +1001,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
         {/* Credibility badges */}
         {(() => {
-          const badgesBlock = DEFAULT_OFFER_CONTENT['credibility_badges'];
+          const badgesBlock = getOfferContent(offer, 'credibility_badges');
           const items = badgesBlock?.content?.items as string[] | undefined;
           if (!items || items.length === 0) return null;
           return (
