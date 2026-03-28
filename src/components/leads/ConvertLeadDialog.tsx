@@ -123,6 +123,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const { markLeadAsConverted } = useLeadsData();
   const { addClient, addContact, addEngagement, addEngagementService, addAssignment, colleagues, services } = useCRMData();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [offerServices, setOfferServices] = useState<OfferServiceEntry[]>([]);
   const [bundleDiscountPercent, setBundleDiscountPercent] = useState(0);
@@ -138,6 +139,21 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
   const [isConverting, setIsConverting] = useState(false);
   const [conversionStep, setConversionStep] = useState('');
+  const [conversionResult, setConversionResult] = useState<{
+    clientName: string;
+    brandName: string;
+    engagementName: string;
+    engagementId: string;
+    servicesCount: number;
+    teamCount: number;
+    contactsCount: number;
+    freeloUrl?: string;
+    freeloError?: boolean;
+    slackChannel?: string;
+    slackError?: boolean;
+    monthlyFee: number;
+    currency: string;
+  } | null>(null);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   const activeServices = services.filter(s => s.is_active);
