@@ -493,8 +493,8 @@ function OnboardingProcessSection({ offer }: { offer: PublicOffer }) {
   return (
     <section>
       <SectionHeading 
-        title="🚀 Jak to bude probíhat" 
-        subtitle="Celý proces zvládneme obvykle do 48 hodin od vašeho rozhodnutí."
+        title={block.title || '🚀 Jak to bude probíhat'}
+        subtitle={block.subtitle || 'Celý proces zvládneme obvykle do 48 hodin od vašeho rozhodnutí.'}
       />
 
       <div className="relative">
