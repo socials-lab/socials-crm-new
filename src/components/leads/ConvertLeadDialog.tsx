@@ -1398,7 +1398,82 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+                </div>
+
+                {/* Margin calculation */}
+                {offerServices.length > 0 && teamMembers.some(m => m.colleague_id) && (() => {
+                  // Revenue: sum of service prices
+                  const rawMonthly = offerServices
+                    .filter(s => s.billing_type === 'monthly')
+                    .reduce((sum, s) => sum + s.price, 0);
+                  
+                  // Per-service discounts
+                  const perServiceDiscountTotal = offerServices
+                    .filter(s => s.billing_type === 'monthly' && s.discount_type !== 'none' && s.discount_percent > 0)
+                    .reduce((sum, s) => sum + Math.round(s.price * s.discount_percent / 100), 0);
+                  
+                  // Global bundle discount (on top)
+                  const bBase = bundleDiscountScope === 'all_services' 
+                    ? rawMonthly 
+                    : offerServices.filter(s => s.billing_type === 'monthly' && !s.is_creative_boost).reduce((sum, s) => sum + s.price, 0);
+                  const bAmount = bundleDiscountPercent > 0 ? Math.round(bBase * bundleDiscountPercent / 100) : 0;
+                  
+                  const revenueAfterDiscounts = rawMonthly - perServiceDiscountTotal - bAmount;
+                  
+                  // Intro discount (temporary — show separately)
+                  const introAmount = introDiscountPercent > 0 
+                    ? Math.round(revenueAfterDiscounts * introDiscountPercent / 100) 
+                    : 0;
+                  const revenueWithIntro = revenueAfterDiscounts - introAmount;
+                  
+                  // Costs
+                  const totalTeamCost = teamMembers.reduce((sum, m) => {
+                    if (m.cost_model === 'fixed_monthly') return sum + (m.monthly_cost || 0);
+                    if (m.cost_model === 'hourly') return sum + (m.hourly_cost || 0) * 160 / 12;
+                    return sum;
+                  }, 0);
+                  
+                  const margin = revenueAfterDiscounts > 0 
+                    ? ((revenueAfterDiscounts - totalTeamCost) / revenueAfterDiscounts) * 100 
+                    : 0;
+                  const introMargin = revenueWithIntro > 0 
+                    ? ((revenueWithIntro - totalTeamCost) / revenueWithIntro) * 100 
+                    : 0;
+                  
+                  const marginColor = (m: number) => m >= 66 ? 'text-green-600' : m >= 50 ? 'text-yellow-600' : 'text-red-600';
+                  const bgColor = margin >= 66 ? 'bg-green-500/10 border-green-500/30' : margin >= 50 ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-red-500/10 border-red-500/30';
+
+                  return (
+                    <div className={`p-3 rounded-lg border space-y-2 ${bgColor}`}>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                        <span className="text-muted-foreground">Příjem (po slevách)</span>
+                        <span className="text-right font-semibold tabular-nums">{revenueAfterDiscounts.toLocaleString('cs-CZ')} Kč/měs</span>
+                        
+                        <span className="text-muted-foreground">Interní náklady</span>
+                        <span className="text-right font-semibold tabular-nums">{Math.round(totalTeamCost).toLocaleString('cs-CZ')} Kč/měs</span>
+                        
+                        <span className="text-muted-foreground">Zisk</span>
+                        <span className="text-right font-semibold tabular-nums">{Math.round(revenueAfterDiscounts - totalTeamCost).toLocaleString('cs-CZ')} Kč/měs</span>
+                        
+                        <span className="font-semibold">Marže</span>
+                        <span className={`text-right font-bold tabular-nums ${marginColor(margin)}`}>{margin.toFixed(1)} %</span>
+                        
+                        {introDiscountPercent > 0 && (
+                          <>
+                            <span className="text-muted-foreground text-xs pt-1 border-t">Marže s úvodní slevou ({introDiscountPercent}%, {introDiscountMonths} měs.)</span>
+                            <span className={`text-right font-bold tabular-nums pt-1 border-t ${marginColor(introMargin)}`}>{introMargin.toFixed(1)} %</span>
+                          </>
+                        )}
+                      </div>
+                      {margin < 66 && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <AlertTriangle className={`h-3.5 w-3.5 shrink-0 ${marginColor(margin)}`} />
+                          Minimální cílová marže je 66 %. Zvažte úpravu ceny nebo snížení nákladů.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
               <div className="grid gap-4 sm:grid-cols-4">
                 <FormField
@@ -1659,47 +1734,6 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               ))}
             </div>
 
-            {/* Margin warning */}
-            {(() => {
-              const monthlyFee = form.watch('monthly_fee') || 0;
-              const totalTeamCost = teamMembers.reduce((sum, m) => {
-                if (m.cost_model === 'fixed_monthly') return sum + (m.monthly_cost || 0);
-                if (m.cost_model === 'hourly') return sum + (m.hourly_cost || 0) * 160 / 12;
-                return sum;
-              }, 0);
-              const margin = monthlyFee > 0 ? ((monthlyFee - totalTeamCost) / monthlyFee) * 100 : 0;
-              
-              if (monthlyFee > 0 && totalTeamCost > 0) {
-                return (
-                  <div className={`p-3 rounded-lg border flex items-start gap-2 ${
-                    margin >= 66 ? 'bg-green-500/10 border-green-500/30' :
-                    margin >= 50 ? 'bg-yellow-500/10 border-yellow-500/30' :
-                    'bg-red-500/10 border-red-500/30'
-                  }`}>
-                    {margin < 66 && <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${margin >= 50 ? 'text-yellow-600' : 'text-red-600'}`} />}
-                    <div className="text-sm space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Odhadovaná marže:</span>
-                        <span className={`font-bold ${
-                          margin >= 66 ? 'text-green-600' : margin >= 50 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {margin.toFixed(1)} %
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          ({monthlyFee.toLocaleString('cs-CZ')} – {totalTeamCost.toLocaleString('cs-CZ')} = {Math.round(monthlyFee - totalTeamCost).toLocaleString('cs-CZ')} Kč)
-                        </span>
-                      </div>
-                      {margin < 66 && (
-                        <p className="text-xs text-muted-foreground">
-                          ⚠️ Minimální cílová marže je 66 %. Zvažte úpravu ceny nebo snížení interních nákladů.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })()}
 
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
