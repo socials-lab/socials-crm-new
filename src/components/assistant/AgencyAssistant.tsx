@@ -25,8 +25,7 @@ type Msg = { role: 'user' | 'assistant'; content: string };
 const CHAT_URL = `https://empndmpeyrdycjdesoxr.supabase.co/functions/v1/agency-assistant`;
 
 const QUICK_ACTIONS = [
-  { label: '💰 Nacenit službu pro klienta', message: 'Potřebuji nacenit službu pro klienta. Poraď mi jaký balíček vybrat, kolik účtovat a jaké nastavit odměny kolegům.' },
-  { label: '📊 Přehled aktivních zakázek', message: 'Ukaž mi přehled aktivních zakázek a klientů – kolik jich máme, jaké služby běží a jaký je celkový MRR.' },
+  { label: '💰 Nacenit službu pro klienta', message: 'Potřebuji nacenit službu pro klienta. Poraď mi jaký balíček vybrat a kolik účtovat.' },
   { label: '📊 Přehled aktivních zakázek', message: 'Ukaž mi přehled aktivních zakázek a klientů – kolik jich máme, jaké služby běží a jaký je celkový MRR.' },
   { label: '🔥 Nedávné leady a pipeline', message: 'Jaké máme aktuální leady v pipeline? Ukaž mi nedávné leady, jejich stav a odhadovanou hodnotu.' },
   { label: '📖 Jak probíhá onboarding?', message: 'Jaký je postup onboardingu nového klienta? Co potřebuji za přístupy a podklady?' },
