@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logActivity } from '@/services/activityLogger';
+import { notifyNewLead, notifyFormCompleted, notifyAccessGranted, notifyOfferSent, notifyContractSigned, notifyLeadConverted, notifyLeadLost } from '@/services/notificationTriggers';
 import type { Lead, LeadStage, LeadNote, LeadChangeType, LeadHistoryEntry, LeadNoteType } from '@/types/crm';
 
 // Field labels for history display
@@ -421,6 +422,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       addHistoryEntry(newLead.id, 'created', null, null, newLead.company_name);
       logActivity('lead_created', 'lead', newLead.id, newLead.company_name);
+      notifyNewLead(newLead.id, newLead.company_name);
     },
   });
 
@@ -434,9 +436,29 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (_, { id, data }) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      const lead = leads.find(l => l.id === id);
+      const companyName = lead?.company_name || '';
+      
       if (data.stage) {
         logActivity('lead_stage_changed', 'lead', id, undefined, { new_stage: data.stage });
-      } else {
+        // Trigger notifications based on stage
+        if (data.stage === 'lost' || data.stage === 'bad_fit') {
+          notifyLeadLost(id, companyName);
+        }
+      }
+      if (data.onboarding_form_completed_at && !lead?.onboarding_form_completed_at) {
+        notifyFormCompleted(id, companyName);
+      }
+      if (data.access_received_at && !lead?.access_received_at) {
+        notifyAccessGranted(id, companyName, lead?.access_request_platforms || []);
+      }
+      if (data.offer_sent_at && !lead?.offer_sent_at) {
+        notifyOfferSent(id, companyName);
+      }
+      if (data.contract_signed_at && !lead?.contract_signed_at) {
+        notifyContractSigned(id, companyName);
+      }
+      if (!data.stage) {
         logActivity('lead_updated', 'lead', id);
       }
     },
