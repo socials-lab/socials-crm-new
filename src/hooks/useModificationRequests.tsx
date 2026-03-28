@@ -96,7 +96,7 @@ export function useModificationRequests() {
       if (params.status !== 'draft') {
         toast.success('Požadavek na úpravu byl odeslán ke schválení');
         const eng = engagements.find(e => e.id === params.engagement_id);
-        notifyModificationCreated(eng?.name || '', params.request_type, params.proposed_changes?.service_name || params.request_type);
+        notifyModificationCreated(eng?.name || '', params.request_type, (params.proposed_changes as any)?.service_name || params.request_type);
       } else {
         toast.success('Návrh byl uložen jako draft');
       }
