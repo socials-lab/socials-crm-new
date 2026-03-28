@@ -527,10 +527,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
       // 6. Create Freelo project from template
       setConversionStep('Zakládám Freelo projekt...');
+      let freeloUrl: string | undefined;
+      let freeloFailed = false;
       try {
-        // Default emails that should always be invited
         const defaultEmails = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
-        // Collect emails of assigned team members
         const assignedEmails = teamMembers
           .filter(m => m.colleague_id)
           .map(m => colleagues.find(c => c.id === m.colleague_id)?.email)
@@ -548,25 +548,23 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
         if (freeloError) {
           console.error('Freelo project creation failed:', freeloError);
-          toast.error('Zakázka vytvořena, ale Freelo projekt se nepodařilo vytvořit');
+          freeloFailed = true;
         } else if (freeloResult?.project_url) {
-          // Update engagement with Freelo URL
+          freeloUrl = freeloResult.project_url;
           await supabase
             .from('engagements')
             .update({ freelo_url: freeloResult.project_url })
             .eq('id', newEngagement.id);
-          
-          const inviteMsg = freeloResult.invited_team_count > 0 
-            ? ` (pozváno ${freeloResult.invited_team_count} kolegů)` 
-            : '';
-          toast.success(`Freelo projekt vytvořen${inviteMsg}`);
         }
       } catch (freeloErr) {
         console.error('Error calling Freelo automation:', freeloErr);
+        freeloFailed = true;
       }
 
       // 6b. Create Slack channel and invite team
       setConversionStep('Zakládám Slack kanál...');
+      let slackChannelName: string | undefined;
+      let slackFailed = false;
       try {
         const defaultEmails2 = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
         const assignedEmails2 = teamMembers
@@ -589,21 +587,36 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
         if (slackError) {
           console.error('Slack channel creation failed:', slackError);
-          toast.error('Zakázka vytvořena, ale Slack kanál se nepodařilo vytvořit');
+          slackFailed = true;
         } else if (slackResult?.success) {
-          const slackMsg = slackResult.already_existed
-            ? `Slack kanál #${slackResult.channel_name} již existoval`
-            : `Slack kanál #${slackResult.channel_name} vytvořen (pozváno ${slackResult.invited_count} kolegů)`;
-          toast.success(slackMsg);
+          slackChannelName = slackResult.channel_name;
         }
       } catch (slackErr) {
         console.error('Error calling Slack automation:', slackErr);
+        slackFailed = true;
       }
 
       // 7. Mark lead as converted
       await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
 
-      toast.success('Lead byl úspěšně převeden na zakázku');
+      // Show conversion summary
+      const assignedMembers = teamMembers.filter(m => m.colleague_id && m.role);
+      setConversionResult({
+        clientName: data.client_name,
+        brandName: data.brand_name,
+        engagementName: data.engagement_name,
+        engagementId: newEngagement.id,
+        servicesCount: offerServices.length,
+        teamCount: assignedMembers.length,
+        contactsCount: 1 + additionalContacts.filter(c => c.name.trim()).length,
+        freeloUrl,
+        freeloError: freeloFailed,
+        slackChannel: slackChannelName,
+        slackError: slackFailed,
+        monthlyFee: calculatedMonthlyFee || data.monthly_fee,
+        currency: data.currency,
+      });
+
       onSuccess();
     } catch (error) {
       console.error('Error converting lead:', error);
