@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Save, Plus, Trash2, GripVertical, ExternalLink } from 'lucide-react';
+import { Save, Plus, Trash2, GripVertical, ExternalLink, Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { useOfferContent, DEFAULT_OFFER_CONTENT, type OfferContentBlock } from '@/hooks/useOfferContent';
 
 // Generic section editor for title + subtitle
@@ -448,14 +449,14 @@ export default function OfferContentEditor({ embedded }: { embedded?: boolean })
               <TabsContent value="clients_logos" className="mt-0">
                 {(() => {
                   const block = getBlock('clients_logos');
-                  return block ? <SimpleBlockEditor block={block} onSave={u => handleSave('clients_logos', u)} /> : null;
+                  return block ? <ImageGridEditor block={block} onSave={u => handleSave('clients_logos', u)} folder="clients" /> : null;
                 })()}
               </TabsContent>
 
               <TabsContent value="certifications" className="mt-0">
                 {(() => {
                   const block = getBlock('certifications');
-                  return block ? <SimpleBlockEditor block={block} onSave={u => handleSave('certifications', u)} /> : null;
+                  return block ? <ImageGridEditor block={block} onSave={u => handleSave('certifications', u)} folder="certifications" /> : null;
                 })()}
               </TabsContent>
 
