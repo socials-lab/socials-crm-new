@@ -40,7 +40,8 @@ export function SendOfferDialog({
 }: SendOfferDialogProps) {
   const { colleagues } = useCRMData();
   const { fillTemplate } = useEmailTemplates();
-  const [selectedOwnerId, setSelectedOwnerId] = useState(lead.owner_id);
+  const activeColleagues = colleagues.filter(c => c.status === 'active');
+  const [selectedOwnerId, setSelectedOwnerId] = useState(lead.owner_id || activeColleagues[0]?.id || '');
   const cleanWebsite = (website: string | null) => {
     if (!website) return '';
     return website
@@ -61,7 +62,6 @@ export function SendOfferDialog({
   const [bcc, setBcc] = useState<string[]>([]);
 
   const selectedOwner = colleagues.find(c => c.id === selectedOwnerId);
-  const activeColleagues = colleagues.filter(c => c.status === 'active');
 
   // Generate email content when owner changes
   useEffect(() => {
@@ -131,7 +131,8 @@ export function SendOfferDialog({
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
-      setSelectedOwnerId(lead.owner_id);
+      const ownerId = lead.owner_id || activeColleagues[0]?.id || '';
+      setSelectedOwnerId(ownerId);
       setEmailSubject(getDefaultSubject());
     }
     onOpenChange(newOpen);
