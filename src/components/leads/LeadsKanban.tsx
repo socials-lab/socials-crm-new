@@ -14,6 +14,7 @@ interface LeadsKanbanProps {
   leads: Lead[];
   onLeadClick: (lead: Lead) => void;
   onStageChange: (leadId: string, newStage: LeadStage) => void;
+  onAddLostReason?: (leadId: string, reason: string, stage: LeadStage) => void;
 }
 
 const STAGE_CONFIG: Record<LeadStage, { title: string; shortTitle: string; color: string; bgColor: string }> = {
@@ -40,7 +41,7 @@ const ACTIVE_STAGES: LeadStage[] = [
 
 const CLOSED_STAGES: LeadStage[] = ['won', 'lost', 'postponed'];
 
-export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanProps) {
+export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason }: LeadsKanbanProps) {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<LeadStage | null>(null);
   const [closedOpen, setClosedOpen] = useState(false);
