@@ -156,6 +156,19 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
 
   if (!lead) return null;
 
+  const handleMarkContractSigned = () => {
+    updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
+    
+    // Propagate contract_url to the converted engagement/client
+    if (lead.converted_to_engagement_id && lead.contract_url) {
+      updateEngagement(lead.converted_to_engagement_id, { 
+        contract_url: lead.contract_url 
+      });
+    }
+    
+    toast.success('✅ Smlouva podepsána! Odkaz uložen k leadu' + (lead.converted_to_engagement_id ? ' i ke klientovi.' : '.'));
+  };
+
   const owner = colleagues.find(c => c.id === lead.owner_id);
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
   const history = getLeadHistory(lead.id);
