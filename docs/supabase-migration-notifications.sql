@@ -1,8 +1,8 @@
 -- Notifications System Migration
--- This creates the notifications table for storing user notifications
+-- Creates the notifications table for storing user notifications
 
 -- Create the notifications table
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- Komu notifikace patří
@@ -29,13 +29,13 @@ CREATE TABLE notifications (
 );
 
 -- Indexy pro rychlé dotazy
-CREATE INDEX idx_notifications_user_unread 
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread 
 ON notifications(user_id, is_read, created_at DESC);
 
-CREATE INDEX idx_notifications_entity 
+CREATE INDEX IF NOT EXISTS idx_notifications_entity 
 ON notifications(entity_type, entity_id);
 
-CREATE INDEX idx_notifications_created_at
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at
 ON notifications(created_at DESC);
 
 -- RLS
@@ -57,12 +57,11 @@ ON notifications FOR DELETE
 USING (auth.uid() = user_id);
 
 -- CRM users can create notifications for any user
--- This allows the system to create notifications for other users
 CREATE POLICY "CRM users can create notifications"
 ON notifications FOR INSERT
 WITH CHECK (is_crm_user(auth.uid()));
 
--- Add comment for documentation
-COMMENT ON TABLE notifications IS 'Stores user notifications for leads, engagements, extra work, and other CRM events';
-COMMENT ON COLUMN notifications.type IS 'Notification type: lead_form_completed, engagement_assigned, extra_work_approved, etc.';
-COMMENT ON COLUMN notifications.entity_type IS 'Type of related entity: lead, engagement, extra_work, creative_boost, modification';
+-- Enable realtime for notifications
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+
+COMMENT ON TABLE notifications IS 'Stores user notifications for CRM events';
