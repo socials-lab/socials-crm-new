@@ -145,11 +145,16 @@ export function AgencyAssistant({ open, onClose }: AgencyAssistantProps) {
     }
   }, [open, view]);
 
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
-  }, [messages]);
+  }, []);
+
+  // Scroll when new messages arrive or content updates during streaming
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, displayedContent, isLoading, scrollToBottom]);
 
   const loadConversations = useCallback(async () => {
     setLoadingHistory(true);
