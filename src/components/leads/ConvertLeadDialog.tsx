@@ -631,7 +631,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                               setOfferServices(prev => prev.map((s, i) => i === idx ? { ...s, intro_discount_months: val } : s));
                             }}
                             placeholder="3"
-                            className="w-12 h-6 text-xs text-right"
+                            className="w-16 h-6 text-xs text-right"
                           />
                           <span className="text-[11px] text-muted-foreground">měs.</span>
                           {hasDiscount && (
