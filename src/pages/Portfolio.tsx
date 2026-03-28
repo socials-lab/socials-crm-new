@@ -42,7 +42,10 @@ export default function Portfolio() {
   const [editTitle, setEditTitle] = useState('');
   const [editOrder, setEditOrder] = useState(0);
 
-  const filteredItems = items.filter(item => filter === 'all' || item.type === filter);
+  // Show demo items when DB is empty (not loading)
+  const displayItems = !isLoading && items.length === 0 ? DEMO_ITEMS : items;
+  const isDemo = !isLoading && items.length === 0;
+  const filteredItems = displayItems.filter(item => filter === 'all' || item.type === filter);
 
   const handleUpload = async () => {
     if (uploadFiles.length === 0) return;
@@ -80,8 +83,8 @@ export default function Portfolio() {
     setEditItem(null);
   };
 
-  const imageCount = items.filter(i => i.type === 'image').length;
-  const videoCount = items.filter(i => i.type === 'video').length;
+  const imageCount = displayItems.filter(i => i.type === 'image').length;
+  const videoCount = displayItems.filter(i => i.type === 'video').length;
 
   return (
     <div className="space-y-6">
@@ -89,6 +92,13 @@ export default function Portfolio() {
         title="Portfolio"
         description="Správa bannerů a videí zobrazených ve veřejných nabídkách"
       />
+
+      {isDemo && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary flex items-center gap-2">
+          <Image className="h-4 w-4 shrink-0" />
+          <span>Zobrazují se vzorová data. Nahrajte vlastní položky do Supabase storage pro reálný obsah.</span>
+        </div>
+      )}
 
       {/* Stats + actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
