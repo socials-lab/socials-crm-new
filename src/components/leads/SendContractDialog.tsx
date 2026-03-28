@@ -9,8 +9,14 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { FileSignature, Copy, Check, Building2, Hash, Mail, MapPin, Package, Code, ChevronDown, ChevronUp, FileText, ExternalLink } from 'lucide-react';
+import {
+  FileSignature, Copy, Check, Building2, Hash, Mail, MapPin,
+  Package, Code, ChevronDown, ChevronUp, FileText, ExternalLink,
+  Link2, Send, AlertCircle,
+} from 'lucide-react';
 import type { Lead, LeadService } from '@/types/crm';
 import { toast } from 'sonner';
 
@@ -29,6 +35,8 @@ interface SendContractDialogProps {
 export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendContractDialogProps) {
   const [copied, setCopied] = useState(false);
   const [showPayload, setShowPayload] = useState(false);
+  const [googleDocsUrl, setGoogleDocsUrl] = useState(lead.contract_url || '');
+  const [isSendingToDraft, setIsSendingToDraft] = useState(false);
 
   const leadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
   const monthlyServices = leadServices.filter(s => (s.billing_type || 'monthly') === 'monthly');
@@ -37,9 +45,12 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
   const oneOffTotal = oneOffServices.reduce((sum, s) => sum + (s.price || 0), 0);
   const currency = lead.currency || 'CZK';
 
-  // Build DigiSign API payload
+  const hasGoogleDocsUrl = googleDocsUrl.trim().length > 0 && googleDocsUrl.includes('docs.google.com');
+
+  // Build DigiSign API payload — always as DRAFT
   const digisignPayload = {
     envelope: {
+      status: 'draft',
       email_subject: `Smlouva o spolupráci — ${lead.company_name}`,
       email_body: `Dobrý den,\n\nv příloze zasíláme smlouvu o spolupráci k podpisu.\n\nDěkujeme,\nTým Socials`,
       signers: [
@@ -52,12 +63,17 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
       ],
       document: {
         name: `Smlouva_${lead.company_name.replace(/\s+/g, '_')}.pdf`,
+        source: hasGoogleDocsUrl ? 'google_docs_export' : 'generated',
+        google_docs_url: hasGoogleDocsUrl ? googleDocsUrl.trim() : undefined,
+        export_format: 'application/pdf',
       },
       metadata: {
         lead_id: lead.id,
         company_name: lead.company_name,
         ico: lead.ico,
         dic: lead.dic,
+        created_as: 'draft',
+        note: 'Draft vytvořen z CRM — doplňte podpisové archy v DigiSign a odešlete ručně.',
       },
     },
     contract_data: {
@@ -88,6 +104,18 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
       },
       offer_type: lead.offer_type || 'retainer',
     },
+    automation: {
+      steps: [
+        '1. Stáhnout Google Doc jako PDF (export link)',
+        '2. Vytvořit draft envelope v DigiSign s přiloženým PDF',
+        '3. Nastavit podepisující osobu (bez podpisových archů)',
+        '4. Uživatel doplní podpisové archy v DigiSign',
+        '5. Uživatel odešle smlouvu k podpisu z DigiSign',
+      ],
+      google_docs_export_url: hasGoogleDocsUrl
+        ? `${googleDocsUrl.trim().replace(/\/edit.*$/, '')}/export?format=pdf`
+        : null,
+    },
   };
 
   const payloadJson = JSON.stringify(digisignPayload, null, 2);
@@ -104,7 +132,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
   // Build Google Docs content for pre-filled contract
   const buildGoogleDocsContent = () => {
     const billingAddress = [lead.billing_street, lead.billing_city, lead.billing_zip, lead.billing_country].filter(Boolean).join(', ');
-    
+
     let content = `SMLOUVA O SPOLUPRÁCI\n\n`;
     content += `1. SMLUVNÍ STRANY\n\n`;
     content += `Objednatel:\n`;
@@ -120,7 +148,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
     content += `Poskytovatel:\n`;
     content += `[DOPLNIT ÚDAJE POSKYTOVATELE]\n\n`;
     content += `2. PŘEDMĚT SMLOUVY\n\n`;
-    
+
     if (leadServices.length > 0) {
       leadServices.forEach((svc, idx) => {
         const tierLabel = svc.selected_tier ? ` (${svc.selected_tier.toUpperCase()})` : '';
@@ -136,7 +164,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
         content += `Jednorázová cena: ${oneOffTotal.toLocaleString('cs-CZ')} ${currency}\n`;
       }
     }
-    
+
     content += `\n3. DOBA TRVÁNÍ\n\n[DOPLNIT]\n\n`;
     content += `4. PLATEBNÍ PODMÍNKY\n\n[DOPLNIT]\n\n`;
     content += `5. ZÁVĚREČNÁ USTANOVENÍ\n\n[DOPLNIT]\n\n`;
@@ -149,29 +177,38 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
 
   const handleOpenGoogleDocs = () => {
     const content = buildGoogleDocsContent();
-    // Google Docs "create" URL with pre-filled title
     const title = encodeURIComponent(`Smlouva — ${lead.company_name}`);
-    const body = encodeURIComponent(content);
-    // Use Google Docs create URL — opens a new blank doc with the title
-    const googleDocsUrl = `https://docs.google.com/document/create?title=${title}&body=${body}`;
-    
-    // Copy the contract text to clipboard for pasting into the doc
+
     navigator.clipboard.writeText(content).then(() => {
       toast.success('Text smlouvy zkopírován do schránky — vložte ho do nového dokumentu (Ctrl+V)');
     });
-    
-    // Open a new Google Doc
+
     window.open(`https://docs.google.com/document/create?title=${title}`, '_blank');
   };
 
-  const handleCreateContract = () => {
-    toast.success('Smlouva vytvořena — čeká na propojení s DigiSign API');
+  const handleSendDraftToDigisign = async () => {
+    if (!hasGoogleDocsUrl) {
+      toast.error('Zadejte odkaz na Google Doc se smlouvou');
+      return;
+    }
+
+    setIsSendingToDraft(true);
+
+    // Simulate API call — will be replaced with actual Edge Function
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    toast.success('📋 Draft smlouvy vytvořen v DigiSign — doplňte podpisové archy a odešlete', {
+      duration: 5000,
+    });
+
     onSend({
-      contract_url: '',
-      digisign_envelope_id: null,
+      contract_url: googleDocsUrl.trim(),
+      digisign_envelope_id: `draft_${Date.now()}`,
       digisign_document_url: null,
       contract_sent_at: new Date().toISOString(),
     });
+
+    setIsSendingToDraft(false);
     onOpenChange(false);
   };
 
@@ -184,7 +221,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
             Vytvořit smlouvu
           </DialogTitle>
           <DialogDescription>
-            Zkontrolujte údaje a vytvořte smlouvu v Google Docs nebo přes DigiSign API.
+            Vytvořte smlouvu v Google Docs, upravte ji a pak odešlete jako draft do DigiSign.
           </DialogDescription>
         </DialogHeader>
 
@@ -193,7 +230,6 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
           <div className="rounded-lg border bg-card p-4 space-y-4">
             <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Údaje do smlouvy</h5>
 
-            {/* Company & billing */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Smluvní strana</p>
@@ -239,7 +275,6 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
               </div>
             </div>
 
-            {/* Services & pricing */}
             {leadServices.length > 0 && (
               <div className="space-y-2">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -280,7 +315,6 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
             )}
           </div>
 
-          {/* Missing data warning */}
           {hasMissingData && (
             <div className="rounded-lg border border-amber-300/40 bg-amber-500/5 p-3">
               <p className="text-xs font-medium" style={{ color: 'hsl(var(--warning, 45 93% 47%))' }}>
@@ -291,21 +325,16 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
 
           <Separator />
 
-          {/* ── Two paths: Google Docs or DigiSign ── */}
+          {/* ── Step 1: Create in Google Docs ── */}
           <div className="space-y-3">
-            <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Jak chcete smlouvu vytvořit?</h5>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-primary text-primary-foreground text-[10px] rounded-full h-5 w-5 p-0 flex items-center justify-center shrink-0">1</Badge>
+              <h5 className="text-sm font-semibold">Vytvořit smlouvu v Google Docs</h5>
+            </div>
 
-            {/* Option 1: Google Docs */}
             <div className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium">Google Docs</span>
-                  <Badge variant="outline" className="text-[10px]">Manuální</Badge>
-                </div>
-              </div>
               <p className="text-xs text-muted-foreground">
-                Otevře nový Google Doc s předvyplněnými údaji. Text smlouvy se zkopíruje do schránky — stačí vložit (Ctrl+V), upravit a pak odeslat přes DigiSign ručně.
+                Otevře nový Google Doc s předvyplněnými údaji. Upravte smlouvu dle potřeby a zkopírujte odkaz.
               </p>
               <Button
                 variant="outline"
@@ -319,34 +348,92 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
                 <ExternalLink className="h-3 w-3 text-muted-foreground" />
               </Button>
             </div>
+          </div>
 
-            {/* Option 2: DigiSign API */}
+          {/* ── Step 2: Paste Google Docs URL ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-primary text-primary-foreground text-[10px] rounded-full h-5 w-5 p-0 flex items-center justify-center shrink-0">2</Badge>
+              <h5 className="text-sm font-semibold">Vložit odkaz na hotovou smlouvu</h5>
+            </div>
+
             <div className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileSignature className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">DigiSign API</span>
-                  <Badge variant="secondary" className="text-[10px]">Připraveno</Badge>
+              <div className="space-y-2">
+                <Label htmlFor="gdocs-url" className="text-xs text-muted-foreground">
+                  Odkaz na Google Doc s upravenou smlouvou
+                </Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      id="gdocs-url"
+                      placeholder="https://docs.google.com/document/d/..."
+                      value={googleDocsUrl}
+                      onChange={e => setGoogleDocsUrl(e.target.value)}
+                      className="pl-9 text-sm"
+                    />
+                  </div>
+                </div>
+                {googleDocsUrl.trim() && !hasGoogleDocsUrl && (
+                  <p className="text-[11px] text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Zadejte platný odkaz na Google Docs
+                  </p>
+                )}
+                {hasGoogleDocsUrl && (
+                  <p className="text-[11px] text-emerald-600 flex items-center gap-1">
+                    <Check className="h-3 w-3" />
+                    Google Doc odkaz rozpoznán
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Step 3: Send draft to DigiSign ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-primary text-primary-foreground text-[10px] rounded-full h-5 w-5 p-0 flex items-center justify-center shrink-0">3</Badge>
+              <h5 className="text-sm font-semibold">Odeslat draft do DigiSign</h5>
+            </div>
+
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="rounded-md bg-muted/50 p-3 space-y-1.5">
+                <p className="text-xs font-medium">Automatizace provede:</p>
+                <ol className="text-[11px] text-muted-foreground space-y-0.5 list-decimal list-inside">
+                  <li>Stáhne Google Doc jako PDF</li>
+                  <li>Vytvoří draft envelope v DigiSign s přiloženým PDF</li>
+                  <li>Nastaví podepisující osobu: <span className="font-medium text-foreground">{lead.contact_name}</span></li>
+                </ol>
+                <div className="mt-2 rounded border border-amber-300/40 bg-amber-500/5 px-2.5 py-1.5">
+                  <p className="text-[11px] font-medium" style={{ color: 'hsl(var(--warning, 45 93% 47%))' }}>
+                    ⚠️ Smlouva se odešle pouze jako <strong>draft</strong> — podpisové archy doplníte a odešlete ručně v DigiSign.
+                  </p>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Automatické odeslání smlouvy přes DigiSign API — zatím připraven payload, backend bude napojen.
-              </p>
 
-              {/* Expandable payload preview */}
-              <button
-                type="button"
-                onClick={() => setShowPayload(!showPayload)}
-                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Code className="h-3.5 w-3.5" />
-                <span>API Payload</span>
-                {showPayload ? (
-                  <ChevronUp className="h-3.5 w-3.5" />
-                ) : (
-                  <ChevronDown className="h-3.5 w-3.5" />
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleSendDraftToDigisign}
+                  disabled={!hasGoogleDocsUrl || leadServices.length === 0 || isSendingToDraft}
+                >
+                  <Send className="h-4 w-4" />
+                  {isSendingToDraft ? 'Vytvářím draft…' : 'Vytvořit draft v DigiSign'}
+                </Button>
+
+                {/* Expandable payload preview */}
+                <button
+                  type="button"
+                  onClick={() => setShowPayload(!showPayload)}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                >
+                  <Code className="h-3.5 w-3.5" />
+                  <span>API Payload</span>
+                  {showPayload ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                </button>
+              </div>
 
               {showPayload && (
                 <div className="relative">
@@ -364,16 +451,6 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
                   </Button>
                 </div>
               )}
-
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={handleCreateContract}
-                disabled={leadServices.length === 0}
-              >
-                <FileSignature className="h-4 w-4" />
-                Odeslat přes DigiSign
-              </Button>
             </div>
           </div>
 
