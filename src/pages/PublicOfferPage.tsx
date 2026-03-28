@@ -590,7 +590,7 @@ function ReportingSection({ offer }: { offer: PublicOffer }) {
         subtitle={block.subtitle || ''}
       />
       <p className="text-sm text-muted-foreground/70 italic -mt-6 mb-8">
-        (Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)
+        {note}
       </p>
 
       <div className="mb-6">
