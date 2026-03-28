@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { FileSignature, Copy, Check, Building2, Hash, Mail, MapPin, Package, Code, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileSignature, Copy, Check, Building2, Hash, Mail, MapPin, Package, Code, ChevronDown, ChevronUp, FileText, ExternalLink } from 'lucide-react';
 import type { Lead, LeadService } from '@/types/crm';
 import { toast } from 'sonner';
 
@@ -101,8 +101,70 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Build Google Docs content for pre-filled contract
+  const buildGoogleDocsContent = () => {
+    const billingAddress = [lead.billing_street, lead.billing_city, lead.billing_zip, lead.billing_country].filter(Boolean).join(', ');
+    
+    let content = `SMLOUVA O SPOLUPRÁCI\n\n`;
+    content += `1. SMLUVNÍ STRANY\n\n`;
+    content += `Objednatel:\n`;
+    content += `${lead.company_name}\n`;
+    if (lead.ico) content += `IČO: ${lead.ico}\n`;
+    if (lead.dic) content += `DIČ: ${lead.dic}\n`;
+    if (billingAddress) content += `Sídlo: ${billingAddress}\n`;
+    content += `Kontaktní osoba: ${lead.contact_name}\n`;
+    if (lead.contact_email) content += `E-mail: ${lead.contact_email}\n`;
+    if (lead.contact_phone) content += `Tel: ${lead.contact_phone}\n`;
+    if (lead.billing_email) content += `Fakturační e-mail: ${lead.billing_email}\n`;
+    content += `\n`;
+    content += `Poskytovatel:\n`;
+    content += `[DOPLNIT ÚDAJE POSKYTOVATELE]\n\n`;
+    content += `2. PŘEDMĚT SMLOUVY\n\n`;
+    
+    if (leadServices.length > 0) {
+      leadServices.forEach((svc, idx) => {
+        const tierLabel = svc.selected_tier ? ` (${svc.selected_tier.toUpperCase()})` : '';
+        const priceLabel = `${(svc.price || 0).toLocaleString('cs-CZ')} ${svc.currency || currency}`;
+        const billingLabel = (svc.billing_type || 'monthly') === 'monthly' ? '/měs' : ' jednorázově';
+        content += `${idx + 1}. ${svc.name}${tierLabel} — ${priceLabel}${billingLabel}\n`;
+      });
+      content += `\n`;
+      if (monthlyTotal > 0) {
+        content += `Celková měsíční cena: ${monthlyTotal.toLocaleString('cs-CZ')} ${currency}/měs\n`;
+      }
+      if (oneOffTotal > 0) {
+        content += `Jednorázová cena: ${oneOffTotal.toLocaleString('cs-CZ')} ${currency}\n`;
+      }
+    }
+    
+    content += `\n3. DOBA TRVÁNÍ\n\n[DOPLNIT]\n\n`;
+    content += `4. PLATEBNÍ PODMÍNKY\n\n[DOPLNIT]\n\n`;
+    content += `5. ZÁVĚREČNÁ USTANOVENÍ\n\n[DOPLNIT]\n\n`;
+    content += `\nV __________ dne __________\n\n`;
+    content += `Za objednatele:\t\t\tZa poskytovatele:\n`;
+    content += `${lead.contact_name}\t\t\t[JMÉNO]\n`;
+
+    return content;
+  };
+
+  const handleOpenGoogleDocs = () => {
+    const content = buildGoogleDocsContent();
+    // Google Docs "create" URL with pre-filled title
+    const title = encodeURIComponent(`Smlouva — ${lead.company_name}`);
+    const body = encodeURIComponent(content);
+    // Use Google Docs create URL — opens a new blank doc with the title
+    const googleDocsUrl = `https://docs.google.com/document/create?title=${title}&body=${body}`;
+    
+    // Copy the contract text to clipboard for pasting into the doc
+    navigator.clipboard.writeText(content).then(() => {
+      toast.success('Text smlouvy zkopírován do schránky — vložte ho do nového dokumentu (Ctrl+V)');
+    });
+    
+    // Open a new Google Doc
+    window.open(`https://docs.google.com/document/create?title=${title}`, '_blank');
+  };
+
   const handleCreateContract = () => {
-    // Frontend-only: simulate creating the contract
     toast.success('Smlouva vytvořena — čeká na propojení s DigiSign API');
     onSend({
       contract_url: '',
@@ -122,7 +184,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
             Vytvořit smlouvu
           </DialogTitle>
           <DialogDescription>
-            Zkontrolujte údaje a vytvořte smlouvu k odeslání přes DigiSign.
+            Zkontrolujte údaje a vytvořte smlouvu v Google Docs nebo přes DigiSign API.
           </DialogDescription>
         </DialogHeader>
 
@@ -221,7 +283,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
           {/* Missing data warning */}
           {hasMissingData && (
             <div className="rounded-lg border border-amber-300/40 bg-amber-500/5 p-3">
-              <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+              <p className="text-xs font-medium" style={{ color: 'hsl(var(--warning, 45 93% 47%))' }}>
                 ⚠️ Některé údaje chybí — smlouva může být neúplná. Doplňte je v detailu leadu.
               </p>
             </div>
@@ -229,49 +291,96 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
 
           <Separator />
 
-          {/* DigiSign API payload preview */}
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => setShowPayload(!showPayload)}
-              className="flex items-center justify-between w-full text-left"
-            >
-              <div className="flex items-center gap-2">
-                <Code className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  DigiSign API Payload
-                </span>
-                <Badge variant="outline" className="text-[10px]">Preview</Badge>
-              </div>
-              {showPayload ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              )}
-            </button>
+          {/* ── Two paths: Google Docs or DigiSign ── */}
+          <div className="space-y-3">
+            <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Jak chcete smlouvu vytvořit?</h5>
 
-            {showPayload && (
-              <div className="relative">
-                <pre className="rounded-md border bg-muted/50 p-3 text-[11px] font-mono overflow-x-auto max-h-[300px] overflow-y-auto leading-relaxed">
-                  {payloadJson}
-                </pre>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute top-2 right-2 h-7 gap-1.5 text-xs"
-                  onClick={handleCopyPayload}
-                >
-                  {copied ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                  {copied ? 'Zkopírováno' : 'Kopírovat'}
-                </Button>
+            {/* Option 1: Google Docs */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">Google Docs</span>
+                  <Badge variant="outline" className="text-[10px]">Manuální</Badge>
+                </div>
               </div>
-            )}
+              <p className="text-xs text-muted-foreground">
+                Otevře nový Google Doc s předvyplněnými údaji. Text smlouvy se zkopíruje do schránky — stačí vložit (Ctrl+V), upravit a pak odeslat přes DigiSign ručně.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={handleOpenGoogleDocs}
+                disabled={leadServices.length === 0}
+              >
+                <FileText className="h-4 w-4" />
+                Vytvořit v Google Docs
+                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+              </Button>
+            </div>
+
+            {/* Option 2: DigiSign API */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileSignature className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">DigiSign API</span>
+                  <Badge variant="secondary" className="text-[10px]">Připraveno</Badge>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Automatické odeslání smlouvy přes DigiSign API — zatím připraven payload, backend bude napojen.
+              </p>
+
+              {/* Expandable payload preview */}
+              <button
+                type="button"
+                onClick={() => setShowPayload(!showPayload)}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Code className="h-3.5 w-3.5" />
+                <span>API Payload</span>
+                {showPayload ? (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                )}
+              </button>
+
+              {showPayload && (
+                <div className="relative">
+                  <pre className="rounded-md border bg-muted/50 p-3 text-[11px] font-mono overflow-x-auto max-h-[250px] overflow-y-auto leading-relaxed">
+                    {payloadJson}
+                  </pre>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 h-7 gap-1.5 text-xs"
+                    onClick={handleCopyPayload}
+                  >
+                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    {copied ? 'Zkopírováno' : 'Kopírovat'}
+                  </Button>
+                </div>
+              )}
+
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={handleCreateContract}
+                disabled={leadServices.length === 0}
+              >
+                <FileSignature className="h-4 w-4" />
+                Odeslat přes DigiSign
+              </Button>
+            </div>
           </div>
 
           {/* Contract signed status */}
           {lead.contract_signed_at && (
             <div className="rounded-lg border border-emerald-300/40 bg-emerald-500/5 p-3">
-              <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium">
+              <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'hsl(var(--success, 142 76% 36%))' }}>
                 <Check className="h-4 w-4" />
                 Smlouva byla podepsána {new Date(lead.contract_signed_at).toLocaleDateString('cs-CZ')}
               </div>
@@ -281,11 +390,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Zrušit
-          </Button>
-          <Button onClick={handleCreateContract} disabled={leadServices.length === 0}>
-            <FileSignature className="h-4 w-4 mr-2" />
-            {lead.contract_sent_at ? 'Aktualizovat smlouvu' : 'Vytvořit smlouvu'}
+            Zavřít
           </Button>
         </DialogFooter>
       </DialogContent>
