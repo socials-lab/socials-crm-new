@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -693,6 +693,19 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               ) : (
                 <span className="text-xs text-muted-foreground">Nebyla podepsána</span>
               )}
+              {lead.contract_signed_at && (
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 mt-1">
+                  <Check className="h-3 w-3" />
+                  Podepsáno {new Date(lead.contract_signed_at).toLocaleDateString('cs-CZ')}
+                </div>
+              )}
+              <div className="mt-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Podepisující</p>
+                <p className="text-xs mt-0.5">
+                  {lead.contact_name}
+                  {lead.contact_email && <span className="text-muted-foreground"> · {lead.contact_email}</span>}
+                </p>
+              </div>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Onboarding formulář</p>
