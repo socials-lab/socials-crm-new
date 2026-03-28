@@ -37,6 +37,8 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
   const [showPayload, setShowPayload] = useState(false);
   const [googleDocsUrl, setGoogleDocsUrl] = useState(lead.contract_url || '');
   const [isSendingToDraft, setIsSendingToDraft] = useState(false);
+  const [draftCreated, setDraftCreated] = useState(false);
+  const [draftEnvelopeId, setDraftEnvelopeId] = useState<string | null>(null);
 
   const leadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
   const monthlyServices = leadServices.filter(s => (s.billing_type || 'monthly') === 'monthly');
