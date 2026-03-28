@@ -1471,50 +1471,19 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 </div>
               )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                {form.watch('engagement_type') === 'retainer' ? (
-                  <FormField
-                    control={form.control}
-                    name="monthly_fee"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Měsíční fee</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="one_off_fee"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Jednorázová částka</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="engagement_notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Poznámky k zakázce</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} rows={2} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-                <FormField
-                  control={form.control}
-                  name="engagement_notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Poznámky k zakázce</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} rows={2} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              />
             </div>
 
             {/* ── SECTION 5: Tým ── */}
