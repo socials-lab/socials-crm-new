@@ -546,10 +546,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             .update({ freelo_url: freeloResult.project_url })
             .eq('id', newEngagement.id);
           
-          const parts: string[] = [];
-          if (freeloResult.invited_team_count > 0) parts.push(`${freeloResult.invited_team_count} kolegů`);
-          if (freeloResult.invited_client_count > 0) parts.push(`${freeloResult.invited_client_count} klientů`);
-          const inviteMsg = parts.length > 0 ? ` (pozváno: ${parts.join(', ')})` : '';
+          const inviteMsg = freeloResult.invited_team_count > 0 
+            ? ` (pozváno ${freeloResult.invited_team_count} kolegů)` 
+            : '';
           toast.success(`Freelo projekt vytvořen${inviteMsg}`);
         }
       } catch (freeloErr) {
