@@ -8,11 +8,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { FileSignature, ExternalLink, Copy, Check, Send, Building2, Hash, Mail, MapPin, Package } from 'lucide-react';
+import { FileSignature, Copy, Check, Building2, Hash, Mail, MapPin, Package, Code, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Lead, LeadService } from '@/types/crm';
 import { toast } from 'sonner';
 
@@ -29,14 +27,8 @@ interface SendContractDialogProps {
 }
 
 export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendContractDialogProps) {
-  const [contractUrl, setContractUrl] = useState(lead.contract_url || '');
-  const [digisignEnvelopeId, setDigisignEnvelopeId] = useState(lead.digisign_envelope_id || '');
-  const [digisignDocumentUrl, setDigisignDocumentUrl] = useState(lead.digisign_document_url || '');
   const [copied, setCopied] = useState(false);
-
-  const digisignLink = digisignEnvelopeId
-    ? `https://app.digisign.org/envelope/${digisignEnvelopeId}`
-    : null;
+  const [showPayload, setShowPayload] = useState(false);
 
   const leadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
   const monthlyServices = leadServices.filter(s => (s.billing_type || 'monthly') === 'monthly');
@@ -45,26 +37,80 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
   const oneOffTotal = oneOffServices.reduce((sum, s) => sum + (s.price || 0), 0);
   const currency = lead.currency || 'CZK';
 
-  const handleSend = () => {
-    if (!contractUrl && !digisignDocumentUrl) {
-      toast.error('Zadejte odkaz na smlouvu nebo DigiSign dokument');
-      return;
-    }
+  // Build DigiSign API payload
+  const digisignPayload = {
+    envelope: {
+      email_subject: `Smlouva o spolupráci — ${lead.company_name}`,
+      email_body: `Dobrý den,\n\nv příloze zasíláme smlouvu o spolupráci k podpisu.\n\nDěkujeme,\nTým Socials`,
+      signers: [
+        {
+          name: lead.contact_name,
+          email: lead.contact_email || lead.billing_email,
+          role: 'signer',
+          order: 1,
+        },
+      ],
+      document: {
+        name: `Smlouva_${lead.company_name.replace(/\s+/g, '_')}.pdf`,
+      },
+      metadata: {
+        lead_id: lead.id,
+        company_name: lead.company_name,
+        ico: lead.ico,
+        dic: lead.dic,
+      },
+    },
+    contract_data: {
+      client: {
+        company_name: lead.company_name,
+        ico: lead.ico || null,
+        dic: lead.dic || null,
+        billing_street: lead.billing_street || null,
+        billing_city: lead.billing_city || null,
+        billing_zip: lead.billing_zip || null,
+        billing_country: lead.billing_country || null,
+        billing_email: lead.billing_email || null,
+        contact_name: lead.contact_name,
+        contact_email: lead.contact_email || null,
+        contact_phone: lead.contact_phone || null,
+      },
+      services: leadServices.map(svc => ({
+        name: svc.name,
+        tier: svc.selected_tier || null,
+        price: svc.price || 0,
+        currency: svc.currency || currency,
+        billing_type: svc.billing_type || 'monthly',
+      })),
+      pricing: {
+        monthly_total: monthlyTotal,
+        one_off_total: oneOffTotal,
+        currency,
+      },
+      offer_type: lead.offer_type || 'retainer',
+    },
+  };
 
+  const payloadJson = JSON.stringify(digisignPayload, null, 2);
+
+  const hasMissingData = !lead.billing_street || !lead.billing_city || !lead.contact_email;
+
+  const handleCopyPayload = async () => {
+    await navigator.clipboard.writeText(payloadJson);
+    setCopied(true);
+    toast.success('Payload zkopírován');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCreateContract = () => {
+    // Frontend-only: simulate creating the contract
+    toast.success('Smlouva vytvořena — čeká na propojení s DigiSign API');
     onSend({
-      contract_url: contractUrl || digisignDocumentUrl || '',
-      digisign_envelope_id: digisignEnvelopeId || null,
-      digisign_document_url: digisignDocumentUrl || null,
+      contract_url: '',
+      digisign_envelope_id: null,
+      digisign_document_url: null,
       contract_sent_at: new Date().toISOString(),
     });
     onOpenChange(false);
-  };
-
-  const handleCopy = async (text: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast.success('Zkopírováno');
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -73,10 +119,10 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSignature className="h-5 w-5 text-primary" />
-            Smlouva — DigiSign
+            Vytvořit smlouvu
           </DialogTitle>
           <DialogDescription>
-            Zkontrolujte údaje pro smlouvu a připojte ji přes DigiSign.
+            Zkontrolujte údaje a vytvořte smlouvu k odeslání přes DigiSign.
           </DialogDescription>
         </DialogHeader>
 
@@ -102,7 +148,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
                 )}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Mail className="h-3 w-3 shrink-0" />
-                  {lead.contact_name} · {lead.contact_email}
+                  {lead.contact_name} · {lead.contact_email || <span className="text-destructive">chybí e-mail</span>}
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -172,83 +218,63 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
             )}
           </div>
 
-          <Separator />
-
-          {/* DigiSign fields */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <img src="https://www.digisign.org/favicon.ico" alt="" className="h-4 w-4" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              <span className="text-sm font-medium">DigiSign</span>
-              <Badge variant="outline" className="text-[10px]">Doporučeno</Badge>
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-xs">ID obálky (Envelope ID)</Label>
-              <Input
-                value={digisignEnvelopeId}
-                onChange={(e) => setDigisignEnvelopeId(e.target.value)}
-                placeholder="např. abc123-def456-..."
-                className="font-mono text-sm"
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Zkopírujte z DigiSign po vytvoření obálky. Backend webhook uloží podepsaný dokument automaticky.
+          {/* Missing data warning */}
+          {hasMissingData && (
+            <div className="rounded-lg border border-amber-300/40 bg-amber-500/5 p-3">
+              <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+                ⚠️ Některé údaje chybí — smlouva může být neúplná. Doplňte je v detailu leadu.
               </p>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <Label className="text-xs">Odkaz na DigiSign dokument</Label>
-              <Input
-                type="url"
-                value={digisignDocumentUrl}
-                onChange={(e) => setDigisignDocumentUrl(e.target.value)}
-                placeholder="https://app.digisign.org/document/..."
-              />
-            </div>
+          <Separator />
 
-            {digisignLink && (
-              <div className="flex items-center gap-2 p-2 rounded-md bg-primary/5 border border-primary/20">
-                <FileSignature className="h-4 w-4 text-primary shrink-0" />
-                <a href={digisignLink} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate flex-1">
-                  {digisignLink}
-                </a>
-                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleCopy(digisignLink)}>
+          {/* DigiSign API payload preview */}
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowPayload(!showPayload)}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <div className="flex items-center gap-2">
+                <Code className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  DigiSign API Payload
+                </span>
+                <Badge variant="outline" className="text-[10px]">Preview</Badge>
+              </div>
+              {showPayload ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+
+            {showPayload && (
+              <div className="relative">
+                <pre className="rounded-md border bg-muted/50 p-3 text-[11px] font-mono overflow-x-auto max-h-[300px] overflow-y-auto leading-relaxed">
+                  {payloadJson}
+                </pre>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-2 right-2 h-7 gap-1.5 text-xs"
+                  onClick={handleCopyPayload}
+                >
                   {copied ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" asChild>
-                  <a href={digisignLink} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+                  {copied ? 'Zkopírováno' : 'Kopírovat'}
                 </Button>
               </div>
             )}
           </div>
 
-          <Separator />
-
-          {/* Fallback: manual contract URL */}
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Nebo přímý odkaz na smlouvu (volitelné)</Label>
-            <Input
-              type="url"
-              value={contractUrl}
-              onChange={(e) => setContractUrl(e.target.value)}
-              placeholder="https://drive.google.com/... nebo jiný odkaz"
-            />
-          </div>
-
-          {/* Status info */}
+          {/* Contract signed status */}
           {lead.contract_signed_at && (
             <div className="rounded-lg border border-emerald-300/40 bg-emerald-500/5 p-3">
               <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium">
                 <Check className="h-4 w-4" />
                 Smlouva byla podepsána {new Date(lead.contract_signed_at).toLocaleDateString('cs-CZ')}
               </div>
-              {lead.digisign_document_url && (
-                <a href={lead.digisign_document_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline mt-1">
-                  <ExternalLink className="h-3 w-3" />
-                  Otevřít podepsaný dokument
-                </a>
-              )}
             </div>
           )}
         </div>
@@ -257,9 +283,9 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
           </Button>
-          <Button onClick={handleSend} disabled={!contractUrl && !digisignDocumentUrl && !digisignEnvelopeId}>
-            <Send className="h-4 w-4 mr-2" />
-            {lead.contract_sent_at ? 'Aktualizovat smlouvu' : 'Odeslat smlouvu'}
+          <Button onClick={handleCreateContract} disabled={leadServices.length === 0}>
+            <FileSignature className="h-4 w-4 mr-2" />
+            {lead.contract_sent_at ? 'Aktualizovat smlouvu' : 'Vytvořit smlouvu'}
           </Button>
         </DialogFooter>
       </DialogContent>
