@@ -188,7 +188,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
     setShowTransitionDialog(true);
   };
 
-  const handleConfirmTransition = () => {
+  const handleConfirmTransition = (reason?: string) => {
     if (pendingTransition) {
       confirmTransition({
         leadId: pendingTransition.leadId,
@@ -196,13 +196,21 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         toStage: pendingTransition.toStage,
         transitionValue: pendingTransition.leadValue,
       });
+      if (reason) {
+        const prefix = pendingTransition.toStage === 'lost' ? '❌ Důvod prohry: ' : '⏸️ Důvod odložení: ';
+        addNote(lead.id, prefix + reason, 'general');
+      }
       toast.success('Přechod byl potvrzen pro analytiku');
     }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
 
-  const handleSkipTransition = () => {
+  const handleSkipTransition = (reason?: string) => {
+    if (reason && pendingTransition) {
+      const prefix = pendingTransition.toStage === 'lost' ? '❌ Důvod prohry: ' : '⏸️ Důvod odložení: ';
+      addNote(lead.id, prefix + reason, 'general');
+    }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };

@@ -50,7 +50,7 @@ type ViewMode = 'kanban' | 'table';
 const STAGE_ORDER: LeadStage[] = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'won', 'lost', 'postponed'];
 
 export default function Leads() {
-  const { leads, updateLeadStage } = useLeadsData();
+  const { leads, updateLeadStage, addNote } = useLeadsData();
   const { colleagues } = useCRMData();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -278,6 +278,10 @@ export default function Leads() {
           leads={filteredLeads} 
           onLeadClick={handleLeadClick}
           onStageChange={handleStageChange}
+          onAddLostReason={(leadId, reason, stage) => {
+            const prefix = stage === 'lost' ? '❌ Důvod prohry: ' : '⏸️ Důvod odložení: ';
+            addNote(leadId, prefix + reason, 'general');
+          }}
         />
       ) : (
         <LeadsTable 

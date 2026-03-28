@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,6 +11,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ArrowRight, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import type { PendingTransition } from '@/types/leadTransitions';
 import type { LeadStage } from '@/types/crm';
 
@@ -29,8 +32,8 @@ interface ConfirmStageTransitionDialogProps {
   pendingTransition: PendingTransition | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
-  onSkip: () => void;
+  onConfirm: (reason?: string) => void;
+  onSkip: (reason?: string) => void;
   isConfirming?: boolean;
 }
 
@@ -42,7 +45,17 @@ export function ConfirmStageTransitionDialog({
   onSkip,
   isConfirming = false,
 }: ConfirmStageTransitionDialogProps) {
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    if (open) setReason('');
+  }, [open]);
+
   if (!pendingTransition) return null;
+
+  const requiresReason = pendingTransition.toStage === 'lost' || pendingTransition.toStage === 'postponed';
+  const isLost = pendingTransition.toStage === 'lost';
+  const isPostponed = pendingTransition.toStage === 'postponed';
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -58,7 +71,7 @@ export function ConfirmStageTransitionDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" />
-            Potvrdit pro funnel analytiku?
+            {requiresReason ? (isLost ? 'Proč jsme prohráli?' : 'Důvod odložení') : 'Potvrdit pro funnel analytiku?'}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-4">
@@ -71,7 +84,7 @@ export function ConfirmStageTransitionDialog({
                   {STAGE_LABELS[pendingTransition.fromStage]}
                 </Badge>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <Badge variant="default" className="text-sm">
+                <Badge variant={isLost ? 'destructive' : 'default'} className="text-sm">
                   {STAGE_LABELS[pendingTransition.toStage]}
                 </Badge>
               </div>
@@ -81,20 +94,42 @@ export function ConfirmStageTransitionDialog({
                   Hodnota: {formatCurrency(pendingTransition.leadValue)} Kč
                 </p>
               )}
+
+              {requiresReason && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-foreground">
+                    {isLost ? 'Důvod prohry *' : 'Důvod odložení *'}
+                  </Label>
+                  <Textarea
+                    placeholder={isLost 
+                      ? 'Např. cena, vybrali jinou agenturu, nemají rozpočet, špatný timing...' 
+                      : 'Např. odloženo na Q2, čekají na rozpočet, interní změny...'}
+                    value={reason}
+                    onChange={e => setReason(e.target.value)}
+                    rows={3}
+                    className="text-sm"
+                  />
+                </div>
+              )}
               
-              <p className="text-sm text-muted-foreground">
-                Chcete tento přechod započítat do funnel analytiky? 
-                Toto vám pomůže trackovat průchodnost jednotlivými fázemi pipeline.
-              </p>
+              {!requiresReason && (
+                <p className="text-sm text-muted-foreground">
+                  Chcete tento přechod započítat do funnel analytiky? 
+                  Toto vám pomůže trackovat průchodnost jednotlivými fázemi pipeline.
+                </p>
+              )}
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onSkip} disabled={isConfirming}>
-            Přeskočit
+          <AlertDialogCancel onClick={() => onSkip(reason.trim() || undefined)} disabled={isConfirming}>
+            {requiresReason ? 'Přeskočit analytiku' : 'Přeskočit'}
           </AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} disabled={isConfirming}>
-            {isConfirming ? 'Ukládám...' : 'Potvrdit pro analytiku'}
+          <AlertDialogAction 
+            onClick={() => onConfirm(reason.trim() || undefined)} 
+            disabled={isConfirming || (requiresReason && !reason.trim())}
+          >
+            {isConfirming ? 'Ukládám...' : (requiresReason ? 'Potvrdit' : 'Potvrdit pro analytiku')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -14,6 +14,7 @@ interface LeadsKanbanProps {
   leads: Lead[];
   onLeadClick: (lead: Lead) => void;
   onStageChange: (leadId: string, newStage: LeadStage) => void;
+  onAddLostReason?: (leadId: string, reason: string, stage: LeadStage) => void;
 }
 
 const STAGE_CONFIG: Record<LeadStage, { title: string; shortTitle: string; color: string; bgColor: string }> = {
@@ -40,7 +41,7 @@ const ACTIVE_STAGES: LeadStage[] = [
 
 const CLOSED_STAGES: LeadStage[] = ['won', 'lost', 'postponed'];
 
-export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanProps) {
+export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason }: LeadsKanbanProps) {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<LeadStage | null>(null);
   const [closedOpen, setClosedOpen] = useState(false);
@@ -128,7 +129,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
     setDragOverStage(null);
   };
 
-  const handleConfirmTransition = () => {
+  const handleConfirmTransition = (reason?: string) => {
     if (pendingTransition) {
       confirmTransition({
         leadId: pendingTransition.leadId,
@@ -136,13 +137,19 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange }: LeadsKanbanPr
         toStage: pendingTransition.toStage,
         transitionValue: pendingTransition.leadValue,
       });
+      if (reason && onAddLostReason) {
+        onAddLostReason(pendingTransition.leadId, reason, pendingTransition.toStage);
+      }
       toast.success('Přechod byl potvrzen pro analytiku');
     }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
 
-  const handleSkipTransition = () => {
+  const handleSkipTransition = (reason?: string) => {
+    if (reason && pendingTransition && onAddLostReason) {
+      onAddLostReason(pendingTransition.leadId, reason, pendingTransition.toStage);
+    }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
