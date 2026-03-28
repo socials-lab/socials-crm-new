@@ -487,7 +487,9 @@ function ServiceStructureExplanation() {
   );
 }
 
-function OnboardingProcessSection() {
+function OnboardingProcessSection({ offer }: { offer: PublicOffer }) {
+  const block = getOfferContent(offer, 'onboarding');
+  const steps = block.content?.steps || ONBOARDING_STEPS.map(s => ({ icon: '', title: s.title, description: s.description, timeline: s.timeline }));
   return (
     <section>
       <SectionHeading 
