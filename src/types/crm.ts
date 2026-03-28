@@ -519,7 +519,8 @@ export type LeadStage =
   | 'offer_sent'         // Nabídka odeslána
   | 'won'                // Vyhráno
   | 'lost'               // Prohráno
-  | 'postponed';         // Odloženo
+  | 'postponed'          // Odloženo
+  | 'bad_fit';           // Bad Fit
 
 export type LeadSource = 
   | 'referral'

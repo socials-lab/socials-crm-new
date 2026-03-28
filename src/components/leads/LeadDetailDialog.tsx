@@ -90,6 +90,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   won: 'Vyhráno',
   lost: 'Prohráno',
   postponed: 'Odloženo',
+  bad_fit: 'Bad Fit',
 };
 
 const STAGE_COLORS: Record<LeadStage, string> = {
@@ -102,6 +103,7 @@ const STAGE_COLORS: Record<LeadStage, string> = {
   won: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
   lost: 'bg-red-500/10 text-red-700 border-red-500/30',
   postponed: 'bg-gray-500/10 text-gray-700 border-gray-500/30',
+  bad_fit: 'bg-orange-500/10 text-orange-700 border-orange-500/30',
 };
 
 const SOURCE_LABELS: Record<Lead['source'], string> = {

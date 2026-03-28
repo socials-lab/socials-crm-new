@@ -168,7 +168,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         contact_position: lead.contact_position || '',
         contact_email: lead.contact_email || '',
         contact_phone: lead.contact_phone || '',
-        stage: lead.stage,
+        stage: lead.stage as any,
         owner_id: lead.owner_id,
         source: lead.source,
         source_custom: lead.source_custom || '',

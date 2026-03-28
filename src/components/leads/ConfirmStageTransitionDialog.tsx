@@ -26,6 +26,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   won: 'Vyhráno',
   lost: 'Prohráno',
   postponed: 'Odloženo',
+  bad_fit: 'Bad Fit',
 };
 
 interface ConfirmStageTransitionDialogProps {
@@ -53,9 +54,10 @@ export function ConfirmStageTransitionDialog({
 
   if (!pendingTransition) return null;
 
-  const requiresReason = pendingTransition.toStage === 'lost' || pendingTransition.toStage === 'postponed';
+  const requiresReason = pendingTransition.toStage === 'lost' || pendingTransition.toStage === 'postponed' || pendingTransition.toStage === 'bad_fit';
   const isLost = pendingTransition.toStage === 'lost';
   const isPostponed = pendingTransition.toStage === 'postponed';
+  const isBadFit = pendingTransition.toStage === 'bad_fit';
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -71,7 +73,7 @@ export function ConfirmStageTransitionDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" />
-            {requiresReason ? (isLost ? 'Proč jsme prohráli?' : 'Důvod odložení') : 'Potvrdit pro funnel analytiku?'}
+            {requiresReason ? (isLost ? 'Proč jsme prohráli?' : isBadFit ? 'Proč je to Bad Fit?' : 'Důvod odložení') : 'Potvrdit pro funnel analytiku?'}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-4">
@@ -84,7 +86,7 @@ export function ConfirmStageTransitionDialog({
                   {STAGE_LABELS[pendingTransition.fromStage]}
                 </Badge>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <Badge variant={isLost ? 'destructive' : 'default'} className="text-sm">
+                <Badge variant={isLost || isBadFit ? 'destructive' : 'default'} className="text-sm">
                   {STAGE_LABELS[pendingTransition.toStage]}
                 </Badge>
               </div>

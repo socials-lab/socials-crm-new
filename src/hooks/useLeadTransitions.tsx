@@ -37,6 +37,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   won: 'Won',
   lost: 'Lost',
   postponed: 'Odloženo',
+  bad_fit: 'Bad Fit',
 };
 
 export function useLeadTransitions() {
