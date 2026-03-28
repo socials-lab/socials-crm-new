@@ -39,7 +39,6 @@ export function SendInterviewInviteDialog({
   const [subject, setSubject] = useState(defaultSubject);
   const [message, setMessage] = useState(defaultMessage);
   const [cc, setCc] = useState<string[]>([]);
-  const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
 
   const handleSendEmail = () => {
