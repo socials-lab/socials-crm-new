@@ -520,9 +520,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           .filter(Boolean) as string[];
         const teamEmails = [...new Set([...defaultEmails, ...assignedEmails])];
 
+        const projectName = data.brand_name || data.client_name;
         const { data: freeloResult, error: freeloError } = await supabase.functions.invoke('create-freelo-project', {
           body: {
-            project_name: data.engagement_name,
+            project_name: projectName,
             currency: data.currency,
             team_emails: teamEmails,
           },
