@@ -69,7 +69,7 @@ import cl7 from '@/assets/clients/client-7.avif';
 import cl8 from '@/assets/clients/client-8.avif';
 import cl9 from '@/assets/clients/client-9.avif';
 import cl10 from '@/assets/clients/client-10.avif';
-import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersMockData';
+import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersData';
 import { usePublicPortfolio } from '@/hooks/usePortfolioData';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -862,13 +862,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   };
 
   useEffect(() => {
-    function fetchOffer() {
+    async function fetchOffer() {
       if (!token || token === ':token' || token.length < 3) {
         setError('Neplatný odkaz na nabídku');
         setLoading(false);
         return;
       }
-      const foundOffer = getPublicOfferByToken(token);
+      const foundOffer = await getPublicOfferByToken(token);
       if (!foundOffer) {
         setError('Nabídka nebyla nalezena nebo již není platná');
         setLoading(false);

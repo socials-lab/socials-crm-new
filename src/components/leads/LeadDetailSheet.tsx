@@ -67,7 +67,7 @@ import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
-import { getOffersByLeadId } from '@/data/publicOffersMockData';
+import { getOffersByLeadId } from '@/data/publicOffersData';
 import type { PublicOffer } from '@/types/publicOffer';
 import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
 import type { Lead, LeadStage, LeadService } from '@/types/crm';
@@ -835,8 +835,8 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                         variant="outline"
                         size="sm"
                         className="flex-1"
-                        onClick={() => {
-                          const offers = getOffersByLeadId(lead.id);
+                        onClick={async () => {
+                          const offers = await getOffersByLeadId(lead.id);
                           const latestOffer = offers.length > 0 ? offers[offers.length - 1] : null;
                           if (latestOffer) {
                             setEditingOffer(latestOffer);
