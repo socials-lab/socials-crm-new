@@ -325,7 +325,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
           <SheetHeader className="space-y-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <SheetTitle className="text-xl">{lead.company_name}</SheetTitle>
+                <SheetTitle className="text-xl">{lead.website || lead.company_name}</SheetTitle>
                 {lead.qualification_status === 'qualified' && (
                   <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30 gap-1">
                     <CheckCircle2 className="h-3 w-3" />

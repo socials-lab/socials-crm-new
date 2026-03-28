@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  Building2, 
+  Globe, 
   User, 
   ExternalLink, 
   Mail, 
@@ -65,8 +65,8 @@ export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="font-medium text-sm truncate">{lead.company_name}</span>
+            <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="font-medium text-sm truncate">{lead.website || lead.company_name}</span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {lead.access_request_sent_at && (
