@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,8 @@ import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/pub
 import { addPublicOffer, updatePublicOffer } from '@/data/publicOffersMockData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
+import { DEFAULT_OFFER_CONTENT } from '@/hooks/useOfferContent';
+import { supabase } from '@/integrations/supabase/client';
 import { getServiceDetail } from '@/constants/serviceDetails';
 import { enrichServiceWithDemoRewards } from '@/utils/serviceRewardDemoData';
 import { getRewardsFromServiceConfig, getServiceRewardRecommendation } from '@/constants/serviceRewards';
