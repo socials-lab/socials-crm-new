@@ -27,6 +27,7 @@ const STAGE_CONFIG: Record<LeadStage, { title: string; shortTitle: string; color
   won: { title: 'Vyhráno', shortTitle: 'Won', color: 'bg-emerald-500', bgColor: 'bg-emerald-500/10' },
   lost: { title: 'Prohráno', shortTitle: 'Lost', color: 'bg-red-500', bgColor: 'bg-red-500/10' },
   postponed: { title: 'Odloženo', shortTitle: 'Odloženo', color: 'bg-gray-500', bgColor: 'bg-gray-500/10' },
+  bad_fit: { title: 'Bad Fit', shortTitle: 'Bad Fit', color: 'bg-orange-500', bgColor: 'bg-orange-500/10' },
 };
 
 // Active stages in a 2x3 grid layout
@@ -39,7 +40,7 @@ const ACTIVE_STAGES: LeadStage[] = [
   'offer_sent', 
 ];
 
-const CLOSED_STAGES: LeadStage[] = ['won', 'lost', 'postponed'];
+const CLOSED_STAGES: LeadStage[] = ['won', 'lost', 'postponed', 'bad_fit'];
 
 export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason }: LeadsKanbanProps) {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason
       won: [],
       lost: [],
       postponed: [],
+      bad_fit: [],
     };
     
     leads.forEach(lead => {

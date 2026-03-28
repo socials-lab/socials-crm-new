@@ -26,6 +26,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   won: 'Vyhráno',
   lost: 'Prohráno',
   postponed: 'Odloženo',
+  bad_fit: 'Bad Fit',
 };
 
 interface ConfirmStageTransitionDialogProps {
