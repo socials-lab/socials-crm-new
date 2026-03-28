@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX, Check, X, Loader2 } from 'lucide-react';
+import { Plus, Trash2, FileText, ExternalLink, AlertTriangle, Sparkles, Package, Building2, User, Mail, Phone, Globe, Hash, Calendar, TrendingUp, Percent, ClipboardCheck, ClipboardX, Check, X, Loader2, CheckCircle2, FolderKanban, MessageSquare, Users } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -122,6 +123,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const { markLeadAsConverted } = useLeadsData();
   const { addClient, addContact, addEngagement, addEngagementService, addAssignment, colleagues, services } = useCRMData();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [offerServices, setOfferServices] = useState<OfferServiceEntry[]>([]);
   const [bundleDiscountPercent, setBundleDiscountPercent] = useState(0);
@@ -137,6 +139,21 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
   const [isConverting, setIsConverting] = useState(false);
   const [conversionStep, setConversionStep] = useState('');
+  const [conversionResult, setConversionResult] = useState<{
+    clientName: string;
+    brandName: string;
+    engagementName: string;
+    engagementId: string;
+    servicesCount: number;
+    teamCount: number;
+    contactsCount: number;
+    freeloUrl?: string;
+    freeloError?: boolean;
+    slackChannel?: string;
+    slackError?: boolean;
+    monthlyFee: number;
+    currency: string;
+  } | null>(null);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   const activeServices = services.filter(s => s.is_active);
@@ -510,10 +527,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
       // 6. Create Freelo project from template
       setConversionStep('Zakládám Freelo projekt...');
+      let freeloUrl: string | undefined;
+      let freeloFailed = false;
       try {
-        // Default emails that should always be invited
         const defaultEmails = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
-        // Collect emails of assigned team members
         const assignedEmails = teamMembers
           .filter(m => m.colleague_id)
           .map(m => colleagues.find(c => c.id === m.colleague_id)?.email)
@@ -531,25 +548,23 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
         if (freeloError) {
           console.error('Freelo project creation failed:', freeloError);
-          toast.error('Zakázka vytvořena, ale Freelo projekt se nepodařilo vytvořit');
+          freeloFailed = true;
         } else if (freeloResult?.project_url) {
-          // Update engagement with Freelo URL
+          freeloUrl = freeloResult.project_url;
           await supabase
             .from('engagements')
             .update({ freelo_url: freeloResult.project_url })
             .eq('id', newEngagement.id);
-          
-          const inviteMsg = freeloResult.invited_team_count > 0 
-            ? ` (pozváno ${freeloResult.invited_team_count} kolegů)` 
-            : '';
-          toast.success(`Freelo projekt vytvořen${inviteMsg}`);
         }
       } catch (freeloErr) {
         console.error('Error calling Freelo automation:', freeloErr);
+        freeloFailed = true;
       }
 
       // 6b. Create Slack channel and invite team
       setConversionStep('Zakládám Slack kanál...');
+      let slackChannelName: string | undefined;
+      let slackFailed = false;
       try {
         const defaultEmails2 = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
         const assignedEmails2 = teamMembers
@@ -572,21 +587,36 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
         if (slackError) {
           console.error('Slack channel creation failed:', slackError);
-          toast.error('Zakázka vytvořena, ale Slack kanál se nepodařilo vytvořit');
+          slackFailed = true;
         } else if (slackResult?.success) {
-          const slackMsg = slackResult.already_existed
-            ? `Slack kanál #${slackResult.channel_name} již existoval`
-            : `Slack kanál #${slackResult.channel_name} vytvořen (pozváno ${slackResult.invited_count} kolegů)`;
-          toast.success(slackMsg);
+          slackChannelName = slackResult.channel_name;
         }
       } catch (slackErr) {
         console.error('Error calling Slack automation:', slackErr);
+        slackFailed = true;
       }
 
       // 7. Mark lead as converted
       await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
 
-      toast.success('Lead byl úspěšně převeden na zakázku');
+      // Show conversion summary
+      const assignedMembers = teamMembers.filter(m => m.colleague_id && m.role);
+      setConversionResult({
+        clientName: data.client_name,
+        brandName: data.brand_name,
+        engagementName: data.engagement_name,
+        engagementId: newEngagement.id,
+        servicesCount: offerServices.length,
+        teamCount: assignedMembers.length,
+        contactsCount: 1 + additionalContacts.filter(c => c.name.trim()).length,
+        freeloUrl,
+        freeloError: freeloFailed,
+        slackChannel: slackChannelName,
+        slackError: slackFailed,
+        monthlyFee: calculatedMonthlyFee || data.monthly_fee,
+        currency: data.currency,
+      });
+
       onSuccess();
     } catch (error) {
       console.error('Error converting lead:', error);
@@ -623,6 +653,122 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
     const labels: Record<string, string> = { growth: 'GROWTH', pro: 'PRO', elite: 'ELITE' };
     return labels[tier] || tier.toUpperCase();
   };
+
+  const handleCloseSummary = () => {
+    const engagementId = conversionResult?.engagementId;
+    setConversionResult(null);
+    onOpenChange(false);
+    if (engagementId) {
+      navigate(`/engagements?highlight=${engagementId}`);
+    }
+  };
+
+  const formatFee = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('cs-CZ').format(amount) + ' ' + currency;
+  };
+
+  // Show conversion summary
+  if (conversionResult) {
+    return (
+      <Dialog open={open} onOpenChange={() => handleCloseSummary()}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <DialogTitle>Zakázka úspěšně vytvořena</DialogTitle>
+                <DialogDescription>
+                  Souhrn převodu leadu <span className="font-medium">{conversionResult.clientName}</span>
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-2">
+            {/* Client & Engagement */}
+            <div className="rounded-lg border bg-card p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                Klient: {conversionResult.clientName}
+                {conversionResult.brandName !== conversionResult.clientName && (
+                  <Badge variant="outline" className="text-xs">{conversionResult.brandName}</Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Zakázka: <span className="font-medium">{conversionResult.engagementName}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                Měsíční fee: <span className="font-medium">{formatFee(conversionResult.monthlyFee, conversionResult.currency)}</span>
+              </div>
+            </div>
+
+            {/* What was created */}
+            <div className="rounded-lg border bg-card p-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Co bylo vytvořeno</p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  {conversionResult.servicesCount} {conversionResult.servicesCount === 1 ? 'služba' : conversionResult.servicesCount < 5 ? 'služby' : 'služeb'}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  {conversionResult.teamCount} {conversionResult.teamCount === 1 ? 'člen' : conversionResult.teamCount < 5 ? 'členové' : 'členů'} týmu
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  {conversionResult.contactsCount} {conversionResult.contactsCount === 1 ? 'kontakt' : conversionResult.contactsCount < 5 ? 'kontakty' : 'kontaktů'}
+                </div>
+              </div>
+            </div>
+
+            {/* Integrations */}
+            <div className="rounded-lg border bg-card p-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Integrace</p>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-sm">
+                  <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                  Freelo:{' '}
+                  {conversionResult.freeloError ? (
+                    <span className="text-destructive">nepodařilo se vytvořit</span>
+                  ) : conversionResult.freeloUrl ? (
+                    <a href={conversionResult.freeloUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                      projekt vytvořen <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  Slack:{' '}
+                  {conversionResult.slackError ? (
+                    <span className="text-destructive">nepodařilo se vytvořit</span>
+                  ) : conversionResult.slackChannel ? (
+                    <span className="font-medium">#{conversionResult.slackChannel}</span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={handleCloseSummary}>
+              Zavřít
+            </Button>
+            <Button onClick={handleCloseSummary}>
+              Zobrazit zakázku
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
