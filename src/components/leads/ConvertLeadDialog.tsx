@@ -123,6 +123,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const { user } = useAuth();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [offerServices, setOfferServices] = useState<OfferServiceEntry[]>([]);
+  const [bundleDiscountPercent, setBundleDiscountPercent] = useState(0);
+  const [bundleDiscountScope, setBundleDiscountScope] = useState<'core_only' | 'all_services'>('core_only');
+  const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
+  const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
   const activeServices = services.filter(s => s.is_active);
@@ -177,8 +181,15 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       const publicOffers = getOffersByLeadId(lead.id);
       const latestOffer = publicOffers.length > 0 ? publicOffers[publicOffers.length - 1] : null;
       const offerBundlePercent = latestOffer?.monthly_discount_percent || 0;
+      const offerDiscountScope = latestOffer?.discount_scope || 'core_only';
       const offerIntroPercent = latestOffer?.intro_discount_percent || 0;
       const offerIntroMonths = latestOffer?.intro_discount_months || 3;
+      
+      // Initialize global discount state from offer
+      setBundleDiscountPercent(offerBundlePercent);
+      setBundleDiscountScope(offerDiscountScope as 'core_only' | 'all_services');
+      setIntroDiscountPercent(offerIntroPercent);
+      setIntroDiscountMonths(offerIntroMonths);
       
       // Build editable offer services — apply offer-level discounts to monthly services
       const offerSvcs: OfferServiceEntry[] = leadServices.map(ls => {
@@ -386,10 +397,15 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         notes: data.contact_notes || '',
       });
 
-      // 3. Create Engagement — calculate fees from services
-      const calculatedMonthlyFee = offerServices
+      // 3. Create Engagement — calculate fees with global discounts
+      const rawMonthlyFee = offerServices
         .filter(s => s.billing_type === 'monthly')
         .reduce((sum, s) => sum + s.price, 0);
+      const bundleBase = bundleDiscountScope === 'all_services' 
+        ? rawMonthlyFee 
+        : offerServices.filter(s => s.billing_type === 'monthly' && !s.is_creative_boost).reduce((sum, s) => sum + s.price, 0);
+      const bundleAmount = bundleDiscountPercent > 0 ? Math.round(bundleBase * bundleDiscountPercent / 100) : 0;
+      const calculatedMonthlyFee = rawMonthlyFee - bundleAmount;
       const calculatedOneOffFee = offerServices
         .filter(s => s.billing_type === 'one_off')
         .reduce((sum, s) => sum + s.price, 0);
@@ -441,9 +457,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             upsold_by_id: null,
             upsell_commission_percent: null,
             effective_from: null,
-            intro_discount_percent: offerSvc.discount_type !== 'none' ? offerSvc.discount_percent : null,
-            intro_discount_months: offerSvc.discount_type === 'intro' ? offerSvc.intro_months : null,
-            intro_discount_start_date: offerSvc.discount_type !== 'none' && offerSvc.discount_percent > 0
+            // Per-service discount takes precedence, then global intro discount
+            intro_discount_percent: offerSvc.discount_type !== 'none' 
+              ? offerSvc.discount_percent 
+              : (introDiscountPercent > 0 ? introDiscountPercent : null),
+            intro_discount_months: offerSvc.discount_type === 'intro' 
+              ? offerSvc.intro_months 
+              : (introDiscountPercent > 0 ? introDiscountMonths : null),
+            intro_discount_start_date: (offerSvc.discount_type !== 'none' || introDiscountPercent > 0)
               ? new Date().toISOString().split('T')[0]
               : null,
           });
@@ -1216,30 +1237,130 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                       </div>
                     );
                   })}
-                  {offerServices.length > 0 && (
-                    <>
-                      <div className="flex items-center justify-between px-3 py-2 bg-muted/50">
-                        <span className="text-sm font-semibold">Celkem měsíčně</span>
-                        <span className="text-sm font-bold tabular-nums text-primary">
-                          {offerServices
-                            .filter(s => s.billing_type === 'monthly')
-                            .reduce((sum, s) => sum + s.price, 0)
-                            .toLocaleString('cs-CZ')} {lead.currency}/měs
-                        </span>
-                      </div>
-                      {offerServices.some(s => s.billing_type === 'one_off') && (
+                  {offerServices.length > 0 && (() => {
+                    const monthlyTotal = offerServices
+                      .filter(s => s.billing_type === 'monthly')
+                      .reduce((sum, s) => sum + s.price, 0);
+                    const oneOffTotal = offerServices
+                      .filter(s => s.billing_type === 'one_off')
+                      .reduce((sum, s) => sum + s.price, 0);
+                    
+                    // Apply bundle discount
+                    const bundleBase = bundleDiscountScope === 'all_services' 
+                      ? monthlyTotal 
+                      : offerServices.filter(s => s.billing_type === 'monthly' && !s.is_creative_boost).reduce((sum, s) => sum + s.price, 0);
+                    const bundleDiscountAmount = bundleDiscountPercent > 0 
+                      ? Math.round(bundleBase * bundleDiscountPercent / 100) 
+                      : 0;
+                    const monthlyAfterBundle = monthlyTotal - bundleDiscountAmount;
+                    
+                    // Apply intro discount on top
+                    const introDiscountAmount = introDiscountPercent > 0 
+                      ? Math.round(monthlyAfterBundle * introDiscountPercent / 100) 
+                      : 0;
+                    const monthlyAfterIntro = monthlyAfterBundle - introDiscountAmount;
+
+                    return (
+                      <>
                         <div className="flex items-center justify-between px-3 py-2 bg-muted/50">
-                          <span className="text-sm font-semibold">Celkem jednorázově</span>
+                          <span className="text-sm font-semibold">Celkem měsíčně (před slevami)</span>
                           <span className="text-sm font-bold tabular-nums">
-                            {offerServices
-                              .filter(s => s.billing_type === 'one_off')
-                              .reduce((sum, s) => sum + s.price, 0)
-                              .toLocaleString('cs-CZ')} {lead.currency}
+                            {monthlyTotal.toLocaleString('cs-CZ')} {lead.currency}/měs
                           </span>
                         </div>
-                      )}
-                    </>
-                  )}
+                        
+                        {/* Bundle discount */}
+                        <div className="px-3 py-2.5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">Sleva při odběru služeb:</span>
+                              <Select
+                                value={bundleDiscountScope}
+                                onValueChange={(val: 'core_only' | 'all_services') => setBundleDiscountScope(val)}
+                              >
+                                <SelectTrigger className="h-6 w-[130px] text-[11px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="core_only" className="text-xs">Pouze core</SelectItem>
+                                  <SelectItem value="all_services" className="text-xs">Všechny služby</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={bundleDiscountPercent || ''}
+                                onChange={(e) => setBundleDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                                placeholder="0"
+                                className="w-16 h-7 text-sm text-right tabular-nums"
+                              />
+                              <span className="text-xs text-muted-foreground">%</span>
+                            </div>
+                          </div>
+                          {bundleDiscountAmount > 0 && (
+                            <p className="text-[11px] text-amber-600 text-right tabular-nums">
+                              −{bundleDiscountAmount.toLocaleString('cs-CZ')} {lead.currency} → {monthlyAfterBundle.toLocaleString('cs-CZ')} {lead.currency}/měs
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Intro discount */}
+                        <div className="px-3 py-2.5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">Úvodní sleva (první měsíce):</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={introDiscountPercent || ''}
+                                onChange={(e) => setIntroDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                                placeholder="0"
+                                className="w-16 h-7 text-sm text-right tabular-nums"
+                              />
+                              <span className="text-xs text-muted-foreground">% na</span>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={24}
+                                value={introDiscountMonths}
+                                onChange={(e) => setIntroDiscountMonths(Math.min(24, Math.max(1, Number(e.target.value))))}
+                                className="w-14 h-7 text-sm text-right tabular-nums"
+                              />
+                              <span className="text-xs text-muted-foreground">měs.</span>
+                            </div>
+                          </div>
+                          {introDiscountAmount > 0 && (
+                            <p className="text-[11px] text-amber-600 text-right tabular-nums">
+                              −{introDiscountAmount.toLocaleString('cs-CZ')} {lead.currency} → {monthlyAfterIntro.toLocaleString('cs-CZ')} {lead.currency}/měs (první {introDiscountMonths} měs.)
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Final total */}
+                        <div className="flex items-center justify-between px-3 py-2 bg-primary/5 border-t-2 border-primary/20">
+                          <span className="text-sm font-bold">Měsíčně celkem</span>
+                          <span className="text-sm font-bold tabular-nums text-primary">
+                            {monthlyAfterBundle.toLocaleString('cs-CZ')} {lead.currency}/měs
+                          </span>
+                        </div>
+                        
+                        {oneOffTotal > 0 && (
+                          <div className="flex items-center justify-between px-3 py-2 bg-muted/50">
+                            <span className="text-sm font-semibold">Celkem jednorázově</span>
+                            <span className="text-sm font-bold tabular-nums">
+                              {oneOffTotal.toLocaleString('cs-CZ')} {lead.currency}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 {/* Add service button */}
                 <div className="flex items-center gap-2">
