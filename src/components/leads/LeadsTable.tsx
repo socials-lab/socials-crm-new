@@ -103,7 +103,7 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => onLeadClick(lead)}
               >
-                <TableCell className="font-medium">{lead.website ? lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '') : lead.company_name}</TableCell>
+                <TableCell className="font-medium">{lead.website ? ((d) => d.charAt(0).toUpperCase() + d.slice(1))(lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '')) : lead.company_name}</TableCell>
                 <TableCell className="text-muted-foreground">{lead.ico}</TableCell>
                 <TableCell>
                   <div className="truncate max-w-[150px]">

@@ -19,8 +19,10 @@ import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { getLeadLastActivity } from '@/utils/leadActivityUtils';
 
-const cleanDomain = (url: string) =>
-  url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+const cleanDomain = (url: string) => {
+  const d = url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+  return d.charAt(0).toUpperCase() + d.slice(1);
+};
 
 interface LeadMobileCardProps {
   lead: Lead;

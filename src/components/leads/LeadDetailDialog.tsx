@@ -385,7 +385,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
               <div className="flex items-center gap-3 flex-wrap">
                 <DialogTitle className="text-xl font-semibold">
                   <InlineEditField
-                    value={lead.website ? lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '') : lead.company_name}
+                    value={lead.website ? ((d) => d.charAt(0).toUpperCase() + d.slice(1))(lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '')) : lead.company_name}
                     onSave={(v) => { updateLead(lead.id, { website: v }); toast.success('Uloženo'); }}
                     placeholder="URL webu"
                     displayClassName="text-xl font-semibold"
