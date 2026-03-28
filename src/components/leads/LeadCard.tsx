@@ -12,6 +12,7 @@ const cleanDomain = (url: string) => {
 
 interface LeadCardProps {
   lead: Lead;
+  ownerName?: string;
   onClick: () => void;
 }
 
@@ -20,7 +21,7 @@ const OFFER_TYPE_LABELS: Record<Lead['offer_type'], string> = {
   one_off: 'jednorázově',
 };
 
-export function LeadCard({ lead, onClick }: LeadCardProps) {
+export function LeadCard({ lead, ownerName, onClick }: LeadCardProps) {
   const isConverted = !!lead.converted_to_client_id;
   const activityInfo = getLeadLastActivity(lead);
 
@@ -77,10 +78,17 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
           </div>
         </div>
 
-        {/* Contact */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <User className="h-3 w-3" />
-          <span className="truncate">{lead.contact_name}</span>
+        {/* Contact + Owner */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <User className="h-3 w-3 shrink-0" />
+            <span className="truncate">{lead.contact_name}</span>
+          </div>
+          {ownerName && (
+            <span className="text-[10px] font-medium text-primary truncate max-w-[80px]" title={`Řešitel: ${ownerName}`}>
+              {ownerName}
+            </span>
+          )}
         </div>
 
         {/* Value */}
