@@ -404,6 +404,22 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         notes: data.contact_notes || '',
       });
 
+      // 2b. Create additional contacts
+      for (const ac of additionalContacts) {
+        if (ac.name.trim()) {
+          await addContact({
+            client_id: newClient.id,
+            name: ac.name,
+            position: ac.position || null,
+            email: ac.email || null,
+            phone: ac.phone || null,
+            is_primary: false,
+            is_decision_maker: ac.is_decision_maker,
+            notes: '',
+          });
+        }
+      }
+
       // 3. Create Engagement — calculate fees with global discounts
       const rawMonthlyFee = offerServices
         .filter(s => s.billing_type === 'monthly')
