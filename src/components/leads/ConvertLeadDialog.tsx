@@ -356,6 +356,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         primary_service_id: '',
         engagement_notes: lead.summary,
       });
+      })();
     }
   }, [lead, open, form, services]);
 
