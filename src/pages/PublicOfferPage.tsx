@@ -1314,47 +1314,20 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <SectionDivider />
 
         {/* ===== CO ZÍSKÁTE NAVÍC ===== */}
+        {(() => {
+          const benefitsBlock = getOfferContent(offer, 'benefits');
+          const benefitItems = benefitsBlock.content?.items || [];
+          return (
         <ScrollReveal>
           <section className="space-y-6">
             <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-center">
-              🎁 Co od nás dostanete ke každé spolupráci
+              {benefitsBlock.title || '🎁 Co od nás dostanete ke každé spolupráci'}
             </h2>
             <p className="text-sm text-muted-foreground text-center max-w-lg mx-auto">
-              Nejde jen o reklamu — stavíme partnerství, které vám pomůže růst
+              {benefitsBlock.subtitle || ''}
             </p>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
-              {[
-                {
-                  icon: '📞',
-                  title: '1× měsíčně vyhodnocovací call + konzultace',
-                  desc: 'Pravidelně spolu procházíme výsledky a hledáme nové příležitosti pro růst vašeho businessu. Žádné překvapení — vždy víte, co se děje a proč.'
-                },
-                {
-                  icon: '📊',
-                  title: '24/7 přístup k reportu výsledků',
-                  desc: 'Živý report s aktuálními daty kdykoli potřebujete. Nemusíte čekat na měsíční PDF — vidíte výkon kampaní v reálném čase.'
-                },
-                {
-                  icon: '💬',
-                  title: 'Komunikace v projektovém nástroji Freelo',
-                  desc: 'Veškerá komunikace na jednom místě, přehledně a dohledatelně. Žádné ztracené e-maily nebo zapomenuté požadavky.'
-                },
-                {
-                  icon: '👤',
-                  title: 'Komunikujete přímo se specialistou',
-                  desc: 'Žádný prostředník ani account manager — mluvíte rovnou s člověkem, který vaše kampaně denně spravuje a zná je do detailu.'
-                },
-                {
-                  icon: '🏠',
-                  title: 'Celý výkonnostní marketing pod jednou střechou',
-                  desc: 'Meta, Google, Shoptet, analytika — vše řešíme my. Ušetříte čas i nervy s koordinací více dodavatelů a máte jednoho partnera pro vše.'
-                },
-                {
-                  icon: '🧠',
-                  title: 'Strategická podpora rozvoje vašeho businessu',
-                  desc: 'Nejsme jen specialisté na reklamu — rozumíme e-commerce, maržím a obchodním modelům. Pomůžeme vám najít nové příležitosti, optimalizovat nabídku a škálovat byznys, nejen kampaně.'
-                },
-              ].map((item, i) => (
+              {benefitItems.map((item: any, i: number) => (
                 <ScrollReveal key={i} delay={i * 100}>
                   <div className="rounded-xl border border-foreground/[0.06] bg-muted/30 p-5 space-y-2 h-full">
                     <div className="text-2xl">{item.icon}</div>
@@ -1366,6 +1339,8 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </div>
           </section>
         </ScrollReveal>
+          );
+        })()}
 
         <SectionDivider />
 
