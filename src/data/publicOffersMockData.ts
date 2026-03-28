@@ -769,6 +769,9 @@ export function getPublicOfferByToken(token: string): PublicOffer | undefined {
   if (token === 'test-video-boost') {
     return TEST_VIDEO_BOOST_OFFER;
   }
+  if (token === 'demo-socials-adv') {
+    return DEMO_SOCIALS_ADV_OFFER;
+  }
   
   const offers = getStoredOffers();
   return offers.find(o => o.token === token && o.is_active);
