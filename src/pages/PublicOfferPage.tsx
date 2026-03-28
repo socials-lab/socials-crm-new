@@ -526,7 +526,9 @@ function OnboardingProcessSection({ offer }: { offer: PublicOffer }) {
                 </div>
               </div>
             </ScrollReveal>
-          ))}
+            );
+          })}
+        </div>
         </div>
       </div>
     </section>
