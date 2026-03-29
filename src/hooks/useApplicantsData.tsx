@@ -90,6 +90,7 @@ interface ApplicantsDataContextType {
   sendRejection: (applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => void;
   sendOnboarding: (applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => void;
   completeOnboarding: (applicantId: string, data: OnboardingData) => Colleague;
+  refreshApplicantFromDB: (applicantId: string) => Promise<void>;
 }
 
 export interface OnboardingData {
