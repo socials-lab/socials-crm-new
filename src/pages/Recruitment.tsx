@@ -37,7 +37,7 @@ export default function Recruitment() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingApplicant, setEditingApplicant] = useState<Applicant | null>(null);
-  const [activeTab, setActiveTab] = useState('pipeline');
+  
 
   const selectedApplicant = selectedApplicantId 
     ? applicants.find(a => a.id === selectedApplicantId) ?? null 
