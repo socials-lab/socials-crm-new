@@ -124,16 +124,23 @@ serve(async (req) => {
     
     if (hasServiceKey) {
       try {
-        const parsed = JSON.parse(Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY')!);
+        const raw = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY')!;
+        const parsed = JSON.parse(raw);
+        const keys = Object.keys(parsed);
         serviceKeyValid = !!parsed.private_key && !!parsed.client_email;
         clientEmail = parsed.client_email || '';
-      } catch { 
+        if (!serviceKeyValid) {
+          clientEmail = `has keys: ${keys.join(', ')}`;
+        }
+      } catch (e) { 
+        const raw = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY')!;
+        clientEmail = `parse error: ${e.message}, first 80 chars: ${raw.substring(0, 80)}`;
         serviceKeyValid = false; 
       }
     }
 
     return new Response(JSON.stringify({
-      google_service_account_key: hasServiceKey ? (serviceKeyValid ? `✅ valid (${clientEmail})` : '❌ invalid JSON structure') : '❌ missing',
+      google_service_account_key: hasServiceKey ? (serviceKeyValid ? `✅ valid (${clientEmail})` : `❌ invalid: ${clientEmail}`) : '❌ missing',
       google_admin_email: hasAdminEmail ? `✅ set (${Deno.env.get('GOOGLE_ADMIN_EMAIL')})` : '❌ missing',
     }), {
       status: 200,
