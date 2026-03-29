@@ -67,6 +67,7 @@ export function ConvertApplicantDialog({
   onOpenChange 
 }: ConvertApplicantDialogProps) {
   const { completeOnboarding } = useApplicantsData();
+  const { fillTemplate } = useEmailTemplates();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidatingARES, setIsValidatingARES] = useState(false);
   const [aresError, setAresError] = useState<string | null>(null);
