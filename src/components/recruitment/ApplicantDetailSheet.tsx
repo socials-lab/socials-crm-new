@@ -62,6 +62,7 @@ import { SendApplicantOnboardingDialog } from './SendApplicantOnboardingDialog';
 import { ConvertApplicantDialog } from './ConvertApplicantDialog';
 import { SendInterviewInviteDialog } from './SendInterviewInviteDialog';
 import { SendRejectionEmailDialog } from './SendRejectionEmailDialog';
+import { SendContractRequestDialog } from './SendContractRequestDialog';
 import { ApplicantCommunicationTimeline } from './ApplicantCommunicationTimeline';
 import { InlineEditField } from '@/components/leads/InlineEditField';
 
@@ -115,6 +116,7 @@ export function ApplicantDetailSheet({
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const [isContractRequestDialogOpen, setIsContractRequestDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open && applicant?.id && applicant.stage === 'hired') {
@@ -597,44 +599,8 @@ export function ApplicantDetailSheet({
                           </p>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8"
-                        onClick={() => {
-                          const lines = [
-                            `Dobrý den,`,
-                            ``,
-                            `prosím o přípravu smlouvy pro nového spolupracovníka:`,
-                            ``,
-                            `── OSOBNÍ ÚDAJE ──`,
-                            `Jméno: ${applicant.full_name}`,
-                            `Email: ${applicant.email}`,
-                            `Osobní email: ${applicant.personal_email || '—'}`,
-                            `Telefon: ${applicant.phone || '—'}`,
-                            `Datum narození: ${applicant.birthday ? format(new Date(applicant.birthday), 'd. M. yyyy', { locale: cs }) : '—'}`,
-                            ``,
-                            `── FAKTURAČNÍ ÚDAJE ──`,
-                            `Firma: ${applicant.company_name || '—'}`,
-                            `IČO: ${applicant.ico || '—'}`,
-                            `DIČ: ${applicant.dic || '—'}`,
-                            `Adresa: ${applicant.billing_street && applicant.billing_city ? `${applicant.billing_street}, ${applicant.billing_zip} ${applicant.billing_city}` : '—'}`,
-                            ``,
-                            `── FINANCE ──`,
-                            `Hodinová sazba: ${applicant.hourly_rate ? `${applicant.hourly_rate} Kč/h` : '—'}`,
-                            `Bankovní účet: ${applicant.bank_account || '—'}`,
-                            ``,
-                            `── POZICE & NÁPLŇ PRÁCE ──`,
-                            `Pozice: ${applicant.position}`,
-                            ``,
-                            `Děkuji,`,
-                          ];
-                          const body = encodeURIComponent(lines.join('\n'));
-                          const subject = encodeURIComponent(`Příprava smlouvy — ${applicant.full_name} (${applicant.position})`);
-                          window.open(`mailto:dana.bauerova@socials.cz?subject=${subject}&body=${body}`, '_blank');
-                        }}
-                      >
-                        <Mail className="h-3.5 w-3.5 mr-1" />
+                      <Button size="sm" variant="outline" className="h-8" onClick={() => setIsContractRequestDialogOpen(true)}>
+                        <ScrollText className="h-3.5 w-3.5 mr-1" />
                         Vytvořit email
                       </Button>
                     </div>
