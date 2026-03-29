@@ -87,6 +87,11 @@ export interface Applicant {
   academy_completed: boolean;           // Prošel akademií (videa)
   first_clients_assigned: boolean;      // Přidělení prvních klientů
   fully_onboarded: boolean;             // 100% zapracovaný
+
+  // Termination (failed onboarding)
+  onboarding_terminated: boolean;       // Ukončeno během zapracování
+  terminated_at: string | null;         // Datum ukončení
+  termination_reason: string | null;    // Důvod ukončení
   
   // Metadata
   created_at: string;
