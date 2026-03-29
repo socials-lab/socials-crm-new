@@ -294,8 +294,42 @@ export default function ApplicantOnboardingForm() {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('Onboarding data submitted:', data);
+    try {
+      // Save to Supabase via edge function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/applicant-onboarding`,
+        {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            applicantId,
+            birthday: data.birthday?.toISOString().split('T')[0],
+            personal_email: data.personal_email,
+            avatar_url: data.avatar_url,
+            phone: data.phone,
+            ico: data.ico,
+            company_name: data.company_name,
+            dic: data.dic,
+            billing_street: data.billing_street,
+            billing_city: data.billing_city,
+            billing_zip: data.billing_zip,
+            hourly_rate: data.hourly_rate,
+            bank_account: data.bank_account,
+          }),
+        }
+      );
+      
+      const result = await response.json();
+      if (!response.ok) {
+        console.error('Onboarding save error:', result);
+      }
+    } catch (e) {
+      console.error('Failed to save onboarding to Supabase:', e);
+    }
+    
     toast.success('Onboarding dokončen! Vítej v týmu.');
     setIsSubmitted(true);
     setIsSubmitting(false);
