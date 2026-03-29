@@ -26,7 +26,7 @@ import { APPLICANT_STAGE_CONFIG } from '@/types/applicant';
 type ViewMode = 'kanban' | 'table';
 
 export default function Recruitment() {
-  const { applicants, updateApplicantStage } = useApplicantsData();
+  const { applicants, updateApplicantStage, updateApplicant } = useApplicantsData();
   const { colleagues } = useCRMData();
   
   const [searchQuery, setSearchQuery] = useState('');
