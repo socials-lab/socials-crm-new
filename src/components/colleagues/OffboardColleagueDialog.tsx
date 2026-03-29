@@ -7,6 +7,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +40,9 @@ export function OffboardColleagueDialog({
   const [removeFreelo, setRemoveFreelo] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<OffboardResults | null>(null);
+  const [confirmText, setConfirmText] = useState('');
+
+  const isConfirmed = confirmText.toLowerCase() === 'ukončit';
 
   const handleOffboard = async () => {
     setIsProcessing(true);
@@ -76,6 +80,7 @@ export function OffboardColleagueDialog({
 
   const handleClose = () => {
     setResults(null);
+    setConfirmText('');
     setDeactivateGoogle(true);
     setDeactivateSlack(true);
     setRemoveFreelo(true);
@@ -139,6 +144,19 @@ export function OffboardColleagueDialog({
                   </div>
                 </label>
               </div>
+
+              <div className="space-y-2 pt-2 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Pro potvrzení napište <strong className="text-foreground">ukončit</strong>:
+                </p>
+                <Input
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="ukončit"
+                  disabled={isProcessing}
+                  className="font-mono"
+                />
+              </div>
             </div>
 
             <DialogFooter>
@@ -148,7 +166,7 @@ export function OffboardColleagueDialog({
               <Button
                 variant="destructive"
                 onClick={handleOffboard}
-                disabled={isProcessing || (!deactivateGoogle && !deactivateSlack && !removeFreelo)}
+                disabled={isProcessing || !isConfirmed || (!deactivateGoogle && !deactivateSlack && !removeFreelo)}
               >
                 {isProcessing ? (
                   <>
