@@ -88,6 +88,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         cover_letter: applicant.cover_letter || '',
         cv_url: applicant.cv_url || '',
         video_url: applicant.video_url || '',
+        portfolio_url: applicant.portfolio_url || '',
         stage: applicant.stage,
         owner_id: applicant.owner_id || '',
         source: applicant.source,
