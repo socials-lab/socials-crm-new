@@ -284,7 +284,7 @@ export function ApplicantDetailSheet({
                   />
                   <Select
                     value={applicant.source}
-                    onValueChange={(v) => updateApplicant(applicant.id, { source: v })}
+                    onValueChange={(v) => updateApplicant(applicant.id, { source: v as ApplicantSource })}
                   >
                     <SelectTrigger className="h-6 w-auto text-xs gap-1 px-2 border-dashed">
                       <SelectValue />
