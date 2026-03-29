@@ -219,6 +219,11 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
                     onClick={(e) => e.stopPropagation()}
                   />
                   <span className="text-xs text-muted-foreground whitespace-nowrap">sleva</span>
+                  {(service.country_variants || []).length > 0 && (
+                    <Badge variant="secondary" className="text-xs tabular-nums ml-1 shrink-0">
+                      Σ {(service.price + (service.country_variants || []).reduce((sum, v) => sum + v.price, 0)).toLocaleString('cs-CZ')} {service.currency}
+                    </Badge>
+                  )}
                 </div>
               )}
               <CollapsibleTrigger asChild>
