@@ -52,7 +52,7 @@ import {
   Hash,
   FileSignature,
 } from 'lucide-react';
-import { Globe, FileDown, Play, AlertTriangle } from 'lucide-react';
+import { Globe, FileDown, Play, AlertTriangle, Link as LinkIcon, Sparkles } from 'lucide-react';
 import { ScrollText } from 'lucide-react';
 import { OffboardColleagueDialog } from '@/components/colleagues/OffboardColleagueDialog';
 import type { Applicant, ApplicantStage, ApplicantSource } from '@/types/applicant';
