@@ -167,6 +167,27 @@ export function ConvertApplicantDialog({
         }
       }
 
+      // Invite to Slack
+      if (inviteToSlack) {
+        const slackEmail = generatedEmail || applicant.email;
+        const { data: slackData, error: slackError } = await supabase.functions.invoke('invite-slack-user', {
+          body: {
+            email: slackEmail,
+            channels: ['general'],
+          },
+        });
+
+        if (slackError) {
+          console.error('Slack invite error:', slackError);
+          toast.error('Nepodařilo se pozvat do Slacku', { description: slackError.message });
+        } else if (slackData?.success) {
+          setSlackInvited(true);
+          toast.success(slackData.message);
+        } else if (slackData?.error) {
+          toast.error('Slack: ' + slackData.error);
+        }
+      }
+
       const colleague = completeOnboarding(applicant.id, {
         full_name: applicant.full_name,
         email: generatedEmail || applicant.email,
@@ -189,6 +210,7 @@ export function ConvertApplicantDialog({
       onOpenChange(false);
       form.reset();
       setWorkspaceEmail(null);
+      setSlackInvited(false);
     } catch (error) {
       toast.error('Nepodařilo se převést uchazeče');
     } finally {
