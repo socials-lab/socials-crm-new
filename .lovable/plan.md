@@ -1,72 +1,39 @@
 
 
-## Kompletní redesign veřejné nabídky — moderní layout inspirovaný socials.cz
+## Plan: Notifikace po vyplnění onboarding formuláře kandidátem
 
-### Aktuální pořadí sekcí
-1. Hero (název firmy, kontakt)
-2. Audit & Loom video
-3. Služby + ceník
-4. Onboarding timeline
-5. Proč s námi
-6. Portfolio (bannery + videa)
-7. Reporting
-8. Loom video (duplikát)
-9. Kontakt
-10. CTA
-11. Footer
+### Co se stane
+Když kandidát vyplní onboardingový formulář, systém automaticky odešle CRM notifikaci všem adminům s přehledem klíčových údajů pro vytvoření smlouvy.
 
-### Nové pořadí sekcí (logičtější sales flow)
+### Notifikace bude obsahovat
+- Jméno kandidáta, pozice, email, telefon
+- IČO, název firmy, DIČ
+- Fakturační adresa
+- Hodinová sazba, bankovní účet
+- Datum narození
 
-```text
-1. Hero (větší, modernější, lime akcenty)
-2. Loom video / Audit (osobní zpráva — hned po hero)
-3. Proč s námi (social proof nahoru — buduje důvěru PŘED cenou)
-4. Portfolio (grafika + videa — vizuální wow efekt)
-5. Služby + cenový přehled (teprve teď ukazujeme co a za kolik)
-6. Reporting (bonus — added value)
-7. Onboarding timeline (jak to bude probíhat — odpovídá na "co dál?")
-8. Kontakt + CTA (finální call to action)
-9. Footer
-```
+### Technické kroky
 
-Odstranění duplikátního Loom videa (sekce na řádku 1134 duplicitní k řádku 964).
+**1. Rozšířit edge function `applicant-onboarding`**
+- Po úspěšném uložení onboarding dat (POST handler, po `update`) načíst plná data kandidáta
+- Zavolat `notifyAdmins` — ale protože jsme v edge function (ne v klientu), vložíme notifikace přímo do tabulky `notifications` přes service role klient
+- Notifikace bude typu `applicant_onboarding_completed`
+- Metadata budou obsahovat shrnutí pro smlouvu (jméno, pozice, IČO, sazba, adresa...)
+- Link na `/recruitment` pro rychlý přístup
 
-### Vizuální redesign inspirovaný socials.cz
+**2. Přidat trigger funkci v `notificationTriggers.ts`**
+- Nová funkce `notifyApplicantOnboardingCompleted(applicantId, applicantName, position, contractSummary)`
+- Volá `notifyAdmins` se strukturovaným shrnutím pro smlouvu
+- Message bude: `"{jméno} vyplnil onboarding formulář. Připravte smlouvu – pozice: {pozice}, sazba: {sazba} Kč/h"`
 
-**Hero sekce:**
-- Větší typografie, uppercase nadpis ve stylu webu
-- Lime/zelený gradient na klíčovém slově (název firmy)
-- Credibility badges přímo pod hero (Meta Partner, Google Partner, Shoptet Zlatý Partner)
-- Subtilní gradient pozadí místo plochého
+**3. Zavolat notifikaci z edge function**
+- V POST handleru `applicant-onboarding`, po úspěšném update, vložit přímo INSERT do `notifications` tabulky pro všechny adminy (přes service role — edge function má přístup)
+- Metadata: `{ full_name, position, email, phone, ico, company_name, dic, hourly_rate, billing_address, bank_account, birthday }`
 
-**Sekce karty:**
-- Odstranit `rounded-2xl border bg-card/50 backdrop-blur-sm` wrapper ze všech sekcí
-- Nahradit plnějším tmavým stylem — sekce oddělené větším spacingem a subtilními divider liniemi
-- Nadpisy sekcí: uppercase, menší tracking, lime accent na klíčovém slově
-- Karty s jemným `border border-white/5` a `bg-white/[0.02]` hover efektem
+**4. Volitelně: zavolat notifikaci i z klienta**
+- V `ApplicantOnboardingForm.tsx` po úspěšném uložení zavolat trigger — ale protože formulář je veřejný (bez auth), lepší je to řešit v edge function
 
-**Typografie:**
-- Nadpisy sekcí větší a tučnější
-- Odstranit emoji z nadpisů sekcí — nahradit čistšími ikonami nebo jen textem
-- Víc kontrastu mezi nadpisem a popiskem
-
-**CTA sekce:**
-- Lime zelené tlačítko (bg-[#C8FF00] text-black) ve stylu webu
-- Větší, výraznější
-
-**Sticky header:**
-- Tmavší, tenčí, s lime CTA buttonem
-
-**Footer:**
-- Certifikační loga jako řada ikon
-- Minimalistický, méně odkazů
-
-### Soubory k úpravě
-- `src/pages/PublicOfferPage.tsx` — kompletní restrukturalizace pořadí sekcí, vizuální update všech komponent, odstranění duplikátního Loom, nový design hero/CTA/headeru
-
-### Technické detaily
-- Přeuspořádání volání komponent v hlavním `return` (řádky 879–1249)
-- Vizuální update každé sub-komponenty (`OnboardingProcessSection`, `WhyUsSection`, `CreativePortfolioSection`, `ReportingSection`, `ContactSection`, `ServiceCard`)
-- Nové CSS utility třídy pro lime gradient: `bg-gradient-to-r from-[#C8FF00] to-[#A8E600]`
-- Lime text accent: `text-[#C8FF00]` místo `text-primary` na klíčových místech v offer-dark kontextu
+### Rozhodnutí
+- Notifikace se vytvoří v edge function (server-side), ne z klienta — protože onboarding formulář je veřejný a nemá auth context
+- Nepotřebujeme nový typ notifikace v DB — stačí textový typ `applicant_onboarding_completed`
 
