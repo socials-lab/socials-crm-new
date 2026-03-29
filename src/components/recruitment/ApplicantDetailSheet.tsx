@@ -266,7 +266,7 @@ export function ApplicantDetailSheet({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {[...RECRUITMENT_STAGES, 'hired' as ApplicantStage, 'bad_fit' as ApplicantStage, 'withdrawn' as ApplicantStage].map((key) => (
+                        {[...RECRUITMENT_STAGES, 'hired' as ApplicantStage, 'bad_fit' as ApplicantStage, 'withdrawn' as ApplicantStage, 'postponed' as ApplicantStage].map((key) => (
                           <SelectItem key={key} value={key}>
                             {APPLICANT_STAGE_CONFIG[key].title}
                           </SelectItem>

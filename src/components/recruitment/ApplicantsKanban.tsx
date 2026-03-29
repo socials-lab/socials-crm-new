@@ -26,7 +26,7 @@ const HIRING_STAGES: ApplicantStage[] = [
 ];
 
 // Closed/end stages
-const CLOSED_STAGES: ApplicantStage[] = ['bad_fit', 'withdrawn'];
+const CLOSED_STAGES: ApplicantStage[] = ['bad_fit', 'withdrawn', 'postponed'];
 
 // Onboarding pipeline steps (after hired)
 type OnboardingStep = 'buddy_meeting' | 'academy' | 'first_clients' | 'fully_ready' | 'terminated';
@@ -58,7 +58,7 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
   const applicantsByStage = useMemo(() => {
     const grouped: Record<ApplicantStage, Applicant[]> = {
       new_applicant: [], invited_interview: [], interview_done: [],
-      offer_sent: [], hired: [], bad_fit: [], withdrawn: [],
+      offer_sent: [], hired: [], bad_fit: [], withdrawn: [], postponed: [],
     };
     applicants.forEach(a => { if (grouped[a.stage]) grouped[a.stage].push(a); });
     return grouped;
@@ -76,7 +76,7 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
     return grouped;
   }, [hiredApplicants]);
 
-  const closedCount = applicantsByStage.bad_fit.length + applicantsByStage.withdrawn.length;
+  const closedCount = applicantsByStage.bad_fit.length + applicantsByStage.withdrawn.length + applicantsByStage.postponed.length;
 
   // Drag & drop handlers for hiring pipeline
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -329,12 +329,16 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
                 <div className="w-2 h-2 rounded-full bg-muted-foreground" />
                 {applicantsByStage.withdrawn.length} staženo
               </span>
+              <span className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                {applicantsByStage.postponed.length} odloženo
+              </span>
               {closedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </div>
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
             {CLOSED_STAGES.map(stage => renderStageColumn(stage, true))}
           </div>
         </CollapsibleContent>
