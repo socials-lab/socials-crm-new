@@ -381,54 +381,124 @@ export function ApplicantDetailSheet({
                     </CardContent>
                   </Card>
 
-                  {/* Company info if onboarding completed */}
-                  {onboardingCompleted && applicant.ico && (
-                    <Card className="border-primary/20 bg-primary/5">
-                      <CardContent className="p-4">
-                        <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
-                          <Building className="h-4 w-4" />
-                          Fakturační údaje
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">IČO:</span>
-                            <span className="ml-1 font-medium">{applicant.ico}</span>
-                          </div>
-                          {applicant.company_name && (
+                  {/* Onboarding data summary - for contract preparation */}
+                  {onboardingCompleted && (
+                    <Collapsible defaultOpen>
+                      <Card className="border-primary/20 bg-primary/5">
+                        <CardContent className="p-4">
+                          <CollapsibleTrigger className="flex items-center justify-between w-full">
+                            <h4 className="font-medium text-sm flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              Vyplněné onboarding údaje (pro smlouvu)
+                            </h4>
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="mt-3 space-y-4">
+                            {/* Personal info */}
                             <div>
-                              <span className="text-muted-foreground">Firma:</span>
-                              <span className="ml-1">{applicant.company_name}</span>
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Osobní údaje</p>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Jméno:</span>
+                                  <span className="ml-1 font-medium">{applicant.full_name}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Pozice:</span>
+                                  <span className="ml-1">{applicant.position}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Email:</span>
+                                  <span className="ml-1">{applicant.email}</span>
+                                </div>
+                                {applicant.personal_email && (
+                                  <div>
+                                    <span className="text-muted-foreground">Osobní email:</span>
+                                    <span className="ml-1">{applicant.personal_email}</span>
+                                  </div>
+                                )}
+                                {applicant.phone && (
+                                  <div>
+                                    <span className="text-muted-foreground">Telefon:</span>
+                                    <span className="ml-1">{applicant.phone}</span>
+                                  </div>
+                                )}
+                                {applicant.birthday && (
+                                  <div>
+                                    <span className="text-muted-foreground">Datum narození:</span>
+                                    <span className="ml-1">{format(new Date(applicant.birthday), 'd. M. yyyy', { locale: cs })}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          )}
-                          {applicant.dic && (
+
+                            <Separator />
+
+                            {/* Billing info */}
                             <div>
-                              <span className="text-muted-foreground">DIČ:</span>
-                              <span className="ml-1">{applicant.dic}</span>
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Fakturační údaje</p>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                {applicant.ico && (
+                                  <div>
+                                    <span className="text-muted-foreground">IČO:</span>
+                                    <span className="ml-1 font-medium">{applicant.ico}</span>
+                                  </div>
+                                )}
+                                {applicant.company_name && (
+                                  <div>
+                                    <span className="text-muted-foreground">Firma:</span>
+                                    <span className="ml-1">{applicant.company_name}</span>
+                                  </div>
+                                )}
+                                {applicant.dic && (
+                                  <div>
+                                    <span className="text-muted-foreground">DIČ:</span>
+                                    <span className="ml-1">{applicant.dic}</span>
+                                  </div>
+                                )}
+                                {applicant.billing_street && (
+                                  <div className="col-span-2">
+                                    <span className="text-muted-foreground">Adresa:</span>
+                                    <span className="ml-1">
+                                      {applicant.billing_street}, {applicant.billing_zip} {applicant.billing_city}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          )}
-                          {applicant.hourly_rate && (
-                            <div className="flex items-center gap-1">
-                              <DollarSign className="h-3 w-3 text-muted-foreground" />
-                              <span className="font-medium">{applicant.hourly_rate} Kč/h</span>
+
+                            <Separator />
+
+                            {/* Financial info */}
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Finanční údaje</p>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                {applicant.hourly_rate && (
+                                  <div className="flex items-center gap-1">
+                                    <DollarSign className="h-3 w-3 text-muted-foreground" />
+                                    <span className="font-medium">{applicant.hourly_rate} Kč/h</span>
+                                  </div>
+                                )}
+                                {applicant.bank_account && (
+                                  <div className="flex items-center gap-1">
+                                    <CreditCard className="h-3 w-3 text-muted-foreground" />
+                                    <span>{applicant.bank_account}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          )}
-                          {applicant.billing_street && (
-                            <div className="col-span-2">
-                              <span className="text-muted-foreground">Adresa:</span>
-                              <span className="ml-1">
-                                {applicant.billing_street}, {applicant.billing_zip} {applicant.billing_city}
-                              </span>
-                            </div>
-                          )}
-                          {applicant.bank_account && (
-                            <div className="col-span-2 flex items-center gap-1">
-                              <CreditCard className="h-3 w-3 text-muted-foreground" />
-                              <span>{applicant.bank_account}</span>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+
+                            {applicant.onboarding_completed_at && (
+                              <>
+                                <Separator />
+                                <p className="text-xs text-muted-foreground">
+                                  Vyplněno {format(new Date(applicant.onboarding_completed_at), 'd. M. yyyy \'v\' HH:mm', { locale: cs })}
+                                </p>
+                              </>
+                            )}
+                          </CollapsibleContent>
+                        </CardContent>
+                      </Card>
+                    </Collapsible>
                   )}
                 </div>
               )}
