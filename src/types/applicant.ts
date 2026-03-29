@@ -6,7 +6,7 @@ export type ApplicantStage =
   | 'interview_done'      // Pohovor proběhl
   | 'offer_sent'          // Nabídka odeslána
   | 'hired'               // Přijat
-  | 'rejected'            // Zamítnut
+  | 'bad_fit'             // Bad fit
   | 'withdrawn';          // Stáhnul přihlášku
 
 export type ApplicantSource = 'website' | 'linkedin' | 'referral' | 'job_portal' | 'other';
@@ -112,7 +112,7 @@ export const APPLICANT_STAGE_CONFIG: Record<ApplicantStage, { title: string; col
   interview_done: { title: 'Pohovor proběhl', color: 'bg-purple-100 text-purple-800 border-purple-200' },
   offer_sent: { title: 'Nabídka odeslána', color: 'bg-orange-100 text-orange-800 border-orange-200' },
   hired: { title: 'Přijat', color: 'bg-green-100 text-green-800 border-green-200' },
-  rejected: { title: 'Zamítnut', color: 'bg-red-100 text-red-800 border-red-200' },
+  bad_fit: { title: 'Bad fit', color: 'bg-red-100 text-red-800 border-red-200' },
   withdrawn: { title: 'Stáhnul přihlášku', color: 'bg-gray-100 text-gray-800 border-gray-200' },
 };
 
@@ -122,7 +122,7 @@ export const APPLICANT_STAGE_ORDER: ApplicantStage[] = [
   'interview_done',
   'offer_sent',
   'hired',
-  'rejected',
+  'bad_fit',
   'withdrawn',
 ];
 

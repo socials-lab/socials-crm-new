@@ -129,7 +129,7 @@ export function ApplicantDetailSheet({
   if (!applicant) return null;
 
   const isHired = applicant.stage === 'hired';
-  const isRejected = applicant.stage === 'rejected';
+  const isBadFit = applicant.stage === 'bad_fit';
   const interviewInviteSent = !!applicant.interview_invite_sent_at;
   const rejectionSent = !!applicant.rejection_sent_at;
   const onboardingAlreadySent = !!applicant.onboarding_sent_at;
@@ -238,7 +238,7 @@ export function ApplicantDetailSheet({
           </div>
 
           {/* Pipeline stepper */}
-          {!isRejected && (
+          {!isBadFit && (
             <div className="flex items-center gap-0 pb-4">
               {PIPELINE_STEPS.map((step, idx) => {
                 const Icon = step.icon;
@@ -283,11 +283,11 @@ export function ApplicantDetailSheet({
             </div>
           )}
 
-          {/* Rejected banner */}
-          {isRejected && (
+          {/* Bad fit banner */}
+          {isBadFit && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm mb-2">
               <UserX className="h-4 w-4" />
-              <span className="font-medium">Kandidát byl odmítnut</span>
+              <span className="font-medium">Kandidát označen jako bad fit</span>
               {applicant.rejection_sent_at && (
                 <span className="text-destructive/70 ml-1">
                   ({format(new Date(applicant.rejection_sent_at), 'd. M. yyyy', { locale: cs })})
@@ -524,7 +524,7 @@ export function ApplicantDetailSheet({
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" className="h-8" onClick={() => setIsInterviewInviteDialogOpen(true)} disabled={isRejected}>
+                      <Button size="sm" className="h-8" onClick={() => setIsInterviewInviteDialogOpen(true)} disabled={isBadFit}>
                         <Send className="h-3.5 w-3.5 mr-1" />
                         Odeslat
                       </Button>
@@ -567,7 +567,7 @@ export function ApplicantDetailSheet({
                   )}
 
                   {/* Onboarding form send */}
-                  {!isRejected && (
+                  {!isBadFit && (
                     <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
                       <div className="flex items-center gap-3">
                         <div className={`p-1.5 rounded-md ${onboardingCompleted ? 'bg-green-100 text-green-600' : onboardingAlreadySent ? 'bg-yellow-100 text-yellow-600' : 'bg-muted text-muted-foreground'}`}>
@@ -609,7 +609,7 @@ export function ApplicantDetailSheet({
                   )}
 
                   {/* Convert to colleague */}
-                  {!isRejected && (
+                  {!isBadFit && (
                     <>
                     {/* Contract creation — generate email to Dana */}
                     <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">

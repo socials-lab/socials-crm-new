@@ -5,7 +5,7 @@ CREATE TYPE public.applicant_stage AS ENUM (
   'interview_done',
   'offer_sent',
   'hired',
-  'rejected',
+  'bad_fit',
   'withdrawn'
 );
 

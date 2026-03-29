@@ -45,7 +45,7 @@ export default function Recruitment() {
 
   // Split applicants into pipeline (active) and hired
   const pipelineApplicants = useMemo(() => 
-    applicants.filter(a => !['hired', 'rejected', 'withdrawn'].includes(a.stage) || (a.stage === 'hired' && !a.converted_to_colleague_id)),
+    applicants.filter(a => !['hired', 'bad_fit', 'withdrawn'].includes(a.stage) || (a.stage === 'hired' && !a.converted_to_colleague_id)),
     [applicants]
   );
 
@@ -72,7 +72,7 @@ export default function Recruitment() {
   // KPI calculations
   const kpis = useMemo(() => {
     const activeApplicants = applicants.filter(a => 
-      !['hired', 'rejected', 'withdrawn'].includes(a.stage)
+      !['hired', 'bad_fit', 'withdrawn'].includes(a.stage)
     );
     const hiredThisMonth = applicants.filter(a => {
       if (a.stage !== 'hired') return false;
