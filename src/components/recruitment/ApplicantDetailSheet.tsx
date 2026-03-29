@@ -52,6 +52,11 @@ import {
   Hash,
   FileSignature,
 } from 'lucide-react';
+import {
+  Globe,
+  FileDown,
+  Play,
+} from 'lucide-react';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
@@ -272,6 +277,72 @@ export function ApplicantDetailSheet({
             <div className="p-6 pb-12 space-y-6">
 
               {/* Onboarding data — always visible */}
+              {/* Application data — Přihláška */}
+              <Card className="border-border/60 bg-card shadow-sm">
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="font-semibold text-sm">Přihláška</h3>
+                    <span className="text-xs text-muted-foreground">
+                      · {format(new Date(applicant.created_at), 'd. M. yyyy', { locale: cs })}
+                    </span>
+                  </div>
+
+                  {/* Links row */}
+                  <div className="flex flex-wrap gap-2">
+                    {applicant.video_url && (
+                      <a href={applicant.video_url} target="_blank" rel="noopener noreferrer">
+                        <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
+                          <Play className="h-3 w-3" />
+                          Loom / video
+                          <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+                        </Badge>
+                      </a>
+                    )}
+                    {applicant.portfolio_url && (
+                      <a href={applicant.portfolio_url} target="_blank" rel="noopener noreferrer">
+                        <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
+                          <Globe className="h-3 w-3" />
+                          Portfolio / tvorba
+                          <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+                        </Badge>
+                      </a>
+                    )}
+                    {applicant.cv_url && (
+                      <a href={applicant.cv_url} target="_blank" rel="noopener noreferrer">
+                        <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
+                          <FileDown className="h-3 w-3" />
+                          CV (PDF)
+                          <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+                        </Badge>
+                      </a>
+                    )}
+                    {!applicant.video_url && !applicant.portfolio_url && !applicant.cv_url && (
+                      <span className="text-xs text-muted-foreground italic">Žádné přílohy</span>
+                    )}
+                  </div>
+
+                  {/* Cover letter / motivation */}
+                  {applicant.cover_letter ? (
+                    <Collapsible>
+                      <CollapsibleTrigger className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                        <MessageSquare className="h-3 w-3" />
+                        Motivační dopis
+                        <ChevronDown className="h-3 w-3" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2">
+                        <div className="text-sm whitespace-pre-wrap bg-muted/50 rounded-lg p-3 border border-border/40">
+                          {applicant.cover_letter}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">Motivační dopis nevyplněn</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Údaje pro smlouvu */}
               <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm">
                 <CardContent className="p-5 space-y-4">
                   <div className="flex items-center justify-between gap-3">
