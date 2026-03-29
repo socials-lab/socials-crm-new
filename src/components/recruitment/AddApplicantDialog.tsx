@@ -141,6 +141,8 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       onboarding_sent_at: null,
       onboarding_completed_at: null,
       converted_to_colleague_id: null,
+      contract_sent_at: null,
+      contract_signed_at: null,
     };
 
     if (isEditing && applicant) {
