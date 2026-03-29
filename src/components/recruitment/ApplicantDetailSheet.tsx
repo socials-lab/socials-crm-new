@@ -87,11 +87,14 @@ function getPipelineProgress(applicant: Applicant) {
     contract: false, // manual step — no automation
     colleague: !!applicant.converted_to_colleague_id,
   };
-  // Current active step
+  // Override contract step based on actual data
+  steps.contract = !!applicant.contract_signed_at;
+
   let activeStep = 'interview';
   if (steps.interview) activeStep = 'hired';
   if (steps.hired) activeStep = 'onboarding';
   if (steps.onboarding) activeStep = 'contract';
+  if (steps.contract) activeStep = 'colleague';
   if (steps.colleague) activeStep = 'colleague';
 
   return { steps, activeStep };
@@ -126,6 +129,8 @@ export function ApplicantDetailSheet({
   const onboardingAlreadySent = !!applicant.onboarding_sent_at;
   const onboardingCompleted = !!applicant.onboarding_completed_at;
   const convertedToColleague = !!applicant.converted_to_colleague_id;
+  const contractSent = !!applicant.contract_sent_at;
+  const contractSigned = !!applicant.contract_signed_at;
 
   const stageConfig = APPLICANT_STAGE_CONFIG[applicant.stage];
   const owner = colleagues.find(c => c.id === applicant.owner_id);
@@ -482,6 +487,73 @@ export function ApplicantDetailSheet({
 
                   {/* Convert to colleague */}
                   {!isRejected && (
+                    <>
+                    {/* Contract sent */}
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-md ${contractSent ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                          <FileSignature className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Odeslání smlouvy</p>
+                          <p className="text-xs text-muted-foreground">
+                            {contractSent
+                              ? `Odesláno ${format(new Date(applicant.contract_sent_at!), 'd. M. yyyy', { locale: cs })}`
+                              : 'Smlouva zatím nebyla odeslána'}
+                          </p>
+                        </div>
+                      </div>
+                      {contractSent ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 text-xs">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Odesláno
+                          </Badge>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => updateApplicant(applicant.id, { contract_sent_at: null })}>
+                            Zrušit
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-8" onClick={() => updateApplicant(applicant.id, { contract_sent_at: new Date().toISOString() })}>
+                          <Send className="h-3.5 w-3.5 mr-1" />
+                          Označit jako odesláno
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Contract signed */}
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-md ${contractSigned ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                          <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Podpis smlouvy</p>
+                          <p className="text-xs text-muted-foreground">
+                            {contractSigned
+                              ? `Podepsáno ${format(new Date(applicant.contract_signed_at!), 'd. M. yyyy', { locale: cs })}`
+                              : 'Smlouva zatím nebyla podepsána'}
+                          </p>
+                        </div>
+                      </div>
+                      {contractSigned ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 text-xs">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Podepsáno
+                          </Badge>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => updateApplicant(applicant.id, { contract_signed_at: null })}>
+                            Zrušit
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-8" onClick={() => updateApplicant(applicant.id, { contract_signed_at: new Date().toISOString() })}>
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                          Označit jako podepsáno
+                        </Button>
+                      )}
+                    </div>
+
                     <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
                       <div className="flex items-center gap-3">
                         <div className={`p-1.5 rounded-md ${convertedToColleague ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
@@ -508,6 +580,7 @@ export function ApplicantDetailSheet({
                         </Button>
                       )}
                     </div>
+                    </>
                   )}
                 </div>
               </div>
