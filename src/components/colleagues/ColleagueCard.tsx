@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ChevronDown, ChevronUp, Mail, Pencil, Zap, Sparkles, Briefcase, 
   Check, X, ExternalLink, Shield, Phone, Cake, Building, CreditCard,
-  MapPin, User, BarChart3
+  MapPin, User, BarChart3, FileText, Link, Plus
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,7 @@ interface ColleagueCardProps {
     expressCount: number;
   }>;
   onUpdateAssignment?: (assignmentId: string, data: { monthly_cost: number }) => void;
+  onUpdateColleague?: (colleagueId: string, data: Partial<Colleague>) => void;
 }
 
 export function ColleagueCard({
@@ -73,6 +74,7 @@ export function ColleagueCard({
   yearCredits,
   creditsDetail,
   onUpdateAssignment,
+  onUpdateColleague,
 }: ColleagueCardProps) {
   const navigate = useNavigate();
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
