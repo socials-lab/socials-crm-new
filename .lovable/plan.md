@@ -1,55 +1,28 @@
 
 
-## Plan: Jazykové mutace (země) u služeb v nabídce
+## Plán: Zobrazení škálovaných nákladů/odměn u jazykových mutací
 
-### Kontext
-V modulu Návrhy změn (Modifications) již existuje logika pro "expand_country" — přidání nové země ke stávající službě s multiplikátorem 0.5 (50% cena). Tuto logiku je třeba přenést do dialogu pro vytváření/editaci nabídek v Leads.
+### Problém
+V sekci "Náklady na doručení & odměny" se u jednotlivých rolí zobrazuje **základní (base) odměna** z `rewardOverrides`, ale celkový součet (`sc.cost`) už je správně násobený multiplikátorem country variant. To je matoucí — řádky nesedí s celkem.
 
-### Co se změní
+### Řešení
+V UI sekci nákladů (řádky 802–849 v `CreateOfferDialog.tsx`) zobrazit u každé role **efektivní částku** (base × variantCostMultiplier), pokud má služba country varianty:
 
-**1. Rozšíření typu `PublicOfferService` o pole pro země**
-- Soubor: `src/types/publicOffer.ts`
-- Přidat pole `managed_countries?: string[]` — seznam kódů zemí, pro které služba platí
-- Přidat pole `country_variants?: CountryVariant[]` — seznam jazykových mutací s vlastní cenou
+1. **Zobrazit škálovanou odměnu vedle base hodnoty**
+   - Editační input zůstane s base hodnotou (to je to, co uživatel nastavuje)
+   - Pokud existují country varianty, za inputem se zobrazí label typu `→ 15 000 Kč` (efektivní částka po násobení)
+   - Formát: `10 000 Kč/měs → 15 000 Kč (1.5×)`
 
-```
-interface CountryVariant {
-  country_code: string;   // 'SK', 'DE' atd.
-  multiplier: number;     // default 0.5
-  price: number;          // vypočtená cena
-}
-```
+2. **Přidat info o multiplikátoru u názvu služby**
+   - Už existuje `variantLabel` v totals kalkulaci, zobrazí se jako `(1.5×)` u názvu
+   - Přidat i malý text pod názvem služby: "Včetně 1 dalšího trhu" nebo "Včetně 2 dalších trhů"
 
-**2. Úprava `EditableOfferServiceCard` — přidání sekce pro země**
-- Soubor: `src/components/leads/EditableOfferServiceCard.tsx`
-- Pod sekci ceny přidat novou sekci "Jazykové mutace / Země"
-- Zobrazit výběr "hlavní země" (default CZ) s vlajkou
-- Tlačítko "Přidat další trh" → otevře dropdown s `MANAGED_COUNTRIES`
-- Každý přidaný trh zobrazí: vlajka + název země, multiplikátor (default 0.5, editovatelný), vypočtená cena
-- Vlajky zemí se zobrazí i v collapsed stavu karty vedle názvu služby
+### Soubor ke změně
+- `src/components/leads/CreateOfferDialog.tsx` — sekce zobrazení reward overrides (cca řádky 802–880)
 
-**3. Úprava `CreateOfferDialog` — zpracování variant**
-- Soubor: `src/components/leads/CreateOfferDialog.tsx`
-- V kalkulaci `totals` započítat ceny country variantů ke službě
-- Při ukládání nabídky uložit country varianty jako součást `services[]`
-- V reward overrides zohlednit, že country varianta má proporcionální náklady
-
-**4. Zobrazení na veřejné nabídce**
-- Soubor: `src/pages/PublicOfferPage.tsx`
-- U každé služby zobrazit vlajky zemí, pro které platí
-- Pokud jsou country varianty, zobrazit je jako pod-položky s cenou (např. "🇸🇰 Slovensko — 50 % z CZ ceny")
-
-### Technické detaily
-
-- Využijí se existující konstanty z `src/constants/countries.ts` (`MANAGED_COUNTRIES`, `getCountryFlag`, `getCountryName`)
-- Multiplikátor default 0.5 z `src/utils/pricingEngine.ts` (`DEFAULT_MULTIPLIERS.expand_country`)
-- Cena varianty = `basePrice × multiplier`
-- Žádné DB migrace — country varianty se ukládají jako součást JSON pole `services` v tabulce `public_offers`
-- Typ `PublicOfferService` se rozšíří, ale zpětná kompatibilita je zachována (nová pole optional)
-
-### Rozsah změn
-1. `src/types/publicOffer.ts` — nové typy
-2. `src/components/leads/EditableOfferServiceCard.tsx` — UI pro přidání zemí
-3. `src/components/leads/CreateOfferDialog.tsx` — kalkulace s variantami
-4. `src/pages/PublicOfferPage.tsx` — zobrazení vlajek a variant na veřejné nabídce
+### Detail implementace
+- Pro každý `sc` v `serviceCosts` najít příslušnou `editableService` a její `country_variants`
+- Spočítat `multiplier = 1 + sum(variants.multiplier)`
+- U každého řádku role: pokud `multiplier > 1`, zobrazit `Math.round(r.reward * multiplier)` jako efektivní hodnotu
+- Input pro editaci zůstane na base hodnotě — škálování je automatické
 
