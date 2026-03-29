@@ -136,7 +136,7 @@ export function ConvertApplicantDialog({
     setIsSubmitting(true);
 
     try {
-      // Create Google Workspace account if enabled
+      // Step 1: Create Google Workspace account first (if enabled)
       let generatedEmail: string | undefined;
       if (createWorkspaceAccount) {
         setIsCreatingAccount(true);
@@ -156,9 +156,11 @@ export function ConvertApplicantDialog({
 
         if (wsError) {
           console.error('Workspace account error:', wsError);
-          toast.error('Nepodařilo se vytvořit Google Workspace účet', {
+          toast.error('Nepodařilo se vytvořit Google Workspace účet – Slack, Freelo a CRM nebudou nastaveny', {
             description: wsError.message,
           });
+          setIsSubmitting(false);
+          return; // Stop here – other services depend on the workspace email
         } else if (wsData?.success) {
           generatedEmail = wsData.email;
           setWorkspaceEmail(wsData.email);
@@ -167,7 +169,9 @@ export function ConvertApplicantDialog({
             duration: 10000,
           });
         } else if (wsData?.error) {
-          toast.error('Google Workspace: ' + wsData.error);
+          toast.error('Google Workspace: ' + wsData.error + ' – ostatní služby nebudou nastaveny');
+          setIsSubmitting(false);
+          return; // Stop here
         }
       }
 
