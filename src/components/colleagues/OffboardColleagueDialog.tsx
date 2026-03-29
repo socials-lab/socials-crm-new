@@ -23,7 +23,7 @@ interface OffboardColleagueDialogProps {
 }
 
 interface OffboardResults {
-  google?: { success: boolean; error?: string };
+  google?: { success: boolean; forwarding?: boolean; error?: string };
   slack?: { success: boolean; error?: string };
   freelo?: { success: boolean; removedFromProjects?: number; error?: string };
 }
@@ -111,7 +111,7 @@ export function OffboardColleagueDialog({
                   />
                   <div>
                     <p className="text-sm font-medium">Deaktivovat Google Workspace</p>
-                    <p className="text-xs text-muted-foreground">Suspendování účtu (ne smazání)</p>
+                    <p className="text-xs text-muted-foreground">Suspendování účtu + přesměrování e-mailů na hello@socials.cz</p>
                   </div>
                 </label>
 
@@ -167,16 +167,25 @@ export function OffboardColleagueDialog({
               <p className="text-sm font-medium">Výsledky:</p>
 
               {results.google && (
-                <div className="flex items-center justify-between p-3 rounded-lg border">
-                  <span className="text-sm">Google Workspace</span>
-                  {results.google.success ? (
-                    <Badge className="bg-status-active/10 text-status-active border-status-active/20">
-                      <Check className="h-3 w-3 mr-1" /> Deaktivováno
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive">
-                      <X className="h-3 w-3 mr-1" /> {results.google.error}
-                    </Badge>
+                <div className="p-3 rounded-lg border space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Google Workspace</span>
+                    {results.google.success ? (
+                      <Badge className="bg-status-active/10 text-status-active border-status-active/20">
+                        <Check className="h-3 w-3 mr-1" /> Deaktivováno
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive">
+                        <X className="h-3 w-3 mr-1" /> {results.google.error}
+                      </Badge>
+                    )}
+                  </div>
+                  {results.google.success && (
+                    <p className="text-xs text-muted-foreground">
+                      {results.google.forwarding
+                        ? '✉️ E-maily přesměrovány na hello@socials.cz'
+                        : '⚠️ Přesměrování e-mailů se nepodařilo nastavit – zkontrolujte ručně'}
+                    </p>
                   )}
                 </div>
               )}
