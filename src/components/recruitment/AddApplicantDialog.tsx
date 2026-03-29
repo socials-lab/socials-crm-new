@@ -103,6 +103,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         cover_letter: '',
         cv_url: '',
         video_url: '',
+        portfolio_url: '',
         stage: 'new_applicant',
         owner_id: '',
         source: 'website',
