@@ -767,6 +767,12 @@ export function ApplicantDetailSheet({
         open={isConvertDialogOpen}
         onOpenChange={setIsConvertDialogOpen}
       />
+      <SendContractRequestDialog
+        applicant={applicant}
+        open={isContractRequestDialogOpen}
+        onOpenChange={setIsContractRequestDialogOpen}
+        onSend={() => {}}
+      />
     </Dialog>
   );
 }
