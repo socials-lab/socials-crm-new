@@ -473,6 +473,18 @@ export function ApplicantDetailSheet({
                     </div>
                   </div>
 
+                  {/* AI usage */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Jak využívá AI?</p>
+                    {applicant.ai_usage ? (
+                      <div className="text-sm whitespace-pre-wrap bg-muted/50 rounded-lg p-3 border border-border/40">
+                        {applicant.ai_usage}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Nevyplněno</p>
+                    )}
+                  </div>
+
                   {/* Cover letter / motivation */}
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">Motivační dopis</p>

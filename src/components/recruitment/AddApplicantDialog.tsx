@@ -38,6 +38,7 @@ const formSchema = z.object({
   phone: z.string().optional(),
   position: z.string().min(1, 'Pozice je povinná'),
   cover_letter: z.string().optional(),
+  ai_usage: z.string().optional(),
   cv_url: z.string().url().optional().or(z.literal('')),
   video_url: z.string().url().optional().or(z.literal('')),
   portfolio_url: z.string().url().optional().or(z.literal('')),
@@ -68,6 +69,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       phone: '',
       position: '',
       cover_letter: '',
+      ai_usage: '',
       cv_url: '',
       video_url: '',
       portfolio_url: '',
@@ -86,6 +88,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         phone: applicant.phone || '',
         position: applicant.position,
         cover_letter: applicant.cover_letter || '',
+        ai_usage: (applicant as any).ai_usage || '',
         cv_url: applicant.cv_url || '',
         video_url: applicant.video_url || '',
         portfolio_url: applicant.portfolio_url || '',
@@ -101,6 +104,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         phone: '',
         position: '',
         cover_letter: '',
+        ai_usage: '',
         cv_url: '',
         video_url: '',
         portfolio_url: '',
@@ -119,6 +123,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       phone: data.phone || null,
       position: data.position,
       cover_letter: data.cover_letter || null,
+      ai_usage: data.ai_usage || null,
       cv_url: data.cv_url || null,
       video_url: data.video_url || null,
       portfolio_url: data.portfolio_url || null,
@@ -390,6 +395,25 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
                     <Textarea 
                       placeholder="Motivace uchazeče..."
                       className="min-h-[100px]"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* AI usage */}
+            <FormField
+              control={form.control}
+              name="ai_usage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Jak využíváš AI?</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Jak uchazeč využívá umělou inteligenci..."
+                      className="min-h-[80px]"
                       {...field} 
                     />
                   </FormControl>
