@@ -900,7 +900,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                 Role
                               </Button>
                             </div>
-                          ))}
+                          )})}
                         </div>
                       ) : (
                         <div className="px-3 py-3 text-xs text-muted-foreground text-center">
