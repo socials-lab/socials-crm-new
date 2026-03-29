@@ -267,7 +267,146 @@ export function ColleagueCard({
               </div>
             )}
 
-            {/* 3. Workload & Earnings - Admin Only */}
+            {/* 2.5 Contracts - Admin Only */}
+            {isSuperAdmin && (
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm flex items-center gap-2 text-foreground">
+                  <FileText className="h-4 w-4 text-primary" />
+                  Smlouvy
+                </h4>
+                <div className="space-y-2">
+                  {/* Cooperation contract */}
+                  <div className="p-2.5 rounded-lg border bg-background">
+                    <p className="text-xs text-muted-foreground mb-1.5">Smlouva o spolupráci</p>
+                    {editingContract === 'cooperation' ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          value={tempContractUrl}
+                          onChange={(e) => setTempContractUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="h-7 text-xs"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveContractUrl('cooperation');
+                            if (e.key === 'Escape') setEditingContract(null);
+                          }}
+                        />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => handleSaveContractUrl('cooperation')}>
+                          <Check className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingContract(null)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : colleague.contract_cooperation_url ? (
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={colleague.contract_cooperation_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1 truncate"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Link className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{colleague.contract_cooperation_url.replace(/^https?:\/\//, '')}</span>
+                        </a>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingContract('cooperation');
+                            setTempContractUrl(colleague.contract_cooperation_url || '');
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1 w-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingContract('cooperation');
+                          setTempContractUrl('');
+                        }}
+                      >
+                        <Plus className="h-3 w-3" />
+                        Přidat odkaz
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* GDPR / DPP contract */}
+                  <div className="p-2.5 rounded-lg border bg-background">
+                    <p className="text-xs text-muted-foreground mb-1.5">GDPR / DPP</p>
+                    {editingContract === 'gdpr' ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          value={tempContractUrl}
+                          onChange={(e) => setTempContractUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="h-7 text-xs"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveContractUrl('gdpr');
+                            if (e.key === 'Escape') setEditingContract(null);
+                          }}
+                        />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => handleSaveContractUrl('gdpr')}>
+                          <Check className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingContract(null)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : colleague.contract_gdpr_url ? (
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={colleague.contract_gdpr_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1 truncate"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Link className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{colleague.contract_gdpr_url.replace(/^https?:\/\//, '')}</span>
+                        </a>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingContract('gdpr');
+                            setTempContractUrl(colleague.contract_gdpr_url || '');
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1 w-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingContract('gdpr');
+                          setTempContractUrl('');
+                        }}
+                      >
+                        <Plus className="h-3 w-3" />
+                        Přidat odkaz
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             {isSuperAdmin && (
               <div className="space-y-4">
                 <h4 className="font-semibold text-sm flex items-center gap-2 text-foreground">
