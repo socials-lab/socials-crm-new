@@ -26,7 +26,7 @@ const HIRING_STAGES: ApplicantStage[] = [
 ];
 
 // Closed/end stages
-const CLOSED_STAGES: ApplicantStage[] = ['rejected', 'withdrawn'];
+const CLOSED_STAGES: ApplicantStage[] = ['bad_fit', 'withdrawn'];
 
 // Onboarding pipeline steps (after hired)
 type OnboardingStep = 'buddy_meeting' | 'academy' | 'first_clients' | 'fully_ready' | 'terminated';
@@ -58,7 +58,7 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
   const applicantsByStage = useMemo(() => {
     const grouped: Record<ApplicantStage, Applicant[]> = {
       new_applicant: [], invited_interview: [], interview_done: [],
-      offer_sent: [], hired: [], rejected: [], withdrawn: [],
+      offer_sent: [], hired: [], bad_fit: [], withdrawn: [],
     };
     applicants.forEach(a => { if (grouped[a.stage]) grouped[a.stage].push(a); });
     return grouped;
@@ -76,7 +76,7 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
     return grouped;
   }, [hiredApplicants]);
 
-  const closedCount = applicantsByStage.rejected.length + applicantsByStage.withdrawn.length;
+  const closedCount = applicantsByStage.bad_fit.length + applicantsByStage.withdrawn.length;
 
   // Drag & drop handlers for hiring pipeline
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -323,7 +323,7 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
             <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-destructive" />
-                {applicantsByStage.rejected.length} zamítnuto
+                {applicantsByStage.bad_fit.length} bad fit
               </span>
               <span className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-muted-foreground" />

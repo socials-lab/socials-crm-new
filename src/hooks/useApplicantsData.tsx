@@ -207,7 +207,7 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
   const sendRejection = useCallback((applicantId: string, emailData?: { subject: string; message: string; recipients: string[] }) => {
     updateApplicant(applicantId, { 
       rejection_sent_at: new Date().toISOString(),
-      stage: 'rejected'
+      stage: 'bad_fit'
     });
     if (emailData) {
       addNote(applicantId, emailData.message, { note_type: 'email_sent', subject: emailData.subject, recipients: emailData.recipients });
