@@ -66,8 +66,7 @@ export default function Recruitment() {
   };
 
   const filteredApplicants = useMemo(() => {
-    const source = activeTab === 'hired' ? hiredApplicants : pipelineApplicants;
-    return source.filter(applicant => {
+    return pipelineApplicants.filter(applicant => {
       const matchesSearch = !searchQuery || 
         applicant.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         applicant.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -81,7 +80,7 @@ export default function Recruitment() {
 
       return matchesSearch && matchesOwner && matchesStage && matchesPosition && matchesSource;
     });
-  }, [pipelineApplicants, hiredApplicants, activeTab, searchQuery, ownerFilter, stageFilter, positionFilter, sourceFilter]);
+  }, [pipelineApplicants, searchQuery, ownerFilter, stageFilter, positionFilter, sourceFilter]);
 
   // KPI calculations
   const kpis = useMemo(() => {
