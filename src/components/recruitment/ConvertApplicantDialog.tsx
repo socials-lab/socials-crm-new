@@ -553,6 +553,31 @@ export function ConvertApplicantDialog({
               )}
             </div>
 
+            {/* Freelo invite */}
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FolderKanban className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Pozvat do Freelo</span>
+                </div>
+                <Switch 
+                  checked={inviteToFreelo} 
+                  onCheckedChange={setInviteToFreelo} 
+                />
+              </div>
+              {inviteToFreelo && (
+                <p className="text-xs text-muted-foreground">
+                  Email kolegy bude pozván do onboardingového Freelo projektu.
+                </p>
+              )}
+              {freeloInvited && (
+                <div className="flex items-center gap-1 text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  Pozván do Freelo
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Zrušit
