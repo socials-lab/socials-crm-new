@@ -118,6 +118,7 @@ export function ApplicantDetailSheet({
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const [isContractRequestDialogOpen, setIsContractRequestDialogOpen] = useState(false);
+  const [isOffboardDialogOpen, setIsOffboardDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open && applicant?.id && applicant.stage === 'hired') {
