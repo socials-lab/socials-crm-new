@@ -74,6 +74,8 @@ export function ConvertApplicantDialog({
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [workspaceEmail, setWorkspaceEmail] = useState<string | null>(null);
   const [slackInvited, setSlackInvited] = useState(false);
+  const [inviteToFreelo, setInviteToFreelo] = useState(true);
+  const [freeloInvited, setFreeloInvited] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
