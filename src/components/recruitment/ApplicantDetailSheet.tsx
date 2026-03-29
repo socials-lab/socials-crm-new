@@ -859,6 +859,20 @@ export function ApplicantDetailSheet({
         onOpenChange={setIsContractRequestDialogOpen}
         onSend={() => {}}
       />
+      {linkedColleague && (
+        <OffboardColleagueDialog
+          open={isOffboardDialogOpen}
+          onOpenChange={setIsOffboardDialogOpen}
+          colleague={linkedColleague as any}
+          onOffboarded={() => {
+            updateApplicant(applicant.id, {
+              onboarding_terminated: true,
+              terminated_at: new Date().toISOString(),
+            });
+            setIsOffboardDialogOpen(false);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
