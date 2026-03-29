@@ -266,20 +266,35 @@ export function ApplicantDetailSheet({
           <ScrollArea className="h-[calc(92vh-200px)]">
             <div className="p-6 pb-12 space-y-6">
 
-              {/* Onboarding data — prominent when completed */}
-              {onboardingCompleted && (
-                <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm">
-                  <CardContent className="p-5 space-y-4">
-                    <div className="flex items-center justify-between">
+              {/* Onboarding data — always visible */}
+              <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm">
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
                       <h3 className="font-semibold text-sm flex items-center gap-2">
                         <FileText className="h-4 w-4 text-primary" />
                         Údaje pro smlouvu
                       </h3>
-                      <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Tady se zobrazují všechny údaje z onboarding formuláře kandidáta.
+                      </p>
+                    </div>
+                    {onboardingCompleted ? (
+                      <Badge className="bg-primary/20 text-primary border-primary/30 text-xs whitespace-nowrap">
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         Vyplněno {format(new Date(applicant.onboarding_completed_at!), 'd. M.', { locale: cs })}
                       </Badge>
-                    </div>
+                    ) : onboardingAlreadySent ? (
+                      <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Čeká na vyplnění
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs whitespace-nowrap">
+                        Neodesláno
+                      </Badge>
+                    )}
+                  </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       {/* Personal */}
@@ -298,24 +313,18 @@ export function ApplicantDetailSheet({
                             <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                             <span className="text-primary">{applicant.email}</span>
                           </div>
-                          {applicant.personal_email && (
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span className="text-xs text-muted-foreground">{applicant.personal_email}</span>
-                            </div>
-                          )}
-                          {applicant.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span>{applicant.phone}</span>
-                            </div>
-                          )}
-                          {applicant.birthday && (
-                            <div className="flex items-center gap-2">
-                              <Cake className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span>{format(new Date(applicant.birthday), 'd. M. yyyy', { locale: cs })}</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-xs text-muted-foreground">{applicant.personal_email || 'Osobní email nevyplněn'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span>{applicant.phone || 'Telefon nevyplněn'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Cake className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span>{applicant.birthday ? format(new Date(applicant.birthday), 'd. M. yyyy', { locale: cs }) : 'Datum narození nevyplněn'}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -323,43 +332,38 @@ export function ApplicantDetailSheet({
                       <div className="space-y-2">
                         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Fakturace & finance</p>
                         <div className="space-y-1.5 text-sm">
-                          {applicant.company_name && (
-                            <div className="flex items-center gap-2">
-                              <Building className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span className="font-medium">{applicant.company_name}</span>
-                            </div>
-                          )}
-                          {applicant.ico && (
-                            <div className="flex items-center gap-2">
-                              <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span>IČO: {applicant.ico}</span>
-                              {applicant.dic && <span className="text-muted-foreground">· DIČ: {applicant.dic}</span>}
-                            </div>
-                          )}
-                          {applicant.billing_street && (
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span>{applicant.billing_street}, {applicant.billing_zip} {applicant.billing_city}</span>
-                            </div>
-                          )}
-                          {applicant.hourly_rate && (
-                            <div className="flex items-center gap-2">
-                              <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span className="font-semibold text-primary">{applicant.hourly_rate} Kč/h</span>
-                            </div>
-                          )}
-                          {applicant.bank_account && (
-                            <div className="flex items-center gap-2">
-                              <CreditCard className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span>{applicant.bank_account}</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <Building className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="font-medium">{applicant.company_name || 'Firma nevyplněna'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span>
+                              IČO: {applicant.ico || 'nevyplněno'}
+                              {applicant.dic ? ` · DIČ: ${applicant.dic}` : ' · DIČ: nevyplněno'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span>
+                              {applicant.billing_street && applicant.billing_zip && applicant.billing_city
+                                ? `${applicant.billing_street}, ${applicant.billing_zip} ${applicant.billing_city}`
+                                : 'Adresa nevyplněna'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="font-semibold text-primary">{applicant.hourly_rate ? `${applicant.hourly_rate} Kč/h` : 'Sazba nevyplněna'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span>{applicant.bank_account || 'Bankovní účet nevyplněn'}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                </CardContent>
+              </Card>
 
               {/* Action cards */}
               <div className="space-y-3">
