@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Mail, Copy, Check, Send } from 'lucide-react';
+import { Mail, Copy, Check, Send, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
@@ -38,6 +38,7 @@ export function SendApplicantOnboardingDialog({
   const senderName = [user?.user_metadata?.first_name, user?.user_metadata?.last_name].filter(Boolean).join(' ') || 'Socials';
   const senderEmail = user?.email || '';
   const [copied, setCopied] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
   
@@ -57,11 +58,12 @@ export function SendApplicantOnboardingDialog({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSendEmail = () => {
-    const mailtoLink = `mailto:${applicant.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-    window.open(mailtoLink, '_blank');
+  const handleSendEmail = async () => {
+    setIsSending(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
     sendOnboarding(applicant.id, { subject: emailSubject, message: emailBody, recipients: [applicant.email] });
     onSend?.();
+    setIsSending(false);
     toast.success('Onboarding byl odeslán');
     onOpenChange(false);
   };
@@ -143,11 +145,21 @@ export function SendApplicantOnboardingDialog({
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleMarkAsSent}>
-            Pouze označit jako odesláno
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Označit jako odeslané
           </Button>
-          <Button onClick={handleSendEmail} className="gap-2">
-            <Send className="h-4 w-4" />
-            Otevřít v emailu
+          <Button onClick={handleSendEmail} disabled={isSending} className="gap-2">
+            {isSending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Odesílám...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                Odeslat email
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
