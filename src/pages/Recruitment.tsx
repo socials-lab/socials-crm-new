@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, LayoutGrid, List, UserCheck } from 'lucide-react';
+import { Search, Plus, LayoutGrid, List, UserCheck, X, Filter } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,8 @@ import { ApplicantsKanban } from '@/components/recruitment/ApplicantsKanban';
 import { ApplicantsTable } from '@/components/recruitment/ApplicantsTable';
 import { ApplicantDetailSheet } from '@/components/recruitment/ApplicantDetailSheet';
 import { AddApplicantDialog } from '@/components/recruitment/AddApplicantDialog';
-import type { Applicant, ApplicantStage } from '@/types/applicant';
-import { APPLICANT_STAGE_CONFIG } from '@/types/applicant';
+import type { Applicant, ApplicantStage, ApplicantSource } from '@/types/applicant';
+import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 
 type ViewMode = 'kanban' | 'table';
 
@@ -32,6 +32,8 @@ export default function Recruitment() {
   const [searchQuery, setSearchQuery] = useState('');
   const [ownerFilter, setOwnerFilter] = useState<string>('all');
   const [stageFilter, setStageFilter] = useState<ApplicantStage | 'all'>('all');
+  const [positionFilter, setPositionFilter] = useState<string>('all');
+  const [sourceFilter, setSourceFilter] = useState<ApplicantSource | 'all'>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
   const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -42,6 +44,12 @@ export default function Recruitment() {
   const selectedApplicant = selectedApplicantId 
     ? applicants.find(a => a.id === selectedApplicantId) ?? null 
     : null;
+
+  // Unique positions for filter
+  const positions = useMemo(() => {
+    const posSet = new Set(applicants.map(a => a.position));
+    return Array.from(posSet).sort();
+  }, [applicants]);
 
   // Split applicants into pipeline (active) and hired
   const pipelineApplicants = useMemo(() => 
@@ -54,20 +62,33 @@ export default function Recruitment() {
     [applicants]
   );
 
+  const hasActiveFilters = searchQuery || ownerFilter !== 'all' || stageFilter !== 'all' || positionFilter !== 'all' || sourceFilter !== 'all';
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setOwnerFilter('all');
+    setStageFilter('all');
+    setPositionFilter('all');
+    setSourceFilter('all');
+  };
+
   const filteredApplicants = useMemo(() => {
     const source = activeTab === 'hired' ? hiredApplicants : pipelineApplicants;
     return source.filter(applicant => {
-      const matchesSearch = 
+      const matchesSearch = !searchQuery || 
         applicant.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         applicant.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        applicant.position.toLowerCase().includes(searchQuery.toLowerCase());
+        applicant.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (applicant.phone || '').toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesOwner = ownerFilter === 'all' || applicant.owner_id === ownerFilter;
       const matchesStage = stageFilter === 'all' || applicant.stage === stageFilter;
+      const matchesPosition = positionFilter === 'all' || applicant.position === positionFilter;
+      const matchesSource = sourceFilter === 'all' || applicant.source === sourceFilter;
 
-      return matchesSearch && matchesOwner && matchesStage;
+      return matchesSearch && matchesOwner && matchesStage && matchesPosition && matchesSource;
     });
-  }, [pipelineApplicants, hiredApplicants, activeTab, searchQuery, ownerFilter, stageFilter]);
+  }, [pipelineApplicants, hiredApplicants, activeTab, searchQuery, ownerFilter, stageFilter, positionFilter, sourceFilter]);
 
   // KPI calculations
   const kpis = useMemo(() => {
@@ -179,42 +200,80 @@ export default function Recruitment() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Hledat jméno, email, pozici..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Hledat jméno, email, pozici, telefon..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={positionFilter} onValueChange={setPositionFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Pozice" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Všechny pozice</SelectItem>
+              {positions.map(pos => (
+                <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Odpovědná osoba" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Všichni</SelectItem>
+              {owners.map(owner => (
+                <SelectItem key={owner!.id} value={owner!.id}>
+                  {owner!.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as ApplicantSource | 'all')}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Zdroj" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Všechny zdroje</SelectItem>
+              {Object.entries(APPLICANT_SOURCE_LABELS).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={stageFilter} onValueChange={(v) => setStageFilter(v as ApplicantStage | 'all')}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Stav" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Všechny stavy</SelectItem>
+              {Object.entries(APPLICANT_STAGE_CONFIG).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  {config.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Odpovědná osoba" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Všichni</SelectItem>
-            {owners.map(owner => (
-              <SelectItem key={owner!.id} value={owner!.id}>
-                {owner!.full_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={stageFilter} onValueChange={(v) => setStageFilter(v as ApplicantStage | 'all')}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Stav" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Všechny stavy</SelectItem>
-            {Object.entries(APPLICANT_STAGE_CONFIG).map(([key, config]) => (
-              <SelectItem key={key} value={key}>
-                {config.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        {/* Active filters summary */}
+        {hasActiveFilters && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              Zobrazeno <span className="font-semibold text-foreground">{filteredApplicants.length}</span> z {activeTab === 'hired' ? hiredApplicants.length : pipelineApplicants.length} uchazečů
+            </span>
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={clearAllFilters}>
+              <X className="h-3 w-3" />
+              Zrušit filtry
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Tabs: Pipeline / Přijatí */}
