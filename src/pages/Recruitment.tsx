@@ -236,6 +236,7 @@ export default function Recruitment() {
               applicants={filteredApplicants} 
               onApplicantClick={handleApplicantClick}
               onStageChange={handleStageChange}
+              onUpdateApplicant={updateApplicant}
             />
           ) : (
             <ApplicantsTable
