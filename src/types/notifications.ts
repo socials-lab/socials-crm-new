@@ -18,9 +18,10 @@ export type NotificationType =
   | 'extra_work_ready_to_invoice'
   | 'creative_boost_activated'
   | 'creative_boost_deadline'
-  | 'sop_update_suggested';
+  | 'sop_update_suggested'
+  | 'applicant_onboarding_completed';
 
-export type EntityType = 'lead' | 'engagement' | 'extra_work' | 'creative_boost' | 'modification' | 'colleague' | 'feedback' | 'sop';
+export type EntityType = 'lead' | 'engagement' | 'extra_work' | 'creative_boost' | 'modification' | 'colleague' | 'feedback' | 'sop' | 'applicant';
 
 export interface Notification {
   id: string;
@@ -181,6 +182,12 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, {
     color: 'text-orange-600',
     bgColor: 'bg-orange-500/10',
     entityType: 'sop'
+  },
+  applicant_onboarding_completed: {
+    icon: '📋',
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-500/10',
+    entityType: 'applicant'
   },
 };
 
