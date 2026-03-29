@@ -81,6 +81,13 @@ export function ApplicantDetailSheet({
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
 
+  // Refresh applicant data from DB when detail sheet opens (sync onboarding data)
+  useEffect(() => {
+    if (open && applicant?.id && applicant.stage === 'hired') {
+      refreshApplicantFromDB(applicant.id);
+    }
+  }, [open, applicant?.id, applicant?.stage, refreshApplicantFromDB]);
+
   if (!applicant) return null;
 
   const isHired = applicant.stage === 'hired';
