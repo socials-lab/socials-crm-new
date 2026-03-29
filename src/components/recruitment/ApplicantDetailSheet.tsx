@@ -188,33 +188,6 @@ export function ApplicantDetailSheet({
                 </div>
               </DialogHeader>
             </div>
-            {/* Compact contact info in header */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <a href={`mailto:${applicant.email}`} className="flex items-center gap-1 hover:text-primary transition-colors">
-                <Mail className="h-3 w-3" />
-                {applicant.email}
-              </a>
-              {applicant.phone && (
-                <span className="flex items-center gap-1">
-                  <Phone className="h-3 w-3" />
-                  {applicant.phone}
-                </span>
-              )}
-              {applicant.hourly_rate && (
-                <span className="flex items-center gap-1 font-medium text-foreground">
-                  <DollarSign className="h-3 w-3" />
-                  {applicant.hourly_rate} Kč/h
-                </span>
-              )}
-              <span className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                {owner?.full_name || 'Nepřiřazeno'}
-              </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {format(new Date(applicant.created_at), 'd. M. yyyy', { locale: cs })}
-              </span>
-            </div>
             <div className="flex items-center gap-2 shrink-0">
               <Select value={applicant.stage} onValueChange={handleStageChange}>
                 <SelectTrigger className={`w-44 h-9 text-sm ${stageConfig.color}`}>
@@ -229,6 +202,34 @@ export function ApplicantDetailSheet({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Compact contact bar */}
+          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <a href={`mailto:${applicant.email}`} className="flex items-center gap-1 hover:text-primary transition-colors">
+              <Mail className="h-3 w-3" />
+              {applicant.email}
+            </a>
+            {applicant.phone && (
+              <span className="flex items-center gap-1">
+                <Phone className="h-3 w-3" />
+                {applicant.phone}
+              </span>
+            )}
+            {applicant.hourly_rate != null && (
+              <span className="flex items-center gap-1 font-medium text-foreground">
+                <DollarSign className="h-3 w-3" />
+                {applicant.hourly_rate} Kč/h
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <User className="h-3 w-3" />
+              {owner?.full_name || 'Nepřiřazeno'}
+            </span>
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {format(new Date(applicant.created_at), 'd. M. yyyy', { locale: cs })}
+            </span>
           </div>
 
           {/* Pipeline stepper */}
