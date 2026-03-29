@@ -694,32 +694,45 @@ export function ApplicantDetailSheet({
                       )}
                     </div>
 
+                    {/* Convert to colleague - hide completely if already converted */}
+                    {!convertedToColleague && (
                     <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
                       <div className="flex items-center gap-3">
-                        <div className={`p-1.5 rounded-md ${convertedToColleague ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                        <div className="p-1.5 rounded-md bg-muted text-muted-foreground">
                           <UserPlus className="h-4 w-4" />
                         </div>
                         <div>
                           <p className="font-medium text-sm">Převod na kolegu</p>
                           <p className="text-xs text-muted-foreground">
-                            {convertedToColleague
-                              ? `Vytvořen: ${linkedColleague?.full_name}`
-                              : 'Vytvořit záznam v kolegové'}
+                            Vytvořit záznam v kolegové
                           </p>
                         </div>
                       </div>
-                      {convertedToColleague ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 text-xs">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Převedeno
-                        </Badge>
-                      ) : (
-                        <Button size="sm" variant="outline" className="h-8" onClick={() => setIsConvertDialogOpen(true)}>
-                          <ArrowRightLeft className="h-3.5 w-3.5 mr-1" />
-                          Převést
-                        </Button>
-                      )}
+                      <Button size="sm" variant="outline" className="h-8" onClick={() => setIsConvertDialogOpen(true)}>
+                        <ArrowRightLeft className="h-3.5 w-3.5 mr-1" />
+                        Převést
+                      </Button>
                     </div>
+                    )}
+                    {convertedToColleague && (
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5">
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 rounded-md bg-green-100 text-green-600">
+                          <UserPlus className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Převedeno na kolegu</p>
+                          <p className="text-xs text-muted-foreground">
+                            {linkedColleague?.full_name}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 text-xs">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Hotovo
+                      </Badge>
+                    </div>
+                    )}
                     </>
                   )}
                 </div>
