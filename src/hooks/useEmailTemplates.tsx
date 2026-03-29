@@ -105,6 +105,14 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
     description: 'Interní email se souhrnem údajů pro přípravu smlouvy',
     available_variables: ['full_name', 'email', 'personal_email', 'phone', 'birthday', 'company_name', 'ico', 'dic', 'billing_address', 'hourly_rate', 'bank_account', 'position', 'signature'],
   },
+  conversion_summary: {
+    template_key: 'conversion_summary',
+    name: 'Souhrn po převodu na kolegu',
+    subject_template: 'Vítej v Socials – souhrn přístupů pro {full_name}',
+    body_template: 'Ahoj {first_name},\n\nvítej v týmu Socials! Rádi tě máme na palubě 🎉\n\nTady je souhrn toho, co jsme pro tebe připravili:\n\n{access_list}\n\n📋 Následující kroky:\n1. Přihlas se do Google Workspace a nastav si nové heslo\n2. Přijmi pozvánky do Slacku a Freela\n3. Ozve se ti tvůj HR manažer, který s tebou projde vše potřebné\n\nPokud budeš mít jakékoliv dotazy, neváhej se obrátit na svého HR manažera.\n\nTěšíme se na spolupráci!\n{signature}',
+    description: 'Souhrnný email novému kolegovi s přehledem přístupů',
+    available_variables: ['full_name', 'first_name', 'access_list', 'signature'],
+  },
 };
 
 export function useEmailTemplates() {
