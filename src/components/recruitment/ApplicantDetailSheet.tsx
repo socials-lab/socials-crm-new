@@ -315,57 +315,80 @@ export function ApplicantDetailSheet({
                     </span>
                   </div>
 
+                  {/* Basic contact info from form */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Jméno</p>
+                      <p className="font-medium">{applicant.full_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Pozice</p>
+                      <p className="font-medium">{applicant.position}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">E-mail</p>
+                      <a href={`mailto:${applicant.email}`} className="text-primary hover:underline">{applicant.email}</a>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Telefon</p>
+                      {applicant.phone ? (
+                        <a href={`tel:${applicant.phone}`} className="hover:underline">{applicant.phone}</a>
+                      ) : (
+                        <span className="text-muted-foreground italic">—</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <Separator />
+
                   {/* Links row */}
-                  <div className="flex flex-wrap gap-2">
-                    {applicant.video_url && (
-                      <a href={applicant.video_url} target="_blank" rel="noopener noreferrer">
-                        <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
-                          <Play className="h-3 w-3" />
-                          Loom / video
-                          <ExternalLink className="h-2.5 w-2.5 opacity-50" />
-                        </Badge>
-                      </a>
-                    )}
-                    {applicant.portfolio_url && (
-                      <a href={applicant.portfolio_url} target="_blank" rel="noopener noreferrer">
-                        <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
-                          <Globe className="h-3 w-3" />
-                          Portfolio / tvorba
-                          <ExternalLink className="h-2.5 w-2.5 opacity-50" />
-                        </Badge>
-                      </a>
-                    )}
-                    {applicant.cv_url && (
-                      <a href={applicant.cv_url} target="_blank" rel="noopener noreferrer">
-                        <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
-                          <FileDown className="h-3 w-3" />
-                          CV (PDF)
-                          <ExternalLink className="h-2.5 w-2.5 opacity-50" />
-                        </Badge>
-                      </a>
-                    )}
-                    {!applicant.video_url && !applicant.portfolio_url && !applicant.cv_url && (
-                      <span className="text-xs text-muted-foreground italic">Žádné přílohy</span>
-                    )}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Přílohy & odkazy</p>
+                    <div className="flex flex-wrap gap-2">
+                      {applicant.video_url && (
+                        <a href={applicant.video_url} target="_blank" rel="noopener noreferrer">
+                          <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
+                            <Play className="h-3 w-3" />
+                            Loom / video
+                            <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+                          </Badge>
+                        </a>
+                      )}
+                      {applicant.portfolio_url && (
+                        <a href={applicant.portfolio_url} target="_blank" rel="noopener noreferrer">
+                          <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
+                            <Globe className="h-3 w-3" />
+                            Osobní značka / tvorba
+                            <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+                          </Badge>
+                        </a>
+                      )}
+                      {applicant.cv_url && (
+                        <a href={applicant.cv_url} target="_blank" rel="noopener noreferrer">
+                          <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
+                            <FileDown className="h-3 w-3" />
+                            CV (PDF)
+                            <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+                          </Badge>
+                        </a>
+                      )}
+                      {!applicant.video_url && !applicant.portfolio_url && !applicant.cv_url && (
+                        <span className="text-xs text-muted-foreground italic">Žádné přílohy</span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Cover letter / motivation */}
-                  {applicant.cover_letter ? (
-                    <Collapsible>
-                      <CollapsibleTrigger className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-                        <MessageSquare className="h-3 w-3" />
-                        Motivační dopis
-                        <ChevronDown className="h-3 w-3" />
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-2">
-                        <div className="text-sm whitespace-pre-wrap bg-muted/50 rounded-lg p-3 border border-border/40">
-                          {applicant.cover_letter}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">Motivační dopis nevyplněn</p>
-                  )}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Motivační dopis</p>
+                    {applicant.cover_letter ? (
+                      <div className="text-sm whitespace-pre-wrap bg-muted/50 rounded-lg p-3 border border-border/40">
+                        {applicant.cover_letter}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Nevyplněno</p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
