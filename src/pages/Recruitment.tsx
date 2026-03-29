@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, LayoutGrid, List } from 'lucide-react';
+import { Search, Plus, LayoutGrid, List, UserCheck } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,
   SelectContent,
