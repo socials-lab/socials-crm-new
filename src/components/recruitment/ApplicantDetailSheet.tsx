@@ -173,12 +173,24 @@ export function ApplicantDetailSheet({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <DialogHeader className="space-y-1">
-                <DialogTitle className="text-xl">
+                <DialogTitle className="text-xl flex items-center gap-3">
                   <InlineEditField
                     value={applicant.full_name}
                     onSave={(v) => updateApplicant(applicant.id, { full_name: v })}
                     displayClassName="text-xl font-semibold"
                   />
+                  <Select value={applicant.stage} onValueChange={handleStageChange}>
+                    <SelectTrigger className={`w-auto h-7 text-xs px-2.5 gap-1.5 font-medium rounded-full border-0 ${stageConfig.color}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(APPLICANT_STAGE_CONFIG).map(([key, config]) => (
+                        <SelectItem key={key} value={key}>
+                          {config.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </DialogTitle>
                 <div className="flex items-center gap-3">
                   <InlineEditField
@@ -192,20 +204,6 @@ export function ApplicantDetailSheet({
                   </Badge>
                 </div>
               </DialogHeader>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Select value={applicant.stage} onValueChange={handleStageChange}>
-                <SelectTrigger className={`w-44 h-9 text-sm ${stageConfig.color}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(APPLICANT_STAGE_CONFIG).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      {config.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
