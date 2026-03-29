@@ -52,7 +52,8 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-const MOCK_APPLICANT_DATA = {
+// Fallback mock data for when DB is not available
+const MOCK_APPLICANT_DATA: Record<string, { full_name: string; email: string; phone: string; position: string }> = {
   'mock-applicant-1': {
     full_name: 'Jan Novák',
     email: 'jan.novak@email.cz',
