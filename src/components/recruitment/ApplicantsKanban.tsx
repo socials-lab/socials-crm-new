@@ -107,14 +107,24 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
         onStageChange(draggedApplicantId, 'hired');
       }
       
-      // Set onboarding flags based on target step
-      const stepIndex = ONBOARDING_STEP_ORDER.indexOf(step);
-      onUpdateApplicant(draggedApplicantId, {
-        buddy_meeting_done: stepIndex >= 1, // completed if past buddy_meeting
-        academy_completed: stepIndex >= 2,
-        first_clients_assigned: stepIndex >= 3,
-        fully_onboarded: step === 'fully_ready',
-      });
+      // Handle terminated step
+      if (step === 'terminated') {
+        onUpdateApplicant(draggedApplicantId, {
+          onboarding_terminated: true,
+          terminated_at: new Date().toISOString(),
+        });
+      } else {
+        // Set onboarding flags based on target step
+        const stepIndex = ONBOARDING_STEP_ORDER.indexOf(step);
+        onUpdateApplicant(draggedApplicantId, {
+          onboarding_terminated: false,
+          terminated_at: null,
+          buddy_meeting_done: stepIndex >= 1, // completed if past buddy_meeting
+          academy_completed: stepIndex >= 2,
+          first_clients_assigned: stepIndex >= 3,
+          fully_onboarded: step === 'fully_ready',
+        });
+      }
     }
     setDraggedApplicantId(null); setDragOverStage(null); setDragOverOnboardingStep(null);
   };
