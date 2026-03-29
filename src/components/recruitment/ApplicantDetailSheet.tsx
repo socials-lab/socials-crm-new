@@ -52,11 +52,7 @@ import {
   Hash,
   FileSignature,
 } from 'lucide-react';
-import {
-  Globe,
-  FileDown,
-  Play,
-} from 'lucide-react';
+import { Globe, FileDown, Play } from 'lucide-react';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
