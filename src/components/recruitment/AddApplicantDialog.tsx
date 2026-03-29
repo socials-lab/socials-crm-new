@@ -130,6 +130,10 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       billing_city: null,
       billing_zip: null,
       bank_account: null,
+      // Personal info (null until onboarding)
+      birthday: null,
+      personal_email: null,
+      avatar_url: null,
       // Communication tracking
       interview_invite_sent_at: null,
       rejection_sent_at: null,

@@ -62,6 +62,11 @@ export interface Applicant {
   billing_zip: string | null;
   bank_account: string | null;
   
+  // Personal info (filled during onboarding)
+  birthday: string | null;
+  personal_email: string | null;
+  avatar_url: string | null;
+  
   // Communication tracking
   interview_invite_sent_at: string | null;
   rejection_sent_at: string | null;

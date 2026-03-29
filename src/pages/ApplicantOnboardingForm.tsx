@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import socialsLogo from '@/assets/socials-logo.svg';
 import { AvatarUpload } from '@/components/forms/AvatarUpload';
+import { supabase } from '@/integrations/supabase/client';
 
 const formSchema = z.object({
   full_name: z.string().min(2, 'Jméno je povinné'),
@@ -51,7 +52,8 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-const MOCK_APPLICANT_DATA = {
+// Fallback mock data for when DB is not available
+const MOCK_APPLICANT_DATA: Record<string, { full_name: string; email: string; phone: string; position: string }> = {
   'mock-applicant-1': {
     full_name: 'Jan Novák',
     email: 'jan.novak@email.cz',
@@ -137,18 +139,58 @@ export default function ApplicantOnboardingForm() {
   });
 
   useEffect(() => {
-    if (applicantId) {
-      setTimeout(() => {
-        const data = MOCK_APPLICANT_DATA[applicantId as keyof typeof MOCK_APPLICANT_DATA];
-        if (data) {
-          form.reset({ ...form.getValues(), ...data });
-          setIsLoading(false);
-        } else {
-          setNotFound(true);
-          setIsLoading(false);
+    if (!applicantId) return;
+    
+    const loadApplicant = async () => {
+      try {
+        // Try loading from Supabase first
+        const { data, error } = await supabase.functions.invoke('applicant-onboarding', {
+          method: 'GET',
+          body: undefined,
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        // Use query params approach since GET with invoke is tricky
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/applicant-onboarding?applicantId=${applicantId}`,
+          { headers: { 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
+        );
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.applicant) {
+            if (result.already_completed) {
+              setIsSubmitted(true);
+              setIsLoading(false);
+              return;
+            }
+            form.reset({ 
+              ...form.getValues(), 
+              full_name: result.applicant.full_name,
+              email: result.applicant.email,
+              phone: result.applicant.phone || '',
+              position: result.applicant.position,
+            });
+            setIsLoading(false);
+            return;
+          }
         }
-      }, 500);
-    }
+      } catch (e) {
+        console.log('Supabase fetch failed, falling back to mock data');
+      }
+
+      // Fallback to mock data
+      const mockData = MOCK_APPLICANT_DATA[applicantId];
+      if (mockData) {
+        form.reset({ ...form.getValues(), ...mockData });
+        setIsLoading(false);
+      } else {
+        setNotFound(true);
+        setIsLoading(false);
+      }
+    };
+
+    loadApplicant();
   }, [applicantId, form]);
 
   const validateARES = async (ico: string) => {
@@ -252,8 +294,42 @@ export default function ApplicantOnboardingForm() {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('Onboarding data submitted:', data);
+    try {
+      // Save to Supabase via edge function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/applicant-onboarding`,
+        {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            applicantId,
+            birthday: data.birthday?.toISOString().split('T')[0],
+            personal_email: data.personal_email,
+            avatar_url: data.avatar_url,
+            phone: data.phone,
+            ico: data.ico,
+            company_name: data.company_name,
+            dic: data.dic,
+            billing_street: data.billing_street,
+            billing_city: data.billing_city,
+            billing_zip: data.billing_zip,
+            hourly_rate: data.hourly_rate,
+            bank_account: data.bank_account,
+          }),
+        }
+      );
+      
+      const result = await response.json();
+      if (!response.ok) {
+        console.error('Onboarding save error:', result);
+      }
+    } catch (e) {
+      console.error('Failed to save onboarding to Supabase:', e);
+    }
+    
     toast.success('Onboarding dokončen! Vítej v týmu.');
     setIsSubmitted(true);
     setIsSubmitting(false);
