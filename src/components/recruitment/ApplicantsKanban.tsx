@@ -280,24 +280,22 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
                                 <Badge variant="outline" className="text-[10px]">Buddy</Badge>
                               )}
                             </div>
-                            {/* Mini checklist */}
-                            <div className="mt-2 space-y-0.5">
-                              <div className="flex items-center gap-1.5 text-[11px]">
-                                <div className={cn("h-2 w-2 rounded-full", applicant.buddy_meeting_done ? "bg-emerald-500" : "bg-muted-foreground/30")} />
-                                <span className={applicant.buddy_meeting_done ? "text-foreground" : "text-muted-foreground"}>Schůzka s buddym</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[11px]">
-                                <div className={cn("h-2 w-2 rounded-full", applicant.academy_completed ? "bg-emerald-500" : "bg-muted-foreground/30")} />
-                                <span className={applicant.academy_completed ? "text-foreground" : "text-muted-foreground"}>Akademie</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[11px]">
-                                <div className={cn("h-2 w-2 rounded-full", applicant.first_clients_assigned ? "bg-emerald-500" : "bg-muted-foreground/30")} />
-                                <span className={applicant.first_clients_assigned ? "text-foreground" : "text-muted-foreground"}>Přidělení klientů</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[11px]">
-                                <div className={cn("h-2 w-2 rounded-full", applicant.fully_onboarded ? "bg-emerald-500" : "bg-muted-foreground/30")} />
-                                <span className={applicant.fully_onboarded ? "text-foreground font-medium" : "text-muted-foreground"}>100 % Ready</span>
-                              </div>
+                            {/* Contact info instead of checklist - stage is already visible from column */}
+                            <div className="mt-1.5 space-y-0.5">
+                              {applicant.email && (
+                                <p className="text-[11px] text-muted-foreground truncate">{applicant.email}</p>
+                              )}
+                              {applicant.phone && (
+                                <p className="text-[11px] text-muted-foreground">{applicant.phone}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t">
+                              <Badge variant="secondary" className="text-[10px]">
+                                {APPLICANT_SOURCE_LABELS[applicant.source]}
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground">
+                                {format(new Date(applicant.created_at), 'd. M.', { locale: cs })}
+                              </span>
                             </div>
                           </CardContent>
                         </Card>
