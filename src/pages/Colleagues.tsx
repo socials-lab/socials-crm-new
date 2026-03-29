@@ -27,6 +27,7 @@ import { ColleagueCard } from '@/components/colleagues/ColleagueCard';
 import type { ColleagueStatus, Colleague } from '@/types/crm';
 import { toast } from 'sonner';
 import { OffboardColleagueDialog } from '@/components/colleagues/OffboardColleagueDialog';
+import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { CreativeBoostProvider, useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { supabase } from '@/integrations/supabase/client';
 import { TeamInvoicingOverview } from '@/components/colleagues/TeamInvoicingOverview';
