@@ -76,6 +76,7 @@ export function ConvertApplicantDialog({
   const [slackInvited, setSlackInvited] = useState(false);
   const [inviteToFreelo, setInviteToFreelo] = useState(true);
   const [freeloInvited, setFreeloInvited] = useState(false);
+  const [crmInvited, setCrmInvited] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
