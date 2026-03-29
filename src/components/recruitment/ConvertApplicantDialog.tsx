@@ -446,7 +446,39 @@ export function ConvertApplicantDialog({
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
+            {/* Google Workspace account */}
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Vytvořit Google Workspace účet</span>
+                </div>
+                <Switch 
+                  checked={createWorkspaceAccount} 
+                  onCheckedChange={setCreateWorkspaceAccount} 
+                />
+              </div>
+              {createWorkspaceAccount && (
+                <p className="text-xs text-muted-foreground">
+                  Bude vytvořen email <span className="font-mono font-medium text-foreground">
+                    {(() => {
+                      const parts = applicant.full_name.split(' ');
+                      const first = parts[0]?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || '';
+                      const last = parts.slice(1).join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || '';
+                      return `${first}.${last}@socials.cz`;
+                    })()}
+                  </span> a na soukromý email přijde pozvánka k přihlášení.
+                </p>
+              )}
+              {workspaceEmail && (
+                <div className="flex items-center gap-1 text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  Účet vytvořen: {workspaceEmail}
+                </div>
+              )}
+            </div>
+
+
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Zrušit
               </Button>
