@@ -485,6 +485,41 @@ export function ApplicantDetailSheet({
                     )}
                   </div>
 
+                  {/* Personal brand */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Osobní značka</p>
+                    {applicant.personal_brand ? (
+                      <div className="text-sm whitespace-pre-wrap bg-muted/50 rounded-lg p-3 border border-border/40">
+                        {applicant.personal_brand}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Nevyplněno</p>
+                    )}
+                  </div>
+
+                  {/* Social links */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Sociální sítě</p>
+                    {applicant.social_links ? (
+                      <div className="text-sm bg-muted/50 rounded-lg p-3 border border-border/40 space-y-1">
+                        {applicant.social_links.split(/[,\n]/).map((link, i) => {
+                          const trimmed = link.trim();
+                          if (!trimmed) return null;
+                          const isUrl = trimmed.startsWith('http');
+                          return isUrl ? (
+                            <a key={i} href={trimmed} target="_blank" rel="noopener noreferrer" className="block text-sm text-primary hover:underline truncate">
+                              {trimmed}
+                            </a>
+                          ) : (
+                            <span key={i} className="block text-sm">{trimmed}</span>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Nevyplněno</p>
+                    )}
+                  </div>
+
                   {/* Cover letter / motivation */}
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">Motivační dopis</p>

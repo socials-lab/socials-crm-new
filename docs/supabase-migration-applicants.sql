@@ -34,6 +34,8 @@ CREATE TABLE public.applicants (
   -- Application content
   cover_letter text,
   ai_usage text,
+  personal_brand text,
+  social_links text,
   cv_url text,
   video_url text,
   
