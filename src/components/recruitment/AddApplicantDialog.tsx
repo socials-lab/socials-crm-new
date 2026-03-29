@@ -121,7 +121,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       cover_letter: data.cover_letter || null,
       cv_url: data.cv_url || null,
       video_url: data.video_url || null,
-      portfolio_url: null,
+      portfolio_url: data.portfolio_url || null,
       stage: data.stage as ApplicantStage,
       owner_id: data.owner_id || null,
       source: data.source as ApplicantSource,
