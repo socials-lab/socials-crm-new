@@ -267,6 +267,10 @@ function ColleaguesContent() {
                     yearCredits={yearCredits}
                     creditsDetail={creditsDetail}
                     onUpdateAssignment={handleUpdateAssignment}
+                    onUpdateColleague={(id, data) => {
+                      updateColleague(id, data);
+                      toast.success('Uloženo');
+                    }}
                   />
                 </div>
               );
