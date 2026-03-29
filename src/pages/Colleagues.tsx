@@ -26,6 +26,7 @@ import { UserManagement } from '@/components/settings/UserManagement';
 import { ColleagueCard } from '@/components/colleagues/ColleagueCard';
 import type { ColleagueStatus, Colleague } from '@/types/crm';
 import { toast } from 'sonner';
+import { OffboardColleagueDialog } from '@/components/colleagues/OffboardColleagueDialog';
 import { CreativeBoostProvider, useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { supabase } from '@/integrations/supabase/client';
 import { TeamInvoicingOverview } from '@/components/colleagues/TeamInvoicingOverview';
@@ -59,6 +60,7 @@ function ColleaguesContent() {
   const [expandedColleagueId, setExpandedColleagueId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingColleague, setEditingColleague] = useState<Colleague | null>(null);
+  const [offboardingColleague, setOffboardingColleague] = useState<Colleague | null>(null);
 
   // Handle highlight from URL
   useEffect(() => {
@@ -271,6 +273,7 @@ function ColleaguesContent() {
                       updateColleague(id, data);
                       toast.success('Uloženo');
                     }}
+                    onOffboard={superAdmin ? (c) => setOffboardingColleague(c) : undefined}
                   />
                 </div>
               );
@@ -299,6 +302,17 @@ function ColleaguesContent() {
         </SheetContent>
       </Sheet>
 
+      {offboardingColleague && (
+        <OffboardColleagueDialog
+          open={!!offboardingColleague}
+          onOpenChange={(open) => { if (!open) setOffboardingColleague(null); }}
+          colleague={offboardingColleague}
+          onOffboarded={(id) => {
+            updateColleague(id, { status: 'left' });
+            setOffboardingColleague(null);
+          }}
+        />
+      )}
 
         </TabsContent>
 
