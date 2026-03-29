@@ -60,8 +60,31 @@ import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applica
 
 // Recruitment pipeline stages (before hired)
 const RECRUITMENT_STAGES: ApplicantStage[] = ['new_applicant', 'invited_interview', 'interview_done', 'offer_sent'];
-// Stages available when already hired (onboarding pipeline)
-const HIRED_ALLOWED_STAGES: ApplicantStage[] = ['hired', 'bad_fit', 'withdrawn'];
+
+// Onboarding steps for hired candidates
+const ONBOARDING_STEPS = [
+  { value: 'buddy_meeting', label: 'Schůzka s buddym', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  { value: 'academy', label: 'Akademie', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+  { value: 'clients_assigned', label: 'Přidělení klientů', color: 'bg-orange-100 text-orange-800 border-orange-200' },
+  { value: 'fully_ready', label: '100 % Ready', color: 'bg-green-100 text-green-800 border-green-200' },
+  { value: 'terminated', label: 'Ukončeno', color: 'bg-red-100 text-red-800 border-red-200' },
+] as const;
+
+type OnboardingStepValue = typeof ONBOARDING_STEPS[number]['value'];
+
+function getOnboardingStep(applicant: Applicant): OnboardingStepValue {
+  if (applicant.onboarding_terminated) return 'terminated';
+  if (applicant.fully_onboarded) return 'fully_ready';
+  if (applicant.first_clients_assigned) return 'clients_assigned';
+  if (applicant.academy_completed) return 'academy';
+  if (applicant.buddy_meeting_done) return 'buddy_meeting';
+  // Default: just hired, not started onboarding yet
+  return 'buddy_meeting';
+}
+
+function getOnboardingStepConfig(step: OnboardingStepValue) {
+  return ONBOARDING_STEPS.find(s => s.value === step)!;
+}
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { SendApplicantOnboardingDialog } from './SendApplicantOnboardingDialog';
