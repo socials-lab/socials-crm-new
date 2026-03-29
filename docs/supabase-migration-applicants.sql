@@ -6,7 +6,8 @@ CREATE TYPE public.applicant_stage AS ENUM (
   'offer_sent',
   'hired',
   'bad_fit',
-  'withdrawn'
+  'withdrawn',
+  'postponed'
 );
 
 -- Create applicant_source enum
