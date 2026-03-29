@@ -394,7 +394,8 @@ export function ApplicantDetailSheet({
                 </CardContent>
               </Card>
 
-              {/* Údaje pro smlouvu */}
+              {/* Údaje pro smlouvu — only show after onboarding form is completed */}
+              {onboardingCompleted && (
               <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm">
                 <CardContent className="p-5 space-y-4">
                   <div className="flex items-center justify-between gap-3">
@@ -404,24 +405,13 @@ export function ApplicantDetailSheet({
                         Údaje pro smlouvu
                       </h3>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Tady se zobrazují všechny údaje z onboarding formuláře kandidáta.
+                        Všechny údaje z onboarding formuláře kandidáta.
                       </p>
                     </div>
-                    {onboardingCompleted ? (
-                      <Badge className="bg-primary/20 text-primary border-primary/30 text-xs whitespace-nowrap">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Vyplněno {format(new Date(applicant.onboarding_completed_at!), 'd. M.', { locale: cs })}
-                      </Badge>
-                    ) : onboardingAlreadySent ? (
-                      <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Čeká na vyplnění
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs whitespace-nowrap">
-                        Neodesláno
-                      </Badge>
-                    )}
+                    <Badge className="bg-primary/20 text-primary border-primary/30 text-xs whitespace-nowrap">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Vyplněno {format(new Date(applicant.onboarding_completed_at!), 'd. M.', { locale: cs })}
+                    </Badge>
                   </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -492,6 +482,7 @@ export function ApplicantDetailSheet({
                     </div>
                 </CardContent>
               </Card>
+              )}
 
               {/* Action cards */}
               <div className="space-y-3">
