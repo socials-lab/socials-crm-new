@@ -67,10 +67,18 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
   },
   rejection_email: {
     template_key: 'rejection_email',
-    name: 'Odmítnutí kandidáta',
+    name: 'Odmítnutí kandidáta (přátelské)',
     subject_template: 'Vyjádření k Vaší přihlášce – {position} | Socials',
-    body_template: 'Dobrý den {name},\n\nděkujeme za Váš zájem o pozici {position} v agentuře Socials a čas, který jste věnoval/a přípravě své přihlášky.\n\nPo pečlivém zvážení jsme se rozhodli pokračovat s jinými kandidáty.\n\nPřejeme Vám mnoho úspěchů.\n\n{signature}',
-    description: 'Odmítací email pro uchazeče',
+    body_template: 'Ahoj {name},\n\nmoc děkujeme za Tvůj zájem o pozici {position} u nás v Socials a za čas, který jsi věnoval/a přihlášce.\n\nPo pečlivém zvážení jsme se tentokrát rozhodli jít jiným směrem – ale to vůbec neznamená, že bychom si Tě nevážili. Naopak, Tvůj profil nás zaujal a rádi bychom zůstali v kontaktu.\n\nKdyby se v budoucnu objevila pozice, která by seděla lépe, určitě se ozveme. A pokud budeš mít chuť se nám znovu ozvat ty, dveře máme otevřené. 🙂\n\nDržíme palce a přejeme hodně úspěchů!\n\n{signature}',
+    description: 'Přátelské odmítnutí s otevřenými dveřmi',
+    available_variables: ['name', 'position', 'signature'],
+  },
+  rejection_email_constructive: {
+    template_key: 'rejection_email_constructive',
+    name: 'Odmítnutí kandidáta (konstruktivní)',
+    subject_template: 'Vyjádření k Vaší přihlášce – {position} | Socials',
+    body_template: 'Ahoj {name},\n\nděkujeme za Tvůj zájem o pozici {position} v Socials.\n\nPo zvážení jsme se rozhodli pokračovat s kandidáty, jejichž profil aktuálně lépe odpovídá tomu, co hledáme. Abychom Ti to ale jen neoznámili – tady je pár postřehů, které by Ti mohly pomoct:\n\n• [Doplň konkrétní feedback – např. doporučení na rozvoj skills, certifikace, portfolio tip]\n\nBerme to jako „teď ne", nikoli „nikdy". Sleduj naše nabídky a klidně se ozvi znovu, až budeš cítit, že je ten správný čas.\n\nDržíme palce!\n\n{signature}',
+    description: 'Konstruktivní odmítnutí s feedbackem',
     available_variables: ['name', 'position', 'signature'],
   },
   meeting_request: {
