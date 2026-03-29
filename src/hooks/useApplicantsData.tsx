@@ -18,6 +18,8 @@ const INITIAL_MOCK_APPLICANTS: Applicant[] = [
     video_url: 'https://www.youtube.com/watch?v=example',
     portfolio_url: 'https://instagram.com/jan.novak.design',
     ai_usage: 'Používám ChatGPT pro tvorbu reklamních textů a analýzu dat v Google Ads. Experimentuji s Midjourney pro kreativní návrhy.',
+    personal_brand: 'Ano, buduji si osobní značku na LinkedInu a Instagramu zaměřenou na performance marketing.',
+    social_links: 'https://linkedin.com/in/jan-novak, https://instagram.com/jan.novak.marketing',
     stage: 'hired',
     owner_id: null,
     notes: [],
