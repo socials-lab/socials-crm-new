@@ -6,13 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-async function getGoogleAccessToken(serviceAccountKey: any, adminEmail: string): Promise<string> {
+async function getGoogleAccessToken(serviceAccountKey: any, adminEmail: string, scopes: string = "https://www.googleapis.com/auth/admin.directory.user"): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
   const payload = {
     iss: serviceAccountKey.client_email,
     sub: adminEmail,
-    scope: "https://www.googleapis.com/auth/admin.directory.user",
+    scope: scopes,
     aud: "https://oauth2.googleapis.com/token",
     iat: now,
     exp: now + 3600,
@@ -53,7 +53,7 @@ async function getGoogleAccessToken(serviceAccountKey: any, adminEmail: string):
   return (await tokenResponse.json()).access_token;
 }
 
-async function suspendGoogleUser(email: string): Promise<{ success: boolean; error?: string }> {
+async function suspendGoogleUser(email: string): Promise<{ success: boolean; forwarding?: boolean; error?: string }> {
   try {
     const serviceAccountKeyStr = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY');
     const adminEmail = Deno.env.get('GOOGLE_ADMIN_EMAIL');
@@ -62,14 +62,67 @@ async function suspendGoogleUser(email: string): Promise<{ success: boolean; err
     }
 
     const serviceAccountKey = JSON.parse(serviceAccountKeyStr);
-    const accessToken = await getGoogleAccessToken(serviceAccountKey, adminEmail);
+    
+    // Step 1: Set up email forwarding to hello@socials.cz before suspending
+    let forwardingSet = false;
+    try {
+      const gmailScopes = "https://www.googleapis.com/auth/gmail.settings.basic https://www.googleapis.com/auth/gmail.settings.sharing";
+      const gmailToken = await getGoogleAccessToken(serviceAccountKey, email, gmailScopes);
 
+      // Create forwarding address
+      const createFwdResponse = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/settings/forwardingAddresses`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${gmailToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ forwardingEmail: "hello@socials.cz" }),
+        }
+      );
+      
+      const fwdData = await createFwdResponse.json();
+      console.log("Forwarding address creation:", JSON.stringify(fwdData));
+
+      // Enable auto-forwarding (works if address is already verified or in same domain)
+      if (createFwdResponse.ok || fwdData.error?.code === 409) {
+        const enableFwdResponse = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/settings/autoForwarding`,
+          {
+            method: "PUT",
+            headers: {
+              "Authorization": `Bearer ${gmailToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              enabled: true,
+              emailAddress: "hello@socials.cz",
+              disposition: "leaveInInbox",
+            }),
+          }
+        );
+
+        if (enableFwdResponse.ok) {
+          forwardingSet = true;
+          console.log(`Email forwarding set for ${email} -> hello@socials.cz`);
+        } else {
+          const fwdError = await enableFwdResponse.json();
+          console.error("Enable forwarding error:", JSON.stringify(fwdError));
+        }
+      }
+    } catch (fwdError) {
+      console.error("Forwarding setup error (non-fatal):", fwdError);
+    }
+
+    // Step 2: Suspend the account
+    const adminToken = await getGoogleAccessToken(serviceAccountKey, adminEmail);
     const response = await fetch(
       `https://admin.googleapis.com/admin/directory/v1/users/${encodeURIComponent(email)}`,
       {
         method: "PUT",
         headers: {
-          "Authorization": `Bearer ${accessToken}`,
+          "Authorization": `Bearer ${adminToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ suspended: true }),
@@ -79,10 +132,10 @@ async function suspendGoogleUser(email: string): Promise<{ success: boolean; err
     if (!response.ok) {
       const errorData = await response.json();
       console.error("Google suspend error:", JSON.stringify(errorData));
-      return { success: false, error: errorData.error?.message || `HTTP ${response.status}` };
+      return { success: false, forwarding: forwardingSet, error: errorData.error?.message || `HTTP ${response.status}` };
     }
 
-    return { success: true };
+    return { success: true, forwarding: forwardingSet };
   } catch (error) {
     console.error("Google suspend exception:", error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
