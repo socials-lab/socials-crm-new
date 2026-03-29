@@ -209,6 +209,44 @@ export function ConvertApplicantDialog({
         }
       }
 
+      // Invite to CRM with default "Můj přehled" access
+      const crmEmail = generatedEmail || applicant.email;
+      try {
+        const nameParts = applicant.full_name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-user', {
+          body: {
+            email: crmEmail,
+            firstName,
+            lastName,
+            role: 'specialist',
+            position: applicant.position,
+            phone: applicant.phone,
+            is_freelancer: true,
+            internal_hourly_cost: data.hourly_rate,
+          },
+        });
+
+        if (inviteError) {
+          console.error('CRM invite error:', inviteError);
+          toast.error('Nepodařilo se vytvořit CRM účet', { description: inviteError.message });
+        } else if (inviteData?.error) {
+          // Already exists is OK
+          if (inviteData.error.includes('already') || inviteData.error.includes('existuje')) {
+            setCrmInvited(true);
+          } else {
+            toast.error('CRM: ' + inviteData.error);
+          }
+        } else {
+          setCrmInvited(true);
+          toast.success(`CRM přístup vytvořen pro ${crmEmail} (pouze Můj přehled)`);
+        }
+      } catch (e) {
+        console.error('CRM invite exception:', e);
+      }
+
       const colleague = completeOnboarding(applicant.id, {
         full_name: applicant.full_name,
         email: generatedEmail || applicant.email,
