@@ -39,6 +39,8 @@ const formSchema = z.object({
   position: z.string().min(1, 'Pozice je povinná'),
   cover_letter: z.string().optional(),
   ai_usage: z.string().optional(),
+  personal_brand: z.string().optional(),
+  social_links: z.string().optional(),
   cv_url: z.string().url().optional().or(z.literal('')),
   video_url: z.string().url().optional().or(z.literal('')),
   portfolio_url: z.string().url().optional().or(z.literal('')),
@@ -70,6 +72,8 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       position: '',
       cover_letter: '',
       ai_usage: '',
+      personal_brand: '',
+      social_links: '',
       cv_url: '',
       video_url: '',
       portfolio_url: '',
@@ -89,6 +93,8 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         position: applicant.position,
         cover_letter: applicant.cover_letter || '',
         ai_usage: (applicant as any).ai_usage || '',
+        personal_brand: (applicant as any).personal_brand || '',
+        social_links: (applicant as any).social_links || '',
         cv_url: applicant.cv_url || '',
         video_url: applicant.video_url || '',
         portfolio_url: applicant.portfolio_url || '',
@@ -105,6 +111,8 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         position: '',
         cover_letter: '',
         ai_usage: '',
+        personal_brand: '',
+        social_links: '',
         cv_url: '',
         video_url: '',
         portfolio_url: '',
@@ -124,6 +132,8 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       position: data.position,
       cover_letter: data.cover_letter || null,
       ai_usage: data.ai_usage || null,
+      personal_brand: data.personal_brand || null,
+      social_links: data.social_links || null,
       cv_url: data.cv_url || null,
       video_url: data.video_url || null,
       portfolio_url: data.portfolio_url || null,
@@ -414,6 +424,44 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
                     <Textarea 
                       placeholder="Jak uchazeč využívá umělou inteligenci..."
                       className="min-h-[80px]"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Personal brand */}
+            <FormField
+              control={form.control}
+              name="personal_brand"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Osobní značka</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Buduješ osobní značku? Jakou?"
+                      className="min-h-[80px]"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Social links */}
+            <FormField
+              control={form.control}
+              name="social_links"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Odkazy na sociální sítě</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="LinkedIn, Instagram, TikTok, YouTube... (každý odkaz na nový řádek)"
+                      className="min-h-[60px]"
                       {...field} 
                     />
                   </FormControl>

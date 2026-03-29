@@ -43,6 +43,8 @@ export interface Applicant {
   video_url: string | null;
   portfolio_url: string | null;
   ai_usage: string | null;
+  personal_brand: string | null;
+  social_links: string | null;
   
   // Pipeline
   stage: ApplicantStage;
