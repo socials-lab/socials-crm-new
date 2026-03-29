@@ -88,6 +88,13 @@ export function ColleagueCard({
     setEditingAssignmentId(null);
   };
 
+  const handleSaveContractUrl = (type: 'cooperation' | 'gdpr') => {
+    const field = type === 'cooperation' ? 'contract_cooperation_url' : 'contract_gdpr_url';
+    onUpdateColleague?.(colleague.id, { [field]: tempContractUrl || null });
+    setEditingContract(null);
+    setTempContractUrl('');
+  };
+
   const formatBirthday = (birthday: string) => {
     const date = new Date(birthday);
     return format(date, 'd. MMMM', { locale: cs });
