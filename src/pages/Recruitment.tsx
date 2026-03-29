@@ -55,11 +55,6 @@ export default function Recruitment() {
     [applicants]
   );
 
-  const hiredApplicants = useMemo(() =>
-    applicants.filter(a => a.stage === 'hired' || a.converted_to_colleague_id),
-    [applicants]
-  );
-
   const hasActiveFilters = searchQuery || ownerFilter !== 'all' || stageFilter !== 'all' || positionFilter !== 'all' || sourceFilter !== 'all';
 
   const clearAllFilters = () => {
