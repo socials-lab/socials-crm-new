@@ -43,8 +43,20 @@ export default function Recruitment() {
     ? applicants.find(a => a.id === selectedApplicantId) ?? null 
     : null;
 
+  // Split applicants into pipeline (active) and hired
+  const pipelineApplicants = useMemo(() => 
+    applicants.filter(a => !['hired', 'rejected', 'withdrawn'].includes(a.stage) || (a.stage === 'hired' && !a.converted_to_colleague_id)),
+    [applicants]
+  );
+
+  const hiredApplicants = useMemo(() =>
+    applicants.filter(a => a.stage === 'hired' || a.converted_to_colleague_id),
+    [applicants]
+  );
+
   const filteredApplicants = useMemo(() => {
-    return applicants.filter(applicant => {
+    const source = activeTab === 'hired' ? hiredApplicants : pipelineApplicants;
+    return source.filter(applicant => {
       const matchesSearch = 
         applicant.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         applicant.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -55,7 +67,7 @@ export default function Recruitment() {
 
       return matchesSearch && matchesOwner && matchesStage;
     });
-  }, [applicants, searchQuery, ownerFilter, stageFilter]);
+  }, [pipelineApplicants, hiredApplicants, activeTab, searchQuery, ownerFilter, stageFilter]);
 
   // KPI calculations
   const kpis = useMemo(() => {
