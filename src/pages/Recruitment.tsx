@@ -258,7 +258,7 @@ export default function Recruitment() {
           <div className="flex items-center gap-2 flex-wrap">
             <Filter className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
-              Zobrazeno <span className="font-semibold text-foreground">{filteredApplicants.length}</span> z {activeTab === 'hired' ? hiredApplicants.length : pipelineApplicants.length} uchazečů
+              Zobrazeno <span className="font-semibold text-foreground">{filteredApplicants.length}</span> z {pipelineApplicants.length} uchazečů
             </span>
             <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={clearAllFilters}>
               <X className="h-3 w-3" />
