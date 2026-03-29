@@ -466,7 +466,7 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
                           type="number"
                           value={variant.price}
                           onChange={(e) => handleVariantPriceChange(vIdx, Number(e.target.value) || 0)}
-                          className="h-7 w-20 text-xs text-right tabular-nums"
+                          className="h-7 w-28 text-xs text-right tabular-nums"
                         />
                         <span className="text-xs text-muted-foreground">{service.currency}</span>
                       </div>
