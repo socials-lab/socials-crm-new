@@ -40,6 +40,7 @@ const formSchema = z.object({
   cover_letter: z.string().optional(),
   cv_url: z.string().url().optional().or(z.literal('')),
   video_url: z.string().url().optional().or(z.literal('')),
+  portfolio_url: z.string().url().optional().or(z.literal('')),
   stage: z.string(),
   owner_id: z.string().optional(),
   source: z.string(),
