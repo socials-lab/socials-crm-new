@@ -69,7 +69,8 @@ import cl7 from '@/assets/clients/client-7.avif';
 import cl8 from '@/assets/clients/client-8.avif';
 import cl9 from '@/assets/clients/client-9.avif';
 import cl10 from '@/assets/clients/client-10.avif';
-import { getPublicOfferByToken, incrementOfferView } from '@/data/publicOffersData';
+import { getPublicOfferByToken as getSupabaseOffer, incrementOfferView as incrementSupabaseView } from '@/data/publicOffersData';
+import { getPublicOfferByToken as getMockOffer, incrementOfferView as incrementMockView } from '@/data/publicOffersMockData';
 import { usePublicPortfolio } from '@/hooks/usePortfolioData';
 import { useIsMobile } from '@/hooks/use-mobile';
 
