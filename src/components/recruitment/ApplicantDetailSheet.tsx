@@ -400,139 +400,161 @@ export function ApplicantDetailSheet({
 
               {/* Onboarding data — always visible */}
               {/* Application data — Přihláška */}
-              <Card className="border-border/60 bg-card shadow-sm">
-                <CardContent className="p-5 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <h3 className="font-semibold text-sm">Přihláška</h3>
-                    <span className="text-xs text-muted-foreground">
-                      · {format(new Date(applicant.created_at), 'd. M. yyyy', { locale: cs })}
-                    </span>
-                  </div>
-
-                  {/* Basic contact info from form */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Jméno</p>
-                      <p className="font-medium">{applicant.full_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Pozice</p>
-                      <p className="font-medium">{applicant.position}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">E-mail</p>
-                      <a href={`mailto:${applicant.email}`} className="text-primary hover:underline">{applicant.email}</a>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Telefon</p>
-                      {applicant.phone ? (
-                        <a href={`tel:${applicant.phone}`} className="hover:underline">{applicant.phone}</a>
-                      ) : (
-                        <span className="text-muted-foreground italic">—</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Links row */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Přílohy & odkazy</p>
-                    <div className="flex flex-wrap gap-2">
-                      {applicant.video_url && (
-                        <a href={applicant.video_url} target="_blank" rel="noopener noreferrer">
-                          <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
-                            <Play className="h-3 w-3" />
-                            Loom / video
-                            <ExternalLink className="h-2.5 w-2.5 opacity-50" />
-                          </Badge>
-                        </a>
-                      )}
-                      {applicant.portfolio_url && (
-                        <a href={applicant.portfolio_url} target="_blank" rel="noopener noreferrer">
-                          <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
-                            <Globe className="h-3 w-3" />
-                            Osobní značka / tvorba
-                            <ExternalLink className="h-2.5 w-2.5 opacity-50" />
-                          </Badge>
-                        </a>
-                      )}
-                      {applicant.cv_url && (
-                        <a href={applicant.cv_url} target="_blank" rel="noopener noreferrer">
-                          <Badge variant="secondary" className="cursor-pointer hover:bg-accent gap-1.5 text-xs py-1">
-                            <FileDown className="h-3 w-3" />
-                            CV (PDF)
-                            <ExternalLink className="h-2.5 w-2.5 opacity-50" />
-                          </Badge>
-                        </a>
-                      )}
-                      {!applicant.video_url && !applicant.portfolio_url && !applicant.cv_url && (
-                        <span className="text-xs text-muted-foreground italic">Žádné přílohy</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* AI usage */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Jak využívá AI?</p>
-                    {applicant.ai_usage ? (
-                      <div className="text-sm whitespace-pre-wrap bg-muted/50 rounded-lg p-3 border border-border/40">
-                        {applicant.ai_usage}
+              <div className="space-y-3">
+                {/* Row 1: KONTAKT, ODKAZY, INFO */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* KONTAKT */}
+                  <Card className="border-border/60 bg-card shadow-sm">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Kontakt</h4>
                       </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic">Nevyplněno</p>
-                    )}
-                  </div>
-
-                  {/* Personal brand */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Osobní značka</p>
-                    {applicant.personal_brand ? (
-                      <div className="text-sm whitespace-pre-wrap bg-muted/50 rounded-lg p-3 border border-border/40">
-                        {applicant.personal_brand}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic">Nevyplněno</p>
-                    )}
-                  </div>
-
-                  {/* Social links */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Sociální sítě</p>
-                    {applicant.social_links ? (
-                      <div className="text-sm bg-muted/50 rounded-lg p-3 border border-border/40 space-y-1">
-                        {applicant.social_links.split(/[,\n]/).map((link, i) => {
-                          const trimmed = link.trim();
-                          if (!trimmed) return null;
-                          const isUrl = trimmed.startsWith('http');
-                          return isUrl ? (
-                            <a key={i} href={trimmed} target="_blank" rel="noopener noreferrer" className="block text-sm text-primary hover:underline truncate">
-                              {trimmed}
-                            </a>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Jméno</p>
+                          <p className="font-medium">{applicant.full_name}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Pozice</p>
+                          <p className="font-medium">{applicant.position}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">E-mail</p>
+                          <a href={`mailto:${applicant.email}`} className="text-primary hover:underline text-sm truncate block">{applicant.email}</a>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Telefon</p>
+                          {applicant.phone ? (
+                            <a href={`tel:${applicant.phone}`} className="hover:underline text-sm">{applicant.phone}</a>
                           ) : (
-                            <span key={i} className="block text-sm">{trimmed}</span>
-                          );
-                        })}
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic">Nevyplněno</p>
-                    )}
-                  </div>
+                    </CardContent>
+                  </Card>
 
-                  {/* Cover letter / motivation */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Motivační dopis</p>
-                    {applicant.cover_letter ? (
-                      <div className="text-sm whitespace-pre-wrap bg-muted/50 rounded-lg p-3 border border-border/40">
-                        {applicant.cover_letter}
+                  {/* ODKAZY */}
+                  <Card className="border-border/60 bg-card shadow-sm">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Odkazy</h4>
                       </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic">Nevyplněno</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="space-y-2 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Loom video</p>
+                          {applicant.video_url ? (
+                            <a href={applicant.video_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block">
+                              {new URL(applicant.video_url).hostname}
+                            </a>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Portfolio / osobní značka</p>
+                          {applicant.portfolio_url ? (
+                            <a href={applicant.portfolio_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block">
+                              {new URL(applicant.portfolio_url).hostname}
+                            </a>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">CV</p>
+                          {applicant.cv_url ? (
+                            <a href={applicant.cv_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block">
+                              {new URL(applicant.cv_url).hostname}
+                            </a>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* INFO */}
+                  <Card className="border-border/60 bg-card shadow-sm">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Info</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Zdroj</p>
+                          <p className="font-medium">{APPLICANT_SOURCE_LABELS[applicant.source]}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Datum</p>
+                          <p className="font-medium">{format(new Date(applicant.created_at), 'd. M. yyyy HH:mm:ss', { locale: cs })}</p>
+                        </div>
+                        {applicant.social_links && (
+                          <div className="col-span-2">
+                            <p className="text-xs text-muted-foreground">Sociální sítě</p>
+                            <div className="space-y-0.5">
+                              {applicant.social_links.split(/[,\n]/).map((link, i) => {
+                                const trimmed = link.trim();
+                                if (!trimmed) return null;
+                                const isUrl = trimmed.startsWith('http');
+                                return isUrl ? (
+                                  <a key={i} href={trimmed} target="_blank" rel="noopener noreferrer" className="block text-sm text-primary hover:underline truncate">
+                                    {(() => { try { return new URL(trimmed).hostname; } catch { return trimmed; } })()}
+                                  </a>
+                                ) : (
+                                  <span key={i} className="block text-sm">{trimmed}</span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Row 2: MOTIVAČNÍ DOPIS, JAK VYUŽÍVÁ AI */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Card className="border-border/60 bg-card shadow-sm">
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Motivační dopis</h4>
+                      </div>
+                      {applicant.cover_letter ? (
+                        <p className="text-sm whitespace-pre-wrap">{applicant.cover_letter}</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">Nevyplněno</p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-border/60 bg-card shadow-sm">
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Jak využívá AI</h4>
+                      </div>
+                      {applicant.ai_usage ? (
+                        <p className="text-sm whitespace-pre-wrap">{applicant.ai_usage}</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">Nevyplněno</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Row 3: OSOBNÍ ZNAČKA (if filled) */}
+                {applicant.personal_brand && (
+                  <Card className="border-border/60 bg-card shadow-sm">
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Osobní značka</h4>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{applicant.personal_brand}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
 
               {/* Údaje pro smlouvu — only show after onboarding form is completed */}
               {onboardingCompleted && (
