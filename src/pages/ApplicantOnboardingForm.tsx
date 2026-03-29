@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import socialsLogo from '@/assets/socials-logo.svg';
 import { AvatarUpload } from '@/components/forms/AvatarUpload';
+import { supabase } from '@/integrations/supabase/client';
 
 const formSchema = z.object({
   full_name: z.string().min(2, 'Jméno je povinné'),
