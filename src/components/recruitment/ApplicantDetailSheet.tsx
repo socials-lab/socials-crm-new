@@ -258,7 +258,7 @@ export function ApplicantDetailSheet({
                 </div>
               </DialogHeader>
             </div>
-            <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <div className="flex flex-col items-start gap-1.5 shrink-0">
               {isHired ? (
                 <Select value={currentOnboardingStep!} onValueChange={handleOnboardingStepChange}>
                   <SelectTrigger className={`w-auto h-7 text-xs px-2.5 gap-1.5 font-medium rounded-full border-0 ${currentOnboardingStepConfig!.color}`}>
