@@ -254,6 +254,38 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     return newColleague;
   }, [updateApplicant, addColleague]);
 
+  const refreshApplicantFromDB = useCallback(async (applicantId: string) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/applicant-onboarding?applicantId=${applicantId}`,
+        { headers: { 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
+      );
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.applicant) {
+          const dbApplicant = result.applicant;
+          updateApplicant(applicantId, {
+            birthday: dbApplicant.birthday || null,
+            personal_email: dbApplicant.personal_email || null,
+            avatar_url: dbApplicant.avatar_url || null,
+            ico: dbApplicant.ico || null,
+            company_name: dbApplicant.company_name || null,
+            dic: dbApplicant.dic || null,
+            hourly_rate: dbApplicant.hourly_rate || null,
+            billing_street: dbApplicant.billing_street || null,
+            billing_city: dbApplicant.billing_city || null,
+            billing_zip: dbApplicant.billing_zip || null,
+            bank_account: dbApplicant.bank_account || null,
+            onboarding_completed_at: dbApplicant.onboarding_completed_at || null,
+            phone: dbApplicant.phone || null,
+          });
+        }
+      }
+    } catch (e) {
+      console.log('Failed to refresh applicant from DB:', e);
+    }
+  }, [updateApplicant]);
+
   const getApplicantById = useCallback((id: string) => {
     return applicants.find(a => a.id === id);
   }, [applicants]);
@@ -277,7 +309,8 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     sendRejection,
     sendOnboarding,
     completeOnboarding,
-  }), [applicants, isLoading, error, addApplicant, updateApplicant, deleteApplicant, updateApplicantStage, addNote, getApplicantById, getApplicantsByStage, sendInterviewInvite, sendRejection, sendOnboarding, completeOnboarding]);
+    refreshApplicantFromDB,
+  }), [applicants, isLoading, error, addApplicant, updateApplicant, deleteApplicant, updateApplicantStage, addNote, getApplicantById, getApplicantsByStage, sendInterviewInvite, sendRejection, sendOnboarding, completeOnboarding, refreshApplicantFromDB]);
 
   return (
     <ApplicantsDataContext.Provider value={value}>
