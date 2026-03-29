@@ -48,7 +48,8 @@ import {
   Plus as PlusIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
+import type { PublicOfferService, PublicOffer, PortfolioLink, CountryVariant } from '@/types/publicOffer';
+import { getCountryFlag, getCountryName } from '@/constants/countries';
 import socialsLogoDark from '@/assets/socials-logo-dark.svg';
 import socialsLogo from '@/assets/socials-logo.svg';
 import cert1 from '@/assets/certs/cert-1.avif';
@@ -247,6 +248,11 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
   const hasRequirements = service.requirements && service.requirements.length > 0;
   const hasDetailedSections = service.detailed_sections && service.detailed_sections.length > 0;
   const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline;
+  const hasCountryVariants = service.country_variants && service.country_variants.length > 0;
+  const countryFlags = [
+    ...(service.managed_countries || []),
+    ...(service.country_variants || []).map(v => v.country_code),
+  ];
 
   const descriptionLines = !hasDeliverables 
     ? (service.offer_description?.split('\n').filter(line => line.trim().length > 0) || [])
@@ -271,6 +277,11 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-base">{service.name}</p>
+                    {countryFlags.length > 0 && (
+                      <span className="text-sm" title={countryFlags.map(c => getCountryName(c)).join(', ')}>
+                        {countryFlags.map(c => getCountryFlag(c)).join(' ')}
+                      </span>
+                    )}
                     {service.service_type === 'core' && service.selected_tier && (
                       <Badge 
                         variant="outline" 
@@ -409,6 +420,31 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Country variants */}
+              {hasCountryVariants && (
+                <div className="p-4 rounded-lg bg-foreground/[0.03] border border-foreground/[0.08]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-base">🌍</span>
+                    <p className="text-sm font-semibold">Jazykové mutace:</p>
+                  </div>
+                  <div className="space-y-2">
+                    {service.country_variants!.map((variant, vIdx) => (
+                      <div key={vIdx} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{getCountryFlag(variant.country_code)}</span>
+                          <span>{getCountryName(variant.country_code)}</span>
+                          <span className="text-muted-foreground text-xs">({Math.round(variant.multiplier * 100)} % z ceny)</span>
+                        </div>
+                        <span className="font-semibold text-[#94e700]">
+                          +{variant.price.toLocaleString('cs-CZ')} {service.currency}
+                          {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

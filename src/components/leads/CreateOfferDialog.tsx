@@ -302,7 +302,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       if (catalogService?.code === 'CREATIVE_BOOST') {
         return CB_CREDITS * CB_PRICE;
       }
-      return s.price;
+      const variantsTotal = (s.country_variants || []).reduce((sum, v) => sum + v.price, 0);
+      return s.price + variantsTotal;
     };
 
     const coreMonthly = editableServices
@@ -320,7 +321,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       if (catalogService?.code === 'CREATIVE_BOOST') {
         return sum + CB_CREDITS * CB_PRICE;
       }
-      return sum + (s.original_price || s.price);
+      const variantsTotal = (s.country_variants || []).reduce((sv, v) => sv + v.price, 0);
+      return sum + (s.original_price || s.price) + variantsTotal;
     }, 0);
     const totalFinal = editableServices.reduce((sum, s) => sum + getEffectiveMonthlyPrice(s), 0);
     const totalDiscount = totalOriginal - totalFinal;
