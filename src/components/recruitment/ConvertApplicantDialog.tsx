@@ -130,9 +130,44 @@ export function ConvertApplicantDialog({
     setIsSubmitting(true);
 
     try {
+      // Create Google Workspace account if enabled
+      let generatedEmail: string | undefined;
+      if (createWorkspaceAccount) {
+        setIsCreatingAccount(true);
+        const nameParts = applicant.full_name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        const { data: wsData, error: wsError } = await supabase.functions.invoke('create-workspace-account', {
+          body: {
+            first_name: firstName,
+            last_name: lastName,
+            personal_email: data.personal_email || applicant.email,
+          },
+        });
+
+        setIsCreatingAccount(false);
+
+        if (wsError) {
+          console.error('Workspace account error:', wsError);
+          toast.error('Nepodařilo se vytvořit Google Workspace účet', {
+            description: wsError.message,
+          });
+        } else if (wsData?.success) {
+          generatedEmail = wsData.email;
+          setWorkspaceEmail(wsData.email);
+          toast.success(`Google Workspace účet vytvořen: ${wsData.email}`, {
+            description: `Dočasné heslo bylo nastaveno. Pozvánka odeslána na ${data.personal_email || applicant.email}.`,
+            duration: 10000,
+          });
+        } else if (wsData?.error) {
+          toast.error('Google Workspace: ' + wsData.error);
+        }
+      }
+
       const colleague = completeOnboarding(applicant.id, {
         full_name: applicant.full_name,
-        email: applicant.email,
+        email: generatedEmail || applicant.email,
         phone: applicant.phone || '',
         position: applicant.position,
         avatar_url: data.avatar_url || undefined,
@@ -151,10 +186,12 @@ export function ConvertApplicantDialog({
       toast.success(`${applicant.full_name} byl přidán do kolegů`);
       onOpenChange(false);
       form.reset();
+      setWorkspaceEmail(null);
     } catch (error) {
       toast.error('Nepodařilo se převést uchazeče');
     } finally {
       setIsSubmitting(false);
+      setIsCreatingAccount(false);
     }
   };
 
