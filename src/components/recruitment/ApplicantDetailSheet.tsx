@@ -52,8 +52,9 @@ import {
   Hash,
   FileSignature,
 } from 'lucide-react';
-import { Globe, FileDown, Play } from 'lucide-react';
+import { Globe, FileDown, Play, AlertTriangle } from 'lucide-react';
 import { ScrollText } from 'lucide-react';
+import { OffboardColleagueDialog } from '@/components/colleagues/OffboardColleagueDialog';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
