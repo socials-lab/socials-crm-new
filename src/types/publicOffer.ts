@@ -29,6 +29,15 @@ export interface PublicOfferService {
   requirements?: string[];        // What we need from client
   start_timeline?: string;        // When we can start
   detailed_sections?: ServiceDetailSection[];  // Expandable structured detail sections
+  managed_countries?: string[];         // Country codes this service covers (e.g. ['CZ', 'SK'])
+  country_variants?: CountryVariant[];  // Additional country expansions with pricing
+}
+
+// Country variant for service expansion to additional markets
+export interface CountryVariant {
+  country_code: string;   // e.g. 'SK', 'DE'
+  multiplier: number;     // default 0.5 (50% of base price)
+  price: number;          // calculated price = base_price × multiplier
 }
 
 // Structured detail section for "Více informací" expandable

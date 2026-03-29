@@ -6,8 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronUp, X, Plus, Trash2, Package, Clock, Zap, ClipboardList, FileText } from 'lucide-react';
-import type { PublicOfferService, ServiceDetailSection } from '@/types/publicOffer';
+import { ChevronDown, ChevronUp, X, Plus, Trash2, Package, Clock, Zap, ClipboardList, FileText, Globe } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { PublicOfferService, ServiceDetailSection, CountryVariant } from '@/types/publicOffer';
+import { MANAGED_COUNTRIES, getCountryFlag, getCountryName } from '@/constants/countries';
 
 interface EditableOfferServiceCardProps {
   service: PublicOfferService;
