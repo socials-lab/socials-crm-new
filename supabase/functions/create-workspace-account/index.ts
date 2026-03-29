@@ -114,39 +114,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Health check - verify secrets are configured
-  const url = new URL(req.url);
-  if (url.searchParams.get('health') === 'check') {
-    const hasServiceKey = !!Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY');
-    const hasAdminEmail = !!Deno.env.get('GOOGLE_ADMIN_EMAIL');
-    let serviceKeyValid = false;
-    let clientEmail = '';
-    
-    if (hasServiceKey) {
-      try {
-        const raw = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY')!;
-        const parsed = JSON.parse(raw);
-        const keys = Object.keys(parsed);
-        serviceKeyValid = !!parsed.private_key && !!parsed.client_email;
-        clientEmail = parsed.client_email || '';
-        if (!serviceKeyValid) {
-          clientEmail = `has keys: ${keys.join(', ')}`;
-        }
-      } catch (e) { 
-        const raw = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY')!;
-        clientEmail = `parse error: ${e.message}, first 80 chars: ${raw.substring(0, 80)}`;
-        serviceKeyValid = false; 
-      }
-    }
-
-    return new Response(JSON.stringify({
-      google_service_account_key: hasServiceKey ? (serviceKeyValid ? `✅ valid (${clientEmail})` : `❌ invalid: ${clientEmail}`) : '❌ missing',
-      google_admin_email: hasAdminEmail ? `✅ set (${Deno.env.get('GOOGLE_ADMIN_EMAIL')})` : '❌ missing',
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
 
   try {
     // Verify auth
