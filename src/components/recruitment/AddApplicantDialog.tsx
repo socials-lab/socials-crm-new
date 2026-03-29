@@ -403,6 +403,25 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
               )}
             />
 
+            {/* AI usage */}
+            <FormField
+              control={form.control}
+              name="ai_usage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Jak využíváš AI?</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Jak uchazeč využívá umělou inteligenci..."
+                      className="min-h-[80px]"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Zrušit
