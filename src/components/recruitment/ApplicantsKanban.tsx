@@ -26,7 +26,7 @@ const HIRING_STAGES: ApplicantStage[] = [
 ];
 
 // Closed/end stages
-const CLOSED_STAGES: ApplicantStage[] = ['bad_fit', 'withdrawn'];
+const CLOSED_STAGES: ApplicantStage[] = ['bad_fit', 'withdrawn', 'postponed'];
 
 // Onboarding pipeline steps (after hired)
 type OnboardingStep = 'buddy_meeting' | 'academy' | 'first_clients' | 'fully_ready' | 'terminated';
@@ -58,7 +58,7 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
   const applicantsByStage = useMemo(() => {
     const grouped: Record<ApplicantStage, Applicant[]> = {
       new_applicant: [], invited_interview: [], interview_done: [],
-      offer_sent: [], hired: [], bad_fit: [], withdrawn: [],
+      offer_sent: [], hired: [], bad_fit: [], withdrawn: [], postponed: [],
     };
     applicants.forEach(a => { if (grouped[a.stage]) grouped[a.stage].push(a); });
     return grouped;
@@ -76,7 +76,7 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
     return grouped;
   }, [hiredApplicants]);
 
-  const closedCount = applicantsByStage.bad_fit.length + applicantsByStage.withdrawn.length;
+  const closedCount = applicantsByStage.bad_fit.length + applicantsByStage.withdrawn.length + applicantsByStage.postponed.length;
 
   // Drag & drop handlers for hiring pipeline
   const handleDragStart = (e: React.DragEvent, id: string) => {

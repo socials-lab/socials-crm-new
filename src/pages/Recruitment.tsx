@@ -51,7 +51,7 @@ export default function Recruitment() {
 
   // Split applicants into pipeline (active) and hired
   const pipelineApplicants = useMemo(() => 
-    applicants.filter(a => !['hired', 'bad_fit', 'withdrawn'].includes(a.stage) || (a.stage === 'hired' && !a.converted_to_colleague_id)),
+    applicants.filter(a => !['hired', 'bad_fit', 'withdrawn', 'postponed'].includes(a.stage) || (a.stage === 'hired' && !a.converted_to_colleague_id)),
     [applicants]
   );
 
