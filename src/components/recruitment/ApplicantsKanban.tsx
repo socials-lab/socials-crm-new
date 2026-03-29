@@ -68,7 +68,7 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
   const hiredApplicants = applicantsByStage.hired;
   const onboardingByStep = useMemo(() => {
     const grouped: Record<OnboardingStep, Applicant[]> = {
-      buddy_meeting: [], academy: [], first_clients: [], fully_ready: [],
+      buddy_meeting: [], academy: [], first_clients: [], fully_ready: [], terminated: [],
     };
     hiredApplicants.forEach(a => {
       grouped[getOnboardingStep(a)].push(a);
