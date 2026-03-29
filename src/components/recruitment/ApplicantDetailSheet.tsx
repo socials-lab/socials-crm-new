@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
@@ -73,13 +73,20 @@ export function ApplicantDetailSheet({
   onOpenChange, 
   onEdit 
 }: ApplicantDetailSheetProps) {
-  const { updateApplicantStage, updateApplicant, addNote, sendInterviewInvite, sendRejection, sendOnboarding } = useApplicantsData();
+  const { updateApplicantStage, updateApplicant, addNote, sendInterviewInvite, sendRejection, sendOnboarding, refreshApplicantFromDB } = useApplicantsData();
   const { colleagues } = useCRMData();
   const [newNote, setNewNote] = useState('');
   const [isOnboardingDialogOpen, setIsOnboardingDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+
+  // Refresh applicant data from DB when detail sheet opens (sync onboarding data)
+  useEffect(() => {
+    if (open && applicant?.id && applicant.stage === 'hired') {
+      refreshApplicantFromDB(applicant.id);
+    }
+  }, [open, applicant?.id, applicant?.stage, refreshApplicantFromDB]);
 
   if (!applicant) return null;
 
