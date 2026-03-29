@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, LayoutGrid, List } from 'lucide-react';
+import { Search, Plus, LayoutGrid, List, UserCheck } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -34,13 +37,26 @@ export default function Recruitment() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingApplicant, setEditingApplicant] = useState<Applicant | null>(null);
+  const [activeTab, setActiveTab] = useState('pipeline');
 
   const selectedApplicant = selectedApplicantId 
     ? applicants.find(a => a.id === selectedApplicantId) ?? null 
     : null;
 
+  // Split applicants into pipeline (active) and hired
+  const pipelineApplicants = useMemo(() => 
+    applicants.filter(a => !['hired', 'rejected', 'withdrawn'].includes(a.stage) || (a.stage === 'hired' && !a.converted_to_colleague_id)),
+    [applicants]
+  );
+
+  const hiredApplicants = useMemo(() =>
+    applicants.filter(a => a.stage === 'hired' || a.converted_to_colleague_id),
+    [applicants]
+  );
+
   const filteredApplicants = useMemo(() => {
-    return applicants.filter(applicant => {
+    const source = activeTab === 'hired' ? hiredApplicants : pipelineApplicants;
+    return source.filter(applicant => {
       const matchesSearch = 
         applicant.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         applicant.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -51,7 +67,7 @@ export default function Recruitment() {
 
       return matchesSearch && matchesOwner && matchesStage;
     });
-  }, [applicants, searchQuery, ownerFilter, stageFilter]);
+  }, [pipelineApplicants, hiredApplicants, activeTab, searchQuery, ownerFilter, stageFilter]);
 
   // KPI calculations
   const kpis = useMemo(() => {
@@ -201,19 +217,91 @@ export default function Recruitment() {
         </Select>
       </div>
 
-      {/* Main content */}
-      {viewMode === 'kanban' ? (
-        <ApplicantsKanban 
-          applicants={filteredApplicants} 
-          onApplicantClick={handleApplicantClick}
-          onStageChange={handleStageChange}
-        />
-      ) : (
-        <ApplicantsTable
-          applicants={filteredApplicants}
-          onApplicantClick={handleApplicantClick}
-        />
-      )}
+      {/* Tabs: Pipeline / Přijatí */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="hired" className="gap-1.5">
+            <UserCheck className="h-3.5 w-3.5" />
+            Přijatí
+            {hiredApplicants.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{hiredApplicants.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pipeline" className="mt-4">
+          {viewMode === 'kanban' ? (
+            <ApplicantsKanban 
+              applicants={filteredApplicants} 
+              onApplicantClick={handleApplicantClick}
+              onStageChange={handleStageChange}
+            />
+          ) : (
+            <ApplicantsTable
+              applicants={filteredApplicants}
+              onApplicantClick={handleApplicantClick}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="hired" className="mt-4">
+          <div className="rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Jméno</TableHead>
+                  <TableHead>Pozice</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Přijat</TableHead>
+                  <TableHead>Smlouva</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredApplicants.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      Zatím žádní přijatí kandidáti
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredApplicants.map(applicant => (
+                    <TableRow
+                      key={applicant.id}
+                      className="cursor-pointer"
+                      onClick={() => handleApplicantClick(applicant)}
+                    >
+                      <TableCell className="font-medium">{applicant.full_name}</TableCell>
+                      <TableCell>{applicant.position}</TableCell>
+                      <TableCell className="text-muted-foreground">{applicant.email}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {applicant.updated_at ? new Date(applicant.updated_at).toLocaleDateString('cs-CZ') : '—'}
+                      </TableCell>
+                      <TableCell>
+                        {applicant.contract_signed_at ? (
+                          <Badge variant="default" className="bg-green-600 text-xs">Podepsána</Badge>
+                        ) : applicant.contract_sent_at ? (
+                          <Badge variant="secondary" className="text-xs">Odeslána</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">Čeká</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {applicant.converted_to_colleague_id ? (
+                          <Badge variant="default" className="bg-primary text-xs">Kolega</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">Přijat</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Detail Sheet */}
       <ApplicantDetailSheet
