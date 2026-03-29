@@ -127,7 +127,48 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
     onUpdate({ ...service, detailed_sections: sections });
   };
 
-  return (
+  // ─── Country Variants handlers ───
+  const handleAddCountryVariant = (countryCode: string) => {
+    const existingCodes = (service.country_variants || []).map(v => v.country_code);
+    const mainCountries = service.managed_countries || [];
+    if (existingCodes.includes(countryCode) || mainCountries.includes(countryCode)) return;
+    const multiplier = 0.5;
+    const price = Math.round(service.price * multiplier);
+    const newVariant: CountryVariant = { country_code: countryCode, multiplier, price };
+    onUpdate({ ...service, country_variants: [...(service.country_variants || []), newVariant] });
+  };
+
+  const handleRemoveCountryVariant = (index: number) => {
+    const variants = (service.country_variants || []).filter((_, i) => i !== index);
+    onUpdate({ ...service, country_variants: variants });
+  };
+
+  const handleVariantMultiplierChange = (index: number, multiplier: number) => {
+    const variants = [...(service.country_variants || [])];
+    const price = Math.round(service.price * multiplier);
+    variants[index] = { ...variants[index], multiplier, price };
+    onUpdate({ ...service, country_variants: variants });
+  };
+
+  const handleVariantPriceChange = (index: number, price: number) => {
+    const variants = [...(service.country_variants || [])];
+    variants[index] = { ...variants[index], price };
+    onUpdate({ ...service, country_variants: variants });
+  };
+
+  const handleMainCountryChange = (countryCode: string) => {
+    const current = service.managed_countries || [];
+    if (current.includes(countryCode)) return;
+    onUpdate({ ...service, managed_countries: [countryCode] });
+  };
+
+  const usedCountryCodes = [
+    ...(service.managed_countries || []),
+    ...(service.country_variants || []).map(v => v.country_code),
+  ];
+  const availableCountries = MANAGED_COUNTRIES.filter(c => !usedCountryCodes.includes(c.code));
+
+
     <Card className="border-2">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CardHeader className="pb-2">
