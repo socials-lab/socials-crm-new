@@ -735,6 +735,54 @@ export function ApplicantDetailSheet({
                       </Badge>
                     </div>
                     )}
+
+                    {/* Offboard from recruitment - for hired & converted candidates */}
+                    {isHired && convertedToColleague && !applicant.onboarding_terminated && (
+                      <div className="flex items-center justify-between p-3 rounded-lg border border-destructive/20 bg-destructive/5">
+                        <div className="flex items-center gap-3">
+                          <div className="p-1.5 rounded-md bg-destructive/10 text-destructive">
+                            <AlertTriangle className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Ukončit zapracování</p>
+                            <p className="text-xs text-muted-foreground">
+                              Deaktivovat přístupy (Workspace, Slack, Freelo)
+                            </p>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          className="h-8" 
+                          onClick={() => setIsOffboardDialogOpen(true)}
+                        >
+                          <UserX className="h-3.5 w-3.5 mr-1" />
+                          Ukončit
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Terminated badge */}
+                    {applicant.onboarding_terminated && (
+                      <div className="flex items-center justify-between p-3 rounded-lg border border-destructive/30 bg-destructive/5">
+                        <div className="flex items-center gap-3">
+                          <div className="p-1.5 rounded-md bg-destructive/10 text-destructive">
+                            <UserX className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Zapracování ukončeno</p>
+                            <p className="text-xs text-muted-foreground">
+                              {applicant.terminated_at 
+                                ? format(new Date(applicant.terminated_at), 'd. M. yyyy', { locale: cs })
+                                : 'Přístupy byly deaktivovány'}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="destructive" className="text-xs">
+                          Ukončeno
+                        </Badge>
+                      </div>
+                    )}
                     </>
                   )}
                 </div>
