@@ -410,7 +410,7 @@ export function ApplicantDetailSheet({
                         <User className="h-3.5 w-3.5 text-muted-foreground" />
                         <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Kontakt</h4>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                      <div className="space-y-2 text-sm">
                         <div>
                           <p className="text-xs text-muted-foreground">Jméno</p>
                           <p className="font-medium">{applicant.full_name}</p>
@@ -421,7 +421,7 @@ export function ApplicantDetailSheet({
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">E-mail</p>
-                          <a href={`mailto:${applicant.email}`} className="text-primary hover:underline text-sm truncate block">{applicant.email}</a>
+                          <a href={`mailto:${applicant.email}`} className="text-primary hover:underline text-sm break-all">{applicant.email}</a>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Telefon</p>
