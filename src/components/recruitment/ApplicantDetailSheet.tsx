@@ -34,13 +34,11 @@ import {
   Video, 
   Calendar,
   ExternalLink,
-  Edit,
   MessageSquare,
   Send,
   UserPlus,
   ClipboardList,
   CheckCircle2,
-  Building,
   CreditCard,
   ArrowRightLeft,
   PhoneCall,
@@ -48,6 +46,11 @@ import {
   Clock,
   DollarSign,
   ChevronDown,
+  Building,
+  MapPin,
+  Cake,
+  Hash,
+  FileSignature,
 } from 'lucide-react';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
@@ -67,6 +70,33 @@ interface ApplicantDetailSheetProps {
   onEdit: (applicant: Applicant) => void;
 }
 
+// Pipeline steps definition
+const PIPELINE_STEPS = [
+  { key: 'interview', label: 'Pohovor', icon: PhoneCall },
+  { key: 'hired', label: 'Přijat', icon: CheckCircle2 },
+  { key: 'onboarding', label: 'Onboarding', icon: ClipboardList },
+  { key: 'contract', label: 'Smlouva', icon: FileSignature },
+  { key: 'colleague', label: 'Kolega', icon: UserPlus },
+] as const;
+
+function getPipelineProgress(applicant: Applicant) {
+  const steps = {
+    interview: !!applicant.interview_invite_sent_at,
+    hired: applicant.stage === 'hired' || !!applicant.converted_to_colleague_id,
+    onboarding: !!applicant.onboarding_completed_at,
+    contract: false, // manual step — no automation
+    colleague: !!applicant.converted_to_colleague_id,
+  };
+  // Current active step
+  let activeStep = 'interview';
+  if (steps.interview) activeStep = 'hired';
+  if (steps.hired) activeStep = 'onboarding';
+  if (steps.onboarding) activeStep = 'contract';
+  if (steps.colleague) activeStep = 'colleague';
+
+  return { steps, activeStep };
+}
+
 export function ApplicantDetailSheet({ 
   applicant, 
   open, 
@@ -81,7 +111,6 @@ export function ApplicantDetailSheet({
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
 
-  // Refresh applicant data from DB when detail sheet opens (sync onboarding data)
   useEffect(() => {
     if (open && applicant?.id && applicant.stage === 'hired') {
       refreshApplicantFromDB(applicant.id);
@@ -101,6 +130,7 @@ export function ApplicantDetailSheet({
   const stageConfig = APPLICANT_STAGE_CONFIG[applicant.stage];
   const owner = colleagues.find(c => c.id === applicant.owner_id);
   const linkedColleague = colleagues.find(c => c.id === applicant.converted_to_colleague_id);
+  const { steps: pipelineSteps, activeStep } = getPipelineProgress(applicant);
 
   const handleStageChange = (newStage: string) => {
     updateApplicantStage(applicant.id, newStage as ApplicantStage);
@@ -121,488 +151,451 @@ export function ApplicantDetailSheet({
     sendRejection(applicant.id, emailData);
   };
 
-  const handleSendOnboarding = () => {
-    // handled inside the dialog via sendOnboarding directly
-  };
+  const handleSendOnboarding = () => {};
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-        {/* Header */}
-        <DialogHeader className="px-6 pt-6 pb-4 space-y-3">
-          <div className="flex items-start justify-between">
-            <div>
-              <DialogTitle className="text-xl">
-                <InlineEditField
-                  value={applicant.full_name}
-                  onSave={(v) => updateApplicant(applicant.id, { full_name: v })}
-                  displayClassName="text-xl font-semibold"
-                />
-              </DialogTitle>
-              <InlineEditField
-                value={applicant.position}
-                onSave={(v) => updateApplicant(applicant.id, { position: v })}
-                displayClassName="text-muted-foreground"
-                emptyText="Přidej pozici..."
-              />
+      <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col p-0">
+        {/* Header with pipeline stepper */}
+        <div className="px-6 pt-6 pb-0 space-y-4">
+          {/* Top row: name + stage */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <DialogHeader className="space-y-1">
+                <DialogTitle className="text-xl">
+                  <InlineEditField
+                    value={applicant.full_name}
+                    onSave={(v) => updateApplicant(applicant.id, { full_name: v })}
+                    displayClassName="text-xl font-semibold"
+                  />
+                </DialogTitle>
+                <div className="flex items-center gap-3">
+                  <InlineEditField
+                    value={applicant.position}
+                    onSave={(v) => updateApplicant(applicant.id, { position: v })}
+                    displayClassName="text-muted-foreground text-sm"
+                    emptyText="Přidej pozici..."
+                  />
+                  <Badge variant="secondary" className="text-xs">
+                    {APPLICANT_SOURCE_LABELS[applicant.source]}
+                  </Badge>
+                </div>
+              </DialogHeader>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
+              <Select value={applicant.stage} onValueChange={handleStageChange}>
+                <SelectTrigger className={`w-44 h-9 text-sm ${stageConfig.color}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(APPLICANT_STAGE_CONFIG).map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      {config.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Stage selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Stav:</span>
-            <Select value={applicant.stage} onValueChange={handleStageChange}>
-              <SelectTrigger className={`w-48 ${stageConfig.color}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(APPLICANT_STAGE_CONFIG).map(([key, config]) => (
-                  <SelectItem key={key} value={key}>
-                    {config.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </DialogHeader>
+          {/* Pipeline stepper */}
+          {!isRejected && (
+            <div className="flex items-center gap-0 pb-4">
+              {PIPELINE_STEPS.map((step, idx) => {
+                const Icon = step.icon;
+                const isDone = pipelineSteps[step.key as keyof typeof pipelineSteps];
+                const isActive = activeStep === step.key && !isDone;
+                const isPast = isDone;
+
+                return (
+                  <div key={step.key} className="flex items-center flex-1 last:flex-none">
+                    <div className="flex flex-col items-center gap-1 min-w-0">
+                      <div
+                        className={`
+                          flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all
+                          ${isPast 
+                            ? 'bg-primary border-primary text-primary-foreground' 
+                            : isActive 
+                              ? 'border-primary bg-primary/10 text-primary' 
+                              : 'border-border bg-muted text-muted-foreground'
+                          }
+                        `}
+                      >
+                        {isPast ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <Icon className="h-4 w-4" />
+                        )}
+                      </div>
+                      <span className={`text-[10px] font-medium text-center leading-tight ${
+                        isPast ? 'text-primary' : isActive ? 'text-foreground' : 'text-muted-foreground'
+                      }`}>
+                        {step.label}
+                      </span>
+                    </div>
+                    {idx < PIPELINE_STEPS.length - 1 && (
+                      <div className={`h-0.5 flex-1 mx-1 mt-[-16px] rounded-full ${
+                        isPast ? 'bg-primary' : 'bg-border'
+                      }`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Rejected banner */}
+          {isRejected && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm mb-2">
+              <UserX className="h-4 w-4" />
+              <span className="font-medium">Kandidát byl odmítnut</span>
+              {applicant.rejection_sent_at && (
+                <span className="text-destructive/70 ml-1">
+                  ({format(new Date(applicant.rejection_sent_at), 'd. M. yyyy', { locale: cs })})
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         <Separator />
 
-        {/* Two-column layout */}
-        <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-[55fr_45fr] divide-x">
-          {/* LEFT COLUMN: Workflow + Contact + Details */}
-          <ScrollArea className="h-[calc(90vh-160px)]">
+        {/* Main content: two columns */}
+        <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-[1fr_380px] divide-x">
+          {/* LEFT COLUMN */}
+          <ScrollArea className="h-[calc(92vh-200px)]">
             <div className="p-6 pb-12 space-y-6">
-              {/* STEP 1: Communication with applicant */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">1</span>
-                  Komunikace s uchazečem
-                </h3>
 
-                {/* Interview invite */}
-                <Card className="border-border/50">
-                  <CardContent className="p-4">
+              {/* Onboarding data — prominent when completed */}
+              {onboardingCompleted && (
+                <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm">
+                  <CardContent className="p-5 space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${interviewInviteSent ? 'bg-green-100 text-green-600' : 'bg-muted'}`}>
-                          <PhoneCall className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">Pozvánka na pohovor</p>
-                          {interviewInviteSent ? (
-                            <p className="text-xs text-muted-foreground">
-                              Odesláno {format(new Date(applicant.interview_invite_sent_at!), 'd. M. yyyy', { locale: cs })}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">Zatím neodesláno</p>
+                      <h3 className="font-semibold text-sm flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-primary" />
+                        Údaje pro smlouvu
+                      </h3>
+                      <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Vyplněno {format(new Date(applicant.onboarding_completed_at!), 'd. M.', { locale: cs })}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Personal */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Osobní údaje</p>
+                        <div className="space-y-1.5 text-sm">
+                          <div className="flex items-center gap-2">
+                            <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="font-medium">{applicant.full_name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span>{applicant.position}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-primary">{applicant.email}</span>
+                          </div>
+                          {applicant.personal_email && (
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-xs text-muted-foreground">{applicant.personal_email}</span>
+                            </div>
+                          )}
+                          {applicant.phone && (
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span>{applicant.phone}</span>
+                            </div>
+                          )}
+                          {applicant.birthday && (
+                            <div className="flex items-center gap-2">
+                              <Cake className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span>{format(new Date(applicant.birthday), 'd. M. yyyy', { locale: cs })}</span>
+                            </div>
                           )}
                         </div>
                       </div>
-                      {interviewInviteSent ? (
+
+                      {/* Billing + Financial */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Fakturace & finance</p>
+                        <div className="space-y-1.5 text-sm">
+                          {applicant.company_name && (
+                            <div className="flex items-center gap-2">
+                              <Building className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span className="font-medium">{applicant.company_name}</span>
+                            </div>
+                          )}
+                          {applicant.ico && (
+                            <div className="flex items-center gap-2">
+                              <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span>IČO: {applicant.ico}</span>
+                              {applicant.dic && <span className="text-muted-foreground">· DIČ: {applicant.dic}</span>}
+                            </div>
+                          )}
+                          {applicant.billing_street && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span>{applicant.billing_street}, {applicant.billing_zip} {applicant.billing_city}</span>
+                            </div>
+                          )}
+                          {applicant.hourly_rate && (
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span className="font-semibold text-primary">{applicant.hourly_rate} Kč/h</span>
+                            </div>
+                          )}
+                          {applicant.bank_account && (
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span>{applicant.bank_account}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Action cards */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Akce</h3>
+                
+                <div className="grid grid-cols-1 gap-2">
+                  {/* Interview invite */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-1.5 rounded-md ${interviewInviteSent ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                        <PhoneCall className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">Pozvánka na pohovor</p>
+                        <p className="text-xs text-muted-foreground">
+                          {interviewInviteSent
+                            ? `Odesláno ${format(new Date(applicant.interview_invite_sent_at!), 'd. M. yyyy', { locale: cs })}`
+                            : 'Zatím neodesláno'}
+                        </p>
+                      </div>
+                    </div>
+                    {interviewInviteSent ? (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 text-xs">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Hotovo
+                        </Badge>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsInterviewInviteDialogOpen(true)}>
+                          Znovu
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" className="h-8" onClick={() => setIsInterviewInviteDialogOpen(true)} disabled={isRejected}>
+                        <Send className="h-3.5 w-3.5 mr-1" />
+                        Odeslat
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Rejection */}
+                  {!isHired && !convertedToColleague && (
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-md ${rejectionSent ? 'bg-red-100 text-red-600' : 'bg-muted text-muted-foreground'}`}>
+                          <UserX className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Odmítnutí kandidáta</p>
+                          <p className="text-xs text-muted-foreground">
+                            {rejectionSent
+                              ? `Odesláno ${format(new Date(applicant.rejection_sent_at!), 'd. M. yyyy', { locale: cs })}`
+                              : 'Slušné odmítnutí emailem'}
+                          </p>
+                        </div>
+                      </div>
+                      {rejectionSent ? (
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
+                          <Badge variant="secondary" className="bg-red-100 text-red-700 border-red-200 text-xs">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Odesláno
                           </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsInterviewInviteDialogOpen(true)}
-                          >
-                            Odeslat znovu
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsRejectionDialogOpen(true)}>
+                            Znovu
                           </Button>
                         </div>
                       ) : (
-                        <Button
-                          size="sm"
-                          onClick={() => setIsInterviewInviteDialogOpen(true)}
-                          disabled={isRejected}
-                        >
-                          <Send className="h-4 w-4 mr-1" />
+                        <Button size="sm" variant="outline" className="h-8 text-destructive hover:text-destructive" onClick={() => setIsRejectionDialogOpen(true)}>
+                          <UserX className="h-3.5 w-3.5 mr-1" />
+                          Odmítnout
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Onboarding form send */}
+                  {!isRejected && (
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-md ${onboardingCompleted ? 'bg-green-100 text-green-600' : onboardingAlreadySent ? 'bg-yellow-100 text-yellow-600' : 'bg-muted text-muted-foreground'}`}>
+                          <ClipboardList className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Onboarding formulář</p>
+                          <p className="text-xs text-muted-foreground">
+                            {onboardingCompleted
+                              ? `Vyplněno ${format(new Date(applicant.onboarding_completed_at!), 'd. M. yyyy', { locale: cs })}`
+                              : onboardingAlreadySent
+                                ? `Odesláno ${format(new Date(applicant.onboarding_sent_at!), 'd. M. yyyy', { locale: cs })}`
+                                : 'Odeslat odkaz na vyplnění'}
+                          </p>
+                        </div>
+                      </div>
+                      {onboardingCompleted ? (
+                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 text-xs">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Vyplněno
+                        </Badge>
+                      ) : onboardingAlreadySent ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200 text-xs">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Čeká
+                          </Badge>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsOnboardingDialogOpen(true)}>
+                            Znovu
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="sm" className="h-8" onClick={() => setIsOnboardingDialogOpen(true)}>
+                          <Send className="h-3.5 w-3.5 mr-1" />
                           Odeslat
                         </Button>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
 
-                {/* Rejection email */}
-                {!isHired && !convertedToColleague && (
-                  <Card className="border-border/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${rejectionSent ? 'bg-red-100 text-red-600' : 'bg-muted'}`}>
-                            <UserX className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">Odmítnutí kandidáta</p>
-                            {rejectionSent ? (
-                              <p className="text-xs text-muted-foreground">
-                                Odesláno {format(new Date(applicant.rejection_sent_at!), 'd. M. yyyy', { locale: cs })}
-                              </p>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">Slušné odmítnutí emailem</p>
-                            )}
-                          </div>
+                  {/* Convert to colleague */}
+                  {!isRejected && (
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-md ${convertedToColleague ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                          <UserPlus className="h-4 w-4" />
                         </div>
-                        {rejectionSent ? (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="bg-red-100 text-red-700 border-red-200">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Odesláno
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setIsRejectionDialogOpen(true)}
-                            >
-                              Odeslat znovu
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setIsRejectionDialogOpen(true)}
-                          >
-                            <UserX className="h-4 w-4 mr-1" />
-                            Odmítnout
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              {/* STEP 2: Onboarding */}
-              {!isRejected && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm flex items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">2</span>
-                    Onboarding
-                  </h3>
-
-                  {/* Onboarding form */}
-                  <Card className="border-border/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${onboardingCompleted ? 'bg-green-100 text-green-600' : onboardingAlreadySent ? 'bg-yellow-100 text-yellow-600' : 'bg-muted'}`}>
-                            <ClipboardList className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">Onboarding formulář</p>
-                            {onboardingCompleted ? (
-                              <p className="text-xs text-muted-foreground">
-                                Vyplněno {format(new Date(applicant.onboarding_completed_at!), 'd. M. yyyy', { locale: cs })}
-                              </p>
-                            ) : onboardingAlreadySent ? (
-                              <p className="text-xs text-muted-foreground">
-                                Odesláno {format(new Date(applicant.onboarding_sent_at!), 'd. M. yyyy', { locale: cs })}
-                              </p>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">Odeslat odkaz na vyplnění údajů</p>
-                            )}
-                          </div>
+                        <div>
+                          <p className="font-medium text-sm">Převod na kolegu</p>
+                          <p className="text-xs text-muted-foreground">
+                            {convertedToColleague
+                              ? `Vytvořen: ${linkedColleague?.full_name}`
+                              : 'Vytvořit záznam v kolegové'}
+                          </p>
                         </div>
-                        {onboardingCompleted ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Vyplněno
-                          </Badge>
-                        ) : onboardingAlreadySent ? (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Čeká na vyplnění
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setIsOnboardingDialogOpen(true)}
-                            >
-                              Znovu
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            onClick={() => setIsOnboardingDialogOpen(true)}
-                          >
-                            <Send className="h-4 w-4 mr-1" />
-                            Odeslat
-                          </Button>
-                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Colleague conversion */}
-                  <Card className="border-border/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${convertedToColleague ? 'bg-green-100 text-green-600' : 'bg-muted'}`}>
-                            <UserPlus className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">Převod na kolegu</p>
-                            {convertedToColleague ? (
-                              <p className="text-xs text-muted-foreground">
-                                Vytvořen záznam: {linkedColleague?.full_name}
-                              </p>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">Vytvořit záznam v kolegové</p>
-                            )}
-                          </div>
-                        </div>
-                        {convertedToColleague ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Převedeno
-                          </Badge>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setIsConvertDialogOpen(true)}
-                          >
-                            <ArrowRightLeft className="h-4 w-4 mr-1" />
-                            Převést ručně
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Onboarding data summary - for contract preparation */}
-                  {onboardingCompleted && (
-                    <Collapsible defaultOpen>
-                      <Card className="border-primary/20 bg-primary/5">
-                        <CardContent className="p-4">
-                          <CollapsibleTrigger className="flex items-center justify-between w-full">
-                            <h4 className="font-medium text-sm flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
-                              Vyplněné onboarding údaje (pro smlouvu)
-                            </h4>
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="mt-3 space-y-4">
-                            {/* Personal info */}
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Osobní údaje</p>
-                              <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">Jméno:</span>
-                                  <span className="ml-1 font-medium">{applicant.full_name}</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Pozice:</span>
-                                  <span className="ml-1">{applicant.position}</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Email:</span>
-                                  <span className="ml-1">{applicant.email}</span>
-                                </div>
-                                {applicant.personal_email && (
-                                  <div>
-                                    <span className="text-muted-foreground">Osobní email:</span>
-                                    <span className="ml-1">{applicant.personal_email}</span>
-                                  </div>
-                                )}
-                                {applicant.phone && (
-                                  <div>
-                                    <span className="text-muted-foreground">Telefon:</span>
-                                    <span className="ml-1">{applicant.phone}</span>
-                                  </div>
-                                )}
-                                {applicant.birthday && (
-                                  <div>
-                                    <span className="text-muted-foreground">Datum narození:</span>
-                                    <span className="ml-1">{format(new Date(applicant.birthday), 'd. M. yyyy', { locale: cs })}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <Separator />
-
-                            {/* Billing info */}
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Fakturační údaje</p>
-                              <div className="grid grid-cols-2 gap-2 text-sm">
-                                {applicant.ico && (
-                                  <div>
-                                    <span className="text-muted-foreground">IČO:</span>
-                                    <span className="ml-1 font-medium">{applicant.ico}</span>
-                                  </div>
-                                )}
-                                {applicant.company_name && (
-                                  <div>
-                                    <span className="text-muted-foreground">Firma:</span>
-                                    <span className="ml-1">{applicant.company_name}</span>
-                                  </div>
-                                )}
-                                {applicant.dic && (
-                                  <div>
-                                    <span className="text-muted-foreground">DIČ:</span>
-                                    <span className="ml-1">{applicant.dic}</span>
-                                  </div>
-                                )}
-                                {applicant.billing_street && (
-                                  <div className="col-span-2">
-                                    <span className="text-muted-foreground">Adresa:</span>
-                                    <span className="ml-1">
-                                      {applicant.billing_street}, {applicant.billing_zip} {applicant.billing_city}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <Separator />
-
-                            {/* Financial info */}
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Finanční údaje</p>
-                              <div className="grid grid-cols-2 gap-2 text-sm">
-                                {applicant.hourly_rate && (
-                                  <div className="flex items-center gap-1">
-                                    <DollarSign className="h-3 w-3 text-muted-foreground" />
-                                    <span className="font-medium">{applicant.hourly_rate} Kč/h</span>
-                                  </div>
-                                )}
-                                {applicant.bank_account && (
-                                  <div className="flex items-center gap-1">
-                                    <CreditCard className="h-3 w-3 text-muted-foreground" />
-                                    <span>{applicant.bank_account}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {applicant.onboarding_completed_at && (
-                              <>
-                                <Separator />
-                                <p className="text-xs text-muted-foreground">
-                                  Vyplněno {format(new Date(applicant.onboarding_completed_at), 'd. M. yyyy \'v\' HH:mm', { locale: cs })}
-                                </p>
-                              </>
-                            )}
-                          </CollapsibleContent>
-                        </CardContent>
-                      </Card>
-                    </Collapsible>
+                      {convertedToColleague ? (
+                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 text-xs">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Převedeno
+                        </Badge>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-8" onClick={() => setIsConvertDialogOpen(true)}>
+                          <ArrowRightLeft className="h-3.5 w-3.5 mr-1" />
+                          Převést
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+              </div>
 
               <Separator />
 
-              {/* Contact info */}
-              <div className="space-y-2">
-                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                  Kontakt
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <InlineEditField
-                      value={applicant.email}
-                      onSave={(v) => updateApplicant(applicant.id, { email: v })}
-                      displayClassName="text-primary"
-                      emptyText="Přidej email..."
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <InlineEditField
-                      value={applicant.phone}
-                      onSave={(v) => updateApplicant(applicant.id, { phone: v || null })}
-                      emptyText="Přidej telefon..."
-                    />
+              {/* Contact & Details — compact grid */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Kontakt</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                      <InlineEditField
+                        value={applicant.email}
+                        onSave={(v) => updateApplicant(applicant.id, { email: v })}
+                        displayClassName="text-primary text-sm"
+                        emptyText="Přidej email..."
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                      <InlineEditField
+                        value={applicant.phone}
+                        onSave={(v) => updateApplicant(applicant.id, { phone: v || null })}
+                        emptyText="Přidej telefon..."
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Details */}
-              <div className="space-y-2">
-                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                  Detaily
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    <InlineEditField
-                      value={applicant.position}
-                      onSave={(v) => updateApplicant(applicant.id, { position: v })}
-                      emptyText="Přidej pozici..."
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Hodinová sazba:</span>
-                    <InlineEditField
-                      value={applicant.hourly_rate}
-                      onSave={(v) => updateApplicant(applicant.id, { hourly_rate: v ? Number(v) : null })}
-                      type="number"
-                      suffix="Kč/h"
-                      emptyText="Přidej sazbu..."
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>Odpovědný: {owner?.full_name || 'Nepřiřazeno'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>Přidán: {format(new Date(applicant.created_at), 'd. MMMM yyyy', { locale: cs })}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      {APPLICANT_SOURCE_LABELS[applicant.source]}
-                      {applicant.source_custom && ` - ${applicant.source_custom}`}
-                    </Badge>
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Detaily</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                      <InlineEditField
+                        value={applicant.position}
+                        onSave={(v) => updateApplicant(applicant.id, { position: v })}
+                        emptyText="Přidej pozici..."
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                      <InlineEditField
+                        value={applicant.hourly_rate}
+                        onSave={(v) => updateApplicant(applicant.id, { hourly_rate: v ? Number(v) : null })}
+                        type="number"
+                        suffix="Kč/h"
+                        emptyText="Přidej sazbu..."
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">{owner?.full_name || 'Nepřiřazeno'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">{format(new Date(applicant.created_at), 'd. M. yyyy', { locale: cs })}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Attachments */}
               <div className="space-y-2">
-                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                  Přílohy
-                </h3>
+                <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Přílohy</h3>
                 <div className="flex gap-2">
                   {applicant.cv_url ? (
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm" className="h-8" asChild>
                       <a href={applicant.cv_url} target="_blank" rel="noopener noreferrer">
-                        <FileText className="h-4 w-4 mr-1" />
+                        <FileText className="h-3.5 w-3.5 mr-1" />
                         CV
                         <ExternalLink className="h-3 w-3 ml-1" />
                       </a>
                     </Button>
                   ) : (
-                    <Badge variant="outline" className="text-muted-foreground">
+                    <Badge variant="outline" className="text-muted-foreground text-xs">
                       <FileText className="h-3 w-3 mr-1" />
                       Bez CV
                     </Badge>
                   )}
                   {applicant.video_url ? (
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm" className="h-8" asChild>
                       <a href={applicant.video_url} target="_blank" rel="noopener noreferrer">
-                        <Video className="h-4 w-4 mr-1" />
+                        <Video className="h-3.5 w-3.5 mr-1" />
                         Video
                         <ExternalLink className="h-3 w-3 ml-1" />
                       </a>
                     </Button>
                   ) : (
-                    <Badge variant="outline" className="text-muted-foreground">
+                    <Badge variant="outline" className="text-muted-foreground text-xs">
                       <Video className="h-3 w-3 mr-1" />
                       Bez videa
                     </Badge>
@@ -610,14 +603,14 @@ export function ApplicantDetailSheet({
                 </div>
               </div>
 
-              {/* Cover letter - collapsible */}
+              {/* Cover letter */}
               {applicant.cover_letter && (
                 <Collapsible>
                   <CollapsibleTrigger className="flex items-center gap-2 w-full">
-                    <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                    <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
                       Motivační dopis
                     </h3>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [&[data-state=open]]:rotate-180" />
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="bg-muted/50 p-3 rounded-lg text-sm whitespace-pre-wrap mt-2">
@@ -630,10 +623,10 @@ export function ApplicantDetailSheet({
           </ScrollArea>
 
           {/* RIGHT COLUMN: Communication Timeline + Notes */}
-          <ScrollArea className="h-[calc(90vh-160px)]">
-            <div className="p-6 space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
+          <ScrollArea className="h-[calc(92vh-200px)]">
+            <div className="p-5 space-y-4">
+              <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <MessageSquare className="h-3.5 w-3.5" />
                 Historie komunikace
               </h3>
 
@@ -641,9 +634,8 @@ export function ApplicantDetailSheet({
 
               <Separator />
 
-              {/* Add note inline */}
               <div className="space-y-2">
-                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
                   Přidat poznámku
                 </h3>
                 <div className="flex gap-2">
@@ -668,31 +660,24 @@ export function ApplicantDetailSheet({
         </div>
       </DialogContent>
 
-      {/* Interview Invite Dialog */}
       <SendInterviewInviteDialog
         applicant={applicant}
         open={isInterviewInviteDialogOpen}
         onOpenChange={setIsInterviewInviteDialogOpen}
         onSend={handleSendInterviewInvite}
       />
-
-      {/* Rejection Email Dialog */}
       <SendRejectionEmailDialog
         applicant={applicant}
         open={isRejectionDialogOpen}
         onOpenChange={setIsRejectionDialogOpen}
         onSend={handleSendRejection}
       />
-
-      {/* Onboarding Dialog */}
       <SendApplicantOnboardingDialog
         applicant={applicant}
         open={isOnboardingDialogOpen}
         onOpenChange={setIsOnboardingDialogOpen}
         onSend={handleSendOnboarding}
       />
-
-      {/* Convert to Colleague Dialog */}
       <ConvertApplicantDialog
         applicant={applicant}
         open={isConvertDialogOpen}
