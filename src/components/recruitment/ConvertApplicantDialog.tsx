@@ -26,7 +26,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera } from 'lucide-react';
+import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,8 @@ import { toast } from 'sonner';
 import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { AvatarUpload } from '@/components/forms/AvatarUpload';
+import { Switch } from '@/components/ui/switch';
+import { supabase } from '@/integrations/supabase/client';
 
 const formSchema = z.object({
   avatar_url: z.string().nullable().optional(),
@@ -67,6 +69,9 @@ export function ConvertApplicantDialog({
   const [isValidatingARES, setIsValidatingARES] = useState(false);
   const [aresError, setAresError] = useState<string | null>(null);
   const [aresValidated, setAresValidated] = useState(false);
+  const [createWorkspaceAccount, setCreateWorkspaceAccount] = useState(true);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [workspaceEmail, setWorkspaceEmail] = useState<string | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -125,9 +130,44 @@ export function ConvertApplicantDialog({
     setIsSubmitting(true);
 
     try {
+      // Create Google Workspace account if enabled
+      let generatedEmail: string | undefined;
+      if (createWorkspaceAccount) {
+        setIsCreatingAccount(true);
+        const nameParts = applicant.full_name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        const { data: wsData, error: wsError } = await supabase.functions.invoke('create-workspace-account', {
+          body: {
+            first_name: firstName,
+            last_name: lastName,
+            personal_email: data.personal_email || applicant.email,
+          },
+        });
+
+        setIsCreatingAccount(false);
+
+        if (wsError) {
+          console.error('Workspace account error:', wsError);
+          toast.error('Nepodařilo se vytvořit Google Workspace účet', {
+            description: wsError.message,
+          });
+        } else if (wsData?.success) {
+          generatedEmail = wsData.email;
+          setWorkspaceEmail(wsData.email);
+          toast.success(`Google Workspace účet vytvořen: ${wsData.email}`, {
+            description: `Dočasné heslo bylo nastaveno. Pozvánka odeslána na ${data.personal_email || applicant.email}.`,
+            duration: 10000,
+          });
+        } else if (wsData?.error) {
+          toast.error('Google Workspace: ' + wsData.error);
+        }
+      }
+
       const colleague = completeOnboarding(applicant.id, {
         full_name: applicant.full_name,
-        email: applicant.email,
+        email: generatedEmail || applicant.email,
         phone: applicant.phone || '',
         position: applicant.position,
         avatar_url: data.avatar_url || undefined,
@@ -146,10 +186,12 @@ export function ConvertApplicantDialog({
       toast.success(`${applicant.full_name} byl přidán do kolegů`);
       onOpenChange(false);
       form.reset();
+      setWorkspaceEmail(null);
     } catch (error) {
       toast.error('Nepodařilo se převést uchazeče');
     } finally {
       setIsSubmitting(false);
+      setIsCreatingAccount(false);
     }
   };
 
@@ -402,6 +444,38 @@ export function ConvertApplicantDialog({
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Google Workspace account */}
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Vytvořit Google Workspace účet</span>
+                </div>
+                <Switch 
+                  checked={createWorkspaceAccount} 
+                  onCheckedChange={setCreateWorkspaceAccount} 
+                />
+              </div>
+              {createWorkspaceAccount && (
+                <p className="text-xs text-muted-foreground">
+                  Bude vytvořen email <span className="font-mono font-medium text-foreground">
+                    {(() => {
+                      const parts = applicant.full_name.split(' ');
+                      const first = parts[0]?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || '';
+                      const last = parts.slice(1).join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || '';
+                      return `${first}.${last}@socials.cz`;
+                    })()}
+                  </span> a na soukromý email přijde pozvánka k přihlášení.
+                </p>
+              )}
+              {workspaceEmail && (
+                <div className="flex items-center gap-1 text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  Účet vytvořen: {workspaceEmail}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
