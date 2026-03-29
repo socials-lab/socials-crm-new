@@ -254,41 +254,29 @@ export function ConvertApplicantDialog({
 
       // Step 5: Send summary email to personal email via mailto
       const personalEmail = data.personal_email || applicant.email;
-      const summaryParts: string[] = [];
-      summaryParts.push(`Ahoj ${applicant.full_name.split(' ')[0]},`);
-      summaryParts.push('');
-      summaryParts.push('vítej v týmu Socials! Rádi tě máme na palubě 🎉');
-      summaryParts.push('');
-      summaryParts.push('Tady je souhrn toho, co jsme pro tebe připravili:');
-      summaryParts.push('');
       
+      const accessLines: string[] = [];
       if (generatedEmail) {
-        summaryParts.push(`✅ Google Workspace účet: ${generatedEmail}`);
-        summaryParts.push('   Na tvůj osobní email ti přišla pozvánka k přihlášení s dočasným heslem.');
+        accessLines.push(`✅ Google Workspace účet: ${generatedEmail}`);
+        accessLines.push('   Na tvůj osobní email ti přišla pozvánka k přihlášení s dočasným heslem.');
       }
       if (slackInvited) {
-        summaryParts.push('✅ Slack – pozvánka odeslána na tvůj nový email');
+        accessLines.push('✅ Slack – pozvánka odeslána na tvůj nový email');
       }
       if (freeloInvited) {
-        summaryParts.push('✅ Freelo – přístup do onboardingového projektu');
+        accessLines.push('✅ Freelo – přístup do onboardingového projektu');
       }
       if (crmInvited) {
-        summaryParts.push('✅ CRM systém – přístup do sekce „Můj přehled"');
+        accessLines.push('✅ CRM systém – přístup do sekce „Můj přehled"');
       }
-      
-      summaryParts.push('');
-      summaryParts.push('📋 Následující kroky:');
-      summaryParts.push('1. Přihlas se do Google Workspace a nastav si nové heslo');
-      summaryParts.push('2. Přijmi pozvánky do Slacku a Freela');
-      summaryParts.push('3. Ozve se ti tvůj HR manažer, který s tebou projde vše potřebné');
-      summaryParts.push('');
-      summaryParts.push('Pokud budeš mít jakékoliv dotazy, neváhej se obrátit na svého HR manažera.');
-      summaryParts.push('');
-      summaryParts.push('Těšíme se na spolupráci!');
-      summaryParts.push('Tým Socials');
 
-      const summarySubject = `Vítej v Socials – souhrn přístupů pro ${applicant.full_name}`;
-      const mailtoUrl = `mailto:${encodeURIComponent(personalEmail)}?subject=${encodeURIComponent(summarySubject)}&body=${encodeURIComponent(summaryParts.join('\n'))}`;
+      const { subject: summarySubject, body: summaryBody } = fillTemplate('conversion_summary', {
+        full_name: applicant.full_name,
+        first_name: applicant.full_name.split(' ')[0],
+        access_list: accessLines.join('\n'),
+      });
+
+      const mailtoUrl = `mailto:${encodeURIComponent(personalEmail)}?subject=${encodeURIComponent(summarySubject)}&body=${encodeURIComponent(summaryBody)}`;
       window.open(mailtoUrl, '_blank');
       toast.info('Otevřen draft souhrnného emailu pro nového kolegu');
 
