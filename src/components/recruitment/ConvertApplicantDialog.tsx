@@ -26,7 +26,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera, Mail } from 'lucide-react';
+import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera, Mail, Hash } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -70,8 +70,10 @@ export function ConvertApplicantDialog({
   const [aresError, setAresError] = useState<string | null>(null);
   const [aresValidated, setAresValidated] = useState(false);
   const [createWorkspaceAccount, setCreateWorkspaceAccount] = useState(true);
+  const [inviteToSlack, setInviteToSlack] = useState(true);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [workspaceEmail, setWorkspaceEmail] = useState<string | null>(null);
+  const [slackInvited, setSlackInvited] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -165,6 +167,27 @@ export function ConvertApplicantDialog({
         }
       }
 
+      // Invite to Slack
+      if (inviteToSlack) {
+        const slackEmail = generatedEmail || applicant.email;
+        const { data: slackData, error: slackError } = await supabase.functions.invoke('invite-slack-user', {
+          body: {
+            email: slackEmail,
+            channels: ['general'],
+          },
+        });
+
+        if (slackError) {
+          console.error('Slack invite error:', slackError);
+          toast.error('Nepodařilo se pozvat do Slacku', { description: slackError.message });
+        } else if (slackData?.success) {
+          setSlackInvited(true);
+          toast.success(slackData.message);
+        } else if (slackData?.error) {
+          toast.error('Slack: ' + slackData.error);
+        }
+      }
+
       const colleague = completeOnboarding(applicant.id, {
         full_name: applicant.full_name,
         email: generatedEmail || applicant.email,
@@ -187,6 +210,7 @@ export function ConvertApplicantDialog({
       onOpenChange(false);
       form.reset();
       setWorkspaceEmail(null);
+      setSlackInvited(false);
     } catch (error) {
       toast.error('Nepodařilo se převést uchazeče');
     } finally {
@@ -474,6 +498,31 @@ export function ConvertApplicantDialog({
                 <div className="flex items-center gap-1 text-sm text-primary">
                   <CheckCircle className="h-4 w-4" />
                   Účet vytvořen: {workspaceEmail}
+                </div>
+              )}
+            </div>
+
+            {/* Slack invite */}
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Pozvat do Slacku</span>
+                </div>
+                <Switch 
+                  checked={inviteToSlack} 
+                  onCheckedChange={setInviteToSlack} 
+                />
+              </div>
+              {inviteToSlack && (
+                <p className="text-xs text-muted-foreground">
+                  Na email kolegy bude odeslána pozvánka do Slack workspace a bude přidán do výchozích kanálů.
+                </p>
+              )}
+              {slackInvited && (
+                <div className="flex items-center gap-1 text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  Pozvánka do Slacku odeslána
                 </div>
               )}
             </div>
