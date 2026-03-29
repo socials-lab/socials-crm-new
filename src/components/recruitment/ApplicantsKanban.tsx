@@ -227,9 +227,20 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
                 const config = ONBOARDING_STEP_CONFIG[step];
                 const Icon = config.icon;
                 const stepApplicants = onboardingByStep[step];
+                const isDropTarget = dragOverOnboardingStep === step;
 
                 return (
-                  <div key={step} className={cn("w-[260px] flex-shrink-0 rounded-lg border flex flex-col min-h-[140px]", config.color)}>
+                  <div
+                    key={step}
+                    className={cn(
+                      "w-[260px] flex-shrink-0 rounded-lg border flex flex-col min-h-[140px] transition-all",
+                      config.color,
+                      isDropTarget && "ring-2 ring-primary shadow-lg"
+                    )}
+                    onDragOver={(e) => handleOnboardingDragOver(e, step)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleOnboardingDrop(e, step)}
+                  >
                     <div className="p-2.5 border-b flex items-center gap-2">
                       <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="font-medium text-xs whitespace-nowrap">{config.label}</span>
@@ -241,7 +252,10 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
                       {stepApplicants.map(applicant => (
                         <Card
                           key={applicant.id}
-                          className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all"
+                          className="cursor-grab hover:shadow-md hover:border-primary/30 transition-all active:cursor-grabbing"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, applicant.id)}
+                          onDragEnd={handleDragEnd}
                           onClick={() => onApplicantClick(applicant)}
                         >
                           <CardContent className="p-2.5">
