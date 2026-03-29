@@ -330,6 +330,9 @@ export interface Colleague {
   billing_city: string | null;        // Město
   billing_zip: string | null;         // PSČ
   bank_account: string | null;        // Číslo účtu
+  // Contracts
+  contract_cooperation_url: string | null;  // Smlouva o spolupráci
+  contract_gdpr_url: string | null;         // GDPR / DPP smlouva
   created_at: string;
   updated_at: string;
 }
