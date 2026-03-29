@@ -70,8 +70,10 @@ export function ConvertApplicantDialog({
   const [aresError, setAresError] = useState<string | null>(null);
   const [aresValidated, setAresValidated] = useState(false);
   const [createWorkspaceAccount, setCreateWorkspaceAccount] = useState(true);
+  const [inviteToSlack, setInviteToSlack] = useState(true);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [workspaceEmail, setWorkspaceEmail] = useState<string | null>(null);
+  const [slackInvited, setSlackInvited] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
