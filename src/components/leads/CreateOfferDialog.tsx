@@ -793,14 +793,30 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                       
                       {totals.serviceCosts.length > 0 ? (
                         <div className="divide-y divide-border/50">
-                          {totals.serviceCosts.map((sc, idx) => (
+                          {totals.serviceCosts.map((sc, idx) => {
+                            const matchedService = editableServices.find(es => es.id === sc.serviceId || es.service_id === sc.serviceId);
+                            const countryVariants = matchedService?.country_variants || [];
+                            const variantMultiplier = countryVariants.length > 0
+                              ? 1 + countryVariants.reduce((sum, v) => sum + v.multiplier, 0)
+                              : 1;
+                            const hasVariants = variantMultiplier > 1;
+                            
+                            return (
                             <div key={idx} className="px-3 py-2">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-medium">{sc.name}</span>
+                                <div>
+                                  <span className="text-xs font-medium">{sc.name}</span>
+                                  {hasVariants && (
+                                    <span className="text-[10px] text-muted-foreground ml-1.5">
+                                      ({variantMultiplier.toFixed(1)}× — vč. {countryVariants.length} {countryVariants.length === 1 ? 'dalšího trhu' : 'dalších trhů'})
+                                    </span>
+                                  )}
+                                </div>
                                 <span className="text-xs font-semibold tabular-nums">{sc.cost.toLocaleString('cs-CZ')} Kč</span>
                               </div>
                               {(rewardOverrides[sc.serviceId] || []).map((r, ri) => {
                                 const isPerCredit = r.rewardType === 'per_credit';
+                                const effectiveReward = hasVariants && !isPerCredit ? Math.round(r.reward * variantMultiplier) : r.reward;
                                 return (
                                   <div key={ri} className="flex items-center pl-3 py-0.5 gap-1.5">
                                     <button
@@ -839,11 +855,16 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                             return { ...prev, [sc.serviceId]: roles };
                                           });
                                         }}
-                                        className="w-28 h-6 text-xs text-right tabular-nums"
+                                        className="w-20 h-6 text-xs text-right tabular-nums"
                                       />
                                       <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                                         {isPerCredit ? 'Kč/kr.' : 'Kč/měs'}
                                       </span>
+                                      {hasVariants && !isPerCredit && effectiveReward !== r.reward && (
+                                        <span className="text-[10px] text-primary font-medium whitespace-nowrap ml-1">
+                                          → {effectiveReward.toLocaleString('cs-CZ')} Kč
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 );
