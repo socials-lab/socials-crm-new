@@ -502,6 +502,31 @@ export function ConvertApplicantDialog({
               )}
             </div>
 
+            {/* Slack invite */}
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Pozvat do Slacku</span>
+                </div>
+                <Switch 
+                  checked={inviteToSlack} 
+                  onCheckedChange={setInviteToSlack} 
+                />
+              </div>
+              {inviteToSlack && (
+                <p className="text-xs text-muted-foreground">
+                  Na email kolegy bude odeslána pozvánka do Slack workspace a bude přidán do výchozích kanálů.
+                </p>
+              )}
+              {slackInvited && (
+                <div className="flex items-center gap-1 text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  Pozvánka do Slacku odeslána
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Zrušit
