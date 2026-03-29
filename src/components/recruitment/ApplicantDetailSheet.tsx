@@ -53,6 +53,7 @@ import {
   FileSignature,
 } from 'lucide-react';
 import { Globe, FileDown, Play } from 'lucide-react';
+import { ScrollText } from 'lucide-react';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
@@ -583,6 +584,61 @@ export function ApplicantDetailSheet({
                   {/* Convert to colleague */}
                   {!isRejected && (
                     <>
+                    {/* Contract creation — generate email to Dana */}
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 rounded-md bg-muted text-muted-foreground">
+                          <ScrollText className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Tvorba smlouvy</p>
+                          <p className="text-xs text-muted-foreground">
+                            Odeslat souhrn pro přípravu smlouvy
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8"
+                        onClick={() => {
+                          const lines = [
+                            `Dobrý den,`,
+                            ``,
+                            `prosím o přípravu smlouvy pro nového spolupracovníka:`,
+                            ``,
+                            `── OSOBNÍ ÚDAJE ──`,
+                            `Jméno: ${applicant.full_name}`,
+                            `Email: ${applicant.email}`,
+                            `Osobní email: ${applicant.personal_email || '—'}`,
+                            `Telefon: ${applicant.phone || '—'}`,
+                            `Datum narození: ${applicant.birthday ? format(new Date(applicant.birthday), 'd. M. yyyy', { locale: cs }) : '—'}`,
+                            ``,
+                            `── FAKTURAČNÍ ÚDAJE ──`,
+                            `Firma: ${applicant.company_name || '—'}`,
+                            `IČO: ${applicant.ico || '—'}`,
+                            `DIČ: ${applicant.dic || '—'}`,
+                            `Adresa: ${applicant.billing_street && applicant.billing_city ? `${applicant.billing_street}, ${applicant.billing_zip} ${applicant.billing_city}` : '—'}`,
+                            ``,
+                            `── FINANCE ──`,
+                            `Hodinová sazba: ${applicant.hourly_rate ? `${applicant.hourly_rate} Kč/h` : '—'}`,
+                            `Bankovní účet: ${applicant.bank_account || '—'}`,
+                            ``,
+                            `── POZICE & NÁPLŇ PRÁCE ──`,
+                            `Pozice: ${applicant.position}`,
+                            ``,
+                            `Děkuji,`,
+                          ];
+                          const body = encodeURIComponent(lines.join('\n'));
+                          const subject = encodeURIComponent(`Příprava smlouvy — ${applicant.full_name} (${applicant.position})`);
+                          window.open(`mailto:dana.bauerova@socials.cz?subject=${subject}&body=${body}`, '_blank');
+                        }}
+                      >
+                        <Mail className="h-3.5 w-3.5 mr-1" />
+                        Vytvořit email
+                      </Button>
+                    </div>
+
                     {/* Contract sent */}
                     <div className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card">
                       <div className="flex items-center gap-3">
