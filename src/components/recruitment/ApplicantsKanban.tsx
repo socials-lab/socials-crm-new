@@ -13,6 +13,7 @@ interface ApplicantsKanbanProps {
   applicants: Applicant[];
   onApplicantClick: (applicant: Applicant) => void;
   onStageChange: (applicantId: string, newStage: ApplicantStage) => void;
+  onUpdateApplicant?: (applicantId: string, data: Partial<Applicant>) => void;
 }
 
 // Hiring pipeline stages (before acceptance)
@@ -46,9 +47,10 @@ function getOnboardingStep(a: Applicant): OnboardingStep {
   return 'buddy_meeting';
 }
 
-export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange }: ApplicantsKanbanProps) {
+export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, onUpdateApplicant }: ApplicantsKanbanProps) {
   const [draggedApplicantId, setDraggedApplicantId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<ApplicantStage | null>(null);
+  const [dragOverOnboardingStep, setDragOverOnboardingStep] = useState<OnboardingStep | null>(null);
   const [closedOpen, setClosedOpen] = useState(false);
 
   const applicantsByStage = useMemo(() => {
@@ -74,20 +76,45 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange }
 
   const closedCount = applicantsByStage.rejected.length + applicantsByStage.withdrawn.length;
 
-  // Drag & drop handlers
+  // Drag & drop handlers for hiring pipeline
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedApplicantId(id);
     e.dataTransfer.effectAllowed = 'move';
   };
-  const handleDragEnd = () => { setDraggedApplicantId(null); setDragOverStage(null); };
+  const handleDragEnd = () => { setDraggedApplicantId(null); setDragOverStage(null); setDragOverOnboardingStep(null); };
   const handleDragOver = (e: React.DragEvent, stage: ApplicantStage) => {
-    e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverStage(stage);
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverStage(stage); setDragOverOnboardingStep(null);
   };
-  const handleDragLeave = () => setDragOverStage(null);
+  const handleDragLeave = () => { setDragOverStage(null); setDragOverOnboardingStep(null); };
   const handleDrop = (e: React.DragEvent, newStage: ApplicantStage) => {
     e.preventDefault();
     if (draggedApplicantId) onStageChange(draggedApplicantId, newStage);
-    setDraggedApplicantId(null); setDragOverStage(null);
+    setDraggedApplicantId(null); setDragOverStage(null); setDragOverOnboardingStep(null);
+  };
+
+  // Drag & drop handlers for onboarding pipeline
+  const handleOnboardingDragOver = (e: React.DragEvent, step: OnboardingStep) => {
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverOnboardingStep(step); setDragOverStage(null);
+  };
+  const handleOnboardingDrop = (e: React.DragEvent, step: OnboardingStep) => {
+    e.preventDefault();
+    if (draggedApplicantId && onUpdateApplicant) {
+      // First ensure applicant is in 'hired' stage
+      const applicant = applicants.find(a => a.id === draggedApplicantId);
+      if (applicant && applicant.stage !== 'hired') {
+        onStageChange(draggedApplicantId, 'hired');
+      }
+      
+      // Set onboarding flags based on target step
+      const stepIndex = ONBOARDING_STEP_ORDER.indexOf(step);
+      onUpdateApplicant(draggedApplicantId, {
+        buddy_meeting_done: stepIndex >= 1, // completed if past buddy_meeting
+        academy_completed: stepIndex >= 2,
+        first_clients_assigned: stepIndex >= 3,
+        fully_onboarded: step === 'fully_ready',
+      });
+    }
+    setDraggedApplicantId(null); setDragOverStage(null); setDragOverOnboardingStep(null);
   };
 
   const renderStageColumn = (stage: ApplicantStage, compact = false) => {
@@ -200,9 +227,20 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange }
                 const config = ONBOARDING_STEP_CONFIG[step];
                 const Icon = config.icon;
                 const stepApplicants = onboardingByStep[step];
+                const isDropTarget = dragOverOnboardingStep === step;
 
                 return (
-                  <div key={step} className={cn("w-[260px] flex-shrink-0 rounded-lg border flex flex-col min-h-[140px]", config.color)}>
+                  <div
+                    key={step}
+                    className={cn(
+                      "w-[260px] flex-shrink-0 rounded-lg border flex flex-col min-h-[140px] transition-all",
+                      config.color,
+                      isDropTarget && "ring-2 ring-primary shadow-lg"
+                    )}
+                    onDragOver={(e) => handleOnboardingDragOver(e, step)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleOnboardingDrop(e, step)}
+                  >
                     <div className="p-2.5 border-b flex items-center gap-2">
                       <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="font-medium text-xs whitespace-nowrap">{config.label}</span>
@@ -214,7 +252,10 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange }
                       {stepApplicants.map(applicant => (
                         <Card
                           key={applicant.id}
-                          className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all"
+                          className="cursor-grab hover:shadow-md hover:border-primary/30 transition-all active:cursor-grabbing"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, applicant.id)}
+                          onDragEnd={handleDragEnd}
                           onClick={() => onApplicantClick(applicant)}
                         >
                           <CardContent className="p-2.5">
