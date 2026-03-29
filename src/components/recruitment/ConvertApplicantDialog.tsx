@@ -78,17 +78,17 @@ export function ConvertApplicantDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      avatar_url: null,
-      birthday: undefined,
-      personal_email: '',
-      ico: '',
-      company_name: '',
-      dic: '',
-      hourly_rate: 500,
-      billing_street: '',
-      billing_city: '',
-      billing_zip: '',
-      bank_account: '',
+      avatar_url: applicant.avatar_url || null,
+      birthday: applicant.birthday ? new Date(applicant.birthday) : undefined,
+      personal_email: applicant.personal_email || '',
+      ico: applicant.ico || '',
+      company_name: applicant.company_name || '',
+      dic: applicant.dic || '',
+      hourly_rate: applicant.hourly_rate || 500,
+      billing_street: applicant.billing_street || '',
+      billing_city: applicant.billing_city || '',
+      billing_zip: applicant.billing_zip || '',
+      bank_account: applicant.bank_account || '',
     },
   });
 
