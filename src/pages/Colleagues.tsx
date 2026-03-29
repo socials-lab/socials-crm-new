@@ -40,6 +40,7 @@ function ColleaguesContent() {
   const highlightedRef = useRef<HTMLDivElement>(null);
   
   const { isSuperAdmin: superAdmin, canSeeFinancials } = useUserRole();
+  const { applicants, updateApplicant: updateApplicantData } = useApplicantsData();
 
   const { 
     colleagues: rawColleagues, 
@@ -310,6 +311,14 @@ function ColleaguesContent() {
           colleague={offboardingColleague}
           onOffboarded={(id) => {
             updateColleague(id, { status: 'left' });
+            // Sync back to linked applicant
+            const linkedApplicant = applicants.find(a => a.converted_to_colleague_id === id);
+            if (linkedApplicant) {
+              updateApplicantData(linkedApplicant.id, {
+                onboarding_terminated: true,
+                terminated_at: new Date().toISOString(),
+              });
+            }
             setOffboardingColleague(null);
           }}
         />
