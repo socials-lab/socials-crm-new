@@ -337,7 +337,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
             </div>
 
             {/* Files */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="cv_url"
@@ -356,7 +356,20 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
                 name="video_url"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL videa</FormLabel>
+                    <FormLabel>URL videa (Loom)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="portfolio_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL portfolia</FormLabel>
                     <FormControl>
                       <Input placeholder="https://..." {...field} />
                     </FormControl>
