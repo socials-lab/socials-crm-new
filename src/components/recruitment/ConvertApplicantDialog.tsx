@@ -231,6 +231,7 @@ export function ConvertApplicantDialog({
       form.reset();
       setWorkspaceEmail(null);
       setSlackInvited(false);
+      setFreeloInvited(false);
     } catch (error) {
       toast.error('Nepodařilo se převést uchazeče');
     } finally {
