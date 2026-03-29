@@ -118,6 +118,67 @@ serve(async (req) => {
         });
       }
 
+      // Fetch full applicant data for notification
+      const { data: fullApplicant } = await supabase
+        .from('applicants')
+        .select('*')
+        .eq('id', applicantId)
+        .single();
+
+      // Create notifications for all admins
+      if (fullApplicant) {
+        const billingAddress = [
+          fullApplicant.billing_street,
+          fullApplicant.billing_city,
+          fullApplicant.billing_zip,
+        ].filter(Boolean).join(', ');
+
+        const contractSummary = {
+          full_name: fullApplicant.full_name,
+          position: fullApplicant.position,
+          email: fullApplicant.email,
+          personal_email: fullApplicant.personal_email,
+          phone: fullApplicant.phone,
+          ico: fullApplicant.ico,
+          company_name: fullApplicant.company_name,
+          dic: fullApplicant.dic,
+          billing_address: billingAddress,
+          hourly_rate: fullApplicant.hourly_rate,
+          bank_account: fullApplicant.bank_account,
+          birthday: fullApplicant.birthday,
+        };
+
+        const rateText = fullApplicant.hourly_rate ? `, sazba: ${fullApplicant.hourly_rate} Kč/h` : '';
+        const notificationMessage = `${fullApplicant.full_name} vyplnil onboarding formulář. Připravte smlouvu – pozice: ${fullApplicant.position}${rateText}`;
+
+        // Get all admin user IDs
+        const { data: adminRoles } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .in('role', ['admin', 'management']);
+
+        if (adminRoles && adminRoles.length > 0) {
+          const notifications = adminRoles.map((r: { user_id: string }) => ({
+            user_id: r.user_id,
+            type: 'applicant_onboarding_completed',
+            title: '📋 Onboarding vyplněn – připravte smlouvu',
+            message: notificationMessage,
+            entity_type: 'applicant',
+            entity_id: applicantId,
+            link: '/recruitment',
+            metadata: contractSummary,
+          }));
+
+          const { error: notifError } = await supabase
+            .from('notifications')
+            .insert(notifications);
+
+          if (notifError) {
+            console.error('Error creating notifications:', notifError);
+          }
+        }
+      }
+
       return new Response(JSON.stringify({ 
         success: true, 
         message: 'Onboarding data saved successfully' 

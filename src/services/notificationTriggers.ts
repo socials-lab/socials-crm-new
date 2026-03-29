@@ -281,6 +281,26 @@ export async function notifyClientApprovedModification(
   ]);
 }
 
+// ===== RECRUITMENT =====
+
+export async function notifyApplicantOnboardingCompleted(
+  applicantId: string,
+  applicantName: string,
+  position: string,
+  contractSummary: Record<string, unknown>
+) {
+  const rateText = contractSummary.hourly_rate ? `, sazba: ${contractSummary.hourly_rate} Kč/h` : '';
+  await notifyAdmins({
+    type: 'applicant_onboarding_completed',
+    title: '📋 Onboarding vyplněn – připravte smlouvu',
+    message: `${applicantName} vyplnil onboarding formulář. Připravte smlouvu – pozice: ${position}${rateText}`,
+    entityType: 'applicant',
+    entityId: applicantId,
+    link: '/recruitment',
+    metadata: contractSummary,
+  });
+}
+
 // ===== INVOICING =====
 
 export async function notifyInvoiceIssued(

@@ -40,6 +40,7 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   creative_boost_activated: 'Creative Boost aktivován',
   creative_boost_deadline: 'Creative Boost deadline',
   sop_update_suggested: 'Návrh na úpravu SOP',
+  applicant_onboarding_completed: 'Onboarding kandidáta vyplněn',
 };
 
 // Group notifications by date
