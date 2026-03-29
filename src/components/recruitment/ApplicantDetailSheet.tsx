@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
@@ -73,7 +73,7 @@ export function ApplicantDetailSheet({
   onOpenChange, 
   onEdit 
 }: ApplicantDetailSheetProps) {
-  const { updateApplicantStage, updateApplicant, addNote, sendInterviewInvite, sendRejection, sendOnboarding } = useApplicantsData();
+  const { updateApplicantStage, updateApplicant, addNote, sendInterviewInvite, sendRejection, sendOnboarding, refreshApplicantFromDB } = useApplicantsData();
   const { colleagues } = useCRMData();
   const [newNote, setNewNote] = useState('');
   const [isOnboardingDialogOpen, setIsOnboardingDialogOpen] = useState(false);
