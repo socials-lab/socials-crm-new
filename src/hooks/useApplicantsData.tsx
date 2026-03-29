@@ -255,6 +255,8 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
   }, [updateApplicant, addColleague]);
 
   const refreshApplicantFromDB = useCallback(async (applicantId: string) => {
+    // Skip API call for mock/demo data
+    if (applicantId.startsWith('mock-')) return;
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/applicant-onboarding?applicantId=${applicantId}`,
