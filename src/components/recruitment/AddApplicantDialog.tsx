@@ -40,6 +40,7 @@ const formSchema = z.object({
   cover_letter: z.string().optional(),
   cv_url: z.string().url().optional().or(z.literal('')),
   video_url: z.string().url().optional().or(z.literal('')),
+  portfolio_url: z.string().url().optional().or(z.literal('')),
   stage: z.string(),
   owner_id: z.string().optional(),
   source: z.string(),
@@ -69,6 +70,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       cover_letter: '',
       cv_url: '',
       video_url: '',
+      portfolio_url: '',
       stage: 'new_applicant',
       owner_id: '',
       source: 'website',
@@ -86,6 +88,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         cover_letter: applicant.cover_letter || '',
         cv_url: applicant.cv_url || '',
         video_url: applicant.video_url || '',
+        portfolio_url: applicant.portfolio_url || '',
         stage: applicant.stage,
         owner_id: applicant.owner_id || '',
         source: applicant.source,
@@ -100,6 +103,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         cover_letter: '',
         cv_url: '',
         video_url: '',
+        portfolio_url: '',
         stage: 'new_applicant',
         owner_id: '',
         source: 'website',
@@ -117,7 +121,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       cover_letter: data.cover_letter || null,
       cv_url: data.cv_url || null,
       video_url: data.video_url || null,
-      portfolio_url: null,
+      portfolio_url: data.portfolio_url || null,
       stage: data.stage as ApplicantStage,
       owner_id: data.owner_id || null,
       source: data.source as ApplicantSource,
@@ -333,7 +337,7 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
             </div>
 
             {/* Files */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="cv_url"
@@ -352,7 +356,20 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
                 name="video_url"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL videa</FormLabel>
+                    <FormLabel>URL videa (Loom)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="portfolio_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL portfolia</FormLabel>
                     <FormControl>
                       <Input placeholder="https://..." {...field} />
                     </FormControl>
