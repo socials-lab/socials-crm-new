@@ -139,18 +139,58 @@ export default function ApplicantOnboardingForm() {
   });
 
   useEffect(() => {
-    if (applicantId) {
-      setTimeout(() => {
-        const data = MOCK_APPLICANT_DATA[applicantId as keyof typeof MOCK_APPLICANT_DATA];
-        if (data) {
-          form.reset({ ...form.getValues(), ...data });
-          setIsLoading(false);
-        } else {
-          setNotFound(true);
-          setIsLoading(false);
+    if (!applicantId) return;
+    
+    const loadApplicant = async () => {
+      try {
+        // Try loading from Supabase first
+        const { data, error } = await supabase.functions.invoke('applicant-onboarding', {
+          method: 'GET',
+          body: undefined,
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        // Use query params approach since GET with invoke is tricky
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/applicant-onboarding?applicantId=${applicantId}`,
+          { headers: { 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
+        );
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.applicant) {
+            if (result.already_completed) {
+              setIsSubmitted(true);
+              setIsLoading(false);
+              return;
+            }
+            form.reset({ 
+              ...form.getValues(), 
+              full_name: result.applicant.full_name,
+              email: result.applicant.email,
+              phone: result.applicant.phone || '',
+              position: result.applicant.position,
+            });
+            setIsLoading(false);
+            return;
+          }
         }
-      }, 500);
-    }
+      } catch (e) {
+        console.log('Supabase fetch failed, falling back to mock data');
+      }
+
+      // Fallback to mock data
+      const mockData = MOCK_APPLICANT_DATA[applicantId];
+      if (mockData) {
+        form.reset({ ...form.getValues(), ...mockData });
+        setIsLoading(false);
+      } else {
+        setNotFound(true);
+        setIsLoading(false);
+      }
+    };
+
+    loadApplicant();
   }, [applicantId, form]);
 
   const validateARES = async (ico: string) => {
