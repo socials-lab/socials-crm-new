@@ -247,18 +247,33 @@ export function ApplicantDetailSheet({
                     onSave={(v) => updateApplicant(applicant.id, { full_name: v })}
                     displayClassName="text-xl font-semibold"
                   />
-                  <Select value={applicant.stage} onValueChange={handleStageChange}>
-                    <SelectTrigger className={`w-auto h-7 text-xs px-2.5 gap-1.5 font-medium rounded-full border-0 ${stageConfig.color}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(isHired ? HIRED_ALLOWED_STAGES : [...RECRUITMENT_STAGES, 'hired' as ApplicantStage, 'bad_fit' as ApplicantStage, 'withdrawn' as ApplicantStage]).map((key) => (
-                        <SelectItem key={key} value={key}>
-                          {APPLICANT_STAGE_CONFIG[key].title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {isHired ? (
+                    <Select value={currentOnboardingStep!} onValueChange={handleOnboardingStepChange}>
+                      <SelectTrigger className={`w-auto h-7 text-xs px-2.5 gap-1.5 font-medium rounded-full border-0 ${currentOnboardingStepConfig!.color}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ONBOARDING_STEPS.map((step) => (
+                          <SelectItem key={step.value} value={step.value}>
+                            {step.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Select value={applicant.stage} onValueChange={handleStageChange}>
+                      <SelectTrigger className={`w-auto h-7 text-xs px-2.5 gap-1.5 font-medium rounded-full border-0 ${stageConfig.color}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[...RECRUITMENT_STAGES, 'hired' as ApplicantStage, 'bad_fit' as ApplicantStage, 'withdrawn' as ApplicantStage].map((key) => (
+                          <SelectItem key={key} value={key}>
+                            {APPLICANT_STAGE_CONFIG[key].title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </DialogTitle>
                 <div className="flex items-center gap-3">
                   <InlineEditField
