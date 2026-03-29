@@ -255,8 +255,9 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
   }, [updateApplicant, addColleague]);
 
   const refreshApplicantFromDB = useCallback(async (applicantId: string) => {
-    // Skip API call for mock/demo data
-    if (applicantId.startsWith('mock-')) return;
+    // Skip API call for local/mock applicants that do not exist in Supabase
+    const isSupabaseUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(applicantId);
+    if (!isSupabaseUuid) return;
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/applicant-onboarding?applicantId=${applicantId}`,
