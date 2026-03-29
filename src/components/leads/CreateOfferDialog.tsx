@@ -302,7 +302,8 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       if (catalogService?.code === 'CREATIVE_BOOST') {
         return CB_CREDITS * CB_PRICE;
       }
-      return s.price;
+      const variantsTotal = (s.country_variants || []).reduce((sum, v) => sum + v.price, 0);
+      return s.price + variantsTotal;
     };
 
     const coreMonthly = editableServices
