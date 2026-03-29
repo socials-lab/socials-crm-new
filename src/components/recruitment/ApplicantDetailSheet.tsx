@@ -129,7 +129,7 @@ export function ApplicantDetailSheet({
   if (!applicant) return null;
 
   const isHired = applicant.stage === 'hired';
-  const isRejected = applicant.stage === 'rejected';
+  const isBadFit = applicant.stage === 'bad_fit';
   const interviewInviteSent = !!applicant.interview_invite_sent_at;
   const rejectionSent = !!applicant.rejection_sent_at;
   const onboardingAlreadySent = !!applicant.onboarding_sent_at;
