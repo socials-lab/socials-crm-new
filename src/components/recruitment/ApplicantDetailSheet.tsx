@@ -322,10 +322,23 @@ export function ApplicantDetailSheet({
                 {applicant.hourly_rate} Kč/h
               </span>
             )}
-            <span className="flex items-center gap-1">
-              <User className="h-3 w-3" />
-              {owner?.full_name || 'Nepřiřazeno'}
-            </span>
+            <Select
+              value={applicant.owner_id || '__none__'}
+              onValueChange={(v) => updateApplicant(applicant.id, { owner_id: v === '__none__' ? null : v })}
+            >
+              <SelectTrigger className="h-auto w-auto text-xs gap-1 px-0 border-0 shadow-none bg-transparent hover:text-primary transition-colors p-0">
+                <User className="h-3 w-3 shrink-0" />
+                <SelectValue placeholder="Nepřiřazeno" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__" className="text-xs">Nepřiřazeno</SelectItem>
+                {colleagues.filter(c => c.status === 'active').map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="text-xs">
+                    {c.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               {format(new Date(applicant.created_at), 'd. M. yyyy', { locale: cs })}
