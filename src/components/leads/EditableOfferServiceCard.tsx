@@ -169,6 +169,7 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
   const availableCountries = MANAGED_COUNTRIES.filter(c => !usedCountryCodes.includes(c.code));
 
 
+  return (
     <Card className="border-2">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CardHeader className="pb-2">
