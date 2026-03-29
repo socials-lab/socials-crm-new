@@ -175,7 +175,7 @@ export function ConvertApplicantDialog({
         }
       }
 
-      // Invite to Slack
+      // Step 2: Invite to Slack (uses workspace email if created)
       if (inviteToSlack) {
         const slackEmail = generatedEmail || applicant.email;
         const { data: slackData, error: slackError } = await supabase.functions.invoke('invite-slack-user', {
