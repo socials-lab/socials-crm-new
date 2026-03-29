@@ -298,6 +298,107 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
                 </span>
               </div>
             </div>
+
+            {/* Country Variants / Markets */}
+            <div className="p-3 bg-muted/50 rounded-lg space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Globe className="h-4 w-4 text-primary" />
+                <span>Jazykové mutace / Země</span>
+              </div>
+
+              {/* Main country */}
+              <div className="space-y-1">
+                <Label className="text-xs">Hlavní trh</Label>
+                <Select
+                  value={(service.managed_countries || [])[0] || 'CZ'}
+                  onValueChange={handleMainCountryChange}
+                >
+                  <SelectTrigger className="h-8 text-sm w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MANAGED_COUNTRIES.map(c => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.flag} {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Additional country variants */}
+              {(service.country_variants || []).length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Další trhy</Label>
+                  {(service.country_variants || []).map((variant, vIdx) => (
+                    <div key={vIdx} className="flex items-center gap-2 p-2 bg-background rounded-md border">
+                      <span className="text-lg shrink-0">{getCountryFlag(variant.country_code)}</span>
+                      <span className="text-sm min-w-[80px]">{getCountryName(variant.country_code)}</span>
+                      <div className="flex items-center gap-1 ml-auto">
+                        <Label className="text-xs text-muted-foreground shrink-0">×</Label>
+                        <Input
+                          type="number"
+                          step="0.05"
+                          min="0.1"
+                          max="1"
+                          value={variant.multiplier}
+                          onChange={(e) => handleVariantMultiplierChange(vIdx, Number(e.target.value) || 0.5)}
+                          className="h-7 w-16 text-xs text-right tabular-nums"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">=</span>
+                        <Input
+                          type="number"
+                          value={variant.price}
+                          onChange={(e) => handleVariantPriceChange(vIdx, Number(e.target.value) || 0)}
+                          className="h-7 w-28 text-xs text-right tabular-nums"
+                        />
+                        <span className="text-xs text-muted-foreground">{service.currency}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveCountryVariant(vIdx)}
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add country button */}
+              {availableCountries.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Select onValueChange={handleAddCountryVariant}>
+                    <SelectTrigger className="h-7 text-xs w-52">
+                      <SelectValue placeholder="Přidat další trh..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCountries.map(c => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.flag} {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-muted-foreground">50 % z ceny</span>
+                </div>
+              )}
+
+              {/* Total with variants */}
+              {(service.country_variants || []).length > 0 && (
+                <div className="flex items-center justify-between pt-2 border-t text-sm">
+                  <span className="text-muted-foreground">Celkem za všechny trhy:</span>
+                  <span className="font-semibold">
+                    {(service.price + (service.country_variants || []).reduce((sum, v) => sum + v.price, 0)).toLocaleString('cs-CZ')} {service.currency}
+                    {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground">/měs</span>}
+                  </span>
+                </div>
+              )}
+            </div>
             
             {/* Deliverables */}
             <div className="space-y-2">
@@ -413,106 +514,7 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
               />
             </div>
 
-            {/* Country Variants / Markets */}
-            <div className="p-3 bg-muted/50 rounded-lg space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Globe className="h-4 w-4 text-primary" />
-                <span>Jazykové mutace / Země</span>
-              </div>
 
-              {/* Main country */}
-              <div className="space-y-1">
-                <Label className="text-xs">Hlavní trh</Label>
-                <Select
-                  value={(service.managed_countries || [])[0] || 'CZ'}
-                  onValueChange={handleMainCountryChange}
-                >
-                  <SelectTrigger className="h-8 text-sm w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MANAGED_COUNTRIES.map(c => (
-                      <SelectItem key={c.code} value={c.code}>
-                        {c.flag} {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Additional country variants */}
-              {(service.country_variants || []).length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs">Další trhy</Label>
-                  {(service.country_variants || []).map((variant, vIdx) => (
-                    <div key={vIdx} className="flex items-center gap-2 p-2 bg-background rounded-md border">
-                      <span className="text-lg shrink-0">{getCountryFlag(variant.country_code)}</span>
-                      <span className="text-sm min-w-[80px]">{getCountryName(variant.country_code)}</span>
-                      <div className="flex items-center gap-1 ml-auto">
-                        <Label className="text-xs text-muted-foreground shrink-0">×</Label>
-                        <Input
-                          type="number"
-                          step="0.05"
-                          min="0.1"
-                          max="1"
-                          value={variant.multiplier}
-                          onChange={(e) => handleVariantMultiplierChange(vIdx, Number(e.target.value) || 0.5)}
-                          className="h-7 w-16 text-xs text-right tabular-nums"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-muted-foreground">=</span>
-                        <Input
-                          type="number"
-                          value={variant.price}
-                          onChange={(e) => handleVariantPriceChange(vIdx, Number(e.target.value) || 0)}
-                          className="h-7 w-28 text-xs text-right tabular-nums"
-                        />
-                        <span className="text-xs text-muted-foreground">{service.currency}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveCountryVariant(vIdx)}
-                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Add country button */}
-              {availableCountries.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Select onValueChange={handleAddCountryVariant}>
-                    <SelectTrigger className="h-7 text-xs w-52">
-                      <SelectValue placeholder="Přidat další trh..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableCountries.map(c => (
-                        <SelectItem key={c.code} value={c.code}>
-                          {c.flag} {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-xs text-muted-foreground">50 % z ceny</span>
-                </div>
-              )}
-
-              {/* Total with variants */}
-              {(service.country_variants || []).length > 0 && (
-                <div className="flex items-center justify-between pt-2 border-t text-sm">
-                  <span className="text-muted-foreground">Celkem za všechny trhy:</span>
-                  <span className="font-semibold">
-                    {(service.price + (service.country_variants || []).reduce((sum, v) => sum + v.price, 0)).toLocaleString('cs-CZ')} {service.currency}
-                    {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground">/měs</span>}
-                  </span>
-                </div>
-              )}
-            </div>
 
             {/* Detailed Sections (expandable structured info) */}
             <Collapsible>
