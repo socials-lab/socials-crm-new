@@ -109,13 +109,7 @@ export function SendContractRequestDialog({
       return;
     }
     setIsSending(true);
-
-    const ccParam = ccEmails.length > 0 ? `&cc=${ccEmails.join(',')}` : '';
-    const bccParam = bccEmails.length > 0 ? `&bcc=${bccEmails.join(',')}` : '';
-    const mailtoLink = `mailto:${toEmails.join(',')}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailContent)}${ccParam}${bccParam}`;
-    window.open(mailtoLink, '_blank');
-
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     onSend();
     setIsSending(false);
     toast.success('Žádost o přípravu smlouvy byla odeslána');
@@ -248,7 +242,7 @@ export function SendContractRequestDialog({
             ) : (
               <>
                 <Send className="h-4 w-4 mr-2" />
-                Otevřít v emailu
+                Odeslat email
               </>
             )}
           </Button>
