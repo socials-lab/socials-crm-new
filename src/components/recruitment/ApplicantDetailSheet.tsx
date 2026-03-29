@@ -57,6 +57,11 @@ import { ScrollText } from 'lucide-react';
 import { OffboardColleagueDialog } from '@/components/colleagues/OffboardColleagueDialog';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
+
+// Recruitment pipeline stages (before hired)
+const RECRUITMENT_STAGES: ApplicantStage[] = ['new_applicant', 'invited_interview', 'interview_done', 'offer_sent'];
+// Stages available when already hired (onboarding pipeline)
+const HIRED_ALLOWED_STAGES: ApplicantStage[] = ['hired', 'bad_fit', 'withdrawn'];
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { SendApplicantOnboardingDialog } from './SendApplicantOnboardingDialog';
