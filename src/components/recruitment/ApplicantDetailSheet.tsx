@@ -167,12 +167,52 @@ export function ApplicantDetailSheet({
   const contractSigned = !!applicant.contract_signed_at;
 
   const stageConfig = APPLICANT_STAGE_CONFIG[applicant.stage];
+  const currentOnboardingStep = isHired ? getOnboardingStep(applicant) : null;
+  const currentOnboardingStepConfig = currentOnboardingStep ? getOnboardingStepConfig(currentOnboardingStep) : null;
   const owner = colleagues.find(c => c.id === applicant.owner_id);
   const linkedColleague = colleagues.find(c => c.id === applicant.converted_to_colleague_id);
   const { steps: pipelineSteps, activeStep } = getPipelineProgress(applicant);
 
   const handleStageChange = (newStage: string) => {
     updateApplicantStage(applicant.id, newStage as ApplicantStage);
+  };
+
+  const handleOnboardingStepChange = (step: string) => {
+    const updates: Partial<Applicant> = {
+      buddy_meeting_done: false,
+      academy_completed: false,
+      first_clients_assigned: false,
+      fully_onboarded: false,
+      onboarding_terminated: false,
+      terminated_at: null,
+    };
+
+    switch (step) {
+      case 'terminated':
+        updates.onboarding_terminated = true;
+        updates.terminated_at = new Date().toISOString();
+        break;
+      case 'fully_ready':
+        updates.buddy_meeting_done = true;
+        updates.academy_completed = true;
+        updates.first_clients_assigned = true;
+        updates.fully_onboarded = true;
+        break;
+      case 'clients_assigned':
+        updates.buddy_meeting_done = true;
+        updates.academy_completed = true;
+        updates.first_clients_assigned = true;
+        break;
+      case 'academy':
+        updates.buddy_meeting_done = true;
+        updates.academy_completed = true;
+        break;
+      case 'buddy_meeting':
+        updates.buddy_meeting_done = true;
+        break;
+    }
+
+    updateApplicant(applicant.id, updates);
   };
 
   const handleAddNote = () => {
