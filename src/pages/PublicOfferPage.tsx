@@ -869,14 +869,22 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         setLoading(false);
         return;
       }
-      const foundOffer = await getPublicOfferByToken(token);
+      // Try mock data first (for test tokens), then Supabase
+      const mockOffer = getMockOffer(token);
+      if (mockOffer) {
+        setOffer(mockOffer);
+        incrementMockView(token);
+        setLoading(false);
+        return;
+      }
+      const foundOffer = await getSupabaseOffer(token);
       if (!foundOffer) {
         setError('Nabídka nebyla nalezena nebo již není platná');
         setLoading(false);
         return;
       }
       setOffer(foundOffer);
-      incrementOfferView(token);
+      incrementSupabaseView(token);
       setLoading(false);
     }
     fetchOffer();
