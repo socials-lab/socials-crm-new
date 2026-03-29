@@ -570,12 +570,23 @@ export function ConvertApplicantDialog({
               )}
             </div>
 
+            {/* Sequential info banner */}
+            {createWorkspaceAccount && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-muted-foreground">
+                <Mail className="h-4 w-4 text-blue-500 shrink-0" />
+                <span>Nejdříve se vytvoří Google Workspace účet, na ten pak navazuje pozvánka do Slacku, Freela a CRM.</span>
+              </div>
+            )}
+
             {/* Slack invite */}
-            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+            <div className={cn("border rounded-lg p-4 space-y-3 bg-muted/30", createWorkspaceAccount && "opacity-75")}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Hash className="h-4 w-4 text-primary" />
                   <span className="font-medium text-sm">Pozvat do Slacku</span>
+                  {createWorkspaceAccount && (
+                    <Badge variant="outline" className="text-[10px]">Po vytvoření Workspace</Badge>
+                  )}
                 </div>
                 <Switch 
                   checked={inviteToSlack} 
@@ -584,7 +595,10 @@ export function ConvertApplicantDialog({
               </div>
               {inviteToSlack && (
                 <p className="text-xs text-muted-foreground">
-                  Na email kolegy bude odeslána pozvánka do Slack workspace a bude přidán do výchozích kanálů.
+                  {createWorkspaceAccount 
+                    ? 'Pozvánka bude odeslána na nový @socials.cz email po vytvoření Workspace účtu.'
+                    : 'Na email kolegy bude odeslána pozvánka do Slack workspace a bude přidán do výchozích kanálů.'
+                  }
                 </p>
               )}
               {slackInvited && (
@@ -596,11 +610,14 @@ export function ConvertApplicantDialog({
             </div>
 
             {/* Freelo invite */}
-            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+            <div className={cn("border rounded-lg p-4 space-y-3 bg-muted/30", createWorkspaceAccount && "opacity-75")}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FolderKanban className="h-4 w-4 text-primary" />
                   <span className="font-medium text-sm">Pozvat do Freelo</span>
+                  {createWorkspaceAccount && (
+                    <Badge variant="outline" className="text-[10px]">Po vytvoření Workspace</Badge>
+                  )}
                 </div>
                 <Switch 
                   checked={inviteToFreelo} 
@@ -609,7 +626,10 @@ export function ConvertApplicantDialog({
               </div>
               {inviteToFreelo && (
                 <p className="text-xs text-muted-foreground">
-                  Email kolegy bude pozván do onboardingového Freelo projektu.
+                  {createWorkspaceAccount
+                    ? 'Pozvánka do Freelo bude odeslána na nový @socials.cz email.'
+                    : 'Email kolegy bude pozván do onboardingového Freelo projektu.'
+                  }
                 </p>
               )}
               {freeloInvited && (
@@ -621,14 +641,18 @@ export function ConvertApplicantDialog({
             </div>
 
             {/* CRM access - always on, info only */}
-            <div className="border rounded-lg p-4 space-y-3 bg-primary/5 border-primary/20">
+            <div className={cn("border rounded-lg p-4 space-y-3 bg-primary/5 border-primary/20", createWorkspaceAccount && "opacity-75")}>
               <div className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4 text-primary" />
                 <span className="font-medium text-sm">Vytvořit CRM účet</span>
-                <Badge variant="outline" className="text-[10px] ml-auto">Automaticky</Badge>
+                <Badge variant="outline" className="text-[10px] ml-auto">
+                  {createWorkspaceAccount ? 'Po vytvoření Workspace' : 'Automaticky'}
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Kolegovi bude vytvořen přístup do CRM s rolí <strong>specialist</strong> a přístupem pouze do <strong>Můj přehled</strong>. Další oprávnění nastavíte ručně ve Správě přístupů.
+                Kolegovi bude vytvořen přístup do CRM s rolí <strong>specialist</strong> a přístupem pouze do <strong>Můj přehled</strong>. 
+                {createWorkspaceAccount && ' Použije se nový @socials.cz email.'}
+                {' '}Další oprávnění nastavíte ručně ve Správě přístupů.
               </p>
               {crmInvited && (
                 <div className="flex items-center gap-1 text-sm text-primary">
