@@ -619,6 +619,24 @@ export function ConvertApplicantDialog({
               )}
             </div>
 
+            {/* CRM access - always on, info only */}
+            <div className="border rounded-lg p-4 space-y-3 bg-primary/5 border-primary/20">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-primary" />
+                <span className="font-medium text-sm">Vytvořit CRM účet</span>
+                <Badge variant="outline" className="text-[10px] ml-auto">Automaticky</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Kolegovi bude vytvořen přístup do CRM s rolí <strong>specialist</strong> a přístupem pouze do <strong>Můj přehled</strong>. Další oprávnění nastavíte ručně ve Správě přístupů.
+              </p>
+              {crmInvited && (
+                <div className="flex items-center gap-1 text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  CRM účet vytvořen
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Zrušit
