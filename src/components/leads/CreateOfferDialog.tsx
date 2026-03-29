@@ -855,7 +855,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                                             return { ...prev, [sc.serviceId]: roles };
                                           });
                                         }}
-                                        className="w-20 h-6 text-xs text-right tabular-nums"
+                                        className="w-24 h-6 text-xs text-right tabular-nums px-1.5"
                                       />
                                       <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                                         {isPerCredit ? 'Kč/kr.' : 'Kč/měs'}
