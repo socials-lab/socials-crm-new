@@ -3,6 +3,7 @@ import type { Applicant, ApplicantStage, ApplicantNote } from '@/types/applicant
 import { useAuth } from './useAuth';
 import { useCRMData } from './useCRMData';
 import type { Colleague } from '@/types/crm';
+import { supabase } from '@/integrations/supabase/client';
 
 // Mock data for testing without Supabase
 const INITIAL_MOCK_APPLICANTS: Applicant[] = [
