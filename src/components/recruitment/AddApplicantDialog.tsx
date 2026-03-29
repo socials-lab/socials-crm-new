@@ -39,6 +39,8 @@ const formSchema = z.object({
   position: z.string().min(1, 'Pozice je povinná'),
   cover_letter: z.string().optional(),
   ai_usage: z.string().optional(),
+  personal_brand: z.string().optional(),
+  social_links: z.string().optional(),
   cv_url: z.string().url().optional().or(z.literal('')),
   video_url: z.string().url().optional().or(z.literal('')),
   portfolio_url: z.string().url().optional().or(z.literal('')),
