@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, LayoutGrid, List, UserCheck, X, Filter } from 'lucide-react';
+import { Search, Plus, LayoutGrid, List, X, Filter } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
