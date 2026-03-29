@@ -80,6 +80,7 @@ export function OffboardColleagueDialog({
 
   const handleClose = () => {
     setResults(null);
+    setConfirmText('');
     setDeactivateGoogle(true);
     setDeactivateSlack(true);
     setRemoveFreelo(true);
