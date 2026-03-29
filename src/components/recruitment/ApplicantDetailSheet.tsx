@@ -188,6 +188,33 @@ export function ApplicantDetailSheet({
                 </div>
               </DialogHeader>
             </div>
+            {/* Compact contact info in header */}
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <a href={`mailto:${applicant.email}`} className="flex items-center gap-1 hover:text-primary transition-colors">
+                <Mail className="h-3 w-3" />
+                {applicant.email}
+              </a>
+              {applicant.phone && (
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  {applicant.phone}
+                </span>
+              )}
+              {applicant.hourly_rate && (
+                <span className="flex items-center gap-1 font-medium text-foreground">
+                  <DollarSign className="h-3 w-3" />
+                  {applicant.hourly_rate} Kč/h
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <User className="h-3 w-3" />
+                {owner?.full_name || 'Nepřiřazeno'}
+              </span>
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {format(new Date(applicant.created_at), 'd. M. yyyy', { locale: cs })}
+              </span>
+            </div>
             <div className="flex items-center gap-2 shrink-0">
               <Select value={applicant.stage} onValueChange={handleStageChange}>
                 <SelectTrigger className={`w-44 h-9 text-sm ${stageConfig.color}`}>
@@ -652,117 +679,7 @@ export function ApplicantDetailSheet({
                 </div>
               </div>
 
-              <Separator />
 
-              {/* Contact & Details — compact grid */}
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Kontakt</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                      <InlineEditField
-                        value={applicant.email}
-                        onSave={(v) => updateApplicant(applicant.id, { email: v })}
-                        displayClassName="text-primary text-sm"
-                        emptyText="Přidej email..."
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                      <InlineEditField
-                        value={applicant.phone}
-                        onSave={(v) => updateApplicant(applicant.id, { phone: v || null })}
-                        emptyText="Přidej telefon..."
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Detaily</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                      <InlineEditField
-                        value={applicant.position}
-                        onSave={(v) => updateApplicant(applicant.id, { position: v })}
-                        emptyText="Přidej pozici..."
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-                      <InlineEditField
-                        value={applicant.hourly_rate}
-                        onSave={(v) => updateApplicant(applicant.id, { hourly_rate: v ? Number(v) : null })}
-                        type="number"
-                        suffix="Kč/h"
-                        emptyText="Přidej sazbu..."
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <User className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">{owner?.full_name || 'Nepřiřazeno'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">{format(new Date(applicant.created_at), 'd. M. yyyy', { locale: cs })}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Attachments */}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Přílohy</h3>
-                <div className="flex gap-2">
-                  {applicant.cv_url ? (
-                    <Button variant="outline" size="sm" className="h-8" asChild>
-                      <a href={applicant.cv_url} target="_blank" rel="noopener noreferrer">
-                        <FileText className="h-3.5 w-3.5 mr-1" />
-                        CV
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </a>
-                    </Button>
-                  ) : (
-                    <Badge variant="outline" className="text-muted-foreground text-xs">
-                      <FileText className="h-3 w-3 mr-1" />
-                      Bez CV
-                    </Badge>
-                  )}
-                  {applicant.video_url ? (
-                    <Button variant="outline" size="sm" className="h-8" asChild>
-                      <a href={applicant.video_url} target="_blank" rel="noopener noreferrer">
-                        <Video className="h-3.5 w-3.5 mr-1" />
-                        Video
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </a>
-                    </Button>
-                  ) : (
-                    <Badge variant="outline" className="text-muted-foreground text-xs">
-                      <Video className="h-3 w-3 mr-1" />
-                      Bez videa
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Cover letter */}
-              {applicant.cover_letter && (
-                <Collapsible>
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full">
-                    <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
-                      Motivační dopis
-                    </h3>
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="bg-muted/50 p-3 rounded-lg text-sm whitespace-pre-wrap mt-2">
-                      {applicant.cover_letter}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
             </div>
           </ScrollArea>
 
