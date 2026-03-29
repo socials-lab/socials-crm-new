@@ -47,9 +47,10 @@ function getOnboardingStep(a: Applicant): OnboardingStep {
   return 'buddy_meeting';
 }
 
-export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange }: ApplicantsKanbanProps) {
+export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, onUpdateApplicant }: ApplicantsKanbanProps) {
   const [draggedApplicantId, setDraggedApplicantId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<ApplicantStage | null>(null);
+  const [dragOverOnboardingStep, setDragOverOnboardingStep] = useState<OnboardingStep | null>(null);
   const [closedOpen, setClosedOpen] = useState(false);
 
   const applicantsByStage = useMemo(() => {
