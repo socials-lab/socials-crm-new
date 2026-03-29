@@ -140,7 +140,7 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      google_service_account_key: hasServiceKey ? (serviceKeyValid ? `✅ valid (${clientEmail})` : '❌ invalid JSON structure') : '❌ missing',
+      google_service_account_key: hasServiceKey ? (serviceKeyValid ? `✅ valid (${clientEmail})` : `❌ invalid: ${clientEmail}`) : '❌ missing',
       google_admin_email: hasAdminEmail ? `✅ set (${Deno.env.get('GOOGLE_ADMIN_EMAIL')})` : '❌ missing',
     }), {
       status: 200,
