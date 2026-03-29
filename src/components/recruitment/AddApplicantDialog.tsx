@@ -149,6 +149,9 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       academy_completed: false,
       first_clients_assigned: false,
       fully_onboarded: false,
+      onboarding_terminated: false,
+      terminated_at: null,
+      termination_reason: null,
     };
 
     if (isEditing && applicant) {
