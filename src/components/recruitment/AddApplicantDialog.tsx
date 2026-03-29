@@ -432,6 +432,44 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
               )}
             />
 
+            {/* Personal brand */}
+            <FormField
+              control={form.control}
+              name="personal_brand"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Osobní značka</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Buduješ osobní značku? Jakou?"
+                      className="min-h-[80px]"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Social links */}
+            <FormField
+              control={form.control}
+              name="social_links"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Odkazy na sociální sítě</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="LinkedIn, Instagram, TikTok, YouTube... (každý odkaz na nový řádek)"
+                      className="min-h-[60px]"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Zrušit
