@@ -232,6 +232,12 @@ export function ConvertApplicantDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {applicant.onboarding_completed_at && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20 text-sm">
+            <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+            <span>Údaje předvyplněny z onboardingového formuláře</span>
+          </div>
+        )}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Avatar upload */}
