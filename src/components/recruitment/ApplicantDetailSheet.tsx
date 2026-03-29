@@ -283,11 +283,11 @@ export function ApplicantDetailSheet({
             </div>
           )}
 
-          {/* Rejected banner */}
+          {/* Bad fit banner */}
           {isBadFit && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm mb-2">
               <UserX className="h-4 w-4" />
-              <span className="font-medium">Kandidát byl odmítnut</span>
+              <span className="font-medium">Kandidát označen jako bad fit</span>
               {applicant.rejection_sent_at && (
                 <span className="text-destructive/70 ml-1">
                   ({format(new Date(applicant.rejection_sent_at), 'd. M. yyyy', { locale: cs })})
