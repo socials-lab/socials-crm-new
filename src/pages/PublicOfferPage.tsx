@@ -423,6 +423,31 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                 </div>
               )}
 
+              {/* Country variants */}
+              {hasCountryVariants && (
+                <div className="p-4 rounded-lg bg-foreground/[0.03] border border-foreground/[0.08]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-base">🌍</span>
+                    <p className="text-sm font-semibold">Jazykové mutace:</p>
+                  </div>
+                  <div className="space-y-2">
+                    {service.country_variants!.map((variant, vIdx) => (
+                      <div key={vIdx} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{getCountryFlag(variant.country_code)}</span>
+                          <span>{getCountryName(variant.country_code)}</span>
+                          <span className="text-muted-foreground text-xs">({Math.round(variant.multiplier * 100)} % z ceny)</span>
+                        </div>
+                        <span className="font-semibold text-[#94e700]">
+                          +{variant.price.toLocaleString('cs-CZ')} {service.currency}
+                          {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {hasDetailedSections && (
                 <Collapsible open={showDetailedSections} onOpenChange={setShowDetailedSections}>
                   <CollapsibleTrigger className="w-full">
