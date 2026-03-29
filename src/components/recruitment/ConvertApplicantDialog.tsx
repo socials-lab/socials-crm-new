@@ -406,10 +406,10 @@ export function ConvertApplicantDialog({
                 control={form.control}
                 name="personal_email"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Soukromý email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="jan@gmail.com" {...field} />
+                      <Input type="email" placeholder="jan@gmail.com" {...field} className="mt-auto" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
