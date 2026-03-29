@@ -27,6 +27,7 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera, Mail, Hash, FolderKanban } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
