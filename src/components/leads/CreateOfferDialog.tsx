@@ -347,17 +347,27 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       const isCB = catalogService.code === 'CREATIVE_BOOST';
       const serviceRevenue = getEffectiveMonthlyPrice(es);
       const overrides = rewardOverrides[es.service_id] || [];
+      const countryVariants = es.country_variants || [];
+      
+      // Calculate multiplier for country variants cost scaling
+      // Country variants add proportional internal costs based on their price ratio to base
+      const variantCostMultiplier = es.price > 0
+        ? 1 + countryVariants.reduce((sum, v) => sum + v.multiplier, 0)
+        : 1;
       
       if (overrides.length > 0) {
         let svcCost = 0;
         const roleDetails: { role: string; reward: number; rewardType?: string }[] = [];
         overrides.forEach(r => {
-          const effectiveReward = r.rewardType === 'per_credit' ? r.reward * CB_CREDITS : r.reward;
+          const baseReward = r.rewardType === 'per_credit' ? r.reward * CB_CREDITS : r.reward;
+          // Scale reward by country variant multiplier (base + variants)
+          const effectiveReward = Math.round(baseReward * variantCostMultiplier);
           svcCost += effectiveReward;
           roleDetails.push({ role: r.role, reward: effectiveReward, rewardType: r.rewardType });
         });
         totalInternalCost += svcCost;
-        serviceCosts.push({ serviceId: es.service_id, name: isCB ? `${es.name} (${CB_CREDITS} kr. × ${CB_PRICE} Kč)` : es.name, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
+        const variantLabel = countryVariants.length > 0 ? ` (${variantCostMultiplier.toFixed(1)}×)` : '';
+        serviceCosts.push({ serviceId: es.service_id, name: isCB ? `${es.name} (${CB_CREDITS} kr. × ${CB_PRICE} Kč)` : `${es.name}${variantLabel}`, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
       } else {
         serviceCosts.push({ serviceId: es.service_id, name: isCB ? `${es.name} (${CB_CREDITS} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
       }
