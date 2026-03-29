@@ -26,7 +26,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera } from 'lucide-react';
+import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,8 @@ import { toast } from 'sonner';
 import type { Applicant } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { AvatarUpload } from '@/components/forms/AvatarUpload';
+import { Switch } from '@/components/ui/switch';
+import { supabase } from '@/integrations/supabase/client';
 
 const formSchema = z.object({
   avatar_url: z.string().nullable().optional(),
