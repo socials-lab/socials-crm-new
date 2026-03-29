@@ -60,8 +60,31 @@ import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applica
 
 // Recruitment pipeline stages (before hired)
 const RECRUITMENT_STAGES: ApplicantStage[] = ['new_applicant', 'invited_interview', 'interview_done', 'offer_sent'];
-// Stages available when already hired (onboarding pipeline)
-const HIRED_ALLOWED_STAGES: ApplicantStage[] = ['hired', 'bad_fit', 'withdrawn'];
+
+// Onboarding steps for hired candidates
+const ONBOARDING_STEPS = [
+  { value: 'buddy_meeting', label: 'Schůzka s buddym', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  { value: 'academy', label: 'Akademie', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+  { value: 'clients_assigned', label: 'Přidělení klientů', color: 'bg-orange-100 text-orange-800 border-orange-200' },
+  { value: 'fully_ready', label: '100 % Ready', color: 'bg-green-100 text-green-800 border-green-200' },
+  { value: 'terminated', label: 'Ukončeno', color: 'bg-red-100 text-red-800 border-red-200' },
+] as const;
+
+type OnboardingStepValue = typeof ONBOARDING_STEPS[number]['value'];
+
+function getOnboardingStep(applicant: Applicant): OnboardingStepValue {
+  if (applicant.onboarding_terminated) return 'terminated';
+  if (applicant.fully_onboarded) return 'fully_ready';
+  if (applicant.first_clients_assigned) return 'clients_assigned';
+  if (applicant.academy_completed) return 'academy';
+  if (applicant.buddy_meeting_done) return 'buddy_meeting';
+  // Default: just hired, not started onboarding yet
+  return 'buddy_meeting';
+}
+
+function getOnboardingStepConfig(step: OnboardingStepValue) {
+  return ONBOARDING_STEPS.find(s => s.value === step)!;
+}
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { SendApplicantOnboardingDialog } from './SendApplicantOnboardingDialog';
@@ -144,12 +167,52 @@ export function ApplicantDetailSheet({
   const contractSigned = !!applicant.contract_signed_at;
 
   const stageConfig = APPLICANT_STAGE_CONFIG[applicant.stage];
+  const currentOnboardingStep = isHired ? getOnboardingStep(applicant) : null;
+  const currentOnboardingStepConfig = currentOnboardingStep ? getOnboardingStepConfig(currentOnboardingStep) : null;
   const owner = colleagues.find(c => c.id === applicant.owner_id);
   const linkedColleague = colleagues.find(c => c.id === applicant.converted_to_colleague_id);
   const { steps: pipelineSteps, activeStep } = getPipelineProgress(applicant);
 
   const handleStageChange = (newStage: string) => {
     updateApplicantStage(applicant.id, newStage as ApplicantStage);
+  };
+
+  const handleOnboardingStepChange = (step: string) => {
+    const updates: Partial<Applicant> = {
+      buddy_meeting_done: false,
+      academy_completed: false,
+      first_clients_assigned: false,
+      fully_onboarded: false,
+      onboarding_terminated: false,
+      terminated_at: null,
+    };
+
+    switch (step) {
+      case 'terminated':
+        updates.onboarding_terminated = true;
+        updates.terminated_at = new Date().toISOString();
+        break;
+      case 'fully_ready':
+        updates.buddy_meeting_done = true;
+        updates.academy_completed = true;
+        updates.first_clients_assigned = true;
+        updates.fully_onboarded = true;
+        break;
+      case 'clients_assigned':
+        updates.buddy_meeting_done = true;
+        updates.academy_completed = true;
+        updates.first_clients_assigned = true;
+        break;
+      case 'academy':
+        updates.buddy_meeting_done = true;
+        updates.academy_completed = true;
+        break;
+      case 'buddy_meeting':
+        updates.buddy_meeting_done = true;
+        break;
+    }
+
+    updateApplicant(applicant.id, updates);
   };
 
   const handleAddNote = () => {
@@ -184,18 +247,33 @@ export function ApplicantDetailSheet({
                     onSave={(v) => updateApplicant(applicant.id, { full_name: v })}
                     displayClassName="text-xl font-semibold"
                   />
-                  <Select value={applicant.stage} onValueChange={handleStageChange}>
-                    <SelectTrigger className={`w-auto h-7 text-xs px-2.5 gap-1.5 font-medium rounded-full border-0 ${stageConfig.color}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(isHired ? HIRED_ALLOWED_STAGES : [...RECRUITMENT_STAGES, 'hired' as ApplicantStage, 'bad_fit' as ApplicantStage, 'withdrawn' as ApplicantStage]).map((key) => (
-                        <SelectItem key={key} value={key}>
-                          {APPLICANT_STAGE_CONFIG[key].title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {isHired ? (
+                    <Select value={currentOnboardingStep!} onValueChange={handleOnboardingStepChange}>
+                      <SelectTrigger className={`w-auto h-7 text-xs px-2.5 gap-1.5 font-medium rounded-full border-0 ${currentOnboardingStepConfig!.color}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ONBOARDING_STEPS.map((step) => (
+                          <SelectItem key={step.value} value={step.value}>
+                            {step.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Select value={applicant.stage} onValueChange={handleStageChange}>
+                      <SelectTrigger className={`w-auto h-7 text-xs px-2.5 gap-1.5 font-medium rounded-full border-0 ${stageConfig.color}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[...RECRUITMENT_STAGES, 'hired' as ApplicantStage, 'bad_fit' as ApplicantStage, 'withdrawn' as ApplicantStage].map((key) => (
+                          <SelectItem key={key} value={key}>
+                            {APPLICANT_STAGE_CONFIG[key].title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </DialogTitle>
                 <div className="flex items-center gap-3">
                   <InlineEditField
