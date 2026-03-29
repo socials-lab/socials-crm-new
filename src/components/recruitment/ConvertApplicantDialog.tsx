@@ -69,6 +69,9 @@ export function ConvertApplicantDialog({
   const [isValidatingARES, setIsValidatingARES] = useState(false);
   const [aresError, setAresError] = useState<string | null>(null);
   const [aresValidated, setAresValidated] = useState(false);
+  const [createWorkspaceAccount, setCreateWorkspaceAccount] = useState(true);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [workspaceEmail, setWorkspaceEmail] = useState<string | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
