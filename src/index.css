@@ -299,3 +299,8 @@
 .dandroid-prose blockquote {
   @apply border-l-2 border-primary/30 pl-3 my-2 italic text-muted-foreground;
 }
+
+/* Fix uneven padding in scrollable dialogs */
+[role="dialog"].overflow-y-auto {
+  scrollbar-gutter: stable;
+}
