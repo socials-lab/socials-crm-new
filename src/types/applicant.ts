@@ -80,6 +80,13 @@ export interface Applicant {
   // Contract tracking
   contract_sent_at: string | null;
   contract_signed_at: string | null;
+
+  // Onboarding checklist (post-hire)
+  buddy_id: string | null;              // Přidělený buddy/mentor
+  buddy_meeting_done: boolean;          // Úvodní schůzka s buddym proběhla
+  academy_completed: boolean;           // Prošel akademií (videa)
+  first_clients_assigned: boolean;      // Přidělení prvních klientů
+  fully_onboarded: boolean;             // 100% zapracovaný
   
   // Metadata
   created_at: string;

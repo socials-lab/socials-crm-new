@@ -144,6 +144,11 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       converted_to_colleague_id: null,
       contract_sent_at: null,
       contract_signed_at: null,
+      buddy_id: null,
+      buddy_meeting_done: false,
+      academy_completed: false,
+      first_clients_assigned: false,
+      fully_onboarded: false,
     };
 
     if (isEditing && applicant) {
