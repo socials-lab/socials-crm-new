@@ -26,7 +26,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera, Mail, Hash } from 'lucide-react';
+import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera, Mail, Hash, FolderKanban } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -74,6 +74,8 @@ export function ConvertApplicantDialog({
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [workspaceEmail, setWorkspaceEmail] = useState<string | null>(null);
   const [slackInvited, setSlackInvited] = useState(false);
+  const [inviteToFreelo, setInviteToFreelo] = useState(true);
+  const [freeloInvited, setFreeloInvited] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -188,6 +190,24 @@ export function ConvertApplicantDialog({
         }
       }
 
+      // Invite to Freelo onboarding project
+      if (inviteToFreelo) {
+        const freeloEmail = generatedEmail || applicant.email;
+        const { data: freeloData, error: freeloError } = await supabase.functions.invoke('invite-freelo-user', {
+          body: { email: freeloEmail },
+        });
+
+        if (freeloError) {
+          console.error('Freelo invite error:', freeloError);
+          toast.error('Nepodařilo se pozvat do Freelo', { description: freeloError.message });
+        } else if (freeloData?.success) {
+          setFreeloInvited(true);
+          toast.success(freeloData.message);
+        } else if (freeloData?.error) {
+          toast.error('Freelo: ' + freeloData.error);
+        }
+      }
+
       const colleague = completeOnboarding(applicant.id, {
         full_name: applicant.full_name,
         email: generatedEmail || applicant.email,
@@ -211,6 +231,7 @@ export function ConvertApplicantDialog({
       form.reset();
       setWorkspaceEmail(null);
       setSlackInvited(false);
+      setFreeloInvited(false);
     } catch (error) {
       toast.error('Nepodařilo se převést uchazeče');
     } finally {
@@ -529,6 +550,31 @@ export function ConvertApplicantDialog({
                 <div className="flex items-center gap-1 text-sm text-primary">
                   <CheckCircle className="h-4 w-4" />
                   Pozvánka do Slacku odeslána
+                </div>
+              )}
+            </div>
+
+            {/* Freelo invite */}
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FolderKanban className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Pozvat do Freelo</span>
+                </div>
+                <Switch 
+                  checked={inviteToFreelo} 
+                  onCheckedChange={setInviteToFreelo} 
+                />
+              </div>
+              {inviteToFreelo && (
+                <p className="text-xs text-muted-foreground">
+                  Email kolegy bude pozván do onboardingového Freelo projektu.
+                </p>
+              )}
+              {freeloInvited && (
+                <div className="flex items-center gap-1 text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  Pozván do Freelo
                 </div>
               )}
             </div>
