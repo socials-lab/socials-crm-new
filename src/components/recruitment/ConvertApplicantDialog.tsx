@@ -27,6 +27,7 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Loader2, Search, CheckCircle, AlertCircle, UserPlus, CalendarIcon, Camera, Mail, Hash, FolderKanban } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -76,6 +77,7 @@ export function ConvertApplicantDialog({
   const [slackInvited, setSlackInvited] = useState(false);
   const [inviteToFreelo, setInviteToFreelo] = useState(true);
   const [freeloInvited, setFreeloInvited] = useState(false);
+  const [crmInvited, setCrmInvited] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -208,6 +210,44 @@ export function ConvertApplicantDialog({
         }
       }
 
+      // Invite to CRM with default "Můj přehled" access
+      const crmEmail = generatedEmail || applicant.email;
+      try {
+        const nameParts = applicant.full_name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-user', {
+          body: {
+            email: crmEmail,
+            firstName,
+            lastName,
+            role: 'specialist',
+            position: applicant.position,
+            phone: applicant.phone,
+            is_freelancer: true,
+            internal_hourly_cost: data.hourly_rate,
+          },
+        });
+
+        if (inviteError) {
+          console.error('CRM invite error:', inviteError);
+          toast.error('Nepodařilo se vytvořit CRM účet', { description: inviteError.message });
+        } else if (inviteData?.error) {
+          // Already exists is OK
+          if (inviteData.error.includes('already') || inviteData.error.includes('existuje')) {
+            setCrmInvited(true);
+          } else {
+            toast.error('CRM: ' + inviteData.error);
+          }
+        } else {
+          setCrmInvited(true);
+          toast.success(`CRM přístup vytvořen pro ${crmEmail} (pouze Můj přehled)`);
+        }
+      } catch (e) {
+        console.error('CRM invite exception:', e);
+      }
+
       const colleague = completeOnboarding(applicant.id, {
         full_name: applicant.full_name,
         email: generatedEmail || applicant.email,
@@ -232,6 +272,7 @@ export function ConvertApplicantDialog({
       setWorkspaceEmail(null);
       setSlackInvited(false);
       setFreeloInvited(false);
+      setCrmInvited(false);
     } catch (error) {
       toast.error('Nepodařilo se převést uchazeče');
     } finally {
@@ -575,6 +616,24 @@ export function ConvertApplicantDialog({
                 <div className="flex items-center gap-1 text-sm text-primary">
                   <CheckCircle className="h-4 w-4" />
                   Pozván do Freelo
+                </div>
+              )}
+            </div>
+
+            {/* CRM access - always on, info only */}
+            <div className="border rounded-lg p-4 space-y-3 bg-primary/5 border-primary/20">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-primary" />
+                <span className="font-medium text-sm">Vytvořit CRM účet</span>
+                <Badge variant="outline" className="text-[10px] ml-auto">Automaticky</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Kolegovi bude vytvořen přístup do CRM s rolí <strong>specialist</strong> a přístupem pouze do <strong>Můj přehled</strong>. Další oprávnění nastavíte ručně ve Správě přístupů.
+              </p>
+              {crmInvited && (
+                <div className="flex items-center gap-1 text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  CRM účet vytvořen
                 </div>
               )}
             </div>
