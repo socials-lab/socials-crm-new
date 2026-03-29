@@ -55,7 +55,7 @@ import {
 import { Globe, FileDown, Play, AlertTriangle } from 'lucide-react';
 import { ScrollText } from 'lucide-react';
 import { OffboardColleagueDialog } from '@/components/colleagues/OffboardColleagueDialog';
-import type { Applicant, ApplicantStage } from '@/types/applicant';
+import type { Applicant, ApplicantStage, ApplicantSource } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 
 // Recruitment pipeline stages (before hired)
