@@ -39,6 +39,9 @@ export function OffboardColleagueDialog({
   const [removeFreelo, setRemoveFreelo] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<OffboardResults | null>(null);
+  const [confirmText, setConfirmText] = useState('');
+
+  const isConfirmed = confirmText.toLowerCase() === 'ukončit';
 
   const handleOffboard = async () => {
     setIsProcessing(true);
