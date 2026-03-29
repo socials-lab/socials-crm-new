@@ -282,9 +282,21 @@ export function ApplicantDetailSheet({
                     displayClassName="text-muted-foreground text-sm"
                     emptyText="Přidej pozici..."
                   />
-                  <Badge variant="secondary" className="text-xs">
-                    {APPLICANT_SOURCE_LABELS[applicant.source]}
-                  </Badge>
+                  <Select
+                    value={applicant.source}
+                    onValueChange={(v) => updateApplicant(applicant.id, { source: v })}
+                  >
+                    <SelectTrigger className="h-6 w-auto text-xs gap-1 px-2 border-dashed">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(APPLICANT_SOURCE_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key} className="text-xs">
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </DialogHeader>
             </div>
