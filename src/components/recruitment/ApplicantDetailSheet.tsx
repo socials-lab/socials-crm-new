@@ -52,8 +52,9 @@ import {
   Hash,
   FileSignature,
 } from 'lucide-react';
-import { Globe, FileDown, Play } from 'lucide-react';
+import { Globe, FileDown, Play, AlertTriangle } from 'lucide-react';
 import { ScrollText } from 'lucide-react';
+import { OffboardColleagueDialog } from '@/components/colleagues/OffboardColleagueDialog';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
@@ -117,6 +118,7 @@ export function ApplicantDetailSheet({
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const [isContractRequestDialogOpen, setIsContractRequestDialogOpen] = useState(false);
+  const [isOffboardDialogOpen, setIsOffboardDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open && applicant?.id && applicant.stage === 'hired') {
@@ -733,6 +735,54 @@ export function ApplicantDetailSheet({
                       </Badge>
                     </div>
                     )}
+
+                    {/* Offboard from recruitment - for hired & converted candidates */}
+                    {isHired && convertedToColleague && !applicant.onboarding_terminated && (
+                      <div className="flex items-center justify-between p-3 rounded-lg border border-destructive/20 bg-destructive/5">
+                        <div className="flex items-center gap-3">
+                          <div className="p-1.5 rounded-md bg-destructive/10 text-destructive">
+                            <AlertTriangle className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Ukončit zapracování</p>
+                            <p className="text-xs text-muted-foreground">
+                              Deaktivovat přístupy (Workspace, Slack, Freelo)
+                            </p>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          className="h-8" 
+                          onClick={() => setIsOffboardDialogOpen(true)}
+                        >
+                          <UserX className="h-3.5 w-3.5 mr-1" />
+                          Ukončit
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Terminated badge */}
+                    {applicant.onboarding_terminated && (
+                      <div className="flex items-center justify-between p-3 rounded-lg border border-destructive/30 bg-destructive/5">
+                        <div className="flex items-center gap-3">
+                          <div className="p-1.5 rounded-md bg-destructive/10 text-destructive">
+                            <UserX className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Zapracování ukončeno</p>
+                            <p className="text-xs text-muted-foreground">
+                              {applicant.terminated_at 
+                                ? format(new Date(applicant.terminated_at), 'd. M. yyyy', { locale: cs })
+                                : 'Přístupy byly deaktivovány'}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="destructive" className="text-xs">
+                          Ukončeno
+                        </Badge>
+                      </div>
+                    )}
                     </>
                   )}
                 </div>
@@ -809,6 +859,20 @@ export function ApplicantDetailSheet({
         onOpenChange={setIsContractRequestDialogOpen}
         onSend={() => {}}
       />
+      {linkedColleague && (
+        <OffboardColleagueDialog
+          open={isOffboardDialogOpen}
+          onOpenChange={setIsOffboardDialogOpen}
+          colleague={linkedColleague as any}
+          onOffboarded={() => {
+            updateApplicant(applicant.id, {
+              onboarding_terminated: true,
+              terminated_at: new Date().toISOString(),
+            });
+            setIsOffboardDialogOpen(false);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
