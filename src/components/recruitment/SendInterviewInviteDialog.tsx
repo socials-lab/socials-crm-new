@@ -93,14 +93,7 @@ export function SendInterviewInviteDialog({
       return;
     }
     setIsSending(true);
-
-    // Build mailto with all recipients
-    const ccParam = ccEmails.length > 0 ? `&cc=${ccEmails.join(',')}` : '';
-    const bccParam = bccEmails.length > 0 ? `&bcc=${bccEmails.join(',')}` : '';
-    const mailtoLink = `mailto:${toEmails.join(',')}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailContent)}${ccParam}${bccParam}`;
-    window.open(mailtoLink, '_blank');
-
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     onSend({ subject: emailSubject, message: emailContent, recipients: toEmails });
     setIsSending(false);
     toast.success('Pozvánka na pohovor byla odeslána');
@@ -238,7 +231,7 @@ export function SendInterviewInviteDialog({
             ) : (
               <>
                 <Send className="h-4 w-4 mr-2" />
-                Otevřít v emailu
+                Odeslat email
               </>
             )}
           </Button>

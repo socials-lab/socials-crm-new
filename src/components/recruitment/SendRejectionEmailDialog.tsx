@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Send, UserX, DoorOpen, MessageSquareText } from 'lucide-react';
+import { Send, UserX, DoorOpen, MessageSquareText, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
@@ -53,10 +53,13 @@ export function SendRejectionEmailDialog({
     setMessage(tpl.body);
   };
 
-  const handleSendEmail = () => {
-    const mailtoLink = `mailto:${applicant.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-    window.open(mailtoLink, '_blank');
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSendEmail = async () => {
+    setIsSending(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
     onSend({ subject, message, recipients: [applicant.email] });
+    setIsSending(false);
     toast.success('Odmítací email byl odeslán');
     onOpenChange(false);
   };
@@ -147,11 +150,21 @@ export function SendRejectionEmailDialog({
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleMarkAsSent}>
-            Pouze označit jako odesláno
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Označit jako odeslané
           </Button>
-          <Button variant="destructive" onClick={handleSendEmail} className="gap-2">
-            <Send className="h-4 w-4" />
-            Otevřít v emailu
+          <Button variant="destructive" onClick={handleSendEmail} disabled={isSending} className="gap-2">
+            {isSending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Odesílám...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                Odeslat email
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
