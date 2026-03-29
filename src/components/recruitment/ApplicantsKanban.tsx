@@ -13,6 +13,7 @@ interface ApplicantsKanbanProps {
   applicants: Applicant[];
   onApplicantClick: (applicant: Applicant) => void;
   onStageChange: (applicantId: string, newStage: ApplicantStage) => void;
+  onUpdateApplicant?: (applicantId: string, data: Partial<Applicant>) => void;
 }
 
 // Hiring pipeline stages (before acceptance)
