@@ -48,7 +48,8 @@ import {
   Plus as PlusIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
+import type { PublicOfferService, PublicOffer, PortfolioLink, CountryVariant } from '@/types/publicOffer';
+import { getCountryFlag, getCountryName } from '@/constants/countries';
 import socialsLogoDark from '@/assets/socials-logo-dark.svg';
 import socialsLogo from '@/assets/socials-logo.svg';
 import cert1 from '@/assets/certs/cert-1.avif';
@@ -247,6 +248,11 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
   const hasRequirements = service.requirements && service.requirements.length > 0;
   const hasDetailedSections = service.detailed_sections && service.detailed_sections.length > 0;
   const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline;
+  const hasCountryVariants = service.country_variants && service.country_variants.length > 0;
+  const countryFlags = [
+    ...(service.managed_countries || []),
+    ...(service.country_variants || []).map(v => v.country_code),
+  ];
 
   const descriptionLines = !hasDeliverables 
     ? (service.offer_description?.split('\n').filter(line => line.trim().length > 0) || [])
