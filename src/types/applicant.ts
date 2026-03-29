@@ -76,6 +76,10 @@ export interface Applicant {
   onboarding_completed_at: string | null;
   converted_to_colleague_id: string | null;
   
+  // Contract tracking
+  contract_sent_at: string | null;
+  contract_signed_at: string | null;
+  
   // Metadata
   created_at: string;
   updated_at: string;
