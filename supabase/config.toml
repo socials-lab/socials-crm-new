@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.create-slack-channel]
 verify_jwt = false
+
+[functions.offboard-colleague]
+verify_jwt = false

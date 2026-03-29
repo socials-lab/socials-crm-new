@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ChevronDown, ChevronUp, Mail, Pencil, Zap, Sparkles, Briefcase, 
   Check, X, ExternalLink, Shield, Phone, Cake, Building, CreditCard,
-  MapPin, User, BarChart3, FileText, Link, Plus
+  MapPin, User, BarChart3, FileText, Link, Plus, UserMinus
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,7 @@ interface ColleagueCardProps {
   }>;
   onUpdateAssignment?: (assignmentId: string, data: { monthly_cost: number }) => void;
   onUpdateColleague?: (colleagueId: string, data: Partial<Colleague>) => void;
+  onOffboard?: (colleague: Colleague) => void;
 }
 
 export function ColleagueCard({
@@ -75,6 +76,7 @@ export function ColleagueCard({
   creditsDetail,
   onUpdateAssignment,
   onUpdateColleague,
+  onOffboard,
 }: ColleagueCardProps) {
   const navigate = useNavigate();
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
@@ -169,6 +171,17 @@ export function ColleagueCard({
               onClick={(e) => { e.stopPropagation(); onEdit(colleague); }}
             >
               <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+          {isSuperAdmin && onOffboard && colleague.status !== 'left' && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={(e) => { e.stopPropagation(); onOffboard(colleague); }}
+              title="Ukončit spolupráci"
+            >
+              <UserMinus className="h-4 w-4" />
             </Button>
           )}
           <Button variant="ghost" size="icon" className="h-8 w-8">
