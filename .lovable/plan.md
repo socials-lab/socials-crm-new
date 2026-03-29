@@ -1,47 +1,55 @@
 
 
-## Offboarding kolegy – deaktivace Google Workspace, Slack a Freelo
+## Plan: Jazykové mutace (země) u služeb v nabídce
 
-### Co se bude dělat
+### Kontext
+V modulu Návrhy změn (Modifications) již existuje logika pro "expand_country" — přidání nové země ke stávající službě s multiplikátorem 0.5 (50% cena). Tuto logiku je třeba přenést do dialogu pro vytváření/editaci nabídek v Leads.
 
-Přidáme **offboarding dialog** pro kolegy, který umožní deaktivovat/odebrat kolegu ze 3 systémů:
+### Co se změní
 
-1. **Google Workspace** – suspendování účtu (ne smazání) přes Admin Directory API
-2. **Slack** – deaktivace uživatele přes `users.admin.setInactive`
-3. **Freelo** – odebrání ze všech projektů přes API
+**1. Rozšíření typu `PublicOfferService` o pole pro země**
+- Soubor: `src/types/publicOffer.ts`
+- Přidat pole `managed_countries?: string[]` — seznam kódů zemí, pro které služba platí
+- Přidat pole `country_variants?: CountryVariant[]` — seznam jazykových mutací s vlastní cenou
 
-Plus nastavení statusu kolegy na `left` a zaznamenání data ukončení.
+```
+interface CountryVariant {
+  country_code: string;   // 'SK', 'DE' atd.
+  multiplier: number;     // default 0.5
+  price: number;          // vypočtená cena
+}
+```
 
-### Struktura
+**2. Úprava `EditableOfferServiceCard` — přidání sekce pro země**
+- Soubor: `src/components/leads/EditableOfferServiceCard.tsx`
+- Pod sekci ceny přidat novou sekci "Jazykové mutace / Země"
+- Zobrazit výběr "hlavní země" (default CZ) s vlajkou
+- Tlačítko "Přidat další trh" → otevře dropdown s `MANAGED_COUNTRIES`
+- Každý přidaný trh zobrazí: vlajka + název země, multiplikátor (default 0.5, editovatelný), vypočtená cena
+- Vlajky zemí se zobrazí i v collapsed stavu karty vedle názvu služby
 
-#### 1. Nová edge funkce `offboard-colleague/index.ts`
-- Přijme `email` a volitelné flagy: `deactivate_google`, `deactivate_slack`, `remove_freelo`
-- **Google**: Použije existující `getGoogleAccessToken()` logiku, zavolá `PUT /admin/directory/v1/users/{userKey}` s `{ suspended: true }`
-- **Slack**: Použije `SLACK_ADMIN_TOKEN`, zavolá `users.admin.setInactive` s emailem uživatele (nejdřív lookup přes `users.lookupByEmail`)
-- **Freelo**: Použije `FREELO_API_KEY`, najde všechny projekty uživatele a odebere ho (Freelo API `manage-workers` s `remove`)
-- Vrátí výsledky pro každý systém (úspěch/chyba)
+**3. Úprava `CreateOfferDialog` — zpracování variant**
+- Soubor: `src/components/leads/CreateOfferDialog.tsx`
+- V kalkulaci `totals` započítat ceny country variantů ke službě
+- Při ukládání nabídky uložit country varianty jako součást `services[]`
+- V reward overrides zohlednit, že country varianta má proporcionální náklady
 
-#### 2. Nový dialog `OffboardColleagueDialog.tsx`
-- Otevírá se z `ColleagueCard` tlačítkem "Ukončit spolupráci" (jen pro super admina)
-- Zobrazí jméno a email kolegy
-- 3 checkboxy (defaultně zaškrtnuté):
-  - ☑ Deaktivovat Google Workspace
-  - ☑ Deaktivovat Slack
-  - ☑ Odebrat z Freelo projektů
-- Tlačítko "Ukončit spolupráci" → zavolá edge funkci, pak aktualizuje kolegu (`status: 'left'`)
-- Zobrazí souhrn výsledků (co se povedlo, co ne)
-
-#### 3. Úprava `ColleagueCard.tsx`
-- Přidat tlačítko "Ukončit spolupráci" vedle "Upravit" (jen pro super admina, jen pro aktivní kolegy)
+**4. Zobrazení na veřejné nabídce**
+- Soubor: `src/pages/PublicOfferPage.tsx`
+- U každé služby zobrazit vlajky zemí, pro které platí
+- Pokud jsou country varianty, zobrazit je jako pod-položky s cenou (např. "🇸🇰 Slovensko — 50 % z CZ ceny")
 
 ### Technické detaily
 
-- Google API: scope `https://www.googleapis.com/auth/admin.directory.user` už máme nakonfigurovaný
-- Slack: `users.admin.setInactive` vyžaduje admin token – `SLACK_ADMIN_TOKEN` už existuje
-- Freelo: API pro odebrání uživatele z projektů – použijeme `manage-workers` endpoint s parametrem pro odebrání
-- Všechny potřebné secrets už jsou nakonfigurované
+- Využijí se existující konstanty z `src/constants/countries.ts` (`MANAGED_COUNTRIES`, `getCountryFlag`, `getCountryName`)
+- Multiplikátor default 0.5 z `src/utils/pricingEngine.ts` (`DEFAULT_MULTIPLIERS.expand_country`)
+- Cena varianty = `basePrice × multiplier`
+- Žádné DB migrace — country varianty se ukládají jako součást JSON pole `services` v tabulce `public_offers`
+- Typ `PublicOfferService` se rozšíří, ale zpětná kompatibilita je zachována (nová pole optional)
 
-### Omezení
-- Freelo API nemusí mít přímý endpoint pro "odebrat ze všech projektů naráz" – možná bude třeba iterovat přes projekty. Ověřím při implementaci.
-- Slack `users.admin.setInactive` je undocumented API – stejně jako stávající invite endpoint.
+### Rozsah změn
+1. `src/types/publicOffer.ts` — nové typy
+2. `src/components/leads/EditableOfferServiceCard.tsx` — UI pro přidání zemí
+3. `src/components/leads/CreateOfferDialog.tsx` — kalkulace s variantami
+4. `src/pages/PublicOfferPage.tsx` — zobrazení vlajek a variant na veřejné nabídce
 
