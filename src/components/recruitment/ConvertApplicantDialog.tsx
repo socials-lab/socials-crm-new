@@ -190,6 +190,24 @@ export function ConvertApplicantDialog({
         }
       }
 
+      // Invite to Freelo onboarding project
+      if (inviteToFreelo) {
+        const freeloEmail = generatedEmail || applicant.email;
+        const { data: freeloData, error: freeloError } = await supabase.functions.invoke('invite-freelo-user', {
+          body: { email: freeloEmail },
+        });
+
+        if (freeloError) {
+          console.error('Freelo invite error:', freeloError);
+          toast.error('Nepodařilo se pozvat do Freelo', { description: freeloError.message });
+        } else if (freeloData?.success) {
+          setFreeloInvited(true);
+          toast.success(freeloData.message);
+        } else if (freeloData?.error) {
+          toast.error('Freelo: ' + freeloData.error);
+        }
+      }
+
       const colleague = completeOnboarding(applicant.id, {
         full_name: applicant.full_name,
         email: generatedEmail || applicant.email,
