@@ -79,6 +79,8 @@ export function ColleagueCard({
   const navigate = useNavigate();
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [tempCost, setTempCost] = useState<string>('');
+  const [editingContract, setEditingContract] = useState<'cooperation' | 'gdpr' | null>(null);
+  const [tempContractUrl, setTempContractUrl] = useState<string>('');
 
   const handleSaveAssignmentCost = (assignmentId: string) => {
     const cost = parseFloat(tempCost) || 0;
