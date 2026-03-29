@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import { ApplicantCard } from './ApplicantCard';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
