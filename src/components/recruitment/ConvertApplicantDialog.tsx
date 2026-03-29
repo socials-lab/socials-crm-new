@@ -37,6 +37,7 @@ import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { AvatarUpload } from '@/components/forms/AvatarUpload';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 const formSchema = z.object({
   avatar_url: z.string().nullable().optional(),
