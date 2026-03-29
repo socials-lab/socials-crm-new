@@ -4,7 +4,7 @@ import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG } from '@/types/applicant';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronUp, Users, GraduationCap, Briefcase, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Users, GraduationCap, Briefcase, CheckCircle2, XCircle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -29,18 +29,20 @@ const HIRING_STAGES: ApplicantStage[] = [
 const CLOSED_STAGES: ApplicantStage[] = ['rejected', 'withdrawn'];
 
 // Onboarding pipeline steps (after hired)
-type OnboardingStep = 'buddy_meeting' | 'academy' | 'first_clients' | 'fully_ready';
+type OnboardingStep = 'buddy_meeting' | 'academy' | 'first_clients' | 'fully_ready' | 'terminated';
 
 const ONBOARDING_STEP_CONFIG: Record<OnboardingStep, { label: string; icon: typeof Users; color: string }> = {
   buddy_meeting: { label: 'Schůzka s buddym', icon: Users, color: 'bg-blue-500/10 border-blue-200' },
   academy: { label: 'Akademie', icon: GraduationCap, color: 'bg-violet-500/10 border-violet-200' },
   first_clients: { label: 'Přidělení klientů', icon: Briefcase, color: 'bg-amber-500/10 border-amber-200' },
   fully_ready: { label: '100 % Ready', icon: CheckCircle2, color: 'bg-emerald-500/10 border-emerald-200' },
+  terminated: { label: 'Ukončeno', icon: XCircle, color: 'bg-destructive/10 border-destructive/20' },
 };
 
-const ONBOARDING_STEP_ORDER: OnboardingStep[] = ['buddy_meeting', 'academy', 'first_clients', 'fully_ready'];
+const ONBOARDING_STEP_ORDER: OnboardingStep[] = ['buddy_meeting', 'academy', 'first_clients', 'fully_ready', 'terminated'];
 
 function getOnboardingStep(a: Applicant): OnboardingStep {
+  if (a.onboarding_terminated) return 'terminated';
   if (a.fully_onboarded) return 'fully_ready';
   if (a.first_clients_assigned) return 'first_clients';
   if (a.academy_completed) return 'academy';
