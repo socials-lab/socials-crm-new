@@ -277,6 +277,11 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-base">{service.name}</p>
+                    {countryFlags.length > 0 && (
+                      <span className="text-sm" title={countryFlags.map(c => getCountryName(c)).join(', ')}>
+                        {countryFlags.map(c => getCountryFlag(c)).join(' ')}
+                      </span>
+                    )}
                     {service.service_type === 'core' && service.selected_tier && (
                       <Badge 
                         variant="outline" 
