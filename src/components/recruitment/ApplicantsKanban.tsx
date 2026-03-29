@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ApplicantCard } from './ApplicantCard';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
-import { APPLICANT_STAGE_CONFIG } from '@/types/applicant';
+import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp, Users, GraduationCap, Briefcase, CheckCircle2, XCircle } from 'lucide-react';
