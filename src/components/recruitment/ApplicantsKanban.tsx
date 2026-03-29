@@ -329,12 +329,16 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
                 <div className="w-2 h-2 rounded-full bg-muted-foreground" />
                 {applicantsByStage.withdrawn.length} staženo
               </span>
+              <span className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                {applicantsByStage.postponed.length} odloženo
+              </span>
               {closedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </div>
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
             {CLOSED_STAGES.map(stage => renderStageColumn(stage, true))}
           </div>
         </CollapsibleContent>
