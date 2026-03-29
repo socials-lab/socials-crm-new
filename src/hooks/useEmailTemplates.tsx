@@ -89,6 +89,14 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
     description: 'Onboarding formulář pro přijatého kandidáta',
     available_variables: ['name', 'position', 'url', 'signature'],
   },
+  contract_request: {
+    template_key: 'contract_request',
+    name: 'Žádost o přípravu smlouvy',
+    subject_template: 'Příprava smlouvy — {full_name} ({position})',
+    body_template: 'Dobrý den,\n\nprosím o přípravu smlouvy pro nového spolupracovníka.\n\n── OSOBNÍ ÚDAJE ──\nJméno: {full_name}\nEmail: {email}\nOsobní email: {personal_email}\nTelefon: {phone}\nDatum narození: {birthday}\n\n── FAKTURAČNÍ ÚDAJE ──\nFirma: {company_name}\nIČO: {ico}\nDIČ: {dic}\nAdresa: {billing_address}\n\n── FINANCE ──\nHodinová sazba: {hourly_rate}\nBankovní účet: {bank_account}\n\n── POZICE & NÁPLŇ PRÁCE ──\nPozice: {position}\n\nDěkuji,\n{signature}',
+    description: 'Interní email se souhrnem údajů pro přípravu smlouvy',
+    available_variables: ['full_name', 'email', 'personal_email', 'phone', 'birthday', 'company_name', 'ico', 'dic', 'billing_address', 'hourly_rate', 'bank_account', 'position', 'signature'],
+  },
 };
 
 export function useEmailTemplates() {
