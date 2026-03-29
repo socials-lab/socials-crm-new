@@ -401,8 +401,8 @@ export function ApplicantDetailSheet({
               {/* Onboarding data — always visible */}
               {/* Application data — Přihláška */}
               <div className="space-y-3">
-                {/* Row 1: KONTAKT, ODKAZY, INFO */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Row 1: KONTAKT + ODKAZY */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* KONTAKT */}
                   <Card className="border-border/60 bg-card shadow-sm">
                     <CardContent className="p-4 space-y-3">
@@ -446,114 +446,106 @@ export function ApplicantDetailSheet({
                         <div>
                           <p className="text-xs text-muted-foreground">Loom video</p>
                           {applicant.video_url ? (
-                            <a href={applicant.video_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block">
-                              {new URL(applicant.video_url).hostname}
+                            <a href={applicant.video_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all block">
+                              {(() => { try { return new URL(applicant.video_url).hostname; } catch { return applicant.video_url; } })()}
                             </a>
                           ) : <span className="text-muted-foreground">—</span>}
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Portfolio / osobní značka</p>
                           {applicant.portfolio_url ? (
-                            <a href={applicant.portfolio_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block">
-                              {new URL(applicant.portfolio_url).hostname}
+                            <a href={applicant.portfolio_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all block">
+                              {(() => { try { return new URL(applicant.portfolio_url).hostname; } catch { return applicant.portfolio_url; } })()}
                             </a>
                           ) : <span className="text-muted-foreground">—</span>}
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">CV</p>
                           {applicant.cv_url ? (
-                            <a href={applicant.cv_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block">
-                              {new URL(applicant.cv_url).hostname}
+                            <a href={applicant.cv_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all block">
+                              {(() => { try { return new URL(applicant.cv_url).hostname; } catch { return applicant.cv_url; } })()}
                             </a>
                           ) : <span className="text-muted-foreground">—</span>}
                         </div>
                       </div>
                     </CardContent>
                   </Card>
+                </div>
 
-                  {/* INFO */}
-                  <Card className="border-border/60 bg-card shadow-sm">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Info</h4>
+                {/* Row 2: INFO (full width) */}
+                <Card className="border-border/60 bg-card shadow-sm">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                      <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Info</h4>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Zdroj</p>
+                        <p className="font-medium">{APPLICANT_SOURCE_LABELS[applicant.source]}</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Zdroj</p>
-                          <p className="font-medium">{APPLICANT_SOURCE_LABELS[applicant.source]}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Datum</p>
-                          <p className="font-medium">{format(new Date(applicant.created_at), 'd. M. yyyy HH:mm:ss', { locale: cs })}</p>
-                        </div>
-                        {applicant.social_links && (
-                          <div className="col-span-2">
-                            <p className="text-xs text-muted-foreground">Sociální sítě</p>
-                            <div className="space-y-0.5">
-                              {applicant.social_links.split(/[,\n]/).map((link, i) => {
-                                const trimmed = link.trim();
-                                if (!trimmed) return null;
-                                const isUrl = trimmed.startsWith('http');
-                                return isUrl ? (
-                                  <a key={i} href={trimmed} target="_blank" rel="noopener noreferrer" className="block text-sm text-primary hover:underline truncate">
-                                    {(() => { try { return new URL(trimmed).hostname; } catch { return trimmed; } })()}
-                                  </a>
-                                ) : (
-                                  <span key={i} className="block text-sm">{trimmed}</span>
-                                );
-                              })}
-                            </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Datum</p>
+                        <p className="font-medium">{format(new Date(applicant.created_at), 'd. M. yyyy', { locale: cs })}</p>
+                      </div>
+                      {applicant.social_links && (
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground">Sociální sítě</p>
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+                            {applicant.social_links.split(/[,\n]/).map((link, i) => {
+                              const trimmed = link.trim();
+                              if (!trimmed) return null;
+                              const isUrl = trimmed.startsWith('http');
+                              return isUrl ? (
+                                <a key={i} href={trimmed} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                                  {(() => { try { return new URL(trimmed).hostname; } catch { return trimmed; } })()}
+                                </a>
+                              ) : (
+                                <span key={i} className="text-sm">{trimmed}</span>
+                              );
+                            })}
                           </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Row 2: MOTIVAČNÍ DOPIS, JAK VYUŽÍVÁ AI */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Card className="border-border/60 bg-card shadow-sm">
-                    <CardContent className="p-4 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Motivační dopis</h4>
-                      </div>
-                      {applicant.cover_letter ? (
-                        <p className="text-sm whitespace-pre-wrap">{applicant.cover_letter}</p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">Nevyplněno</p>
+                        </div>
                       )}
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-border/60 bg-card shadow-sm">
-                    <CardContent className="p-4 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Jak využívá AI</h4>
-                      </div>
-                      {applicant.ai_usage ? (
-                        <p className="text-sm whitespace-pre-wrap">{applicant.ai_usage}</p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">Nevyplněno</p>
+                      {applicant.personal_brand && (
+                        <div className="col-span-2 md:col-span-4">
+                          <p className="text-xs text-muted-foreground">Osobní značka</p>
+                          <p className="text-sm">{applicant.personal_brand}</p>
+                        </div>
                       )}
-                    </CardContent>
-                  </Card>
-                </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                {/* Row 3: OSOBNÍ ZNAČKA (if filled) */}
-                {applicant.personal_brand && (
-                  <Card className="border-border/60 bg-card shadow-sm">
-                    <CardContent className="p-4 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Osobní značka</h4>
-                      </div>
-                      <p className="text-sm whitespace-pre-wrap">{applicant.personal_brand}</p>
-                    </CardContent>
-                  </Card>
-                )}
+                {/* Row 3: MOTIVAČNÍ DOPIS */}
+                <Card className="border-border/60 bg-card shadow-sm">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                      <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Motivační dopis</h4>
+                    </div>
+                    {applicant.cover_letter ? (
+                      <p className="text-sm whitespace-pre-wrap">{applicant.cover_letter}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Nevyplněno</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Row 4: JAK VYUŽÍVÁ AI */}
+                <Card className="border-border/60 bg-card shadow-sm">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+                      <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Jak využívá AI</h4>
+                    </div>
+                    {applicant.ai_usage ? (
+                      <p className="text-sm whitespace-pre-wrap">{applicant.ai_usage}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Nevyplněno</p>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Údaje pro smlouvu — only show after onboarding form is completed */}
