@@ -76,20 +76,45 @@ export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, 
 
   const closedCount = applicantsByStage.rejected.length + applicantsByStage.withdrawn.length;
 
-  // Drag & drop handlers
+  // Drag & drop handlers for hiring pipeline
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedApplicantId(id);
     e.dataTransfer.effectAllowed = 'move';
   };
-  const handleDragEnd = () => { setDraggedApplicantId(null); setDragOverStage(null); };
+  const handleDragEnd = () => { setDraggedApplicantId(null); setDragOverStage(null); setDragOverOnboardingStep(null); };
   const handleDragOver = (e: React.DragEvent, stage: ApplicantStage) => {
-    e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverStage(stage);
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverStage(stage); setDragOverOnboardingStep(null);
   };
-  const handleDragLeave = () => setDragOverStage(null);
+  const handleDragLeave = () => { setDragOverStage(null); setDragOverOnboardingStep(null); };
   const handleDrop = (e: React.DragEvent, newStage: ApplicantStage) => {
     e.preventDefault();
     if (draggedApplicantId) onStageChange(draggedApplicantId, newStage);
-    setDraggedApplicantId(null); setDragOverStage(null);
+    setDraggedApplicantId(null); setDragOverStage(null); setDragOverOnboardingStep(null);
+  };
+
+  // Drag & drop handlers for onboarding pipeline
+  const handleOnboardingDragOver = (e: React.DragEvent, step: OnboardingStep) => {
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverOnboardingStep(step); setDragOverStage(null);
+  };
+  const handleOnboardingDrop = (e: React.DragEvent, step: OnboardingStep) => {
+    e.preventDefault();
+    if (draggedApplicantId && onUpdateApplicant) {
+      // First ensure applicant is in 'hired' stage
+      const applicant = applicants.find(a => a.id === draggedApplicantId);
+      if (applicant && applicant.stage !== 'hired') {
+        onStageChange(draggedApplicantId, 'hired');
+      }
+      
+      // Set onboarding flags based on target step
+      const stepIndex = ONBOARDING_STEP_ORDER.indexOf(step);
+      onUpdateApplicant(draggedApplicantId, {
+        buddy_meeting_done: stepIndex >= 1, // completed if past buddy_meeting
+        academy_completed: stepIndex >= 2,
+        first_clients_assigned: stepIndex >= 3,
+        fully_onboarded: step === 'fully_ready',
+      });
+    }
+    setDraggedApplicantId(null); setDragOverStage(null); setDragOverOnboardingStep(null);
   };
 
   const renderStageColumn = (stage: ApplicantStage, compact = false) => {
