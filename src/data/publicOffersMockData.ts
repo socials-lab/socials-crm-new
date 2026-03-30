@@ -1,4 +1,6 @@
 import type { PublicOffer } from '@/types/publicOffer';
+import demoAuditMeta from '@/assets/demo-audit-meta-ads.jpg';
+import demoAuditAnalytics from '@/assets/demo-audit-analytics.jpg';
 
 const STORAGE_KEY = 'public_offers_mock';
 
@@ -439,6 +441,7 @@ const TEST_OFFER: PublicOffer = {
     },
   ],
   audit_summary: 'Reklamní účty na Meta platformách mají prostor pro výrazné zlepšení:\n\n• Chybí správné nastavení Pixelu a konverzního měření – nemůžete přesně vyhodnotit, co reklamy přinášejí.\n• Kampaně nemají optimální strukturu – chybí oddělení akvizice a remarketingu.\n• Katalog produktů není propojen – nevyužíváte dynamické reklamy, které zobrazují zákazníkům přesně to, co je zajímá.',
+  audit_html: `<p><strong>Reklamní účty na Meta platformách mají prostor pro výrazné zlepšení:</strong></p><ul><li>Chybí správné nastavení Pixelu a konverzního měření – nemůžete přesně vyhodnotit, co reklamy přinášejí.</li><li>Kampaně nemají optimální strukturu – chybí oddělení akvizice a remarketingu.</li><li>Katalog produktů není propojen – nevyužíváte dynamické reklamy.</li></ul><p>Ukázka aktuálního stavu kampaní:</p><img src="${demoAuditMeta}" alt="Stav Meta Ads kampaní" /><p><strong>Analytické měření:</strong></p><p>V Google Analytics 4 chybí správné nastavení konverzí a cílů. Bez toho nelze vyhodnocovat skutečný dopad kampaní.</p><img src="${demoAuditAnalytics}" alt="Stav Google Analytics" />`,
   recommendation_intro: 'Na základě auditu doporučujeme začít kompletním nastavením měření a struktury kampaní (Socials Boost) a paralelně zajistit pravidelnou tvorbu reklamních kreativ (Creative Boost), aby kampaně měly vždy čerstvé a relevantní vizuály.',
   custom_note: null,
   loom_url: null,
