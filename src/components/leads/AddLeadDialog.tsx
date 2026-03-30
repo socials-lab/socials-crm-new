@@ -244,7 +244,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       billing_zip: data.billing_zip || null,
       billing_country: data.billing_country || null,
       billing_email: data.billing_email || null,
-      contact_name: data.contact_name,
+      contact_name: data.contact_name?.trim() || companyName,
       contact_position: data.contact_position || null,
       contact_email: data.contact_email || null,
       contact_phone: data.contact_phone || null,
