@@ -1,50 +1,75 @@
-import creative1 from '@/assets/sales-deck/creative-example-1.jpg';
-import creative2 from '@/assets/sales-deck/creative-example-2.jpg';
-import creative3 from '@/assets/sales-deck/creative-example-3.jpg';
-import creative4 from '@/assets/sales-deck/creative-example-4.jpg';
-import creative5 from '@/assets/sales-deck/creative-example-5.jpg';
-import creative6 from '@/assets/sales-deck/creative-example-6.jpg';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
-const examples = [
-  { src: creative1, label: 'Meta Ads — Fashion', aspect: 'square' },
-  { src: creative2, label: 'Meta Ads — Kosmetika', aspect: 'square' },
-  { src: creative3, label: 'Google Shopping — Nábytek', aspect: 'square' },
-  { src: creative4, label: 'Meta Ads — Sport', aspect: 'square' },
-  { src: creative5, label: 'Stories — Šperky', aspect: 'vertical' },
-  { src: creative6, label: 'Stories — Káva', aspect: 'vertical' },
-];
+interface PortfolioItem {
+  id: string;
+  title: string;
+  file_url: string;
+  type: 'image' | 'video';
+  sort_order: number;
+  is_active: boolean;
+}
 
 export function CreativeExamplesSlide() {
+  const [items, setItems] = useState<PortfolioItem[]>([]);
+
+  useEffect(() => {
+    (supabase as any)
+      .from('portfolio_items')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .then(({ data }: any) => {
+        if (data) setItems(data);
+      });
+  }, []);
+
+  // Show up to 8 items
+  const displayItems = items.slice(0, 8);
+
   return (
     <div className="w-full h-full bg-[#0a0a0a] flex flex-col px-32 py-20">
       <h2 className="text-[48px] font-bold text-white mb-3 tracking-tight text-center">
         🖼️ Ukázky našich kreativ
       </h2>
-      <p className="text-[22px] text-white/50 mb-14 text-center">
-        Příklady bannerů a stories, které tvoříme pro naše klienty
+      <p className="text-[22px] text-white/50 mb-12 text-center">
+        Bannery, videa a grafiky, které tvoříme pro naše klienty
       </p>
 
-      <div className="flex gap-6 justify-center items-end flex-1">
-        {/* 4 square creatives */}
-        {examples.filter(e => e.aspect === 'square').map((ex, i) => (
-          <div key={i} className="flex flex-col items-center">
-            <div className="w-[300px] h-[300px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/40">
-              <img src={ex.src} alt={ex.label} className="w-full h-full object-cover" />
-            </div>
-            <span className="text-[15px] text-white/40 mt-4 font-medium">{ex.label}</span>
+      {displayItems.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-[20px] text-white/30">Portfolio se načítá…</p>
+        </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="grid grid-cols-4 gap-6 auto-rows-fr">
+            {displayItems.map((item) => (
+              <div key={item.id} className="flex flex-col items-center">
+                <div className="w-[360px] h-[360px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/40 bg-white/5">
+                  {item.type === 'video' ? (
+                    <video
+                      src={item.file_url}
+                      muted
+                      className="w-full h-full object-cover"
+                      preload="metadata"
+                      poster={`${item.file_url}#t=0.5`}
+                    />
+                  ) : (
+                    <img
+                      src={item.file_url}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+                <span className="text-[15px] text-white/40 mt-3 font-medium truncate max-w-[340px]">
+                  {item.title}
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
-
-        {/* 2 vertical story creatives */}
-        {examples.filter(e => e.aspect === 'vertical').map((ex, i) => (
-          <div key={i} className="flex flex-col items-center">
-            <div className="w-[180px] h-[320px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/40">
-              <img src={ex.src} alt={ex.label} className="w-full h-full object-cover" />
-            </div>
-            <span className="text-[15px] text-white/40 mt-4 font-medium">{ex.label}</span>
-          </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
