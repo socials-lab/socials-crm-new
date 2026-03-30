@@ -305,6 +305,14 @@ function formatCzechDate(date: Date): string {
   return `${day}. ${month} ${year}`;
 }
 
+function isLikelyPhoneNumber(value: string): boolean {
+  const trimmed = value.trim();
+  if (!/^[+\d\s().-]+$/.test(trimmed)) return false;
+
+  const digitsOnly = trimmed.replace(/\D/g, "");
+  return digitsOnly.length >= 9 && digitsOnly.length <= 15;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -447,14 +455,14 @@ serve(async (req) => {
       );
     }
 
-    // Validate all signatories have phone numbers (DigiSign requires mobile for all recipients)
-    const signatoriesWithoutPhone = signatories.filter(s => !s.phone || s.phone.trim() === '');
-    if (signatoriesWithoutPhone.length > 0) {
-      const missingNames = signatoriesWithoutPhone.map(s => s.name).join(', ');
+    // Validate all signatories have valid phone numbers (DigiSign requires mobile for all recipients)
+    const signatoriesWithInvalidPhone = signatories.filter(s => !s.phone || !isLikelyPhoneNumber(s.phone));
+    if (signatoriesWithInvalidPhone.length > 0) {
+      const missingNames = signatoriesWithInvalidPhone.map(s => s.name).join(', ');
       return new Response(
         JSON.stringify({
-          error: `Následující podpisující osoby nemají vyplněný telefon (DigiSign vyžaduje telefon pro všechny podepisující): ${missingNames}`,
-          missing_phone_signatories: signatoriesWithoutPhone.map(s => s.name),
+          error: `Následující podpisující osoby nemají platný telefon (DigiSign vyžaduje telefon pro všechny podepisující): ${missingNames}`,
+          invalid_phone_signatories: signatoriesWithInvalidPhone.map(s => s.name),
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

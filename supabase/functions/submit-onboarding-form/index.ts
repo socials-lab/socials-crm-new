@@ -40,6 +40,18 @@ function isValidEmailFormat(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+function isLikelyPhoneNumber(value: string): boolean {
+  const trimmed = value.trim();
+  if (!/^[+\d\s().-]+$/.test(trimmed)) return false;
+
+  const digitsOnly = trimmed.replace(/\D/g, "");
+  return digitsOnly.length >= 9 && digitsOnly.length <= 15;
+}
+
+function normalizePhone(value: string | undefined): string {
+  return (value || "").trim();
+}
+
 /** Parse to YYYY-MM-DD for DATE column. Returns null if invalid. */
 function toDateOnly(v: unknown): string | null {
   if (!v) return null;
@@ -105,6 +117,46 @@ serve(async (req) => {
       );
     }
 
+    const invalidSignatories = data.signatories.filter((signatory) => !isLikelyPhoneNumber(normalizePhone(signatory.phone)));
+    if (invalidSignatories.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: "Telefon podpisující osoby musí obsahovat validní telefonní číslo (min. 9 číslic)",
+          invalid_signatories: invalidSignatories.map((s) => s.name || "Neznámý signatář"),
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const invalidProjectContacts = data.projectContacts.filter((contact) => {
+      const normalized = normalizePhone(contact.phone);
+      return normalized.length > 0 && !isLikelyPhoneNumber(normalized);
+    });
+    if (invalidProjectContacts.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: "Telefon projektového kontaktu musí obsahovat validní telefonní číslo (min. 9 číslic)",
+          invalid_project_contacts: invalidProjectContacts.map((c) => c.name || "Neznámý kontakt"),
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const sanitizedSignatories = data.signatories.map((signatory) => ({
+      ...signatory,
+      name: signatory.name.trim(),
+      position: signatory.position?.trim() || undefined,
+      email: signatory.email.trim(),
+      phone: normalizePhone(signatory.phone),
+    }));
+
+    const sanitizedProjectContacts = data.projectContacts.map((contact) => ({
+      ...contact,
+      name: contact.name.trim(),
+      email: contact.email.trim(),
+      phone: normalizePhone(contact.phone) || undefined,
+    }));
+
     const onboardingStartDate = toDateOnly(data.startDate) ?? data.startDate;
 
     const { error: updateError } = await supabaseAdmin
@@ -120,12 +172,12 @@ serve(async (req) => {
         billing_zip: data.billing_zip || null,
         billing_country: data.billing_country || null,
         billing_email: data.billing_email || null,
-        contact_name: primarySignatory.name,
-        contact_position: primarySignatory.position || null,
+        contact_name: sanitizedSignatories[0].name,
+        contact_position: sanitizedSignatories[0].position || null,
         contact_email: contactEmail,
-        contact_phone: primarySignatory.phone || null,
-        onboarding_signatories: data.signatories,
-        onboarding_project_contacts: data.projectContacts,
+        contact_phone: sanitizedSignatories[0].phone || null,
+        onboarding_signatories: sanitizedSignatories,
+        onboarding_project_contacts: sanitizedProjectContacts,
         onboarding_start_date: onboardingStartDate,
         onboarding_form_completed_at: new Date().toISOString(),
       })

@@ -51,14 +51,22 @@ interface OnboardingLead {
 }
 
 
+const isLikelyPhoneNumber = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!/^[+\d\s().-]+$/.test(trimmed)) return false;
+
+  const digitsOnly = trimmed.replace(/\D/g, '');
+  return digitsOnly.length >= 9 && digitsOnly.length <= 15;
+};
+
 const signatorySchema = z.object({
   name: z.string().min(1, 'Jméno je povinné'),
   position: z.string().optional(),
   email: z.string().email('Neplatný formát e-mailu'),
   phone: z.string()
     .min(1, 'Telefon je povinný pro podpis smlouvy')
-    .refine(val => val.length >= 9, {
-      message: 'Telefon musí mít alespoň 9 číslic',
+    .refine(val => isLikelyPhoneNumber(val), {
+      message: 'Telefon musí být platné telefonní číslo (min. 9 číslic)',
     }),
 });
 
@@ -67,8 +75,8 @@ const projectContactSchema = z.object({
   email: z.string().email('Neplatný formát e-mailu'),
   phone: z.string()
     .optional()
-    .refine(val => !val || val.length === 0 || val.length >= 9, {
-      message: 'Telefon musí mít alespoň 9 číslic',
+    .refine(val => !val || val.length === 0 || isLikelyPhoneNumber(val), {
+      message: 'Telefon musí být platné telefonní číslo (min. 9 číslic)',
     }),
 });
 
