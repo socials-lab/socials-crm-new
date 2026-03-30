@@ -1097,7 +1097,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         )}
 
         {/* ===== AUDIT FINDINGS ===== */}
-        {offer.audit_summary && (
+        {(offer.audit_html || offer.audit_summary) && (
           <>
             <ScrollReveal>
               <section>
@@ -1105,23 +1105,31 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   title="🔍 Co jsme zjistili"
                   subtitle="Na základě analýzy vašich reklamních účtů a webu jsme identifikovali klíčové oblasti pro zlepšení."
                 />
-                <div className="space-y-3">
-                  {offer.audit_summary.split('\n').filter(line => line.trim().length > 0).map((finding, idx) => {
-                    const cleanFinding = finding.replace(/^[-•*]\s*/, '').trim();
-                    if (!cleanFinding) return null;
-                    return (
-                      <div
-                        key={idx}
-                        className="flex items-start gap-4 p-4 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-foreground/[0.1] transition-all duration-300"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                          <span className="text-sm">💡</span>
+                
+                {offer.audit_html ? (
+                  <div 
+                    className="prose prose-sm max-w-none [&_img]:max-w-full [&_img]:rounded-xl [&_img]:border [&_img]:border-foreground/10 [&_img]:my-4 [&_img]:shadow-lg [&_p]:text-sm [&_p]:text-foreground/80 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:text-sm [&_li]:text-foreground/80 [&_strong]:text-foreground [&_em]:text-foreground/70"
+                    dangerouslySetInnerHTML={{ __html: offer.audit_html }}
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {offer.audit_summary!.split('\n').filter(line => line.trim().length > 0).map((finding, idx) => {
+                      const cleanFinding = finding.replace(/^[-•*]\s*/, '').trim();
+                      if (!cleanFinding) return null;
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-4 p-4 rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-foreground/[0.1] transition-all duration-300"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-sm">💡</span>
+                          </div>
+                          <p className="text-sm text-foreground/80 leading-relaxed">{cleanFinding}</p>
                         </div>
-                        <p className="text-sm text-foreground/80 leading-relaxed">{cleanFinding}</p>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {offer.recommendation_intro && (
                   <div className="mt-6 p-5 rounded-xl bg-[#94e700]/[0.05] border border-[#94e700]/20">

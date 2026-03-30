@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { AuditEditor } from './AuditEditor';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Copy, ExternalLink, Check, TrendingUp, Plus, X, History, ChevronDown, ChevronUp, Info } from 'lucide-react';
@@ -156,6 +157,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   const { services, colleagues } = useCRMData();
   const isEditMode = !!existingOffer;
   const [auditSummary, setAuditSummary] = useState('');
+  const [auditHtml, setAuditHtml] = useState('');
   const [recommendationIntro, setRecommendationIntro] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [loomUrl, setLoomUrl] = useState('');
@@ -189,6 +191,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     // Edit mode: populate from existing offer
     if (existingOffer) {
       setAuditSummary(existingOffer.audit_summary || '');
+      setAuditHtml(existingOffer.audit_html || '');
       setRecommendationIntro(existingOffer.recommendation_intro || '');
       setCustomNote(existingOffer.custom_note || '');
       setLoomUrl(existingOffer.loom_url || '');
@@ -417,6 +420,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         
         await updatePublicOffer(existingOffer.token, {
           audit_summary: auditSummary.trim() || null,
+          audit_html: auditHtml.trim() || null,
           recommendation_intro: recommendationIntro.trim() || null,
           custom_note: customNote.trim() || null,
           loom_url: loomUrl.trim() || null,
@@ -495,6 +499,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           website: lead.website || null,
           contact_name: lead.contact_name,
           audit_summary: auditSummary.trim() || null,
+          audit_html: auditHtml.trim() || null,
           recommendation_intro: recommendationIntro.trim() || null,
           custom_note: customNote.trim() || null,
           loom_url: loomUrl.trim() || null,
@@ -622,15 +627,18 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
 
                 {/* Audit summary - Co jsme zjistili */}
                 <div className="space-y-2">
-                  <Label htmlFor="audit">🔍 Co jsme zjistili (volitelné)</Label>
-                  <p className="text-xs text-muted-foreground">Každý řádek se zobrazí jako samostatný finding. Můžete psát i souvislý text.</p>
-                  <Textarea
-                    id="audit"
-                    value={auditSummary}
-                    onChange={(e) => setAuditSummary(e.target.value)}
-                    placeholder={"Reklamní účty nejsou optimálně nastaveny — chybí remarketing a audience segmentace.\nKampaně nemají strukturu podle fáze nákupního cyklu.\nKreativy se neobměňují dostatečně často, dochází k ad fatigue."}
-                    rows={6}
-                    className="font-mono text-xs"
+                  <Label>🔍 Co jsme zjistili (volitelné)</Label>
+                  <p className="text-xs text-muted-foreground">Popis zjištění z auditu. Můžete vkládat text, odrážky i screenshoty (Ctrl+V nebo přetažením).</p>
+                  <AuditEditor
+                    content={auditHtml || auditSummary}
+                    onChange={(html) => {
+                      setAuditHtml(html);
+                      // Extract plain text for backward compatibility
+                      const tmp = document.createElement('div');
+                      tmp.innerHTML = html;
+                      setAuditSummary(tmp.textContent || '');
+                    }}
+                    placeholder="Reklamní účty nejsou optimálně nastaveny — chybí remarketing a audience segmentace..."
                   />
                 </div>
 
