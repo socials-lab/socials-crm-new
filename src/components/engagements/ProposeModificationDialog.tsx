@@ -192,6 +192,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [bundledItems, setBundledItems] = useState<ModificationRequestItem[]>([]);
   const [bundleDiscountPercent, setBundleDiscountPercent] = useState<number>(0);
 
+  // Bulk edit state
+  const [bulkEditChanges, setBulkEditChanges] = useState<BulkEditProposedChanges | null>(null);
+
   // Clear draft helper (no-op now, drafts are saved as proper records)
   const clearDraft = useCallback(() => {
     try { localStorage.removeItem('modification_dialog_draft'); } catch { /* ignore */ }
