@@ -26,7 +26,8 @@ import {
   Check,
   Link2,
   Eye,
-  Calendar
+  Calendar,
+  Copy
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -1007,6 +1008,26 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">Zatím neodesláno</p>
+                      )}
+                      {(lead.onboarding_form_sent_at || lead.onboarding_form_url) && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[200px]">
+                            {lead.onboarding_form_url || `https://crm.socials.cz/onboarding/${lead.id}`}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 shrink-0"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const url = lead.onboarding_form_url || `https://crm.socials.cz/onboarding/${lead.id}`;
+                              await navigator.clipboard.writeText(url);
+                              toast.success('URL zkopírováno');
+                            }}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>

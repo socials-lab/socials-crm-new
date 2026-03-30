@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Loader2, ShieldCheck, ShieldAlert, ShieldX, Sparkles, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
+import { Loader2, ShieldCheck, ShieldAlert, ShieldX, Sparkles, CheckCircle2, XCircle, Trash2, Copy } from 'lucide-react';
 import { 
   Building2, 
   Globe, 
