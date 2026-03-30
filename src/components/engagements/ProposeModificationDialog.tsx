@@ -731,6 +731,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'add_service': return c.price || null;
       case 'update_service_price': return c.new_price ? (c.new_price - (c.old_price || 0)) : null;
       case 'deactivate_service': return c.price ? -(c.price) : null;
+      case 'bulk_edit': return c.new_total_monthly ? (c.new_total_monthly - (c.old_total_monthly || 0)) : null;
       default: return null;
     }
   };
