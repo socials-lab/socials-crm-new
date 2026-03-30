@@ -865,7 +865,8 @@ export type ModificationRequestType =
   | 'deactivate_service'
   | 'add_assignment'
   | 'update_assignment'
-  | 'new_engagement';
+  | 'new_engagement'
+  | 'bulk_edit';
 
 // Status for modification requests
 export type ModificationRequestStatus = 
@@ -885,6 +886,7 @@ export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, s
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
   new_engagement: 'Nová zakázka (jiné SRO)',
+  bulk_edit: 'Hromadná úprava zakázky',
 };
 
 // Status labels
