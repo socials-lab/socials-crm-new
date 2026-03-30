@@ -370,6 +370,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       // Bundled items reset
       setBundledItems([]);
       setBundleDiscountPercent(0);
+      setBulkEditChanges(null);
     }
   }, [open]);
 
