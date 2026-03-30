@@ -63,6 +63,7 @@ export interface PublicOffer {
   website: string | null;
   contact_name: string;
   audit_summary: string | null;
+  audit_html: string | null;
   recommendation_intro: string | null;
   custom_note: string | null;
   loom_url: string | null;
