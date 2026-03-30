@@ -2615,6 +2615,14 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   />
                 );
               })()}
+              {/* BULK EDIT FIELDS */}
+              {requestType === 'bulk_edit' && (
+                <BulkEditStep
+                  engagementId={selectedEngagementId}
+                  onChange={setBulkEditChanges}
+                  initialData={bulkEditChanges}
+                />
+              )}
             </>
           )}
 
