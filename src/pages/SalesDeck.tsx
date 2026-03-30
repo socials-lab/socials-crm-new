@@ -8,6 +8,7 @@ import { WhyUsSlide } from '@/components/sales-deck/slides/WhyUsSlide';
 import { BenefitsSlide } from '@/components/sales-deck/slides/BenefitsSlide';
 import { ReportingSlide } from '@/components/sales-deck/slides/ReportingSlide';
 import { CreativeSlide } from '@/components/sales-deck/slides/CreativeSlide';
+import { CreativeExamplesSlide } from '@/components/sales-deck/slides/CreativeExamplesSlide';
 import { OnboardingSlide } from '@/components/sales-deck/slides/OnboardingSlide';
 import { CtaSlide } from '@/components/sales-deck/slides/CtaSlide';
 
