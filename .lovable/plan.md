@@ -1,28 +1,44 @@
 
 
-## Plán: Zobrazení škálovaných nákladů/odměn u jazykových mutací
+## Plán: Interaktivní sales prezentace pro úvodní call
 
-### Problém
-V sekci "Náklady na doručení & odměny" se u jednotlivých rolí zobrazuje **základní (base) odměna** z `rewardOverrides`, ale celkový součet (`sc.cost`) už je správně násobený multiplikátorem country variant. To je matoucí — řádky nesedí s celkem.
+### Co vznikne
+Fullscreen webová prezentace na route `/sales-deck`, přístupná z CRM (protected route). Prezentující přepíná slidy šipkami nebo kliknutím. Obsah čerpá z existujících `DEFAULT_OFFER_CONTENT` bloků v `useOfferContent.tsx`.
 
-### Řešení
-V UI sekci nákladů (řádky 802–849 v `CreateOfferDialog.tsx`) zobrazit u každé role **efektivní částku** (base × variantCostMultiplier), pokud má služba country varianty:
+### Slidy (7-8 slidů)
 
-1. **Zobrazit škálovanou odměnu vedle base hodnoty**
-   - Editační input zůstane s base hodnotou (to je to, co uživatel nastavuje)
-   - Pokud existují country varianty, za inputem se zobrazí label typu `→ 15 000 Kč` (efektivní částka po násobení)
-   - Formát: `10 000 Kč/měs → 15 000 Kč (1.5×)`
+1. **Titulní slide** — Logo Socials, tagline "Výkonnostní marketing, který měříme až na zisk"
+2. **Credibility badges** — 13 specialistů, 30 mil. Kč/měsíc, 7 let na trhu, AI-first, 5/5 hodnocení (z `credibility_badges`)
+3. **Proč právě my** — 6 stat karet z `why_us` (stat + label + krátký popis)
+4. **Co dostanete** — 6 benefit karet z `benefits` (ikona + název + popis)
+5. **Reporting** — Slide o reportingu až na úroveň zisku, odkaz na demo report (z `reporting`)
+6. **Grafika, která prodává** — Creative boost info (z `creative_portfolio`)
+7. **Jak to bude probíhat** — 5 onboarding kroků jako timeline (z `onboarding`)
+8. **Pojďme do toho** — CTA slide s kontaktem
 
-2. **Přidat info o multiplikátoru u názvu služby**
-   - Už existuje `variantLabel` v totals kalkulaci, zobrazí se jako `(1.5×)` u názvu
-   - Přidat i malý text pod názvem služby: "Včetně 1 dalšího trhu" nebo "Včetně 2 dalších trhů"
+### Technický návrh
 
-### Soubor ke změně
-- `src/components/leads/CreateOfferDialog.tsx` — sekce zobrazení reward overrides (cca řádky 802–880)
+**Nové soubory:**
+- `src/pages/SalesDeck.tsx` — hlavní prezentační komponenta
+- `src/components/sales-deck/slides/` — jednotlivé slide komponenty
 
-### Detail implementace
-- Pro každý `sc` v `serviceCosts` najít příslušnou `editableService` a její `country_variants`
-- Spočítat `multiplier = 1 + sum(variants.multiplier)`
-- U každého řádku role: pokud `multiplier > 1`, zobrazit `Math.round(r.reward * multiplier)` jako efektivní hodnotu
-- Input pro editaci zůstane na base hodnotě — škálování je automatické
+**Přístup ke slidům:**
+- Fixní rozlišení 1920x1080 se škálováním přes `transform: scale()` do viewportu
+- Navigace: klávesy (šipky, mezerník, Escape), klik na strany, indikátor slidů dole
+- Fullscreen mód přes tlačítko (Fullscreen API)
+- Tmavé pozadí, moderní minimalistický design s accent barvami Socials
+
+**Obsah:**
+- Data přímo z `DEFAULT_OFFER_CONTENT` konstant — žádné API volání potřeba
+- Logo ze `src/assets/socials-logo.svg`
+
+**Route:**
+- Protected route `/sales-deck` v `App.tsx`
+- Bez AppLayout wrapperu (fullscreen prezentace)
+- Odkaz v sidebaru nebo přes přímou URL
+
+### Soubory ke změně
+- `src/App.tsx` — přidat route
+- `src/pages/SalesDeck.tsx` — nový
+- `src/components/sales-deck/` — slide komponenty
 
