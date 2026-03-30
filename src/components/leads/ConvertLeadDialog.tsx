@@ -345,7 +345,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         engagement_name: lead.website 
           ? lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').replace(/^./, c => c.toUpperCase())
           : lead.company_name,
-        engagement_type: 'one_off',
+        engagement_type: (lead.offer_type as 'retainer' | 'one_off') || 'retainer',
         billing_model: 'fixed_fee',
         currency: lead.currency,
         monthly_fee: monthlyTotal || (lead.offer_type === 'retainer' ? lead.estimated_price : 0),
