@@ -22,6 +22,7 @@ const slides = [
   BenefitsSlide,
   ReportingSlide,
   CreativeSlide,
+  CreativeExamplesSlide,
   OnboardingSlide,
   CtaSlide,
 ];
