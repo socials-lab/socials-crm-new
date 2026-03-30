@@ -670,7 +670,14 @@ function VideoThumbnail({ src, alt, onClick }: { src: string; alt: string; onCli
       onMouseLeave={() => { if (!isMobile) { const v = videoRef.current; if (v) { v.pause(); v.currentTime = 0; } } }}
     >
       {isMobile ? (
-        <div className="w-full h-full bg-gradient-to-br from-foreground/[0.06] to-foreground/[0.02]" />
+        <video
+          src={src}
+          className="w-full h-full object-cover"
+          muted
+          playsInline
+          preload="metadata"
+          style={{ pointerEvents: 'none' }}
+        />
       ) : (
         <video
           ref={videoRef}
