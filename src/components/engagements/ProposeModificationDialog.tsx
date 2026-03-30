@@ -719,6 +719,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'add_assignment': return `👤 ${c.colleague_name || 'Přiřazení kolegy'}`;
       case 'update_assignment': return `⚙️ ${c.colleague_name || 'Změna odměny'}`;
       case 'new_engagement': return `🏢 ${c.engagement_name || 'Nová zakázka'}`;
+      case 'bulk_edit': return `📋 Hromadná úprava (${c.services?.length || 0} služeb)`;
       default: return 'Položka';
     }
   };
