@@ -154,6 +154,7 @@ const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
   add_assignment: UserPlus,
   update_assignment: Settings,
   new_engagement: Building2,
+  bulk_edit: Settings,
 };
 
 const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
@@ -164,6 +165,7 @@ const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
   add_assignment: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   update_assignment: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   new_engagement: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  bulk_edit: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
@@ -174,6 +176,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny',
   new_engagement: 'Nová zakázka',
+  bulk_edit: 'Hromadná úprava',
 };
 
 export function ModificationRequestCard({

@@ -274,6 +274,7 @@ function createClientApprovedNotification(request: StoredModificationRequest): v
     add_assignment: 'přiřazení kolegy',
     update_assignment: 'změnu odměny',
     new_engagement: 'novou zakázku',
+    bulk_edit: 'hromadnou úpravu zakázky',
   };
   
   const clientName = request.client_brand_name || request.client_name;

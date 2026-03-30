@@ -51,6 +51,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
   new_engagement: 'Nová zakázka',
+  bulk_edit: 'Hromadná úprava zakázky',
 };
 
 const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
@@ -61,6 +62,7 @@ const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
   add_assignment: 'Přiřazení nového kolegy k vybrané službě s definicí jeho odměny',
   update_assignment: 'Změna odměny přiřazeného kolegy',
   new_engagement: 'Nová zakázka pro stávajícího klienta — pod stejným nebo jiným SRO',
+  bulk_edit: 'Úprava všech služeb, cen a odměn celé zakázky najednou — jeden souhrnný návrh pro klienta',
 };
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
