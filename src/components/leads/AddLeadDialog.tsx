@@ -901,6 +901,317 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
               />
             </div>
 
+            {/* Enrichment Section */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm border-b pb-2 flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Detaily leadu (enrichment)
+              </h4>
+
+              {/* Scoring & Qualification */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="lead_score"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lead score (0–100)</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} max={100} placeholder="0" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="credibility_score"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kredibilita (0–100)</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} max={100} placeholder="0" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="enrichment_qualification_tier"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kvalifikace</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Vyberte tier" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="high">🔥 High</SelectItem>
+                          <SelectItem value="medium">⚡ Střední</SelectItem>
+                          <SelectItem value="low">❄️ Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Company enrichment */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="business_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Typ podnikání</FormLabel>
+                      <FormControl>
+                        <Input placeholder="SaaS, služby..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="company_address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Adresa firmy (enrichment)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Adresa z enrichmentu" {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <div className="flex items-end gap-4">
+                  <FormField
+                    control={form.control}
+                    name="is_vat_payer"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl>
+                          <Checkbox checked={field.value === true} onCheckedChange={(v) => field.onChange(v === true ? true : null)} />
+                        </FormControl>
+                        <FormLabel className="text-sm font-normal">Plátce DPH</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="is_ecommerce"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl>
+                          <Checkbox checked={field.value === true} onCheckedChange={(v) => field.onChange(v === true ? true : null)} />
+                        </FormControl>
+                        <FormLabel className="text-sm font-normal">E-shop</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Social */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="facebook_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Facebook URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://facebook.com/..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="instagram_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instagram URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://instagram.com/..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Marketing info */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="enrichment_platform"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Platforma webu</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Shoptet, WordPress..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="enrichment_ad_spend_range"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rozpočet na reklamu (rozsah)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="50–100k Kč" {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="enrichment_services_needed"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Požadované služby/kanály</FormLabel>
+                      <FormControl>
+                        <Input placeholder="PPC, Social, SEO..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="marketing_experience"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kdo řeší marketing</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Interně, agentura..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="marketing_maturity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marketingová vyspělost</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Začátečník, pokročilý..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="has_creative_team"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Grafický tým</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ano, ne, částečně" {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="pain_point"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pain point</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Hlavní problém klienta" {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Tracking */}
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tracking na webu</span>
+                <div className="flex flex-wrap gap-4">
+                  {(['has_gtm', 'has_ga4', 'has_meta_pixel', 'has_google_ads'] as const).map(fieldName => {
+                    const labels: Record<string, string> = { has_gtm: 'GTM', has_ga4: 'GA4', has_meta_pixel: 'Meta Pixel', has_google_ads: 'Google Ads' };
+                    return (
+                      <FormField
+                        key={fieldName}
+                        control={form.control}
+                        name={fieldName}
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-2 space-y-0">
+                            <FormControl>
+                              <Checkbox checked={field.value === true} onCheckedChange={(v) => field.onChange(v === true ? true : null)} />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">{labels[fieldName]}</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Booking */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="booking_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status schůzky</FormLabel>
+                      <FormControl>
+                        <Input placeholder="scheduled, completed..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="booking_datetime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Datum schůzky</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="booking_meet_link"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Meet link</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://meet.google.com/..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Research */}
+              <FormField
+                control={form.control}
+                name="company_research"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Research firmy</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="AI research, poznámky o firmě..." {...field} value={field.value || ''} rows={4} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Zrušit
