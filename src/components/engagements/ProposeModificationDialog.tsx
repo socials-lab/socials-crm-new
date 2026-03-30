@@ -2627,7 +2627,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           )}
 
           {/* ===== ADD ANOTHER ITEM BUTTON (after step 3 form) ===== */}
-          {selectedEngagementId && requestType && bundledItems.length > 0 && (
+          {selectedEngagementId && requestType && requestType !== 'bulk_edit' && bundledItems.length > 0 && (
             <Button
               type="button"
               variant="outline"
