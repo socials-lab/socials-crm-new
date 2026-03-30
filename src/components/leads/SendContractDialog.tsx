@@ -219,7 +219,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSignature className="h-5 w-5 text-primary" />
@@ -230,7 +230,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 overflow-y-auto flex-1 min-h-0">
           {/* ── Contract data preview ── */}
           <div className="rounded-lg border bg-card p-4 space-y-4">
             <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Údaje do smlouvy</h5>
