@@ -55,6 +55,7 @@ import Prospects from "./pages/Prospects";
 import Portfolio from "./pages/Portfolio";
 import OfferContentEditor from "./pages/OfferContentEditor";
 import OfferManagement from "./pages/OfferManagement";
+import SalesDeck from "./pages/SalesDeck";
 
 const queryClient = new QueryClient();
 
