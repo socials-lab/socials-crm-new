@@ -67,6 +67,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const CREATIVE_BOOST_SERVICE_ID = 'srv-3';
 
@@ -151,9 +152,65 @@ function EngagementsContent() {
   
   // Creative Boost - no inline editing state needed, handled by unified component
 
-  // Freelo URL inline editing
-  const [editingFreeloId, setEditingFreeloId] = useState<string | null>(null);
-  const [tempFreeloUrl, setTempFreeloUrl] = useState<string>('');
+  // Contract file upload
+  const contractInputRefs = useRef<Record<string, HTMLInputElement>>({});
+  const [uploadingContractId, setUploadingContractId] = useState<string | null>(null);
+
+  const handleContractUpload = (engagementId: string) => {
+    contractInputRefs.current[engagementId]?.click();
+  };
+
+  const handleContractFileChange = async (engagementId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingContractId(engagementId);
+    try {
+      const ext = file.name.split('.').pop();
+      const filePath = `${engagementId}/${Date.now()}.${ext}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('engagement-contracts')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('engagement-contracts')
+        .getPublicUrl(filePath);
+
+      // For private buckets, use signed URL instead
+      const { data: signedData } = await supabase.storage
+        .from('engagement-contracts')
+        .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
+
+      const contractUrl = signedData?.signedUrl || publicUrl;
+      await updateEngagement(engagementId, { contract_url: contractUrl });
+      toast.success('Smlouva nahrána');
+    } catch (error) {
+      console.error('Contract upload error:', error);
+      toast.error('Chyba při nahrávání smlouvy');
+    } finally {
+      setUploadingContractId(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleContractRemove = async (engagementId: string, contractUrl: string) => {
+    try {
+      // Extract path from URL
+      const urlParts = contractUrl.split('engagement-contracts/');
+      if (urlParts[1]) {
+        const path = urlParts[1].split('?')[0];
+        await supabase.storage.from('engagement-contracts').remove([path]);
+      }
+      await updateEngagement(engagementId, { contract_url: null });
+      toast.success('Smlouva odstraněna');
+    } catch (error) {
+      console.error('Contract remove error:', error);
+      toast.error('Chyba při odstraňování smlouvy');
+    }
+  };
 
   // Document URLs inline editing
   const [editingOfferUrlId, setEditingOfferUrlId] = useState<string | null>(null);
@@ -1193,69 +1250,24 @@ function EngagementsContent() {
                       )}
                     </div>
 
-                    {/* Freelo link - always visible */}
+                    {/* Contract upload */}
                     <div className="space-y-3">
                       <h4 className="font-medium text-sm flex items-center gap-2">
-                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                        Projektový nástroj
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        Smlouva
                       </h4>
-                      {editingFreeloId === engagement.id ? (
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Input
-                            type="url"
-                            value={tempFreeloUrl}
-                            onChange={(e) => setTempFreeloUrl(e.target.value)}
-                            className="h-8 text-sm flex-1"
-                            placeholder="https://app.freelo.io/..."
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                updateEngagement(engagement.id, { freelo_url: tempFreeloUrl || null });
-                                setEditingFreeloId(null);
-                                toast.success('Freelo odkaz uložen');
-                              } else if (e.key === 'Escape') {
-                                setEditingFreeloId(null);
-                              }
-                            }}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-status-active"
-                            onClick={() => {
-                              updateEngagement(engagement.id, { freelo_url: tempFreeloUrl || null });
-                              setEditingFreeloId(null);
-                              toast.success('Freelo odkaz uložen');
-                            }}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setEditingFreeloId(null)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : engagement.freelo_url ? (
+                      {engagement.contract_url ? (
                         <div className="flex items-center gap-2">
                           <a
-                            href={engagement.freelo_url}
+                            href={engagement.contract_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-background border text-sm text-primary hover:bg-muted transition-colors"
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-background border text-sm text-primary hover:bg-muted transition-colors truncate max-w-xs"
                           >
-                            <img 
-                              src="https://www.freelo.io/favicon.ico" 
-                              alt="Freelo" 
-                              className="h-4 w-4"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                            Otevřít ve Freelu
-                            <ExternalLink className="h-3.5 w-3.5" />
+                            <FileText className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{engagement.contract_url.split('/').pop() || 'Smlouva'}</span>
+                            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                           </a>
                           <Button
                             variant="ghost"
@@ -1263,11 +1275,21 @@ function EngagementsContent() {
                             className="h-8 w-8"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setEditingFreeloId(engagement.id);
-                              setTempFreeloUrl(engagement.freelo_url || '');
+                              handleContractUpload(engagement.id);
                             }}
                           >
                             <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleContractRemove(engagement.id, engagement.contract_url!);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       ) : (
@@ -1277,14 +1299,22 @@ function EngagementsContent() {
                           className="h-8 text-sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setEditingFreeloId(engagement.id);
-                            setTempFreeloUrl('');
+                            handleContractUpload(engagement.id);
                           }}
                         >
                           <Plus className="h-3.5 w-3.5 mr-1" />
-                          Přidat Freelo odkaz
+                          Nahrát smlouvu
                         </Button>
                       )}
+                      <input
+                        ref={(el) => {
+                          if (el) contractInputRefs.current[engagement.id] = el;
+                        }}
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        className="hidden"
+                        onChange={(e) => handleContractFileChange(engagement.id, e)}
+                      />
                     </div>
 
                   </div>
