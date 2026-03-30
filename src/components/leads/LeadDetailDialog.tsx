@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Loader2, ShieldCheck, ShieldAlert, ShieldX, Sparkles, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
+import { Loader2, ShieldCheck, ShieldAlert, ShieldX, Sparkles, CheckCircle2, XCircle, Trash2, Copy } from 'lucide-react';
 import { 
   Building2, 
   Globe, 
@@ -719,6 +719,24 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                     <span className="text-xs text-muted-foreground ml-auto">
                       {new Date(lead.onboarding_form_sent_at).toLocaleDateString('cs-CZ')}
                     </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 pl-6">
+                    <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[300px]">
+                      {lead.onboarding_form_url || `https://crm.socials.cz/onboarding/${lead.id}`}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 shrink-0"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const url = lead.onboarding_form_url || `https://crm.socials.cz/onboarding/${lead.id}`;
+                        await navigator.clipboard.writeText(url);
+                        toast.success('URL zkopírováno');
+                      }}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               )}
