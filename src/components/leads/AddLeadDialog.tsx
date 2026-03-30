@@ -595,7 +595,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                   name="contact_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Kontaktní osoba *</FormLabel>
+                      <FormLabel>Kontaktní osoba</FormLabel>
                       <FormControl>
                         <Input placeholder="Jan Novák" {...field} />
                       </FormControl>
