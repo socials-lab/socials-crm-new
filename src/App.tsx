@@ -92,6 +92,7 @@ const App = () => (
                             <Route path="/creative-boost-share/:token" element={<PublicCreativeBoostPage />} />
                             <Route path="/creative-boost-share-test" element={<PublicCreativeBoostPage testToken="test" />} />
                             <Route path="/sop-share/:token" element={<PublicSOPPage />} />
+                            <Route path="/sales-deck" element={<SalesDeck />} />
                             
                             {/* Protected routes */}
                             <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
