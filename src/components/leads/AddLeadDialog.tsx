@@ -47,7 +47,7 @@ const leadSchema = z.object({
   billing_zip: z.string().optional().nullable(),
   billing_country: z.string().optional().nullable(),
   billing_email: z.string().email('Zadejte platný email').or(z.literal('')).optional().nullable(),
-  contact_name: z.string().min(1, 'Jméno kontaktu je povinné'),
+  contact_name: z.string().default(''),
   contact_position: z.string().optional().nullable(),
   contact_email: z.string().email('Zadejte platný email').or(z.literal('')).optional().nullable(),
   contact_phone: z.string().optional().nullable(),
