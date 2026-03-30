@@ -31,9 +31,10 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Lead, LeadSource } from '@/types/crm';
 import { toast } from 'sonner';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Loader2, ExternalLink, Users, Building2, Calendar, Briefcase, Scale } from 'lucide-react';
+import { Loader2, ExternalLink, Users, Building2, Calendar, Briefcase, Scale, Activity, BarChart3, Target, Video } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 import { fetchAresData, type DirectorInfo, type AresData } from '@/utils/aresUtils';
 
 const leadSchema = z.object({
@@ -143,6 +144,31 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       ad_spend_monthly: null,
       summary: '',
       probability_percent: 30,
+      // Enrichment defaults
+      enrichment_platform: '',
+      enrichment_ad_spend_range: '',
+      enrichment_services_needed: '',
+      marketing_experience: '',
+      marketing_maturity: '',
+      has_creative_team: '',
+      pain_point: '',
+      has_ga4: null,
+      has_gtm: null,
+      has_meta_pixel: null,
+      has_google_ads: null,
+      lead_score: null,
+      credibility_score: null,
+      enrichment_qualification_tier: '',
+      is_vat_payer: null,
+      is_ecommerce: null,
+      business_type: '',
+      company_address: '',
+      facebook_url: '',
+      instagram_url: '',
+      booking_status: '',
+      booking_datetime: '',
+      booking_meet_link: '',
+      company_research: '',
     },
   });
 
