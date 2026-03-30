@@ -865,7 +865,8 @@ export type ModificationRequestType =
   | 'deactivate_service'
   | 'add_assignment'
   | 'update_assignment'
-  | 'new_engagement';
+  | 'new_engagement'
+  | 'bulk_edit';
 
 // Status for modification requests
 export type ModificationRequestStatus = 
@@ -885,6 +886,7 @@ export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, s
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
   new_engagement: 'Nová zakázka (jiné SRO)',
+  bulk_edit: 'Hromadná úprava zakázky',
 };
 
 // Status labels
@@ -993,6 +995,55 @@ export interface NewEngagementProposedChanges {
   send_onboarding_form?: boolean;
 }
 
+/** A single service edit within a bulk_edit request */
+export interface BulkEditServiceItem {
+  engagement_service_id: string;
+  service_name: string;
+  /** 'keep' = unchanged, 'update' = price/reward change, 'deactivate' = remove, 'add' = new service */
+  action: 'keep' | 'update' | 'deactivate' | 'add';
+  old_price: number;
+  new_price: number;
+  currency: string;
+  /** Assignment/reward changes for this service */
+  assignment_changes?: Array<{
+    assignment_id?: string;
+    colleague_id: string;
+    colleague_name: string;
+    role: string;
+    cost_model: 'hourly' | 'fixed_monthly' | 'percentage';
+    old_value: number;
+    new_value: number;
+  }>;
+}
+
+/** Proposed changes for a bulk edit of an entire engagement */
+export interface BulkEditProposedChanges {
+  /** All services with their changes */
+  services: BulkEditServiceItem[];
+  /** New services to add */
+  new_services?: Array<{
+    service_id: string | null;
+    name: string;
+    price: number;
+    currency: string;
+    billing_type: 'monthly' | 'one_off';
+    selected_tier?: ServiceTier | null;
+    assignments?: Array<{
+      colleague_id: string;
+      colleague_name: string;
+      role: string;
+      cost_model: 'hourly' | 'fixed_monthly' | 'percentage';
+      monthly_cost?: number;
+    }>;
+  }>;
+  /** Summary totals */
+  old_total_monthly: number;
+  new_total_monthly: number;
+  old_total_internal_cost: number;
+  new_total_internal_cost: number;
+  currency: string;
+}
+
 export type ModificationProposedChanges = 
   | AddServiceProposedChanges
   | UpdateServicePriceProposedChanges
@@ -1000,7 +1051,8 @@ export type ModificationProposedChanges =
   | AddAssignmentProposedChanges
   | UpdateAssignmentProposedChanges
   | RemoveAssignmentProposedChanges
-  | NewEngagementProposedChanges;
+  | NewEngagementProposedChanges
+  | BulkEditProposedChanges;
 
 // Item within a bundled modification request
 export interface ModificationRequestItem {
@@ -1053,5 +1105,5 @@ export interface ModificationRequestWithDetails extends ModificationRequest {
 
 // Helper to check if a request type is client-facing
 export function isClientFacingRequestType(type: ModificationRequestType): boolean {
-  return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service', 'new_engagement'].includes(type);
+  return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service', 'new_engagement', 'bulk_edit'].includes(type);
 }

@@ -19,7 +19,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useCRMData } from '@/hooks/useCRMData';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useAuth } from '@/hooks/useAuth';
-import type { ModificationRequestType, ServiceTier, ModificationRequestItem, ModificationProposedChanges } from '@/types/crm';
+import type { ModificationRequestType, ServiceTier, ModificationRequestItem, ModificationProposedChanges, BulkEditProposedChanges } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SERVICE_DETAILS } from '@/constants/serviceDetails';
@@ -27,6 +27,7 @@ import { getServiceDefaults } from '@/constants/serviceDefaults';
 import { PricingImpactSection } from '@/components/engagements/PricingImpactSection';
 import type { PricingSnapshot } from '@/utils/pricingEngine';
 import { getServiceRewardRecommendation, getRewardsFromServiceConfig } from '@/constants/serviceRewards';
+import { BulkEditStep } from '@/components/engagements/BulkEditStep';
 
 interface ProposeModificationDialogProps {
   open: boolean;
@@ -51,6 +52,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
   new_engagement: 'Nová zakázka',
+  bulk_edit: 'Hromadná úprava zakázky',
 };
 
 const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
@@ -61,10 +63,12 @@ const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
   add_assignment: 'Přiřazení nového kolegy k vybrané službě s definicí jeho odměny',
   update_assignment: 'Změna odměny přiřazeného kolegy',
   new_engagement: 'Nová zakázka pro stávajícího klienta — pod stejným nebo jiným SRO',
+  bulk_edit: 'Úprava všech služeb, cen a odměn celé zakázky najednou — jeden souhrnný návrh pro klienta',
 };
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
 const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
+  'bulk_edit',
   'expand_country',
   'add_service',
   'update_service_price',
@@ -187,6 +191,9 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   // Bundled items for multi-item requests
   const [bundledItems, setBundledItems] = useState<ModificationRequestItem[]>([]);
   const [bundleDiscountPercent, setBundleDiscountPercent] = useState<number>(0);
+
+  // Bulk edit state
+  const [bulkEditChanges, setBulkEditChanges] = useState<BulkEditProposedChanges | null>(null);
 
   // Clear draft helper (no-op now, drafts are saved as proper records)
   const clearDraft = useCallback(() => {
@@ -363,6 +370,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       // Bundled items reset
       setBundledItems([]);
       setBundleDiscountPercent(0);
+      setBulkEditChanges(null);
     }
   }, [open]);
 
@@ -690,6 +698,11 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         };
         break;
       }
+      case 'bulk_edit': {
+        if (!bulkEditChanges) return null;
+        proposed_changes = { ...bulkEditChanges };
+        break;
+      }
     }
 
     return { proposed_changes, engagement_service_id: eng_service_id, engagement_assignment_id: eng_assignment_id };
@@ -706,6 +719,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'add_assignment': return `👤 ${c.colleague_name || 'Přiřazení kolegy'}`;
       case 'update_assignment': return `⚙️ ${c.colleague_name || 'Změna odměny'}`;
       case 'new_engagement': return `🏢 ${c.engagement_name || 'Nová zakázka'}`;
+      case 'bulk_edit': return `📋 Hromadná úprava (${c.services?.length || 0} služeb)`;
       default: return 'Položka';
     }
   };
@@ -717,6 +731,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       case 'add_service': return c.price || null;
       case 'update_service_price': return c.new_price ? (c.new_price - (c.old_price || 0)) : null;
       case 'deactivate_service': return c.price ? -(c.price) : null;
+      case 'bulk_edit': return c.new_total_monthly ? (c.new_total_monthly - (c.old_total_monthly || 0)) : null;
       default: return null;
     }
   };
@@ -2600,11 +2615,19 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
                   />
                 );
               })()}
+              {/* BULK EDIT FIELDS */}
+              {requestType === 'bulk_edit' && (
+                <BulkEditStep
+                  engagementId={selectedEngagementId}
+                  onChange={setBulkEditChanges}
+                  initialData={bulkEditChanges}
+                />
+              )}
             </>
           )}
 
           {/* ===== ADD ANOTHER ITEM BUTTON (after step 3 form) ===== */}
-          {selectedEngagementId && requestType && bundledItems.length > 0 && (
+          {selectedEngagementId && requestType && requestType !== 'bulk_edit' && bundledItems.length > 0 && (
             <Button
               type="button"
               variant="outline"

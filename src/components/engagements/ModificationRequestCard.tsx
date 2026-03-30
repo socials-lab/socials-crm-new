@@ -47,6 +47,7 @@ import type {
   UpdateAssignmentProposedChanges,
   RemoveAssignmentProposedChanges,
   NewEngagementProposedChanges,
+  BulkEditProposedChanges,
 } from '@/types/crm';
 import type { StoredModificationRequest } from '@/data/modificationRequestsMockData';
 import { formatCZK } from '@/utils/pricingEngine';
@@ -154,6 +155,7 @@ const REQUEST_TYPE_ICONS: Record<ModificationRequestType, typeof Package> = {
   add_assignment: UserPlus,
   update_assignment: Settings,
   new_engagement: Building2,
+  bulk_edit: Settings,
 };
 
 const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
@@ -164,6 +166,7 @@ const REQUEST_TYPE_COLORS: Record<ModificationRequestType, string> = {
   add_assignment: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   update_assignment: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   new_engagement: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  bulk_edit: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
 const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
@@ -174,6 +177,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny',
   new_engagement: 'Nová zakázka',
+  bulk_edit: 'Hromadná úprava',
 };
 
 export function ModificationRequestCard({
@@ -422,6 +426,62 @@ export function ModificationRequestCard({
             <p className="font-medium"><span className="text-muted-foreground">Celkem:</span> {c.total_monthly_price.toLocaleString('cs-CZ')} {c.currency}/měs</p>
             {c.is_different_sro && c.onboarding_email && (
               <p className="text-xs text-muted-foreground mt-1">📋 Klient vyplní údaje přes onboarding formulář ({c.onboarding_email})</p>
+            )}
+          </div>
+        );
+      }
+      case 'bulk_edit': {
+        const c = changes as BulkEditProposedChanges;
+        const changedServices = c.services.filter(s => s.action !== 'keep');
+        const delta = c.new_total_monthly - c.old_total_monthly;
+        return (
+          <div className="space-y-2 text-sm">
+            <p><span className="text-muted-foreground">Typ:</span> <span className="font-medium">Hromadná úprava zakázky</span></p>
+            <p>
+              <span className="text-muted-foreground">Celková cena:</span>{' '}
+              <span className="line-through text-muted-foreground">{c.old_total_monthly.toLocaleString('cs-CZ')}</span>
+              {' → '}
+              <span className="font-medium text-primary">{c.new_total_monthly.toLocaleString('cs-CZ')} {c.currency}/měs</span>
+              {delta !== 0 && (
+                <span className={cn("ml-1 text-xs", delta > 0 ? "text-green-600" : "text-destructive")}>
+                  ({delta >= 0 ? '+' : ''}{delta.toLocaleString('cs-CZ')})
+                </span>
+              )}
+            </p>
+            {changedServices.length > 0 && (
+              <div className="space-y-1 pl-2 border-l-2 border-primary/20">
+                {changedServices.map((s, i) => (
+                  <div key={i} className="text-xs">
+                    {s.action === 'deactivate' ? (
+                      <span className="text-destructive">❌ {s.service_name} (-{s.old_price.toLocaleString('cs-CZ')} Kč)</span>
+                    ) : (
+                      <span>
+                        💰 {s.service_name}:{' '}
+                        <span className="line-through text-muted-foreground">{s.old_price.toLocaleString('cs-CZ')}</span>
+                        {' → '}{s.new_price.toLocaleString('cs-CZ')} Kč
+                      </span>
+                    )}
+                    {s.assignment_changes && s.assignment_changes.length > 0 && (
+                      <div className="ml-3 text-muted-foreground">
+                        {s.assignment_changes.map((a, aIdx) => (
+                          <p key={aIdx}>
+                            👤 {a.colleague_name}: {a.old_value.toLocaleString('cs-CZ')} → {a.new_value.toLocaleString('cs-CZ')} Kč
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {c.new_services && c.new_services.length > 0 && (
+              <div className="space-y-1 pl-2 border-l-2 border-green-300 dark:border-green-700">
+                {c.new_services.map((s, i) => (
+                  <p key={i} className="text-xs text-green-600">
+                    ➕ {s.name} — {s.price.toLocaleString('cs-CZ')} {s.currency}/měs
+                  </p>
+                ))}
+              </div>
             )}
           </div>
         );
