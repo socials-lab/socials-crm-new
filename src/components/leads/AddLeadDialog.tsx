@@ -37,17 +37,17 @@ import { cn } from '@/lib/utils';
 import { fetchAresData, type DirectorInfo, type AresData } from '@/utils/aresUtils';
 
 const leadSchema = z.object({
-  company_name: z.string().min(1, 'Název firmy je povinný'),
-  ico: z.string().min(1, 'IČO je povinné'),
+  website: z.string().min(1, 'URL adresa je povinná').url('Zadejte platnou URL (např. https://example.com)'),
+  company_name: z.string().default(''),
+  ico: z.string().default(''),
   dic: z.string().optional().nullable(),
-  website: z.string().url('Zadejte platnou URL').or(z.literal('')).optional().nullable(),
   industry: z.string().optional().nullable(),
   billing_street: z.string().optional().nullable(),
   billing_city: z.string().optional().nullable(),
   billing_zip: z.string().optional().nullable(),
   billing_country: z.string().optional().nullable(),
   billing_email: z.string().email('Zadejte platný email').or(z.literal('')).optional().nullable(),
-  contact_name: z.string().min(1, 'Jméno kontaktu je povinné'),
+  contact_name: z.string().default(''),
   contact_position: z.string().optional().nullable(),
   contact_email: z.string().email('Zadejte platný email').or(z.literal('')).optional().nullable(),
   contact_phone: z.string().optional().nullable(),
@@ -219,8 +219,22 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
   }, [lead, form]);
 
   const handleSubmit = (data: LeadFormData) => {
+    // Derive company_name from website domain if not provided
+    let companyName = data.company_name?.trim() || '';
+    if (!companyName && data.website) {
+      try {
+        const url = new URL(data.website);
+        companyName = url.hostname.replace(/^www\./, '');
+        // Capitalize first letter
+        companyName = companyName.charAt(0).toUpperCase() + companyName.slice(1);
+      } catch {
+        companyName = data.website;
+      }
+    }
+    if (!companyName) companyName = 'Bez názvu';
+
     const leadData = {
-      company_name: data.company_name,
+      company_name: companyName,
       ico: data.ico,
       dic: data.dic || null,
       website: data.website || null,
@@ -230,7 +244,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       billing_zip: data.billing_zip || null,
       billing_country: data.billing_country || null,
       billing_email: data.billing_email || null,
-      contact_name: data.contact_name,
+      contact_name: data.contact_name?.trim() || companyName,
       contact_position: data.contact_position || null,
       contact_email: data.contact_email || null,
       contact_phone: data.contact_phone || null,
@@ -330,13 +344,27 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
             <div className="space-y-4">
               <h4 className="font-medium text-sm border-b pb-2">Firma a kontakt</h4>
               
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Web *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://example.com" {...field} value={field.value || ''} autoFocus />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="ico"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>IČO *</FormLabel>
+                      <FormLabel>IČO</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
@@ -363,7 +391,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                   name="company_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Název firmy *</FormLabel>
+                      <FormLabel>Název firmy</FormLabel>
                       <FormControl>
                         <Input placeholder="Firma s.r.o." {...field} />
                       </FormControl>
@@ -485,19 +513,6 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="website"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Web</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://example.com" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             {/* Billing Address Section */}
@@ -580,7 +595,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                   name="contact_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Kontaktní osoba *</FormLabel>
+                      <FormLabel>Kontaktní osoba</FormLabel>
                       <FormControl>
                         <Input placeholder="Jan Novák" {...field} />
                       </FormControl>
