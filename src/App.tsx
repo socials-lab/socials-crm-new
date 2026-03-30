@@ -55,6 +55,7 @@ import Prospects from "./pages/Prospects";
 import Portfolio from "./pages/Portfolio";
 import OfferContentEditor from "./pages/OfferContentEditor";
 import OfferManagement from "./pages/OfferManagement";
+import SalesDeck from "./pages/SalesDeck";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ const App = () => (
                             <Route path="/creative-boost-share/:token" element={<PublicCreativeBoostPage />} />
                             <Route path="/creative-boost-share-test" element={<PublicCreativeBoostPage testToken="test" />} />
                             <Route path="/sop-share/:token" element={<PublicSOPPage />} />
+                            <Route path="/sales-deck" element={<SalesDeck />} />
                             
                             {/* Protected routes */}
                             <Route element={<RouteGuard><AppLayout /></RouteGuard>}>
