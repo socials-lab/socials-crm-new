@@ -27,6 +27,7 @@ import { getServiceDefaults } from '@/constants/serviceDefaults';
 import { PricingImpactSection } from '@/components/engagements/PricingImpactSection';
 import type { PricingSnapshot } from '@/utils/pricingEngine';
 import { getServiceRewardRecommendation, getRewardsFromServiceConfig } from '@/constants/serviceRewards';
+import { BulkEditStep } from '@/components/engagements/BulkEditStep';
 
 interface ProposeModificationDialogProps {
   open: boolean;
