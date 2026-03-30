@@ -378,11 +378,6 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                   <Pencil className="h-4 w-4 mr-1" />
                   Upravit
                 </Button>
-                {onDelete && (
-                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
             </div>
 
