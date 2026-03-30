@@ -37,10 +37,10 @@ import { cn } from '@/lib/utils';
 import { fetchAresData, type DirectorInfo, type AresData } from '@/utils/aresUtils';
 
 const leadSchema = z.object({
-  company_name: z.string().min(1, 'Název firmy je povinný'),
-  ico: z.string().min(1, 'IČO je povinné'),
+  website: z.string().min(1, 'URL adresa je povinná').url('Zadejte platnou URL (např. https://example.com)'),
+  company_name: z.string().default(''),
+  ico: z.string().default(''),
   dic: z.string().optional().nullable(),
-  website: z.string().url('Zadejte platnou URL').or(z.literal('')).optional().nullable(),
   industry: z.string().optional().nullable(),
   billing_street: z.string().optional().nullable(),
   billing_city: z.string().optional().nullable(),
@@ -330,13 +330,27 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
             <div className="space-y-4">
               <h4 className="font-medium text-sm border-b pb-2">Firma a kontakt</h4>
               
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Web *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://example.com" {...field} value={field.value || ''} autoFocus />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="ico"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>IČO *</FormLabel>
+                      <FormLabel>IČO</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
@@ -363,7 +377,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                   name="company_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Název firmy *</FormLabel>
+                      <FormLabel>Název firmy</FormLabel>
                       <FormControl>
                         <Input placeholder="Firma s.r.o." {...field} />
                       </FormControl>
