@@ -31,9 +31,10 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Lead, LeadSource } from '@/types/crm';
 import { toast } from 'sonner';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Loader2, ExternalLink, Users, Building2, Calendar, Briefcase, Scale } from 'lucide-react';
+import { Loader2, ExternalLink, Users, Building2, Calendar, Briefcase, Scale, Activity, BarChart3, Target, Video } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 import { fetchAresData, type DirectorInfo, type AresData } from '@/utils/aresUtils';
 
 const leadSchema = z.object({
@@ -59,6 +60,31 @@ const leadSchema = z.object({
   ad_spend_monthly: z.coerce.number().min(0).optional().nullable(),
   summary: z.string().default(''),
   probability_percent: z.coerce.number().min(0).max(100).default(30),
+  // Enrichment fields
+  enrichment_platform: z.string().optional().nullable(),
+  enrichment_ad_spend_range: z.string().optional().nullable(),
+  enrichment_services_needed: z.string().optional().nullable(),
+  marketing_experience: z.string().optional().nullable(),
+  marketing_maturity: z.string().optional().nullable(),
+  has_creative_team: z.string().optional().nullable(),
+  pain_point: z.string().optional().nullable(),
+  has_ga4: z.boolean().optional().nullable(),
+  has_gtm: z.boolean().optional().nullable(),
+  has_meta_pixel: z.boolean().optional().nullable(),
+  has_google_ads: z.boolean().optional().nullable(),
+  lead_score: z.coerce.number().min(0).max(100).optional().nullable(),
+  credibility_score: z.coerce.number().min(0).max(100).optional().nullable(),
+  enrichment_qualification_tier: z.string().optional().nullable(),
+  is_vat_payer: z.boolean().optional().nullable(),
+  is_ecommerce: z.boolean().optional().nullable(),
+  business_type: z.string().optional().nullable(),
+  company_address: z.string().optional().nullable(),
+  facebook_url: z.string().optional().nullable(),
+  instagram_url: z.string().optional().nullable(),
+  booking_status: z.string().optional().nullable(),
+  booking_datetime: z.string().optional().nullable(),
+  booking_meet_link: z.string().optional().nullable(),
+  company_research: z.string().optional().nullable(),
 });
 
 type LeadFormData = z.infer<typeof leadSchema>;
@@ -118,6 +144,31 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       ad_spend_monthly: null,
       summary: '',
       probability_percent: 30,
+      // Enrichment defaults
+      enrichment_platform: '',
+      enrichment_ad_spend_range: '',
+      enrichment_services_needed: '',
+      marketing_experience: '',
+      marketing_maturity: '',
+      has_creative_team: '',
+      pain_point: '',
+      has_ga4: null,
+      has_gtm: null,
+      has_meta_pixel: null,
+      has_google_ads: null,
+      lead_score: null,
+      credibility_score: null,
+      enrichment_qualification_tier: '',
+      is_vat_payer: null,
+      is_ecommerce: null,
+      business_type: '',
+      company_address: '',
+      facebook_url: '',
+      instagram_url: '',
+      booking_status: '',
+      booking_datetime: '',
+      booking_meet_link: '',
+      company_research: '',
     },
   });
 
@@ -176,6 +227,31 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         ad_spend_monthly: lead.ad_spend_monthly,
         summary: lead.summary,
         probability_percent: lead.probability_percent,
+        // Enrichment
+        enrichment_platform: lead.enrichment_platform || '',
+        enrichment_ad_spend_range: lead.enrichment_ad_spend_range || '',
+        enrichment_services_needed: lead.enrichment_services_needed || '',
+        marketing_experience: lead.marketing_experience || '',
+        marketing_maturity: lead.marketing_maturity || '',
+        has_creative_team: lead.has_creative_team || '',
+        pain_point: lead.pain_point || '',
+        has_ga4: lead.has_ga4 ?? null,
+        has_gtm: lead.has_gtm ?? null,
+        has_meta_pixel: lead.has_meta_pixel ?? null,
+        has_google_ads: lead.has_google_ads ?? null,
+        lead_score: lead.lead_score ?? null,
+        credibility_score: lead.credibility_score ?? null,
+        enrichment_qualification_tier: lead.enrichment_qualification_tier || '',
+        is_vat_payer: lead.is_vat_payer ?? null,
+        is_ecommerce: lead.is_ecommerce ?? null,
+        business_type: lead.business_type || '',
+        company_address: lead.company_address || '',
+        facebook_url: lead.facebook_url || '',
+        instagram_url: lead.instagram_url || '',
+        booking_status: lead.booking_status || '',
+        booking_datetime: lead.booking_datetime || '',
+        booking_meet_link: lead.booking_meet_link || '',
+        company_research: lead.company_research || '',
       });
       // Backward compat: convert old string[] to DirectorInfo[]
       const rawDirectors = lead.directors || [];
@@ -210,6 +286,30 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         ad_spend_monthly: null,
         summary: '',
         probability_percent: 30,
+        enrichment_platform: '',
+        enrichment_ad_spend_range: '',
+        enrichment_services_needed: '',
+        marketing_experience: '',
+        marketing_maturity: '',
+        has_creative_team: '',
+        pain_point: '',
+        has_ga4: null,
+        has_gtm: null,
+        has_meta_pixel: null,
+        has_google_ads: null,
+        lead_score: null,
+        credibility_score: null,
+        enrichment_qualification_tier: '',
+        is_vat_payer: null,
+        is_ecommerce: null,
+        business_type: '',
+        company_address: '',
+        facebook_url: '',
+        instagram_url: '',
+        booking_status: '',
+        booking_datetime: '',
+        booking_meet_link: '',
+        company_research: '',
       });
       setAresDirectors([]);
       setAresLegalForm(null);
@@ -288,33 +388,33 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       vat_payer_status: null,
       meeting_request_sent_at: null,
       // Enrichment fields
-      enrichment_platform: null,
-      enrichment_ad_spend_range: null,
-      enrichment_services_needed: null,
-      marketing_experience: null,
-      marketing_maturity: null,
-      has_creative_team: null,
-      pain_point: null,
-      has_ga4: null,
-      has_gtm: null,
-      has_meta_pixel: null,
-      has_google_ads: null,
-      tracking_detected: null,
-      lead_score: null,
-      credibility_score: null,
-      enrichment_qualification_tier: null,
-      is_vat_payer: null,
-      is_ecommerce: null,
-      business_type: null,
-      company_address: null,
-      facebook_url: null,
-      instagram_url: null,
-      booking_status: null,
-      booking_datetime: null,
-      booking_meet_link: null,
-      company_research: null,
-      enrichment_completed: null,
-      enrichment_id: null,
+      enrichment_platform: data.enrichment_platform || null,
+      enrichment_ad_spend_range: data.enrichment_ad_spend_range || null,
+      enrichment_services_needed: data.enrichment_services_needed || null,
+      marketing_experience: data.marketing_experience || null,
+      marketing_maturity: data.marketing_maturity || null,
+      has_creative_team: data.has_creative_team || null,
+      pain_point: data.pain_point || null,
+      has_ga4: data.has_ga4 ?? null,
+      has_gtm: data.has_gtm ?? null,
+      has_meta_pixel: data.has_meta_pixel ?? null,
+      has_google_ads: data.has_google_ads ?? null,
+      tracking_detected: (data.has_ga4 || data.has_gtm || data.has_meta_pixel || data.has_google_ads) ? true : null,
+      lead_score: data.lead_score ?? null,
+      credibility_score: data.credibility_score ?? null,
+      enrichment_qualification_tier: data.enrichment_qualification_tier || null,
+      is_vat_payer: data.is_vat_payer ?? null,
+      is_ecommerce: data.is_ecommerce ?? null,
+      business_type: data.business_type || null,
+      company_address: data.company_address || null,
+      facebook_url: data.facebook_url || null,
+      instagram_url: data.instagram_url || null,
+      booking_status: data.booking_status || null,
+      booking_datetime: data.booking_datetime || null,
+      booking_meet_link: data.booking_meet_link || null,
+      company_research: data.company_research || null,
+      enrichment_completed: lead?.enrichment_completed ?? null,
+      enrichment_id: lead?.enrichment_id ?? null,
       created_by: user?.id || null,
       updated_by: user?.id || null,
     };
@@ -796,6 +896,318 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                       <Textarea placeholder="Zájem o Performance Boost..." {...field} />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Enrichment Section */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm border-b pb-2 flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Detaily leadu (enrichment)
+              </h4>
+
+              {/* Scoring & Qualification */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="lead_score"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lead score (0–100)</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} max={100} placeholder="0" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="credibility_score"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kredibilita (0–100)</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} max={100} placeholder="0" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="enrichment_qualification_tier"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kvalifikace</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Vyberte tier" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="high">🔥 High</SelectItem>
+                          <SelectItem value="medium">⚡ Střední</SelectItem>
+                          <SelectItem value="low">❄️ Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Company enrichment */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="business_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Typ podnikání</FormLabel>
+                      <FormControl>
+                        <Input placeholder="SaaS, služby..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="company_address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Adresa firmy (enrichment)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Adresa z enrichmentu" {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <div className="flex items-end gap-4">
+                  <FormField
+                    control={form.control}
+                    name="is_vat_payer"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl>
+                          <Checkbox checked={field.value === true} onCheckedChange={(v) => field.onChange(v === true ? true : null)} />
+                        </FormControl>
+                        <FormLabel className="text-sm font-normal">Plátce DPH</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="is_ecommerce"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl>
+                          <Checkbox checked={field.value === true} onCheckedChange={(v) => field.onChange(v === true ? true : null)} />
+                        </FormControl>
+                        <FormLabel className="text-sm font-normal">E-shop</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Social */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="facebook_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Facebook URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://facebook.com/..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="instagram_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instagram URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://instagram.com/..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Marketing info */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="enrichment_platform"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Platforma webu</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Shoptet, WordPress..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="enrichment_ad_spend_range"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rozpočet na reklamu (rozsah)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="50–100k Kč" {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="enrichment_services_needed"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Požadované služby/kanály</FormLabel>
+                      <FormControl>
+                        <Input placeholder="PPC, Social, SEO..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="marketing_experience"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kdo řeší marketing</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Interně, agentura..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="marketing_maturity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marketingová vyspělost</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Začátečník, pokročilý..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="has_creative_team"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Grafický tým</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ano, ne, částečně" {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="pain_point"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pain point</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Hlavní problém klienta" {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Tracking */}
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tracking na webu</span>
+                <div className="flex flex-wrap gap-4">
+                  {(['has_gtm', 'has_ga4', 'has_meta_pixel', 'has_google_ads'] as const).map(fieldName => {
+                    const labels: Record<string, string> = { has_gtm: 'GTM', has_ga4: 'GA4', has_meta_pixel: 'Meta Pixel', has_google_ads: 'Google Ads' };
+                    return (
+                      <FormField
+                        key={fieldName}
+                        control={form.control}
+                        name={fieldName}
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-2 space-y-0">
+                            <FormControl>
+                              <Checkbox checked={field.value === true} onCheckedChange={(v) => field.onChange(v === true ? true : null)} />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">{labels[fieldName]}</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Booking */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="booking_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status schůzky</FormLabel>
+                      <FormControl>
+                        <Input placeholder="scheduled, completed..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="booking_datetime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Datum schůzky</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="booking_meet_link"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Meet link</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://meet.google.com/..." {...field} value={field.value || ''} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Research */}
+              <FormField
+                control={form.control}
+                name="company_research"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Research firmy</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="AI research, poznámky o firmě..." {...field} value={field.value || ''} rows={4} />
+                    </FormControl>
                   </FormItem>
                 )}
               />
