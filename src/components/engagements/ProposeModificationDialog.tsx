@@ -67,6 +67,7 @@ const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
 const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
+  'bulk_edit',
   'expand_country',
   'add_service',
   'update_service_price',
