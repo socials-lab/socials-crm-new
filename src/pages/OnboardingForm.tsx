@@ -455,7 +455,7 @@ export default function OnboardingForm() {
               data.signatories[0]?.email,
               ownerEmail,
             ].filter(Boolean),
-            bcc: ['danny@socials.cz', 'dana.bauerova@socials.cz'],
+            bcc: ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz', 'dana.bauerova@socials.cz'],
           },
         };
         console.log('Onboarding summary payload:', summaryPayload);
