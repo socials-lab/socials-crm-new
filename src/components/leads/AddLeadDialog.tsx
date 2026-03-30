@@ -499,19 +499,6 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="website"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Web</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://example.com" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             {/* Billing Address Section */}
