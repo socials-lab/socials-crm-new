@@ -698,6 +698,11 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
         };
         break;
       }
+      case 'bulk_edit': {
+        if (!bulkEditChanges) return null;
+        proposed_changes = { ...bulkEditChanges };
+        break;
+      }
     }
 
     return { proposed_changes, engagement_service_id: eng_service_id, engagement_assignment_id: eng_assignment_id };
