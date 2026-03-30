@@ -1130,7 +1130,6 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                     })}
                   </div>
                 )}
-                </div>
 
                 {offer.recommendation_intro && (
                   <div className="mt-6 p-5 rounded-xl bg-[#94e700]/[0.05] border border-[#94e700]/20">
