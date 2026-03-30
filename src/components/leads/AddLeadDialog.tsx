@@ -219,8 +219,22 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
   }, [lead, form]);
 
   const handleSubmit = (data: LeadFormData) => {
+    // Derive company_name from website domain if not provided
+    let companyName = data.company_name?.trim() || '';
+    if (!companyName && data.website) {
+      try {
+        const url = new URL(data.website);
+        companyName = url.hostname.replace(/^www\./, '');
+        // Capitalize first letter
+        companyName = companyName.charAt(0).toUpperCase() + companyName.slice(1);
+      } catch {
+        companyName = data.website;
+      }
+    }
+    if (!companyName) companyName = 'Bez názvu';
+
     const leadData = {
-      company_name: data.company_name,
+      company_name: companyName,
       ico: data.ico,
       dic: data.dic || null,
       website: data.website || null,
