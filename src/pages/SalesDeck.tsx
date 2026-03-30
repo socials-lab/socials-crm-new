@@ -9,6 +9,8 @@ import { BenefitsSlide } from '@/components/sales-deck/slides/BenefitsSlide';
 import { ReportingSlide } from '@/components/sales-deck/slides/ReportingSlide';
 import { CreativeSlide } from '@/components/sales-deck/slides/CreativeSlide';
 import { CreativeExamplesSlide } from '@/components/sales-deck/slides/CreativeExamplesSlide';
+import { CertificationsSlide } from '@/components/sales-deck/slides/CertificationsSlide';
+import { ClientsSlide } from '@/components/sales-deck/slides/ClientsSlide';
 import { OnboardingSlide } from '@/components/sales-deck/slides/OnboardingSlide';
 import { CtaSlide } from '@/components/sales-deck/slides/CtaSlide';
 
@@ -20,6 +22,8 @@ const slides = [
   CredibilitySlide,
   WhyUsSlide,
   BenefitsSlide,
+  CertificationsSlide,
+  ClientsSlide,
   ReportingSlide,
   CreativeSlide,
   CreativeExamplesSlide,
