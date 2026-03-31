@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, UserPlus, ArrowRightLeft, Search, ExternalLink, Code, Download } from 'lucide-react';
+import { Users, UserPlus, ArrowRightLeft, Search, ExternalLink, Code, Download, Upload } from 'lucide-react';
 import { ProspectIntegrationDialog } from '@/components/prospects/ProspectIntegrationDialog';
+import { ImportProspectsDialog } from '@/components/prospects/ImportProspectsDialog';
 import { useProspectsData } from '@/hooks/useProspectsData';
 import { ProspectDetailSheet, getCompanyUrl } from '@/components/prospects/ProspectDetailSheet';
 import { PROSPECT_STATUS_LABELS, PROSPECT_STATUS_COLORS } from '@/types/prospect';
@@ -21,6 +22,7 @@ export default function Prospects() {
   const [interactionFilter, setInteractionFilter] = useState<string>('all');
   const [selectedProspect, setSelectedProspect] = useState<ProspectWithInteractions | null>(null);
   const [integrationOpen, setIntegrationOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   // Collect unique interaction titles for filter dropdown
   const interactionTitles = useMemo(() => {
@@ -82,6 +84,10 @@ export default function Prospects() {
         description="Kontakty z lead magnetů a webinářů"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
+              <Upload className="h-4 w-4" />
+              Import CSV
+            </Button>
             <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-1.5" disabled={filtered.length === 0}>
               <Download className="h-4 w-4" />
               Export CSV
@@ -213,6 +219,11 @@ export default function Prospects() {
       <ProspectIntegrationDialog
         open={integrationOpen}
         onOpenChange={setIntegrationOpen}
+      />
+
+      <ImportProspectsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
       />
     </div>
   );
