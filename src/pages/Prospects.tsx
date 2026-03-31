@@ -22,6 +22,7 @@ export default function Prospects() {
   const [interactionFilter, setInteractionFilter] = useState<string>('all');
   const [selectedProspect, setSelectedProspect] = useState<ProspectWithInteractions | null>(null);
   const [integrationOpen, setIntegrationOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   // Collect unique interaction titles for filter dropdown
   const interactionTitles = useMemo(() => {
