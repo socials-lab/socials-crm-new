@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ProspectInteractionType } from '@/types/prospect';
 import { INTERACTION_TYPE_LABELS } from '@/types/prospect';
+import { useProspectsData } from '@/hooks/useProspectsData';
 
 interface Props {
   open: boolean;
@@ -71,6 +72,7 @@ function parseCSV(text: string): string[][] {
 }
 
 export function ImportProspectsDialog({ open, onOpenChange }: Props) {
+  const { prospects } = useProspectsData();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<'upload' | 'mapping' | 'importing' | 'done'>('upload');
   const [headers, setHeaders] = useState<string[]>([]);
@@ -79,6 +81,11 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
   const [sourceName, setSourceName] = useState('');
   const [interactionType, setInteractionType] = useState<ProspectInteractionType>('lead_magnet_download');
   const [importedCount, setImportedCount] = useState(0);
+  const [customSource, setCustomSource] = useState(false);
+
+  const existingSources = Array.from(
+    new Set(prospects.flatMap(p => p.interactions.map(i => i.title)))
+  ).sort();
 
   const reset = useCallback(() => {
     setStep('upload');
@@ -86,6 +93,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
     setRows([]);
     setFieldMap({ name: -1, email: -1, phone: -1, company: -1 });
     setSourceName('');
+    setCustomSource(false);
     setInteractionType('lead_magnet_download');
     setImportedCount(0);
   }, []);
@@ -211,11 +219,42 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Zdroj / lead magnet *</Label>
-                <Input
-                  placeholder="Např. Webinář: Facebook Ads 2026"
-                  value={sourceName}
-                  onChange={e => setSourceName(e.target.value)}
-                />
+                {!customSource && existingSources.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <Select
+                      value={sourceName || '__pick__'}
+                      onValueChange={v => {
+                        if (v === '__new__') { setCustomSource(true); setSourceName(''); }
+                        else if (v !== '__pick__') { setSourceName(v); }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte zdroj" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__pick__" disabled>Vyberte zdroj…</SelectItem>
+                        {existingSources.map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                        <SelectItem value="__new__">+ Nový zdroj…</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Např. Webinář: Facebook Ads 2026"
+                      value={sourceName}
+                      onChange={e => setSourceName(e.target.value)}
+                      className="flex-1"
+                    />
+                    {existingSources.length > 0 && (
+                      <Button variant="ghost" size="sm" onClick={() => { setCustomSource(false); setSourceName(''); }}>
+                        ← Vybrat
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Typ interakce</Label>
