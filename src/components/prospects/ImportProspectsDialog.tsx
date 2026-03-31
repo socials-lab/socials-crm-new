@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { ProspectInteractionType } from '@/types/prospect';
 import { INTERACTION_TYPE_LABELS } from '@/types/prospect';
 import { useProspectsData } from '@/hooks/useProspectsData';
+import { getCompanyUrl } from '@/components/prospects/ProspectDetailSheet';
 
 interface Props {
   open: boolean;
