@@ -17,7 +17,7 @@ import socialsLogo from '@/assets/socials-logo.svg';
 import {
   LayoutDashboard,
   User,
-  Target,
+  Magnet,
   Building2,
   Contact,
   ClipboardList,
@@ -67,7 +67,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Obchod',
     items: [
-      { title: 'Leady', url: '/leads', page: 'leads', icon: Target },
+      { title: 'Leady', url: '/leads', page: 'leads', icon: Magnet },
       { title: 'Zájemci', url: '/prospects', page: 'prospects', icon: UserSearch },
       { title: 'Klienti', url: '/clients', page: 'clients', icon: Building2 },
       { title: 'Kontakty', url: '/contacts', page: 'contacts', icon: Contact },

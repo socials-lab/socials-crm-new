@@ -3,12 +3,12 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useUserRole } from '@/hooks/useUserRole';
-import { LayoutDashboard, Target, ClipboardList, Building2, Menu } from 'lucide-react';
+import { LayoutDashboard, Magnet, ClipboardList, Building2, Menu } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 const bottomNavItems: { title: string; icon: LucideIcon; url: string; page: string }[] = [
   { title: 'Přehled', icon: LayoutDashboard, url: '/', page: 'dashboard' },
-  { title: 'Leady', icon: Target, url: '/leads', page: 'leads' },
+  { title: 'Leady', icon: Magnet, url: '/leads', page: 'leads' },
   { title: 'Zakázky', icon: ClipboardList, url: '/engagements', page: 'engagements' },
   { title: 'Klienti', icon: Building2, url: '/clients', page: 'clients' },
 ];
