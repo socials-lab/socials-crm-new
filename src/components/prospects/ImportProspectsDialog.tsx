@@ -72,6 +72,7 @@ function parseCSV(text: string): string[][] {
 }
 
 export function ImportProspectsDialog({ open, onOpenChange }: Props) {
+  const { prospects } = useProspectsData();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<'upload' | 'mapping' | 'importing' | 'done'>('upload');
   const [headers, setHeaders] = useState<string[]>([]);
