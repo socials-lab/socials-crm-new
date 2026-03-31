@@ -82,6 +82,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
   const [sourceName, setSourceName] = useState('');
   const [interactionType, setInteractionType] = useState<ProspectInteractionType>('lead_magnet_download');
   const [importedCount, setImportedCount] = useState(0);
+  const [skippedCount, setSkippedCount] = useState(0);
   const [customSource, setCustomSource] = useState(false);
 
   const existingSources = Array.from(
@@ -97,6 +98,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
     setCustomSource(false);
     setInteractionType('lead_magnet_download');
     setImportedCount(0);
+    setSkippedCount(0);
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,52 +147,82 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
 
     setStep('importing');
     let count = 0;
+    let skipped = 0;
+    const trimmedSource = sourceName.trim();
+
+    // Pre-fetch existing prospects & interactions for duplicate detection
+    const [{ data: existingProspects }, { data: existingInteractions }] = await Promise.all([
+      supabase.from('prospects' as any).select('id, email'),
+      supabase.from('prospect_interactions' as any).select('prospect_id, title'),
+    ]);
+
+    const emailToId = new Map<string, string>();
+    if (existingProspects) {
+      for (const p of existingProspects as any[]) {
+        if (p.email) emailToId.set(p.email.toLowerCase().trim(), p.id);
+      }
+    }
+    const interactionSet = new Set<string>();
+    if (existingInteractions) {
+      for (const i of existingInteractions as any[]) {
+        interactionSet.add(`${i.prospect_id}::${i.title}`);
+      }
+    }
 
     for (const row of rows) {
       const name = nameIdx >= 0 ? row[nameIdx] || '' : '';
       const email = emailIdx >= 0 ? row[emailIdx] || '' : '';
       if (!name && !email) continue;
 
+      const emailLower = email.toLowerCase().trim();
+      const existingId = emailLower ? emailToId.get(emailLower) : null;
+
+      // Skip if same contact + same source already exists
+      if (existingId && interactionSet.has(`${existingId}::${trimmedSource}`)) {
+        skipped++;
+        continue;
+      }
+
       // Auto-fill company from email domain if not mapped or empty
       let company = companyIdx >= 0 ? row[companyIdx] || null : null;
       if (!company && email) {
         const url = getCompanyUrl(email);
-        if (url) {
-          company = url.replace('https://', '').replace('www.', '');
-        }
+        if (url) company = url.replace('https://', '').replace('www.', '');
       }
 
-      const prospect = {
-        name: name || email.split('@')[0] || 'Neznámý',
-        email,
-        phone: phoneIdx >= 0 ? row[phoneIdx] || null : null,
-        company,
-        status: 'new' as const,
-        notes: [],
-      };
-
-      const { data, error } = await supabase
-        .from('prospects' as any)
-        .insert(prospect as any)
-        .select('id')
-        .single();
-
-      if (error) { console.warn('Failed to insert prospect', error); continue; }
-
-      if (data) {
-        await supabase
-          .from('prospect_interactions' as any)
+      let prospectId = existingId;
+      if (!prospectId) {
+        const { data, error } = await supabase
+          .from('prospects' as any)
           .insert({
-            prospect_id: (data as any).id,
-            type: interactionType,
-            title: sourceName.trim(),
-            occurred_at: new Date().toISOString(),
-          } as any);
+            name: name || email.split('@')[0] || 'Neznámý',
+            email: emailLower || email,
+            phone: phoneIdx >= 0 ? row[phoneIdx] || null : null,
+            company,
+            status: 'new' as const,
+            notes: [],
+          } as any)
+          .select('id')
+          .single();
+        if (error) { console.warn('Failed to insert prospect', error); continue; }
+        prospectId = (data as any).id;
+        if (emailLower) emailToId.set(emailLower, prospectId!);
       }
+
+      await supabase
+        .from('prospect_interactions' as any)
+        .insert({
+          prospect_id: prospectId,
+          type: interactionType,
+          title: trimmedSource,
+          occurred_at: new Date().toISOString(),
+        } as any);
+      interactionSet.add(`${prospectId}::${trimmedSource}`);
       count++;
     }
 
     setImportedCount(count);
+    setSkippedCount(skipped);
     setStep('done');
     queryClient.invalidateQueries({ queryKey: ['prospects'] });
     queryClient.invalidateQueries({ queryKey: ['prospect_interactions'] });
@@ -368,6 +400,9 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
               <Check className="h-6 w-6 text-primary" />
             </div>
             <p className="text-lg font-semibold">Importováno {importedCount} zájemců</p>
+            {skippedCount > 0 && (
+              <p className="text-sm text-muted-foreground">Přeskočeno {skippedCount} duplicit</p>
+            )}
             <p className="text-sm text-muted-foreground">Zdroj: {sourceName} · {INTERACTION_TYPE_LABELS[interactionType]}</p>
             <Button onClick={handleClose}>Zavřít</Button>
           </div>
