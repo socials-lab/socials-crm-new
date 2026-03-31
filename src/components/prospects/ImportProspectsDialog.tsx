@@ -98,6 +98,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
     setCustomSource(false);
     setInteractionType('lead_magnet_download');
     setImportedCount(0);
+    setSkippedCount(0);
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
