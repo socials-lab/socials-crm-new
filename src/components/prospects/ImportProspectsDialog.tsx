@@ -82,6 +82,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
   const [sourceName, setSourceName] = useState('');
   const [interactionType, setInteractionType] = useState<ProspectInteractionType>('lead_magnet_download');
   const [importedCount, setImportedCount] = useState(0);
+  const [skippedCount, setSkippedCount] = useState(0);
   const [customSource, setCustomSource] = useState(false);
 
   const existingSources = Array.from(
