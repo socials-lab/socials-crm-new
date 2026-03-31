@@ -84,6 +84,10 @@ export default function Prospects() {
         description="Kontakty z lead magnetů a webinářů"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
+              <Upload className="h-4 w-4" />
+              Import CSV
+            </Button>
             <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-1.5" disabled={filtered.length === 0}>
               <Download className="h-4 w-4" />
               Export CSV
