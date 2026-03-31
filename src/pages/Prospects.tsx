@@ -220,6 +220,11 @@ export default function Prospects() {
         open={integrationOpen}
         onOpenChange={setIntegrationOpen}
       />
+
+      <ImportProspectsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+      />
     </div>
   );
 }
