@@ -18,23 +18,32 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-type ColumnMapping = 'name' | 'email' | 'phone' | 'company' | 'skip';
+type CrmField = 'name' | 'email' | 'phone' | 'company';
 
-const COLUMN_OPTIONS: { value: ColumnMapping; label: string }[] = [
-  { value: 'name', label: 'Jméno' },
-  { value: 'email', label: 'E-mail' },
-  { value: 'phone', label: 'Telefon' },
-  { value: 'company', label: 'Firma' },
-  { value: 'skip', label: '— Přeskočit —' },
+const CRM_FIELDS: { field: CrmField; label: string; required: boolean }[] = [
+  { field: 'name', label: 'Jméno', required: false },
+  { field: 'email', label: 'E-mail', required: true },
+  { field: 'phone', label: 'Telefon', required: false },
+  { field: 'company', label: 'Firma', required: false },
 ];
 
-function autoDetectColumn(header: string): ColumnMapping {
-  const h = header.toLowerCase().trim();
-  if (/jm[eé]no|name|first.?name|full.?name|kontakt/.test(h)) return 'name';
-  if (/e-?mail|email/.test(h)) return 'email';
-  if (/telefon|phone|mobil/.test(h)) return 'phone';
-  if (/firma|company|spole[čc]nost|organization/.test(h)) return 'company';
-  return 'skip';
+function autoDetectFieldIndex(headers: string[], rows: string[][], field: CrmField): number {
+  for (let i = 0; i < headers.length; i++) {
+    const h = headers[i].toLowerCase().trim();
+    if (field === 'name' && /jm[eé]no|name|first.?name|full.?name|kontakt|p[rř][ií]jmen/.test(h)) return i;
+    if (field === 'email' && /e-?mail|email|mail/.test(h)) return i;
+    if (field === 'phone' && /telefon|phone|mobil|tel\.?$/.test(h)) return i;
+    if (field === 'company' && /firma|company|spole[čc]nost|organization|org/.test(h)) return i;
+  }
+  // Content-sniff: check first few rows
+  if (rows.length > 0) {
+    for (let i = 0; i < headers.length; i++) {
+      const samples = rows.slice(0, 5).map(r => r[i] || '');
+      if (field === 'email' && samples.some(s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s))) return i;
+      if (field === 'phone' && samples.some(s => /^\+?\d[\d\s\-]{6,}$/.test(s.trim()))) return i;
+    }
+  }
+  return -1;
 }
 
 function parseCSV(text: string): string[][] {
