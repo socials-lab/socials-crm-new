@@ -81,6 +81,11 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
   const [sourceName, setSourceName] = useState('');
   const [interactionType, setInteractionType] = useState<ProspectInteractionType>('lead_magnet_download');
   const [importedCount, setImportedCount] = useState(0);
+  const [customSource, setCustomSource] = useState(false);
+
+  const existingSources = Array.from(
+    new Set(prospects.flatMap(p => p.interactions.map(i => i.title)))
+  ).sort();
 
   const reset = useCallback(() => {
     setStep('upload');
@@ -88,6 +93,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
     setRows([]);
     setFieldMap({ name: -1, email: -1, phone: -1, company: -1 });
     setSourceName('');
+    setCustomSource(false);
     setInteractionType('lead_magnet_download');
     setImportedCount(0);
   }, []);
