@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { ProspectInteractionType } from '@/types/prospect';
 import { INTERACTION_TYPE_LABELS } from '@/types/prospect';
 import { useProspectsData } from '@/hooks/useProspectsData';
+import { getCompanyUrl } from '@/components/prospects/ProspectDetailSheet';
 
 interface Props {
   open: boolean;
@@ -150,11 +151,20 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
       const email = emailIdx >= 0 ? row[emailIdx] || '' : '';
       if (!name && !email) continue;
 
+      // Auto-fill company from email domain if not mapped or empty
+      let company = companyIdx >= 0 ? row[companyIdx] || null : null;
+      if (!company && email) {
+        const url = getCompanyUrl(email);
+        if (url) {
+          company = url.replace('https://', '').replace('www.', '');
+        }
+      }
+
       const prospect = {
         name: name || email.split('@')[0] || 'Neznámý',
         email,
         phone: phoneIdx >= 0 ? row[phoneIdx] || null : null,
-        company: companyIdx >= 0 ? row[companyIdx] || null : null,
+        company,
         status: 'new' as const,
         notes: [],
       };
