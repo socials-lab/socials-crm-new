@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Upload, FileText, AlertCircle, Check } from 'lucide-react';
+import { Upload, FileText, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,23 +18,33 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-type ColumnMapping = 'name' | 'email' | 'phone' | 'company' | 'skip';
+type CrmField = 'name' | 'email' | 'phone' | 'company';
 
-const COLUMN_OPTIONS: { value: ColumnMapping; label: string }[] = [
-  { value: 'name', label: 'Jméno' },
-  { value: 'email', label: 'E-mail' },
-  { value: 'phone', label: 'Telefon' },
-  { value: 'company', label: 'Firma' },
-  { value: 'skip', label: '— Přeskočit —' },
+const CRM_FIELDS: { field: CrmField; label: string; required: boolean }[] = [
+  { field: 'name', label: 'Jméno', required: false },
+  { field: 'email', label: 'E-mail', required: true },
+  { field: 'phone', label: 'Telefon', required: false },
+  { field: 'company', label: 'Firma', required: false },
 ];
 
-function autoDetectColumn(header: string): ColumnMapping {
-  const h = header.toLowerCase().trim();
-  if (/jm[eé]no|name|first.?name|full.?name|kontakt/.test(h)) return 'name';
-  if (/e-?mail|email/.test(h)) return 'email';
-  if (/telefon|phone|mobil/.test(h)) return 'phone';
-  if (/firma|company|spole[čc]nost|organization/.test(h)) return 'company';
-  return 'skip';
+const NONE_VALUE = '__none__';
+
+function autoDetect(headers: string[], rows: string[][], field: CrmField): number {
+  for (let i = 0; i < headers.length; i++) {
+    const h = headers[i].toLowerCase().trim();
+    if (field === 'name' && /jm[eé]no|name|first.?name|full.?name|kontakt|p[rř][ií]jmen|osloveni/.test(h)) return i;
+    if (field === 'email' && /e-?mail|mail/.test(h)) return i;
+    if (field === 'phone' && /telefon|phone|mobil|tel\.?$/.test(h)) return i;
+    if (field === 'company' && /firma|company|spole[čc]nost|organization|org/.test(h)) return i;
+  }
+  if (rows.length > 0) {
+    for (let i = 0; i < headers.length; i++) {
+      const samples = rows.slice(0, 5).map(r => r[i] || '');
+      if (field === 'email' && samples.some(s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s))) return i;
+      if (field === 'phone' && samples.some(s => /^\+?\d[\d\s\-]{6,}$/.test(s.trim()))) return i;
+    }
+  }
+  return -1;
 }
 
 function parseCSV(text: string): string[][] {
@@ -65,7 +75,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
   const [step, setStep] = useState<'upload' | 'mapping' | 'importing' | 'done'>('upload');
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
-  const [columnMap, setColumnMap] = useState<ColumnMapping[]>([]);
+  const [fieldMap, setFieldMap] = useState<Record<CrmField, number>>({ name: -1, email: -1, phone: -1, company: -1 });
   const [sourceName, setSourceName] = useState('');
   const [interactionType, setInteractionType] = useState<ProspectInteractionType>('lead_magnet_download');
   const [importedCount, setImportedCount] = useState(0);
@@ -74,7 +84,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
     setStep('upload');
     setHeaders([]);
     setRows([]);
-    setColumnMap([]);
+    setFieldMap({ name: -1, email: -1, phone: -1, company: -1 });
     setSourceName('');
     setInteractionType('lead_magnet_download');
     setImportedCount(0);
@@ -96,31 +106,36 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
       const dataRows = parsed.slice(1).filter(r => r.some(c => c.length > 0));
       setHeaders(hdrs);
       setRows(dataRows);
-      setColumnMap(hdrs.map(h => autoDetectColumn(h)));
+
+      const detected: Record<CrmField, number> = { name: -1, email: -1, phone: -1, company: -1 };
+      const used = new Set<number>();
+      for (const f of CRM_FIELDS) {
+        const idx = autoDetect(hdrs, dataRows, f.field);
+        if (idx >= 0 && !used.has(idx)) {
+          detected[f.field] = idx;
+          used.add(idx);
+        }
+      }
+      setFieldMap(detected);
       setStep('mapping');
     };
     reader.readAsText(file, 'UTF-8');
   };
 
   const handleImport = async () => {
-    const nameIdx = columnMap.indexOf('name');
-    const emailIdx = columnMap.indexOf('email');
+    const { name: nameIdx, email: emailIdx, phone: phoneIdx, company: companyIdx } = fieldMap;
 
     if (nameIdx === -1 && emailIdx === -1) {
-      toast.error('Musíte namapovat alespoň Jméno nebo E-mail');
+      toast.error('Namapujte alespoň Jméno nebo E-mail');
       return;
     }
-
     if (!sourceName.trim()) {
-      toast.error('Zadejte název zdroje (lead magnet / webinář)');
+      toast.error('Zadejte název zdroje');
       return;
     }
 
     setStep('importing');
     let count = 0;
-
-    const phoneIdx = columnMap.indexOf('phone');
-    const companyIdx = columnMap.indexOf('company');
 
     for (const row of rows) {
       const name = nameIdx >= 0 ? row[nameIdx] || '' : '';
@@ -129,7 +144,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
 
       const prospect = {
         name: name || email.split('@')[0] || 'Neznámý',
-        email: email,
+        email,
         phone: phoneIdx >= 0 ? row[phoneIdx] || null : null,
         company: companyIdx >= 0 ? row[companyIdx] || null : null,
         status: 'new' as const,
@@ -142,10 +157,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
         .select('id')
         .single();
 
-      if (error) {
-        console.warn('Failed to insert prospect', error);
-        continue;
-      }
+      if (error) { console.warn('Failed to insert prospect', error); continue; }
 
       if (data) {
         await supabase
@@ -157,7 +169,6 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
             occurred_at: new Date().toISOString(),
           } as any);
       }
-
       count++;
     }
 
@@ -167,21 +178,20 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
     queryClient.invalidateQueries({ queryKey: ['prospect_interactions'] });
   };
 
-  const handleClose = () => {
-    reset();
-    onOpenChange(false);
-  };
+  const handleClose = () => { reset(); onOpenChange(false); };
 
+  // Build preview using only mapped columns
+  const mappedFields = CRM_FIELDS.filter(f => fieldMap[f.field] >= 0);
   const previewRows = rows.slice(0, 5);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Import zájemců z CSV</DialogTitle>
           <DialogDescription>
             {step === 'upload' && 'Nahrajte CSV soubor s kontakty'}
-            {step === 'mapping' && 'Zkontrolujte mapování sloupců a nastavte zdroj'}
+            {step === 'mapping' && 'Přiřaďte sloupce z CSV a nastavte zdroj'}
             {step === 'importing' && 'Probíhá import...'}
             {step === 'done' && 'Import dokončen'}
           </DialogDescription>
@@ -191,17 +201,13 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
           <div className="flex flex-col items-center justify-center gap-4 py-10 border-2 border-dashed rounded-lg">
             <Upload className="h-10 w-10 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Vyberte CSV soubor</p>
-            <Input
-              type="file"
-              accept=".csv,.txt"
-              onChange={handleFileChange}
-              className="max-w-xs"
-            />
+            <Input type="file" accept=".csv,.txt" onChange={handleFileChange} className="max-w-xs" />
           </div>
         )}
 
         {step === 'mapping' && (
           <div className="space-y-6">
+            {/* Source & type */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Zdroj / lead magnet *</Label>
@@ -214,9 +220,7 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
               <div className="space-y-2">
                 <Label>Typ interakce</Label>
                 <Select value={interactionType} onValueChange={v => setInteractionType(v as ProspectInteractionType)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {(Object.entries(INTERACTION_TYPE_LABELS) as [ProspectInteractionType, string][]).map(([key, label]) => (
                       <SelectItem key={key} value={key}>{label}</SelectItem>
@@ -226,69 +230,75 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
               </div>
             </div>
 
+            {/* Field mapping — 4 rows, user picks CSV column for each */}
             <div>
-              <Label className="mb-2 block">Mapování sloupců</Label>
-              <div className="flex gap-2 mb-2">
-                {headers.map((h, i) => (
-                  <div key={i} className="flex-1 min-w-0 space-y-1">
-                    <p className="text-xs font-medium truncate text-muted-foreground">{h}</p>
-                    <Select value={columnMap[i]} onValueChange={v => {
-                      const newMap = [...columnMap];
-                      newMap[i] = v as ColumnMapping;
-                      setColumnMap(newMap);
-                    }}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
+              <Label className="mb-3 block">Mapování sloupců <span className="text-muted-foreground font-normal">({headers.length} sloupců v CSV)</span></Label>
+              <div className="space-y-2">
+                {CRM_FIELDS.map(({ field, label, required }) => (
+                  <div key={field} className="flex items-center gap-3">
+                    <span className="text-sm w-24 shrink-0">
+                      {label} {required && <span className="text-destructive">*</span>}
+                    </span>
+                    <Select
+                      value={fieldMap[field] >= 0 ? String(fieldMap[field]) : NONE_VALUE}
+                      onValueChange={v => setFieldMap(prev => ({ ...prev, [field]: v === NONE_VALUE ? -1 : Number(v) }))}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="— Nepřiřazeno —" />
                       </SelectTrigger>
                       <SelectContent>
-                        {COLUMN_OPTIONS.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        <SelectItem value={NONE_VALUE}>— Nepřiřazeno —</SelectItem>
+                        {headers.map((h, i) => (
+                          <SelectItem key={i} value={String(i)}>
+                            {h}
+                            {rows[0]?.[i] ? ` (${rows[0][i].slice(0, 30)})` : ''}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {fieldMap[field] >= 0 && (
+                      <Badge variant="secondary" className="text-xs shrink-0">✓</Badge>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
 
-            <div>
-              <Label className="mb-2 block">Náhled dat ({rows.length} řádků celkem)</Label>
-              <div className="rounded-lg border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {headers.map((h, i) => (
-                        <TableHead key={i} className="text-xs whitespace-nowrap">
-                          {columnMap[i] !== 'skip' ? (
-                            <Badge variant="secondary" className="text-xs">{COLUMN_OPTIONS.find(o => o.value === columnMap[i])?.label}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground italic">přeskočeno</span>
-                          )}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {previewRows.map((row, ri) => (
-                      <TableRow key={ri}>
-                        {row.map((cell, ci) => (
-                          <TableCell key={ci} className={`text-xs ${columnMap[ci] === 'skip' ? 'text-muted-foreground/50' : ''}`}>
-                            {cell || '—'}
-                          </TableCell>
+            {/* Preview of mapped data */}
+            {mappedFields.length > 0 && (
+              <div>
+                <Label className="mb-2 block">Náhled ({rows.length} řádků celkem)</Label>
+                <div className="rounded-lg border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {mappedFields.map(f => (
+                          <TableHead key={f.field} className="text-xs">{f.label}</TableHead>
                         ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {previewRows.map((row, ri) => (
+                        <TableRow key={ri}>
+                          {mappedFields.map(f => (
+                            <TableCell key={f.field} className="text-xs">
+                              {row[fieldMap[f.field]] || '—'}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {rows.length > 5 && (
+                  <p className="text-xs text-muted-foreground mt-1">… a dalších {rows.length - 5} řádků</p>
+                )}
               </div>
-              {rows.length > 5 && (
-                <p className="text-xs text-muted-foreground mt-1">… a dalších {rows.length - 5} řádků</p>
-              )}
-            </div>
+            )}
 
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>Zrušit</Button>
-              <Button onClick={handleImport} disabled={!sourceName.trim()}>
+              <Button onClick={handleImport} disabled={!sourceName.trim() || (fieldMap.name === -1 && fieldMap.email === -1)}>
                 <FileText className="h-4 w-4 mr-1.5" />
                 Importovat {rows.length} zájemců
               </Button>
@@ -305,8 +315,8 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
 
         {step === 'done' && (
           <div className="flex flex-col items-center gap-4 py-10">
-            <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <Check className="h-6 w-6 text-emerald-600" />
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Check className="h-6 w-6 text-primary" />
             </div>
             <p className="text-lg font-semibold">Importováno {importedCount} zájemců</p>
             <p className="text-sm text-muted-foreground">Zdroj: {sourceName} · {INTERACTION_TYPE_LABELS[interactionType]}</p>
