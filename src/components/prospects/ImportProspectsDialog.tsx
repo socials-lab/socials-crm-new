@@ -400,6 +400,9 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
               <Check className="h-6 w-6 text-primary" />
             </div>
             <p className="text-lg font-semibold">Importováno {importedCount} zájemců</p>
+            {skippedCount > 0 && (
+              <p className="text-sm text-muted-foreground">Přeskočeno {skippedCount} duplicit</p>
+            )}
             <p className="text-sm text-muted-foreground">Zdroj: {sourceName} · {INTERACTION_TYPE_LABELS[interactionType]}</p>
             <Button onClick={handleClose}>Zavřít</Button>
           </div>
