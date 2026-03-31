@@ -219,11 +219,42 @@ export function ImportProspectsDialog({ open, onOpenChange }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Zdroj / lead magnet *</Label>
-                <Input
-                  placeholder="Např. Webinář: Facebook Ads 2026"
-                  value={sourceName}
-                  onChange={e => setSourceName(e.target.value)}
-                />
+                {!customSource && existingSources.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <Select
+                      value={sourceName || '__pick__'}
+                      onValueChange={v => {
+                        if (v === '__new__') { setCustomSource(true); setSourceName(''); }
+                        else if (v !== '__pick__') { setSourceName(v); }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte zdroj" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__pick__" disabled>Vyberte zdroj…</SelectItem>
+                        {existingSources.map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                        <SelectItem value="__new__">+ Nový zdroj…</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Např. Webinář: Facebook Ads 2026"
+                      value={sourceName}
+                      onChange={e => setSourceName(e.target.value)}
+                      className="flex-1"
+                    />
+                    {existingSources.length > 0 && (
+                      <Button variant="ghost" size="sm" onClick={() => { setCustomSource(false); setSourceName(''); }}>
+                        ← Vybrat
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Typ interakce</Label>
