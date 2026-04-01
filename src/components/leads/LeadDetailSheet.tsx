@@ -26,7 +26,8 @@ import {
   Check,
   Link2,
   Eye,
-  X
+  Calendar,
+  Copy
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -58,7 +59,6 @@ import {
 } from '@/components/ui/select';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
-import { useDigiSign } from '@/hooks/useDigiSign';
 import { useLeadTransitions } from '@/hooks/useLeadTransitions';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
@@ -68,18 +68,20 @@ import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
+import { getOffersByLeadId } from '@/data/publicOffersData';
+import type { PublicOffer } from '@/types/publicOffer';
 import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
 import type { Lead, LeadStage, LeadService } from '@/types/crm';
 import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { VatBadge } from '@/components/shared/VatBadge';
 
 interface LeadDetailSheetProps {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit: (lead: Lead) => void;
+  onDelete?: (leadId: string) => void;
 }
 
 const STAGE_LABELS: Record<LeadStage, string> = {
@@ -92,6 +94,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   won: 'Vyhráno',
   lost: 'Prohráno',
   postponed: 'Odloženo',
+  bad_fit: 'Bad Fit',
 };
 
 const SOURCE_LABELS: Record<Lead['source'], string> = {
@@ -104,10 +107,9 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
   other: 'Jiný',
 };
 
-export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
+export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, onDelete }: LeadDetailSheetProps) {
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
-  const { colleagues, services } = useCRMData();
-  const { createContract, isLoading: isCreatingContract } = useDigiSign();
+  const { colleagues, services, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
   const [noteText, setNoteText] = useState('');
   const [isConvertOpen, setIsConvertOpen] = useState(false);
@@ -119,82 +121,40 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
   const [sharedOfferUrl, setSharedOfferUrl] = useState<string | null>(null);
+  const [editingOffer, setEditingOffer] = useState<PublicOffer | null>(null);
   const [showContractWarning, setShowContractWarning] = useState(false);
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
-  const [isContractConfirmOpen, setIsContractConfirmOpen] = useState(false);
-  const [isManualSignConfirmOpen, setIsManualSignConfirmOpen] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
+  const [showOnboardingData, setShowOnboardingData] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isProcessingWarning = useRef(false);
 
   // Use fresh lead data from context to reflect updates immediately
   const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
-  const isContractCreated = !!lead?.contract_created_at;
-
-  // Contract readiness validation
-  const contractReadiness = useMemo(() => {
-    const leadServices = lead?.potential_services || [];
-    const signatories = lead?.onboarding_signatories || [];
-
-    const monthlyFromServices = leadServices
-      .filter((s: LeadService) => s.billing_type === 'monthly')
-      .reduce((sum: number, s: LeadService) => sum + (s.price || 0), 0);
-
-    const oneOffFromServices = leadServices
-      .filter((s: LeadService) => s.billing_type === 'one_off')
-      .reduce((sum: number, s: LeadService) => sum + (s.price || 0), 0);
-
-    // estimated_price is synced from latest active offer total in useLeadsData,
-    // so prefer it to keep DigiSign preview aligned with discounted offer totals.
-    const estimatedTotal = Number(lead?.estimated_price || 0);
-    const monthlyFromEstimated = estimatedTotal > 0
-      ? Math.max(estimatedTotal - oneOffFromServices, 0)
-      : 0;
-
-    const monthlyFee = monthlyFromEstimated > 0 ? monthlyFromEstimated : monthlyFromServices;
-
-    const allSignatoriesHavePhone = signatories.length > 0 && signatories.every((s: { phone?: string }) => s.phone && s.phone.trim() !== '');
-    const allSignatoriesHaveEmail = signatories.length > 0 && signatories.every((s: { email?: string }) => s.email && s.email.trim() !== '');
-
-    return {
-      hasServices: leadServices.length > 0,
-      hasMonthlyFee: monthlyFee > 0,
-      hasSignatories: signatories.length > 0,
-      allSignatoriesHavePhone,
-      allSignatoriesHaveEmail,
-      monthlyFee,
-      isReady: leadServices.length > 0 && monthlyFee > 0 && signatories.length > 0 && allSignatoriesHavePhone && allSignatoriesHaveEmail,
-    };
-  }, [lead?.potential_services, lead?.onboarding_signatories, lead?.estimated_price]);
 
   if (!lead) return null;
 
   const owner = colleagues.find(c => c.id === lead.owner_id);
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
-  const isFinished = ['won', 'lost', 'postponed'].includes(lead.stage);
   const history = getLeadHistory(lead.id);
-  const handleStageChange = async (newStage: LeadStage) => {
+  const handleStageChange = (newStage: LeadStage) => {
     const fromStage = lead.stage;
-    try {
-      await updateLeadStage(lead.id, newStage);
-      toast.success('Stav leadu byl změněn');
-
-      // Show confirmation dialog for funnel analytics
-      setPendingTransition({
-        leadId: lead.id,
-        leadName: lead.company_name,
-        fromStage,
-        toStage: newStage,
-        leadValue: lead.estimated_price || 0,
-      });
-      setShowTransitionDialog(true);
-    } catch (error) {
-      console.error('Failed to update lead stage:', error);
-      toast.error('Nepodařilo se změnit stav leadu');
-    }
+    updateLeadStage(lead.id, newStage);
+    toast.success('Stav leadu byl změněn');
+    
+    // Show confirmation dialog for funnel analytics
+    setPendingTransition({
+      leadId: lead.id,
+      leadName: lead.company_name,
+      fromStage,
+      toStage: newStage,
+      leadValue: lead.estimated_price || 0,
+    });
+    setShowTransitionDialog(true);
   };
 
-  const handleConfirmTransition = () => {
+  const handleConfirmTransition = (reason?: string) => {
     if (pendingTransition) {
       confirmTransition({
         leadId: pendingTransition.leadId,
@@ -202,61 +162,54 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         toStage: pendingTransition.toStage,
         transitionValue: pendingTransition.leadValue,
       });
+      if (reason) {
+        const prefix = pendingTransition.toStage === 'lost' ? '❌ Důvod prohry: ' : '⏸️ Důvod odložení: ';
+        addNote(lead.id, prefix + reason, 'general');
+      }
       toast.success('Přechod byl potvrzen pro analytiku');
     }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
 
-  const handleSkipTransition = () => {
+  const handleSkipTransition = (reason?: string) => {
+    if (reason && pendingTransition) {
+      const prefix = pendingTransition.toStage === 'lost' ? '❌ Důvod prohry: ' : '⏸️ Důvod odložení: ';
+      addNote(lead.id, prefix + reason, 'general');
+    }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
 
-  const handleAddNote = async () => {
+  const handleAddNote = () => {
     if (!noteText.trim()) return;
-    try {
-      await addNote(lead.id, noteText.trim());
-      setNoteText('');
-      toast.success('Poznámka byla přidána');
-    } catch (error) {
-      console.error('Failed to add note:', error);
-      toast.error('Nepodařilo se přidat poznámku');
-    }
+    addNote(lead.id, noteText.trim());
+    setNoteText('');
+    toast.success('Poznámka byla přidána');
   };
 
-  const handleAddService = async (service: LeadService) => {
+  const handleAddService = (service: LeadService) => {
     const currentServices = lead.potential_services || [];
     const updatedServices = [...currentServices, service];
     const newEstimatedPrice = updatedServices.reduce((sum, s) => sum + s.price, 0);
-
-    try {
-      await updateLead(lead.id, {
-        potential_services: updatedServices,
-        estimated_price: newEstimatedPrice,
-      });
-      toast.success('Služba byla přidána do nabídky');
-    } catch (error) {
-      console.error('Failed to add service:', error);
-      toast.error('Nepodařilo se přidat službu');
-    }
+    
+    updateLead(lead.id, {
+      potential_services: updatedServices,
+      estimated_price: newEstimatedPrice,
+    });
+    toast.success('Služba byla přidána do nabídky');
   };
 
-  const handleRemoveService = async (serviceId: string) => {
+  const handleRemoveService = (serviceId: string) => {
     const currentServices = lead.potential_services || [];
     const updatedServices = currentServices.filter(s => s.id !== serviceId);
     const newEstimatedPrice = updatedServices.reduce((sum, s) => sum + s.price, 0);
-
-    try {
-      await updateLead(lead.id, {
-        potential_services: updatedServices,
-        estimated_price: newEstimatedPrice,
-      });
-      toast.success('Služba byla odebrána z nabídky');
-    } catch (error) {
-      console.error('Failed to remove service:', error);
-      toast.error('Nepodařilo se odebrat službu');
-    }
+    
+    updateLead(lead.id, {
+      potential_services: updatedServices,
+      estimated_price: newEstimatedPrice,
+    });
+    toast.success('Služba byla odebrána z nabídky');
   };
 
   // Handle convert button click - check warnings in sequence
@@ -295,6 +248,30 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
 
   return (
     <>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete smazat tento lead? Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                onDelete?.(lead.id);
+                onOpenChange(false);
+              }}
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Onboarding Form Warning Dialog */}
       <AlertDialog open={showOnboardingWarning} onOpenChange={setShowOnboardingWarning}>
         <AlertDialogContent>
@@ -355,7 +332,25 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         <SheetContent className="sm:max-w-lg overflow-y-auto">
           <SheetHeader className="space-y-1">
             <div className="flex items-center justify-between">
-              <SheetTitle className="text-xl">{lead.company_name}</SheetTitle>
+              <div className="flex items-center gap-2">
+                <SheetTitle className="text-xl">{lead.website ? ((d) => d.charAt(0).toUpperCase() + d.slice(1))(lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '')) : lead.company_name}</SheetTitle>
+                {lead.qualification_status === 'qualified' && (
+                  <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30 gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Kvalifikovaný
+                  </Badge>
+                )}
+                {lead.qualification_status === 'bad_fit' && (
+                  <Badge variant="outline" className="text-xs bg-red-500/10 text-red-700 border-red-500/30">
+                    Bad Fit
+                  </Badge>
+                )}
+                {lead.qualification_status === 'pending' && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                    Čeká na posouzení
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setIsHistoryOpen(true)}>
                   <Clock className="h-4 w-4" />
@@ -366,7 +361,35 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                 </Button>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">IČO: {lead.ico}</p>
+
+            {/* Prominent owner/resolver selector */}
+            <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-muted/50 border">
+              <User className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Řešitel:</span>
+              <Select 
+                value={lead.owner_id || '_none'} 
+                onValueChange={(val) => {
+                  const newOwnerId = val === '_none' ? null : val;
+                  updateLead(lead.id, { owner_id: newOwnerId });
+                  toast.success('Řešitel leadu byl změněn');
+                }}
+              >
+                <SelectTrigger className="h-8 border-0 bg-transparent shadow-none p-0 pl-1 font-medium text-sm flex-1 min-w-0">
+                  <SelectValue placeholder="Nepřiřazeno" />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  <SelectItem value="_none">
+                    <span className="text-muted-foreground">Nepřiřazeno</span>
+                  </SelectItem>
+                  {colleagues.filter(c => c.status === 'active').map((colleague) => (
+                    <SelectItem key={colleague.id} value={colleague.id}>
+                      {colleague.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
           </SheetHeader>
 
 
@@ -393,24 +416,12 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                         <ExternalLink className="h-3 w-3" />
                         ARES
                       </a>
-                      <a
-                        href={`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${lead.ico}&firma=${encodeURIComponent(lead.company_name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Justice
-                      </a>
                     </div>
                   </div>
                   {lead.dic && (
                     <div>
                       <span className="text-muted-foreground text-xs">DIČ</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{lead.dic}</span>
-                        <VatBadge dic={lead.dic} />
-                      </div>
+                      <p className="font-medium">{lead.dic}</p>
                     </div>
                   )}
                 </div>
@@ -541,33 +552,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <label className="text-xs text-muted-foreground">Odpovědná osoba</label>
-                    <Select
-                      value={lead.owner_id}
-                      onValueChange={async (newOwnerId) => {
-                        try {
-                          await updateLead(lead.id, { owner_id: newOwnerId });
-                          toast.success('Majitel leadu byl změněn');
-                        } catch (error) {
-                          console.error('Failed to update owner:', error);
-                          toast.error('Nepodařilo se změnit majitele');
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="mt-1 h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background">
-                        {colleagues.filter(c => c.status === 'active').map((colleague) => (
-                          <SelectItem key={colleague.id} value={colleague.id}>
-                            {colleague.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="text-sm">
                   <div>
                     <span className="text-muted-foreground">Zdroj:</span>
                     <p className="font-medium">
@@ -609,8 +594,6 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                   variant="outline"
                   size="sm"
                   onClick={() => setIsAddServiceOpen(true)}
-                  disabled={isContractCreated}
-                  title={isContractCreated ? 'Služby nelze upravovat po vytvoření smlouvy' : undefined}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Přidat
@@ -649,8 +632,6 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                           size="sm"
                           className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                           onClick={() => handleRemoveService(service.id)}
-                          disabled={isContractCreated}
-                          title={isContractCreated ? 'Služby nelze upravovat po vytvoření smlouvy' : undefined}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -667,17 +648,16 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
               {/* Total price */}
               {(() => {
                 const hasServices = lead.potential_services && lead.potential_services.length > 0;
-                const totalPrice = lead.estimated_price || (hasServices
+                const totalPrice = hasServices
                   ? lead.potential_services.reduce((sum, s) => sum + s.price, 0)
-                  : 0);
-                const hasMonthlyServices = hasServices && lead.potential_services.some(s => s.billing_type === 'monthly');
+                  : 0;
                 return (
                   <div className="p-3 rounded-lg bg-muted/50">
                     <span className="text-xs text-muted-foreground">Celková cena</span>
                     {hasServices ? (
                       <p className="text-lg font-semibold">
                         {totalPrice.toLocaleString()} {lead.currency}
-                        {hasMonthlyServices && <span className="text-sm font-normal">/měs</span>}
+                        {lead.offer_type === 'retainer' && <span className="text-sm font-normal">/měs</span>}
                       </p>
                     ) : (
                       <p className="text-lg text-muted-foreground italic">Není stanovena</p>
@@ -695,7 +675,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
                 💬 Komunikace s klientem
               </h4>
-
+              
               {/* Meeting Request */}
               <div className={cn(
                 "p-3 rounded-lg border",
@@ -703,18 +683,18 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
               )}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Send className="h-4 w-4 text-muted-foreground" />
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium">Žádost o schůzku</p>
                         {lead.meeting_request_sent_at && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                       </div>
                       {lead.meeting_request_sent_at ? (
-                        <div className="text-xs text-green-700">
-                          ✓ Odeslano {new Date(lead.meeting_request_sent_at).toLocaleDateString('cs-CZ')}
-                        </div>
+                        <p className="text-xs text-green-700">
+                          ✓ Odesláno {new Date(lead.meeting_request_sent_at).toLocaleDateString('cs-CZ')}
+                        </p>
                       ) : (
-                        <p className="text-xs text-muted-foreground">Zatim neodeslano</p>
+                        <p className="text-xs text-muted-foreground">Zatím neodesláno</p>
                       )}
                     </div>
                   </div>
@@ -722,14 +702,12 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                     variant="outline"
                     size="sm"
                     onClick={() => setIsMeetingRequestOpen(true)}
-                    disabled={isFinished}
-                    title={isFinished ? 'Lead je uzavren' : undefined}
                   >
                     {lead.meeting_request_sent_at ? 'Znovu odeslat' : 'Odeslat'}
                   </Button>
                 </div>
               </div>
-              
+
               {/* Access Request */}
               <div className={cn(
                 "p-3 rounded-lg border",
@@ -759,8 +737,6 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                     variant="outline"
                     size="sm"
                     onClick={() => setIsRequestAccessOpen(true)}
-                    disabled={isFinished}
-                    title={isFinished ? 'Lead je uzavřen' : undefined}
                   >
                     {lead.access_request_sent_at ? 'Znovu odeslat' : 'Odeslat'}
                   </Button>
@@ -804,17 +780,12 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                       <Button
                         variant="default"
                         size="sm"
-                        onClick={async () => {
-                          try {
-                            await updateLead(lead.id, {
-                              access_received_at: new Date().toISOString(),
-                              stage: 'access_received' as LeadStage
-                            });
-                            toast.success('🔑 Přístupy byly přijaty!');
-                          } catch (error) {
-                            console.error('Failed to update access received:', error);
-                            toast.error('Nepodařilo se uložit změnu');
-                          }
+                        onClick={() => {
+                          updateLead(lead.id, { 
+                            access_received_at: new Date().toISOString(),
+                            stage: 'access_received' as LeadStage 
+                          });
+                          toast.success('🔑 Přístupy byly přijaty!');
                         }}
                       >
                         ✓ Přijato
@@ -874,16 +845,36 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                         Vytvořeno: {new Date(lead.offer_created_at).toLocaleDateString('cs-CZ')}
                       </p>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => setIsCreateOfferOpen(true)}
-                      disabled={isFinished}
-                      title={isFinished ? 'Lead je uzavřen' : undefined}
-                    >
-                      Vytvořit novou nabídku
-                    </Button>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={async () => {
+                          const offers = await getOffersByLeadId(lead.id);
+                          const latestOffer = offers.length > 0 ? offers[offers.length - 1] : null;
+                          if (latestOffer) {
+                            setEditingOffer(latestOffer);
+                            setIsCreateOfferOpen(true);
+                          } else {
+                            toast.error('Nabídka nebyla nalezena');
+                          }
+                        }}
+                      >
+                        Editovat nabídku
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setEditingOffer(null);
+                          setIsCreateOfferOpen(true);
+                        }}
+                      >
+                        Nová nabídka
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -891,20 +882,14 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                       variant="default"
                       className="w-full"
                       onClick={() => setIsCreateOfferOpen(true)}
-                      disabled={(lead.potential_services?.length || 0) === 0 || isFinished}
-                      title={isFinished ? 'Lead je uzavřen' : undefined}
+                      disabled={(lead.potential_services?.length || 0) === 0}
                     >
                       <Link2 className="h-4 w-4 mr-2" />
                       Vytvořit sdílenou nabídku
                     </Button>
-                    {(lead.potential_services?.length || 0) === 0 && !isFinished && (
+                    {(lead.potential_services?.length || 0) === 0 && (
                       <p className="text-xs text-muted-foreground text-center mt-2">
                         Nejprve přidejte služby do nabídky
-                      </p>
-                    )}
-                    {isFinished && (
-                      <p className="text-xs text-muted-foreground text-center mt-2">
-                        Lead je uzavřen
                       </p>
                     )}
                   </>
@@ -950,8 +935,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                     variant={lead.offer_sent_at ? "outline" : "default"}
                     size="sm"
                     onClick={() => setIsSendOfferOpen(true)}
-                    disabled={!lead.offer_url || isFinished}
-                    title={isFinished ? 'Lead je uzavřen' : undefined}
+                    disabled={!lead.offer_url}
                   >
                     {lead.offer_sent_at ? 'Znovu odeslat' : 'Odeslat'}
                   </Button>
@@ -1005,6 +989,26 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                       ) : (
                         <p className="text-xs text-muted-foreground">Zatím neodesláno</p>
                       )}
+                      {(lead.onboarding_form_sent_at || lead.onboarding_form_url) && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[200px]">
+                            {lead.onboarding_form_url || `https://crm.socials.cz/onboarding/${lead.id}`}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 shrink-0"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const url = lead.onboarding_form_url || `https://crm.socials.cz/onboarding/${lead.id}`;
+                              await navigator.clipboard.writeText(url);
+                              toast.success('URL zkopírováno');
+                            }}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   {!lead.onboarding_form_completed_at && (
@@ -1012,24 +1016,91 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                       variant={lead.onboarding_form_sent_at ? "outline" : "default"}
                       size="sm"
                       onClick={() => setIsOnboardingFormOpen(true)}
-                      disabled={isFinished || !lead.potential_services?.length || !lead.offer_sent_at}
-                      title={
-                        isFinished ? 'Lead je uzavřen'
-                        : !lead.potential_services?.length ? 'Nejprve přidejte služby'
-                        : !lead.offer_sent_at ? 'Nejprve odešlete nabídku'
-                        : undefined
-                      }
                     >
                       {lead.onboarding_form_sent_at ? 'Znovu odeslat' : 'Odeslat'}
                     </Button>
                   )}
+                  {lead.onboarding_form_completed_at && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowOnboardingData(!showOnboardingData)}
+                      className="gap-1"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      {showOnboardingData ? 'Skrýt údaje' : 'Zobrazit údaje'}
+                    </Button>
+                  )}
                 </div>
-                {!lead.onboarding_form_completed_at && !isFinished && (!lead.potential_services?.length || !lead.offer_sent_at) && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {!lead.potential_services?.length
-                      ? 'Nejprve přidejte služby do nabídky'
-                      : 'Nejprve odešlete nabídku klientovi'}
-                  </p>
+
+                {/* Onboarding Form Data - toggled by button */}
+                {lead.onboarding_form_completed_at && showOnboardingData && (
+                  <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+                    {/* Billing info */}
+                    {(lead.billing_street || lead.billing_city || lead.billing_email) && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                          <MapPin className="h-3 w-3" />
+                          Fakturační údaje z formuláře
+                        </p>
+                        <div className="text-sm space-y-1 pl-4">
+                          {lead.billing_street && <p>{lead.billing_street}</p>}
+                          {(lead.billing_zip || lead.billing_city) && (
+                            <p>{[lead.billing_zip, lead.billing_city].filter(Boolean).join(' ')}</p>
+                          )}
+                          {lead.billing_country && (
+                            <p className="text-xs text-muted-foreground">{lead.billing_country}</p>
+                          )}
+                          {lead.billing_email && (
+                            <div className="flex items-center gap-1.5 pt-1">
+                              <Mail className="h-3 w-3 text-muted-foreground" />
+                              <a 
+                                href={`mailto:${lead.billing_email}`}
+                                className="text-xs text-primary hover:underline"
+                              >
+                                {lead.billing_email}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contact person from form */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                        <User className="h-3 w-3" />
+                        Kontaktní osoba
+                      </p>
+                      <div className="text-sm space-y-0.5 pl-4">
+                        <p className="font-medium">{lead.contact_name}</p>
+                        {lead.contact_position && (
+                          <p className="text-xs text-muted-foreground">{lead.contact_position}</p>
+                        )}
+                        {lead.contact_email && (
+                          <a href={`mailto:${lead.contact_email}`} className="text-xs text-primary hover:underline block">
+                            {lead.contact_email}
+                          </a>
+                        )}
+                        {lead.contact_phone && (
+                          <a href={`tel:${lead.contact_phone}`} className="text-xs text-muted-foreground hover:underline block">
+                            {lead.contact_phone}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Client message */}
+                    {lead.client_message && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                          <MessageSquare className="h-3 w-3" />
+                          Zpráva od klienta
+                        </p>
+                        <p className="text-xs italic pl-4 text-muted-foreground">"{lead.client_message}"</p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -1067,64 +1138,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                         </a>
                       </div>
                     ) : lead.onboarding_form_completed_at ? (
-                      <div className="space-y-3">
-                        {/* Prerequisites checklist */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2 text-xs">
-                            {contractReadiness.hasServices ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                            ) : (
-                              <X className="h-3.5 w-3.5 text-red-500" />
-                            )}
-                            <span className={contractReadiness.hasServices ? 'text-muted-foreground' : 'text-red-600'}>
-                              Služby ({lead.potential_services?.length || 0})
-                              {!contractReadiness.hasServices && ' - Přidejte alespoň 1 službu'}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            {contractReadiness.hasMonthlyFee ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                            ) : (
-                              <X className="h-3.5 w-3.5 text-red-500" />
-                            )}
-                            <span className={contractReadiness.hasMonthlyFee ? 'text-muted-foreground' : 'text-red-600'}>
-                              Měsíční poplatek ({contractReadiness.monthlyFee.toLocaleString('cs-CZ')} Kč)
-                              {!contractReadiness.hasMonthlyFee && ' - Přidejte měsíční službu'}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            {contractReadiness.hasSignatories && contractReadiness.allSignatoriesHavePhone && contractReadiness.allSignatoriesHaveEmail ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                            ) : (
-                              <X className="h-3.5 w-3.5 text-red-500" />
-                            )}
-                            <span className={contractReadiness.hasSignatories && contractReadiness.allSignatoriesHavePhone && contractReadiness.allSignatoriesHaveEmail ? 'text-muted-foreground' : 'text-red-600'}>
-                              Podpisující osoby ({lead?.onboarding_signatories?.length || 0})
-                              {!contractReadiness.hasSignatories && ' - Chybí podpisující osoby'}
-                              {contractReadiness.hasSignatories && !contractReadiness.allSignatoriesHaveEmail && ' - Chybí e-mail u podpisujících'}
-                              {contractReadiness.hasSignatories && !contractReadiness.allSignatoriesHavePhone && ' - Chybí telefon u podpisujících'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between pt-1">
-                          <p className="text-xs text-amber-600">⏳ Čeká na vytvoření</p>
-                          <Button
-                            size="sm"
-                            onClick={() => setIsContractConfirmOpen(true)}
-                            disabled={isCreatingContract || !contractReadiness.isReady}
-                            title={!contractReadiness.isReady ? 'Nejprve dokončete všechny požadavky' : undefined}
-                          >
-                            {isCreatingContract ? (
-                              <>
-                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                Vytvářím...
-                              </>
-                            ) : (
-                              'Vytvořit smlouvu'
-                            )}
-                          </Button>
-                        </div>
-                      </div>
+                      <p className="text-xs text-amber-600">⏳ Čeká na vytvoření</p>
                     ) : (
                       <p className="text-xs text-muted-foreground">Bude vytvořena po vyplnění formuláře</p>
                     )}
@@ -1132,8 +1146,53 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                 </div>
               </div>
 
-              {/* Contract Signed - shown after contract is created */}
+              {/* Contract Sending - shown after contract is created */}
               {lead.contract_url && (
+                <div className={cn(
+                  "p-3 rounded-lg border",
+                  lead.contract_sent_at ? "border-green-500/30 bg-green-500/5" : "bg-card"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Send className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">Smlouva odeslána</p>
+                          {lead.contract_sent_at && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                        </div>
+                        {lead.contract_sent_at ? (
+                          <p className="text-xs text-green-700">
+                            ✓ Odesláno {new Date(lead.contract_sent_at).toLocaleDateString('cs-CZ', {
+                              day: 'numeric',
+                              month: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Připraveno k odeslání</p>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant={lead.contract_sent_at ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => {
+                        updateLead(lead.id, { 
+                          contract_sent_at: new Date().toISOString()
+                        });
+                        toast.success('✉️ Smlouva byla označena jako odeslaná');
+                      }}
+                    >
+                      {lead.contract_sent_at ? '↺ Znovu' : '✉️ Odesláno'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Contract Signed - shown after contract is sent */}
+              {lead.contract_sent_at && (
                 <div className={cn(
                   "p-3 rounded-lg border",
                   lead.contract_signed_at 
@@ -1167,10 +1226,20 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                     </div>
                     {!lead.contract_signed_at && (
                       <Button
-                        variant="outline"
+                        variant="default"
                         size="sm"
-                        className="border-amber-500 text-amber-600 hover:bg-amber-50"
-                        onClick={() => setIsManualSignConfirmOpen(true)}
+                        onClick={() => {
+                          updateLead(lead.id, { 
+                            contract_signed_at: new Date().toISOString()
+                          });
+                          // Propagate contract to converted engagement
+                          if (lead.converted_to_engagement_id && lead.contract_url) {
+                            updateEngagement(lead.converted_to_engagement_id, {
+                              contract_url: lead.contract_url
+                            });
+                          }
+                          toast.success('✅ Smlouva podepsána!' + (lead.converted_to_engagement_id ? ' Odkaz uložen i ke klientovi.' : ''));
+                        }}
                       >
                         ✓ Podepsáno
                       </Button>
@@ -1215,21 +1284,10 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                   variant="default"
                   size="lg"
                   onClick={handleConvertClick}
-                  disabled={!lead.onboarding_form_completed_at || !lead.contract_signed_at}
                 >
                   <ArrowRightLeft className="h-4 w-4 mr-2" />
                   Převést na zakázku
                 </Button>
-                
-                {(!lead.onboarding_form_completed_at || !lead.contract_signed_at) && (
-                  <p className="text-xs text-amber-600 text-center">
-                    {!lead.onboarding_form_completed_at && !lead.contract_signed_at 
-                      ? 'Nejprve musí být vyplněn formulář a podepsána smlouva'
-                      : !lead.onboarding_form_completed_at 
-                      ? 'Nejprve musí být vyplněn onboarding formulář'
-                      : 'Nejprve musí být podepsána smlouva'}
-                  </p>
-                )}
               </div>
             )}
 
@@ -1299,6 +1357,16 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
                 <span>Poslední aktivita: {new Date(lead.updated_at).toLocaleDateString('cs-CZ')}</span>
               </div>
             </div>
+
+            {/* Delete button at the bottom */}
+            {onDelete && (
+              <div className="pt-4 border-t flex justify-end">
+                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive gap-1.5" onClick={() => setShowDeleteConfirm(true)}>
+                  <Trash2 className="h-4 w-4" />
+                  Smazat lead
+                </Button>
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
@@ -1327,27 +1395,6 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         onSubmit={handleAddService}
       />
 
-      <RequestAccessDialog
-        open={isRequestAccessOpen}
-        onOpenChange={setIsRequestAccessOpen}
-        contactName={lead.contact_name}
-        contactEmail={lead.contact_email}
-        companyName={lead.company_name}
-        leadId={lead.id}
-        onSent={async (platforms) => {
-          try {
-            await updateLead(lead.id, {
-              access_request_sent_at: new Date().toISOString(),
-              access_request_platforms: platforms,
-              stage: 'waiting_access' as LeadStage,
-            });
-          } catch (error) {
-            console.error('Failed to update access request:', error);
-            toast.error('Nepodařilo se uložit změnu');
-          }
-        }}
-      />
-
       <SendMeetingRequestDialog
         open={isMeetingRequestOpen}
         onOpenChange={setIsMeetingRequestOpen}
@@ -1355,15 +1402,26 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         contactEmail={lead.contact_email}
         companyName={lead.company_name}
         leadId={lead.id}
-        onSent={async () => {
-          try {
-            await updateLead(lead.id, {
-              meeting_request_sent_at: new Date().toISOString(),
-            });
-          } catch (error) {
-            console.error('Failed to update meeting request:', error);
-            toast.error('Nepodařilo se uložit změnu');
-          }
+        onSent={(emailData) => {
+          updateLead(lead.id, {
+            meeting_request_sent_at: new Date().toISOString(),
+          });
+        }}
+      />
+
+      <RequestAccessDialog
+        open={isRequestAccessOpen}
+        onOpenChange={setIsRequestAccessOpen}
+        contactName={lead.contact_name}
+        contactEmail={lead.contact_email}
+        companyName={lead.company_name}
+        leadId={lead.id}
+        onSent={(platforms) => {
+          updateLead(lead.id, {
+            access_request_sent_at: new Date().toISOString(),
+            access_request_platforms: platforms,
+            stage: 'waiting_access' as LeadStage,
+          });
         }}
       />
 
@@ -1371,16 +1429,11 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         open={isOnboardingFormOpen}
         onOpenChange={setIsOnboardingFormOpen}
         lead={lead}
-        onSent={async (formUrl) => {
-          try {
-            await updateLead(lead.id, {
-              onboarding_form_sent_at: new Date().toISOString(),
-              onboarding_form_url: formUrl,
-            });
-          } catch (error) {
-            console.error('Failed to update onboarding form:', error);
-            toast.error('Nepodařilo se uložit změnu');
-          }
+        onSent={(formUrl) => {
+          updateLead(lead.id, {
+            onboarding_form_sent_at: new Date().toISOString(),
+            onboarding_form_url: formUrl,
+          });
         }}
       />
 
@@ -1388,295 +1441,31 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit }: 
         open={isSendOfferOpen}
         onOpenChange={setIsSendOfferOpen}
         lead={lead}
-        onSent={async (ownerId) => {
-          try {
-            await updateLead(lead.id, {
-              offer_sent_at: new Date().toISOString(),
-              offer_sent_by_id: ownerId,
-              stage: 'offer_sent' as LeadStage,
-            });
-          } catch (error) {
-            console.error('Failed to update offer sent:', error);
-            toast.error('Nepodařilo se uložit změnu');
-          }
+        onSent={(ownerId) => {
+          updateLead(lead.id, {
+            offer_sent_at: new Date().toISOString(),
+            offer_sent_by_id: ownerId,
+            stage: 'offer_sent' as LeadStage,
+          });
         }}
       />
 
       <CreateOfferDialog
         open={isCreateOfferOpen}
-        onOpenChange={setIsCreateOfferOpen}
+        onOpenChange={(open) => {
+          setIsCreateOfferOpen(open);
+          if (!open) setEditingOffer(null);
+        }}
         lead={lead}
-        onSuccess={async (token, offerUrl) => {
+        existingOffer={editingOffer || undefined}
+        onSuccess={(token, offerUrl) => {
           setSharedOfferUrl(offerUrl);
-          try {
-            await updateLead(lead.id, {
-              offer_url: offerUrl,
-              offer_created_at: new Date().toISOString(),
-              stage: 'preparing_offer' as LeadStage,
-            });
-          } catch (error) {
-            console.error('Failed to update offer:', error);
-            toast.error('Nepodařilo se uložit změnu');
-          }
+          updateLead(lead.id, {
+            offer_url: offerUrl,
+            offer_created_at: new Date().toISOString(),
+          });
         }}
       />
-
-      {/* Contract Confirmation Dialog */}
-      <AlertDialog open={isContractConfirmOpen} onOpenChange={setIsContractConfirmOpen}>
-        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Potvrdit vytvoření smlouvy</AlertDialogTitle>
-            <AlertDialogDescription>
-              Prosím zkontrolujte údaje, které budou použity pro vytvoření smlouvy v DigiSign.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {/* Company Info */}
-            <div>
-              <h4 className="font-semibold text-sm mb-2">Informace o společnosti</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Název:</span>
-                  <span className="font-medium">{lead.company_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">IČO:</span>
-                  <span className="font-medium">{lead.ico}</span>
-                </div>
-                {lead.dic && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">DIČ:</span>
-                    <span className="font-medium">{lead.dic}</span>
-                  </div>
-                )}
-                {lead.website && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Web:</span>
-                    <span className="font-medium">{lead.website}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Billing Address */}
-            <div>
-              <h4 className="font-semibold text-sm mb-2">Fakturační adresa</h4>
-              <div className="space-y-1 text-sm">
-                {lead.billing_street && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Ulice:</span>
-                    <span className="font-medium">{lead.billing_street}</span>
-                  </div>
-                )}
-                {lead.billing_city && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Město:</span>
-                    <span className="font-medium">{lead.billing_city}</span>
-                  </div>
-                )}
-                {lead.billing_zip && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">PSČ:</span>
-                    <span className="font-medium">{lead.billing_zip}</span>
-                  </div>
-                )}
-                {!lead.billing_street && !lead.billing_city && !lead.billing_zip && (
-                  <p className="text-amber-600 text-xs">⚠️ Fakturační adresa není vyplněna</p>
-                )}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Contact Person */}
-            <div>
-              <h4 className="font-semibold text-sm mb-2">Kontaktní osoba</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Jméno:</span>
-                  <span className="font-medium">{lead.contact_name}</span>
-                </div>
-                {lead.contact_position && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pozice:</span>
-                    <span className="font-medium">{lead.contact_position}</span>
-                  </div>
-                )}
-                {lead.contact_email && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Email:</span>
-                    <span className="font-medium">{lead.contact_email}</span>
-                  </div>
-                )}
-                {lead.contact_phone && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Telefon:</span>
-                    <span className="font-medium">{lead.contact_phone}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Services */}
-            <div>
-              <h4 className="font-semibold text-sm mb-2">Služby</h4>
-              <div className="space-y-1 text-sm">
-                {lead.potential_services && lead.potential_services.length > 0 ? (
-                  <div className="space-y-2">
-                    {lead.potential_services.map((service: LeadService, idx: number) => (
-                      <div key={idx} className="p-2 rounded border bg-muted/30">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-medium">{service.name}</div>
-                            {service.selected_tier && (
-                              <div className="text-xs text-muted-foreground mt-0.5">
-                                Tier: {service.selected_tier}
-                              </div>
-                            )}
-                          </div>
-                          <div className="text-right ml-3">
-                            <div className="font-semibold">
-                              {service.price.toLocaleString('cs-CZ')} {(() => {
-                                if (!service.currency) throw new Error(`Lead service ${service.name} has no currency`);
-                                return service.currency;
-                              })()}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {service.billing_type === 'monthly' ? 'měsíčně' : 'jednorázově'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-amber-600 text-xs">⚠️ Chybí služby - nelze vytvořit smlouvu bez služeb</p>
-                )}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Signatories */}
-            <div>
-              <h4 className="font-semibold text-sm mb-2">Podpisující osoby</h4>
-              <div className="space-y-1 text-sm">
-                {lead.onboarding_signatories && lead.onboarding_signatories.length > 0 ? (
-                  <div className="space-y-2">
-                    {lead.onboarding_signatories.map((signatory: { name: string; position?: string; email: string; phone?: string }, idx: number) => (
-                      <div key={idx} className="p-2 rounded border bg-muted/30">
-                        <div className="font-medium">{signatory.name}</div>
-                        {signatory.position && (
-                          <div className="text-xs text-muted-foreground">{signatory.position}</div>
-                        )}
-                        {signatory.email ? (
-                          <div className="text-xs text-muted-foreground">{signatory.email}</div>
-                        ) : (
-                          <div className="text-xs text-red-500">⚠️ Chybí e-mail</div>
-                        )}
-                        {signatory.phone ? (
-                          <div className="text-xs text-muted-foreground">{signatory.phone}</div>
-                        ) : (
-                          <div className="text-xs text-red-500">⚠️ Chybí telefon</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-amber-600 text-xs">⚠️ Chybí podpisující osoby</p>
-                )}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Pricing */}
-            <div>
-              <h4 className="font-semibold text-sm mb-2">Cena</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Odhadovaná cena:</span>
-                  <span className="font-medium">
-                    {lead.estimated_price ? `${lead.estimated_price.toLocaleString('cs-CZ')} ${(() => {
-                      if (!lead.currency) throw new Error(`Lead ${lead.id} has no currency`);
-                      return lead.currency;
-                    })()}` : 'Neuvedeno'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCreatingContract}>Zrušit</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                const result = await createContract(lead.id);
-                if (result) {
-                  setIsContractConfirmOpen(false);
-                }
-              }}
-              disabled={isCreatingContract || !contractReadiness.isReady}
-            >
-              {isCreatingContract ? (
-                <>
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  Vytvářím...
-                </>
-              ) : (
-                'Vytvořit smlouvu'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Manual Contract Signed Confirmation Dialog */}
-      <AlertDialog open={isManualSignConfirmOpen} onOpenChange={setIsManualSignConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>⚠️ Ruční označení smlouvy jako podepsané</AlertDialogTitle>
-            <AlertDialogDescription>
-              <div className="space-y-3 text-sm">
-                <p className="text-amber-600 font-medium">
-                  Tato akce je určena pouze pro výjimečné případy, kdy automatická aktualizace přes webhook selhala.
-                </p>
-                <p>
-                  Za normálních okolností se smlouva označí jako podepsaná automaticky, když všechny strany podepíší v DigiSign.
-                </p>
-                <p className="text-muted-foreground">
-                  Opravdu chcete ručně označit smlouvu jako podepsanou?
-                </p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                try {
-                  await updateLead(lead.id, {
-                    contract_signed_at: new Date().toISOString()
-                  });
-                  toast.success('✅ Smlouva byla ručně označena jako podepsaná');
-                  setIsManualSignConfirmOpen(false);
-                } catch (error) {
-                  console.error('Failed to mark contract as signed:', error);
-                  toast.error('Nepodařilo se uložit změnu');
-                }
-              }}
-              className="bg-amber-600 hover:bg-amber-700"
-            >
-              Ano, označit jako podepsanou
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Confirmation Dialog for Funnel Analytics */}
       <ConfirmStageTransitionDialog

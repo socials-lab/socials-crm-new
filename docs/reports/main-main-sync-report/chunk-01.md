@@ -1,0 +1,148 @@
+# Main-main sync report chunk 01 (131 commits)
+
+- Commit count: **131**
+- Date span: **2026-03-26T10:10:47Z -> 2026-03-26T13:15:15Z**
+
+- `259614b` | `2026-03-26T10:10:47Z` | `gpt-engineer-app[bot]` | `Work in progress` | files:`1` | `+102/-102` | area:`bun.lock` | impact:`This commit work in progress, primarily affecting bun.lock.`
+- `2c47e07` | `2026-03-26T10:11:46Z` | `gpt-engineer-app[bot]` | `Reviewed lead detail for enrich` | files:`1` | `+41/-0` | area:`docs` | impact:`This commit reviewed lead detail for enrich, primarily affecting docs.`
+- `c499188` | `2026-03-26T10:12:53Z` | `gpt-engineer-app[bot]` | `Added lead enrichment DB fields` | files:`3` | `+503/-0` | area:`src, supabase` | impact:`This commit added lead enrichment DB fields, primarily affecting src, supabase.`
+- `6fc3353` | `2026-03-26T10:13:08Z` | `gpt-engineer-app[bot]` | `Added lead enrichment webhook` | files:`1` | `+3/-1` | area:`src` | impact:`This commit added lead enrichment webhook, primarily affecting src.`
+- `1872585` | `2026-03-26T10:13:18Z` | `gpt-engineer-app[bot]` | `Added lead enrichment support` | files:`1` | `+28/-0` | area:`src` | impact:`This commit added lead enrichment support, primarily affecting src.`
+- `c298f86` | `2026-03-26T10:13:27Z` | `gpt-engineer-app[bot]` | `Added lead enrichment support` | files:`1` | `+2/-1` | area:`src` | impact:`This commit added lead enrichment support, primarily affecting src.`
+- `659f935` | `2026-03-26T10:13:34Z` | `gpt-engineer-app[bot]` | `Added lead enrichment support` | files:`1` | `+3/-0` | area:`src` | impact:`This commit added lead enrichment support, primarily affecting src.`
+- `53c8974` | `2026-03-26T10:13:43Z` | `gpt-engineer-app[bot]` | `Added lead enrichment fields` | files:`1` | `+0/-1` | area:`src` | impact:`This commit added lead enrichment fields, primarily affecting src.`
+- `02f518b` | `2026-03-26T10:14:19Z` | `gpt-engineer-app[bot]` | `Added lead enrichment support` | files:`7` | `+680/-103` | area:`src, bun.lock, docs` | impact:`This commit added lead enrichment support, primarily affecting src, bun.lock, docs.`
+- `82937da` | `2026-03-26T10:14:46Z` | `gpt-engineer-app[bot]` | `Upravila výšku kanban sloupců` | files:`1` | `+2/-2` | area:`src` | impact:`This commit upravila výšku kanban sloupců, primarily affecting src.`
+- `196a4aa` | `2026-03-26T10:14:53Z` | `gpt-engineer-app[bot]` | `Let columns expand without cap` | files:`1` | `+1/-1` | area:`src` | impact:`This commit let columns expand without cap, primarily affecting src.`
+- `6b948ac` | `2026-03-26T10:15:04Z` | `gpt-engineer-app[bot]` | `Expanded Kanban columns height` | files:`1` | `+3/-3` | area:`src` | impact:`This commit expanded Kanban columns height, primarily affecting src.`
+- `ec6cd12` | `2026-03-26T10:17:16Z` | `gpt-engineer-app[bot]` | `Upravil lead detail layout` | files:`1` | `+266/-427` | area:`src` | impact:`This commit upravil lead detail layout, primarily affecting src.`
+- `95bba3d` | `2026-03-26T10:17:38Z` | `gpt-engineer-app[bot]` | `Přesunul hlavní info nahoru` | files:`1` | `+266/-427` | area:`src` | impact:`This commit přesunul hlavní info nahoru, primarily affecting src.`
+- `4b63f25` | `2026-03-26T10:19:33Z` | `gpt-engineer-app[bot]` | `Redesigned lead detail layout` | files:`1` | `+264/-196` | area:`src` | impact:`This commit redesigned lead detail layout, primarily affecting src.`
+- `e0765d6` | `2026-03-26T10:19:51Z` | `gpt-engineer-app[bot]` | `Redesigned lead detail layout` | files:`1` | `+4/-3` | area:`src` | impact:`This commit redesigned lead detail layout, primarily affecting src.`
+- `eed4e7b` | `2026-03-26T10:20:45Z` | `gpt-engineer-app[bot]` | `Redesigned lead detail header` | files:`1` | `+155/-144` | area:`src` | impact:`This commit redesigned lead detail header, primarily affecting src.`
+- `f3c17a6` | `2026-03-26T10:20:52Z` | `gpt-engineer-app[bot]` | `Redesigned lead detail layout` | files:`1` | `+1/-1` | area:`src` | impact:`This commit redesigned lead detail layout, primarily affecting src.`
+- `a48a3e5` | `2026-03-26T10:21:16Z` | `gpt-engineer-app[bot]` | `Redesigned lead detail header` | files:`2` | `+424/-344` | area:`src` | impact:`This commit redesigned lead detail header, primarily affecting src.`
+- `e7d3773` | `2026-03-26T10:21:41Z` | `gpt-engineer-app[bot]` | `Removed estimated price header` | files:`1` | `+0/-9` | area:`src` | impact:`This commit removed estimated price header, primarily affecting src.`
+- `ad9b2bf` | `2026-03-26T10:21:49Z` | `gpt-engineer-app[bot]` | `Removed estimated price in header` | files:`1` | `+0/-9` | area:`src` | impact:`This commit removed estimated price in header, primarily affecting src.`
+- `12a8e77` | `2026-03-26T10:22:17Z` | `gpt-engineer-app[bot]` | `Fixed lead summary truncation` | files:`1` | `+31/-25` | area:`src` | impact:`This commit fixed lead summary truncation, primarily affecting src.`
+- `51eada3` | `2026-03-26T10:22:26Z` | `gpt-engineer-app[bot]` | `Replaced lead header grid table` | files:`1` | `+31/-25` | area:`src` | impact:`This commit replaced lead header grid table, primarily affecting src.`
+- `dec2a0b` | `2026-03-26T10:26:08Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`This commit changes, primarily affecting src.`
+- `fa14b32` | `2026-03-26T10:26:17Z` | `gpt-engineer-app[bot]` | `Widened lead detail popup layout` | files:`1` | `+1/-1` | area:`src` | impact:`This commit widened lead detail popup layout, primarily affecting src.`
+- `cb25ea6` | `2026-03-26T10:27:39Z` | `gpt-engineer-app[bot]` | `Added meeting date & Meet link` | files:`1` | `+28/-1` | area:`src` | impact:`This commit added meeting date & Meet link, primarily affecting src.`
+- `65de32b` | `2026-03-26T10:27:50Z` | `gpt-engineer-app[bot]` | `Added booking to lead detail` | files:`1` | `+28/-1` | area:`src` | impact:`This commit added booking to lead detail, primarily affecting src.`
+- `b6f99d2` | `2026-03-26T10:29:10Z` | `gpt-engineer-app[bot]` | `Fixed ad spend edit display` | files:`1` | `+4/-6` | area:`src` | impact:`This commit fixed ad spend edit display, primarily affecting src.`
+- `cc881f6` | `2026-03-26T10:29:18Z` | `gpt-engineer-app[bot]` | `Removed ad spend edit field` | files:`1` | `+4/-6` | area:`src` | impact:`This commit removed ad spend edit field, primarily affecting src.`
+- `24544ec` | `2026-03-26T10:31:17Z` | `gpt-engineer-app[bot]` | `Redesigned LeadFlowStepper UI` | files:`1` | `+121/-122` | area:`src` | impact:`This commit redesigned LeadFlowStepper UI, primarily affecting src.`
+- `0d8cd09` | `2026-03-26T10:31:28Z` | `gpt-engineer-app[bot]` | `Redesigned lead flow stepper` | files:`1` | `+8/-0` | area:`src` | impact:`This commit redesigned lead flow stepper, primarily affecting src.`
+- `1a715ca` | `2026-03-26T10:31:56Z` | `gpt-engineer-app[bot]` | `Redesigned lead flow stepper` | files:`2` | `+129/-122` | area:`src` | impact:`This commit redesigned lead flow stepper, primarily affecting src.`
+- `3985e79` | `2026-03-26T10:33:03Z` | `gpt-engineer-app[bot]` | `Zarovnal Zdroj dropdown v detailu` | files:`1` | `+9/-9` | area:`src` | impact:`This commit zarovnal Zdroj dropdown v detailu, primarily affecting src.`
+- `0711a38` | `2026-03-26T10:33:13Z` | `gpt-engineer-app[bot]` | `Zarovnal Zdroj select v detailu` | files:`1` | `+9/-9` | area:`src` | impact:`This commit zarovnal Zdroj select v detailu, primarily affecting src.`
+- `52a5a85` | `2026-03-26T10:52:29Z` | `gpt-engineer-app[bot]` | `Přidal možnost znovu odeslat` | files:`1` | `+15/-3` | area:`src` | impact:`This commit přidal možnost znovu odeslat, primarily affecting src.`
+- `c2e7a8f` | `2026-03-26T10:52:39Z` | `gpt-engineer-app[bot]` | `Added resend actions in stepper` | files:`1` | `+15/-3` | area:`src` | impact:`This commit added resend actions in stepper, primarily affecting src.`
+- `6a13d0f` | `2026-03-26T10:53:17Z` | `gpt-engineer-app[bot]` | `Enabled offer edit and resend` | files:`1` | `+7/-5` | area:`src` | impact:`This commit enabled offer edit and resend, primarily affecting src.`
+- `6236b11` | `2026-03-26T10:53:27Z` | `gpt-engineer-app[bot]` | `Přidal úpravu nabídky ve stepperu` | files:`1` | `+7/-5` | area:`src` | impact:`This commit přidal úpravu nabídky ve stepperu, primarily affecting src.`
+- `79af327` | `2026-03-26T11:26:52Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+3/-21` | area:`src` | impact:`This commit changes, primarily affecting src.`
+- `bc98d53` | `2026-03-26T11:27:04Z` | `gpt-engineer-app[bot]` | `Zjednodušil flow nabídky` | files:`1` | `+3/-21` | area:`src` | impact:`This commit zjednodušil flow nabídky, primarily affecting src.`
+- `9157ac5` | `2026-03-26T11:28:07Z` | `gpt-engineer-app[bot]` | `Inspected offer pricing impact` | files:`1` | `+56/-41` | area:`src` | impact:`This commit inspected offer pricing impact, primarily affecting src.`
+- `1da3f02` | `2026-03-26T11:28:21Z` | `gpt-engineer-app[bot]` | `Upgraded offer cost breakdown` | files:`1` | `+56/-41` | area:`src` | impact:`This commit upgraded offer cost breakdown, primarily affecting src.`
+- `b266cbc` | `2026-03-26T11:42:49Z` | `gpt-engineer-app[bot]` | `Inspected offer dialog services` | files:`1` | `+103/-2` | area:`src` | impact:`This commit inspected offer dialog services, primarily affecting src.`
+- `724d021` | `2026-03-26T11:43:09Z` | `gpt-engineer-app[bot]` | `Předvyplnil nabídku službami` | files:`1` | `+18/-6` | area:`src` | impact:`This commit předvyplnil nabídku službami, primarily affecting src.`
+- `6b283b3` | `2026-03-26T11:43:22Z` | `gpt-engineer-app[bot]` | `Auto-naplň nabídku službami` | files:`1` | `+35/-1` | area:`src` | impact:`This commit auto-naplň nabídku službami, primarily affecting src.`
+- `cf04092` | `2026-03-26T11:43:37Z` | `gpt-engineer-app[bot]` | `Auto-suggested offer services` | files:`1` | `+156/-9` | area:`src` | impact:`This commit auto-suggested offer services, primarily affecting src.`
+- `be5ea36` | `2026-03-26T11:44:29Z` | `gpt-engineer-app[bot]` | `Zahrnul Creative Boost do kalkulací` | files:`1` | `+31/-8` | area:`src` | impact:`This commit zahrnul Creative Boost do kalkulací, primarily affecting src.`
+- `bd885de` | `2026-03-26T11:44:42Z` | `gpt-engineer-app[bot]` | `Fixed Creative Boost totals calc` | files:`1` | `+31/-8` | area:`src` | impact:`This commit fixed Creative Boost totals calc, primarily affecting src.`
+- `8460db0` | `2026-03-26T11:45:05Z` | `gpt-engineer-app[bot]` | `Removed validity from offer form` | files:`1` | `+0/-10` | area:`src` | impact:`This commit removed validity from offer form, primarily affecting src.`
+- `0137ba6` | `2026-03-26T11:45:13Z` | `gpt-engineer-app[bot]` | `Removed offer validity field` | files:`1` | `+0/-10` | area:`src` | impact:`This commit removed offer validity field, primarily affecting src.`
+- `8938e05` | `2026-03-26T11:47:17Z` | `gpt-engineer-app[bot]` | `Added Creative Boost rewards` | files:`1` | `+1/-1` | area:`src` | impact:`This commit added Creative Boost rewards, primarily affecting src.`
+- `e4a19bf` | `2026-03-26T11:47:24Z` | `gpt-engineer-app[bot]` | `Fixed Creative Boost costs calc` | files:`1` | `+5/-1` | area:`src` | impact:`This commit fixed Creative Boost costs calc, primarily affecting src.`
+- `8e526ad` | `2026-03-26T11:47:39Z` | `gpt-engineer-app[bot]` | `Added fallback rewards for CB` | files:`1` | `+6/-2` | area:`src` | impact:`This commit added fallback rewards for CB, primarily affecting src.`
+- `c6a29d4` | `2026-03-26T11:50:08Z` | `gpt-engineer-app[bot]` | `Adjusted credits cost to 100%` | files:`1` | `+2/-2` | area:`src` | impact:`This commit adjusted credits cost to 100%, primarily affecting src.`
+- `7cc8888` | `2026-03-26T11:50:34Z` | `gpt-engineer-app[bot]` | `Vypočetl 100 % kredity grafika` | files:`1` | `+3/-1` | area:`src` | impact:`This commit vypočetl 100 % kredity grafika, primarily affecting src.`
+- `aae97fe` | `2026-03-26T11:50:47Z` | `gpt-engineer-app[bot]` | `Upravil Creative Boost výpočet` | files:`1` | `+5/-3` | area:`src` | impact:`This commit upravil Creative Boost výpočet, primarily affecting src.`
+- `5fd19c2` | `2026-03-26T11:55:09Z` | `gpt-engineer-app[bot]` | `Přesunul audit a Loom nahoru` | files:`1` | `+0/-43` | area:`src` | impact:`This commit přesunul audit a Loom nahoru, primarily affecting src.`
+- `40fb2c9` | `2026-03-26T11:55:20Z` | `gpt-engineer-app[bot]` | `Přesunul audit a loom nahoru` | files:`1` | `+37/-0` | area:`src` | impact:`This commit přesunul audit a loom nahoru, primarily affecting src.`
+- `24a5053` | `2026-03-26T11:55:29Z` | `gpt-engineer-app[bot]` | `Přesunul audit do hlavičky` | files:`1` | `+37/-43` | area:`src` | impact:`This commit přesunul audit do hlavičky, primarily affecting src.`
+- `8c8a1bc` | `2026-03-26T12:03:28Z` | `gpt-engineer-app[bot]` | `Provedl kontrolu PublicOfferPage` | files:`1` | `+40/-13` | area:`src` | impact:`This commit provedl kontrolu PublicOfferPage, primarily affecting src.`
+- `6d7a744` | `2026-03-26T12:03:46Z` | `gpt-engineer-app[bot]` | `Přidal onboarding kroky` | files:`1` | `+37/-17` | area:`src` | impact:`This commit přidal onboarding kroky, primarily affecting src.`
+- `eb88ec2` | `2026-03-26T12:03:55Z` | `gpt-engineer-app[bot]` | `Vylepšil onboarding timeline` | files:`1` | `+2/-2` | area:`src` | impact:`This commit vylepšil onboarding timeline, primarily affecting src.`
+- `64be527` | `2026-03-26T12:04:11Z` | `gpt-engineer-app[bot]` | `Přidal onboarding timeline do nabídky` | files:`1` | `+79/-32` | area:`src` | impact:`This commit přidal onboarding timeline do nabídky, primarily affecting src.`
+- `96ee9d3` | `2026-03-26T12:05:14Z` | `gpt-engineer-app[bot]` | `Checked dark mode styleguide` | files:`1` | `+7/-6` | area:`src` | impact:`This commit checked dark mode styleguide, primarily affecting src.`
+- `5d13c4b` | `2026-03-26T12:05:25Z` | `gpt-engineer-app[bot]` | `Forced dark mode on public offer` | files:`1` | `+30/-0` | area:`src` | impact:`This commit forced dark mode on public offer, primarily affecting src.`
+- `ff183fc` | `2026-03-26T12:05:37Z` | `gpt-engineer-app[bot]` | `Forced dark theme on offers` | files:`1` | `+3/-3` | area:`src` | impact:`This commit forced dark theme on offers, primarily affecting src.`
+- `c955fe1` | `2026-03-26T12:05:57Z` | `gpt-engineer-app[bot]` | `Forced dark mode on offer page` | files:`2` | `+37/-6` | area:`src` | impact:`This commit forced dark mode on offer page, primarily affecting src.`
+- `bf4e520` | `2026-03-26T12:06:53Z` | `gpt-engineer-app[bot]` | `Save plan in Lovable` | files:`1` | `+21/-59` | area:`.lovable` | impact:`This commit save plan in Lovable, primarily affecting .lovable.`
+- `6c6598d` | `2026-03-26T12:07:13Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+2/-0` | area:`src` | impact:`This commit changes, primarily affecting src.`
+- `e4def1d` | `2026-03-26T12:07:59Z` | `gpt-engineer-app[bot]` | `Přidala sekci proč s námi` | files:`1` | `+93/-0` | area:`src` | impact:`This commit přidala sekci proč s námi, primarily affecting src.`
+- `781067c` | `2026-03-26T12:08:08Z` | `gpt-engineer-app[bot]` | `Přidala sekci proč s námi` | files:`1` | `+95/-0` | area:`src` | impact:`This commit přidala sekci proč s námi, primarily affecting src.`
+- `c2bf6da` | `2026-03-26T12:12:55Z` | `gpt-engineer-app[bot]` | `Inspected offer page sections` | files:`1` | `+27/-88` | area:`src` | impact:`This commit inspected offer page sections, primarily affecting src.`
+- `02e60de` | `2026-03-26T12:13:25Z` | `gpt-engineer-app[bot]` | `Vylepšil vizuální separaci a hover` | files:`1` | `+44/-0` | area:`src` | impact:`This commit vylepšil vizuální separaci a hover, primarily affecting src.`
+- `2cb6446` | `2026-03-26T12:13:37Z` | `gpt-engineer-app[bot]` | `Vylepšil vizuál a hover sekcí` | files:`1` | `+27/-44` | area:`src` | impact:`This commit vylepšil vizuál a hover sekcí, primarily affecting src.`
+- `6fb159d` | `2026-03-26T12:15:59Z` | `gpt-engineer-app[bot]` | `Changes` | files:`10` | `+0/-0` | area:`public` | impact:`This commit changes, primarily affecting public.`
+- `b7f0fb2` | `2026-03-26T12:16:24Z` | `gpt-engineer-app[bot]` | `Added portfolio images` | files:`1` | `+3/-0` | area:`src` | impact:`This commit added portfolio images, primarily affecting src.`
+- `37e4660` | `2026-03-26T12:17:04Z` | `gpt-engineer-app[bot]` | `Added creative portfolio section` | files:`1` | `+67/-0` | area:`src` | impact:`This commit added creative portfolio section, primarily affecting src.`
+- `6bb3ad8` | `2026-03-26T12:17:20Z` | `gpt-engineer-app[bot]` | `Added portfolio section` | files:`11` | `+70/-0` | area:`public, src` | impact:`This commit added portfolio section, primarily affecting public, src.`
+- `45f00db` | `2026-03-26T12:17:53Z` | `gpt-engineer-app[bot]` | `Changes` | files:`4` | `+0/-0` | area:`public` | impact:`This commit changes, primarily affecting public.`
+- `ddc0697` | `2026-03-26T12:18:14Z` | `gpt-engineer-app[bot]` | `Added portfolio banners to offer` | files:`1` | `+4/-0` | area:`src` | impact:`This commit added portfolio banners to offer, primarily affecting src.`
+- `07ea34f` | `2026-03-26T12:18:29Z` | `gpt-engineer-app[bot]` | `Added portfolio banner images` | files:`5` | `+4/-0` | area:`public, src` | impact:`This commit added portfolio banner images, primarily affecting public, src.`
+- `a7072a3` | `2026-03-26T12:21:02Z` | `gpt-engineer-app[bot]` | `Save plan in Lovable` | files:`1` | `+56/-27` | area:`.lovable` | impact:`This commit save plan in Lovable, primarily affecting .lovable.`
+- `4a65cdc` | `2026-03-26T12:22:57Z` | `gpt-engineer-app[bot]` | `Created portfolio feature tasks` | files:`3` | `+475/-0` | area:`src, docs` | impact:`This commit created portfolio feature tasks, primarily affecting src, docs.`
+- `7bca5e5` | `2026-03-26T12:23:16Z` | `gpt-engineer-app[bot]` | `Added portfolio media CMS + DB` | files:`1` | `+12/-16` | area:`src` | impact:`This commit added portfolio media CMS + DB, primarily affecting src.`
+- `30b9cbd` | `2026-03-26T12:23:32Z` | `gpt-engineer-app[bot]` | `Added portfolio DB + CRM admin` | files:`3` | `+6/-1` | area:`src` | impact:`This commit added portfolio DB + CRM admin, primarily affecting src.`
+- `9ddedf0` | `2026-03-26T12:24:04Z` | `gpt-engineer-app[bot]` | `Added portfolio CMS with videos` | files:`1` | `+69/-35` | area:`src` | impact:`This commit added portfolio CMS with videos, primarily affecting src.`
+- `0f51a66` | `2026-03-26T12:24:18Z` | `gpt-engineer-app[bot]` | `Added portfolio items storage` | files:`1` | `+4/-0` | area:`src` | impact:`This commit added portfolio items storage, primarily affecting src.`
+- `76aa216` | `2026-03-26T12:24:46Z` | `gpt-engineer-app[bot]` | `Added portfolio items CMS flow` | files:`7` | `+550/-36` | area:`src, docs` | impact:`This commit added portfolio items CMS flow, primarily affecting src, docs.`
+- `6bc9dde` | `2026-03-26T12:29:45Z` | `gpt-engineer-app[bot]` | `Changes` | files:`10` | `+0/-0` | area:`public` | impact:`This commit changes, primarily affecting public.`
+- `356c3a8` | `2026-03-26T12:30:08Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+11/-0` | area:`src` | impact:`This commit changes, primarily affecting src.`
+- `6b99ff8` | `2026-03-26T12:31:07Z` | `gpt-engineer-app[bot]` | `Added portfolio fallback videos` | files:`11` | `+11/-0` | area:`public, src` | impact:`This commit added portfolio fallback videos, primarily affecting public, src.`
+- `015cde1` | `2026-03-26T12:34:11Z` | `gpt-engineer-app[bot]` | `Save plan in Lovable` | files:`1` | `+19/-56` | area:`.lovable` | impact:`This commit save plan in Lovable, primarily affecting .lovable.`
+- `911e1c1` | `2026-03-26T12:34:34Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+3/-0` | area:`src` | impact:`This commit changes, primarily affecting src.`
+- `d98b48e` | `2026-03-26T12:35:01Z` | `gpt-engineer-app[bot]` | `Added reporting demo section` | files:`1` | `+46/-0` | area:`src` | impact:`This commit added reporting demo section, primarily affecting src.`
+- `4ce2ce6` | `2026-03-26T12:35:11Z` | `gpt-engineer-app[bot]` | `Added reporting demo section` | files:`1` | `+49/-0` | area:`src` | impact:`This commit added reporting demo section, primarily affecting src.`
+- `43d6c5a` | `2026-03-26T12:54:13Z` | `gpt-engineer-app[bot]` | `Save plan in Lovable` | files:`1` | `+63/-13` | area:`.lovable` | impact:`This commit save plan in Lovable, primarily affecting .lovable.`
+- `2616e07` | `2026-03-26T12:58:22Z` | `gpt-engineer-app[bot]` | `Prepared offer page redesign` | files:`1` | `+409/-575` | area:`src` | impact:`This commit prepared offer page redesign, primarily affecting src.`
+- `6ca9cc2` | `2026-03-26T12:58:47Z` | `gpt-engineer-app[bot]` | `Redesigned public offer layout` | files:`1` | `+409/-575` | area:`src` | impact:`This commit redesigned public offer layout, primarily affecting src.`
+- `f5115c4` | `2026-03-26T13:01:14Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`This commit changes, primarily affecting src.`
+- `760aa61` | `2026-03-26T13:01:25Z` | `gpt-engineer-app[bot]` | `Expanded PublicOfferPage layout` | files:`1` | `+1/-1` | area:`src` | impact:`This commit expanded PublicOfferPage layout, primarily affecting src.`
+- `2f3abaa` | `2026-03-26T13:01:42Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+0/-8` | area:`src` | impact:`This commit changes, primarily affecting src.`
+- `87a56f8` | `2026-03-26T13:01:50Z` | `gpt-engineer-app[bot]` | `Removed „Platí do“ label` | files:`1` | `+0/-8` | area:`src` | impact:`This commit removed „Platí do“ label, primarily affecting src.`
+- `3bdbd7a` | `2026-03-26T13:03:28Z` | `gpt-engineer-app[bot]` | `Updated "Why Us" section copy` | files:`1` | `+15/-5` | area:`src` | impact:`This commit updated "Why Us" section copy, primarily affecting src.`
+- `99ff7a1` | `2026-03-26T13:03:36Z` | `gpt-engineer-app[bot]` | `Updated "Why Us" section copy` | files:`1` | `+1/-1` | area:`src` | impact:`This commit updated "Why Us" section copy, primarily affecting src.`
+- `a689cd1` | `2026-03-26T13:03:46Z` | `gpt-engineer-app[bot]` | `Updated offer AI-first metrics` | files:`1` | `+16/-6` | area:`src` | impact:`This commit updated offer AI-first metrics, primarily affecting src.`
+- `d3b657f` | `2026-03-26T13:05:08Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+3/-3` | area:`src` | impact:`This commit changes, primarily affecting src.`
+- `23dc2e3` | `2026-03-26T13:05:18Z` | `gpt-engineer-app[bot]` | `Updated “Proč právě my” stats` | files:`1` | `+3/-3` | area:`src` | impact:`This commit updated “Proč právě my” stats, primarily affecting src.`
+- `05e967e` | `2026-03-26T13:06:50Z` | `gpt-engineer-app[bot]` | `Updated primary color to green` | files:`1` | `+39/-39` | area:`src` | impact:`This commit updated primary color to green, primarily affecting src.`
+- `831668a` | `2026-03-26T13:07:00Z` | `gpt-engineer-app[bot]` | `Replaced primary lime color` | files:`1` | `+39/-39` | area:`src` | impact:`This commit replaced primary lime color, primarily affecting src.`
+- `dabd89a` | `2026-03-26T13:08:28Z` | `gpt-engineer-app[bot]` | `Added light/dark mode switcher` | files:`1` | `+26/-0` | area:`src` | impact:`This commit added light/dark mode switcher, primarily affecting src.`
+- `06d7a6e` | `2026-03-26T13:08:39Z` | `gpt-engineer-app[bot]` | `Added light/dark mode switcher` | files:`1` | `+2/-0` | area:`src` | impact:`This commit added light/dark mode switcher, primarily affecting src.`
+- `84e7b7d` | `2026-03-26T13:08:47Z` | `gpt-engineer-app[bot]` | `Added light/dark mode toggle` | files:`1` | `+1/-0` | area:`src` | impact:`This commit added light/dark mode toggle, primarily affecting src.`
+- `05d2257` | `2026-03-26T13:09:08Z` | `gpt-engineer-app[bot]` | `Added light/dark mode toggle` | files:`1` | `+27/-6` | area:`src` | impact:`This commit added light/dark mode toggle, primarily affecting src.`
+- `113395b` | `2026-03-26T13:09:21Z` | `gpt-engineer-app[bot]` | `Added light/dark mode switcher` | files:`1` | `+6/-3` | area:`src` | impact:`This commit added light/dark mode switcher, primarily affecting src.`
+- `6829d31` | `2026-03-26T13:09:29Z` | `gpt-engineer-app[bot]` | `Added light/dark mode toggle` | files:`1` | `+4/-0` | area:`src` | impact:`This commit added light/dark mode toggle, primarily affecting src.`
+- `72dbd35` | `2026-03-26T13:09:44Z` | `gpt-engineer-app[bot]` | `Added light/dark offer toggle` | files:`2` | `+66/-9` | area:`src` | impact:`This commit added light/dark offer toggle, primarily affecting src.`
+- `d845c21` | `2026-03-26T13:10:22Z` | `gpt-engineer-app[bot]` | `Přesunul reporting nad ceny` | files:`1` | `+6/-1` | area:`src` | impact:`This commit přesunul reporting nad ceny, primarily affecting src.`
+- `1611e24` | `2026-03-26T13:10:34Z` | `gpt-engineer-app[bot]` | `Přesunul Reporting nad ceník` | files:`1` | `+0/-4` | area:`src` | impact:`This commit přesunul Reporting nad ceník, primarily affecting src.`
+- `c183df7` | `2026-03-26T13:10:45Z` | `gpt-engineer-app[bot]` | `Presunul Reporting nad ceník` | files:`1` | `+6/-5` | area:`src` | impact:`This commit presunul Reporting nad ceník, primarily affecting src.`
+- `227ae8a` | `2026-03-26T13:11:16Z` | `gpt-engineer-app[bot]` | `Added asset switcher arrows` | files:`1` | `+3/-1` | area:`src` | impact:`This commit added asset switcher arrows, primarily affecting src.`
+- `4f1a8b5` | `2026-03-26T13:11:25Z` | `gpt-engineer-app[bot]` | `Added portfolio asset navigation` | files:`1` | `+13/-1` | area:`src` | impact:`This commit added portfolio asset navigation, primarily affecting src.`
+- `36f562b` | `2026-03-26T13:11:43Z` | `gpt-engineer-app[bot]` | `Added portfolio asset switcher` | files:`1` | `+52/-24` | area:`src` | impact:`This commit added portfolio asset switcher, primarily affecting src.`
+- `e32ae51` | `2026-03-26T13:11:58Z` | `gpt-engineer-app[bot]` | `Přidal navigaci v lightboxu` | files:`1` | `+0/-12` | area:`src` | impact:`This commit přidal navigaci v lightboxu, primarily affecting src.`
+- `0ecf800` | `2026-03-26T13:12:13Z` | `gpt-engineer-app[bot]` | `Přidal navigaci v lightboxu` | files:`1` | `+13/-0` | area:`src` | impact:`This commit přidal navigaci v lightboxu, primarily affecting src.`
+- `feb3557` | `2026-03-26T13:12:27Z` | `gpt-engineer-app[bot]` | `Přidal šipky pro lightbox` | files:`1` | `+69/-26` | area:`src` | impact:`This commit přidal šipky pro lightbox, primarily affecting src.`
+- `b1ef4e0` | `2026-03-26T13:13:21Z` | `gpt-engineer-app[bot]` | `Fixed light theme readability` | files:`1` | `+81/-81` | area:`src` | impact:`This commit fixed light theme readability, primarily affecting src.`
+- `a4ec08d` | `2026-03-26T13:13:36Z` | `gpt-engineer-app[bot]` | `Fixed light mode readability` | files:`1` | `+3/-8` | area:`src` | impact:`This commit fixed light mode readability, primarily affecting src.`
+- `bc21461` | `2026-03-26T13:13:50Z` | `gpt-engineer-app[bot]` | `Fixed light mode text colors` | files:`1` | `+1/-6` | area:`src` | impact:`This commit fixed light mode text colors, primarily affecting src.`
+- `5e3059e` | `2026-03-26T13:14:05Z` | `gpt-engineer-app[bot]` | `Fixed light mode text + logos` | files:`1` | `+3/-3` | area:`src` | impact:`This commit fixed light mode text + logos, primarily affecting src.`
+- `5955f79` | `2026-03-26T13:14:25Z` | `gpt-engineer-app[bot]` | `Fixed light mode text contrast` | files:`1` | `+81/-91` | area:`src` | impact:`This commit fixed light mode text contrast, primarily affecting src.`
+- `9e07e7b` | `2026-03-26T13:15:15Z` | `gpt-engineer-app[bot]` | `Centered CTA and removed price` | files:`1` | `+15/-19` | area:`src` | impact:`This commit centered CTA and removed price, primarily affecting src.`
+
+## Top themes in this chunk
+- Lead flow and follow-ups
+- Frontend application changes
+- UI and component polish
+- Performance and reliability
+- Analytics and reporting
+- Tests and quality tooling
+- Changes concentrated in `public`
+- Data model and migrations
+- Integrations and API connectivity
+- Documentation updates

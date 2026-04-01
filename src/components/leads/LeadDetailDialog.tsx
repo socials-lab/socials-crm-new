@@ -1,14 +1,14 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { Loader2, ShieldCheck, ShieldAlert, ShieldX, FileSignature, CheckCircle2 } from 'lucide-react';
-import {
-  Building2,
-  Globe,
-  User,
-  Users,
-  Mail,
-  Phone,
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Loader2, ShieldCheck, ShieldAlert, ShieldX, Sparkles, CheckCircle2, XCircle, Trash2, Copy } from 'lucide-react';
+import { 
+  Building2, 
+  Globe, 
+  User, 
+  Mail, 
+  Phone, 
   ExternalLink,
   TrendingUp,
+  FileText,
   MapPin,
   Clock,
   Coins,
@@ -18,7 +18,6 @@ import {
   Plus,
   Send,
   Scale,
-  Trash2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -53,14 +52,13 @@ import {
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadTransitions } from '@/hooks/useLeadTransitions';
-import { useAresLookup } from '@/hooks/useAresLookup';
-import { useDigiSign } from '@/hooks/useDigiSign';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
 import { RequestAccessDialog } from './RequestAccessDialog';
 import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
+import { SendContractDialog } from './SendContractDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
 import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
@@ -69,15 +67,18 @@ import { LeadCommunicationTimeline } from './LeadCommunicationTimeline';
 import { InlineEditField } from './InlineEditField';
 import { CompanyFinancials } from './CompanyFinancials';
 import type { Lead, LeadStage, LeadService, LeadNoteType } from '@/types/crm';
+import { LeadEnrichmentSection, LeadSummaryBar, LeadScoreBadges } from './LeadEnrichmentSection';
 import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { fetchAresData } from '@/utils/aresUtils';
 import { useVatReliability } from '@/hooks/useVatReliability';
 
 interface LeadDetailDialogProps {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDelete?: (leadId: string) => void;
 }
 
 const STAGE_LABELS: Record<LeadStage, string> = {
@@ -90,6 +91,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   won: 'Vyhráno',
   lost: 'Prohráno',
   postponed: 'Odloženo',
+  bad_fit: 'Bad Fit',
 };
 
 const STAGE_COLORS: Record<LeadStage, string> = {
@@ -102,6 +104,7 @@ const STAGE_COLORS: Record<LeadStage, string> = {
   won: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
   lost: 'bg-red-500/10 text-red-700 border-red-500/30',
   postponed: 'bg-gray-500/10 text-gray-700 border-gray-500/30',
+  bad_fit: 'bg-orange-500/10 text-orange-700 border-orange-500/30',
 };
 
 const SOURCE_LABELS: Record<Lead['source'], string> = {
@@ -114,12 +117,10 @@ const SOURCE_LABELS: Record<Lead['source'], string> = {
   other: 'Jiný',
 };
 
-export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDetailDialogProps) {
-  const { updateLeadStage, updateLead, deleteLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
-  const { colleagues, services } = useCRMData();
+export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete }: LeadDetailDialogProps) {
+  const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
+  const { colleagues, services, engagements, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
-  const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
-  const { createContract, isLoading: isCreatingContract } = useDigiSign();
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
@@ -129,129 +130,73 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
   const [sharedOfferUrl, setSharedOfferUrl] = useState<string | null>(null);
+  const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [showContractWarning, setShowContractWarning] = useState(false);
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
-  const [isContractConfirmOpen, setIsContractConfirmOpen] = useState(false);
-  const [isManualSignConfirmOpen, setIsManualSignConfirmOpen] = useState(false);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [isDeletingLead, setIsDeletingLead] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   // Inline note form state
   const [noteText, setNoteText] = useState('');
   const [noteType, setNoteType] = useState<LeadNoteType>('general');
   const [callDate, setCallDate] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailRecipients, setEmailRecipients] = useState('');
+  const [isLoadingAres, setIsLoadingAres] = useState(false);
   const [pendingIcoChange, setPendingIcoChange] = useState<string | null>(null);
   const isProcessingWarning = useRef(false);
 
   const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
-
-  // Contract readiness validation
-  const contractReadiness = useMemo(() => {
-    const leadServices = lead?.potential_services || [];
-    const signatories = lead?.onboarding_signatories || [];
-
-    const monthlyFromServices = leadServices
-      .filter((s: LeadService) => s.billing_type === 'monthly')
-      .reduce((sum: number, s: LeadService) => sum + (s.price || 0), 0);
-
-    const oneOffFromServices = leadServices
-      .filter((s: LeadService) => s.billing_type === 'one_off')
-      .reduce((sum: number, s: LeadService) => sum + (s.price || 0), 0);
-
-    // estimated_price is synced from latest active offer total in useLeadsData,
-    // so prefer it to keep DigiSign preview aligned with discounted offer totals.
-    const estimatedTotal = Number(lead?.estimated_price || 0);
-    const monthlyFromEstimated = estimatedTotal > 0
-      ? Math.max(estimatedTotal - oneOffFromServices, 0)
-      : 0;
-
-    const monthlyFee = monthlyFromEstimated > 0 ? monthlyFromEstimated : monthlyFromServices;
-
-    const allSignatoriesHavePhone = signatories.length > 0 && signatories.every((s: { phone?: string }) => s.phone && s.phone.trim() !== '');
-    const allSignatoriesHaveEmail = signatories.length > 0 && signatories.every((s: { email?: string }) => s.email && s.email.trim() !== '');
-
-    return {
-      hasServices: leadServices.length > 0,
-      hasMonthlyFee: monthlyFee > 0,
-      hasSignatories: signatories.length > 0,
-      allSignatoriesHavePhone,
-      allSignatoriesHaveEmail,
-      monthlyFee,
-      isReady: leadServices.length > 0 && monthlyFee > 0 && signatories.length > 0 && allSignatoriesHavePhone && allSignatoriesHaveEmail,
-    };
-  }, [lead?.potential_services, lead?.onboarding_signatories, lead?.estimated_price]);
-
+  
   // VAT reliability check
-  // Policy: no automatic background refresh.
-  // We only check when there is no stored result yet.
-  const shouldCheckVatReliability = !!lead?.dic && !lead?.vat_payer_status;
-  const { data: vatData, isLoading: isLoadingVat } = useVatReliability(
-    shouldCheckVatReliability ? lead?.dic : null
-  );
+  const { data: vatData, isLoading: isLoadingVat } = useVatReliability(lead?.dic);
 
-  const lastVatPersistAttemptRef = useRef<string | null>(null);
-
-  // Persist first retrieved status + retrieval timestamp (without periodic refreshes)
+  // Auto-save VAT status when fetched
   useEffect(() => {
-    if (!lead?.id || !vatData?.status) return;
-
-    if (vatData.status !== 'reliable' && vatData.status !== 'unreliable' && vatData.status !== 'not_found') {
-      return;
+    if (
+      (vatData?.vatStatus === 'reliable' || vatData?.vatStatus === 'unreliable' || vatData?.vatStatus === 'not_found') &&
+      lead?.id &&
+      vatData.vatStatus !== lead.vat_payer_status
+    ) {
+      updateLead(lead.id, { vat_payer_status: vatData.vatStatus });
     }
-
-    if (lead.vat_payer_status === vatData.status && lead.vat_payer_checked_at) return;
-
-    const persistKey = `${lead.id}:${vatData.status}`;
-    if (lastVatPersistAttemptRef.current === persistKey) return;
-    lastVatPersistAttemptRef.current = persistKey;
-
-    updateLead(lead.id, {
-      vat_payer_status: vatData.status,
-      vat_payer_checked_at: new Date().toISOString(),
-    } as Partial<Lead>).catch((error) => {
-      console.error('Failed to persist VAT status/timestamp:', {
-        leadId: lead.id,
-        status: vatData.status,
-        error,
-      });
-    });
-  }, [lead?.id, lead?.vat_payer_status, lead?.vat_payer_checked_at, updateLead, vatData?.status]);
+  }, [vatData?.vatStatus, lead?.id, lead?.vat_payer_status, updateLead]);
 
   if (!lead) return null;
+
+  const handleMarkContractSigned = () => {
+    updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
+    
+    // Propagate contract_url to the converted engagement/client
+    if (lead.converted_to_engagement_id && lead.contract_url) {
+      updateEngagement(lead.converted_to_engagement_id, { 
+        contract_url: lead.contract_url 
+      });
+    }
+    
+    toast.success('✅ Smlouva podepsána! Odkaz uložen k leadu' + (lead.converted_to_engagement_id ? ' i ke klientovi.' : '.'));
+  };
 
   const owner = colleagues.find(c => c.id === lead.owner_id);
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
   const history = getLeadHistory(lead.id);
   const isNewLead = lead.stage === 'new_lead';
 
-  const resolvedVatStatus =
-    vatData?.status === 'reliable' || vatData?.status === 'unreliable' || vatData?.status === 'not_found'
-      ? vatData.status
-      : lead.vat_payer_status;
-
-  const handleStageChange = async (newStage: LeadStage) => {
+  const handleStageChange = (newStage: LeadStage) => {
     const fromStage = lead.stage;
-    try {
-      await updateLeadStage(lead.id, newStage);
-      toast.success('Stav leadu byl změněn');
-      setPendingTransition({
-        leadId: lead.id,
-        leadName: lead.company_name,
-        fromStage,
-        toStage: newStage,
-        leadValue: lead.estimated_price || 0,
-      });
-      setShowTransitionDialog(true);
-    } catch (error) {
-      console.error('Failed to update lead stage:', error);
-      toast.error('Nepodařilo se změnit stav leadu');
-    }
+    updateLeadStage(lead.id, newStage);
+    toast.success('Stav leadu byl změněn');
+    setPendingTransition({
+      leadId: lead.id,
+      leadName: lead.company_name,
+      fromStage,
+      toStage: newStage,
+      leadValue: lead.estimated_price || 0,
+    });
+    setShowTransitionDialog(true);
   };
 
-  const handleConfirmTransition = () => {
+  const handleConfirmTransition = (reason?: string) => {
     if (pendingTransition) {
       confirmTransition({
         leadId: pendingTransition.leadId,
@@ -259,109 +204,59 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         toStage: pendingTransition.toStage,
         transitionValue: pendingTransition.leadValue,
       });
+      if (reason) {
+        const prefix = pendingTransition.toStage === 'lost' ? '❌ Důvod prohry: ' : '⏸️ Důvod odložení: ';
+        addNote(lead.id, prefix + reason, 'general');
+      }
       toast.success('Přechod byl potvrzen pro analytiku');
     }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
 
-  const handleSkipTransition = () => {
+  const handleSkipTransition = (reason?: string) => {
+    if (reason && pendingTransition) {
+      const prefix = pendingTransition.toStage === 'lost' ? '❌ Důvod prohry: ' : '⏸️ Důvod odložení: ';
+      addNote(lead.id, prefix + reason, 'general');
+    }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
 
-  const handleInlineNoteSubmit = async () => {
-    if (!noteText.trim()) return;
-    try {
-      // Parse recipients for email types
-      const recipientsList = emailRecipients.trim()
-        ? emailRecipients.split(',').map(r => r.trim()).filter(Boolean)
-        : null;
-
-      await addNote(
-        lead.id,
-        noteText.trim(),
-        noteType,
-        noteType === 'call' && callDate ? callDate : null,
-        (noteType === 'email_sent' || noteType === 'email_received') && emailSubject ? emailSubject : null,
-        recipientsList
-      );
-
-      const noteTypeLabel = noteType === 'call' ? 'Hovor' : noteType === 'internal' ? 'Interní poznámka' : noteType === 'email_sent' ? 'E-mail' : noteType === 'email_received' ? 'E-mail' : 'Poznámka';
-      const isFeminine = noteType === 'internal' || noteType === 'general';
-      toast.success(`${noteTypeLabel} ${isFeminine ? 'byla přidána' : 'byl přidán'}`);
-      setNoteText('');
-      setNoteType('general');
-      setCallDate('');
-      setEmailSubject('');
-      setEmailRecipients('');
-    } catch (error) {
-      console.error('Failed to add note:', error);
-      toast.error('Nepodařilo se přidat poznámku');
-    }
+  const handleAddNote = (text: string, type: LeadNoteType, date: string | null, subject?: string | null, recipients?: string[] | null) => {
+    addNote(lead.id, text, type, date, subject, recipients);
+    toast.success('Poznámka byla přidána');
   };
 
-  const handleAddService = async (service: LeadService) => {
+  const handleInlineNoteSubmit = () => {
+    if (!noteText.trim()) return;
+    const isEmail = noteType === 'email_sent' || noteType === 'email_received';
+    const subject = isEmail && emailSubject.trim() ? emailSubject.trim() : null;
+    const recipients = isEmail && emailRecipients.trim() 
+      ? emailRecipients.split(',').map(r => r.trim()).filter(Boolean) 
+      : null;
+    handleAddNote(
+      noteText.trim(), 
+      noteType, 
+      noteType === 'call' && callDate ? callDate : null,
+      subject,
+      recipients,
+    );
+    setNoteText('');
+    setCallDate('');
+    setEmailSubject('');
+    setEmailRecipients('');
+  };
+
+  const handleAddService = (service: LeadService) => {
     const currentServices = lead.potential_services || [];
     const updatedServices = [...currentServices, service];
     const newEstimatedPrice = updatedServices.reduce((sum, s) => sum + s.price, 0);
-    try {
-      await updateLead(lead.id, {
-        potential_services: updatedServices,
-        estimated_price: newEstimatedPrice,
-      });
-      toast.success('Služba byla přidána do nabídky');
-    } catch (error) {
-      console.error('Failed to add service:', error);
-      toast.error('Nepodařilo se přidat službu');
-    }
-  };
-
-  const handleRemoveService = async (index: number) => {
-    const currentServices = [...(lead.potential_services || [])];
-    currentServices.splice(index, 1);
-    const newEstimatedPrice = currentServices.reduce((sum, s) => sum + s.price, 0);
-    try {
-      await updateLead(lead.id, {
-        potential_services: currentServices,
-        estimated_price: newEstimatedPrice,
-      });
-      toast.success('Služba byla odebrána');
-    } catch (error) {
-      console.error('Failed to remove service:', error);
-      toast.error('Nepodařilo se odebrat službu');
-    }
-  };
-
-  const handleUpdateLead = async (updates: Partial<Lead>) => {
-    try {
-      await updateLead(lead.id, updates);
-      toast.success('Uloženo');
-    } catch (error) {
-      console.error('Failed to update lead:', error);
-      toast.error('Nepodařilo se uložit změny');
-    }
-  };
-
-  const handleDeleteLead = async () => {
-    if (lead.converted_to_client_id || lead.converted_to_engagement_id) {
-      toast.error('Smazání není dostupné: lead už byl převeden na zakázku');
-      setIsDeleteConfirmOpen(false);
-      return;
-    }
-
-    setIsDeletingLead(true);
-    try {
-      await deleteLead(lead.id);
-      toast.success('Lead byl smazán');
-      setIsDeleteConfirmOpen(false);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to delete lead:', error);
-      toast.error('Nepodařilo se smazat lead');
-    } finally {
-      setIsDeletingLead(false);
-    }
+    updateLead(lead.id, {
+      potential_services: updatedServices,
+      estimated_price: newEstimatedPrice,
+    });
+    toast.success('Služba byla přidána do nabídky');
   };
 
   const handleConvertClick = () => {
@@ -390,74 +285,38 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
     }, 150);
   };
 
-  const handleIcoChange = async (newIco: string) => {
-    const cleanIco = newIco.replace(/\s/g, '');
-    if (cleanIco.length === 8 && /^\d{8}$/.test(cleanIco)) {
-      // If IČO already exists and is different, ask for confirmation
-      if (lead.ico && lead.ico !== newIco && lead.ico.replace(/\s/g, '') !== cleanIco) {
-        setPendingIcoChange(newIco);
-        return;
-      }
-      // First time or same IČO - fetch ARES directly
-      const data = await lookupCompany(cleanIco);
-      const updates: Partial<Lead> = { ico: newIco };
-      if (data) {
-        if (data.street) updates.billing_street = data.street;
-        if (data.city) updates.billing_city = data.city;
-        if (data.zip) updates.billing_zip = data.zip;
-        if (data.companyName && !lead.company_name) updates.company_name = data.companyName;
-        if (data.dic) updates.dic = data.dic;
-        if (data.legalForm) (updates as Record<string, unknown>).legal_form = data.legalForm;
-        if (data.foundedDate) (updates as Record<string, unknown>).founded_date = data.foundedDate;
-        if (data.nace) (updates as Record<string, unknown>).ares_nace = data.nace;
-        if (data.directors?.length) (updates as Record<string, unknown>).directors = data.directors;
-        if (data.spisovaZnacka) updates.court_registration = data.spisovaZnacka;
-      }
-      await handleUpdateLead(updates);
-      if (data) {
-        toast.success('IČO uloženo, údaje doplněny z ARES');
-      } else {
-        toast.error('IČO uloženo, ale subjekt nebyl nalezen v ARES');
-      }
-    } else {
-      await handleUpdateLead({ ico: newIco });
-    }
-  };
-
-  const handleConfirmIcoChange = async () => {
-    if (!pendingIcoChange) return;
-    const newIco = pendingIcoChange;
-    setPendingIcoChange(null);
-    const data = await lookupCompany(newIco.replace(/\s/g, ''));
-    const updates: Partial<Lead> = { ico: newIco };
-    if (data) {
-      if (data.street) updates.billing_street = data.street;
-      if (data.city) updates.billing_city = data.city;
-      if (data.zip) updates.billing_zip = data.zip;
-      if (data.companyName) updates.company_name = data.companyName;
-      if (data.dic) updates.dic = data.dic;
-      if (data.legalForm) (updates as Record<string, unknown>).legal_form = data.legalForm;
-      if (data.foundedDate) (updates as Record<string, unknown>).founded_date = data.foundedDate;
-      if (data.nace) (updates as Record<string, unknown>).ares_nace = data.nace;
-      if (data.directors?.length) (updates as Record<string, unknown>).directors = data.directors;
-      if (data.spisovaZnacka) updates.court_registration = data.spisovaZnacka;
-    }
-    await handleUpdateLead(updates);
-    if (data) {
-      toast.success('IČO uloženo, údaje doplněny z ARES');
-    } else {
-      toast.error('IČO uloženo, ale subjekt nebyl nalezen v ARES');
-    }
-  };
-
   return (
     <>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete smazat tento lead? Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                onDelete?.(lead.id);
+                onOpenChange(false);
+              }}
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Onboarding Form Warning Dialog */}
       <AlertDialog open={showOnboardingWarning} onOpenChange={setShowOnboardingWarning}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              Onboarding formulář nebyl vyplněn
+              ⚠️ Onboarding formulář nebyl vyplněn
             </AlertDialogTitle>
             <AlertDialogDescription>
               Klient zatím nevyplnil onboarding formulář. Bez něj nebudete mít kompletní údaje.
@@ -466,7 +325,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogAction 
               onClick={handleOnboardingWarningConfirm}
               className="bg-amber-500 hover:bg-amber-600"
             >
@@ -480,7 +339,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              Smlouva nebyla podepsána
+              ⚠️ Smlouva nebyla podepsána
             </AlertDialogTitle>
             <AlertDialogDescription>
               Pro tento lead zatím nebyla vytvořena nebo podepsána smlouva.
@@ -489,7 +348,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogAction 
               onClick={() => setTimeout(() => setIsConvertOpen(true), 100)}
               className="bg-amber-500 hover:bg-amber-600"
             >
@@ -504,7 +363,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              Změna IČO
+              ⚠️ Změna IČO
             </AlertDialogTitle>
             <AlertDialogDescription>
               Chystáte se změnit IČO z <strong>{lead.ico}</strong> na <strong>{pendingIcoChange}</strong>.
@@ -515,8 +374,33 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPendingIcoChange(null)}>Zrušit</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmIcoChange}
+            <AlertDialogAction 
+              onClick={async () => {
+                const newIco = pendingIcoChange!;
+                setPendingIcoChange(null);
+                setIsLoadingAres(true);
+                const data = await fetchAresData(newIco.replace(/\s/g, ''));
+                const updates: Partial<Lead> = { ico: newIco };
+                if (data) {
+                  if (data.street) updates.billing_street = data.street;
+                  if (data.city) updates.billing_city = data.city;
+                  if (data.zip) updates.billing_zip = data.zip;
+                  if (data.companyName) updates.company_name = data.companyName;
+                  if (data.dic) updates.dic = data.dic;
+                  if (data.legalForm) updates.legal_form = data.legalForm;
+                  if (data.foundedDate) updates.founded_date = data.foundedDate;
+                  if (data.nace) updates.ares_nace = data.nace;
+                  if (data.directors?.length) updates.directors = data.directors;
+                  if (data.spisovaZnacka) updates.court_registration = data.spisovaZnacka;
+                }
+                updateLead(lead.id, updates);
+                if (data) {
+                  toast.success('IČO uloženo, údaje doplněny z ARES');
+                } else {
+                  toast.error('IČO uloženo, ale subjekt nebyl nalezen v ARES');
+                }
+                setIsLoadingAres(false);
+              }}
               className="bg-amber-500 hover:bg-amber-600"
             >
               Ano, přepsat údaje
@@ -525,746 +409,463 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Contract Creation Confirmation Dialog */}
-      <AlertDialog open={isContractConfirmOpen} onOpenChange={setIsContractConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <FileSignature className="h-5 w-5" />
-              Vytvořit smlouvu v DigiSign
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Smlouva bude vytvořena s následujícími parametry:
-              <br /><br />
-              <strong>Měsíční poplatek:</strong> {contractReadiness.monthlyFee.toLocaleString('cs-CZ')} Kč
-              <br />
-              <strong>Služby:</strong> {lead.potential_services?.length || 0}
-              <br />
-              <strong>Podpisující osoby:</strong> {lead.onboarding_signatories?.length || 0}
-              <br /><br />
-              Po vytvoření smlouvy bude automaticky odeslán e-mail k podpisu všem podpisujícím osobám.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                const result = await createContract(lead.id);
-                // Hook already shows toast.error on failure, toast.success on success
-                if (result) {
-                  setIsContractConfirmOpen(false);
-                }
-              }}
-              disabled={isCreatingContract}
-            >
-              {isCreatingContract ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Vytvářím...
-                </>
-              ) : (
-                'Vytvořit smlouvu'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Manual Sign Confirmation Dialog */}
-      <AlertDialog open={isManualSignConfirmOpen} onOpenChange={setIsManualSignConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              Ručně potvrdit podpis smlouvy
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Tímto potvrdíte, že smlouva byla podepsána mimo systém DigiSign (např. fyzicky na papíře).
-              <br /><br />
-              Opravdu chcete označit smlouvu jako podepsanou?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                try {
-                  await updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
-                  toast.success('Smlouva byla označena jako podepsaná');
-                  setIsManualSignConfirmOpen(false);
-                } catch (error) {
-                  console.error('Failed to mark contract as signed:', error);
-                  toast.error('Nepodařilo se uložit změny');
-                }
-              }}
-              className="bg-amber-500 hover:bg-amber-600"
-            >
-              Ano, potvrdit podpis
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Lead Confirmation Dialog */}
-      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Smazat lead?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Opravdu chcete smazat lead <strong>{lead.company_name}</strong>? Tato akce je nevratná.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingLead}>Zrušit</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteLead}
-              disabled={isDeletingLead}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeletingLead ? 'Mazání...' : 'Smazat lead'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent
-          aria-describedby={undefined}
-          className={cn(
-            'flex w-full max-w-5xl flex-col gap-0 p-0',
-            'h-[90dvh] max-h-[90dvh]',
-            'max-lg:inset-0 max-lg:left-0 max-lg:top-0 max-lg:h-[100dvh] max-lg:max-h-[100dvh] max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-none',
-          )}
-        >
+        <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] flex flex-col p-0 gap-0">
           {/* Header */}
-          <div className="flex flex-shrink-0 flex-col gap-3 border-b p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6 sm:pb-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <DialogTitle className="text-lg font-semibold sm:text-xl">
+          <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b flex-shrink-0">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <DialogTitle className="text-xl font-semibold">
                   <InlineEditField
-                    value={lead.company_name}
-                    onSave={(v) => handleUpdateLead({ company_name: v })}
-                    placeholder="Název firmy"
-                    displayClassName="text-lg font-semibold sm:text-xl break-normal"
+                    value={lead.website ? ((d) => d.charAt(0).toUpperCase() + d.slice(1))(lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '')) : lead.company_name}
+                    onSave={(v) => { updateLead(lead.id, { website: v }); toast.success('Uloženo'); }}
+                    placeholder="URL webu"
+                    displayClassName="text-xl font-semibold"
                   />
                 </DialogTitle>
-                <Badge variant="outline" className={cn('shrink-0 text-xs', STAGE_COLORS[lead.stage])}>
+                <Badge variant="outline" className={cn("text-xs", STAGE_COLORS[lead.stage])}>
                   {STAGE_LABELS[lead.stage]}
                 </Badge>
+                <LeadScoreBadges lead={lead} />
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                {lead.ico && <span className="break-all">IČO: {lead.ico}</span>}
-                {owner && (
-                  <>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="min-w-0 break-words">{owner.full_name}</span>
-                  </>
-                )}
-                <span className="hidden sm:inline">•</span>
-                <InlineEditField
-                  value={lead.estimated_price}
-                  onSave={(v) => handleUpdateLead({ estimated_price: Number(v) || 0 })}
-                  type="number"
-                  suffix={lead.currency}
-                  placeholder="Cena"
-                  emptyText="Zadat cenu"
-                />
+              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                {lead.ico && <span>IČO: {lead.ico}</span>}
+                {owner && <span>• {owner.full_name}</span>}
               </div>
             </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0 text-destructive hover:text-destructive max-sm:w-full sm:self-start"
-              onClick={() => setIsDeleteConfirmOpen(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Smazat lead
-            </Button>
           </div>
 
-          {/* Desktop: side-by-side. Mobile: stacked full width (fixed w-[380px] was starving the main column). */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-            {/* Left column: Flow + Info */}
-            <ScrollArea className="min-h-0 min-w-0 border-b max-lg:h-[52dvh] max-lg:flex-none lg:flex-1 lg:border-b-0 lg:border-r">
-              <div className="space-y-6 p-4 sm:p-6">
-                {/* Stage selector */}
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                  <label className="whitespace-nowrap text-xs text-muted-foreground">Stav:</label>
-                  <Select value={lead.stage} onValueChange={handleStageChange}>
-                    <SelectTrigger className="h-8 w-full min-w-0 sm:w-auto sm:max-w-[220px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(STAGE_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={lead.owner_id}
-                    onValueChange={(id) => handleUpdateLead({ owner_id: id })}
-                  >
-                    <SelectTrigger className="h-8 w-full min-w-0 sm:w-auto sm:max-w-[240px]">
-                      <SelectValue placeholder="Odpovědná osoba" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background">
-                      {colleagues.filter(c => c.status === 'active').map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Single scrollable content area */}
+          <ScrollArea className="flex-1">
+            <div className="p-6 space-y-5">
 
-                {/* Flow stepper */}
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-3">Proces</h4>
-                  <LeadFlowStepper
-                    lead={lead}
-                    onSendMeetingRequest={() => setIsMeetingRequestOpen(true)}
-                    onRequestAccess={() => setIsRequestAccessOpen(true)}
-                    onMarkAccessReceived={async () => {
-                      try {
-                        await updateLead(lead.id, {
-                          access_received_at: new Date().toISOString(),
-                          stage: 'access_received' as LeadStage
-                        });
-                        toast.success('Přístupy byly přijaty!');
-                      } catch (error) {
-                        toast.error('Nepodařilo se uložit změny');
-                      }
-                    }}
-                    onAddService={() => setIsAddServiceOpen(true)}
-                    onCreateOffer={() => setIsCreateOfferOpen(true)}
-                    onSendOffer={() => setIsSendOfferOpen(true)}
-                    onSendOnboarding={() => setIsOnboardingFormOpen(true)}
-                    onCreateContract={() => setIsContractConfirmOpen(true)}
-                    isCreatingContract={isCreatingContract}
-                    onMarkContractSent={async () => {
-                      try {
-                        await updateLead(lead.id, { contract_sent_at: new Date().toISOString() });
-                        toast.success('Smlouva byla označena jako odeslaná');
-                      } catch (error) {
-                        toast.error('Nepodařilo se uložit změny');
-                      }
-                    }}
-                    onMarkContractSigned={async () => {
-                      try {
-                        await updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
-                        toast.success('Smlouva byla podepsána!');
-                      } catch (error) {
-                        toast.error('Nepodařilo se uložit změny');
-                      }
-                    }}
-                    onConvert={handleConvertClick}
-                    onRemoveService={handleRemoveService}
-                  />
-                </div>
+              {/* === SUMMARY BAR === */}
+              <LeadSummaryBar lead={lead} />
 
-                <Separator />
+              {/* === THREE INFO CARDS === */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                {/* Collapsible: Company Info */}
-                <Collapsible defaultOpen={isNewLead}>
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Firemní údaje</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-6 pt-3">
-                    <div className="space-y-2 text-sm">
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <span className="text-muted-foreground text-xs">IČO</span>
-                          <div className="flex items-center gap-2">
-                            <InlineEditField
-                              value={lead.ico}
-                              onSave={handleIcoChange}
-                              placeholder="Zadat IČO"
-                              displayClassName="font-medium"
-                            />
-                            {isLoadingAres && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                            {lead.ico && (
-                              <a
-                                href={`https://www.hlidacstatu.cz/subjekt/${lead.ico}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                Hlídač státu
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">DIČ</span>
+                {/* FIRMA Card */}
+                <div className="p-4 rounded-lg border bg-card space-y-3">
+                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Firma
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold">{lead.company_name}</span>
+                      {lead.ico && (
+                        <a href={`https://or.justice.cz/ias/ui/rejstrik-firma.vysledky?ico=${lead.ico}`} target="_blank" rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline">📋 Rejstřík</a>
+                      )}
+                      {(lead.is_vat_payer || lead.vat_payer_status === 'reliable') && (
+                        <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
+                          ✅ DPH
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <div>
+                        <span className="text-muted-foreground text-xs">IČO</span>
+                        <div className="flex items-center gap-2">
                           <InlineEditField
-                            value={lead.dic}
-                            onSave={(v) => handleUpdateLead({ dic: v })}
-                            placeholder="Zadat DIČ"
+                            value={lead.ico}
+                            onSave={async (v) => {
+                              const cleanIco = v.replace(/\s/g, '');
+                              if (cleanIco.length === 8 && /^\d{8}$/.test(cleanIco)) {
+                                if (lead.ico && lead.ico !== v && lead.ico.replace(/\s/g, '') !== cleanIco) {
+                                  setPendingIcoChange(v);
+                                  return;
+                                }
+                                setIsLoadingAres(true);
+                                const data = await fetchAresData(cleanIco);
+                                const updates: Partial<Lead> = { ico: v };
+                                if (data) {
+                                  if (data.street) updates.billing_street = data.street;
+                                  if (data.city) updates.billing_city = data.city;
+                                  if (data.zip) updates.billing_zip = data.zip;
+                                  if (data.companyName && !lead.company_name) updates.company_name = data.companyName;
+                                  if (data.dic) updates.dic = data.dic;
+                                  if (data.legalForm) updates.legal_form = data.legalForm;
+                                  if (data.foundedDate) updates.founded_date = data.foundedDate;
+                                  if (data.nace) updates.ares_nace = data.nace;
+                                  if (data.directors?.length) updates.directors = data.directors;
+                                  if (data.spisovaZnacka) updates.court_registration = data.spisovaZnacka;
+                                }
+                                updateLead(lead.id, updates);
+                                toast.success(data ? 'IČO uloženo, údaje doplněny z ARES' : 'IČO uloženo, ale subjekt nebyl nalezen v ARES');
+                                setIsLoadingAres(false);
+                              } else {
+                                updateLead(lead.id, { ico: v });
+                                toast.success('IČO uloženo');
+                              }
+                            }}
+                            placeholder="Zadat IČO"
                             displayClassName="font-medium"
                           />
+                          {isLoadingAres && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                         </div>
                       </div>
-                      {/* VAT Payer Reliability Badge */}
-                      {lead.dic && (
-                        <div className="mt-1">
-                          {shouldCheckVatReliability && isLoadingVat ? (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              Ověřuji spolehlivost plátce DPH…
-                            </div>
-                          ) : resolvedVatStatus === 'reliable' ? (
-                            <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
-                              <ShieldCheck className="h-3 w-3 mr-1" />
-                              Spolehlivý plátce DPH
-                            </Badge>
-                          ) : resolvedVatStatus === 'unreliable' ? (
-                            <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive font-medium flex items-center gap-2">
-                              <ShieldAlert className="h-4 w-4" />
-                              NESPOLEHLIVÝ PLÁTCE DPH
-                            </div>
-                          ) : resolvedVatStatus === 'not_found' ? (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <ShieldX className="h-3 w-3" />
-                              Není plátce DPH
-                            </span>
-                          ) : vatData?.status === 'error' ? (
-                            <span className="text-xs text-amber-700 flex items-center gap-1">
-                              <ShieldAlert className="h-3 w-3" />
-                              Ověření plátce DPH se nepodařilo{vatData.requestId ? ` (ID: ${vatData.requestId.slice(0, 8)})` : ''}
-                            </span>
-                          ) : null}
-
-                          {lead.vat_payer_checked_at && (
-                            <p className="text-[11px] text-muted-foreground mt-1">
-                              Naposledy ověřeno: {new Date(lead.vat_payer_checked_at).toLocaleString('cs-CZ')}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                      {lead.legal_form && (
-                        <p className="text-muted-foreground">Právní forma: <span className="font-medium text-foreground">{lead.legal_form}</span></p>
-                      )}
-                      {lead.founded_date && (
-                        <p className="text-muted-foreground">Datum vzniku: <span className="font-medium text-foreground">{new Date(lead.founded_date).toLocaleDateString('cs-CZ')}</span></p>
-                      )}
-                      {lead.ares_nace && (
-                        <p className="text-muted-foreground">CZ-NACE: <span className="font-medium text-foreground">{lead.ares_nace}</span></p>
-                      )}
-                      {lead.court_registration && (
-                        <p className="text-muted-foreground flex items-center gap-1.5">
-                          <Scale className="h-3.5 w-3.5" />
-                          Spisová značka: <span className="font-medium text-foreground">{lead.court_registration}</span>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Adresa</span>
+                        <p className="font-medium text-sm">
+                          {lead.company_address || [lead.billing_street, lead.billing_city, lead.billing_zip].filter(Boolean).join(', ') || '–'}
                         </p>
-                      )}
-                      {lead.directors && lead.directors.length > 0 && (
-                        <div>
-                          <span className="text-muted-foreground text-xs">Jednatelé / společníci</span>
-                          <div className="flex flex-wrap gap-1.5 mt-1">
-                            {lead.directors.map((d, i) => {
-                              const dir = typeof d === 'string' ? { name: d, role: 'jednatel', ownership_percent: null } : d;
-                              const isTopOwner = i === 0 && dir.ownership_percent !== null && dir.ownership_percent > 0;
-                              const label = dir.ownership_percent !== null
-                                ? `${dir.name} (${dir.role}, ${dir.ownership_percent}%)`
-                                : `${dir.name} (${dir.role})`;
-                              return (
-                                <Badge
-                                  key={i}
-                                  variant={isTopOwner ? "default" : "secondary"}
-                                  className={cn("text-xs", isTopOwner && "bg-amber-500/90 hover:bg-amber-500 text-white border-amber-600")}
-                                >
-                                  {isTopOwner && '👑 '}{label}
-                                </Badge>
-                              );
-                            })}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">E-shop</span>
+                        <p className="font-medium">{lead.is_ecommerce !== null && lead.is_ecommerce !== undefined ? (lead.is_ecommerce ? 'Ano' : 'Ne') : '–'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Kredibilita</span>
+                        <p className="font-medium">{lead.credibility_score !== null && lead.credibility_score !== undefined ? lead.credibility_score : '–'}</p>
+                      </div>
+                    </div>
+                    {/* Social */}
+                    {(lead.facebook_url || lead.instagram_url) && (
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1 border-t">
+                        {lead.facebook_url && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">Facebook</span>
+                            <a href={lead.facebook_url.startsWith('http') ? lead.facebook_url : `https://facebook.com/${lead.facebook_url}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline block truncate">
+                              {lead.facebook_url.replace(/https?:\/\/(www\.)?facebook\.com\/?/, '')}
+                            </a>
                           </div>
-                        </div>
-                      )}
+                        )}
+                        {lead.instagram_url && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">Instagram</span>
+                            <a href={lead.instagram_url.startsWith('http') ? lead.instagram_url : `https://instagram.com/${lead.instagram_url}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline block truncate">
+                              {lead.instagram_url.replace(/https?:\/\/(www\.)?instagram\.com\/?/, '')}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {lead.ico && <CompanyFinancials ico={lead.ico} />}
+                  </div>
+                </div>
+
+                {/* WEB & TRACKING Card */}
+                <div className="p-4 rounded-lg border bg-card space-y-3">
+                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                    <Globe className="h-3.5 w-3.5" />
+                    Web & Tracking
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <div>
+                        <span className="text-muted-foreground text-xs">Typ webu</span>
+                        <p className="font-medium">{lead.is_ecommerce ? 'E-shop' : lead.business_type || '–'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Platforma</span>
+                        <p className="font-medium">{lead.enrichment_platform || '–'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Vyspělost</span>
+                        <p className="font-medium">{lead.marketing_maturity || '–'}</p>
+                      </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Web</span>
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex items-center gap-1">
                           <InlineEditField
                             value={lead.website}
-                            onSave={(v) => handleUpdateLead({ website: v })}
+                            onSave={(v) => { updateLead(lead.id, { website: v }); toast.success('Uloženo'); }}
                             type="url"
                             placeholder="Zadat web"
                           />
                         </div>
                       </div>
-                      {lead.ico && (
-                        <CompanyFinancials ico={lead.ico} />
-                      )}
-
-                      {/* Address - inline editable */}
-                      <div className="flex items-start gap-2 pt-1">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div className="space-y-1">
-                          <InlineEditField
-                            value={lead.billing_street}
-                            onSave={(v) => handleUpdateLead({ billing_street: v })}
-                            placeholder="Ulice"
-                            emptyText="Zadat ulici"
-                          />
-                          <div className="flex items-center gap-2">
-                            <InlineEditField
-                              value={lead.billing_zip}
-                              onSave={(v) => handleUpdateLead({ billing_zip: v })}
-                              placeholder="PSČ"
-                              emptyText="PSČ"
-                            />
-                            <InlineEditField
-                              value={lead.billing_city}
-                              onSave={(v) => handleUpdateLead({ billing_city: v })}
-                              placeholder="Město"
-                              emptyText="Město"
-                            />
-                          </div>
-                        </div>
-                      </div>
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* Collapsible: Contact */}
-                <Collapsible defaultOpen={isNewLead}>
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Kontaktní osoba</span>
-                    <span className="text-xs text-muted-foreground ml-1">{lead.contact_name}</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-6 pt-3">
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <InlineEditField
-                          value={lead.contact_name}
-                          onSave={(v) => handleUpdateLead({ contact_name: v })}
-                          placeholder="Jméno kontaktu"
-                          displayClassName="font-medium"
-                        />
-                        <span className="text-muted-foreground">–</span>
-                        <InlineEditField
-                          value={lead.contact_position}
-                          onSave={(v) => handleUpdateLead({ contact_position: v })}
-                          placeholder="Pozice"
-                          emptyText="Zadat pozici"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                        <InlineEditField
-                          value={lead.contact_email}
-                          onSave={(v) => handleUpdateLead({ contact_email: v })}
-                          placeholder="E-mail"
-                          emptyText="Zadat e-mail"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        <InlineEditField
-                          value={lead.contact_phone}
-                          onSave={(v) => handleUpdateLead({ contact_phone: v })}
-                          placeholder="Telefon"
-                          emptyText="Zadat telefon"
-                        />
-                      </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* Collapsible: Signatories (for contract) */}
-                {lead.onboarding_form_completed_at && (
-                  <Collapsible defaultOpen={!lead.contract_url}>
-                    <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
-                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Podpisující osoby</span>
-                      <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-1">
-                        {lead.onboarding_signatories?.length || 0}
-                      </Badge>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pl-6 pt-3">
-                      <div className="space-y-3">
-                        {(lead.onboarding_signatories || []).map((signatory: { name: string; position?: string; email: string; phone?: string }, index: number) => (
-                          <div key={index} className="space-y-2 rounded-lg border bg-card p-3">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                                <User className="h-3.5 w-3.5 text-muted-foreground" />
-                                <InlineEditField
-                                  value={signatory.name}
-                                  onSave={async (v) => {
-                                    const updated = [...(lead.onboarding_signatories || [])];
-                                    updated[index] = { ...updated[index], name: v };
-                                    await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
-                                  }}
-                                  placeholder="Jméno"
-                                  displayClassName="font-medium text-sm"
-                                />
-                                <span className="text-muted-foreground text-xs">–</span>
-                                <InlineEditField
-                                  value={signatory.position}
-                                  onSave={async (v) => {
-                                    const updated = [...(lead.onboarding_signatories || [])];
-                                    updated[index] = { ...updated[index], position: v };
-                                    await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
-                                  }}
-                                  placeholder="Pozice"
-                                  emptyText="Zadat pozici"
-                                  displayClassName="text-xs"
-                                />
-                              </div>
-                              {(lead.onboarding_signatories?.length || 0) > 1 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                                  onClick={async () => {
-                                    const updated = [...(lead.onboarding_signatories || [])];
-                                    updated.splice(index, 1);
-                                    await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
-                                    toast.success('Podpisující osoba byla odebrána');
-                                  }}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                            </div>
-                            <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                              <div className="flex items-center gap-1.5">
-                                <Mail className="h-3 w-3 text-muted-foreground" />
-                                <InlineEditField
-                                  value={signatory.email}
-                                  onSave={async (v) => {
-                                    const updated = [...(lead.onboarding_signatories || [])];
-                                    updated[index] = { ...updated[index], email: v };
-                                    await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
-                                  }}
-                                  placeholder="E-mail"
-                                  emptyText="Zadat e-mail"
-                                  displayClassName="text-xs"
-                                />
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <Phone className="h-3 w-3 text-muted-foreground" />
-                                <InlineEditField
-                                  value={signatory.phone}
-                                  onSave={async (v) => {
-                                    const updated = [...(lead.onboarding_signatories || [])];
-                                    updated[index] = { ...updated[index], phone: v };
-                                    await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
-                                  }}
-                                  placeholder="Telefon"
-                                  emptyText="Zadat telefon"
-                                  displayClassName="text-xs"
-                                />
-                              </div>
+                    {/* Tracking badges */}
+                    {(lead.has_ga4 !== null || lead.has_gtm !== null || lead.has_meta_pixel !== null || lead.has_google_ads !== null) && (
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                        {[
+                          { value: lead.has_gtm, label: 'GTM' },
+                          { value: lead.has_meta_pixel, label: 'Meta Pixel' },
+                          { value: lead.has_google_ads, label: 'Google Ads' },
+                          { value: lead.has_ga4, label: 'GA4' },
+                        ].filter(b => b.value !== null && b.value !== undefined).map(b => (
+                          <div key={b.label} className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">{b.label}</span>
+                            <div className={cn(
+                              "h-5 w-5 rounded flex items-center justify-center",
+                              b.value ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"
+                            )}>
+                              {b.value ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
                             </div>
                           </div>
                         ))}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full text-xs"
-                          onClick={async () => {
-                            const updated = [...(lead.onboarding_signatories || []), {
-                              name: '',
-                              position: '',
-                              email: '',
-                              phone: '',
-                            }];
-                            await handleUpdateLead({ onboarding_signatories: updated } as Partial<Lead>);
-                          }}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Přidat podpisující osobu
-                        </Button>
                       </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
+                    )}
+                  </div>
+                </div>
 
-                {/* Collapsible: Sales info */}
-                <Collapsible defaultOpen={isNewLead}>
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Obchodní info</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-6 pt-3">
-                    <div className="space-y-3 text-sm">
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <span className="text-xs text-muted-foreground">Zdroj</span>
-                          <InlineEditField
-                            value={lead.source}
-                            onSave={(v) => handleUpdateLead({ source: v as Lead['source'] })}
-                            type="select"
-                            options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label }))}
-                          />
-                        </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground">Pravděpodobnost</span>
-                          <InlineEditField
-                            value={lead.probability_percent}
-                            onSave={(v) => handleUpdateLead({ probability_percent: Number(v) || 0 })}
-                            type="number"
-                            suffix="%"
-                            placeholder="0"
-                            displayClassName="font-medium"
-                          />
-                        </div>
+                {/* MARKETING Card */}
+                <div className="p-4 rounded-lg border bg-card space-y-3">
+                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    Marketing
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <div>
+                        <span className="text-muted-foreground text-xs">Kanály</span>
+                        <p className="font-medium">{lead.enrichment_services_needed || '–'}</p>
                       </div>
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                        <Coins className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Měsíční investice:</span>
-                        <InlineEditField
-                          value={lead.ad_spend_monthly}
-                          onSave={(v) => handleUpdateLead({ ad_spend_monthly: Number(v) || 0 })}
-                          type="number"
-                          suffix="Kč"
-                          placeholder="0"
-                          displayClassName="font-medium"
-                          emptyText="Zadat"
-                        />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Kdo řeší reklamu</span>
+                        <p className="font-medium">{lead.marketing_experience || '–'}</p>
                       </div>
-                      <div className="p-3 rounded-lg border-l-4 border-primary/50 bg-muted/30">
-                        <span className="text-xs text-muted-foreground block mb-1">Zpráva od klienta:</span>
-                        <InlineEditField
-                          value={lead.client_message}
-                          onSave={(v) => handleUpdateLead({ client_message: v })}
-                          type="textarea"
-                          placeholder="Zadat zprávu od klienta..."
-                          emptyText="Klikni pro přidání zprávy"
-                        />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Grafický tým</span>
+                        <p className="font-medium">{lead.has_creative_team || '–'}</p>
                       </div>
-                      <div className="p-3 rounded-lg bg-muted/30">
-                        <span className="text-xs text-muted-foreground block mb-1">Shrnutí:</span>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Ad spend</span>
+                        <p className="font-medium">
+                          {lead.enrichment_ad_spend_range || (lead.ad_spend_monthly ? `${lead.ad_spend_monthly.toLocaleString('cs-CZ')} Kč` : '–')}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">Zdroj</span>
                         <InlineEditField
-                          value={lead.summary}
-                          onSave={(v) => handleUpdateLead({ summary: v })}
-                          type="textarea"
-                          placeholder="Zadat shrnutí..."
-                          emptyText="Klikni pro přidání shrnutí"
+                          value={lead.source || 'inbound'}
+                          onSave={(v) => { updateLead(lead.id, { source: v as Lead['source'] }); toast.success('Uloženo'); }}
+                          type="select"
+                          options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label }))}
                         />
                       </div>
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* Conversion status */}
-                {lead.converted_to_client_id && (
-                  <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10">
-                    <p className="text-sm text-emerald-700 font-medium">
-                      Lead byl převeden na zakázku
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {lead.converted_at && new Date(lead.converted_at).toLocaleDateString('cs-CZ')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Meta */}
-                <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>Vytvořeno: {new Date(lead.created_at).toLocaleDateString('cs-CZ')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>Poslední aktivita: {new Date(lead.updated_at).toLocaleDateString('cs-CZ')}</span>
+                    {lead.pain_point && (
+                      <div className="p-2.5 rounded-lg border-l-4 border-red-400 bg-red-500/5">
+                        <span className="text-xs text-muted-foreground block mb-0.5">🎯 Pain point</span>
+                        <p className="text-sm font-medium">{lead.pain_point}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            </ScrollArea>
 
-            {/* Right column: Notes + Collapsible Timeline */}
-            <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:h-auto lg:max-h-none lg:w-[380px] lg:max-w-[380px] lg:flex-none">
-              <ScrollArea className="min-h-0 flex-1 lg:min-h-0">
-                <div className="space-y-4 p-4 sm:p-5">
+              {/* BOOKING / MEETING SECTION */}
+              {(lead.booking_datetime || lead.booking_meet_link || lead.booking_status) && (
+                <div className="p-4 rounded-lg border bg-card flex items-center gap-6 flex-wrap">
+                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                    📅 Schůzka
+                  </h4>
+                  {lead.booking_datetime && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
+                        ✓ {new Date(lead.booking_datetime).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </Badge>
+                    </div>
+                  )}
+                  {lead.booking_status && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground text-xs mr-1">Stav:</span>
+                      <span className="font-medium">{lead.booking_status}</span>
+                    </div>
+                  )}
+                  {lead.booking_meet_link && (
+                    <a href={lead.booking_meet_link} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-sm text-primary hover:underline font-medium">
+                      🎥 Google Meet
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                </div>
+              )}
+              {lead.company_research && (
+                <Collapsible defaultOpen>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+                    <Sparkles className="h-4 w-4 text-violet-500" />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Research firmy (Perplexity)</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-3">
+                    <div className="p-4 rounded-lg border bg-card text-sm leading-relaxed whitespace-pre-wrap">
+                      {lead.company_research}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
+              {/* Onboarding form completion status */}
+              {lead.onboarding_form_completed_at && (
+                <div className="p-3 rounded-lg border border-blue-500/30 bg-blue-500/10 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                    <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">
+                      📋 Onboarding formulář vyplněn
+                    </p>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {new Date(lead.onboarding_form_completed_at).toLocaleDateString('cs-CZ')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    Klient vyplnil fakturační údaje, kontaktní osoby a potvrdil služby. Údaje do smlouvy vychází z tohoto formuláře.
+                  </p>
+                </div>
+              )}
+
+              {lead.onboarding_form_sent_at && !lead.onboarding_form_completed_at && (
+                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                      📋 Onboarding formulář odeslán — čeká na vyplnění
+                    </p>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {new Date(lead.onboarding_form_sent_at).toLocaleDateString('cs-CZ')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 pl-6">
+                    <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[300px]">
+                      {lead.onboarding_form_url || `https://crm.socials.cz/onboarding/${lead.id}`}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 shrink-0"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const url = lead.onboarding_form_url || `https://crm.socials.cz/onboarding/${lead.id}`;
+                        await navigator.clipboard.writeText(url);
+                        toast.success('URL zkopírováno');
+                      }}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Conversion status */}
+              {lead.converted_to_client_id && (
+                <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+                  <p className="text-sm text-emerald-700 font-medium">✓ Lead byl převeden na zakázku</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {lead.converted_at && new Date(lead.converted_at).toLocaleDateString('cs-CZ')}
+                  </p>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* === BOTTOM: Workflow + Notes in 2 columns === */}
+              <div className="grid grid-cols-2 gap-5">
+                {/* Left: Stage + Flow Stepper */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-muted-foreground whitespace-nowrap">Stav:</label>
+                    <Select value={lead.stage} onValueChange={handleStageChange}>
+                      <SelectTrigger className="h-8 w-auto">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(STAGE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select 
+                      value={lead.owner_id} 
+                      onValueChange={(id) => { updateLead(lead.id, { owner_id: id }); toast.success('Majitel leadu byl změněn'); }}
+                    >
+                      <SelectTrigger className="h-8 w-auto">
+                        <SelectValue placeholder="Odpovědná osoba" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background">
+                        {colleagues.filter(c => c.status === 'active').map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <h4 className="text-sm font-medium text-muted-foreground">Proces odbavení</h4>
+                  <LeadFlowStepper
+                    lead={lead}
+                    onSendMeetingRequest={() => setIsMeetingRequestOpen(true)}
+                    onQuickConfirmMeetingSent={() => {
+                      updateLead(lead.id, { meeting_request_sent_at: new Date().toISOString() });
+                      toast.success('✓ Žádost o schůzku označena jako odeslaná');
+                    }}
+                    onRequestAccess={() => setIsRequestAccessOpen(true)}
+                    onQuickConfirmAccessSent={() => {
+                      updateLead(lead.id, { access_request_sent_at: new Date().toISOString(), stage: 'waiting_access' as LeadStage });
+                      toast.success('✓ Žádost o přístupy označena jako odeslaná');
+                    }}
+                    onMarkAccessReceived={() => {
+                      updateLead(lead.id, { access_received_at: new Date().toISOString(), stage: 'access_received' as LeadStage });
+                      toast.success('🔑 Přístupy byly přijaty!');
+                    }}
+                    onAddService={() => setIsAddServiceOpen(true)}
+                    onCreateOffer={() => setIsCreateOfferOpen(true)}
+                    onSendOffer={() => setIsSendOfferOpen(true)}
+                    onSendOnboarding={() => setIsOnboardingFormOpen(true)}
+                    onSendContract={() => setIsContractDialogOpen(true)}
+                    onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
+                    onMarkContractSigned={handleMarkContractSigned}
+                    onConvert={handleConvertClick}
+                    onRemoveService={(index) => {
+                      const currentServices = [...(lead.potential_services || [])];
+                      currentServices.splice(index, 1);
+                      const newEstimatedPrice = currentServices.reduce((sum, s) => sum + s.price, 0);
+                      updateLead(lead.id, { potential_services: currentServices, estimated_price: newEstimatedPrice });
+                      toast.success('Služba odebrána');
+                    }}
+                  />
+                </div>
+
+                {/* Right: Notes + Timeline */}
+                <div className="space-y-4">
                   {/* Inline note form */}
                   <div className="space-y-2 p-3 rounded-lg border bg-card">
                     <div className="flex gap-1 flex-wrap">
                       {([
                         { type: 'general' as const, icon: <MessageSquare className="h-3 w-3" />, label: 'Poznámka' },
                         { type: 'call' as const, icon: <Phone className="h-3 w-3" />, label: 'Hovor' },
-                        { type: 'email_sent' as const, icon: <Send className="h-3 w-3" />, label: 'Odeslaný e-mail' },
-                        { type: 'email_received' as const, icon: <Mail className="h-3 w-3" />, label: 'Přijatý e-mail' },
+                        { type: 'email_sent' as const, icon: <Send className="h-3 w-3" />, label: 'Odeslaný' },
+                        { type: 'email_received' as const, icon: <Mail className="h-3 w-3" />, label: 'Přijatý' },
                         { type: 'internal' as const, icon: <Lock className="h-3 w-3" />, label: 'Interní' },
                       ]).map(({ type, icon, label }) => (
-                        <Button
-                          key={type}
-                          variant={noteType === type ? 'default' : 'outline'}
-                          size="sm"
-                          className="gap-1 text-xs h-7"
-                          onClick={() => setNoteType(type)}
-                        >
-                          {icon}
-                          {label}
+                        <Button key={type} variant={noteType === type ? 'default' : 'outline'} size="sm" className="gap-1 text-xs h-7" onClick={() => setNoteType(type)}>
+                          {icon} {label}
                         </Button>
                       ))}
                     </div>
                     {noteType === 'call' && (
-                      <Input
-                        type="datetime-local"
-                        value={callDate}
-                        onChange={(e) => setCallDate(e.target.value)}
-                        className="h-8 text-xs"
-                        placeholder="Datum hovoru"
-                      />
+                      <Input type="datetime-local" value={callDate} onChange={(e) => setCallDate(e.target.value)} className="h-8 text-xs" />
                     )}
                     {(noteType === 'email_sent' || noteType === 'email_received') && (
                       <>
-                        <Input
-                          value={emailSubject}
-                          onChange={(e) => setEmailSubject(e.target.value)}
-                          className="h-8 text-xs"
-                          placeholder="Předmět e-mailu"
-                        />
-                        <Input
-                          value={emailRecipients}
-                          onChange={(e) => setEmailRecipients(e.target.value)}
-                          className="h-8 text-xs"
-                          placeholder={noteType === 'email_sent' ? 'Příjemci (oddělte čárkou)' : 'Od koho (e-mail)'}
-                        />
+                        <Input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="h-8 text-xs" placeholder="Předmět" />
+                        <Input value={emailRecipients} onChange={(e) => setEmailRecipients(e.target.value)} className="h-8 text-xs" placeholder={noteType === 'email_sent' ? 'Příjemci' : 'Od koho'} />
                       </>
                     )}
                     <Textarea
-                      placeholder={
-                        noteType === 'call'
-                          ? 'Co bylo probíráno...'
-                          : noteType === 'internal'
-                            ? 'Interní poznámka...'
-                            : noteType === 'email_sent'
-                              ? 'Obsah odeslaného e-mailu...'
-                              : noteType === 'email_received'
-                                ? 'Obsah přijatého e-mailu...'
-                                : 'Přidat poznámku...'
-                      }
-                      value={noteText}
-                      onChange={(e) => setNoteText(e.target.value)}
-                      rows={3}
-                      className="text-sm min-h-[60px]"
+                      placeholder={noteType === 'call' ? 'Co bylo probíráno...' : noteType === 'internal' ? 'Interní poznámka...' : 'Přidat poznámku...'}
+                      value={noteText} onChange={(e) => setNoteText(e.target.value)} rows={3} className="text-sm min-h-[60px]"
                     />
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={handleInlineNoteSubmit}
-                      disabled={!noteText.trim()}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Přidat
+                    <Button size="sm" className="h-7 text-xs" onClick={handleInlineNoteSubmit} disabled={!noteText.trim()}>
+                      <Plus className="h-3 w-3 mr-1" /> Přidat
                     </Button>
                   </div>
 
-                  {/* Collapsible Timeline */}
+                  {/* Timeline */}
                   <Collapsible defaultOpen>
                     <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
                       <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium">Historie komunikace</span>
                       <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-auto">
-                        {(lead.notes?.length || 0) + (lead.meeting_request_sent_at ? 1 : 0) + (lead.access_request_sent_at ? 1 : 0) + (lead.offer_sent_at ? 1 : 0)} událostí
+                        {(lead.notes?.length || 0) + (lead.access_request_sent_at ? 1 : 0) + (lead.offer_sent_at ? 1 : 0)} událostí
                       </Badge>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pt-3">
@@ -1274,40 +875,39 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
                         onSendOnboarding={() => setIsOnboardingFormOpen(true)}
                         onSendOffer={() => setIsSendOfferOpen(true)}
                         onCreateOffer={() => setIsCreateOfferOpen(true)}
-                        onMarkAccessReceived={async () => {
-                          try {
-                            await updateLead(lead.id, {
-                              access_received_at: new Date().toISOString(),
-                              stage: 'access_received' as LeadStage
-                            });
-                            toast.success('Přístupy byly přijaty!');
-                          } catch (error) {
-                            toast.error('Nepodařilo se uložit změny');
-                          }
+                        onMarkAccessReceived={() => {
+                          updateLead(lead.id, { access_received_at: new Date().toISOString(), stage: 'access_received' as LeadStage });
+                          toast.success('🔑 Přístupy byly přijaty!');
                         }}
-                        onMarkContractSent={async () => {
-                          try {
-                            await updateLead(lead.id, { contract_sent_at: new Date().toISOString() });
-                            toast.success('Smlouva byla označena jako odeslaná');
-                          } catch (error) {
-                            toast.error('Nepodařilo se uložit změny');
-                          }
-                        }}
-                        onMarkContractSigned={async () => {
-                          try {
-                            await updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
-                            toast.success('Smlouva byla podepsána!');
-                          } catch (error) {
-                            toast.error('Nepodařilo se uložit změny');
-                          }
-                        }}
+                        onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
+                        onMarkContractSigned={handleMarkContractSigned}
                       />
                     </CollapsibleContent>
                   </Collapsible>
                 </div>
-              </ScrollArea>
+              </div>
+
+              {/* Meta */}
+              <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Vytvořeno: {new Date(lead.created_at).toLocaleDateString('cs-CZ')}</span>
+                  <span>•</span>
+                  <span>Aktualizace: {new Date(lead.updated_at).toLocaleDateString('cs-CZ')}</span>
+                </div>
+              </div>
+
+              {/* Delete button at the bottom */}
+              {onDelete && (
+                <div className="pt-4 border-t flex justify-end">
+                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive gap-1.5" onClick={() => setShowDeleteConfirm(true)}>
+                    <Trash2 className="h-4 w-4" />
+                    Smazat lead
+                  </Button>
+                </div>
+              )}
             </div>
-          </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
@@ -1336,26 +936,6 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         onSubmit={handleAddService}
       />
 
-      <RequestAccessDialog
-        open={isRequestAccessOpen}
-        onOpenChange={setIsRequestAccessOpen}
-        contactName={lead.contact_name}
-        contactEmail={lead.contact_email}
-        companyName={lead.company_name}
-        leadId={lead.id}
-        onSent={async (platforms) => {
-          try {
-            await updateLead(lead.id, {
-              access_request_sent_at: new Date().toISOString(),
-              access_request_platforms: platforms,
-              stage: 'waiting_access' as LeadStage,
-            });
-          } catch (error) {
-            toast.error('Nepodařilo se uložit změny');
-          }
-        }}
-      />
-
       <SendMeetingRequestDialog
         open={isMeetingRequestOpen}
         onOpenChange={setIsMeetingRequestOpen}
@@ -1363,13 +943,31 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         contactEmail={lead.contact_email}
         companyName={lead.company_name}
         leadId={lead.id}
-        onSent={async () => {
-          try {
-            await updateLead(lead.id, {
-              meeting_request_sent_at: new Date().toISOString(),
-            });
-          } catch (error) {
-            toast.error('Nepodařilo se uložit změnu');
+        onSent={(emailData) => {
+          updateLead(lead.id, {
+            meeting_request_sent_at: new Date().toISOString(),
+          });
+          if (emailData) {
+            addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
+          }
+        }}
+      />
+
+      <RequestAccessDialog
+        open={isRequestAccessOpen}
+        onOpenChange={setIsRequestAccessOpen}
+        contactName={lead.contact_name}
+        contactEmail={lead.contact_email}
+        companyName={lead.company_name}
+        leadId={lead.id}
+        onSent={(platforms, emailData) => {
+          updateLead(lead.id, {
+            access_request_sent_at: new Date().toISOString(),
+            access_request_platforms: platforms,
+            stage: 'waiting_access' as LeadStage,
+          });
+          if (emailData) {
+            addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
           }
         }}
       />
@@ -1378,14 +976,13 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         open={isOnboardingFormOpen}
         onOpenChange={setIsOnboardingFormOpen}
         lead={lead}
-        onSent={async (formUrl) => {
-          try {
-            await updateLead(lead.id, {
-              onboarding_form_sent_at: new Date().toISOString(),
-              onboarding_form_url: formUrl,
-            });
-          } catch (error) {
-            toast.error('Nepodařilo se uložit změny');
+        onSent={(formUrl, emailData) => {
+          updateLead(lead.id, {
+            onboarding_form_sent_at: new Date().toISOString(),
+            onboarding_form_url: formUrl,
+          });
+          if (emailData) {
+            addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
           }
         }}
       />
@@ -1394,15 +991,14 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         open={isSendOfferOpen}
         onOpenChange={setIsSendOfferOpen}
         lead={lead}
-        onSent={async (ownerId) => {
-          try {
-            await updateLead(lead.id, {
-              offer_sent_at: new Date().toISOString(),
-              offer_sent_by_id: ownerId,
-              stage: 'offer_sent' as LeadStage,
-            });
-          } catch (error) {
-            toast.error('Nepodařilo se uložit změny');
+        onSent={(ownerId, emailData) => {
+          updateLead(lead.id, {
+            offer_sent_at: new Date().toISOString(),
+            offer_sent_by_id: ownerId,
+            stage: 'offer_sent' as LeadStage,
+          });
+          if (emailData) {
+            addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
           }
         }}
       />
@@ -1411,16 +1007,39 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         open={isCreateOfferOpen}
         onOpenChange={setIsCreateOfferOpen}
         lead={lead}
-        onSuccess={async (token, offerUrl) => {
+        onSuccess={(token, offerUrl, syncData) => {
           setSharedOfferUrl(offerUrl);
-          try {
-            await updateLead(lead.id, {
-              offer_url: offerUrl,
-              offer_created_at: new Date().toISOString(),
+          const updateData: Partial<Lead> = {
+            offer_url: offerUrl,
+            offer_created_at: new Date().toISOString(),
+          };
+          // Sync services from offer back to lead's potential_services
+          if (syncData?.services) {
+            const syncedServices: LeadService[] = syncData.services.map(s => {
+              const catalogService = services.find(cs => cs.id === s.service_id);
+              const isCB = catalogService?.code === 'CREATIVE_BOOST';
+              return {
+                id: s.id,
+                service_id: s.service_id,
+                name: s.name,
+                selected_tier: s.selected_tier,
+                price: isCB && syncData.cbCredits && syncData.cbPricePerCredit
+                  ? syncData.cbCredits * syncData.cbPricePerCredit
+                  : s.price,
+                currency: s.currency,
+                billing_type: s.billing_type,
+                intro_discount_percent: syncData.introDiscountPercent && s.billing_type === 'monthly'
+                  ? syncData.introDiscountPercent : null,
+                intro_discount_months: syncData.introDiscountMonths && s.billing_type === 'monthly'
+                  ? syncData.introDiscountMonths : null,
+                creative_boost_credits: isCB ? syncData.cbCredits || null : null,
+                creative_boost_price_per_credit: isCB ? syncData.cbPricePerCredit || null : null,
+              };
             });
-          } catch (error) {
-            toast.error('Nepodařilo se uložit změny');
+            updateData.potential_services = syncedServices;
+            updateData.estimated_price = syncedServices.reduce((sum, s) => sum + s.price, 0);
           }
+          updateLead(lead.id, updateData);
         }}
       />
 
@@ -1431,6 +1050,21 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange }: LeadDet
         onConfirm={handleConfirmTransition}
         onSkip={handleSkipTransition}
         isConfirming={isConfirming}
+      />
+
+      <SendContractDialog
+        open={isContractDialogOpen}
+        onOpenChange={setIsContractDialogOpen}
+        lead={lead}
+        onSend={(data) => {
+          updateLead(lead.id, {
+            contract_url: data.contract_url,
+            digisign_envelope_id: data.digisign_envelope_id,
+            digisign_document_url: data.digisign_document_url,
+            contract_sent_at: data.contract_sent_at,
+          });
+          toast.success('📄 Smlouva připravena a odeslána via DigiSign');
+        }}
       />
     </>
   );

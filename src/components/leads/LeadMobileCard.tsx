@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  Building2, 
+  Globe, 
   User, 
   ExternalLink, 
   Mail, 
@@ -12,10 +12,17 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
+  ShieldCheck,
+  ShieldX,
 } from 'lucide-react';
 import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { getLeadLastActivity } from '@/utils/leadActivityUtils';
+
+const cleanDomain = (url: string) => {
+  const d = url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+  return d.charAt(0).toUpperCase() + d.slice(1);
+};
 
 interface LeadMobileCardProps {
   lead: Lead;
@@ -33,6 +40,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   won: 'Vyhráno',
   lost: 'Prohráno',
   postponed: 'Odloženo',
+  bad_fit: 'Bad Fit',
 };
 
 const STAGE_COLORS: Record<LeadStage, string> = {
@@ -45,6 +53,7 @@ const STAGE_COLORS: Record<LeadStage, string> = {
   won: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
   lost: 'bg-red-500/10 text-red-700 border-red-500/30',
   postponed: 'bg-gray-500/10 text-gray-700 border-gray-500/30',
+  bad_fit: 'bg-orange-500/10 text-orange-700 border-orange-500/30',
 };
 
 export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps) {
@@ -63,8 +72,8 @@ export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="font-medium text-sm truncate">{lead.company_name}</span>
+            <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="font-medium text-sm truncate">{lead.website ? cleanDomain(lead.website) : lead.company_name}</span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {lead.access_request_sent_at && (
@@ -94,14 +103,28 @@ export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps
           <span className="truncate">{lead.contact_name}</span>
         </div>
 
-        {/* Middle row: Stage + Owner */}
+        {/* Middle row: Stage + Qualification + Owner */}
         <div className="flex items-center justify-between gap-2">
-          <Badge 
-            variant="outline" 
-            className={cn("text-xs", STAGE_COLORS[lead.stage])}
-          >
-            {STAGE_LABELS[lead.stage]}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge 
+              variant="outline" 
+              className={cn("text-xs", STAGE_COLORS[lead.stage])}
+            >
+              {STAGE_LABELS[lead.stage]}
+            </Badge>
+            {lead.qualification_status === 'qualified' && (
+              <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30 gap-1">
+                <ShieldCheck className="h-3 w-3" />
+                Kvalifikovaný
+              </Badge>
+            )}
+            {lead.qualification_status === 'bad_fit' && (
+              <Badge variant="outline" className="text-xs bg-red-500/10 text-red-700 border-red-500/30 gap-1">
+                <ShieldX className="h-3 w-3" />
+                Bad Fit
+              </Badge>
+            )}
+          </div>
           <span className="text-xs text-muted-foreground truncate">{ownerName}</span>
         </div>
 

@@ -249,9 +249,9 @@ export interface Engagement {
   notice_period_months: number | null;
   freelo_url: string | null;
   platforms: string[];
-  managed_countries: string[];
+  managed_countries?: string[];
   notes: string;
-  pinned_notes: string | null;
+  pinned_notes?: string | null;
   // Document links from lead conversion
   offer_url: string | null;
   contract_url: string | null;
@@ -283,9 +283,7 @@ export interface EngagementService {
   creative_boost_min_credits: number | null;
   creative_boost_max_credits: number | null;
   creative_boost_price_per_credit: number | null;
-  creative_boost_fixed_billing: boolean; // true = fixed package, false = usage-based
-  creative_boost_reward_per_credit_banner?: number | null;
-  creative_boost_reward_per_credit_video?: number | null;
+  creative_boost_fixed_billing?: boolean; // true = fixed package, false = usage-based
   // Note: Reward per credit for graphic designer/video editor is stored in frontend mock data (creativeBoostRewardsMockData.ts)
   // One-off invoicing tracking
   invoicing_status: OneOffInvoicingStatus;
@@ -293,14 +291,14 @@ export interface EngagementService {
   invoiced_in_period: string | null; // Format: "2025-02" (year-month)
   invoice_id: string | null;
   // Upsell tracking - who sold this service
-  upsold_by_id: string | null;
-  upsell_commission_percent: number | null;
+  upsold_by_id?: string | null;
+  upsell_commission_percent?: number | null;
   // Effective date for prorated billing
-  effective_from: string | null; // Date when this service starts (for mid-month proration)
-  // Introductory discount
-  intro_discount_percent: number | null;
-  intro_discount_months: number | null;
-  intro_discount_start_date: string | null;
+  effective_from?: string | null; // Date when this service starts (for mid-month proration)
+  // Introductory discount fields
+  intro_discount_percent?: number | null;
+  intro_discount_months?: number | null;
+  intro_discount_start_date?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -332,6 +330,9 @@ export interface Colleague {
   billing_city: string | null;        // Město
   billing_zip: string | null;         // PSČ
   bank_account: string | null;        // Číslo účtu
+  // Contracts
+  contract_cooperation_url: string | null;  // Smlouva o spolupráci
+  contract_gdpr_url: string | null;         // GDPR / DPP smlouva
   created_at: string;
   updated_at: string;
 }
@@ -521,7 +522,8 @@ export type LeadStage =
   | 'offer_sent'         // Nabídka odeslána
   | 'won'                // Vyhráno
   | 'lost'               // Prohráno
-  | 'postponed';         // Odloženo
+  | 'postponed'          // Odloženo
+  | 'bad_fit';           // Bad Fit
 
 export type LeadSource = 
   | 'referral'
@@ -543,8 +545,14 @@ export interface LeadService {
   price: number;
   currency: string;
   billing_type: 'monthly' | 'one_off';
+  // Introductory discount (optional)
   intro_discount_percent?: number | null;
   intro_discount_months?: number | null;
+  // Creative Boost specific
+  creative_boost_credits?: number | null;
+  creative_boost_price_per_credit?: number | null;
+  creative_boost_graphic_reward?: number | null;
+  creative_boost_editor_reward?: number | null;
 }
 
 export type LeadNoteType = 'general' | 'call' | 'internal' | 'email_sent' | 'email_received';
@@ -611,7 +619,7 @@ export interface Lead {
   
   // Sales info
   stage: LeadStage;
-  owner_id: string;
+  owner_id: string | null;
   source: LeadSource;
   source_custom: string | null;
   client_message: string | null;
@@ -656,14 +664,55 @@ export interface Lead {
   onboarding_form_url: string | null;
   onboarding_form_completed_at: string | null;
   
-  // Contract tracking
+  // Contract tracking (DigiSign)
   contract_url: string | null;
   contract_created_at: string | null;
   contract_sent_at: string | null;
   contract_signed_at: string | null;
+  digisign_envelope_id: string | null;
+  digisign_document_url: string | null;
   
   // VAT payer reliability
   vat_payer_status: 'reliable' | 'unreliable' | 'not_found' | null;
+  
+  // Enrichment: Marketing info
+  enrichment_platform: string | null;
+  enrichment_ad_spend_range: string | null;
+  enrichment_services_needed: string | null;
+  marketing_experience: string | null;
+  marketing_maturity: string | null;
+  has_creative_team: string | null;
+  pain_point: string | null;
+  
+  // Enrichment: Tracking & scoring
+  has_ga4: boolean | null;
+  has_gtm: boolean | null;
+  has_meta_pixel: boolean | null;
+  has_google_ads: boolean | null;
+  tracking_detected: boolean | null;
+  lead_score: number | null;
+  credibility_score: number | null;
+  enrichment_qualification_tier: string | null;
+  
+  // Enrichment: Company
+  is_vat_payer: boolean | null;
+  is_ecommerce: boolean | null;
+  business_type: string | null;
+  company_address: string | null;
+  
+  // Enrichment: Social
+  facebook_url: string | null;
+  instagram_url: string | null;
+  
+  // Enrichment: Booking
+  booking_status: string | null;
+  booking_datetime: string | null;
+  booking_meet_link: string | null;
+  
+  // Enrichment: AI research & meta
+  company_research: string | null;
+  enrichment_completed: boolean | null;
+  enrichment_id: string | null;
   
   // Meta
   created_at: string;
@@ -816,7 +865,8 @@ export type ModificationRequestType =
   | 'deactivate_service'
   | 'add_assignment'
   | 'update_assignment'
-  | 'new_engagement';
+  | 'new_engagement'
+  | 'bulk_edit';
 
 // Status for modification requests
 export type ModificationRequestStatus = 
@@ -836,6 +886,7 @@ export const MODIFICATION_REQUEST_TYPE_LABELS: Record<ModificationRequestType, s
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
   new_engagement: 'Nová zakázka (jiné SRO)',
+  bulk_edit: 'Hromadná úprava zakázky',
 };
 
 // Status labels
@@ -944,6 +995,55 @@ export interface NewEngagementProposedChanges {
   send_onboarding_form?: boolean;
 }
 
+/** A single service edit within a bulk_edit request */
+export interface BulkEditServiceItem {
+  engagement_service_id: string;
+  service_name: string;
+  /** 'keep' = unchanged, 'update' = price/reward change, 'deactivate' = remove, 'add' = new service */
+  action: 'keep' | 'update' | 'deactivate' | 'add';
+  old_price: number;
+  new_price: number;
+  currency: string;
+  /** Assignment/reward changes for this service */
+  assignment_changes?: Array<{
+    assignment_id?: string;
+    colleague_id: string;
+    colleague_name: string;
+    role: string;
+    cost_model: 'hourly' | 'fixed_monthly' | 'percentage';
+    old_value: number;
+    new_value: number;
+  }>;
+}
+
+/** Proposed changes for a bulk edit of an entire engagement */
+export interface BulkEditProposedChanges {
+  /** All services with their changes */
+  services: BulkEditServiceItem[];
+  /** New services to add */
+  new_services?: Array<{
+    service_id: string | null;
+    name: string;
+    price: number;
+    currency: string;
+    billing_type: 'monthly' | 'one_off';
+    selected_tier?: ServiceTier | null;
+    assignments?: Array<{
+      colleague_id: string;
+      colleague_name: string;
+      role: string;
+      cost_model: 'hourly' | 'fixed_monthly' | 'percentage';
+      monthly_cost?: number;
+    }>;
+  }>;
+  /** Summary totals */
+  old_total_monthly: number;
+  new_total_monthly: number;
+  old_total_internal_cost: number;
+  new_total_internal_cost: number;
+  currency: string;
+}
+
 export type ModificationProposedChanges = 
   | AddServiceProposedChanges
   | UpdateServicePriceProposedChanges
@@ -951,7 +1051,8 @@ export type ModificationProposedChanges =
   | AddAssignmentProposedChanges
   | UpdateAssignmentProposedChanges
   | RemoveAssignmentProposedChanges
-  | NewEngagementProposedChanges;
+  | NewEngagementProposedChanges
+  | BulkEditProposedChanges;
 
 // Item within a bundled modification request
 export interface ModificationRequestItem {
@@ -1004,5 +1105,5 @@ export interface ModificationRequestWithDetails extends ModificationRequest {
 
 // Helper to check if a request type is client-facing
 export function isClientFacingRequestType(type: ModificationRequestType): boolean {
-  return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service', 'new_engagement'].includes(type);
+  return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service', 'new_engagement', 'bulk_edit'].includes(type);
 }

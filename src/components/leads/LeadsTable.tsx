@@ -31,6 +31,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   won: 'Vyhráno',
   lost: 'Prohráno',
   postponed: 'Odloženo',
+  bad_fit: 'Bad Fit',
 };
 
 const STAGE_COLORS: Record<LeadStage, string> = {
@@ -43,6 +44,7 @@ const STAGE_COLORS: Record<LeadStage, string> = {
   won: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
   lost: 'bg-red-500/10 text-red-700 border-red-500/30',
   postponed: 'bg-gray-500/10 text-gray-700 border-gray-500/30',
+  bad_fit: 'bg-orange-500/10 text-orange-700 border-orange-500/30',
 };
 
 export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
@@ -50,9 +52,9 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
   const isMobile = useIsMobile();
 
   const getOwnerName = (ownerId: string | null) => {
-    if (!ownerId) return '-';
+    if (!ownerId) return 'Nepřiřazeno';
     const owner = colleagues.find(c => c.id === ownerId);
-    return owner?.full_name || 'Nepřiřazeno';
+    return owner?.full_name || 'Neznámý';
   };
 
   // Mobile view: Card stack
@@ -104,7 +106,7 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => onLeadClick(lead)}
               >
-                <TableCell className="font-medium">{lead.company_name}</TableCell>
+                <TableCell className="font-medium">{lead.website ? ((d) => d.charAt(0).toUpperCase() + d.slice(1))(lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '')) : lead.company_name}</TableCell>
                 <TableCell className="text-muted-foreground">{lead.ico}</TableCell>
                 <TableCell>
                   <div className="truncate max-w-[150px]">
@@ -130,7 +132,9 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
                     <Badge variant="secondary" className="text-xs">
                       {lead.potential_service}
                     </Badge>
-                  ) : '-'}
+                  ) : (
+                    '-'
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   {lead.estimated_price != null ? `${lead.estimated_price.toLocaleString()} ${lead.currency}` : '-'}

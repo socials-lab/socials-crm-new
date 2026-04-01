@@ -1,54 +1,40 @@
-import {
-  Plus,
-  KeyRound,
-  CheckCircle2,
-  Package,
-  Link2,
-  Send,
-  ClipboardList,
-  FileSignature,
+import { 
+  Plus, 
+  KeyRound, 
+  CheckCircle2, 
+  Package, 
+  Link2, 
+  Send, 
+  ClipboardList, 
+  FileSignature, 
   ArrowRightLeft,
   ExternalLink,
   X,
   Check,
-  Loader2,
   Calendar,
+  CircleDot,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { Lead, LeadService } from '@/types/crm';
 
-interface FlowStep {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  isComplete: boolean;
-  completedAt: string | null;
-  action?: {
-    label: string;
-    onClick: () => void;
-    variant?: 'default' | 'outline';
-  };
-  detail?: string;
-  customContent?: React.ReactNode;
-}
-
 interface LeadFlowStepperProps {
   lead: Lead;
   onSendMeetingRequest: () => void;
+  onQuickConfirmMeetingSent: () => void;
   onRequestAccess: () => void;
+  onQuickConfirmAccessSent: () => void;
   onMarkAccessReceived: () => void;
   onAddService: () => void;
   onCreateOffer: () => void;
   onSendOffer: () => void;
   onSendOnboarding: () => void;
-  onCreateContract: () => void;
+  onSendContract: () => void;
   onMarkContractSent: () => void;
   onMarkContractSigned: () => void;
   onConvert: () => void;
   onRemoveService?: (index: number) => void;
-  isCreatingContract?: boolean;
 }
 
 const formatDate = (date: string) => {
@@ -59,20 +45,20 @@ const formatDate = (date: string) => {
   });
 };
 
-function ServicesInlineList({
-  services,
-  currency,
-  onRemove
-}: {
-  services: LeadService[];
+function ServicesInlineList({ 
+  services, 
+  currency, 
+  onRemove 
+}: { 
+  services: LeadService[]; 
   currency: string;
   onRemove?: (index: number) => void;
 }) {
   if (services.length === 0) return null;
   const total = services.reduce((sum, s) => sum + s.price, 0);
-
+  
   return (
-    <div className="mt-1.5 space-y-1">
+    <div className="mt-2 space-y-1 ml-1">
       {services.map((s, i) => (
         <div key={i} className="flex items-center gap-1.5 text-xs group">
           <span className="text-muted-foreground">•</span>
@@ -97,7 +83,7 @@ function ServicesInlineList({
         </div>
       ))}
       {services.length > 1 && (
-        <div className="flex items-center justify-end text-xs font-medium pt-0.5 border-t border-border/50">
+        <div className="flex items-center justify-end text-xs font-medium pt-1 border-t border-border/50">
           Celkem: {total.toLocaleString()} {currency}
         </div>
       )}
@@ -108,106 +94,95 @@ function ServicesInlineList({
 export function LeadFlowStepper({
   lead,
   onSendMeetingRequest,
+  onQuickConfirmMeetingSent,
   onRequestAccess,
+  onQuickConfirmAccessSent,
   onMarkAccessReceived,
   onAddService,
   onCreateOffer,
   onSendOffer,
   onSendOnboarding,
-  onCreateContract,
+  onSendContract,
   onMarkContractSent,
   onMarkContractSigned,
   onConvert,
   onRemoveService,
-  isCreatingContract,
 }: LeadFlowStepperProps) {
   const servicesCount = lead.potential_services?.length || 0;
   const hasOffer = !!lead.offer_url;
-  const isArchived = ['lost', 'postponed'].includes(lead.stage);
-  const canConvert = !lead.converted_to_client_id && !['won', 'lost', 'postponed'].includes(lead.stage);
+  const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
 
-  const steps: FlowStep[] = [
+  interface StepDef {
+    id: string;
+    label: string;
+    isComplete: boolean;
+    completedAt: string | null;
+    detail?: string;
+    actions?: Array<{
+      label: string;
+      onClick: () => void;
+      variant?: 'default' | 'outline' | 'ghost';
+      size?: 'sm' | 'xs';
+    }>;
+    customContent?: React.ReactNode;
+  }
+
+  const steps: StepDef[] = [
     {
       id: 'created',
       label: 'Lead vytvořen',
-      icon: <Plus className="h-3.5 w-3.5" />,
       isComplete: true,
       completedAt: lead.created_at,
     },
     {
       id: 'meeting-request',
       label: 'Žádost o schůzku',
-      icon: <Calendar className="h-3.5 w-3.5" />,
       isComplete: !!lead.meeting_request_sent_at,
       completedAt: lead.meeting_request_sent_at,
-      action: !lead.meeting_request_sent_at ? {
-        label: 'Odeslat',
-        onClick: onSendMeetingRequest,
-        variant: 'outline',
-      } : undefined,
+      actions: !lead.meeting_request_sent_at ? [
+        { label: 'Odeslat e-mail', onClick: onSendMeetingRequest, variant: 'outline' },
+        { label: '✓ Potvrdil ručně', onClick: onQuickConfirmMeetingSent, variant: 'ghost' },
+      ] : [
+        { label: 'Odeslat znovu', onClick: onSendMeetingRequest, variant: 'ghost' },
+      ],
     },
     {
       id: 'access-sent',
       label: 'Žádost o přístupy',
-      icon: <KeyRound className="h-3.5 w-3.5" />,
       isComplete: !!lead.access_request_sent_at,
       completedAt: lead.access_request_sent_at,
-      detail: lead.access_request_platforms?.length > 0
+      detail: lead.access_request_platforms?.length > 0 
         ? lead.access_request_platforms.join(', ')
         : undefined,
-      action: !lead.access_request_sent_at ? {
-        label: 'Odeslat',
-        onClick: onRequestAccess,
-        variant: 'outline',
-      } : undefined,
+      actions: !lead.access_request_sent_at ? [
+        { label: 'Odeslat e-mail', onClick: onRequestAccess, variant: 'outline' },
+        { label: '✓ Potvrdil ručně', onClick: onQuickConfirmAccessSent, variant: 'ghost' },
+      ] : [
+        { label: 'Odeslat znovu', onClick: onRequestAccess, variant: 'ghost' },
+      ],
     },
     {
       id: 'access-received',
       label: 'Přístupy přijaty',
-      icon: <CheckCircle2 className="h-3.5 w-3.5" />,
       isComplete: !!lead.access_received_at,
       completedAt: lead.access_received_at,
-      action: lead.access_request_sent_at && !lead.access_received_at ? {
-        label: 'Potvrdit',
-        onClick: onMarkAccessReceived,
-        variant: 'default',
-      } : undefined,
-    },
-    {
-      id: 'services',
-      label: 'Služby v nabídce',
-      icon: <Package className="h-3.5 w-3.5" />,
-      isComplete: servicesCount > 0,
-      completedAt: null,
-      detail: servicesCount > 0 ? `${servicesCount} služeb` : undefined,
-      action: {
-        label: servicesCount > 0 ? 'Přidat další' : 'Přidat službu',
-        onClick: onAddService,
-        variant: 'outline',
-      },
-      customContent: servicesCount > 0 ? (
-        <ServicesInlineList
-          services={lead.potential_services!}
-          currency={lead.currency}
-          onRemove={onRemoveService}
-        />
-      ) : undefined,
+      actions: lead.access_request_sent_at && !lead.access_received_at ? [
+        { label: '✓ Přístupy přijaty', onClick: onMarkAccessReceived, variant: 'default' },
+      ] : undefined,
     },
     {
       id: 'offer-created',
       label: 'Nabídka vytvořena',
-      icon: <Link2 className="h-3.5 w-3.5" />,
       isComplete: !!lead.offer_created_at,
       completedAt: lead.offer_created_at,
-      action: !hasOffer && servicesCount > 0 ? {
-        label: 'Vytvořit nabídku',
-        onClick: onCreateOffer,
-        variant: 'outline',
-      } : hasOffer ? {
-        label: 'Nová nabídka',
-        onClick: onCreateOffer,
-        variant: 'outline',
-      } : undefined,
+      detail: servicesCount > 0 ? `${servicesCount} služeb` : undefined,
+      actions: [
+        ...(hasOffer ? [
+          { label: 'Upravit nabídku', onClick: onCreateOffer, variant: 'outline' as const },
+        ] : [
+          { label: 'Vytvořit nabídku', onClick: onCreateOffer, variant: 'outline' as const },
+        ]),
+      ],
       customContent: lead.offer_url ? (
         <a
           href={lead.offer_url}
@@ -223,167 +198,169 @@ export function LeadFlowStepper({
     {
       id: 'offer-sent',
       label: 'Nabídka odeslána',
-      icon: <Send className="h-3.5 w-3.5" />,
       isComplete: !!lead.offer_sent_at,
       completedAt: lead.offer_sent_at,
-      action: hasOffer && !lead.offer_sent_at ? {
+      actions: hasOffer && !lead.offer_sent_at ? [{
         label: 'Odeslat nabídku',
         onClick: onSendOffer,
         variant: 'outline',
-      } : undefined,
+      }] : lead.offer_sent_at ? [{
+        label: 'Odeslat znovu',
+        onClick: onSendOffer,
+        variant: 'ghost',
+      }] : undefined,
     },
     {
       id: 'onboarding-sent',
       label: 'Onboarding formulář',
-      icon: <ClipboardList className="h-3.5 w-3.5" />,
-      // Complete if form was sent OR completed (form can be completed via direct link)
-      isComplete: !!lead.onboarding_form_sent_at || !!lead.onboarding_form_completed_at,
-      completedAt: lead.onboarding_form_completed_at || lead.onboarding_form_sent_at,
-      detail: lead.onboarding_form_completed_at
-        ? `Vyplněn ${formatDate(lead.onboarding_form_completed_at)}`
-        : lead.onboarding_form_sent_at
-          ? 'Čeká na vyplnění'
+      isComplete: !!lead.onboarding_form_sent_at,
+      completedAt: lead.onboarding_form_sent_at,
+      detail: lead.onboarding_form_completed_at 
+        ? `Vyplněn ${formatDate(lead.onboarding_form_completed_at)}` 
+        : lead.onboarding_form_sent_at 
+          ? 'Čeká na vyplnění' 
           : undefined,
-      // Don't show "send" action if form was already completed
-      action: !lead.onboarding_form_sent_at && !lead.onboarding_form_completed_at ? {
+      actions: !lead.onboarding_form_sent_at ? [{
         label: 'Odeslat formulář',
         onClick: onSendOnboarding,
         variant: 'outline',
-      } : undefined,
+      }] : [{
+        label: 'Odeslat znovu',
+        onClick: onSendOnboarding,
+        variant: 'ghost',
+      }],
     },
     {
       id: 'contract',
-      label: 'Smlouva',
-      icon: <FileSignature className="h-3.5 w-3.5" />,
+      label: 'Smlouva (DigiSign)',
       isComplete: !!lead.contract_signed_at,
       completedAt: lead.contract_signed_at,
-      detail: lead.contract_signed_at
-        ? 'Podepsána'
-        : lead.contract_sent_at
-          ? 'Odeslána, čeká na podpis'
-          : lead.contract_url
+      detail: lead.contract_signed_at 
+        ? `Podepsána${lead.digisign_envelope_id ? ' via DigiSign' : ''}`
+        : lead.contract_sent_at 
+          ? `Odeslána${lead.digisign_envelope_id ? ' via DigiSign' : ''}, čeká na podpis`
+          : lead.contract_url 
             ? 'Vytvořena'
-            : lead.onboarding_form_completed_at
-              ? 'Připraveno k vytvoření'
-              : 'Čeká na onboarding',
-      action: !lead.contract_url && lead.onboarding_form_completed_at && servicesCount > 0 ? {
-        label: isCreatingContract ? 'Vytvářím...' : 'Vytvořit smlouvu',
-        onClick: onCreateContract,
-        variant: 'default',
-      } : lead.contract_url && !lead.contract_sent_at ? {
+            : undefined,
+      actions: !lead.contract_url && !lead.digisign_envelope_id ? [{
+        label: 'Připravit smlouvu',
+        onClick: onSendContract,
+        variant: 'outline',
+      }] : lead.contract_url && !lead.contract_sent_at ? [{
         label: 'Označit jako odeslanou',
         onClick: onMarkContractSent,
         variant: 'outline',
-      } : lead.contract_sent_at && !lead.contract_signed_at ? {
+      }, {
+        label: 'Upravit',
+        onClick: onSendContract,
+        variant: 'ghost',
+      }] : lead.contract_sent_at && !lead.contract_signed_at ? [{
         label: 'Potvrdit podpis',
         onClick: onMarkContractSigned,
         variant: 'default',
-      } : undefined,
-      customContent: lead.contract_url ? (
-        <a
-          href={lead.contract_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
-        >
-          <ExternalLink className="h-3 w-3" />
-          Zobrazit v DigiSign
-        </a>
-      ) : undefined,
+      }, {
+        label: 'Detail',
+        onClick: onSendContract,
+        variant: 'ghost',
+      }] : lead.contract_signed_at ? [{
+        label: 'Detail smlouvy',
+        onClick: onSendContract,
+        variant: 'ghost',
+      }] : undefined,
     },
     {
       id: 'converted',
       label: 'Převedeno na zakázku',
-      icon: <ArrowRightLeft className="h-3.5 w-3.5" />,
       isComplete: !!lead.converted_at,
       completedAt: lead.converted_at,
-      action: canConvert ? {
+      actions: canConvert ? [{
         label: 'Převést na zakázku',
         onClick: onConvert,
         variant: 'default',
-      } : undefined,
+      }] : undefined,
     },
   ];
-
-  if (isArchived) {
-    steps.push({
-      id: 'archived',
-      label: 'Archivováno',
-      icon: <X className="h-3.5 w-3.5" />,
-      isComplete: true,
-      completedAt: lead.updated_at,
-      detail: lead.stage === 'lost' ? 'Důvod: Prohráno' : 'Důvod: Odloženo',
-    });
-  }
 
   const currentStepIndex = steps.findIndex(s => !s.isComplete);
 
   return (
-    <div className="space-y-1">
-      {steps.map((step, index) => {
-        const isCurrent = index === currentStepIndex;
-        const isFuture = !step.isComplete && index > currentStepIndex;
+    <div className="relative">
+      {/* Vertical line */}
+      <div className="absolute left-[11px] top-3 bottom-3 w-px bg-border" />
 
-        return (
-          <div
-            key={step.id}
-            className={cn(
-              "flex gap-2.5 items-start p-2 rounded-lg transition-colors",
-              step.isComplete && "bg-muted/30",
-              isCurrent && "bg-amber-500/5 ring-1 ring-amber-500/20",
-            )}
-          >
-            {/* Checkbox-style icon */}
-            <div className={cn(
-              "flex items-center justify-center w-5 h-5 rounded mt-0.5 flex-shrink-0 transition-colors",
-              step.isComplete && "bg-green-500 text-white",
-              isCurrent && "bg-amber-500 text-white",
-              isFuture && "border border-border bg-background text-muted-foreground",
-            )}>
-              {step.isComplete ? (
-                <Check className="h-3 w-3" />
-              ) : (
-                <span className="text-[10px] font-medium">{index + 1}</span>
-              )}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap min-h-[20px]">
-                <span className={cn(
-                  "text-sm",
-                  step.isComplete && "font-medium",
-                  isCurrent && "font-medium",
-                  isFuture && "text-muted-foreground",
-                )}>
-                  {step.label}
-                </span>
-                {step.completedAt && (
-                  <span className="text-[11px] text-muted-foreground">
-                    {formatDate(step.completedAt)}
-                  </span>
-                )}
-                {step.detail && (
-                  <span className="text-[11px] text-muted-foreground">
-                    • {step.detail}
-                  </span>
+      <div className="space-y-0">
+        {steps.map((step, index) => {
+          const isCurrent = index === currentStepIndex;
+          const isFuture = !step.isComplete && index > currentStepIndex;
+          const isLast = index === steps.length - 1;
+          
+          return (
+            <div key={step.id} className="relative flex gap-3 pb-1">
+              {/* Circle indicator */}
+              <div className={cn(
+                "relative z-10 flex items-center justify-center w-[22px] h-[22px] rounded-full flex-shrink-0 mt-0.5 transition-colors",
+                step.isComplete && "bg-emerald-500 text-white",
+                isCurrent && "bg-primary text-primary-foreground ring-2 ring-primary/20",
+                isFuture && "bg-muted border-2 border-border",
+              )}>
+                {step.isComplete ? (
+                  <Check className="h-3 w-3" />
+                ) : isCurrent ? (
+                  <CircleDot className="h-3 w-3" />
+                ) : (
+                  <span className="text-[9px] font-medium text-muted-foreground">{index + 1}</span>
                 )}
               </div>
-              {step.customContent}
-              {step.action && (
-                <Button
-                  variant={step.action.variant || 'outline'}
-                  size="sm"
-                  className="mt-1 h-6 text-xs px-2"
-                  onClick={step.action.onClick}
-                >
-                  {step.action.label}
-                </Button>
-              )}
+              
+              {/* Content */}
+              <div className={cn(
+                "flex-1 min-w-0 pb-3",
+                !isLast && "border-b border-border/40",
+              )}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={cn(
+                    "text-sm",
+                    step.isComplete && "font-medium text-foreground",
+                    isCurrent && "font-semibold text-foreground",
+                    isFuture && "text-muted-foreground",
+                  )}>
+                    {step.label}
+                  </span>
+                  {step.completedAt && (
+                    <span className="text-[11px] text-muted-foreground">
+                      {formatDate(step.completedAt)}
+                    </span>
+                  )}
+                  {step.detail && (
+                    <span className="text-[11px] text-muted-foreground">
+                      • {step.detail}
+                    </span>
+                  )}
+                </div>
+                {step.customContent}
+                {step.actions && step.actions.length > 0 && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    {step.actions.map((action, ai) => (
+                      <Button
+                        key={ai}
+                        variant={action.variant || 'outline'}
+                        size="sm"
+                        className={cn(
+                          "h-7 text-xs px-2.5",
+                          action.variant === 'ghost' && "text-muted-foreground hover:text-foreground"
+                        )}
+                        onClick={action.onClick}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

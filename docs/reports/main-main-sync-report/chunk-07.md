@@ -1,0 +1,145 @@
+# Main-Main Sync Report - Chunk 07
+
+- Commit count: **131**
+- Date span: **2026-03-29T10:34:08+00:00 -> 2026-03-29T18:54:49+00:00**
+- Range: `1edeaacb04186e9886cebf181a49707b8baa37a0^..8710a5a945ab7f8a8a5c906bd62e6170afa94363`
+
+- `1edeaac` | `2026-03-29T10:34:08+00:00` | `gpt-engineer-app[bot]` | `Added double-confirm to offboard` | files:`1` | `+3/-0` | area:`src` | impact:`Added double-confirm to offboard, primarily affecting src.`
+- `4a1c2fa` | `2026-03-29T10:34:19+00:00` | `gpt-engineer-app[bot]` | `Added double “ukončit” confirmation` | files:`1` | `+15/-1` | area:`src` | impact:`Added double “ukončit” confirmation, primarily affecting src.`
+- `663a3e0` | `2026-03-29T10:34:26+00:00` | `gpt-engineer-app[bot]` | `Added “ukončit” confirmation` | files:`1` | `+1/-0` | area:`src` | impact:`Added “ukončit” confirmation, primarily affecting src.`
+- `b7ce5a0` | `2026-03-29T10:34:34+00:00` | `gpt-engineer-app[bot]` | `Added “ukončit” confirmation` | files:`1` | `+19/-1` | area:`src` | impact:`Added “ukončit” confirmation, primarily affecting src.`
+- `9a9623b` | `2026-03-29T10:41:35+00:00` | `gpt-engineer-app[bot]` | `Added drag-and-drop stages` | files:`1` | `+1/-0` | area:`src` | impact:`Added drag-and-drop stages, primarily affecting src.`
+- `62c8de2` | `2026-03-29T10:41:42+00:00` | `gpt-engineer-app[bot]` | `Added drag & drop onboarding` | files:`1` | `+2/-1` | area:`src` | impact:`Added drag & drop onboarding, primarily affecting src.`
+- `8687c3a` | `2026-03-29T10:41:56+00:00` | `gpt-engineer-app[bot]` | `Added drag & drop onboarding` | files:`1` | `+30/-5` | area:`src` | impact:`Added drag & drop onboarding, primarily affecting src.`
+- `f0d9760` | `2026-03-29T10:42:24+00:00` | `gpt-engineer-app[bot]` | `Enabled drag & drop onboarding` | files:`1` | `+16/-2` | area:`src` | impact:`Enabled drag & drop onboarding, primarily affecting src.`
+- `3b5615e` | `2026-03-29T10:42:37+00:00` | `gpt-engineer-app[bot]` | `Enabled drag & drop onboarding` | files:`1` | `+1/-0` | area:`src` | impact:`Enabled drag & drop onboarding, primarily affecting src.`
+- `a6a1aee` | `2026-03-29T10:42:51+00:00` | `gpt-engineer-app[bot]` | `Added DnD across pipelines` | files:`1` | `+1/-1` | area:`src` | impact:`Added DnD across pipelines, primarily affecting src.`
+- `cb31a01` | `2026-03-29T10:43:11+00:00` | `gpt-engineer-app[bot]` | `Added onboarding drag & drop` | files:`2` | `+51/-9` | area:`src` | impact:`Added onboarding drag & drop, primarily affecting src.`
+- `76d55f3` | `2026-03-29T10:44:43+00:00` | `gpt-engineer-app[bot]` | `Zvětšil šířku email dialogu` | files:`1` | `+1/-1` | area:`src` | impact:`Zvětšil šířku email dialogu, primarily affecting src.`
+- `543e4e9` | `2026-03-29T10:44:54+00:00` | `gpt-engineer-app[bot]` | `Made contract dialog wider` | files:`1` | `+1/-1` | area:`src` | impact:`Made contract dialog wider, primarily affecting src.`
+- `8fb3537` | `2026-03-29T10:45:54+00:00` | `gpt-engineer-app[bot]` | `Created CRM invite on conversion` | files:`1` | `+1/-0` | area:`src` | impact:`Created CRM invite on conversion, primarily affecting src.`
+- `aaf079e` | `2026-03-29T10:46:10+00:00` | `gpt-engineer-app[bot]` | `Created CRM invite on conversion` | files:`1` | `+38/-0` | area:`src` | impact:`Created CRM invite on conversion, primarily affecting src.`
+- `244219e` | `2026-03-29T10:46:17+00:00` | `gpt-engineer-app[bot]` | `Created CRM invite on conversion` | files:`1` | `+1/-0` | area:`src` | impact:`Created CRM invite on conversion, primarily affecting src.`
+- `e29c8a2` | `2026-03-29T10:46:38+00:00` | `gpt-engineer-app[bot]` | `Created CRM invite on conversion` | files:`1` | `+18/-0` | area:`src` | impact:`Created CRM invite on conversion, primarily affecting src.`
+- `f0f65c0` | `2026-03-29T10:46:48+00:00` | `gpt-engineer-app[bot]` | `Created CRM invite on convert` | files:`1` | `+1/-0` | area:`src` | impact:`Created CRM invite on convert, primarily affecting src.`
+- `2abad20` | `2026-03-29T10:47:22+00:00` | `gpt-engineer-app[bot]` | `Created CRM user on conversion` | files:`1` | `+59/-0` | area:`src` | impact:`Created CRM user on conversion, primarily affecting src.`
+- `286584e` | `2026-03-29T10:48:22+00:00` | `gpt-engineer-app[bot]` | `Enforced sequential org setup` | files:`1` | `+31/-7` | area:`src` | impact:`Enforced sequential org setup, primarily affecting src.`
+- `7fac766` | `2026-03-29T10:48:38+00:00` | `gpt-engineer-app[bot]` | `Enforced workspace-first flow` | files:`1` | `+7/-3` | area:`src` | impact:`Enforced workspace-first flow, primarily affecting src.`
+- `ec7808b` | `2026-03-29T10:48:44+00:00` | `gpt-engineer-app[bot]` | `Enforced sequential conversion` | files:`1` | `+1/-1` | area:`src` | impact:`Enforced sequential conversion, primarily affecting src.`
+- `9a5e4c0` | `2026-03-29T10:48:55+00:00` | `gpt-engineer-app[bot]` | `Enforced Workspace-first setup` | files:`1` | `+39/-11` | area:`src` | impact:`Enforced Workspace-first setup, primarily affecting src.`
+- `264710b` | `2026-03-29T10:49:57+00:00` | `gpt-engineer-app[bot]` | `Added onboarding summary email flow` | files:`1` | `+40/-0` | area:`src` | impact:`Added onboarding summary email flow, primarily affecting src.`
+- `67bb5c9` | `2026-03-29T10:50:10+00:00` | `gpt-engineer-app[bot]` | `Opened onboarding summary draft` | files:`1` | `+40/-0` | area:`src` | impact:`Opened onboarding summary draft, primarily affecting src.`
+- `adba2a2` | `2026-03-29T10:52:22+00:00` | `gpt-engineer-app[bot]` | `Skryl tlačítko převodu pro hired` | files:`1` | `+28/-15` | area:`src` | impact:`Skryl tlačítko převodu pro hired, primarily affecting src.`
+- `3a14b51` | `2026-03-29T10:52:38+00:00` | `gpt-engineer-app[bot]` | `Skrýl převod na kolegu` | files:`1` | `+28/-15` | area:`src` | impact:`Skrýl převod na kolegu, primarily affecting src.`
+- `7d937de` | `2026-03-29T10:54:33+00:00` | `gpt-engineer-app[bot]` | `Added “Ukončeno” pipeline step` | files:`1` | `+5/-0` | area:`src` | impact:`Added “Ukončeno” pipeline step, primarily affecting src.`
+- `b15e9fc` | `2026-03-29T10:54:52+00:00` | `gpt-engineer-app[bot]` | `Added Ukončeno to onboarding` | files:`2` | `+9/-0` | area:`src` | impact:`Added Ukončeno to onboarding, primarily affecting src.`
+- `8870d18` | `2026-03-29T10:55:09+00:00` | `gpt-engineer-app[bot]` | `Added Ukončeno onboarding flow` | files:`1` | `+5/-3` | area:`src` | impact:`Added Ukončeno onboarding flow, primarily affecting src.`
+- `84773d0` | `2026-03-29T10:55:15+00:00` | `gpt-engineer-app[bot]` | `Added “Ukončeno” onboarding` | files:`1` | `+1/-1` | area:`src` | impact:`Added “Ukončeno” onboarding, primarily affecting src.`
+- `673c91c` | `2026-03-29T10:55:24+00:00` | `gpt-engineer-app[bot]` | `Added “Ukončeno” onboarding column` | files:`1` | `+18/-8` | area:`src` | impact:`Added “Ukončeno” onboarding column, primarily affecting src.`
+- `01689a6` | `2026-03-29T10:55:44+00:00` | `gpt-engineer-app[bot]` | `Added “Ukončeno” onboarding` | files:`1` | `+2/-1` | area:`src` | impact:`Added “Ukončeno” onboarding, primarily affecting src.`
+- `5f56b11` | `2026-03-29T10:55:50+00:00` | `gpt-engineer-app[bot]` | `Added “Ukončeno” onboarding step` | files:`1` | `+1/-0` | area:`src` | impact:`Added “Ukončeno” onboarding step, primarily affecting src.`
+- `cbef7c1` | `2026-03-29T10:56:08+00:00` | `gpt-engineer-app[bot]` | `Implemented “Ukončeno” offboarding flow` | files:`1` | `+48/-0` | area:`src` | impact:`Implemented “Ukončeno” offboarding flow, primarily affecting src.`
+- `4df2501` | `2026-03-29T10:56:21+00:00` | `gpt-engineer-app[bot]` | `Synced offboarding do “Ukončeno”` | files:`1` | `+14/-0` | area:`src` | impact:`Synced offboarding do “Ukončeno”, primarily affecting src.`
+- `f41e038` | `2026-03-29T10:56:45+00:00` | `gpt-engineer-app[bot]` | `Added “Ukončeno” onboarding` | files:`1` | `+1/-0` | area:`src` | impact:`Added “Ukončeno” onboarding, primarily affecting src.`
+- `a3d1654` | `2026-03-29T10:56:56+00:00` | `gpt-engineer-app[bot]` | `Synced offboarding to Ukončeno` | files:`1` | `+9/-0` | area:`src` | impact:`Synced offboarding to Ukončeno, primarily affecting src.`
+- `11cbd4f` | `2026-03-29T10:57:23+00:00` | `gpt-engineer-app[bot]` | `Added onboarding Ukončeno sync` | files:`6` | `+113/-13` | area:`src` | impact:`Added onboarding Ukončeno sync, primarily affecting src.`
+- `e4c3251` | `2026-03-29T10:57:58+00:00` | `gpt-engineer-app[bot]` | `Replaced rejected with bad fit` | files:`4` | `+10/-10` | area:`src` | impact:`Replaced rejected with bad fit, primarily affecting src.`
+- `89b312f` | `2026-03-29T10:58:04+00:00` | `gpt-engineer-app[bot]` | `Replaced rejected with bad_fit` | files:`1` | `+1/-1` | area:`src` | impact:`Replaced rejected with bad_fit, primarily affecting src.`
+- `fa18590` | `2026-03-29T10:58:09+00:00` | `gpt-engineer-app[bot]` | `Replaced rejected with bad fit` | files:`1` | `+5/-5` | area:`src` | impact:`Replaced rejected with bad fit, primarily affecting src.`
+- `e9ff690` | `2026-03-29T10:58:27+00:00` | `gpt-engineer-app[bot]` | `Replaced rejected with bad fit` | files:`2` | `+3/-3` | area:`docs, src` | impact:`Replaced rejected with bad fit, primarily affecting docs.`
+- `f01f4ac` | `2026-03-29T10:58:37+00:00` | `gpt-engineer-app[bot]` | `Replaced rejected with bad fit` | files:`6` | `+19/-19` | area:`src, docs` | impact:`Replaced rejected with bad fit, primarily affecting src.`
+- `f2a9679` | `2026-03-29T11:01:32+00:00` | `gpt-engineer-app[bot]` | `Přidal test lead do náboru` | files:`1` | `+44/-0` | area:`src` | impact:`Přidal test lead do náboru, primarily affecting src.`
+- `73d6c44` | `2026-03-29T11:01:41+00:00` | `gpt-engineer-app[bot]` | `Added new_applicant test lead` | files:`1` | `+44/-0` | area:`src` | impact:`Added new_applicant test lead, primarily affecting src.`
+- `25bd9ee` | `2026-03-29T11:03:01+00:00` | `gpt-engineer-app[bot]` | `Skrylo údaje pro smlouvu` | files:`1` | `+8/-17` | area:`src` | impact:`Skrylo údaje pro smlouvu, primarily affecting src.`
+- `7bc5045` | `2026-03-29T11:03:13+00:00` | `gpt-engineer-app[bot]` | `Skryla údaje pro smlouvu` | files:`1` | `+8/-17` | area:`src` | impact:`Skryla údaje pro smlouvu, primarily affecting src.`
+- `dca6b7d` | `2026-03-29T11:06:36+00:00` | `gpt-engineer-app[bot]` | `Přidal 2 varianty odmítnutí` | files:`2` | `+62/-12` | area:`src` | impact:`Přidal 2 varianty odmítnutí, primarily affecting src.`
+- `b9b3d42` | `2026-03-29T11:06:46+00:00` | `gpt-engineer-app[bot]` | `Přidal varianty odmítnutí emailu` | files:`2` | `+62/-12` | area:`src` | impact:`Přidal varianty odmítnutí emailu, primarily affecting src.`
+- `4104fcb` | `2026-03-29T11:13:51+00:00` | `gpt-engineer-app[bot]` | `Přesunul status k názvu leadu` | files:`1` | `+13/-15` | area:`src` | impact:`Přesunul status k názvu leadu, primarily affecting src.`
+- `440386d` | `2026-03-29T11:14:02+00:00` | `gpt-engineer-app[bot]` | `Moved stage selector by name` | files:`1` | `+13/-15` | area:`src` | impact:`Moved stage selector by name, primarily affecting src.`
+- `4d3025a` | `2026-03-29T11:16:11+00:00` | `gpt-engineer-app[bot]` | `Limited applicant stage switching` | files:`1` | `+5/-0` | area:`src` | impact:`Limited applicant stage switching, primarily affecting src.`
+- `8f513f1` | `2026-03-29T11:16:21+00:00` | `gpt-engineer-app[bot]` | `Omezil změny stavu leadu` | files:`1` | `+2/-2` | area:`src` | impact:`Omezil změny stavu leadu, primarily affecting src.`
+- `884a42a` | `2026-03-29T11:16:33+00:00` | `gpt-engineer-app[bot]` | `Limited stage changes after hire` | files:`1` | `+7/-2` | area:`src` | impact:`Limited stage changes after hire, primarily affecting src.`
+- `0e12b53` | `2026-03-29T11:50:43+00:00` | `gpt-engineer-app[bot]` | `Wired dropdown to onboarding` | files:`1` | `+25/-2` | area:`src` | impact:`Wired dropdown to onboarding, primarily affecting src.`
+- `62321b8` | `2026-03-29T11:50:57+00:00` | `gpt-engineer-app[bot]` | `Switched hired dropdown to steps` | files:`1` | `+40/-0` | area:`src` | impact:`Switched hired dropdown to steps, primarily affecting src.`
+- `c29570b` | `2026-03-29T11:51:12+00:00` | `gpt-engineer-app[bot]` | `Enabled onboarding flag select` | files:`1` | `+27/-12` | area:`src` | impact:`Enabled onboarding flag select, primarily affecting src.`
+- `fb0c24b` | `2026-03-29T11:51:24+00:00` | `gpt-engineer-app[bot]` | `Přepnul hired dropdown na kroky` | files:`1` | `+92/-14` | area:`src` | impact:`Přepnul hired dropdown na kroky, primarily affecting src.`
+- `d8e55c2` | `2026-03-29T11:59:07+00:00` | `gpt-engineer-app[bot]` | `Přidal souhrn email šablonu` | files:`1` | `+8/-0` | area:`src` | impact:`Přidal souhrn email šablonu, primarily affecting src.`
+- `adecc33` | `2026-03-29T11:59:24+00:00` | `gpt-engineer-app[bot]` | `Přidal editovatelný souhrn` | files:`1` | `+14/-26` | area:`src` | impact:`Přidal editovatelný souhrn, primarily affecting src.`
+- `8b54821` | `2026-03-29T11:59:33+00:00` | `gpt-engineer-app[bot]` | `Přidal souhrn e-mail šablonu` | files:`1` | `+1/-0` | area:`src` | impact:`Přidal souhrn e-mail šablonu, primarily affecting src.`
+- `179ec80` | `2026-03-29T11:59:45+00:00` | `gpt-engineer-app[bot]` | `Přidal souhrnný email šablonu` | files:`1` | `+1/-0` | area:`src` | impact:`Přidal souhrnný email šablonu, primarily affecting src.`
+- `7a4e099` | `2026-03-29T11:59:57+00:00` | `gpt-engineer-app[bot]` | `Přidal souhrnný email šablonu` | files:`2` | `+24/-26` | area:`src` | impact:`Přidal souhrnný email šablonu, primarily affecting src.`
+- `d15f2d5` | `2026-03-29T12:08:25+00:00` | `gpt-engineer-app[bot]` | `Doplnil onboarding údaje v přidání` | files:`1` | `+1/-0` | area:`src` | impact:`Doplnil onboarding údaje v přidání, primarily affecting src.`
+- `c5c6467` | `2026-03-29T12:08:31+00:00` | `gpt-engineer-app[bot]` | `Doplnil portfolio_url do dialogu` | files:`1` | `+1/-0` | area:`src` | impact:`Doplnil portfolio_url do dialogu, primarily affecting src.`
+- `ccff881` | `2026-03-29T12:08:37+00:00` | `gpt-engineer-app[bot]` | `Doplněn portfolio do přidání` | files:`1` | `+1/-0` | area:`src` | impact:`Doplněn portfolio do přidání, primarily affecting src.`
+- `468ba9f` | `2026-03-29T12:08:43+00:00` | `gpt-engineer-app[bot]` | `Doplnil portfolio_url do dialogu` | files:`1` | `+1/-0` | area:`src` | impact:`Doplnil portfolio_url do dialogu, primarily affecting src.`
+- `3f0c23c` | `2026-03-29T12:08:48+00:00` | `gpt-engineer-app[bot]` | `Doplnil portfolio do přidání` | files:`1` | `+1/-1` | area:`src` | impact:`Doplnil portfolio do přidání, primarily affecting src.`
+- `972c14a` | `2026-03-29T12:08:58+00:00` | `gpt-engineer-app[bot]` | `Doplnil portfolio do formuláře` | files:`1` | `+15/-2` | area:`src` | impact:`Doplnil portfolio do formuláře, primarily affecting src.`
+- `2d46d1a` | `2026-03-29T12:09:08+00:00` | `gpt-engineer-app[bot]` | `Doplnil portfolio do formuláře` | files:`1` | `+20/-3` | area:`src` | impact:`Doplnil portfolio do formuláře, primarily affecting src.`
+- `dd4aec8` | `2026-03-29T12:10:46+00:00` | `gpt-engineer-app[bot]` | `Zlepšil navigaci v náboru` | files:`2` | `+160/-49` | area:`src` | impact:`Zlepšil navigaci v náboru, primarily affecting src.`
+- `ccc0273` | `2026-03-29T12:11:04+00:00` | `gpt-engineer-app[bot]` | `Vylepšil filtrování v náboru` | files:`2` | `+160/-49` | area:`src` | impact:`Vylepšil filtrování v náboru, primarily affecting src.`
+- `51090c9` | `2026-03-29T12:14:21+00:00` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+16/-86` | area:`src` | impact:`Changes, primarily affecting src.`
+- `62bf36f` | `2026-03-29T12:14:29+00:00` | `gpt-engineer-app[bot]` | `Removed “Přijatí” tab` | files:`1` | `+1/-1` | area:`src` | impact:`Removed “Přijatí” tab, primarily affecting src.`
+- `1facb2b` | `2026-03-29T12:14:36+00:00` | `gpt-engineer-app[bot]` | `Removed “Přijatí” tab` | files:`1` | `+0/-2` | area:`src` | impact:`Removed “Přijatí” tab, primarily affecting src.`
+- `1bd6c3f` | `2026-03-29T12:14:46+00:00` | `gpt-engineer-app[bot]` | `Removed “Přijatí” tab` | files:`1` | `+1/-1` | area:`src` | impact:`Removed “Přijatí” tab, primarily affecting src.`
+- `2bf6f1a` | `2026-03-29T12:14:53+00:00` | `gpt-engineer-app[bot]` | `Removed “Přijatí” tab from Recruitment` | files:`1` | `+0/-5` | area:`src` | impact:`Removed “Přijatí” tab from Recruitment, primarily affecting src.`
+- `89619dc` | `2026-03-29T12:15:03+00:00` | `gpt-engineer-app[bot]` | `Removed “Přijatí” tab from recruitment` | files:`1` | `+2/-3` | area:`src` | impact:`Removed “Přijatí” tab from recruitment, primarily affecting src.`
+- `aa0318d` | `2026-03-29T12:15:17+00:00` | `gpt-engineer-app[bot]` | `Removed “Přijatí” from Recruitment` | files:`1` | `+1/-1` | area:`src` | impact:`Removed “Přijatí” from Recruitment, primarily affecting src.`
+- `9e3bac0` | `2026-03-29T12:15:28+00:00` | `gpt-engineer-app[bot]` | `Removed “Přijatí” tab view` | files:`1` | `+21/-99` | area:`src` | impact:`Removed “Přijatí” tab view, primarily affecting src.`
+- `2f0b87c` | `2026-03-29T12:17:08+00:00` | `gpt-engineer-app[bot]` | `Adjusted CRM email sending` | files:`1` | `+21/-8` | area:`src` | impact:`Adjusted CRM email sending, primarily affecting src.`
+- `adde4e9` | `2026-03-29T12:17:20+00:00` | `gpt-engineer-app[bot]` | `Replaced mailto email sending` | files:`1` | `+2/-9` | area:`src` | impact:`Replaced mailto email sending, primarily affecting src.`
+- `e903e70` | `2026-03-29T12:17:35+00:00` | `gpt-engineer-app[bot]` | `Přestal otevírat mailto v CRM` | files:`1` | `+20/-8` | area:`src` | impact:`Přestal otevírat mailto v CRM, primarily affecting src.`
+- `beb8b16` | `2026-03-29T12:17:46+00:00` | `gpt-engineer-app[bot]` | `Přepsal recruitment e-maily` | files:`1` | `+2/-8` | area:`src` | impact:`Přepsal recruitment e-maily, primarily affecting src.`
+- `02dd786` | `2026-03-29T12:18:00+00:00` | `gpt-engineer-app[bot]` | `Přepsal recruitment e-maily` | files:`1` | `+3/-4` | area:`src` | impact:`Přepsal recruitment e-maily, primarily affecting src.`
+- `8f1cef9` | `2026-03-29T12:18:20+00:00` | `gpt-engineer-app[bot]` | `Přepsal recruitment emaily` | files:`5` | `+48/-37` | area:`src` | impact:`Přepsal recruitment emaily, primarily affecting src.`
+- `fb901ac` | `2026-03-29T12:22:18+00:00` | `gpt-engineer-app[bot]` | `Upravilo padding dialogů` | files:`1` | `+6/-0` | area:`src` | impact:`Upravilo padding dialogů, primarily affecting src.`
+- `710ff11` | `2026-03-29T12:22:30+00:00` | `gpt-engineer-app[bot]` | `Fixed uneven dialog padding` | files:`1` | `+2/-3` | area:`src` | impact:`Fixed uneven dialog padding, primarily affecting src.`
+- `5450910` | `2026-03-29T12:22:39+00:00` | `gpt-engineer-app[bot]` | `Fixed uneven dialog padding` | files:`1` | `+5/-0` | area:`src` | impact:`Fixed uneven dialog padding, primarily affecting src.`
+- `fd5760c` | `2026-03-29T12:23:11+00:00` | `gpt-engineer-app[bot]` | `Upravilo layout pole e-mailu` | files:`1` | `+2/-2` | area:`src` | impact:`Upravilo layout pole e-mailu, primarily affecting src.`
+- `fcf68c3` | `2026-03-29T12:23:31+00:00` | `gpt-engineer-app[bot]` | `Upravil zarovnání v převodu` | files:`1` | `+2/-2` | area:`src` | impact:`Upravil zarovnání v převodu, primarily affecting src.`
+- `501d4c6` | `2026-03-29T12:39:21+00:00` | `gpt-engineer-app[bot]` | `Přidal odloženou fázi` | files:`4` | `+9/-6` | area:`src` | impact:`Přidal odloženou fázi, primarily affecting src.`
+- `1229c91` | `2026-03-29T12:39:37+00:00` | `gpt-engineer-app[bot]` | `Přidal stage Odloženo do CRM` | files:`1` | `+5/-1` | area:`src` | impact:`Přidal stage Odloženo do CRM, primarily affecting src.`
+- `158f8d6` | `2026-03-29T12:39:44+00:00` | `gpt-engineer-app[bot]` | `Přidal stage „Odloženo“ do náboru` | files:`1` | `+2/-1` | area:`docs` | impact:`Přidal stage „Odloženo“ do náboru, primarily affecting docs.`
+- `cd5f3dd` | `2026-03-29T12:39:54+00:00` | `gpt-engineer-app[bot]` | `Added postponed applicant stage` | files:`5` | `+16/-8` | area:`src, docs` | impact:`Added postponed applicant stage, primarily affecting src.`
+- `db9e850` | `2026-03-29T12:47:00+00:00` | `gpt-engineer-app[bot]` | `Zrušil checklist v kanbanu` | files:`1` | `+16/-18` | area:`src` | impact:`Zrušil checklist v kanbanu, primarily affecting src.`
+- `42b606c` | `2026-03-29T12:47:06+00:00` | `gpt-engineer-app[bot]` | `Přepnul checklist na kontakt` | files:`1` | `+1/-1` | area:`src` | impact:`Přepnul checklist na kontakt, primarily affecting src.`
+- `54e187b` | `2026-03-29T12:47:16+00:00` | `gpt-engineer-app[bot]` | `Změnil mini info v kanbanu` | files:`1` | `+2/-0` | area:`src` | impact:`Změnil mini info v kanbanu, primarily affecting src.`
+- `4ea69f6` | `2026-03-29T12:47:27+00:00` | `gpt-engineer-app[bot]` | `Změnil karty ve Zapracování` | files:`1` | `+19/-19` | area:`src` | impact:`Změnil karty ve Zapracování, primarily affecting src.`
+- `c349786` | `2026-03-29T12:49:08+00:00` | `gpt-engineer-app[bot]` | `Added source edit option` | files:`1` | `+15/-3` | area:`src` | impact:`Added source edit option, primarily affecting src.`
+- `8717859` | `2026-03-29T12:49:14+00:00` | `gpt-engineer-app[bot]` | `Made applicant source editable` | files:`1` | `+1/-1` | area:`src` | impact:`Made applicant source editable, primarily affecting src.`
+- `6dd7c5a` | `2026-03-29T12:49:20+00:00` | `gpt-engineer-app[bot]` | `Přidal editaci zdroje uchazeče` | files:`1` | `+1/-1` | area:`src` | impact:`Přidal editaci zdroje uchazeče, primarily affecting src.`
+- `219b2db` | `2026-03-29T12:49:31+00:00` | `gpt-engineer-app[bot]` | `Přidal editaci zdroje uchazeče` | files:`1` | `+16/-4` | area:`src` | impact:`Přidal editaci zdroje uchazeče, primarily affecting src.`
+- `b610b7f` | `2026-03-29T12:57:44+00:00` | `gpt-engineer-app[bot]` | `Fixed error opening test offer` | files:`1` | `+2/-1` | area:`src` | impact:`Fixed error opening test offer, primarily affecting src.`
+- `712d044` | `2026-03-29T12:57:53+00:00` | `gpt-engineer-app[bot]` | `Fixed test offer opening error` | files:`1` | `+10/-2` | area:`src` | impact:`Fixed test offer opening error, primarily affecting src.`
+- `d6249c5` | `2026-03-29T12:58:05+00:00` | `gpt-engineer-app[bot]` | `Fixed test offer opening` | files:`1` | `+12/-3` | area:`src` | impact:`Fixed test offer opening, primarily affecting src.`
+- `9319889` | `2026-03-29T18:31:04+00:00` | `gpt-engineer-app[bot]` | `Work in progress` | files:`1` | `+102/-102` | area:`bun.lock` | impact:`Work in progress, primarily affecting bun.lock.`
+- `ce822ed` | `2026-03-29T18:31:51+00:00` | `gpt-engineer-app[bot]` | `Doplnila otázku o využití AI` | files:`2` | `+6/-0` | area:`src` | impact:`Doplnila otázku o využití AI, primarily affecting src.`
+- `4e7ab0d` | `2026-03-29T18:32:16+00:00` | `gpt-engineer-app[bot]` | `Dodal otázku AI do přihlášky` | files:`3` | `+34/-0` | area:`src` | impact:`Dodal otázku AI do přihlášky, primarily affecting src.`
+- `a97c652` | `2026-03-29T18:32:21+00:00` | `gpt-engineer-app[bot]` | `Přidala pole pro AI využití` | files:`1` | `+1/-0` | area:`docs` | impact:`Přidala pole pro AI využití, primarily affecting docs.`
+- `a69195a` | `2026-03-29T18:32:31+00:00` | `gpt-engineer-app[bot]` | `Added AI usage to applicant` | files:`6` | `+143/-102` | area:`src, bun.lock, docs` | impact:`Added AI usage to applicant, primarily affecting src.`
+- `c48bcfd` | `2026-03-29T18:32:52+00:00` | `gpt-engineer-app[bot]` | `Changes` | files:`2` | `+4/-0` | area:`src` | impact:`Changes, primarily affecting src.`
+- `fdcb736` | `2026-03-29T18:33:08+00:00` | `gpt-engineer-app[bot]` | `Doplnil pole osobní značka` | files:`1` | `+2/-0` | area:`src` | impact:`Doplnil pole osobní značka, primarily affecting src.`
+- `8a2926f` | `2026-03-29T18:33:20+00:00` | `gpt-engineer-app[bot]` | `Přidala pole osobní značky` | files:`2` | `+12/-0` | area:`src` | impact:`Přidala pole osobní značky, primarily affecting src.`
+- `738d2de` | `2026-03-29T18:33:32+00:00` | `gpt-engineer-app[bot]` | `Added personal brand fields` | files:`1` | `+38/-0` | area:`src` | impact:`Added personal brand fields, primarily affecting src.`
+- `3512798` | `2026-03-29T18:33:45+00:00` | `gpt-engineer-app[bot]` | `Doplnil personal_brand a sociální odkazy` | files:`2` | `+37/-0` | area:`docs, src` | impact:`Doplnil personal_brand a sociální odkazy, primarily affecting docs.`
+- `fe0176e` | `2026-03-29T18:33:56+00:00` | `gpt-engineer-app[bot]` | `Doplnil pole osobní značky` | files:`5` | `+93/-0` | area:`src, docs` | impact:`Doplnil pole osobní značky, primarily affecting src.`
+- `3039a99` | `2026-03-29T18:36:20+00:00` | `gpt-engineer-app[bot]` | `Přesunul a seskupil detail info` | files:`1` | `+146/-124` | area:`src` | impact:`Přesunul a seskupil detail info, primarily affecting src.`
+- `bc8b7e0` | `2026-03-29T18:36:38+00:00` | `gpt-engineer-app[bot]` | `Reworked applicant header cards` | files:`1` | `+1/-1` | area:`src` | impact:`Reworked applicant header cards, primarily affecting src.`
+- `15e0a15` | `2026-03-29T18:36:49+00:00` | `gpt-engineer-app[bot]` | `Přeskupila karty v detailu` | files:`1` | `+147/-125` | area:`src` | impact:`Přeskupila karty v detailu, primarily affecting src.`
+- `f1846e0` | `2026-03-29T18:38:30+00:00` | `gpt-engineer-app[bot]` | `Rozšířil zobrazení v detailu` | files:`1` | `+2/-2` | area:`src` | impact:`Rozšířil zobrazení v detailu, primarily affecting src.`
+- `3492d94` | `2026-03-29T18:38:41+00:00` | `gpt-engineer-app[bot]` | `Upravily se karty kontaktu` | files:`1` | `+2/-2` | area:`src` | impact:`Upravily se karty kontaktu, primarily affecting src.`
+- `53a75c2` | `2026-03-29T18:51:37+00:00` | `gpt-engineer-app[bot]` | `Přeuspořádal sekce v detailu` | files:`1` | `+79/-87` | area:`src` | impact:`Přeuspořádal sekce v detailu, primarily affecting src.`
+- `d90ac28` | `2026-03-29T18:51:51+00:00` | `gpt-engineer-app[bot]` | `Upravil layout detailu kontaktů` | files:`1` | `+79/-87` | area:`src` | impact:`Upravil layout detailu kontaktů, primarily affecting src.`
+- `5312749` | `2026-03-29T18:53:02+00:00` | `gpt-engineer-app[bot]` | `Vycentrovala badge v kanbanu` | files:`1` | `+45/-43` | area:`src` | impact:`Vycentrovala badge v kanbanu, primarily affecting src.`
+- `5931437` | `2026-03-29T18:53:11+00:00` | `gpt-engineer-app[bot]` | `Zarovnal header stav a zdroj` | files:`1` | `+45/-43` | area:`src` | impact:`Zarovnal header stav a zdroj, primarily affecting src.`
+- `1e9a090` | `2026-03-29T18:54:05+00:00` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`Changes, primarily affecting src.`
+- `1076b1c` | `2026-03-29T18:54:13+00:00` | `gpt-engineer-app[bot]` | `Zarovnal stav vlevo v detailu` | files:`1` | `+1/-1` | area:`src` | impact:`Zarovnal stav vlevo v detailu, primarily affecting src.`
+- `dfa80e0` | `2026-03-29T18:54:39+00:00` | `gpt-engineer-app[bot]` | `Added owner assignment UI` | files:`1` | `+17/-4` | area:`src` | impact:`Added owner assignment UI, primarily affecting src.`
+- `8710a5a` | `2026-03-29T18:54:49+00:00` | `gpt-engineer-app[bot]` | `Added owner assignment dropdown` | files:`1` | `+17/-4` | area:`src` | impact:`Added owner assignment dropdown, primarily affecting src.`
+
+## Top themes in this chunk
+
+- CRM workflow and business logic changes.
+- UI and page behavior updates.
+- Build, tooling, and dependency maintenance.
+- Bug fixes and regression cleanup.
+- Sustained activity in `docs`.

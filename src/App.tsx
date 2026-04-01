@@ -53,6 +53,8 @@ import SOP from "./pages/SOP";
 import PublicSOPPage from "./pages/PublicSOPPage";
 import BugReports from "./pages/BugReports";
 import Prospects from "./pages/Prospects";
+import Portfolio from "./pages/Portfolio";
+import OfferManagement from "./pages/OfferManagement";
 
 function isAuthError(error: unknown): boolean {
   if (error && typeof error === 'object') {
@@ -164,6 +166,8 @@ const App = () => (
                               <Route path="/sop" element={<SOP />} />
                               <Route path="/sop/:articleId" element={<SOP />} />
                               <Route path="/bug-reports" element={<BugReports />} />
+                              <Route path="/portfolio" element={<Portfolio />} />
+                              <Route path="/offer-management" element={<OfferManagement />} />
                             </Route>
                             <Route path="*" element={<NotFound />} />
                               </Routes>

@@ -49,7 +49,7 @@ const formatCurrency = (value: number) => {
 
 type ViewMode = 'kanban' | 'table';
 
-const STAGE_ORDER: LeadStage[] = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'won', 'lost', 'postponed'];
+const STAGE_ORDER: LeadStage[] = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'won', 'lost', 'postponed', 'bad_fit'];
 
 export default function Leads() {
   const { leads, updateLeadStage } = useLeadsData();
@@ -117,9 +117,7 @@ export default function Leads() {
       return isWithinInterval(createdAt, { start, end });
     });
 
-    const activeLeads = periodLeads.filter(l =>
-      !['won', 'lost', 'postponed'].includes(l.stage)
-    );
+    const activeLeads = periodLeads.filter(l => !['won', 'lost', 'postponed', 'bad_fit'].includes(l.stage));
 
     // Vyhrané leady (converted_at v daném období)
     const wonLeads = leads.filter(l => {
@@ -301,6 +299,7 @@ export default function Leads() {
             <SelectItem value="won">Vyhráno</SelectItem>
             <SelectItem value="lost">Prohráno</SelectItem>
             <SelectItem value="postponed">Odloženo</SelectItem>
+            <SelectItem value="bad_fit">Bad Fit</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -311,7 +310,6 @@ export default function Leads() {
           leads={filteredLeads}
           onLeadClick={handleLeadClick}
           onStageChange={handleStageChange}
-          showFinancials={showFinancials}
         />
       ) : (
         <LeadsTable

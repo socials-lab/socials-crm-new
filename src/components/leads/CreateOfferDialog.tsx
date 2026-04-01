@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,88 +10,139 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { AuditEditor } from './AuditEditor';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Copy, ExternalLink, Check, TrendingUp } from 'lucide-react';
+import { Loader2, Copy, ExternalLink, Check, TrendingUp, Plus, X, History, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCRMData } from '@/hooks/useCRMData';
-import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
-import type { Lead } from '@/types/crm';
+import type { Lead, Service } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
-import type { Service, ServiceTier, ServiceRewardRole, ServiceRewardTierConfig } from '@/types/crm';
-import { supabase } from '@/integrations/supabase/client';
-import { mergeWithDefaults } from '@/constants/serviceDefaults';
-import { getServiceDetail } from '@/constants/serviceDetails';
+import { addPublicOffer, updatePublicOffer } from '@/data/publicOffersData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
-import { format } from 'date-fns';
+import { mergeWithDefaults } from '@/constants/serviceDefaults';
+import { supabase } from '@/integrations/supabase/client';
+import { getServiceDetail } from '@/constants/serviceDetails';
+import { getRewardsFromServiceConfig, getServiceRewardRecommendation } from '@/constants/serviceRewards';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-/** Resolve price for a selected tier from service metadata (DB or constants). Returns null if not found. */
-function resolveTierPrice(service: Service | undefined, tier: ServiceTier): number | null {
-  if (!service?.service_type) return null;
-  if (service.service_type !== 'core') return null;
-  if (!tier) return null;
+// Map enrichment platform keywords to service codes
+const PLATFORM_TO_SERVICE_CODES: Record<string, string[]> = {
+  'meta': ['SOCIALS_BOOST'],
+  'facebook': ['SOCIALS_BOOST'],
+  'instagram': ['SOCIALS_BOOST'],
+  'google ads': ['PPC_BOOST'],
+  'google': ['PPC_BOOST'],
+  'sklik': ['PPC_BOOST'],
+  'seznam': ['PPC_BOOST'],
+  'tiktok': ['TIKTOK_ADS'],
+  'heureka': ['HEUREKA_ZBOZI'],
+  'zbozi': ['HEUREKA_ZBOZI'],
+  'zboží': ['HEUREKA_ZBOZI'],
+  'glami': ['GLAMI'],
+  'favi': ['FAVI'],
+  'seo': ['AI_SEO'],
+  'creative': ['CREATIVE_BOOST'],
+  'kreativa': ['CREATIVE_BOOST'],
+  'video': ['VIDEO_BOOST'],
+  'performance': ['PERFORMANCE_BOOST'],
+};
 
-  // 1. DB tier_pricing: array format { tier, price }[]
-  const tp = service.tier_pricing;
-  if (Array.isArray(tp)) {
-    const found = tp.find((p: { tier?: string }) => p.tier === tier);
-    if (found && typeof found.price === 'number' && Number.isFinite(found.price)) return found.price;
-  }
-  // 2. DB tier_pricing: object format { growth: { price }, pro: {...}, elite: {...} }
-  if (tp && typeof tp === 'object' && !Array.isArray(tp) && tier in tp) {
-    const tierData = (tp as Record<string, { price?: number }>)[tier];
-    if (tierData && typeof tierData.price === 'number' && Number.isFinite(tierData.price)) return tierData.price;
-  }
-
-  // 3. Constants serviceDetails.ts
-  const detail = getServiceDetail(service.code);
-  const tierPricing = detail?.tierPricing;
-  if (tierPricing && tier in tierPricing) {
-    const tierData = tierPricing[tier as keyof typeof tierPricing];
-    if (tierData && typeof (tierData as { price?: number }).price === 'number') {
-      return (tierData as { price: number }).price;
+function suggestServiceCodes(lead: Lead): string[] {
+  const codes = new Set<string>();
+  
+  // Check enrichment_platform
+  const platform = (lead.enrichment_platform || '').toLowerCase();
+  // Check enrichment_services_needed
+  const servicesNeeded = (lead.enrichment_services_needed || '').toLowerCase();
+  // Check access_request_platforms
+  const accessPlatforms = (lead.access_request_platforms || []).map(p => p.toLowerCase());
+  
+  const allText = [platform, servicesNeeded, ...accessPlatforms].join(' ');
+  
+  for (const [keyword, serviceCodes] of Object.entries(PLATFORM_TO_SERVICE_CODES)) {
+    if (allText.includes(keyword)) {
+      serviceCodes.forEach(c => codes.add(c));
     }
   }
-  return null;
+  
+  // If both Meta and Google are detected, suggest Performance Boost instead of individual
+  if (codes.has('SOCIALS_BOOST') && codes.has('PPC_BOOST')) {
+    codes.delete('SOCIALS_BOOST');
+    codes.delete('PPC_BOOST');
+    codes.add('PERFORMANCE_BOOST');
+  }
+  
+  // Always suggest Creative Boost if any core service is present
+  if (codes.has('SOCIALS_BOOST') || codes.has('PPC_BOOST') || codes.has('PERFORMANCE_BOOST')) {
+    codes.add('CREATIVE_BOOST');
+  }
+  
+  return Array.from(codes);
+}
+
+function buildServiceFromCatalog(catalogService: Service, lead: Lead): PublicOfferService {
+  const constantDetail = getServiceDetail(catalogService.code);
+  const defaultTier = catalogService.service_type === 'core' ? 'growth' : null;
+  
+  let price = catalogService.base_price || 0;
+  let originalPrice = price;
+  if (constantDetail?.tierPricing && defaultTier) {
+    const tierPrice = constantDetail.tierPricing[defaultTier as keyof typeof constantDetail.tierPricing];
+    if (tierPrice?.price !== null && tierPrice?.price !== undefined) {
+      price = tierPrice.price;
+      originalPrice = tierPrice.originalPrice ?? tierPrice.price;
+    }
+  }
+
+  const description = catalogService.description || constantDetail?.tagline || '';
+  const merged = mergeWithDefaults(catalogService.name, null, null, null, null, null);
+
+  return {
+    id: crypto.randomUUID(),
+    service_id: catalogService.id,
+    name: catalogService.name,
+    description,
+    offer_description: null,
+    selected_tier: defaultTier,
+    price,
+    original_price: originalPrice,
+    discount_reason: '',
+    currency: lead.currency,
+    billing_type: 'monthly',
+    service_type: catalogService.service_type,
+    deliverables: merged.deliverables,
+    frequency: merged.frequency,
+    turnaround: merged.turnaround,
+    requirements: merged.requirements,
+    start_timeline: '',
+    detailed_sections: merged.detailed_sections,
+  };
 }
 
 interface CreateOfferDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead;
-  onSuccess: (token: string, offerUrl: string) => void;
+  onSuccess: (token: string, offerUrl: string, syncData?: { services: PublicOfferService[]; introDiscountPercent?: number; introDiscountMonths?: number; cbCredits?: number; cbPricePerCredit?: number }) => void;
+  existingOffer?: PublicOffer;
 }
 
 function generateToken(): string {
-  // Use cryptographically secure random values
-  const array = new Uint8Array(16);
-  crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
-function getOfferTypeFromServices(services: Array<{ billing_type: 'monthly' | 'one_off' }>): 'retainer' | 'one_off' {
-  if (!services?.length) return 'retainer';
-  const hasMonthly = services.some(s => s.billing_type === 'monthly');
-  const hasOneOff = services.some(s => s.billing_type === 'one_off');
-  if (hasMonthly && hasOneOff) return 'retainer'; // Mixed: default to retainer
-  return hasMonthly ? 'retainer' : 'one_off';
-}
-
-function getRewardRolesForTier(
-  rewardConfig: ServiceRewardTierConfig[] | null | undefined,
-  tier: string | null | undefined
-): ServiceRewardRole[] {
-  if (!rewardConfig || rewardConfig.length === 0) return [];
-
-  if (tier) {
-    const tierMatch = rewardConfig.find(cfg => cfg.tier?.toLowerCase() === tier.toLowerCase());
-    if (tierMatch?.roles?.length) return tierMatch.roles;
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 12; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-
-  const noTierMatch = rewardConfig.find(cfg => !cfg.tier);
-  if (noTierMatch?.roles?.length) return noTierMatch.roles;
-
-  return [];
+  return result;
 }
 
 // Default portfolio links that can be added
@@ -101,10 +152,13 @@ const DEFAULT_PORTFOLIO_OPTIONS: Omit<PortfolioLink, 'id'>[] = [
   { title: 'Reference od klientů', url: 'https://socials.cz/reference', type: 'reference' },
 ];
 
-export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: CreateOfferDialogProps) {
+export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existingOffer }: CreateOfferDialogProps) {
   const { services, colleagues } = useCRMData();
-  const { colleagueId } = useUserRole();
+  const { user } = useAuth();
+  const isEditMode = !!existingOffer;
   const [auditSummary, setAuditSummary] = useState('');
+  const [auditHtml, setAuditHtml] = useState('');
+  const [recommendationIntro, setRecommendationIntro] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [loomUrl, setLoomUrl] = useState('');
   const [validUntil, setValidUntil] = useState('');
@@ -113,43 +167,76 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
   );
   const [monthlyDiscountPercent, setMonthlyDiscountPercent] = useState(0);
   const [discountScope, setDiscountScope] = useState<'core_only' | 'all_services'>('core_only');
+  const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
+  const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
+  const [cbCredits, setCbCredits] = useState(30);
+  const [cbPricePerCredit, setCbPricePerCredit] = useState(400);
   const [isCreating, setIsCreating] = useState(false);
+  // Editable reward overrides per service: keyed by service_id
+  const [rewardOverrides, setRewardOverrides] = useState<Record<string, { role: string; reward: number; rewardType?: string }[]>>({});
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
+  const [showHistory, setShowHistory] = useState(false);
+  
   // Editable services state
   const [editableServices, setEditableServices] = useState<PublicOfferService[]>([]);
 
-  // Get current user's colleague record (the logged-in user)
-  const currentColleague = colleagueId ? colleagues.find(c => c.id === colleagueId) : null;
+  // Get current user's colleague record
+  const currentColleague = colleagues.find((c) => c.profile_id === user?.id && c.status === 'active');
 
-  // Initialize editable services when dialog opens
+  // Initialize from existing offer (edit mode) or lead services
   useEffect(() => {
-    if (open && lead.potential_services) {
+    if (!open) return;
+    
+    // Edit mode: populate from existing offer
+    if (existingOffer) {
+      setAuditSummary(existingOffer.audit_summary || '');
+      setAuditHtml(existingOffer.audit_html || '');
+      setRecommendationIntro(existingOffer.recommendation_intro || '');
+      setCustomNote(existingOffer.custom_note || '');
+      setLoomUrl(existingOffer.loom_url || '');
+      setValidUntil(existingOffer.valid_until || '');
+      setEditableServices(existingOffer.services);
+      setMonthlyDiscountPercent(existingOffer.monthly_discount_percent || 0);
+      setDiscountScope(existingOffer.discount_scope || 'core_only');
+      setIntroDiscountPercent(existingOffer.intro_discount_percent || 0);
+      setIntroDiscountMonths(existingOffer.intro_discount_months || 3);
+      if (existingOffer.portfolio_links?.length > 0) {
+        setPortfolioLinks(existingOffer.portfolio_links);
+      }
+      return;
+    }
+    
+    // If lead already has potential_services, use those
+    if (lead.potential_services && lead.potential_services.length > 0) {
       const initialServices: PublicOfferService[] = lead.potential_services.map(ls => {
         const serviceDetails = services.find(s => s.id === ls.service_id);
-        const merged = mergeWithDefaults(
-          ls.name,
-          serviceDetails?.default_deliverables,
-          serviceDetails?.default_frequency,
-          serviceDetails?.default_turnaround,
-          serviceDetails?.default_requirements,
-          null, // detailed_sections from defaults only (no DB column)
-        );
 
-        // Resolve tier price from service metadata when available (core + selected_tier)
-        const resolvedPrice = ls.selected_tier ? resolveTierPrice(serviceDetails, ls.selected_tier) : null;
-        const price = resolvedPrice !== null ? resolvedPrice : ls.price;
+        let resolvedPrice = ls.price;
+        let resolvedOriginalPrice = ls.price;
+        const constantDetail = serviceDetails ? getServiceDetail(serviceDetails.code) : undefined;
+        if (constantDetail?.tierPricing && ls.selected_tier) {
+          const tierKey = ls.selected_tier as keyof typeof constantDetail.tierPricing;
+          const constantTierPrice = constantDetail.tierPricing[tierKey];
+          if (constantTierPrice?.price !== null && constantTierPrice?.price !== undefined) {
+            resolvedPrice = constantTierPrice.price;
+            resolvedOriginalPrice = constantTierPrice.originalPrice ?? constantTierPrice.price;
+          }
+        }
+
+        const description = serviceDetails?.description || constantDetail?.tagline || '';
+        const merged = mergeWithDefaults(ls.name, 
+          serviceDetails?.default_deliverables, null, null, null, null);
 
         return {
           id: ls.id,
           service_id: ls.service_id,
           name: ls.name,
-          description: serviceDetails?.description || '',
+          description,
           offer_description: null,
           selected_tier: ls.selected_tier,
-          price,
-          original_price: price,
+          price: resolvedPrice,
+          original_price: resolvedOriginalPrice,
           discount_reason: '',
           currency: ls.currency,
           billing_type: ls.billing_type,
@@ -158,83 +245,146 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           frequency: merged.frequency,
           turnaround: merged.turnaround,
           requirements: merged.requirements,
-          detailed_sections: merged.detailed_sections,
           start_timeline: '',
+          detailed_sections: merged.detailed_sections,
         };
       });
       setEditableServices(initialServices);
+      return;
     }
-  }, [open, lead.potential_services, services]);
+    
+    // Otherwise, auto-suggest services based on lead's channels/platforms
+    const suggestedCodes = suggestServiceCodes(lead);
+    if (suggestedCodes.length > 0) {
+      const suggested: PublicOfferService[] = [];
+      for (const code of suggestedCodes) {
+        const catalogService = services.find(s => s.code === code && s.is_active);
+        if (catalogService) {
+          suggested.push(buildServiceFromCatalog(catalogService, lead));
+        }
+      }
+      setEditableServices(suggested);
+    }
+  }, [open, lead, lead.potential_services, services, existingOffer]);
 
-  // Calculate totals and profitability estimate
+  // Initialize reward overrides from catalog when services change
+  useEffect(() => {
+    if (editableServices.length === 0) return;
+    setRewardOverrides(prev => {
+      const next = { ...prev };
+      editableServices.forEach(es => {
+        if (next[es.service_id]) return; // already has overrides
+        const catalogService = services.find(s => s.id === es.service_id);
+        if (!catalogService) return;
+        let roles = getRewardsFromServiceConfig(catalogService.reward_config as Record<string, unknown>, es.selected_tier);
+        if (!roles || roles.length === 0) {
+          roles = getServiceRewardRecommendation(es.name, es.selected_tier);
+        }
+        if (roles && roles.length > 0) {
+          next[es.service_id] = roles.map(r => ({
+            role: r.role,
+            reward: r.reward,
+            rewardType: r.rewardType || (r as { reward_type?: string }).reward_type,
+          }));
+        } else {
+          next[es.service_id] = [];
+        }
+      });
+      return next;
+    });
+  }, [editableServices, services]);
+
   const totals = useMemo(() => {
+    // Helper: get effective monthly price for a service (handles CB credit-based pricing)
+    const getEffectiveMonthlyPrice = (s: PublicOfferService) => {
+      const catalogService = services.find(cs => cs.id === s.service_id);
+      if (catalogService?.code === 'CREATIVE_BOOST') {
+        return cbCredits * cbPricePerCredit;
+      }
+      const variantsTotal = (s.country_variants || []).reduce((sum, v) => sum + v.price, 0);
+      return s.price + variantsTotal;
+    };
+
     const coreMonthly = editableServices
       .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
-      .reduce((sum, s) => sum + s.price, 0);
+      .reduce((sum, s) => sum + getEffectiveMonthlyPrice(s), 0);
     const addonMonthly = editableServices
       .filter(s => s.billing_type === 'monthly' && s.service_type !== 'core')
-      .reduce((sum, s) => sum + s.price, 0);
+      .reduce((sum, s) => sum + getEffectiveMonthlyPrice(s), 0);
     const monthly = coreMonthly + addonMonthly;
-
     const oneOff = editableServices
       .filter(s => s.billing_type === 'one_off')
       .reduce((sum, s) => sum + s.price, 0);
-
-    const totalOriginal = editableServices.reduce((sum, s) => sum + (s.original_price || s.price), 0);
-    const totalFinal = editableServices.reduce((sum, s) => sum + s.price, 0);
+    const totalOriginal = editableServices.reduce((sum, s) => {
+      const catalogService = services.find(cs => cs.id === s.service_id);
+      if (catalogService?.code === 'CREATIVE_BOOST') {
+        return sum + cbCredits * cbPricePerCredit;
+      }
+      const variantsTotal = (s.country_variants || []).reduce((sv, v) => sv + v.price, 0);
+      return sum + (s.original_price || s.price) + variantsTotal;
+    }, 0);
+    const totalFinal = editableServices.reduce((sum, s) => sum + getEffectiveMonthlyPrice(s), 0);
     const totalDiscount = totalOriginal - totalFinal;
-
+    // Discount based on scope
     const discountBase = discountScope === 'all_services' ? monthly : coreMonthly;
-    const discountedBase = monthlyDiscountPercent > 0
-      ? Math.round(discountBase * (1 - monthlyDiscountPercent / 100))
+    const discountedBase = monthlyDiscountPercent > 0 
+      ? Math.round(discountBase * (1 - monthlyDiscountPercent / 100)) 
       : discountBase;
     const monthlyDiscountAmount = discountBase - discountedBase;
-    const monthlyAfterDiscount = discountScope === 'all_services'
-      ? discountedBase
+    const monthlyAfterDiscount = discountScope === 'all_services' 
+      ? discountedBase 
       : discountedBase + addonMonthly;
 
+    // Calculate internal costs from editable reward overrides
     let totalInternalCost = 0;
-    const serviceCosts: { name: string; cost: number; roles: { role: string; reward: number }[] }[] = [];
-    for (const editableService of editableServices) {
-      const catalogService = services.find(service => service.id === editableService.service_id);
-      if (!catalogService?.reward_config?.length) continue;
-
-      const matchedRoles = getRewardRolesForTier(catalogService.reward_config, editableService.selected_tier);
-      if (matchedRoles.length === 0) continue;
-
-      let serviceCost = 0;
-      const roles: { role: string; reward: number }[] = [];
-      for (const role of matchedRoles) {
-        const reward = role.reward_type === 'per_credit' ? role.reward * 30 : role.reward;
-        serviceCost += reward;
-        roles.push({ role: role.role, reward });
+    const serviceCosts: { serviceId: string; name: string; cost: number; revenue: number; roles: { role: string; reward: number; rewardType?: string }[] }[] = [];
+    
+    editableServices.forEach(es => {
+      const catalogService = services.find(s => s.id === es.service_id);
+      if (!catalogService) return;
+      
+      const isCB = catalogService.code === 'CREATIVE_BOOST';
+      const serviceRevenue = getEffectiveMonthlyPrice(es);
+      const overrides = rewardOverrides[es.service_id] || [];
+      const countryVariants = es.country_variants || [];
+      
+      // Calculate multiplier for country variants cost scaling
+      // Country variants add proportional internal costs based on their price ratio to base
+      const variantCostMultiplier = es.price > 0
+        ? 1 + countryVariants.reduce((sum, v) => sum + v.multiplier, 0)
+        : 1;
+      
+      if (overrides.length > 0) {
+        let svcCost = 0;
+        const roleDetails: { role: string; reward: number; rewardType?: string }[] = [];
+        overrides.forEach(r => {
+          const baseReward = r.rewardType === 'per_credit' ? r.reward * cbCredits : r.reward;
+          // Scale reward by country variant multiplier (base + variants)
+          const effectiveReward = Math.round(baseReward * variantCostMultiplier);
+          svcCost += effectiveReward;
+          roleDetails.push({ role: r.role, reward: effectiveReward, rewardType: r.rewardType });
+        });
+        totalInternalCost += svcCost;
+        const variantLabel = countryVariants.length > 0 ? ` (${variantCostMultiplier.toFixed(1)}×)` : '';
+        serviceCosts.push({ serviceId: es.service_id, name: isCB ? `${es.name} (${cbCredits} kr. × ${cbPricePerCredit} Kč)` : `${es.name}${variantLabel}`, cost: svcCost, revenue: serviceRevenue, roles: roleDetails });
+      } else {
+        serviceCosts.push({ serviceId: es.service_id, name: isCB ? `${es.name} (${cbCredits} kreditů)` : es.name, cost: 0, revenue: serviceRevenue, roles: [] });
       }
-
-      totalInternalCost += serviceCost;
-      serviceCosts.push({ name: editableService.name, cost: serviceCost, roles });
-    }
+    });
 
     const revenue = monthlyAfterDiscount;
+    // Waterfall: intro discount applies ON TOP of bundle discount
+    const introAdjustedRevenue = introDiscountPercent > 0
+      ? Math.round(revenue * (1 - introDiscountPercent / 100))
+      : revenue;
     const margin = revenue > 0 ? ((revenue - totalInternalCost) / revenue) * 100 : 0;
+    const introMargin = introAdjustedRevenue > 0 ? ((introAdjustedRevenue - totalInternalCost) / introAdjustedRevenue) * 100 : 0;
 
-    return {
-      monthly,
-      coreMonthly,
-      addonMonthly,
-      oneOff,
-      totalOriginal,
-      totalFinal,
-      totalDiscount,
-      monthlyAfterDiscount,
-      monthlyDiscountAmount,
-      totalInternalCost,
-      serviceCosts,
-      margin,
-    };
-  }, [editableServices, monthlyDiscountPercent, discountScope, services]);
+    return { monthly, coreMonthly, addonMonthly, oneOff, totalOriginal, totalFinal, totalDiscount, monthlyAfterDiscount, monthlyDiscountAmount, totalInternalCost, serviceCosts, margin, introMargin, introAdjustedRevenue };
+  }, [editableServices, monthlyDiscountPercent, discountScope, introDiscountPercent, services, cbCredits, cbPricePerCredit, rewardOverrides]);
 
   const handleUpdateService = (index: number, updated: PublicOfferService) => {
-    setEditableServices(prev =>
+    setEditableServices(prev => 
       prev.map((s, i) => i === index ? updated : s)
     );
   };
@@ -243,23 +393,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     setEditableServices(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Default valid_until to 14 days from now (local date)
-  const defaultValidUntil = useMemo(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 14);
-    return format(date, 'yyyy-MM-dd');
-  }, []);
-
   const handleCreate = async () => {
-    // Validate required fields
-    if (!lead.company_name?.trim()) {
-      toast.error('Chybí název firmy');
-      return;
-    }
-    if (!lead.contact_name?.trim()) {
-      toast.error('Chybí jméno kontaktní osoby');
-      return;
-    }
     if (editableServices.length === 0) {
       toast.error('Přidejte alespoň jednu službu do nabídky');
       return;
@@ -268,64 +402,127 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     setIsCreating(true);
 
     try {
-      const token = generateToken();
-      const offerUrl = `${window.location.origin}/offer/${token}`;
-
-      // Find lead owner for contact info
       const leadOwner = colleagues.find(c => c.id === lead.owner_id);
+      const now = new Date().toISOString();
 
-      // Insert offer into Supabase with timeout
-      const insertPromise = supabase
-        .from('public_offers')
-        .insert({
-          lead_id: lead.id,
-          token,
-          company_name: lead.company_name.trim(),
-          website: lead.website || null,
-          contact_name: lead.contact_name.trim(),
+      if (isEditMode && existingOffer) {
+        // Edit mode: update existing offer with history
+        const changedParts: string[] = [];
+        if (existingOffer.services.length !== editableServices.length) changedParts.push('služby');
+        if (existingOffer.total_price !== totals.monthlyAfterDiscount + totals.oneOff) changedParts.push('ceny');
+        if (existingOffer.monthly_discount_percent !== monthlyDiscountPercent) changedParts.push('sleva');
+        if (existingOffer.audit_summary !== (auditSummary.trim() || null)) changedParts.push('audit');
+        if (changedParts.length === 0) changedParts.push('drobné úpravy');
+        
+        await updatePublicOffer(existingOffer.token, {
           audit_summary: auditSummary.trim() || null,
-          recommendation_intro: null,
+          audit_html: auditHtml.trim() || null,
+          recommendation_intro: recommendationIntro.trim() || null,
           custom_note: customNote.trim() || null,
-          notion_url: loomUrl.trim() || null,  // DB column stores Loom video URL
-          // Cast to unknown to satisfy Supabase's JSONB column type (typed arrays -> Json)
-          services: editableServices as unknown as Record<string, unknown>[],
-          portfolio_links: portfolioLinks as unknown as Record<string, unknown>[],
+          loom_url: loomUrl.trim() || null,
+          services: editableServices,
+          portfolio_links: portfolioLinks,
           total_price: totals.monthlyAfterDiscount + totals.oneOff,
-          monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : null,
-          discount_scope: monthlyDiscountPercent > 0 ? discountScope : null,
-          currency: (() => {
-            if (!lead.currency) throw new Error(`Lead ${lead.id} has no currency`);
-            return lead.currency;
-          })(),
-          offer_type: getOfferTypeFromServices(editableServices),
-          valid_until: validUntil || defaultValidUntil,
-          is_active: true,
-          created_by: currentColleague?.id || null,
-          owner_name: leadOwner?.full_name || null,
-          owner_email: leadOwner?.email || null,
-          owner_phone: leadOwner?.phone || null,
-          estimated_start_date: null, // Can be set later if needed
+          monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
+          discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
+          intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+          intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+          valid_until: validUntil || null,
+          owner_name: leadOwner?.full_name || undefined,
+          owner_email: leadOwner?.email || undefined,
+          owner_phone: leadOwner?.phone || undefined,
+          created_by: currentColleague?.id || existingOffer.created_by || null,
+        }, `Změna: ${changedParts.join(', ')}`);
+
+        const offerUrl = `${window.location.origin}/offer/${existingOffer.token}`;
+        setCreatedOfferUrl(offerUrl);
+        toast.success('Nabídka byla aktualizována!');
+        const syncData = {
+          services: editableServices,
+          introDiscountPercent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+          introDiscountMonths: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+          cbCredits: cbCredits,
+          cbPricePerCredit: cbPricePerCredit,
+        };
+        onSuccess(existingOffer.token, offerUrl, syncData);
+      } else {
+        // Create mode
+        const token = generateToken();
+        const offerUrl = `${window.location.origin}/offer/${token}`;
+
+        // Snapshot current content blocks from DB (strict: no fallback defaults).
+        interface OfferContentSnapshotRow {
+          section_key: string;
+          title: string | null;
+          subtitle: string | null;
+          content: Record<string, unknown>;
+        }
+        const contentSnapshot: Record<string, OfferContentSnapshotRow> = {};
+        const { data } = await supabase
+          .from('offer_content_blocks' as never)
+          .select('section_key, title, subtitle, content');
+        const snapshotRows = (data || []) as unknown as OfferContentSnapshotRow[];
+        if (snapshotRows.length === 0) {
+          throw new Error('Offer content blocks are empty');
+        }
+        snapshotRows.forEach((row) => {
+          contentSnapshot[row.section_key] = {
+            section_key: row.section_key,
+            title: row.title,
+            subtitle: row.subtitle,
+            content: row.content,
+          };
         });
 
-      // Add timeout to prevent hanging forever
-      // Creating an offer can take longer on slower Supabase/connection, so keep this generous.
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Požadavek vypršel. Zkuste to prosím znovu.')), 60000)
-      );
+        const newOffer: PublicOffer = {
+          id: crypto.randomUUID(),
+          lead_id: lead.id,
+          token,
+          company_name: lead.company_name,
+          website: lead.website || null,
+          contact_name: lead.contact_name,
+          audit_summary: auditSummary.trim() || null,
+          audit_html: auditHtml.trim() || null,
+          recommendation_intro: recommendationIntro.trim() || null,
+          custom_note: customNote.trim() || null,
+          loom_url: loomUrl.trim() || null,
+          services: editableServices,
+          portfolio_links: portfolioLinks,
+          total_price: totals.monthlyAfterDiscount + totals.oneOff,
+          monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
+          discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
+          intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+          intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+          currency: lead.currency,
+          offer_type: lead.offer_type as 'retainer' | 'one_off',
+          valid_until: validUntil || null,
+          is_active: true,
+          viewed_at: null,
+          view_count: 0,
+          created_by: currentColleague?.id || null,
+          created_at: now,
+          updated_at: now,
+          owner_name: leadOwner?.full_name || undefined,
+          owner_email: leadOwner?.email || undefined,
+          owner_phone: leadOwner?.phone || undefined,
+          content_blocks_snapshot: contentSnapshot,
+        };
 
-      const { error } = await Promise.race([insertPromise, timeoutPromise]);
-
-      if (error) {
-        throw error;
+        await addPublicOffer(newOffer);
+        setCreatedOfferUrl(offerUrl);
+        toast.success('Nabídka byla vytvořena!');
+        const syncData = {
+          services: editableServices,
+          introDiscountPercent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+          introDiscountMonths: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+          cbCredits: cbCredits,
+          cbPricePerCredit: cbPricePerCredit,
+        };
+        onSuccess(token, offerUrl, syncData);
       }
-
-      setCreatedOfferUrl(offerUrl);
-      toast.success('Nabídka byla vytvořena!');
-      onSuccess(token, offerUrl);
-    } catch (err: unknown) {
-      console.error('Error creating offer:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Chyba při vytváření nabídky';
-      toast.error(errorMessage);
+    } catch (err) {
+      console.error('Error saving offer:', err);
+      toast.error('Chyba při ukládání nabídky');
     } finally {
       setIsCreating(false);
     }
@@ -341,6 +538,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
 
   const handleClose = () => {
     setAuditSummary('');
+    setRecommendationIntro('');
     setCustomNote('');
     setLoomUrl('');
     setValidUntil('');
@@ -349,24 +547,35 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
     setEditableServices([]);
     setMonthlyDiscountPercent(0);
     setDiscountScope('core_only');
+    setIntroDiscountPercent(0);
+    setIntroDiscountMonths(3);
     onOpenChange(false);
   };
+
+  // Default valid_until to 14 days from now
+  const defaultValidUntil = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 14);
+    return date.toISOString().split('T')[0];
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[700px] max-h-[95vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>
-            {createdOfferUrl ? 'Nabídka vytvořena' : 'Vytvořit sdílenou nabídku'}
+            {createdOfferUrl 
+              ? (isEditMode ? '✅ Nabídka aktualizována' : '✅ Nabídka vytvořena')
+              : (isEditMode ? 'Upravit nabídku' : 'Vytvořit sdílenou nabídku')}
           </DialogTitle>
         </DialogHeader>
 
         {createdOfferUrl ? (
           // Success state
           <div className="space-y-4 px-6 pb-6">
-            <div className="p-4 rounded-lg border bg-green-500/10 border-green-500/30">
-              <p className="text-sm text-green-700 font-medium mb-3">
-                Nabídka byla úspěšně vytvořena! Zkopírujte odkaz a odešlete klientovi:
+            <div className="p-4 rounded-lg border bg-emerald-500/10 border-emerald-500/30">
+              <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium mb-3">
+                {isEditMode ? 'Nabídka byla aktualizována! Klient uvidí novou verzi na stejném odkazu:' : 'Nabídka byla úspěšně vytvořena! Zkopírujte odkaz a odešlete klientovi:'}
               </p>
               <div className="flex items-center gap-2">
                 <Input
@@ -398,19 +607,65 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
           <>
             <ScrollArea className="max-h-[calc(95vh-180px)]">
               <div className="space-y-4 px-6 pb-4">
-                {/* Company info */}
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Pro:</span>{' '}
-                    <span className="font-medium">{lead.company_name}</span>
-                    {' · '}
-                    <span className="text-muted-foreground">{lead.contact_name}</span>
-                  </p>
+
+                {/* Audit summary - Co jsme zjistili */}
+                <div className="space-y-2">
+                  <Label>🔍 Co jsme zjistili (volitelné)</Label>
+                  <p className="text-xs text-muted-foreground">Popis zjištění z auditu. Můžete vkládat text, odrážky i screenshoty (Ctrl+V nebo přetažením).</p>
+                  <AuditEditor
+                    content={auditHtml || auditSummary}
+                    onChange={(html) => {
+                      setAuditHtml(html);
+                      // Extract plain text for backward compatibility
+                      const tmp = document.createElement('div');
+                      tmp.innerHTML = html;
+                      setAuditSummary(tmp.textContent || '');
+                    }}
+                    placeholder="Reklamní účty nejsou optimálně nastaveny — chybí remarketing a audience segmentace..."
+                  />
                 </div>
 
+                {/* Recommendation intro */}
+                <div className="space-y-2">
+                  <Label htmlFor="recommendation">✅ Naše doporučení (volitelné)</Label>
+                  <p className="text-xs text-muted-foreground">Souvislý text s doporučením — zobrazí se pod findings v zelené kartě.</p>
+                  <Textarea
+                    id="recommendation"
+                    value={recommendationIntro}
+                    onChange={(e) => setRecommendationIntro(e.target.value)}
+                    placeholder="Na základě auditu doporučujeme začít s kompletní restrukturalizací kampaní a nasazením nových kreativ..."
+                    rows={4}
+                  />
+                </div>
+
+                {/* Custom note */}
+                <div className="space-y-2">
+                  <Label htmlFor="note">📝 Poznámka pro klienta (volitelné)</Label>
+                  <Textarea
+                    id="note"
+                    value={customNote}
+                    onChange={(e) => setCustomNote(e.target.value)}
+                    placeholder="Těšíme se na spolupráci! V případě dotazů se neváhejte obrátit..."
+                    rows={2}
+                  />
+                </div>
+
+                {/* Loom video */}
+                <div className="space-y-2">
+                  <Label htmlFor="loom">🎥 Loom video k nabídce / auditu (volitelné)</Label>
+                  <Input
+                    id="loom"
+                    type="url"
+                    value={loomUrl}
+                    onChange={(e) => setLoomUrl(e.target.value)}
+                    placeholder="https://www.loom.com/share/..."
+                  />
+                </div>
+
+                <Separator />
                 {/* Editable Services */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Služby v nabídce</Label>
+                  <Label className="text-sm font-medium">📦 Služby v nabídce</Label>
                   <div className="space-y-3">
                     {editableServices.map((service, idx) => (
                       <EditableOfferServiceCard
@@ -421,215 +676,520 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                       />
                     ))}
                   </div>
+                  
+                  {/* Add service button */}
+                  {(() => {
+                    const availableToAdd = services.filter(s => 
+                      s.is_active && !editableServices.some(es => es.service_id === s.id)
+                    ).sort((a, b) => {
+                      if (a.service_type !== b.service_type) return a.service_type === 'core' ? -1 : 1;
+                      return a.name.localeCompare(b.name, 'cs');
+                    });
+                    if (availableToAdd.length === 0) return null;
+                    return (
+                      <Select
+                        value=""
+                        onValueChange={(serviceId) => {
+                          const catalogService = services.find(s => s.id === serviceId);
+                          if (catalogService) {
+                            const newService = buildServiceFromCatalog(catalogService, lead);
+                            setEditableServices(prev => [...prev, newService]);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="border-dashed text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Plus className="h-4 w-4" />
+                            <span>Přidat službu</span>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableToAdd.map(s => {
+                            const detail = getServiceDetail(s.code);
+                            const platforms = detail?.platforms;
+                            return (
+                              <SelectItem key={s.id} value={s.id}>
+                                <div className="flex flex-col">
+                                  <span>{s.name} <span className="text-muted-foreground">({s.service_type === 'core' ? 'Core' : 'Addon'})</span></span>
+                                  {platforms && platforms.length > 0 && (
+                                    <span className="text-[11px] text-muted-foreground leading-tight">
+                                      {platforms.join(', ')}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
 
                   {editableServices.length === 0 && (
                     <div className="p-4 text-center text-muted-foreground border rounded-lg border-dashed">
-                      Žádné služby v nabídce. Přidejte služby k leadu před vytvořením nabídky.
+                      Žádné služby v nabídce. Použijte tlačítko výše pro přidání služeb.
+                    </div>
+                  )}
+                  
+                  {/* Creative Boost credit config */}
+                  {editableServices.some(s => {
+                    const cat = services.find(cs => cs.id === s.service_id);
+                    return cat?.code === 'CREATIVE_BOOST';
+                  }) && (
+                    <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🎨</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Creative Boost — nastavení kreditů</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Počet kreditů / měsíc</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={cbCredits}
+                            onChange={(e) => setCbCredits(Math.max(1, Number(e.target.value)))}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Cena za kredit pro klienta</Label>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={cbPricePerCredit}
+                              onChange={(e) => setCbPricePerCredit(Math.max(0, Number(e.target.value)))}
+                              className="h-8 text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground shrink-0">Kč</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Celkem za Creative Boost: <span className="font-semibold">{(cbCredits * cbPricePerCredit).toLocaleString('cs-CZ')} Kč/měs</span>
+                      </div>
                     </div>
                   )}
 
-                  {/* Price Summary */}
+
                   {editableServices.length > 0 && (
-                    <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">Měsíčně:</span>
-                        <span className="font-medium">
-                          {monthlyDiscountPercent > 0 ? (
+                    <div className="rounded-lg border bg-muted/30 space-y-0 overflow-hidden">
+                      <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/50">
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Náklady na doručení & odměny
+                        </span>
+                      </div>
+                      
+                      {totals.serviceCosts.length > 0 ? (
+                        <div className="divide-y divide-border/50">
+                          {totals.serviceCosts.map((sc, idx) => {
+                            const matchedService = editableServices.find(es => es.id === sc.serviceId || es.service_id === sc.serviceId);
+                            const countryVariants = matchedService?.country_variants || [];
+                            const variantMultiplier = countryVariants.length > 0
+                              ? 1 + countryVariants.reduce((sum, v) => sum + v.multiplier, 0)
+                              : 1;
+                            const hasVariants = variantMultiplier > 1;
+                            
+                            return (
+                            <div key={idx} className="px-3 py-2">
+                              <div className="flex items-center justify-between mb-1">
+                                <div>
+                                  <span className="text-xs font-medium">{sc.name}</span>
+                                  {hasVariants && (
+                                    <span className="text-[10px] text-muted-foreground ml-1.5">
+                                      ({variantMultiplier.toFixed(1)}× — vč. {countryVariants.length} {countryVariants.length === 1 ? 'dalšího trhu' : 'dalších trhů'})
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-xs font-semibold tabular-nums">{sc.cost.toLocaleString('cs-CZ')} Kč</span>
+                              </div>
+                              {(rewardOverrides[sc.serviceId] || []).map((r, ri) => {
+                                const isPerCredit = r.rewardType === 'per_credit';
+                                const effectiveReward = hasVariants && !isPerCredit ? Math.round(r.reward * variantMultiplier) : r.reward;
+                                return (
+                                  <div key={ri} className="flex items-center pl-3 py-0.5 gap-1.5">
+                                    <button
+                                      onClick={() => {
+                                        setRewardOverrides(prev => {
+                                          const roles = [...(prev[sc.serviceId] || [])];
+                                          roles.splice(ri, 1);
+                                          return { ...prev, [sc.serviceId]: roles };
+                                        });
+                                      }}
+                                      className="text-muted-foreground/40 hover:text-destructive shrink-0"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                    <Input
+                                      value={r.role}
+                                      onChange={(e) => {
+                                        setRewardOverrides(prev => {
+                                          const roles = [...(prev[sc.serviceId] || [])];
+                                          roles[ri] = { ...roles[ri], role: e.target.value };
+                                          return { ...prev, [sc.serviceId]: roles };
+                                        });
+                                      }}
+                                      className="h-6 text-xs flex-1 min-w-0 border-none shadow-none p-0 bg-transparent"
+                                    />
+                                    <div className="flex items-center gap-1 ml-auto">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={r.reward}
+                                        onChange={(e) => {
+                                          const val = Math.max(0, Number(e.target.value));
+                                          setRewardOverrides(prev => {
+                                            const roles = [...(prev[sc.serviceId] || [])];
+                                            roles[ri] = { ...roles[ri], reward: val };
+                                            return { ...prev, [sc.serviceId]: roles };
+                                          });
+                                        }}
+                                        className="w-24 h-6 text-xs text-right tabular-nums px-1.5"
+                                      />
+                                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                        {isPerCredit ? 'Kč/kr.' : 'Kč/měs'}
+                                      </span>
+                                      {hasVariants && !isPerCredit && effectiveReward !== r.reward && (
+                                        <span className="text-[10px] text-primary font-medium whitespace-nowrap ml-1">
+                                          → {effectiveReward.toLocaleString('cs-CZ')} Kč
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {(rewardOverrides[sc.serviceId] || []).length === 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-xs text-muted-foreground pl-3"
+                                  onClick={() => {
+                                    setRewardOverrides(prev => ({
+                                      ...prev,
+                                      [sc.serviceId]: [{ role: 'Specialista', reward: 0 }],
+                                    }));
+                                  }}
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Přidat odměnu
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 text-[10px] text-muted-foreground pl-3 mt-0.5"
+                                onClick={() => {
+                                  setRewardOverrides(prev => ({
+                                    ...prev,
+                                    [sc.serviceId]: [...(prev[sc.serviceId] || []), { role: 'Nová role', reward: 0 }],
+                                  }));
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Role
+                              </Button>
+                            </div>
+                          )})}
+                        </div>
+                      ) : (
+                        <div className="px-3 py-3 text-xs text-muted-foreground text-center">
+                          Pro vybrané služby nejsou k dispozici data o odměnách.
+                        </div>
+                      )}
+
+                      <div className="border-t bg-background px-3 py-2.5 space-y-1.5">
+                          {totals.totalInternalCost > 0 && (
                             <>
-                              <span className="line-through text-muted-foreground mr-2">
-                                {totals.monthly.toLocaleString('cs-CZ')}
-                              </span>
-                              {totals.monthlyAfterDiscount.toLocaleString('cs-CZ')} {lead.currency}/měs
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Interní náklady celkem</span>
+                                <span className="font-semibold tabular-nums">{totals.totalInternalCost.toLocaleString('cs-CZ')} Kč/měs</span>
+                              </div>
+                              {introDiscountPercent > 0 ? (
+                                <>
+                                  {/* Intro period */}
+                                  <div className="rounded-md border border-amber-300/50 bg-amber-500/5 p-2 space-y-1">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                                      Prvních {introDiscountMonths} měsíců (se slevou {introDiscountPercent} %)
+                                    </p>
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-muted-foreground">Příjem</span>
+                                      <span className="font-semibold tabular-nums">{totals.introAdjustedRevenue.toLocaleString('cs-CZ')} Kč/měs</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-muted-foreground">Po nákladech</span>
+                                      <span className="font-semibold tabular-nums">
+                                        {Math.round(totals.introAdjustedRevenue - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč/měs
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-muted-foreground">Marže</span>
+                                      <span className={`font-bold tabular-nums ${
+                                        totals.introMargin >= 66 ? 'text-emerald-600' : 
+                                        totals.introMargin >= 50 ? 'text-amber-600' : 'text-destructive'
+                                      }`}>
+                                        {totals.introMargin.toFixed(1)} %
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {/* Regular period */}
+                                  <div className="rounded-md border border-emerald-300/50 bg-emerald-500/5 p-2 space-y-1">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                                      Od {introDiscountMonths + 1}. měsíce (plná cena)
+                                    </p>
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-muted-foreground">Příjem</span>
+                                      <span className="font-semibold tabular-nums">{totals.monthlyAfterDiscount.toLocaleString('cs-CZ')} Kč/měs</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-muted-foreground">Po nákladech</span>
+                                      <span className="font-semibold tabular-nums">
+                                        {Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč/měs
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-muted-foreground">Marže</span>
+                                      <span className={`font-bold tabular-nums ${
+                                        totals.margin >= 66 ? 'text-emerald-600' : 
+                                        totals.margin >= 50 ? 'text-amber-600' : 'text-destructive'
+                                      }`}>
+                                        {totals.margin.toFixed(1)} %
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {totals.introMargin < 66 && (
+                                    <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                                      <TrendingUp className="h-3.5 w-3.5 text-destructive shrink-0" />
+                                      <p className="text-xs text-destructive">
+                                        Marže v úvodním období je pod 66 %. Zvažte nižší slevu nebo kratší období.
+                                      </p>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Příjem po nákladech</span>
+                                    <span className="font-semibold tabular-nums">
+                                      {Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč/měs
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Marže</span>
+                                    <span className={`font-bold tabular-nums ${
+                                      totals.margin >= 66 ? 'text-emerald-600' : 
+                                      totals.margin >= 50 ? 'text-amber-600' : 'text-destructive'
+                                    }`}>
+                                      {totals.margin.toFixed(1)} %
+                                    </span>
+                                  </div>
+                                  {totals.margin < 66 && (
+                                    <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20 mt-1">
+                                      <TrendingUp className="h-3.5 w-3.5 text-destructive shrink-0" />
+                                      <p className="text-xs text-destructive">
+                                        Marže je pod cílovou hodnotou 66 %. Zvažte úpravu ceny nebo rozsahu služeb.
+                                      </p>
+                                    </div>
+                                  )}
+                                </>
+                              )}
                             </>
-                          ) : (
-                            <>{totals.monthly.toLocaleString('cs-CZ')} {lead.currency}/měs</>
                           )}
-                        </span>
-                      </div>
 
-                      {totals.monthly > 0 && (
-                        <div className="space-y-1.5 mb-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground text-xs">
-                              Sleva při odběru všech služeb:
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <Input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={monthlyDiscountPercent || ''}
-                                onChange={(e) => setMonthlyDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
-                                placeholder="0"
-                                className="w-16 h-7 text-sm text-right"
-                              />
-                              <span className="text-muted-foreground">%</span>
+                          {/* Bundle Discount */}
+                          <Separator />
+                          <div className="px-3 py-2.5 space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground flex items-center gap-1">
+                                Sleva při odběru všech služeb:
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[280px] text-xs">
+                                      Trvalá sleva za odběr celého balíčku služeb najednou. Platí po celou dobu spolupráce a motivuje klienta k většímu rozsahu.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={monthlyDiscountPercent || ''}
+                                  onChange={(e) => {
+                                    const val = Math.min(100, Math.max(0, Number(e.target.value)));
+                                    setMonthlyDiscountPercent(val);
+                                  }}
+                                  placeholder="0"
+                                  className="w-20 h-7 text-sm text-right"
+                                />
+                                <span className="text-muted-foreground">%</span>
+                              </div>
                             </div>
+                            {monthlyDiscountPercent > 0 && totals.addonMonthly > 0 && (
+                              <div className="flex items-center gap-3 text-xs">
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name="discountScope"
+                                    checked={discountScope === 'core_only'}
+                                    onChange={() => setDiscountScope('core_only')}
+                                    className="accent-primary"
+                                  />
+                                  <span className="text-muted-foreground">Jen core služby</span>
+                                </label>
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name="discountScope"
+                                    checked={discountScope === 'all_services'}
+                                    onChange={() => setDiscountScope('all_services')}
+                                    className="accent-primary"
+                                  />
+                                  <span className="text-muted-foreground">Všechny služby</span>
+                                </label>
+                              </div>
+                            )}
+                            {monthlyDiscountPercent > 0 && (
+                              <div className="flex items-center justify-between text-sm text-emerald-600">
+                                <span>Sleva {monthlyDiscountPercent}% na {discountScope === 'all_services' ? 'všechny služby' : 'core služby'}:</span>
+                                <span className="font-medium">
+                                  -{totals.monthlyDiscountAmount.toLocaleString('cs-CZ')} Kč/měs
+                                </span>
+                              </div>
+                            )}
                           </div>
 
-                          {monthlyDiscountPercent > 0 && totals.addonMonthly > 0 && (
-                            <div className="flex items-center gap-3 text-xs">
-                              <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name="discountScope"
-                                  checked={discountScope === 'core_only'}
-                                  onChange={() => setDiscountScope('core_only')}
-                                  className="accent-primary"
+                          {/* Intro Discount */}
+                          <Separator />
+                          <div className="px-3 py-2.5 space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground flex items-center gap-1">
+                                Úvodní sleva (první měsíce):
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[280px] text-xs">
+                                      Časově omezená sleva na prvních X měsíců spolupráce. Po uplynutí se automaticky fakturuje plná cena (resp. cena po balíčkové slevě).
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                {monthlyDiscountPercent > 0 && introDiscountPercent > 0 && <span className="text-[10px] ml-1 text-amber-500">(aplikuje se na cenu po slevě za balíček)</span>}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={introDiscountPercent || ''}
+                                  onChange={(e) => {
+                                    const val = Math.min(100, Math.max(0, Number(e.target.value)));
+                                    setIntroDiscountPercent(val);
+                                  }}
+                                  placeholder="0"
+                                  className="w-20 h-7 text-sm text-right"
                                 />
-                                <span className="text-muted-foreground">Jen core služby</span>
-                              </label>
-                              <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name="discountScope"
-                                  checked={discountScope === 'all_services'}
-                                  onChange={() => setDiscountScope('all_services')}
-                                  className="accent-primary"
-                                />
-                                <span className="text-muted-foreground">Všechny služby</span>
-                              </label>
+                                <span className="text-muted-foreground">%</span>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      )}
+                            {introDiscountPercent > 0 && (
+                              <>
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Počet měsíců:</span>
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={24}
+                                      value={introDiscountMonths}
+                                      onChange={(e) => setIntroDiscountMonths(Math.min(24, Math.max(1, Number(e.target.value))))}
+                                      className="w-20 h-7 text-sm text-right"
+                                    />
+                                    <span className="text-muted-foreground">měs.</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-amber-600">
+                                  <span>Prvních {introDiscountMonths} měs. za:</span>
+                                  <span className="font-medium">
+                                    {Math.round(totals.monthlyAfterDiscount * (1 - introDiscountPercent / 100)).toLocaleString('cs-CZ')} Kč/měs
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </div>
 
-                      {monthlyDiscountPercent > 0 && (
-                        <div className="flex items-center justify-between text-sm text-green-600 mb-1">
-                          <span>Sleva {monthlyDiscountPercent}% na {discountScope === 'all_services' ? 'všechny služby' : 'core služby'}:</span>
-                          <span className="font-medium">
-                            -{totals.monthlyDiscountAmount.toLocaleString('cs-CZ')} {lead.currency}/měs
-                          </span>
+                          {/* Final Summary */}
+                          <Separator />
+                          <div className="px-3 py-2.5 space-y-1.5">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Měsíčně celkem</span>
+                              <span className="font-semibold tabular-nums">
+                                {monthlyDiscountPercent > 0 ? (
+                                  <>
+                                    <span className="line-through text-muted-foreground mr-2 font-normal">
+                                      {totals.monthly.toLocaleString('cs-CZ')}
+                                    </span>
+                                    {totals.monthlyAfterDiscount.toLocaleString('cs-CZ')} Kč/měs
+                                  </>
+                                ) : (
+                                  <>{totals.monthly.toLocaleString('cs-CZ')} Kč/měs</>
+                                )}
+                              </span>
+                            </div>
+                            {totals.oneOff > 0 && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Jednorázově</span>
+                                <span className="font-semibold tabular-nums">{totals.oneOff.toLocaleString('cs-CZ')} Kč</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-
-                      {totals.oneOff > 0 && (
-                        <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="text-muted-foreground">Jednorázově:</span>
-                          <span className="font-medium">
-                            {totals.oneOff.toLocaleString('cs-CZ')} {lead.currency}
-                          </span>
-                        </div>
-                      )}
-
-                      {totals.totalDiscount > 0 && (
-                        <div className="flex items-center justify-between text-sm text-green-600">
-                          <span>Celková sleva na služby:</span>
-                          <span className="font-medium">
-                            -{totals.totalDiscount.toLocaleString('cs-CZ')} {lead.currency}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   )}
+                </div>
 
-                  {/* Profitability / internal costs */}
-                  {editableServices.length > 0 && totals.totalInternalCost > 0 && (
-                    <div className="p-3 rounded-lg border border-dashed space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <TrendingUp className="h-4 w-4" />
-                        <span>Interní ekonomika (odhad)</span>
-                      </div>
-
-                      {totals.serviceCosts.map((serviceCost, index) => (
-                        <div key={index} className="text-xs space-y-0.5">
-                          <div className="flex items-center justify-between text-muted-foreground">
-                            <span>{serviceCost.name}</span>
-                            <span>{serviceCost.cost.toLocaleString('cs-CZ')} Kč</span>
-                          </div>
-                          {serviceCost.roles.map((roleCost, roleIndex) => (
-                            <div key={roleIndex} className="flex items-center justify-between pl-3 text-muted-foreground/70">
-                              <span>{roleCost.role}</span>
-                              <span>{roleCost.reward.toLocaleString('cs-CZ')} Kč</span>
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-
-                      <Separator />
-
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Interní náklady celkem:</span>
-                        <span className="font-medium">{totals.totalInternalCost.toLocaleString('cs-CZ')} Kč/měs</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Odhadovaná marže:</span>
-                        <span className={`font-bold ${
-                          totals.margin >= 66 ? 'text-green-600' :
-                          totals.margin >= 50 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {totals.margin.toFixed(1)} %
-                          <span className="font-normal text-xs ml-1">
-                            ({Math.round(totals.monthlyAfterDiscount - totals.totalInternalCost).toLocaleString('cs-CZ')} Kč)
-                          </span>
+                {/* History section (edit mode only) */}
+                {isEditMode && existingOffer?.history && existingOffer.history.length > 0 && (
+                  <div className="rounded-lg border bg-muted/30 overflow-hidden">
+                    <button
+                      onClick={() => setShowHistory(!showHistory)}
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <History className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Historie změn ({existingOffer.history.length})
                         </span>
                       </div>
-                      {totals.margin < 66 && (
-                        <div className="flex items-center gap-2 p-2 rounded bg-red-500/10 border border-red-500/20 mt-1">
-                          <TrendingUp className="h-3.5 w-3.5 text-red-600 shrink-0" />
-                          <p className="text-xs text-red-700 dark:text-red-400">
-                            ⚠️ Marže je pod minimální cílovou hodnotou 66 %. Zvažte úpravu ceny nebo rozsahu služeb.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                      {showHistory ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                    </button>
+                    {showHistory && (
+                      <div className="border-t divide-y divide-border/50 max-h-[200px] overflow-y-auto">
+                        {[...existingOffer.history].reverse().map((entry, idx) => (
+                          <div key={idx} className="px-3 py-2 space-y-0.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium">{entry.summary}</span>
+                              <span className="text-[10px] text-muted-foreground tabular-nums">
+                                {new Date(entry.timestamp).toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              Celková cena: {entry.snapshot.total_price?.toLocaleString('cs-CZ')} Kč · {entry.snapshot.services?.length || 0} služeb
+                              {entry.snapshot.monthly_discount_percent ? ` · Sleva ${entry.snapshot.monthly_discount_percent}%` : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                <Separator />
-
-                {/* Audit summary */}
-                <div className="space-y-2">
-                  <Label htmlFor="audit">Výstup z auditu (volitelné)</Label>
-                  <Textarea
-                    id="audit"
-                    value={auditSummary}
-                    onChange={(e) => setAuditSummary(e.target.value)}
-                    placeholder="Na základě analýzy vašich reklamních účtů jsme identifikovali..."
-                    rows={4}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Krátké shrnutí zjištění z auditu účtů klienta
-                  </p>
-                </div>
-
-                {/* Custom note */}
-                <div className="space-y-2">
-                  <Label htmlFor="note">Poznámka pro klienta (volitelné)</Label>
-                  <Textarea
-                    id="note"
-                    value={customNote}
-                    onChange={(e) => setCustomNote(e.target.value)}
-                    placeholder="Těšíme se na spolupráci! V případě dotazů se neváhejte obrátit..."
-                    rows={3}
-                  />
-                </div>
-
-                {/* Loom video */}
-                <div className="space-y-2">
-                  <Label htmlFor="loom">Loom video k nabídce / auditu (volitelné)</Label>
-                  <Input
-                    id="loom"
-                    type="url"
-                    value={loomUrl}
-                    onChange={(e) => setLoomUrl(e.target.value)}
-                    placeholder="https://www.loom.com/share/..."
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Odkaz na Loom video, kde klientovi popisujete nabídku nebo výsledky auditu
-                  </p>
-                </div>
-
-                {/* Valid until */}
-                <div className="space-y-2">
-                  <Label htmlFor="validUntil">Platnost nabídky do</Label>
-                  <Input
-                    id="validUntil"
-                    type="date"
-                    value={validUntil || defaultValidUntil}
-                    onChange={(e) => setValidUntil(e.target.value)}
-                  />
-                </div>
               </div>
             </ScrollArea>
 
@@ -644,10 +1204,10 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess }: Creat
                 {isCreating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Vytvářím...
+                    {isEditMode ? 'Ukládám...' : 'Vytvářím...'}
                   </>
                 ) : (
-                  'Vytvořit nabídku'
+                  isEditMode ? 'Uložit změny' : 'Vytvořit nabídku'
                 )}
               </Button>
             </DialogFooter>

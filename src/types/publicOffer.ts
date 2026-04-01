@@ -1,4 +1,4 @@
-import type { ServiceTier } from './crm';
+import type { ServiceTier, LeadOfferType } from './crm';
 
 // Portfolio link for showcasing work
 export interface PortfolioLink {
@@ -6,13 +6,6 @@ export interface PortfolioLink {
   title: string;
   url: string;
   type: 'case_study' | 'presentation' | 'reference' | 'video';
-}
-
-// Structured detail section for expandable "podrobný rozpis" in service cards
-export interface ServiceDetailSection {
-  emoji: string;
-  title: string;
-  items: string[];
 }
 
 // Service snapshot for public offer
@@ -36,9 +29,32 @@ export interface PublicOfferService {
   requirements?: string[];        // What we need from client
   start_timeline?: string;        // When we can start
   detailed_sections?: ServiceDetailSection[];  // Expandable structured detail sections
+  managed_countries?: string[];         // Country codes this service covers (e.g. ['CZ', 'SK'])
+  country_variants?: CountryVariant[];  // Additional country expansions with pricing
+}
+
+// Country variant for service expansion to additional markets
+export interface CountryVariant {
+  country_code: string;   // e.g. 'SK', 'DE'
+  multiplier: number;     // default 0.5 (50% of base price)
+  price: number;          // calculated price = base_price × multiplier
+}
+
+// Structured detail section for "Více informací" expandable
+export interface ServiceDetailSection {
+  emoji: string;
+  title: string;
+  items: string[];
 }
 
 // Public offer for clients
+export interface PublicOfferHistoryEntry {
+  timestamp: string;
+  changed_by: string | null;
+  summary: string;  // e.g. "Změna cen, přidána služba Creative Boost"
+  snapshot: Omit<PublicOffer, 'history'>;  // Full snapshot of the offer at that point
+}
+
 export interface PublicOffer {
   id: string;
   lead_id: string;
@@ -47,14 +63,15 @@ export interface PublicOffer {
   website: string | null;
   contact_name: string;
   audit_summary: string | null;
-  recommendation_intro: string | null;  // Why we recommend these services
+  audit_html?: string | null;
+  recommendation_intro: string | null;
   custom_note: string | null;
-  loom_url: string | null;        // Loom video URL for embed (stored in DB notion_url column)
+  loom_url: string | null;
   services: PublicOfferService[];
   portfolio_links: PortfolioLink[];
   total_price: number;
   currency: string;
-  offer_type: 'retainer' | 'one_off'; // Derived from services' billing_type
+  offer_type: LeadOfferType;
   valid_until: string | null;
   is_active: boolean;
   viewed_at: string | null;
@@ -62,13 +79,24 @@ export interface PublicOffer {
   created_by: string | null;
   created_at: string;
   updated_at: string;
-  estimated_start_date?: string;  // When collaboration can start
-  monthly_discount_percent?: number; // % discount on monthly services (0-100)
-  discount_scope?: 'core_only' | 'all_services'; // Which monthly services the discount applies to
+  estimated_start_date?: string;
+  monthly_discount_percent?: number;
+  discount_scope?: 'core_only' | 'all_services';
+  intro_discount_percent?: number;
+  intro_discount_months?: number;
   // Contact person info (lead owner)
-  owner_name?: string;       // Name of assigned colleague
-  owner_email?: string;      // Email of assigned colleague
-  owner_phone?: string;      // Phone (optional)
+  owner_name?: string;
+  owner_email?: string;
+  owner_phone?: string;
+  // Edit history
+  history?: PublicOfferHistoryEntry[];
+  // Snapshot of offer_content_blocks at creation time
+  content_blocks_snapshot?: Record<string, {
+    section_key: string;
+    title: string | null;
+    subtitle: string | null;
+    content: Record<string, unknown>;
+  }>;
 }
 
 // Form data for creating offer

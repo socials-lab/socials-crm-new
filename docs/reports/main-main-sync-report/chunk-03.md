@@ -1,0 +1,145 @@
+# Chunk 03 Commit Sync Report
+
+Commits: **133** | Date span: **2026-03-26T16:58:34Z -> 2026-03-27T07:54:49Z**
+
+- `8fa9251` | `2026-03-26T16:58:34Z` | `gpt-engineer-app[bot]` | `Opravil otevření bannerů` | files:`1` | `+1/-0` | area:`src/pages` | impact:`Changes runtime behavior in src/pages related to this commit.`
+- `d5ffb7b` | `2026-03-26T16:58:53Z` | `gpt-engineer-app[bot]` | `Enabled lightbox via portal` | files:`1` | `+2/-2` | area:`src/pages` | impact:`Adds or enables new behavior in src/pages.`
+- `b0d4fbf` | `2026-03-26T16:59:05Z` | `gpt-engineer-app[bot]` | `Moved lightbox to portal` | files:`1` | `+3/-2` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `1921b60` | `2026-03-26T17:01:34Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+9/-55` | area:`src/pages` | impact:`Updates behavior in src/pages with targeted adjustments.`
+- `00b4d00` | `2026-03-26T17:01:47Z` | `gpt-engineer-app[bot]` | `Zrychlil náhledy videí na gridu` | files:`1` | `+9/-55` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `e4ba995` | `2026-03-26T17:03:47Z` | `gpt-engineer-app[bot]` | `Added one-time services section` | files:`1` | `+24/-4` | area:`src/pages` | impact:`Adds or enables new behavior in src/pages.`
+- `5f19869` | `2026-03-26T17:03:58Z` | `gpt-engineer-app[bot]` | `Rozdělil služby na jednorázové` | files:`1` | `+24/-4` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `f84173f` | `2026-03-26T17:04:26Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+16/-9` | area:`src/pages` | impact:`Updates behavior in src/pages with targeted adjustments.`
+- `7a9b980` | `2026-03-26T17:04:37Z` | `gpt-engineer-app[bot]` | `Restored video thumbnails` | files:`1` | `+16/-9` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `a2b7d2c` | `2026-03-26T17:11:34Z` | `gpt-engineer-app[bot]` | `Vypnul video náhledy na mobilu` | files:`1` | `+17/-11` | area:`src/pages` | impact:`Changes runtime behavior in src/pages related to this commit.`
+- `60a048f` | `2026-03-26T17:11:51Z` | `gpt-engineer-app[bot]` | `Disabled video loading on mobile` | files:`1` | `+1/-0` | area:`src/pages` | impact:`Changes runtime behavior in src/pages related to this commit.`
+- `6b1cdc5` | `2026-03-26T17:12:03Z` | `gpt-engineer-app[bot]` | `Limited video previews on mobile` | files:`1` | `+18/-11` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `14d71cf` | `2026-03-26T17:12:29Z` | `gpt-engineer-app[bot]` | `Zvětšil loga značek na mobilu` | files:`1` | `+2/-2` | area:`src/pages` | impact:`Changes runtime behavior in src/pages related to this commit.`
+- `4c2205d` | `2026-03-26T17:12:39Z` | `gpt-engineer-app[bot]` | `Zvětšil loga značek na mobil` | files:`1` | `+2/-2` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `9b37b8d` | `2026-03-27T07:02:49Z` | `gpt-engineer-app[bot]` | `Work in progress` | files:`1` | `+102/-102` | area:`bun.lock` | impact:`Changes runtime behavior in bun.lock related to this commit.`
+- `c3dc2da` | `2026-03-27T07:03:26Z` | `gpt-engineer-app[bot]` | `Added request access email template` | files:`1` | `+2/-2` | area:`src/hooks` | impact:`Adds or enables new behavior in src/hooks.`
+- `1a70e06` | `2026-03-27T07:03:35Z` | `gpt-engineer-app[bot]` | `Doplnil plný text žádosti` | files:`2` | `+104/-104` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `a587481` | `2026-03-27T07:06:05Z` | `gpt-engineer-app[bot]` | `Added qualified label to leads` | files:`3` | `+49/-9` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `f9a656a` | `2026-03-27T07:06:14Z` | `gpt-engineer-app[bot]` | `Added lead qualification labels` | files:`1` | `+2/-2` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `dcbc554` | `2026-03-27T07:06:26Z` | `gpt-engineer-app[bot]` | `Přidal štítek kvalifikace leadů` | files:`3` | `+49/-9` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `d7f2e4f` | `2026-03-27T07:06:58Z` | `gpt-engineer-app[bot]` | `Added platform label to services` | files:`1` | `+16/-5` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `33670dc` | `2026-03-27T07:07:08Z` | `gpt-engineer-app[bot]` | `Zobrazila platformy u služeb` | files:`1` | `+16/-5` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `70cea9a` | `2026-03-27T07:07:26Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+4/-1` | area:`src/components` | impact:`Updates behavior in src/components with targeted adjustments.`
+- `7143722` | `2026-03-27T07:07:36Z` | `gpt-engineer-app[bot]` | `Seřadil služby dle typu v UI` | files:`1` | `+4/-1` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `0eb64bf` | `2026-03-27T07:09:04Z` | `gpt-engineer-app[bot]` | `Implemented Creative Boost pricing logic` | files:`2` | `+164/-40` | area:`src/components, src/types` | impact:`Adds or enables new behavior in src/components, src/types.`
+- `0459a63` | `2026-03-27T07:09:17Z` | `gpt-engineer-app[bot]` | `Added Creative Boost lead pricing` | files:`2` | `+164/-40` | area:`repo` | impact:`Adds or enables new behavior in repo.`
+- `377f6f6` | `2026-03-27T07:10:43Z` | `gpt-engineer-app[bot]` | `Fixed Creative Boost profit calc` | files:`1` | `+4/-1` | area:`src/utils` | impact:`Fixes behavior in src/utils to improve reliability.`
+- `a5112cc` | `2026-03-27T07:10:54Z` | `gpt-engineer-app[bot]` | `Fixed Creative Boost profit math` | files:`1` | `+4/-1` | area:`repo` | impact:`Fixes behavior in repo to improve reliability.`
+- `3c5b370` | `2026-03-27T07:12:11Z` | `gpt-engineer-app[bot]` | `Upravila slevu v CreateOffer` | files:`1` | `+78/-90` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `7dd9302` | `2026-03-27T07:12:22Z` | `gpt-engineer-app[bot]` | `Přesunula slevu do nákladů` | files:`1` | `+78/-90` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `65d6ade` | `2026-03-27T07:12:57Z` | `gpt-engineer-app[bot]` | `Přidal slevu na 3 měsíce` | files:`1` | `+2/-0` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `b8ee680` | `2026-03-27T07:13:07Z` | `gpt-engineer-app[bot]` | `Přidala nastavení intro slevy` | files:`1` | `+4/-0` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `cb1fbcd` | `2026-03-27T07:13:22Z` | `gpt-engineer-app[bot]` | `Added intro discount in offers` | files:`1` | `+2/-0` | area:`src/types` | impact:`Adds or enables new behavior in src/types.`
+- `82659dc` | `2026-03-27T07:13:39Z` | `gpt-engineer-app[bot]` | `Added intro discount to offers` | files:`1` | `+44/-0` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `2f5322f` | `2026-03-27T07:13:50Z` | `gpt-engineer-app[bot]` | `Přidala intro slevu v nabídce` | files:`2` | `+52/-0` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `297d84e` | `2026-03-27T07:14:30Z` | `gpt-engineer-app[bot]` | `Skrýl sloupec Firma v nabídce` | files:`1` | `+0/-9` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `bc62616` | `2026-03-27T07:14:39Z` | `gpt-engineer-app[bot]` | `Removed firma box in dialog` | files:`1` | `+0/-9` | area:`repo` | impact:`Removes behavior and code paths in repo.`
+- `46de1af` | `2026-03-27T07:15:04Z` | `gpt-engineer-app[bot]` | `Opravil výpočet marže po slevě` | files:`1` | `+1/-1` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `df43365` | `2026-03-27T07:15:28Z` | `gpt-engineer-app[bot]` | `Opravena marže po slevě` | files:`1` | `+4/-0` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `5090442` | `2026-03-27T07:15:35Z` | `gpt-engineer-app[bot]` | `Zahrnulo intro slevu do marže` | files:`1` | `+1/-1` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `78a551f` | `2026-03-27T07:15:51Z` | `gpt-engineer-app[bot]` | `Includovala marži při slevě` | files:`1` | `+13/-2` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `a72c6e3` | `2026-03-27T07:16:03Z` | `gpt-engineer-app[bot]` | `Fixed margin for discounts` | files:`1` | `+19/-4` | area:`repo` | impact:`Fixes behavior in repo to improve reliability.`
+- `adcb9a3` | `2026-03-27T07:16:33Z` | `gpt-engineer-app[bot]` | `Zavřel karty služeb ve výběru` | files:`1` | `+13/-2` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `d9e3e0e` | `2026-03-27T07:16:44Z` | `gpt-engineer-app[bot]` | `Defaultně sbalil službu karty` | files:`1` | `+1/-0` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `c2f897e` | `2026-03-27T07:16:56Z` | `gpt-engineer-app[bot]` | `Collapsed service cards by default` | files:`1` | `+14/-2` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `243c35a` | `2026-03-27T07:17:59Z` | `gpt-engineer-app[bot]` | `Added offer edit with history` | files:`1` | `+13/-4` | area:`src/types` | impact:`Adds or enables new behavior in src/types.`
+- `569057e` | `2026-03-27T07:18:09Z` | `gpt-engineer-app[bot]` | `Added offer edit with history` | files:`1` | `+32/-0` | area:`src/data` | impact:`Adds or enables new behavior in src/data.`
+- `19b8748` | `2026-03-27T07:18:38Z` | `gpt-engineer-app[bot]` | `Added offer editing with history` | files:`1` | `+1/-1` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `1b12a25` | `2026-03-27T07:18:55Z` | `gpt-engineer-app[bot]` | `Added offer history & re-edit` | files:`1` | `+5/-2` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `9fd67ff` | `2026-03-27T07:19:19Z` | `gpt-engineer-app[bot]` | `Added offer edit with history` | files:`1` | `+20/-2` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `59c33cf` | `2026-03-27T07:19:47Z` | `gpt-engineer-app[bot]` | `Added offer edit with history` | files:`1` | `+76/-46` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `6861c2f` | `2026-03-27T07:20:00Z` | `gpt-engineer-app[bot]` | `Added offer editing with history` | files:`1` | `+3/-1` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `715a788` | `2026-03-27T07:20:18Z` | `gpt-engineer-app[bot]` | `Added offer edit with history` | files:`1` | `+5/-5` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `22497ef` | `2026-03-27T07:20:39Z` | `gpt-engineer-app[bot]` | `Added offer edit with history` | files:`1` | `+35/-0` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `ed68522` | `2026-03-27T07:21:11Z` | `gpt-engineer-app[bot]` | `Added offer edit with history` | files:`1` | `+3/-0` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `70edb88` | `2026-03-27T07:21:28Z` | `gpt-engineer-app[bot]` | `Added offer edit with history` | files:`1` | `+30/-8` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `09c31ad` | `2026-03-27T07:21:40Z` | `gpt-engineer-app[bot]` | `Added offer edit with history` | files:`1` | `+5/-1` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `5e85112` | `2026-03-27T07:22:05Z` | `gpt-engineer-app[bot]` | `Added offer edit with history` | files:`4` | `+228/-70` | area:`repo` | impact:`Adds or enables new behavior in repo.`
+- `c5ffc3c` | `2026-03-27T07:22:50Z` | `gpt-engineer-app[bot]` | `Adjusted margin for intro discount months` | files:`1` | `+87/-33` | area:`src/components` | impact:`Updates behavior in src/components with targeted adjustments.`
+- `40faf33` | `2026-03-27T07:23:01Z` | `gpt-engineer-app[bot]` | `Zobrazil dvojí marži období` | files:`1` | `+87/-33` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `4dc5593` | `2026-03-27T07:23:48Z` | `gpt-engineer-app[bot]` | `Přidal platformy do seznamu služeb` | files:`1` | `+20/-6` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `192c0ea` | `2026-03-27T07:24:03Z` | `gpt-engineer-app[bot]` | `Zobrazoval platformy u služeb` | files:`1` | `+20/-6` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `7ac6b37` | `2026-03-27T07:24:35Z` | `gpt-engineer-app[bot]` | `Zarovnal cenu služby doprava` | files:`1` | `+3/-5` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `cc09527` | `2026-03-27T07:24:43Z` | `gpt-engineer-app[bot]` | `Zarovnala cenu na kartě služby` | files:`1` | `+3/-5` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `8d80200` | `2026-03-27T07:25:54Z` | `gpt-engineer-app[bot]` | `Upřesnil text onboarding mailu` | files:`1` | `+1/-1` | area:`src/hooks` | impact:`Changes runtime behavior in src/hooks related to this commit.`
+- `e6084a0` | `2026-03-27T07:26:04Z` | `gpt-engineer-app[bot]` | `Upravil onboarding email text` | files:`1` | `+1/-1` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `ed2c45f` | `2026-03-27T07:26:33Z` | `gpt-engineer-app[bot]` | `Zamezila kombinaci slev` | files:`1` | `+10/-2` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `8d3e0ff` | `2026-03-27T07:26:42Z` | `gpt-engineer-app[bot]` | `Enforced mutually exclusive discounts` | files:`1` | `+2/-2` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `3d77ba9` | `2026-03-27T07:26:53Z` | `gpt-engineer-app[bot]` | `Zajistil vzájemnou exkluzi slev` | files:`1` | `+12/-4` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `2e84aa7` | `2026-03-27T07:27:42Z` | `gpt-engineer-app[bot]` | `Added configurable platform list` | files:`1` | `+6/-6` | area:`src/constants` | impact:`Adds or enables new behavior in src/constants.`
+- `fad88f2` | `2026-03-27T07:27:52Z` | `gpt-engineer-app[bot]` | `Added editable service platforms` | files:`1` | `+3/-1` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `539dad8` | `2026-03-27T07:28:03Z` | `gpt-engineer-app[bot]` | `Added editable service platforms` | files:`1` | `+23/-2` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `b70ef0d` | `2026-03-27T07:28:15Z` | `gpt-engineer-app[bot]` | `Made service platforms editable` | files:`1` | `+36/-1` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `59bd59b` | `2026-03-27T07:28:24Z` | `gpt-engineer-app[bot]` | `Upravoval platformy u služeb` | files:`1` | `+1/-0` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `6507607` | `2026-03-27T07:28:48Z` | `gpt-engineer-app[bot]` | `Added editable service platforms` | files:`1` | `+8/-1` | area:`src/pages` | impact:`Adds or enables new behavior in src/pages.`
+- `36b5a21` | `2026-03-27T07:28:59Z` | `gpt-engineer-app[bot]` | `Made service platforms editable` | files:`1` | `+6/-0` | area:`src/pages` | impact:`Changes runtime behavior in src/pages related to this commit.`
+- `77037d0` | `2026-03-27T07:29:11Z` | `gpt-engineer-app[bot]` | `Added editable service platforms` | files:`1` | `+12/-2` | area:`src/constants` | impact:`Adds or enables new behavior in src/constants.`
+- `d47eca6` | `2026-03-27T07:29:22Z` | `gpt-engineer-app[bot]` | `Added editable service platforms` | files:`3` | `+94/-12` | area:`repo` | impact:`Adds or enables new behavior in repo.`
+- `5b4c5d7` | `2026-03-27T07:30:13Z` | `gpt-engineer-app[bot]` | `Zavedla waterfall výpočet slev` | files:`1` | `+3/-4` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `1067f41` | `2026-03-27T07:30:23Z` | `gpt-engineer-app[bot]` | `Povolil kombinaci slev waterfall` | files:`1` | `+3/-4` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `3689ce3` | `2026-03-27T07:31:24Z` | `gpt-engineer-app[bot]` | `Napojil slevy na PublicOffer` | files:`1` | `+50/-24` | area:`src/pages` | impact:`Changes runtime behavior in src/pages related to this commit.`
+- `34e079a` | `2026-03-27T07:31:35Z` | `gpt-engineer-app[bot]` | `Napojil všechny slevy v souhrnu` | files:`1` | `+50/-24` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `b27bc51` | `2026-03-27T07:32:48Z` | `gpt-engineer-app[bot]` | `Umožnil počítat Creative Boost dle kreditů` | files:`1` | `+2/-0` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `7b91deb` | `2026-03-27T07:32:54Z` | `gpt-engineer-app[bot]` | `Made CB pricing configurable` | files:`1` | `+3/-3` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `44f8362` | `2026-03-27T07:32:58Z` | `gpt-engineer-app[bot]` | `Made CB credits editable` | files:`1` | `+5/-5` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `8327cd4` | `2026-03-27T07:33:08Z` | `gpt-engineer-app[bot]` | `Made CB price per credit configurable` | files:`1` | `+1/-1` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `d9f503a` | `2026-03-27T07:33:25Z` | `gpt-engineer-app[bot]` | `Made CB credits configurable` | files:`1` | `+41/-1` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `5b07fe9` | `2026-03-27T07:33:43Z` | `gpt-engineer-app[bot]` | `Přidal konfiguraci CB kreditů` | files:`1` | `+52/-10` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `ccbaed6` | `2026-03-27T07:34:19Z` | `gpt-engineer-app[bot]` | `Added editable internal reward` | files:`1` | `+2/-0` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `10bb172` | `2026-03-27T07:34:34Z` | `gpt-engineer-app[bot]` | `Added editable colleague rewards` | files:`1` | `+28/-1` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `6c0bf03` | `2026-03-27T07:34:54Z` | `gpt-engineer-app[bot]` | `Added editable internal rewards` | files:`1` | `+11/-23` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `9e0f6d4` | `2026-03-27T07:35:04Z` | `gpt-engineer-app[bot]` | `Added editable internal rewards` | files:`1` | `+1/-1` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `f8ddb98` | `2026-03-27T07:35:25Z` | `gpt-engineer-app[bot]` | `Added editable internal rewards` | files:`1` | `+57/-6` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `0f3c3a6` | `2026-03-27T07:35:44Z` | `gpt-engineer-app[bot]` | `Přidal možnost úpravy odměn` | files:`1` | `+25/-3` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `deb7459` | `2026-03-27T07:36:01Z` | `gpt-engineer-app[bot]` | `Povolil úpravu odměn kolegů` | files:`1` | `+121/-31` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `6098bdf` | `2026-03-27T07:36:31Z` | `gpt-engineer-app[bot]` | `Added conversion summary card` | files:`1` | `+1/-1` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `ec8d446` | `2026-03-27T07:37:05Z` | `gpt-engineer-app[bot]` | `Added conversion summary card` | files:`1` | `+118/-29` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `f410933` | `2026-03-27T07:37:23Z` | `gpt-engineer-app[bot]` | `Added conversion summary card` | files:`1` | `+119/-30` | area:`repo` | impact:`Adds or enables new behavior in repo.`
+- `675c1f7` | `2026-03-27T07:38:41Z` | `gpt-engineer-app[bot]` | `Zobrazil intro slevu po převodu` | files:`1` | `+1/-1` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `1e7b991` | `2026-03-27T07:38:50Z` | `gpt-engineer-app[bot]` | `Zobrazil intro slevu po převodu` | files:`1` | `+1/-0` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `53e0044` | `2026-03-27T07:39:06Z` | `gpt-engineer-app[bot]` | `Propagoval intro slevu při konverzi` | files:`1` | `+26/-11` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `8d1f0bc` | `2026-03-27T07:39:32Z` | `gpt-engineer-app[bot]` | `Propagoval intro slevu při převodu` | files:`1` | `+62/-21` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `640ae8b` | `2026-03-27T07:39:59Z` | `gpt-engineer-app[bot]` | `Zobrazil a promítl úvodní slevu` | files:`1` | `+90/-33` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `84de8b6` | `2026-03-27T07:41:33Z` | `gpt-engineer-app[bot]` | `Fixed Creative Boost pricing UI` | files:`1` | `+91/-89` | area:`src/components` | impact:`Fixes behavior in src/components to improve reliability.`
+- `1278915` | `2026-03-27T07:41:44Z` | `gpt-engineer-app[bot]` | `Unhid Creative Boost config` | files:`1` | `+91/-89` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `31f7dfc` | `2026-03-27T07:42:30Z` | `gpt-engineer-app[bot]` | `Added conversion status badges` | files:`1` | `+1/-1` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `cdf9197` | `2026-03-27T07:42:40Z` | `gpt-engineer-app[bot]` | `Show onboarding in lead summary` | files:`1` | `+9/-6` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `c845018` | `2026-03-27T07:43:03Z` | `gpt-engineer-app[bot]` | `Added onboarding status + markers` | files:`1` | `+51/-2` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `b53e778` | `2026-03-27T07:43:16Z` | `gpt-engineer-app[bot]` | `Added onboarding info to summary` | files:`1` | `+9/-1` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `1fca073` | `2026-03-27T07:43:31Z` | `gpt-engineer-app[bot]` | `Zobrazil stav onboarding formuláře` | files:`1` | `+6/-1` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `f8cae85` | `2026-03-27T07:43:47Z` | `gpt-engineer-app[bot]` | `Přidal onboarding do převodu` | files:`1` | `+76/-11` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `c934dd8` | `2026-03-27T07:44:55Z` | `gpt-engineer-app[bot]` | `Zobrazil potvrzení smlouvy v UI` | files:`2` | `+189/-1` | area:`src/components, src/types` | impact:`Changes runtime behavior in src/components, src/types related to this commit.`
+- `6711db4` | `2026-03-27T07:45:08Z` | `gpt-engineer-app[bot]` | `Přidal DigiSign dialog do leadu` | files:`1` | `+2/-0` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `cdf2e6b` | `2026-03-27T07:45:16Z` | `gpt-engineer-app[bot]` | `Přidáno DigiSign do smlouvy` | files:`1` | `+1/-0` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `b6d64a9` | `2026-03-27T07:45:29Z` | `gpt-engineer-app[bot]` | `Přidal DigiSign dialog smlouvy` | files:`1` | `+20/-4` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `9b12469` | `2026-03-27T07:45:37Z` | `gpt-engineer-app[bot]` | `Added DigiSign contract dialog` | files:`1` | `+1/-0` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `a943f47` | `2026-03-27T07:45:49Z` | `gpt-engineer-app[bot]` | `Added DigiSign contract dialog` | files:`1` | `+1/-0` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `dcdde98` | `2026-03-27T07:45:58Z` | `gpt-engineer-app[bot]` | `Added DigiSign contract dialog` | files:`1` | `+1/-0` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `30a8bbf` | `2026-03-27T07:46:09Z` | `gpt-engineer-app[bot]` | `Added DigiSign contract dialog` | files:`1` | `+1/-0` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `4951b41` | `2026-03-27T07:46:19Z` | `gpt-engineer-app[bot]` | `Added DigiSign contract dialog` | files:`1` | `+15/-0` | area:`src/components` | impact:`Adds or enables new behavior in src/components.`
+- `9134bdd` | `2026-03-27T07:46:43Z` | `gpt-engineer-app[bot]` | `Added DigiSign contract dialog` | files:`1` | `+4/-0` | area:`src/hooks` | impact:`Adds or enables new behavior in src/hooks.`
+- `e6dd4f1` | `2026-03-27T07:46:57Z` | `gpt-engineer-app[bot]` | `Added DigiSign contract dialog` | files:`1` | `+2/-0` | area:`src/hooks` | impact:`Adds or enables new behavior in src/hooks.`
+- `561fe75` | `2026-03-27T07:47:24Z` | `gpt-engineer-app[bot]` | `Přidala DigiSign smlouvu do leadů` | files:`6` | `+237/-5` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `521258e` | `2026-03-27T07:48:57Z` | `gpt-engineer-app[bot]` | `Zarovnala slevy v formuláři` | files:`1` | `+17/-3` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `a3efcd5` | `2026-03-27T07:49:10Z` | `gpt-engineer-app[bot]` | `Extended offer sync to lead` | files:`1` | `+30/-3` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `3ada010` | `2026-03-27T07:49:45Z` | `gpt-engineer-app[bot]` | `Propagated offer discounts` | files:`1` | `+17/-4` | area:`src/pages` | impact:`Changes runtime behavior in src/pages related to this commit.`
+- `11f3701` | `2026-03-27T07:50:01Z` | `gpt-engineer-app[bot]` | `Synced nabídky do onboarding formuláře` | files:`1` | `+40/-23` | area:`src/pages` | impact:`Changes runtime behavior in src/pages related to this commit.`
+- `d6dd1fb` | `2026-03-27T07:50:27Z` | `gpt-engineer-app[bot]` | `Synced intro slevy do onboarding` | files:`1` | `+45/-11` | area:`src/pages` | impact:`Changes runtime behavior in src/pages related to this commit.`
+- `f529690` | `2026-03-27T07:50:54Z` | `gpt-engineer-app[bot]` | `Sync slev do onboarding formuláře` | files:`3` | `+147/-42` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `3e08fd5` | `2026-03-27T07:53:02Z` | `gpt-engineer-app[bot]` | `Rozdělil převodní formulář na sekce` | files:`1` | `+125/-96` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `b67a4e0` | `2026-03-27T07:53:15Z` | `gpt-engineer-app[bot]` | `Rozdělil převodní formulář` | files:`1` | `+125/-96` | area:`repo` | impact:`Changes runtime behavior in repo related to this commit.`
+- `d977c62` | `2026-03-27T07:54:22Z` | `gpt-engineer-app[bot]` | `Zarovnala Creative Boost cenu` | files:`1` | `+37/-2` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+- `fa36f22` | `2026-03-27T07:54:49Z` | `gpt-engineer-app[bot]` | `Ensured CB price = credits×rate` | files:`1` | `+58/-23` | area:`src/components` | impact:`Changes runtime behavior in src/components related to this commit.`
+
+## Top themes in this chunk
+- Most activity concentrated in `src/components, src/pages, src/hooks, src/types` with recurring cross-cutting changes.
+- Mixed-purpose commits appear **76** times in this range.
+- Feature-oriented commits appear **48** times in this range.
+- Update/improvement commits appear **4** times in this range.
+- Fix-oriented commits appear **4** times in this range.
+- Removal/simplification commits appear **1** times in this range.

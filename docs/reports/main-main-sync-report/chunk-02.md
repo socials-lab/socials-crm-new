@@ -1,0 +1,146 @@
+# Chunk 02 - main..main sync report
+
+- Commit count: **132**
+- Date span: **2026-03-26T13:15:15Z -> 2026-03-26T16:58:53Z**
+
+- `9e07e7b` | `2026-03-26T13:15:15Z` | `gpt-engineer-app[bot]` | `Centered CTA and removed price` | files:`1` | `+15/-19` | area:`src` | impact:`Introduces "Centered CTA and removed price" updates in src.`
+- `03b4aa4` | `2026-03-26T13:15:25Z` | `gpt-engineer-app[bot]` | `Removed price from mobile CTA` | files:`1` | `+15/-19` | area:`src` | impact:`Introduces "Removed price from mobile CTA" updates in src.`
+- `ff830eb` | `2026-03-26T13:15:52Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `79c788d` | `2026-03-26T13:16:08Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `5d3bbee` | `2026-03-26T13:16:14Z` | `gpt-engineer-app[bot]` | `Fast Visual Edit` | files:`1` | `+2/-2` | area:`src` | impact:`Introduces "Fast Visual Edit" updates in src.`
+- `eb724a4` | `2026-03-26T13:17:47Z` | `gpt-engineer-app[bot]` | `Improved contact text contrast` | files:`1` | `+2/-2` | area:`src` | impact:`Introduces "Improved contact text contrast" updates in src.`
+- `c342981` | `2026-03-26T13:17:59Z` | `gpt-engineer-app[bot]` | `Updated contact text color` | files:`1` | `+2/-2` | area:`src` | impact:`Introduces "Updated contact text color" updates in src.`
+- `deb0cef` | `2026-03-26T13:20:02Z` | `gpt-engineer-app[bot]` | `Rozdělila portfolio na bannery` | files:`1` | `+64/-51` | area:`src` | impact:`Introduces "Rozdělila portfolio na bannery" updates in src.`
+- `ed7380d` | `2026-03-26T13:20:14Z` | `gpt-engineer-app[bot]` | `Split portfolio into banners/videos` | files:`1` | `+64/-51` | area:`src` | impact:`Introduces "Split portfolio into banners/videos" updates in src.`
+- `73dc4fc` | `2026-03-26T13:21:01Z` | `gpt-engineer-app[bot]` | `Provedl audit služeb v nabídce` | files:`1` | `+20/-4` | area:`src` | impact:`Introduces "Provedl audit služeb v nabídce" updates in src.`
+- `7226dee` | `2026-03-26T13:21:18Z` | `gpt-engineer-app[bot]` | `Zvýraznila a rozdělila služby` | files:`1` | `+20/-10` | area:`src` | impact:`Introduces "Zvýraznila a rozdělila služby" updates in src.`
+- `795a100` | `2026-03-26T13:21:32Z` | `gpt-engineer-app[bot]` | `Zvýraznil a oddělil služby` | files:`1` | `+2/-0` | area:`src` | impact:`Introduces "Zvýraznil a oddělil služby" updates in src.`
+- `ef5dad7` | `2026-03-26T13:21:44Z` | `gpt-engineer-app[bot]` | `Vylepšila služby a rozklik` | files:`1` | `+42/-14` | area:`src` | impact:`Introduces "Vylepšila služby a rozklik" updates in src.`
+- `1414fde` | `2026-03-26T13:22:12Z` | `gpt-engineer-app[bot]` | `Zvedla náhled reportu o 50 %` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Zvedla náhled reportu o 50 %" updates in src.`
+- `e9479cd` | `2026-03-26T13:22:21Z` | `gpt-engineer-app[bot]` | `Zvýšila náhled reportu o 50 %` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Zvýšila náhled reportu o 50 %" updates in src.`
+- `351d9a6` | `2026-03-26T13:22:53Z` | `gpt-engineer-app[bot]` | `Searched headings for emojis` | files:`1` | `+5/-5` | area:`src` | impact:`Introduces "Searched headings for emojis" updates in src.`
+- `c4e933d` | `2026-03-26T13:23:02Z` | `gpt-engineer-app[bot]` | `Přidal emoji k nadpisům` | files:`1` | `+5/-5` | area:`src` | impact:`Introduces "Přidal emoji k nadpisům" updates in src.`
+- `9d0df5e` | `2026-03-26T13:23:47Z` | `gpt-engineer-app[bot]` | `Fixed undefined Star import` | files:`1` | `+2/-2` | area:`src` | impact:`Introduces "Fixed undefined Star import" updates in src.`
+- `5f1f092` | `2026-03-26T13:23:54Z` | `gpt-engineer-app[bot]` | `Fixed Star icon runtime error` | files:`1` | `+2/-2` | area:`src` | impact:`Introduces "Fixed Star icon runtime error" updates in src.`
+- `57e1efe` | `2026-03-26T13:24:03Z` | `gpt-engineer-app[bot]` | `Fixed undefined Star icon` | files:`1` | `+4/-4` | area:`src` | impact:`Introduces "Fixed undefined Star icon" updates in src.`
+- `c9b2d6c` | `2026-03-26T13:24:21Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `390df98` | `2026-03-26T13:24:33Z` | `gpt-engineer-app[bot]` | `Fixed unreadable green hint text` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Fixed unreadable green hint text" updates in src.`
+- `ed69963` | `2026-03-26T13:25:11Z` | `gpt-engineer-app[bot]` | `Zvětšila mezery mezi sekcemi` | files:`1` | `+1/-2` | area:`src` | impact:`Introduces "Zvětšila mezery mezi sekcemi" updates in src.`
+- `d6e2971` | `2026-03-26T13:25:31Z` | `gpt-engineer-app[bot]` | `Added space before onboarding` | files:`1` | `+1/-2` | area:`src` | impact:`Introduces "Added space before onboarding" updates in src.`
+- `268b91b` | `2026-03-26T13:26:11Z` | `gpt-engineer-app[bot]` | `Made pricing summary more bold` | files:`1` | `+21/-14` | area:`src` | impact:`Introduces "Made pricing summary more bold" updates in src.`
+- `156e5ed` | `2026-03-26T13:26:21Z` | `gpt-engineer-app[bot]` | `Vylepšil výraznost cenového boxu` | files:`1` | `+21/-14` | area:`src` | impact:`Introduces "Vylepšil výraznost cenového boxu" updates in src.`
+- `6b94d16` | `2026-03-26T13:28:04Z` | `gpt-engineer-app[bot]` | `Přidala sekci Co jsme zjistili` | files:`1` | `+41/-8` | area:`src` | impact:`Introduces "Přidala sekci Co jsme zjistili" updates in src.`
+- `b4406f3` | `2026-03-26T13:28:17Z` | `gpt-engineer-app[bot]` | `Added audit findings section` | files:`1` | `+41/-8` | area:`src` | impact:`Introduces "Added audit findings section" updates in src.`
+- `dfff5a2` | `2026-03-26T13:31:21Z` | `gpt-engineer-app[bot]` | `Added editable audit findings` | files:`1` | `+22/-5` | area:`src` | impact:`Introduces "Added editable audit findings" updates in src.`
+- `9d1788b` | `2026-03-26T13:31:34Z` | `gpt-engineer-app[bot]` | `Added editable audit texts` | files:`1` | `+22/-5` | area:`src` | impact:`Introduces "Added editable audit texts" updates in src.`
+- `aa490f3` | `2026-03-26T13:33:00Z` | `gpt-engineer-app[bot]` | `Added spacing to mobile CTA` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Added spacing to mobile CTA" updates in src.`
+- `84d5b4f` | `2026-03-26T13:33:11Z` | `gpt-engineer-app[bot]` | `Added bottom spacing to CTA` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Added bottom spacing to CTA" updates in src.`
+- `85192d4` | `2026-03-26T13:33:40Z` | `gpt-engineer-app[bot]` | `Doplnil emoji do odkazů` | files:`1` | `+3/-3` | area:`src` | impact:`Introduces "Doplnil emoji do odkazů" updates in src.`
+- `7dc8d22` | `2026-03-26T13:33:49Z` | `gpt-engineer-app[bot]` | `Added emojis to why-us links` | files:`1` | `+3/-3` | area:`src` | impact:`Introduces "Added emojis to why-us links" updates in src.`
+- `bca7444` | `2026-03-26T13:34:14Z` | `gpt-engineer-app[bot]` | `Extended demo report iframe` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Extended demo report iframe" updates in src.`
+- `6f77258` | `2026-03-26T13:34:24Z` | `gpt-engineer-app[bot]` | `Zvětšil interaktivní iframe` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Zvětšil interaktivní iframe" updates in src.`
+- `78910c4` | `2026-03-26T13:35:10Z` | `gpt-engineer-app[bot]` | `Make price fit on one line` | files:`1` | `+6/-6` | area:`src` | impact:`Introduces "Make price fit on one line" updates in src.`
+- `c6d6415` | `2026-03-26T13:35:20Z` | `gpt-engineer-app[bot]` | `Adjusted mobile price wrapping` | files:`1` | `+6/-6` | area:`src` | impact:`Introduces "Adjusted mobile price wrapping" updates in src.`
+- `236ca29` | `2026-03-26T13:36:03Z` | `gpt-engineer-app[bot]` | `Vylepšila sekci „Pojďme do toho“` | files:`1` | `+11/-8` | area:`src` | impact:`Introduces "Vylepšila sekci „Pojďme do toho“" updates in src.`
+- `ad9b804` | `2026-03-26T13:36:14Z` | `gpt-engineer-app[bot]` | `Zvýraznil sekci Pojďme do toho` | files:`1` | `+11/-8` | area:`src` | impact:`Introduces "Zvýraznil sekci Pojďme do toho" updates in src.`
+- `63c0dae` | `2026-03-26T13:36:52Z` | `gpt-engineer-app[bot]` | `Upřesnil text grafiky v CTA` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Upřesnil text grafiky v CTA" updates in src.`
+- `ad09538` | `2026-03-26T13:37:01Z` | `gpt-engineer-app[bot]` | `Přepsal text v grafice sekci` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Přepsal text v grafice sekci" updates in src.`
+- `42084d7` | `2026-03-26T13:38:41Z` | `gpt-engineer-app[bot]` | `Changes` | files:`3` | `+0/-0` | area:`public` | impact:`Introduces "Changes" updates in public.`
+- `14f0da4` | `2026-03-26T13:39:00Z` | `gpt-engineer-app[bot]` | `Added portfolio video assets` | files:`1` | `+3/-0` | area:`src` | impact:`Introduces "Added portfolio video assets" updates in src.`
+- `20d33e3` | `2026-03-26T13:39:10Z` | `gpt-engineer-app[bot]` | `Added new portfolio videos` | files:`4` | `+3/-0` | area:`public, src` | impact:`Introduces "Added new portfolio videos" updates in public, src.`
+- `b3077db` | `2026-03-26T13:39:59Z` | `gpt-engineer-app[bot]` | `Zkontroloval zlom ceny a měny` | files:`1` | `+4/-4` | area:`src` | impact:`Introduces "Zkontroloval zlom ceny a měny" updates in src.`
+- `96f616e` | `2026-03-26T13:40:07Z` | `gpt-engineer-app[bot]` | `Added nowrap to service price` | files:`1` | `+4/-4` | area:`src` | impact:`Introduces "Added nowrap to service price" updates in src.`
+- `53ac180` | `2026-03-26T13:41:34Z` | `gpt-engineer-app[bot]` | `Zmenšil layout karet na mobilu` | files:`1` | `+76/-61` | area:`src` | impact:`Introduces "Zmenšil layout karet na mobilu" updates in src.`
+- `c71a07f` | `2026-03-26T13:41:45Z` | `gpt-engineer-app[bot]` | `Zpřehlednil mobilní kartu` | files:`1` | `+76/-61` | area:`src` | impact:`Introduces "Zpřehlednil mobilní kartu" updates in src.`
+- `f80ce29` | `2026-03-26T13:42:38Z` | `gpt-engineer-app[bot]` | `Upravil sekci nabídky na míro` | files:`1` | `+11/-3` | area:`src` | impact:`Introduces "Upravil sekci nabídky na míro" updates in src.`
+- `14d9c08` | `2026-03-26T13:42:48Z` | `gpt-engineer-app[bot]` | `Přepsal sekci služeb na míru` | files:`1` | `+11/-3` | area:`src` | impact:`Introduces "Přepsal sekci služeb na míru" updates in src.`
+- `2509be9` | `2026-03-26T13:46:33Z` | `gpt-engineer-app[bot]` | `Removed “Bez závazků” benefit text` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Removed “Bez závazků” benefit text" updates in src.`
+- `69bb7a8` | `2026-03-26T13:46:39Z` | `gpt-engineer-app[bot]` | `Removed minimum commitment text` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Removed minimum commitment text" updates in src.`
+- `c4cd271` | `2026-03-26T13:47:01Z` | `gpt-engineer-app[bot]` | `Zvětšil logo v hlavičce` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Zvětšil logo v hlavičce" updates in src.`
+- `27beb5e` | `2026-03-26T13:47:08Z` | `gpt-engineer-app[bot]` | `Zvětšil logo v hlavičce` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Zvětšil logo v hlavičce" updates in src.`
+- `39fc5fd` | `2026-03-26T13:47:36Z` | `gpt-engineer-app[bot]` | `Provedl kontrolu video tagů` | files:`1` | `+2/-1` | area:`src` | impact:`Introduces "Provedl kontrolu video tagů" updates in src.`
+- `b6b140b` | `2026-03-26T13:47:45Z` | `gpt-engineer-app[bot]` | `Zrychlil načítání videí` | files:`1` | `+2/-1` | area:`src` | impact:`Introduces "Zrychlil načítání videí" updates in src.`
+- `f78889b` | `2026-03-26T13:49:26Z` | `gpt-engineer-app[bot]` | `Updated report embed link` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Updated report embed link" updates in src.`
+- `862cadd` | `2026-03-26T13:49:36Z` | `gpt-engineer-app[bot]` | `Updated demo report shared link` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Updated demo report shared link" updates in src.`
+- `066aabf` | `2026-03-26T15:56:54Z` | `gpt-engineer-app[bot]` | `Změnil text Připraveno pro` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Změnil text Připraveno pro" updates in src.`
+- `004374b` | `2026-03-26T15:57:02Z` | `gpt-engineer-app[bot]` | `Změnil text Připraveno pro` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Změnil text Připraveno pro" updates in src.`
+- `2ea1008` | `2026-03-26T15:58:11Z` | `gpt-engineer-app[bot]` | `Changes` | files:`8` | `+0/-0` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `002a3e5` | `2026-03-26T15:58:38Z` | `gpt-engineer-app[bot]` | `Added cert badge images` | files:`1` | `+19/-0` | area:`src` | impact:`Introduces "Added cert badge images" updates in src.`
+- `4907694` | `2026-03-26T15:58:49Z` | `gpt-engineer-app[bot]` | `Added cert logos to offer` | files:`9` | `+19/-0` | area:`src` | impact:`Introduces "Added cert logos to offer" updates in src.`
+- `2d60e2d` | `2026-03-26T16:04:47Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `9a3100c` | `2026-03-26T16:04:55Z` | `gpt-engineer-app[bot]` | `Seřadila certifikace v sekci` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Seřadila certifikace v sekci" updates in src.`
+- `d675ccf` | `2026-03-26T16:05:39Z` | `gpt-engineer-app[bot]` | `Opravil viditelnost cert badge` | files:`1` | `+3/-3` | area:`src` | impact:`Introduces "Opravil viditelnost cert badge" updates in src.`
+- `d8ea675` | `2026-03-26T16:05:48Z` | `gpt-engineer-app[bot]` | `Zvýraznil certifikační loga` | files:`1` | `+3/-3` | area:`src` | impact:`Introduces "Zvýraznil certifikační loga" updates in src.`
+- `f8e670e` | `2026-03-26T16:06:31Z` | `gpt-engineer-app[bot]` | `Changes` | files:`10` | `+0/-0` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `6c250e8` | `2026-03-26T16:06:50Z` | `gpt-engineer-app[bot]` | `Added client logo strip` | files:`1` | `+21/-0` | area:`src` | impact:`Introduces "Added client logo strip" updates in src.`
+- `e35b97d` | `2026-03-26T16:07:03Z` | `gpt-engineer-app[bot]` | `Přidala sekci log klientů` | files:`11` | `+21/-0` | area:`src` | impact:`Introduces "Přidala sekci log klientů" updates in src.`
+- `1b6c12d` | `2026-03-26T16:07:29Z` | `gpt-engineer-app[bot]` | `Set dark backgrounds for logos` | files:`1` | `+4/-4` | area:`src` | impact:`Introduces "Set dark backgrounds for logos" updates in src.`
+- `4c22027` | `2026-03-26T16:07:38Z` | `gpt-engineer-app[bot]` | `Přepnul pozadí sekce log` | files:`1` | `+4/-4` | area:`src` | impact:`Introduces "Přepnul pozadí sekce log" updates in src.`
+- `bfdd0eb` | `2026-03-26T16:07:58Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+2/-2` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `27920da` | `2026-03-26T16:08:06Z` | `gpt-engineer-app[bot]` | `Zvětšila řadu klient log` | files:`1` | `+2/-2` | area:`src` | impact:`Introduces "Zvětšila řadu klient log" updates in src.`
+- `40378ca` | `2026-03-26T16:12:18Z` | `gpt-engineer-app[bot]` | `Doplnil přínosy služeb klientům` | files:`1` | `+47/-0` | area:`src` | impact:`Introduces "Doplnil přínosy služeb klientům" updates in src.`
+- `dbf5ebc` | `2026-03-26T16:12:27Z` | `gpt-engineer-app[bot]` | `Doplnil sekci benefity služeb` | files:`1` | `+47/-0` | area:`src` | impact:`Introduces "Doplnil sekci benefity služeb" updates in src.`
+- `40c6d48` | `2026-03-26T16:19:43Z` | `gpt-engineer-app[bot]` | `Upřesnila benefit sekci služeb` | files:`1` | `+5/-0` | area:`src` | impact:`Introduces "Upřesnila benefit sekci služeb" updates in src.`
+- `a72df96` | `2026-03-26T16:19:58Z` | `gpt-engineer-app[bot]` | `Přidal kartu business rozvoje` | files:`1` | `+5/-0` | area:`src` | impact:`Introduces "Přidal kartu business rozvoje" updates in src.`
+- `75d15af` | `2026-03-26T16:20:44Z` | `gpt-engineer-app[bot]` | `Set dark background for logos` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Set dark background for logos" updates in src.`
+- `5287db9` | `2026-03-26T16:20:54Z` | `gpt-engineer-app[bot]` | `Set client logos to black bg` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Set client logos to black bg" updates in src.`
+- `bc7cd88` | `2026-03-26T16:21:25Z` | `gpt-engineer-app[bot]` | `Zvětšila certifikační loga` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Zvětšila certifikační loga" updates in src.`
+- `298d650` | `2026-03-26T16:21:34Z` | `gpt-engineer-app[bot]` | `Zvětšila certifikace 2/7/8` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Zvětšila certifikace 2/7/8" updates in src.`
+- `6b0556a` | `2026-03-26T16:21:51Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `4f5b783` | `2026-03-26T16:22:01Z` | `gpt-engineer-app[bot]` | `Změnilo pozadí certifikací na černé` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Změnilo pozadí certifikací na černé" updates in src.`
+- `da96f01` | `2026-03-26T16:22:10Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `d849b06` | `2026-03-26T16:22:22Z` | `gpt-engineer-app[bot]` | `Fast Visual Edit` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Fast Visual Edit" updates in src.`
+- `0adaa5d` | `2026-03-26T16:23:59Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `95cc874` | `2026-03-26T16:24:04Z` | `gpt-engineer-app[bot]` | `Fast Visual Edit` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Fast Visual Edit" updates in src.`
+- `cdbd883` | `2026-03-26T16:24:50Z` | `gpt-engineer-app[bot]` | `Added scroll reveal animations` | files:`1` | `+37/-0` | area:`src` | impact:`Introduces "Added scroll reveal animations" updates in src.`
+- `bcd6bf2` | `2026-03-26T16:25:06Z` | `gpt-engineer-app[bot]` | `Added scroll reveal hook` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Added scroll reveal hook" updates in src.`
+- `14066f6` | `2026-03-26T16:25:20Z` | `gpt-engineer-app[bot]` | `Added scroll reveal hook` | files:`1` | `+76/-0` | area:`src` | impact:`Introduces "Added scroll reveal hook" updates in src.`
+- `9a16390` | `2026-03-26T16:25:37Z` | `gpt-engineer-app[bot]` | `Added scroll reveal animations` | files:`1` | `+18/-16` | area:`src` | impact:`Introduces "Added scroll reveal animations" updates in src.`
+- `e91ee46` | `2026-03-26T16:25:45Z` | `gpt-engineer-app[bot]` | `Added scroll reveal hook` | files:`1` | `+18/-17` | area:`src` | impact:`Introduces "Added scroll reveal hook" updates in src.`
+- `6973656` | `2026-03-26T16:25:57Z` | `gpt-engineer-app[bot]` | `Added scroll reveal hook` | files:`1` | `+33/-31` | area:`src` | impact:`Introduces "Added scroll reveal hook" updates in src.`
+- `252116d` | `2026-03-26T16:26:05Z` | `gpt-engineer-app[bot]` | `Added scroll reveal hook` | files:`1` | `+4/-3` | area:`src` | impact:`Introduces "Added scroll reveal hook" updates in src.`
+- `ce53800` | `2026-03-26T16:26:17Z` | `gpt-engineer-app[bot]` | `Added scroll reveal animations` | files:`1` | `+1/-0` | area:`src` | impact:`Introduces "Added scroll reveal animations" updates in src.`
+- `68cad87` | `2026-03-26T16:26:22Z` | `gpt-engineer-app[bot]` | `Added scroll reveal animations` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Added scroll reveal animations" updates in src.`
+- `d4af540` | `2026-03-26T16:26:37Z` | `gpt-engineer-app[bot]` | `Added scroll reveal animations` | files:`1` | `+50/-48` | area:`src` | impact:`Introduces "Added scroll reveal animations" updates in src.`
+- `fb48f10` | `2026-03-26T16:27:23Z` | `gpt-engineer-app[bot]` | `Added scroll reveal effects` | files:`1` | `+6/-0` | area:`src` | impact:`Introduces "Added scroll reveal effects" updates in src.`
+- `3aa1009` | `2026-03-26T16:27:43Z` | `gpt-engineer-app[bot]` | `Added scroll reveal animations` | files:`2` | `+245/-117` | area:`src` | impact:`Introduces "Added scroll reveal animations" updates in src.`
+- `0bf3c92` | `2026-03-26T16:29:04Z` | `gpt-engineer-app[bot]` | `Added “Co od nás” placement` | files:`1` | `+5/-5` | area:`src` | impact:`Introduces "Added “Co od nás” placement" updates in src.`
+- `932a82d` | `2026-03-26T16:29:14Z` | `gpt-engineer-app[bot]` | `Prohodil pořadí sekcí` | files:`1` | `+5/-5` | area:`src` | impact:`Introduces "Prohodil pořadí sekcí" updates in src.`
+- `fa94a2f` | `2026-03-26T16:32:22Z` | `gpt-engineer-app[bot]` | `Added Supabase offer content editor` | files:`1` | `+124/-0` | area:`docs` | impact:`Introduces "Added Supabase offer content editor" updates in docs.`
+- `077d455` | `2026-03-26T16:33:56Z` | `gpt-engineer-app[bot]` | `Created offer content table migration` | files:`1` | `+176/-0` | area:`src` | impact:`Introduces "Created offer content table migration" updates in src.`
+- `a20b3db` | `2026-03-26T16:35:01Z` | `gpt-engineer-app[bot]` | `Added Supabase offer texts store` | files:`1` | `+472/-0` | area:`src` | impact:`Introduces "Added Supabase offer texts store" updates in src.`
+- `9c13591` | `2026-03-26T16:35:13Z` | `gpt-engineer-app[bot]` | `Added offer content admin` | files:`1` | `+2/-2` | area:`src` | impact:`Introduces "Added offer content admin" updates in src.`
+- `2e4a3ff` | `2026-03-26T16:35:29Z` | `gpt-engineer-app[bot]` | `Add offer content editor` | files:`1` | `+1/-0` | area:`src` | impact:`Introduces "Add offer content editor" updates in src.`
+- `2aa401e` | `2026-03-26T16:35:40Z` | `gpt-engineer-app[bot]` | `Added offer content admin editor` | files:`1` | `+1/-0` | area:`src` | impact:`Introduces "Added offer content admin editor" updates in src.`
+- `82a97e8` | `2026-03-26T16:35:59Z` | `gpt-engineer-app[bot]` | `Added offer content editor` | files:`1` | `+1/-0` | area:`src` | impact:`Introduces "Added offer content editor" updates in src.`
+- `17db1a3` | `2026-03-26T16:36:04Z` | `gpt-engineer-app[bot]` | `Added offer content editor` | files:`1` | `+1/-0` | area:`src` | impact:`Introduces "Added offer content editor" updates in src.`
+- `85860c0` | `2026-03-26T16:36:32Z` | `gpt-engineer-app[bot]` | `Added offer text editor` | files:`5` | `+776/-0` | area:`src, docs` | impact:`Introduces "Added offer text editor" updates in src, docs.`
+- `4ec2242` | `2026-03-26T16:37:04Z` | `gpt-engineer-app[bot]` | `Doplnil správný link na report` | files:`2` | `+2/-2` | area:`src` | impact:`Introduces "Doplnil správný link na report" updates in src.`
+- `f807a96` | `2026-03-26T16:37:13Z` | `gpt-engineer-app[bot]` | `Fixed preview report iframe URL` | files:`2` | `+2/-2` | area:`src` | impact:`Introduces "Fixed preview report iframe URL" updates in src.`
+- `e9accbd` | `2026-03-26T16:41:00Z` | `gpt-engineer-app[bot]` | `Changes` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Changes" updates in src.`
+- `de299af` | `2026-03-26T16:41:09Z` | `gpt-engineer-app[bot]` | `Updated hero credibility badges` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Updated hero credibility badges" updates in src.`
+- `aa41c8a` | `2026-03-26T16:47:29Z` | `gpt-engineer-app[bot]` | `Updated credibility badges texts` | files:`1` | `+15/-9` | area:`src` | impact:`Introduces "Updated credibility badges texts" updates in src.`
+- `05444ab` | `2026-03-26T16:47:46Z` | `gpt-engineer-app[bot]` | `Nahradil hardcoded badges texty` | files:`1` | `+3/-2` | area:`src` | impact:`Introduces "Nahradil hardcoded badges texty" updates in src.`
+- `40ca2f7` | `2026-03-26T16:47:56Z` | `gpt-engineer-app[bot]` | `Updated credibility badges source` | files:`1` | `+17/-10` | area:`src` | impact:`Introduces "Updated credibility badges source" updates in src.`
+- `f8d7cb7` | `2026-03-26T16:48:38Z` | `gpt-engineer-app[bot]` | `Made mobile video previews preload fast` | files:`1` | `+66/-0` | area:`src` | impact:`Introduces "Made mobile video previews preload fast" updates in src.`
+- `a629262` | `2026-03-26T16:49:01Z` | `gpt-engineer-app[bot]` | `Zrychlil náhled videí na mobilu` | files:`1` | `+12/-26` | area:`src` | impact:`Introduces "Zrychlil náhled videí na mobilu" updates in src.`
+- `f51d08f` | `2026-03-26T16:49:11Z` | `gpt-engineer-app[bot]` | `Zrychlil načítání videí v portfoliu` | files:`1` | `+78/-26` | area:`src` | impact:`Introduces "Zrychlil načítání videí v portfoliu" updates in src.`
+- `802be65` | `2026-03-26T16:51:26Z` | `gpt-engineer-app[bot]` | `Přidal postupný mobilní reveal` | files:`1` | `+34/-30` | area:`src` | impact:`Introduces "Přidal postupný mobilní reveal" updates in src.`
+- `c26f460` | `2026-03-26T16:51:38Z` | `gpt-engineer-app[bot]` | `Staggered mobile scroll reveals` | files:`1` | `+34/-30` | area:`src` | impact:`Introduces "Staggered mobile scroll reveals" updates in src.`
+- `8eaecb1` | `2026-03-26T16:51:56Z` | `gpt-engineer-app[bot]` | `Replaced report iframe URL` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Replaced report iframe URL" updates in src.`
+- `78e560c` | `2026-03-26T16:52:01Z` | `gpt-engineer-app[bot]` | `Aktualizoval URL reportu` | files:`1` | `+1/-1` | area:`src` | impact:`Introduces "Aktualizoval URL reportu" updates in src.`
+- `6fc4e2c` | `2026-03-26T16:52:09Z` | `gpt-engineer-app[bot]` | `Replaced report preview URL` | files:`2` | `+2/-2` | area:`src` | impact:`Introduces "Replaced report preview URL" updates in src.`
+- `800da02` | `2026-03-26T16:57:34Z` | `gpt-engineer-app[bot]` | `Improved mobile video thumbnails` | files:`1` | `+4/-4` | area:`src` | impact:`Introduces "Improved mobile video thumbnails" updates in src.`
+- `6c0f3e1` | `2026-03-26T16:57:42Z` | `gpt-engineer-app[bot]` | `Fixed mobile video previews` | files:`1` | `+3/-3` | area:`src` | impact:`Introduces "Fixed mobile video previews" updates in src.`
+- `974f482` | `2026-03-26T16:57:55Z` | `gpt-engineer-app[bot]` | `Fixed mobile video previews` | files:`1` | `+7/-7` | area:`src` | impact:`Introduces "Fixed mobile video previews" updates in src.`
+- `8fa9251` | `2026-03-26T16:58:34Z` | `gpt-engineer-app[bot]` | `Opravil otevření bannerů` | files:`1` | `+1/-0` | area:`src` | impact:`Introduces "Opravil otevření bannerů" updates in src.`
+- `d5ffb7b` | `2026-03-26T16:58:53Z` | `gpt-engineer-app[bot]` | `Enabled lightbox via portal` | files:`1` | `+2/-2` | area:`src` | impact:`Introduces "Enabled lightbox via portal" updates in src.`
+
+## Top themes in this chunk
+- `src` appears in 130 commits, indicating sustained work in this area.
+- `public` appears in 2 commits, indicating sustained work in this area.
+- `docs` appears in 2 commits, indicating sustained work in this area.
+- Subject prefix `added` appears 33 times, showing a recurring delivery pattern.
+- Subject prefix `changes` appears 12 times, showing a recurring delivery pattern.
+- Subject prefix `fixed` appears 7 times, showing a recurring delivery pattern.
+- Subject prefix `updated` appears 6 times, showing a recurring delivery pattern.

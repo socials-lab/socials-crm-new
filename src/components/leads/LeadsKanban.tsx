@@ -9,12 +9,13 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLeadTransitions } from '@/hooks/useLeadTransitions';
+import { useCRMData } from '@/hooks/useCRMData';
 
 interface LeadsKanbanProps {
   leads: Lead[];
   onLeadClick: (lead: Lead) => void;
-  onStageChange: (leadId: string, newStage: LeadStage) => Promise<void>;
-  showFinancials?: boolean;
+  onStageChange: (leadId: string, newStage: LeadStage) => void;
+  onAddLostReason?: (leadId: string, reason: string, stage: LeadStage) => void;
 }
 
 const STAGE_CONFIG: Record<LeadStage, { title: string; shortTitle: string; color: string; bgColor: string }> = {
@@ -27,6 +28,7 @@ const STAGE_CONFIG: Record<LeadStage, { title: string; shortTitle: string; color
   won: { title: 'Vyhráno', shortTitle: 'Won', color: 'bg-emerald-500', bgColor: 'bg-emerald-500/10' },
   lost: { title: 'Prohráno', shortTitle: 'Lost', color: 'bg-red-500', bgColor: 'bg-red-500/10' },
   postponed: { title: 'Odloženo', shortTitle: 'Odloženo', color: 'bg-gray-500', bgColor: 'bg-gray-500/10' },
+  bad_fit: { title: 'Bad Fit', shortTitle: 'Bad Fit', color: 'bg-orange-500', bgColor: 'bg-orange-500/10' },
 };
 
 // Active stages in a 2x3 grid layout
@@ -39,9 +41,10 @@ const ACTIVE_STAGES: LeadStage[] = [
   'offer_sent', 
 ];
 
-const CLOSED_STAGES: LeadStage[] = ['won', 'lost', 'postponed'];
+const CLOSED_STAGES: LeadStage[] = ['won', 'lost', 'postponed', 'bad_fit'];
 
-export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials = true }: LeadsKanbanProps) {
+export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason }: LeadsKanbanProps) {
+  const { colleagues } = useCRMData();
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<LeadStage | null>(null);
   const [closedOpen, setClosedOpen] = useState(false);
@@ -61,6 +64,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials 
       won: [],
       lost: [],
       postponed: [],
+      bad_fit: [],
     };
     
     leads.forEach(lead => {
@@ -103,38 +107,33 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials 
     setDragOverStage(null);
   };
 
-  const handleDrop = async (e: React.DragEvent, stage: LeadStage) => {
+  const handleDrop = (e: React.DragEvent, stage: LeadStage) => {
     e.preventDefault();
     if (draggedLeadId) {
       const lead = leads.find(l => l.id === draggedLeadId);
       if (lead && lead.stage !== stage) {
         const fromStage = lead.stage;
-
-        try {
-          // 1. Update stage and wait for it to complete
-          await onStageChange(draggedLeadId, stage);
-          toast.success(`Lead přesunut do "${STAGE_CONFIG[stage].title}"`);
-
-          // 2. Show confirmation dialog for analytics
-          setPendingTransition({
-            leadId: lead.id,
-            leadName: lead.company_name,
-            fromStage,
-            toStage: stage,
-            leadValue: lead.estimated_price || 0,
-          });
-          setShowTransitionDialog(true);
-        } catch (error) {
-          console.error('Failed to update lead stage:', error);
-          toast.error('Nepodařilo se změnit stav leadu');
-        }
+        
+        // 1. Update stage immediately
+        onStageChange(draggedLeadId, stage);
+        toast.success(`Lead přesunut do "${STAGE_CONFIG[stage].title}"`);
+        
+        // 2. Show confirmation dialog for analytics
+        setPendingTransition({
+          leadId: lead.id,
+          leadName: lead.company_name,
+          fromStage,
+          toStage: stage,
+          leadValue: lead.estimated_price || 0,
+        });
+        setShowTransitionDialog(true);
       }
     }
     setDraggedLeadId(null);
     setDragOverStage(null);
   };
 
-  const handleConfirmTransition = () => {
+  const handleConfirmTransition = (reason?: string) => {
     if (pendingTransition) {
       confirmTransition({
         leadId: pendingTransition.leadId,
@@ -142,13 +141,19 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials 
         toStage: pendingTransition.toStage,
         transitionValue: pendingTransition.leadValue,
       });
+      if (reason && onAddLostReason) {
+        onAddLostReason(pendingTransition.leadId, reason, pendingTransition.toStage);
+      }
       toast.success('Přechod byl potvrzen pro analytiku');
     }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
 
-  const handleSkipTransition = () => {
+  const handleSkipTransition = (reason?: string) => {
+    if (reason && pendingTransition && onAddLostReason) {
+      onAddLostReason(pendingTransition.leadId, reason, pendingTransition.toStage);
+    }
     setShowTransitionDialog(false);
     setPendingTransition(null);
   };
@@ -162,26 +167,27 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials 
 
     return (
       <div
+        key={stage}
         onDragOver={(e) => handleDragOver(e, stage)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, stage)}
         className={cn(
-          "rounded-lg border transition-all flex flex-col h-full",
+          "rounded-lg border transition-all flex flex-col",
           config.bgColor,
           isDropTarget && "ring-2 ring-primary shadow-lg",
-          compact ? "min-h-[120px]" : "min-h-[200px]"
+          compact ? "min-h-[120px]" : "min-h-[140px]"
         )}
       >
         {/* Column Header */}
         <div className="p-2.5 border-b flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className={cn("w-2 h-2 rounded-full flex-shrink-0", config.color)} />
-            <span className="font-medium text-xs truncate">{config.shortTitle}</span>
+            <span className="font-medium text-xs whitespace-nowrap">{config.title}</span>
             <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0">
               {stats.count}
             </Badge>
           </div>
-          {showFinancials && stats.totalValue > 0 && (
+          {stats.totalValue > 0 && (
             <p className="text-[10px] text-muted-foreground mt-1">
               ~{Math.round(stats.totalValue / 1000)}k
             </p>
@@ -190,8 +196,8 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials 
 
         {/* Cards */}
         <div className={cn(
-          "p-1.5 space-y-1.5 flex-1 overflow-y-auto",
-          compact ? "max-h-[200px]" : "max-h-[400px]"
+          "p-1.5 space-y-1.5 flex-1",
+          compact && "max-h-[150px] overflow-y-auto"
         )}>
           {stageLeads.map(lead => (
             <div
@@ -206,6 +212,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials 
             >
               <LeadCard
                 lead={lead}
+                ownerName={colleagues.find(c => c.id === lead.owner_id)?.full_name}
                 onClick={() => onLeadClick(lead)}
               />
             </div>
@@ -223,11 +230,11 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials 
   return (
     <>
       <div className="space-y-4">
-        {/* Active Stages - Fixed-width columns with horizontal scroll */}
-        <div className="overflow-x-auto -mx-2 px-2 pb-2">
-          <div className="flex gap-3 min-w-max">
+        {/* Active Stages - horizontal scroll, fixed-width columns */}
+        <div className="overflow-x-auto scrollbar-thin pb-2">
+          <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
             {ACTIVE_STAGES.map(stage => (
-              <div key={stage} className="w-[280px] flex-shrink-0">
+              <div key={stage} className="w-[260px] flex-shrink-0">
                 {renderStageColumn(stage)}
               </div>
             ))}
@@ -237,37 +244,35 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, showFinancials 
         {/* Closed Stages - Collapsible Section */}
         <Collapsible open={closedOpen} onOpenChange={setClosedOpen}>
           <CollapsibleTrigger asChild>
-            <button className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors text-left">
+            <button className="flex items-center gap-2 w-full p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors text-left">
               <span className="text-sm font-medium">Uzavřené leady</span>
               <Badge variant="outline" className="text-xs">
                 {closedLeadsCount}
               </Badge>
-              <div className="ml-auto flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground">
+              <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  {leadsByStage.won.length}
+                  {leadsByStage.won.length} won
                 </span>
                 <span className="flex items-center gap-1">
                   <div className="w-2 h-2 rounded-full bg-red-500" />
-                  {leadsByStage.lost.length}
+                  {leadsByStage.lost.length} lost
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-orange-500" />
+                  {leadsByStage.bad_fit.length} bad fit
                 </span>
                 <span className="flex items-center gap-1">
                   <div className="w-2 h-2 rounded-full bg-gray-500" />
-                  {leadsByStage.postponed.length}
+                  {leadsByStage.postponed.length} odloženo
                 </span>
                 {closedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </div>
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="overflow-x-auto -mx-2 px-2 pb-2 mt-3">
-              <div className="flex gap-3 min-w-max">
-                {CLOSED_STAGES.map(stage => (
-                  <div key={stage} className="w-[280px] flex-shrink-0">
-                    {renderStageColumn(stage, true)}
-                  </div>
-                ))}
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-3">
+              {CLOSED_STAGES.map(stage => renderStageColumn(stage, true))}
             </div>
           </CollapsibleContent>
         </Collapsible>
