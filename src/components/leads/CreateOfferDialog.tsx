@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getServiceDetail } from '@/constants/serviceDetails';
 import { getRewardsFromServiceConfig, getServiceRewardRecommendation } from '@/constants/serviceRewards';
 import { useAuth } from '@/hooks/useAuth';
+import { buildAppUrl } from '@/utils/appUrl';
 import {
   Select,
   SelectContent,
@@ -434,7 +435,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           created_by: currentColleague?.id || existingOffer.created_by || null,
         }, `Změna: ${changedParts.join(', ')}`);
 
-        const offerUrl = `${window.location.origin}/offer/${existingOffer.token}`;
+        const offerUrl = buildAppUrl(`/offer/${existingOffer.token}`);
         setCreatedOfferUrl(offerUrl);
         toast.success('Nabídka byla aktualizována!');
         const syncData = {
@@ -448,7 +449,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       } else {
         // Create mode
         const token = generateToken();
-        const offerUrl = `${window.location.origin}/offer/${token}`;
+        const offerUrl = buildAppUrl(`/offer/${token}`);
 
         // Snapshot current content blocks from DB (strict: no fallback defaults).
         interface OfferContentSnapshotRow {
@@ -522,7 +523,11 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       }
     } catch (err) {
       console.error('Error saving offer:', err);
-      toast.error('Chyba při ukládání nabídky');
+      if (err instanceof Error && (err.message.includes('localhost') || err.message.includes('VITE_APP_URL'))) {
+        toast.error(err.message);
+      } else {
+        toast.error('Chyba při ukládání nabídky');
+      }
     } finally {
       setIsCreating(false);
     }
