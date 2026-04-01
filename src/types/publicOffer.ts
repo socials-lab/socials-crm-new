@@ -52,6 +52,11 @@ export interface PublicOfferHistoryEntry {
   timestamp: string;
   changed_by: string | null;
   summary: string;  // e.g. "Změna cen, přidána služba Creative Boost"
+  changes?: Array<{
+    field: string;
+    from: string;
+    to: string;
+  }>;
   snapshot: Omit<PublicOffer, 'history'>;  // Full snapshot of the offer at that point
 }
 

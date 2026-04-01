@@ -68,9 +68,23 @@ function isAuthError(error: unknown): boolean {
 
 let authErrorRedirecting = false;
 
+function shouldSuppressAuthRefreshToast(pathname: string): boolean {
+  return (
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/offer/') ||
+    pathname === '/offer-test' ||
+    pathname.startsWith('/onboarding/') ||
+    pathname.startsWith('/applicant-onboarding/') ||
+    pathname.startsWith('/modification/') ||
+    pathname.startsWith('/extra-work-approval/') ||
+    pathname.startsWith('/creative-boost-share/') ||
+    pathname.startsWith('/sop-share/')
+  );
+}
+
 async function handleAuthError(error: unknown) {
   if (!isAuthError(error) || authErrorRedirecting) return;
-  if (window.location.pathname.startsWith('/auth')) return;
+  if (shouldSuppressAuthRefreshToast(window.location.pathname)) return;
   authErrorRedirecting = true;
   try {
     const { session, error: refreshError } = await refreshSessionSafely();

@@ -2,6 +2,106 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { PublicOffer } from '@/types/publicOffer';
 
+type OfferHistoryChange = {
+  field: string;
+  from: string;
+  to: string;
+};
+
+function normalizeText(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value.trim();
+  return String(value);
+}
+
+function formatChangeValue(value: unknown): string {
+  const text = normalizeText(value);
+  if (text.length === 0) return '—';
+  return text.length > 140 ? `${text.slice(0, 137)}...` : text;
+}
+
+function removeImagesFromHtml(html: unknown): string | null {
+  if (typeof html !== 'string') return null;
+  const trimmed = html.trim();
+  if (!trimmed) return null;
+  const withoutImages = trimmed.replace(/<img\b[^>]*>/gi, '').trim();
+  return withoutImages.length > 0 ? withoutImages : null;
+}
+
+function buildServiceKey(service: any): string {
+  return String(service?.id || service?.service_id || service?.name || crypto.randomUUID());
+}
+
+function buildServiceLabel(service: any): string {
+  const tier = service?.selected_tier ? ` (${service.selected_tier})` : '';
+  return `${service?.name || 'Služba'}${tier}`;
+}
+
+function pushChange(changes: OfferHistoryChange[], field: string, before: unknown, after: unknown) {
+  const from = formatChangeValue(before);
+  const to = formatChangeValue(after);
+  if (from === to) return;
+  changes.push({ field, from, to });
+}
+
+function buildOfferChanges(currentOffer: PublicOffer, nextOffer: PublicOffer): OfferHistoryChange[] {
+  const changes: OfferHistoryChange[] = [];
+
+  pushChange(changes, 'Audit (plain text)', currentOffer.audit_summary, nextOffer.audit_summary);
+  pushChange(changes, 'Doporučení', currentOffer.recommendation_intro, nextOffer.recommendation_intro);
+  pushChange(changes, 'Poznámka', currentOffer.custom_note, nextOffer.custom_note);
+  pushChange(changes, 'Loom URL', currentOffer.loom_url, nextOffer.loom_url);
+  pushChange(changes, 'Platnost do', currentOffer.valid_until, nextOffer.valid_until);
+  pushChange(changes, 'Celková cena', currentOffer.total_price, nextOffer.total_price);
+  pushChange(changes, 'Měsíční sleva %', currentOffer.monthly_discount_percent, nextOffer.monthly_discount_percent);
+  pushChange(changes, 'Rozsah slevy', currentOffer.discount_scope, nextOffer.discount_scope);
+  pushChange(changes, 'Úvodní sleva %', currentOffer.intro_discount_percent, nextOffer.intro_discount_percent);
+  pushChange(changes, 'Úvodní sleva (měsíce)', currentOffer.intro_discount_months, nextOffer.intro_discount_months);
+
+  const currentServices = currentOffer.services || [];
+  const nextServices = nextOffer.services || [];
+  const currentByKey = new Map(currentServices.map((service) => [buildServiceKey(service), service]));
+  const nextByKey = new Map(nextServices.map((service) => [buildServiceKey(service), service]));
+
+  const addedServices = nextServices.filter((service) => !currentByKey.has(buildServiceKey(service)));
+  const removedServices = currentServices.filter((service) => !nextByKey.has(buildServiceKey(service)));
+
+  if (addedServices.length > 0) {
+    changes.push({
+      field: 'Služby přidány',
+      from: '—',
+      to: addedServices.map(buildServiceLabel).join(', '),
+    });
+  }
+
+  if (removedServices.length > 0) {
+    changes.push({
+      field: 'Služby odebrány',
+      from: removedServices.map(buildServiceLabel).join(', '),
+      to: '—',
+    });
+  }
+
+  currentServices.forEach((currentService) => {
+    const key = buildServiceKey(currentService);
+    const nextService = nextByKey.get(key);
+    if (!nextService) return;
+    const label = buildServiceLabel(nextService);
+    pushChange(changes, `${label} – cena`, currentService.price, nextService.price);
+    pushChange(changes, `${label} – typ fakturace`, currentService.billing_type, nextService.billing_type);
+    pushChange(changes, `${label} – tier`, currentService.selected_tier, nextService.selected_tier);
+    pushChange(changes, `${label} – offer text`, currentService.offer_description, nextService.offer_description);
+    pushChange(
+      changes,
+      `${label} – varianty zemí`,
+      JSON.stringify(currentService.country_variants || []),
+      JSON.stringify(nextService.country_variants || []),
+    );
+  });
+
+  return changes;
+}
+
 // Convert DB row to PublicOffer type
 function rowToOffer(row: any): PublicOffer {
   return {
@@ -136,7 +236,12 @@ export async function getOffersByLeadId(leadId: string): Promise<PublicOffer[]> 
   return (data as any[] || []).map(rowToOffer);
 }
 
-export async function updatePublicOffer(token: string, updatedOffer: Partial<PublicOffer>, changeSummary?: string): Promise<void> {
+export async function updatePublicOffer(
+  token: string,
+  updatedOffer: Partial<PublicOffer>,
+  changeSummary?: string,
+  options?: { changedBy?: string | null },
+): Promise<void> {
   // First get current offer for history
   const { data: current } = await supabase
     .from('public_offers' as any)
@@ -148,27 +253,43 @@ export async function updatePublicOffer(token: string, updatedOffer: Partial<Pub
 
   const currentOffer = rowToOffer(current);
   
+  const sanitizedUpdatedOffer: Record<string, unknown> = { ...updatedOffer };
+  Object.keys(sanitizedUpdatedOffer).forEach(key => {
+    if (sanitizedUpdatedOffer[key] === undefined) delete sanitizedUpdatedOffer[key];
+  });
+
+  const nextOffer = {
+    ...currentOffer,
+    ...sanitizedUpdatedOffer,
+  } as PublicOffer;
+  const changeDetails = buildOfferChanges(currentOffer, nextOffer);
+  const autoSummary = changeDetails.length > 0
+    ? `Změna: ${changeDetails.slice(0, 4).map((c) => c.field).join(', ')}`
+    : 'Úprava nabídky (bez změny hodnot)';
+
   // Build history entry from current state
   const { history, ...snapshot } = currentOffer;
+  const snapshotForHistory = {
+    ...snapshot,
+    // Keep audit text history but drop embedded image payloads.
+    audit_html: removeImagesFromHtml(snapshot.audit_html),
+    content_blocks_snapshot: undefined,
+  };
   const historyEntry = {
     timestamp: new Date().toISOString(),
-    changed_by: updatedOffer.created_by || currentOffer.created_by || null,
-    summary: changeSummary || 'Úprava nabídky',
-    snapshot: snapshot,
+    changed_by: options?.changedBy ?? currentOffer.created_by ?? null,
+    summary: changeSummary || autoSummary,
+    changes: changeDetails,
+    snapshot: snapshotForHistory,
   };
 
   const existingHistory = currentOffer.history || [];
 
   const updateData: any = {
-    ...updatedOffer,
+    ...sanitizedUpdatedOffer,
     updated_at: new Date().toISOString(),
     history: [...existingHistory, historyEntry],
   };
-
-  // Remove undefined values
-  Object.keys(updateData).forEach(key => {
-    if (updateData[key] === undefined) delete updateData[key];
-  });
 
   const { error } = await supabase
     .from('public_offers' as any)

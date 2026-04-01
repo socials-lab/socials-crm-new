@@ -19,7 +19,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { toast } from 'sonner';
 import type { Lead, Service } from '@/types/crm';
 import type { PublicOfferService, PublicOffer, PortfolioLink } from '@/types/publicOffer';
-import { addPublicOffer, updatePublicOffer } from '@/data/publicOffersData';
+import { addPublicOffer, getOffersByLeadId, getPublicOfferByToken, updatePublicOffer } from '@/data/publicOffersData';
 import { EditableOfferServiceCard } from './EditableOfferServiceCard';
 import { mergeWithDefaults } from '@/constants/serviceDefaults';
 import { supabase } from '@/integrations/supabase/client';
@@ -156,7 +156,10 @@ const DEFAULT_PORTFOLIO_OPTIONS: Omit<PortfolioLink, 'id'>[] = [
 export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existingOffer }: CreateOfferDialogProps) {
   const { services, colleagues } = useCRMData();
   const { user } = useAuth();
-  const isEditMode = !!existingOffer;
+  const [resolvedExistingOffer, setResolvedExistingOffer] = useState<PublicOffer | null>(null);
+  const [isLoadingExistingOffer, setIsLoadingExistingOffer] = useState(false);
+  const offerForEdit = existingOffer || resolvedExistingOffer;
+  const isEditMode = !!offerForEdit;
   const [auditSummary, setAuditSummary] = useState('');
   const [auditHtml, setAuditHtml] = useState('');
   const [recommendationIntro, setRecommendationIntro] = useState('');
@@ -187,23 +190,65 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
 
   // Initialize from existing offer (edit mode) or lead services
   useEffect(() => {
+    if (!open) {
+      setResolvedExistingOffer(null);
+      setIsLoadingExistingOffer(false);
+      return;
+    }
+    if (existingOffer) {
+      setResolvedExistingOffer(null);
+      setIsLoadingExistingOffer(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadExistingOffer() {
+      setIsLoadingExistingOffer(true);
+      try {
+        let foundOffer: PublicOffer | undefined;
+        if (lead.offer_token) {
+          foundOffer = await getPublicOfferByToken(lead.offer_token);
+        } else {
+          const offers = await getOffersByLeadId(lead.id);
+          foundOffer = offers[0];
+        }
+        if (!cancelled) {
+          setResolvedExistingOffer(foundOffer || null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingExistingOffer(false);
+        }
+      }
+    }
+
+    loadExistingOffer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, existingOffer, lead.id, lead.offer_token]);
+
+  useEffect(() => {
     if (!open) return;
+    if (isLoadingExistingOffer) return;
     
     // Edit mode: populate from existing offer
-    if (existingOffer) {
-      setAuditSummary(existingOffer.audit_summary || '');
-      setAuditHtml(existingOffer.audit_html || '');
-      setRecommendationIntro(existingOffer.recommendation_intro || '');
-      setCustomNote(existingOffer.custom_note || '');
-      setLoomUrl(existingOffer.loom_url || '');
-      setValidUntil(existingOffer.valid_until || '');
-      setEditableServices(existingOffer.services);
-      setMonthlyDiscountPercent(existingOffer.monthly_discount_percent || 0);
-      setDiscountScope(existingOffer.discount_scope || 'core_only');
-      setIntroDiscountPercent(existingOffer.intro_discount_percent || 0);
-      setIntroDiscountMonths(existingOffer.intro_discount_months || 3);
-      if (existingOffer.portfolio_links?.length > 0) {
-        setPortfolioLinks(existingOffer.portfolio_links);
+    if (offerForEdit) {
+      setAuditSummary(offerForEdit.audit_summary || '');
+      setAuditHtml(offerForEdit.audit_html || '');
+      setRecommendationIntro(offerForEdit.recommendation_intro || '');
+      setCustomNote(offerForEdit.custom_note || '');
+      setLoomUrl(offerForEdit.loom_url || '');
+      setValidUntil(offerForEdit.valid_until || '');
+      setEditableServices(offerForEdit.services);
+      setMonthlyDiscountPercent(offerForEdit.monthly_discount_percent || 0);
+      setDiscountScope(offerForEdit.discount_scope || 'core_only');
+      setIntroDiscountPercent(offerForEdit.intro_discount_percent || 0);
+      setIntroDiscountMonths(offerForEdit.intro_discount_months || 3);
+      if (offerForEdit.portfolio_links?.length > 0) {
+        setPortfolioLinks(offerForEdit.portfolio_links);
       }
       return;
     }
@@ -266,7 +311,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       }
       setEditableServices(suggested);
     }
-  }, [open, lead, lead.potential_services, services, existingOffer]);
+  }, [open, lead, lead.potential_services, services, offerForEdit, isLoadingExistingOffer]);
 
   // Initialize reward overrides from catalog when services change
   useEffect(() => {
@@ -406,16 +451,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       const leadOwner = colleagues.find(c => c.id === lead.owner_id);
       const now = new Date().toISOString();
 
-      if (isEditMode && existingOffer) {
+      if (isEditMode && offerForEdit) {
         // Edit mode: update existing offer with history
-        const changedParts: string[] = [];
-        if (existingOffer.services.length !== editableServices.length) changedParts.push('služby');
-        if (existingOffer.total_price !== totals.monthlyAfterDiscount + totals.oneOff) changedParts.push('ceny');
-        if (existingOffer.monthly_discount_percent !== monthlyDiscountPercent) changedParts.push('sleva');
-        if (existingOffer.audit_summary !== (auditSummary.trim() || null)) changedParts.push('audit');
-        if (changedParts.length === 0) changedParts.push('drobné úpravy');
-        
-        await updatePublicOffer(existingOffer.token, {
+        await updatePublicOffer(offerForEdit.token, {
           audit_summary: auditSummary.trim() || null,
           audit_html: auditHtml.trim() || null,
           recommendation_intro: recommendationIntro.trim() || null,
@@ -432,10 +470,11 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           owner_name: leadOwner?.full_name || undefined,
           owner_email: leadOwner?.email || undefined,
           owner_phone: leadOwner?.phone || undefined,
-          created_by: currentColleague?.id || existingOffer.created_by || null,
-        }, `Změna: ${changedParts.join(', ')}`);
+        }, undefined, {
+          changedBy: currentColleague?.id || null,
+        });
 
-        const offerUrl = buildAppUrl(`/offer/${existingOffer.token}`);
+        const offerUrl = buildAppUrl(`/offer/${offerForEdit.token}`);
         setCreatedOfferUrl(offerUrl);
         toast.success('Nabídka byla aktualizována!');
         const syncData = {
@@ -445,7 +484,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           cbCredits: cbCredits,
           cbPricePerCredit: cbPricePerCredit,
         };
-        onSuccess(existingOffer.token, offerUrl, syncData);
+        onSuccess(offerForEdit.token, offerUrl, syncData);
       } else {
         // Create mode
         const token = generateToken();
@@ -543,6 +582,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
 
   const handleClose = () => {
     setAuditSummary('');
+    setAuditHtml('');
     setRecommendationIntro('');
     setCustomNote('');
     setLoomUrl('');
@@ -1160,7 +1200,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                 </div>
 
                 {/* History section (edit mode only) */}
-                {isEditMode && existingOffer?.history && existingOffer.history.length > 0 && (
+                {isEditMode && offerForEdit?.history && offerForEdit.history.length > 0 && (
                   <div className="rounded-lg border bg-muted/30 overflow-hidden">
                     <button
                       onClick={() => setShowHistory(!showHistory)}
@@ -1169,14 +1209,14 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                       <div className="flex items-center gap-2">
                         <History className="h-4 w-4 text-muted-foreground" />
                         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Historie změn ({existingOffer.history.length})
+                          Historie změn ({offerForEdit.history.length})
                         </span>
                       </div>
                       {showHistory ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                     </button>
                     {showHistory && (
                       <div className="border-t divide-y divide-border/50 max-h-[200px] overflow-y-auto">
-                        {[...existingOffer.history].reverse().map((entry, idx) => (
+                        {[...offerForEdit.history].reverse().map((entry, idx) => (
                           <div key={idx} className="px-3 py-2 space-y-0.5">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium">{entry.summary}</span>
@@ -1188,6 +1228,23 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                               Celková cena: {entry.snapshot.total_price?.toLocaleString('cs-CZ')} Kč · {entry.snapshot.services?.length || 0} služeb
                               {entry.snapshot.monthly_discount_percent ? ` · Sleva ${entry.snapshot.monthly_discount_percent}%` : ''}
                             </div>
+                            {entry.changes && entry.changes.length > 0 && (
+                              <div className="mt-1.5 space-y-1">
+                                {entry.changes.slice(0, 8).map((change, changeIdx) => (
+                                  <div key={changeIdx} className="text-[10px] leading-snug text-muted-foreground">
+                                    <span className="font-medium text-foreground/80">{change.field}:</span>{' '}
+                                    <span className="line-through decoration-muted-foreground/60">{change.from}</span>{' '}
+                                    <span aria-hidden="true">→</span>{' '}
+                                    <span className="text-foreground/90">{change.to}</span>
+                                  </div>
+                                ))}
+                                {entry.changes.length > 8 && (
+                                  <div className="text-[10px] text-muted-foreground/80">
+                                    +{entry.changes.length - 8} dalších změn
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

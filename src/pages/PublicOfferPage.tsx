@@ -75,6 +75,18 @@ import { usePublicPortfolio } from '@/hooks/usePortfolioData';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const usePublicPortfolioLocal = usePublicPortfolio;
+
+function toLoomEmbedUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  const shareMatch = trimmed.match(/loom\.com\/share\/([a-zA-Z0-9]+)/i);
+  if (shareMatch) return `https://www.loom.com/embed/${shareMatch[1]}`;
+  const embedMatch = trimmed.match(/loom\.com\/embed\/([a-zA-Z0-9]+)/i);
+  if (embedMatch) return trimmed;
+  return null;
+}
+
 // Helper to get content block from offer snapshot or fallback to hardcoded defaults
 function getOfferContent(offer: PublicOffer | null, sectionKey: string) {
   if (offer?.content_blocks_snapshot?.[sectionKey]) {
@@ -868,6 +880,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const loomEmbedUrl = toLoomEmbedUrl(offer?.loom_url);
 
   const handleCopyLink = async () => {
     const url = window.location.href;
@@ -1061,14 +1074,28 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 {offer.loom_url && (
                   <div className="rounded-xl overflow-hidden border border-foreground/[0.08] mb-6">
                     <AspectRatio ratio={16 / 9}>
-                      <iframe
-                        src={offer.loom_url}
-                        title="Video k nabídce"
-                        className="w-full h-full"
-                        frameBorder="0"
-                        allowFullScreen
-                        allow="autoplay; fullscreen"
-                      />
+                      {loomEmbedUrl ? (
+                        <iframe
+                          src={loomEmbedUrl}
+                          title="Video k nabídce"
+                          className="w-full h-full"
+                          frameBorder="0"
+                          allowFullScreen
+                          allow="autoplay; fullscreen"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-foreground/[0.03] p-6 text-center">
+                          <a
+                            href={offer.loom_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                          >
+                            Otevřít Loom video v novém okně
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </div>
+                      )}
                     </AspectRatio>
                   </div>
                 )}

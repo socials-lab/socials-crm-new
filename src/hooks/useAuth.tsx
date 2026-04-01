@@ -47,6 +47,20 @@ function isHardAuthFailure(error: unknown): boolean {
   );
 }
 
+function shouldSuppressSessionToast(pathname: string): boolean {
+  return (
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/offer/') ||
+    pathname === '/offer-test' ||
+    pathname.startsWith('/onboarding/') ||
+    pathname.startsWith('/applicant-onboarding/') ||
+    pathname.startsWith('/modification/') ||
+    pathname.startsWith('/extra-work-approval/') ||
+    pathname.startsWith('/creative-boost-share/') ||
+    pathname.startsWith('/sop-share/')
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -132,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (isHardAuthFailure(error)) {
           setAuthState(null);
-          if (!window.location.pathname.startsWith('/auth') && !sessionLossToastShownRef.current) {
+          if (!shouldSuppressSessionToast(window.location.pathname) && !sessionLossToastShownRef.current) {
             toast.error('Session expired. Please sign in again.');
             sessionLossToastShownRef.current = true;
           }
@@ -165,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (event === 'SIGNED_OUT' && !explicitSignOutRef.current) {
-        if (!window.location.pathname.startsWith('/auth') && !sessionLossToastShownRef.current) {
+        if (!shouldSuppressSessionToast(window.location.pathname) && !sessionLossToastShownRef.current) {
           toast.error('Session expired. Please sign in again.');
           sessionLossToastShownRef.current = true;
         }

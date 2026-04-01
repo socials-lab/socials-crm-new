@@ -1,10 +1,11 @@
 import { useEditor, EditorContent } from '@tiptap/react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Button } from '@/components/ui/button';
 import { Bold, Italic, List, ListOrdered, ImagePlus, Undo, Redo } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface AuditEditorProps {
   content: string;
@@ -14,6 +15,53 @@ interface AuditEditorProps {
 
 export function AuditEditor({ content, onChange, placeholder = 'Popište zjištění z auditu...' }: AuditEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function convertFileToWebpDataUrl(file: File): Promise<string> {
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new window.Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Nepodařilo se načíst obrázek pro převod'));
+        img.src = objectUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth || image.width;
+      canvas.height = image.naturalHeight || image.height;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        throw new Error('Canvas není dostupný');
+      }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((result) => {
+          if (!result) {
+            reject(new Error('Převod obrázku do WebP selhal'));
+            return;
+          }
+          resolve(result);
+        }, 'image/webp', 0.78);
+      });
+
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+          if (!dataUrl.startsWith('data:image/webp')) {
+            reject(new Error('Výstup není WebP'));
+            return;
+          }
+          resolve(dataUrl);
+        };
+        reader.onerror = () => reject(new Error('Nepodařilo se načíst převedený obrázek'));
+        reader.readAsDataURL(blob);
+      });
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
 
   const handleUpdate = useCallback(({ editor: e }: { editor: { getHTML: () => string } }) => {
     onChange(e.getHTML());
@@ -59,20 +107,33 @@ export function AuditEditor({ content, onChange, placeholder = 'Popište zjišt�
     },
   });
 
-  const insertImageFile = (file: File) => {
+  useEffect(() => {
     if (!editor) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const src = e.target?.result as string;
-      if (src) editor.chain().focus().setImage({ src }).run();
-    };
-    reader.readAsDataURL(file);
+    const incoming = content || '';
+    const current = editor.getHTML();
+    if (incoming !== current) {
+      // Keep editor in sync when parent preloads existing offer content.
+      editor.commands.setContent(incoming || '<p></p>', false);
+    }
+  }, [editor, content]);
+
+  const insertImageFile = async (file: File) => {
+    if (!editor) return;
+    try {
+      const webpDataUrl = await convertFileToWebpDataUrl(file);
+      editor.chain().focus().setImage({ src: webpDataUrl }).run();
+    } catch (error) {
+      console.error('Audit image conversion failed:', error);
+      toast.error('Obrázek se nepodařilo převést do WebP');
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    Array.from(files).forEach(insertImageFile);
+    Array.from(files).forEach((file) => {
+      void insertImageFile(file);
+    });
     e.target.value = '';
   };
 
