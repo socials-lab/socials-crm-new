@@ -2234,7 +2234,6 @@ export type Database = {
           offer_sent_at: string | null
           offer_sent_by_id: string | null
           offer_type: string | null
-          offer_url: string | null
           meeting_request_sent_at: string | null
           onboarding_form_completed_at: string | null
           onboarding_form_sent_at: string | null
@@ -2299,7 +2298,6 @@ export type Database = {
           offer_sent_at?: string | null
           offer_sent_by_id?: string | null
           offer_type?: string | null
-          offer_url?: string | null
           meeting_request_sent_at?: string | null
           onboarding_form_completed_at?: string | null
           onboarding_form_sent_at?: string | null
@@ -2364,7 +2362,6 @@ export type Database = {
           offer_sent_at?: string | null
           offer_sent_by_id?: string | null
           offer_type?: string | null
-          offer_url?: string | null
           meeting_request_sent_at?: string | null
           onboarding_form_completed_at?: string | null
           onboarding_form_sent_at?: string | null

@@ -25,6 +25,7 @@ interface SendOfferDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead;
+  offerUrl?: string | null;
   onSent?: (ownerId: string) => void;
 }
 
@@ -32,6 +33,7 @@ export function SendOfferDialog({
   open,
   onOpenChange,
   lead,
+  offerUrl,
   onSent,
 }: SendOfferDialogProps) {
   const { user } = useAuth();
@@ -101,12 +103,12 @@ export function SendOfferDialog({
       domain: lead.website ? cleanWebsite(lead.website) : lead.company_name,
       services_list: servicesText,
       price_summary: priceText,
-      offer_url_line: lead.offer_url ? `Detailní nabídku naleznete zde: ${lead.offer_url}` : '',
+      offer_url_line: offerUrl ? `Detailní nabídku naleznete zde: ${offerUrl}` : '',
       signature: defaultSignature,
     });
 
     setEmailContent(body);
-  }, [currentUserColleague, lead, open, fillTemplate]);
+  }, [currentUserColleague, lead, open, fillTemplate, offerUrl]);
 
   const handleSend = async () => {
     if (!lead.contact_email?.trim()) {
@@ -227,9 +229,9 @@ export function SendOfferDialog({
                 <span className="text-muted-foreground">({lead.contact_email})</span>
               )}
             </div>
-            {lead.offer_url && (
+            {offerUrl && (
               <a 
-                href={lead.offer_url} 
+                href={offerUrl} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-primary hover:underline"

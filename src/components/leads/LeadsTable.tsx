@@ -15,6 +15,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { LeadMobileCard } from './LeadMobileCard';
 import { cn } from '@/lib/utils';
 import { getLeadLastActivity } from '@/utils/leadActivityUtils';
+import { getLeadOfferUrl } from '@/utils/offerUrl';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -99,6 +100,7 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
         <TableBody>
           {leads.map(lead => {
             const activityInfo = getLeadLastActivity(lead);
+            const offerUrl = getLeadOfferUrl(lead);
             
             return (
               <TableRow 
@@ -140,14 +142,14 @@ export function LeadsTable({ leads, onLeadClick }: LeadsTableProps) {
                   {lead.estimated_price != null ? `${lead.estimated_price.toLocaleString()} ${lead.currency}` : '-'}
                 </TableCell>
                 <TableCell>
-                  {lead.offer_url && (
+                  {offerUrl && (
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
                       onClick={(e) => {
                         e.stopPropagation();
-                        window.open(lead.offer_url!, '_blank');
+                        window.open(offerUrl, '_blank');
                       }}
                     >
                       <ExternalLink className="h-4 w-4" />

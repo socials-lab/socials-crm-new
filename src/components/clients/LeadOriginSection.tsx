@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Lead } from '@/types/crm';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { getLeadOfferUrl } from '@/utils/offerUrl';
 
 interface LeadOriginSectionProps {
   lead: Lead;
@@ -11,8 +12,9 @@ interface LeadOriginSectionProps {
 }
 
 export function LeadOriginSection({ lead, onStopPropagation }: LeadOriginSectionProps) {
+  const offerUrl = getLeadOfferUrl(lead);
   const hasOnboardingData = lead.onboarding_form_completed_at;
-  const hasOffer = lead.offer_url || lead.offer_sent_at;
+  const hasOffer = offerUrl || lead.offer_sent_at;
   
   if (!hasOnboardingData && !hasOffer) {
     return null;
@@ -177,14 +179,14 @@ export function LeadOriginSection({ lead, onStopPropagation }: LeadOriginSection
               )}
 
               {/* Offer URL */}
-              {lead.offer_url && (
+              {offerUrl && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="w-full justify-start h-8 text-xs"
                   onClick={(e) => {
                     onStopPropagation(e);
-                    window.open(lead.offer_url!, '_blank');
+                    window.open(offerUrl, '_blank');
                   }}
                 >
                   <ExternalLink className="h-3.5 w-3.5 mr-2" />

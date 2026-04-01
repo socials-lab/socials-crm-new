@@ -18,6 +18,7 @@ import {
 import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { getLeadLastActivity } from '@/utils/leadActivityUtils';
+import { getLeadOfferUrl } from '@/utils/offerUrl';
 
 const cleanDomain = (url: string) => {
   const d = url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
@@ -59,6 +60,7 @@ const STAGE_COLORS: Record<LeadStage, string> = {
 export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps) {
   const isConverted = !!lead.converted_to_client_id;
   const activityInfo = getLeadLastActivity(lead);
+  const offerUrl = getLeadOfferUrl(lead);
 
   return (
     <Card 
@@ -151,14 +153,14 @@ export function LeadMobileCard({ lead, ownerName, onClick }: LeadMobileCardProps
               )}
               <span>{activityInfo.activityLabel}</span>
             </div>
-            {lead.offer_url && (
+            {offerUrl && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.open(lead.offer_url!, '_blank');
+                  window.open(offerUrl, '_blank');
                 }}
               >
                 <ExternalLink className="h-4 w-4" />

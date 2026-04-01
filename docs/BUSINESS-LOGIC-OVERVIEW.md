@@ -388,7 +388,7 @@ Interní systém pro návrhy a zpětnou vazbu od týmu.
 **Status:** Pouze URL odkazy
 
 **Použití:**
-- Odkaz na nabídku (offer_url) – nabídka připravená v Notion
+- Odkaz na nabídku je generovaný z `public_offers.token` (neukládá se jako `leads.offer_url`)
 - Odkaz na SOP a procesy na dashboardu
 
 ---

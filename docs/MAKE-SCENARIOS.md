@@ -104,7 +104,7 @@
 - Meeting recording URL (tl;dv)
 - Estimated deal size
 
-**CRM Integration:** Trigger when lead stage changes to "Příprava nabídky". Returns Notion URL for `offer_url` field.
+**CRM Integration:** Trigger when lead stage changes to "Příprava nabídky". Public offer URL is generated from `public_offers.token`.
 
 ---
 

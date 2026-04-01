@@ -73,6 +73,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { fetchAresData } from '@/utils/aresUtils';
 import { useVatReliability } from '@/hooks/useVatReliability';
+import { getLeadOfferUrl } from '@/utils/offerUrl';
 
 interface LeadDetailDialogProps {
   lead: Lead | null;
@@ -178,6 +179,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
   };
 
   const owner = colleagues.find(c => c.id === lead.owner_id);
+  const resolvedOfferUrl = sharedOfferUrl || getLeadOfferUrl(lead);
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
   const history = getLeadHistory(lead.id);
   const isNewLead = lead.stage === 'new_lead';
@@ -791,6 +793,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                   <h4 className="text-sm font-medium text-muted-foreground">Proces odbavení</h4>
                   <LeadFlowStepper
                     lead={lead}
+                    offerUrl={resolvedOfferUrl}
                     onSendMeetingRequest={() => setIsMeetingRequestOpen(true)}
                     onQuickConfirmMeetingSent={() => {
                       updateLead(lead.id, { meeting_request_sent_at: new Date().toISOString() });
@@ -991,6 +994,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
         open={isSendOfferOpen}
         onOpenChange={setIsSendOfferOpen}
         lead={lead}
+        offerUrl={resolvedOfferUrl}
         onSent={(ownerId, emailData) => {
           updateLead(lead.id, {
             offer_sent_at: new Date().toISOString(),
@@ -1010,7 +1014,6 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
         onSuccess={(token, offerUrl, syncData) => {
           setSharedOfferUrl(offerUrl);
           const updateData: Partial<Lead> = {
-            offer_url: offerUrl,
             offer_created_at: new Date().toISOString(),
           };
           // Sync services from offer back to lead's potential_services

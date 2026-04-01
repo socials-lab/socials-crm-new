@@ -70,7 +70,6 @@ interface CreateLeadPayload {
   estimated_price?: number | null;
   currency?: string | null;
   probability_percent?: number | null;
-  offer_url?: string | null;
   court_name?: string | null;
   court_file_number?: string | null;
 }
@@ -133,39 +132,6 @@ function validateOptionalNumberField(name: string, value: unknown): number | nul
   return value;
 }
 
-const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
-
-function isLocalhostHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase();
-  return LOCAL_HOSTNAMES.has(normalized) || normalized.endsWith(".localhost");
-}
-
-function validateOfferUrl(value: string | null | undefined): string | null | undefined {
-  if (value === undefined || value === null || value.length === 0) {
-    return value;
-  }
-
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error('Invalid field "offer_url": expected absolute URL');
-  }
-
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error('Invalid field "offer_url": expected http/https URL');
-  }
-
-  const runtimeEnvironment = (Deno.env.get("ENVIRONMENT") || Deno.env.get("NODE_ENV") || "").toLowerCase();
-  const isProduction = runtimeEnvironment === "production";
-
-  if (isProduction && isLocalhostHostname(parsed.hostname)) {
-    throw new Error('Invalid field "offer_url": localhost URLs are not allowed in production');
-  }
-
-  return parsed.toString();
-}
-
 function validatePayload(input: unknown): CreateLeadPayload {
   if (!input || typeof input !== "object") {
     throw new Error("Invalid payload: expected JSON object");
@@ -219,7 +185,6 @@ function validatePayload(input: unknown): CreateLeadPayload {
     estimated_price: validateOptionalNumberField("estimated_price", payload.estimated_price),
     currency: normalizeCurrency(validateOptionalStringField("currency", payload.currency)),
     probability_percent: validateOptionalNumberField("probability_percent", payload.probability_percent),
-    offer_url: validateOfferUrl(validateOptionalStringField("offer_url", payload.offer_url)),
     court_name: validateOptionalStringField("court_name", payload.court_name),
     court_file_number: validateOptionalStringField("court_file_number", payload.court_file_number),
   };
@@ -255,7 +220,6 @@ function buildLeadInsert(payload: CreateLeadPayload): Record<string, unknown> {
     "estimated_price",
     "currency",
     "probability_percent",
-    "offer_url",
     "court_name",
     "court_file_number",
   ];

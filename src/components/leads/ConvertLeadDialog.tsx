@@ -37,6 +37,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Lead, CostModel, ClientTier, ServiceRewardRole, ServiceRewardTierConfig } from '@/types/crm';
 import { toast } from 'sonner';
+import { getLeadOfferUrl } from '@/utils/offerUrl';
 
 const convertSchema = z.object({
   // Editable client fields
@@ -342,7 +343,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             start_date: data.start_date,
             end_date: data.end_date || null,
             notice_period_months: toNullableNumber(data.notice_period_months),
-            offer_url: lead.offer_url || null,
+            offer_url: offerUrl || null,
             contract_url: lead.contract_url || null,
             managed_countries: [],
             notes: data.engagement_notes || '',
@@ -454,6 +455,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
   // Check if lead has at least one service
   const hasServices = (lead.potential_services?.length ?? 0) > 0;
+  const offerUrl = getLeadOfferUrl(lead);
   const hasSuggestedTeam = teamMembers.some(member => member._serviceIndex !== undefined);
 
   const monthlyRevenue = monthlyTotal > 0 ? monthlyTotal : 0;
@@ -490,9 +492,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Nabídka v Notion</p>
-              {lead.offer_url ? (
+              {offerUrl ? (
                 <a
-                  href={lead.offer_url}
+                  href={offerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-primary hover:underline"

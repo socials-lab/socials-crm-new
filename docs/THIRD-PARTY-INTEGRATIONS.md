@@ -373,7 +373,7 @@ These services don't have API integrations but store URLs for manual access:
 
 ### Notion
 - **Purpose**: Documents, offers, SOPs
-- **Storage**: `leads.offer_url`, dashboard SOP links
+- **Storage**: dashboard SOP links (lead offer public URL is generated from offer token)
 - **Usage**: Links open Notion pages in new tab
 
 ---

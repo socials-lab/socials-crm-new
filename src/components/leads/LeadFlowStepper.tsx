@@ -21,6 +21,7 @@ import type { Lead, LeadService } from '@/types/crm';
 
 interface LeadFlowStepperProps {
   lead: Lead;
+  offerUrl?: string | null;
   onSendMeetingRequest: () => void;
   onQuickConfirmMeetingSent: () => void;
   onRequestAccess: () => void;
@@ -93,6 +94,7 @@ function ServicesInlineList({
 
 export function LeadFlowStepper({
   lead,
+  offerUrl,
   onSendMeetingRequest,
   onQuickConfirmMeetingSent,
   onRequestAccess,
@@ -109,7 +111,7 @@ export function LeadFlowStepper({
   onRemoveService,
 }: LeadFlowStepperProps) {
   const servicesCount = lead.potential_services?.length || 0;
-  const hasOffer = !!lead.offer_url;
+  const hasOffer = !!offerUrl;
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
 
   interface StepDef {
@@ -183,9 +185,9 @@ export function LeadFlowStepper({
           { label: 'Vytvořit nabídku', onClick: onCreateOffer, variant: 'outline' as const },
         ]),
       ],
-      customContent: lead.offer_url ? (
+      customContent: offerUrl ? (
         <a
-          href={lead.offer_url}
+          href={offerUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"

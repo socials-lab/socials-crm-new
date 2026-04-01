@@ -62,7 +62,6 @@ const leadSchema = z.object({
   estimated_price: z.coerce.number().min(0, 'Cena musí být kladná'),
   currency: z.string().default('CZK'),
   probability_percent: z.coerce.number().min(0).max(100),
-  offer_url: z.string().refine((val) => val === '' || /^(https?:\/\/)?[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(val), { message: 'Zadejte platnou URL' }).or(z.literal('')).optional().nullable(),
   // Court registration info from ARES (hidden fields)
   court_name: z.string().optional().nullable(),
   court_file_number: z.string().optional().nullable(),
@@ -196,7 +195,6 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       estimated_price: 0,
       currency: 'CZK',
       probability_percent: 30,
-      offer_url: '',
       court_name: '',
       court_file_number: '',
     },
@@ -229,7 +227,6 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         estimated_price: lead.estimated_price,
         currency: lead.currency,
         probability_percent: lead.probability_percent,
-        offer_url: lead.offer_url || '',
         court_name: lead.court_name || '',
         court_file_number: lead.court_file_number || '',
       });
@@ -259,7 +256,6 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
         estimated_price: 0,
         currency: 'CZK',
         probability_percent: 30,
-        offer_url: '',
         court_name: '',
         court_file_number: '',
       });
@@ -303,7 +299,7 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       estimated_price: data.estimated_price,
       currency: data.currency,
       probability_percent: data.probability_percent,
-      offer_url: data.offer_url || null,
+      offer_token: lead?.offer_token || null,
       offer_created_at: lead?.offer_created_at || null,
       potential_services: lead?.potential_services || [],
       meeting_request_sent_at: lead?.meeting_request_sent_at || null,

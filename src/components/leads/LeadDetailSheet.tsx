@@ -75,6 +75,7 @@ import type { Lead, LeadStage, LeadService } from '@/types/crm';
 import type { PendingTransition } from '@/types/leadTransitions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getLeadOfferUrl } from '@/utils/offerUrl';
 
 interface LeadDetailSheetProps {
   lead: Lead | null;
@@ -136,6 +137,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
   if (!lead) return null;
 
   const owner = colleagues.find(c => c.id === lead.owner_id);
+  const resolvedOfferUrl = sharedOfferUrl || getLeadOfferUrl(lead);
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
   const history = getLeadHistory(lead.id);
   const handleStageChange = (newStage: LeadStage) => {
@@ -808,19 +810,19 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
               {/* Shared offer - NEW */}
               <div className={cn(
                 "p-3 rounded-lg border",
-                sharedOfferUrl || lead.offer_url ? "border-green-500/30 bg-green-500/5" : "bg-card"
+                resolvedOfferUrl ? "border-green-500/30 bg-green-500/5" : "bg-card"
               )}>
                 <div className="flex items-center gap-2 mb-2">
                   <Link2 className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Sdílená nabídka</span>
-                  {(sharedOfferUrl || lead.offer_url) && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                  {resolvedOfferUrl && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                 </div>
                 
-                {sharedOfferUrl || lead.offer_url ? (
+                {resolvedOfferUrl ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <a
-                        href={sharedOfferUrl || lead.offer_url || '#'}
+                        href={resolvedOfferUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 text-sm text-primary hover:underline"
@@ -833,7 +835,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                         size="sm"
                         className="h-7"
                         onClick={() => {
-                          navigator.clipboard.writeText(sharedOfferUrl || lead.offer_url || '');
+                          navigator.clipboard.writeText(resolvedOfferUrl);
                           toast.success('Odkaz zkopírován');
                         }}
                       >
@@ -926,7 +928,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          {lead.offer_url ? 'Připraveno k odeslání' : 'Nejprve vytvořte nabídku'}
+                          {resolvedOfferUrl ? 'Připraveno k odeslání' : 'Nejprve vytvořte nabídku'}
                         </p>
                       )}
                     </div>
@@ -935,7 +937,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                     variant={lead.offer_sent_at ? "outline" : "default"}
                     size="sm"
                     onClick={() => setIsSendOfferOpen(true)}
-                    disabled={!lead.offer_url}
+                    disabled={!resolvedOfferUrl}
                   >
                     {lead.offer_sent_at ? 'Znovu odeslat' : 'Odeslat'}
                   </Button>
@@ -1441,6 +1443,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
         open={isSendOfferOpen}
         onOpenChange={setIsSendOfferOpen}
         lead={lead}
+        offerUrl={resolvedOfferUrl}
         onSent={(ownerId) => {
           updateLead(lead.id, {
             offer_sent_at: new Date().toISOString(),
@@ -1461,7 +1464,6 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
         onSuccess={(token, offerUrl) => {
           setSharedOfferUrl(offerUrl);
           updateLead(lead.id, {
-            offer_url: offerUrl,
             offer_created_at: new Date().toISOString(),
           });
         }}

@@ -24,7 +24,6 @@ const LEAD_FIELD_LABELS: Record<string, string> = {
   summary: 'Shrnutí',
   estimated_price: 'Odhadovaná cena',
   probability_percent: 'Pravděpodobnost',
-  offer_url: 'URL nabídky',
   offer_created_at: 'Nabídka vytvořena',
   meeting_request_sent_at: 'Žádost o schůzku odeslána',
   billing_street: 'Ulice',
@@ -120,7 +119,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       // applied in the shared-offer flow (including monthly % discounts).
       const { data: offersData, error: offersError } = await supabase
         .from('public_offers')
-        .select('lead_id, total_price, created_at')
+        .select('lead_id, total_price, created_at, token')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -129,13 +128,18 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       }
 
       const latestOfferTotalByLeadId = new Map<string, number>();
+      const latestOfferTokenByLeadId = new Map<string, string>();
       (offersData || []).forEach((offer: Record<string, unknown>) => {
         const leadId = typeof offer.lead_id === 'string' ? offer.lead_id : null;
         const totalPrice = Number(offer.total_price);
+        const token = typeof offer.token === 'string' ? offer.token : null;
 
         if (!leadId || !Number.isFinite(totalPrice)) return;
         if (!latestOfferTotalByLeadId.has(leadId)) {
           latestOfferTotalByLeadId.set(leadId, totalPrice);
+        }
+        if (token && !latestOfferTokenByLeadId.has(leadId)) {
+          latestOfferTokenByLeadId.set(leadId, token);
         }
       });
 
@@ -144,10 +148,12 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       return (data || []).map((lead: Record<string, unknown>) => {
         const leadId = typeof lead.id === 'string' ? lead.id : null;
         const offerTotal = leadId ? latestOfferTotalByLeadId.get(leadId) : undefined;
+        const offerToken = leadId ? latestOfferTokenByLeadId.get(leadId) : undefined;
 
         return {
           ...lead,
           estimated_price: Number.isFinite(offerTotal) ? offerTotal : lead.estimated_price,
+          offer_token: offerToken ?? null,
           notes: Array.isArray(lead.notes) ? lead.notes : [],
           stage: lead.stage || 'new_lead',
           potential_services: Array.isArray(lead.potential_services) ? lead.potential_services : [],

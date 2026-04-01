@@ -638,7 +638,7 @@ export interface Lead {
   estimated_price: number;
   currency: string;
   probability_percent: number;
-  offer_url: string | null;
+  offer_token: string | null;
   offer_created_at: string | null;
   offer_sent_at: string | null;
   offer_sent_by_id: string | null;

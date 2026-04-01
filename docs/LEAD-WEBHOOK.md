@@ -49,7 +49,6 @@ Pass the same token in one of these headers:
   - `estimated_price`
   - `currency`
   - `probability_percent`
-  - `offer_url`
 - Court info:
   - `court_name`
   - `court_file_number`
@@ -101,7 +100,6 @@ curl -X POST "https://bkemtvqmbpxopuasgxcq.supabase.co/functions/v1/create-lead-
   "estimated_price": 45000,
   "currency": "CZK",
   "probability_percent": 30,
-  "offer_url": "https://example.com/offer/acme",
   "court_name": "Mestsky soud v Praze",
   "court_file_number": "C 123456"
  }'
