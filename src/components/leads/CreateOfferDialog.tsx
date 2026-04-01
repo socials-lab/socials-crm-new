@@ -486,7 +486,47 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         };
         onSuccess(offerForEdit.token, offerUrl, syncData);
       } else {
-        // Create mode
+        // Create mode: hard guard against accidental token rotation.
+        // If any active offer already exists for this lead, update it in place.
+        const existingByLead = await getOffersByLeadId(lead.id);
+        const existingOfferForLead = existingByLead[0];
+        if (existingOfferForLead) {
+          await updatePublicOffer(existingOfferForLead.token, {
+            audit_summary: auditSummary.trim() || null,
+            audit_html: auditHtml.trim() || null,
+            recommendation_intro: recommendationIntro.trim() || null,
+            custom_note: customNote.trim() || null,
+            loom_url: loomUrl.trim() || null,
+            services: editableServices,
+            portfolio_links: portfolioLinks,
+            total_price: totals.monthlyAfterDiscount + totals.oneOff,
+            monthly_discount_percent: monthlyDiscountPercent > 0 ? monthlyDiscountPercent : undefined,
+            discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
+            intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+            intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+            valid_until: validUntil || null,
+            owner_name: leadOwner?.full_name || undefined,
+            owner_email: leadOwner?.email || undefined,
+            owner_phone: leadOwner?.phone || undefined,
+          }, undefined, {
+            changedBy: currentColleague?.id || null,
+          });
+
+          const existingOfferUrl = buildAppUrl(`/offer/${existingOfferForLead.token}`);
+          setCreatedOfferUrl(existingOfferUrl);
+          toast.success('Nabídka byla aktualizována!');
+          const syncData = {
+            services: editableServices,
+            introDiscountPercent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
+            introDiscountMonths: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+            cbCredits: cbCredits,
+            cbPricePerCredit: cbPricePerCredit,
+          };
+          onSuccess(existingOfferForLead.token, existingOfferUrl, syncData);
+          return;
+        }
+
+        // True create mode: no previous offer found.
         const token = generateToken();
         const offerUrl = buildAppUrl(`/offer/${token}`);
 
@@ -1261,12 +1301,17 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
               </Button>
               <Button
                 onClick={handleCreate}
-                disabled={isCreating || editableServices.length === 0}
+                disabled={isCreating || editableServices.length === 0 || isLoadingExistingOffer}
               >
                 {isCreating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     {isEditMode ? 'Ukládám...' : 'Vytvářím...'}
+                  </>
+                ) : isLoadingExistingOffer ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Načítám nabídku...
                   </>
                 ) : (
                   isEditMode ? 'Uložit změny' : 'Vytvořit nabídku'

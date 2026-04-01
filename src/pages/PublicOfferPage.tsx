@@ -46,6 +46,7 @@ import {
   Moon,
   Star as StarIcon,
   Plus as PlusIcon,
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink, CountryVariant } from '@/types/publicOffer';
@@ -880,6 +881,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [showOfferHistory, setShowOfferHistory] = useState(false);
   const loomEmbedUrl = toLoomEmbedUrl(offer?.loom_url);
 
   const handleCopyLink = async () => {
@@ -976,6 +978,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const totalOneOff = offer.services
     .filter(s => s.billing_type === 'one_off')
     .reduce((sum, s) => sum + getServiceMonthlyPrice(s), 0);
+  const historyEntries = [...(offer.history || [])]
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const hasVersionHistory = historyEntries.length > 0;
+  const lastChangeDate = hasVersionHistory ? new Date(historyEntries[0].timestamp) : null;
 
   const onboardingUrl = `/onboarding/${offer.lead_id}`;
 
@@ -1034,11 +1040,71 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   : offer.company_name}
               </span>
             </h1>
-            <p className="text-muted-foreground text-sm">
-              Připraveno pro {offer.contact_name === 'Jan Novák' ? 'Jana Nováka' : offer.contact_name}
-            </p>
+            <div className="text-muted-foreground text-sm flex flex-col items-center gap-1 md:flex-row md:justify-center md:gap-2">
+              <span>
+                Připraveno pro {offer.contact_name === 'Jan Novák' ? 'Jana Nováka' : offer.contact_name}
+              </span>
+              {hasVersionHistory && lastChangeDate && (
+                <>
+                  <span className="hidden md:inline text-muted-foreground/40">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowOfferHistory((prev) => !prev)}
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <History className="h-3.5 w-3.5" />
+                    <span>
+                      Poslední změna {lastChangeDate.toLocaleString('cs-CZ', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                    <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showOfferHistory && 'rotate-180')} />
+                  </button>
+                </>
+              )}
+            </div>
           </section>
         </ScrollReveal>
+
+        {hasVersionHistory && showOfferHistory && (
+          <div className="mb-8 rounded-lg border border-foreground/[0.08] bg-foreground/[0.02] divide-y divide-border/50 max-h-[260px] overflow-y-auto">
+            {historyEntries.map((entry, index) => (
+              <div key={`${entry.timestamp}-${index}`} className="px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium">{entry.summary}</span>
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    {new Date(entry.timestamp).toLocaleString('cs-CZ', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+                {entry.changes && entry.changes.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {entry.changes.slice(0, 8).map((change, changeIndex) => (
+                      <div key={changeIndex} className="text-[11px] text-muted-foreground">
+                        <span className="text-foreground/80 font-medium">{change.field}:</span>{' '}
+                        <span className="line-through decoration-muted-foreground/60">{change.from}</span>{' '}
+                        <span aria-hidden="true">→</span>{' '}
+                        <span className="text-foreground/85">{change.to}</span>
+                      </div>
+                    ))}
+                    {entry.changes.length > 8 && (
+                      <div className="text-[10px] text-muted-foreground">+{entry.changes.length - 8} dalších změn</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Credibility badges */}
         {(() => {
