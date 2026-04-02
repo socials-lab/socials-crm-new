@@ -977,16 +977,18 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   }
 
   const isExpired = offer.valid_until && new Date(offer.valid_until) < new Date();
+  const getServiceTotal = (s: PublicOfferService) => 
+    s.price + (s.country_variants || []).reduce((sum, v) => sum + v.price, 0);
   const coreMonthly = offer.services
     .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
-    .reduce((sum, s) => sum + s.price, 0);
+    .reduce((sum, s) => sum + getServiceTotal(s), 0);
   const addonMonthly = offer.services
     .filter(s => s.billing_type === 'monthly' && s.service_type !== 'core')
-    .reduce((sum, s) => sum + s.price, 0);
+    .reduce((sum, s) => sum + getServiceTotal(s), 0);
   const totalMonthly = coreMonthly + addonMonthly;
   const totalOneOff = offer.services
     .filter(s => s.billing_type === 'one_off')
-    .reduce((sum, s) => sum + s.price, 0);
+    .reduce((sum, s) => sum + getServiceTotal(s), 0);
 
   const onboardingUrl = `/onboarding/${offer.lead_id}`;
 
