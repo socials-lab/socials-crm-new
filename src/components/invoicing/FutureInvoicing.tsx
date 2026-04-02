@@ -57,6 +57,7 @@ function calculateOutputCredits(outputTypeId: string, normalCount: number, expre
 
 export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvoicingProps) {
   const { clients, engagements, engagementServices, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices } = useCRMData();
+  const { addRecurringItem, getRecurringItemsForMonth, removeRecurringItem } = useRecurringInvoiceItems();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<MonthlyEngagementInvoice[]>([]);
   const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
