@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { 
+import {
+  BarChart3, 
   Target, 
   Activity, 
   Facebook, 
