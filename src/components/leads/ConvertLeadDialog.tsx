@@ -137,7 +137,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   }>>([]);
   const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
   const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
-  const [commissionMembers, setCommissionMembers] = useState<Record<number, boolean>>({});
+  const [commissionColleagueId, setCommissionColleagueId] = useState<string>('');
   const [isConverting, setIsConverting] = useState(false);
   const [conversionStep, setConversionStep] = useState('');
   const [conversionResult, setConversionResult] = useState<{
@@ -499,7 +499,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             creative_boost_min_credits: offerSvc.is_creative_boost ? (offerSvc.cb_credits || null) : null,
             creative_boost_max_credits: offerSvc.is_creative_boost ? (offerSvc.cb_credits || null) : null,
             creative_boost_price_per_credit: offerSvc.is_creative_boost ? (offerSvc.cb_price_per_credit || null) : null,
-          });
+            // Commission tracking - only on monthly services
+            ...(commissionColleagueId && commissionColleagueId !== 'none' && offerSvc.billing_type === 'monthly' ? {
+              upsold_by_id: commissionColleagueId,
+              upsell_commission_percent: 10,
+            } : {}),
+          } as any);
           createdServiceIds.push(created.id);
         } catch (e) {
           console.error('Error creating engagement service:', e);
@@ -1894,31 +1899,51 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                     </Button>
                   </div>
                   </div>
-                  {/* Commission checkbox */}
-                  {member.colleague_id && (
-                    <div className="flex items-center gap-2 pt-1 border-t">
-                      <Checkbox
-                        id={`commission-${index}`}
-                        checked={!!commissionMembers[index]}
-                        onCheckedChange={(checked) => setCommissionMembers(prev => ({ ...prev, [index]: !!checked }))}
-                      />
-                      <label htmlFor={`commission-${index}`} className="text-xs text-muted-foreground cursor-pointer">
-                        Provize 10 % z měsíční fakturace
-                      </label>
-                      {commissionMembers[index] && (
-                        <Badge variant="outline" className="text-xs ml-auto gap-1">
-                          <Percent className="h-3 w-3" />
-                          {commissionAmount.toLocaleString('cs-CZ')} {lead.currency}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
                 </div>
                 );
               })}
             </div>
 
-            {/* ===== SUMMARY CARD: What's being converted ===== */}
+            {/* ── SECTION 6: Provize za převod ── */}
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+              <div className="flex items-center gap-3 pb-2 border-b">
+                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">6</div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-sm">Provize za převod (10 %)</h4>
+                  <p className="text-xs text-muted-foreground">Jednorázová provize 10 % z měsíční fakturace (bez jednorázových položek)</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">Provize pro kolegu</label>
+                  <Select value={commissionColleagueId} onValueChange={setCommissionColleagueId}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Bez provize" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Bez provize</SelectItem>
+                      {activeColleagues.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {commissionColleagueId && commissionColleagueId !== 'none' && (() => {
+                  const monthlyFromServices = offerServices
+                    .filter(s => s.billing_type === 'monthly')
+                    .reduce((sum, s) => sum + s.price, 0);
+                  const monthlyBase = monthlyFromServices || form.watch('monthly_fee') || 0;
+                  const amount = Math.round(monthlyBase * 0.1);
+                  return (
+                    <Badge variant="outline" className="text-sm gap-1 self-end mb-1">
+                      <Percent className="h-3 w-3" />
+                      {amount.toLocaleString('cs-CZ')} {lead.currency}
+                    </Badge>
+                  );
+                })()}
+              </div>
+            </div>
+
             <div className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] p-4 space-y-4">
               <h4 className="font-semibold text-sm flex items-center gap-2">
                 <Package className="h-4 w-4 text-primary" />
@@ -1976,21 +2001,21 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 <div className="space-y-1">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tým</p>
                   <p className="text-xs text-muted-foreground">
-                    {teamMembers.filter(m => m.colleague_id).map((m, idx) => {
+                    {teamMembers.filter(m => m.colleague_id).map(m => {
                       const c = colleagues.find(col => col.id === m.colleague_id);
-                      const hasCommission = commissionMembers[teamMembers.indexOf(m)];
-                      return c ? `${c.full_name} (${m.role})${hasCommission ? ' 💰' : ''}` : m.role;
+                      return c ? `${c.full_name} (${m.role})` : m.role;
                     }).join(', ')}
                   </p>
-                  {Object.values(commissionMembers).some(Boolean) && (() => {
-                    const monthlyTotal = offerServices
+                  {commissionColleagueId && commissionColleagueId !== 'none' && (() => {
+                    const seller = colleagues.find(c => c.id === commissionColleagueId);
+                    const monthlyFromServices = offerServices
                       .filter(s => s.billing_type === 'monthly')
                       .reduce((sum, s) => sum + s.price, 0);
-                    const commissionCount = Object.values(commissionMembers).filter(Boolean).length;
-                    const commissionAmount = Math.round(monthlyTotal * 0.1);
+                    const monthlyBase = monthlyFromServices || form.watch('monthly_fee') || 0;
+                    const commissionAmount = Math.round(monthlyBase * 0.1);
                     return (
                       <p className="text-xs text-muted-foreground">
-                        💰 Provize: {commissionCount}× {commissionAmount.toLocaleString('cs-CZ')} {lead.currency} (10 % z {monthlyTotal.toLocaleString('cs-CZ')} {lead.currency}/měs)
+                        💰 Provize: {seller?.full_name || '?'} — {commissionAmount.toLocaleString('cs-CZ')} {lead.currency} (10 % z {monthlyBase.toLocaleString('cs-CZ')} {lead.currency}/měs)
                       </p>
                     );
                   })()}
