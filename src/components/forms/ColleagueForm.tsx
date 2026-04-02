@@ -56,6 +56,7 @@ const colleagueSchema = z.object({
   is_freelancer: z.boolean(),
   internal_hourly_cost: z.coerce.number().min(0, 'Hodinová sazba musí být kladná'),
   monthly_fixed_cost: z.coerce.number().min(0).nullable(),
+  minimum_reward: z.coerce.number().min(0).nullable(),
   max_engagements: z.coerce.number().min(0).nullable(),
   capacity_slots: capacitySlotsSchema,
   status: z.enum(['active', 'on_hold', 'left'] as const),
