@@ -100,8 +100,8 @@ export function LeadSummaryBar({ lead, onUpdate }: LeadEnrichmentSectionProps) {
     { label: 'Telefon', value: lead.contact_phone, key: 'contact_phone' },
     { label: 'Web', value: lead.website, key: 'website', isLink: true },
     { label: 'Rozpočet', value: lead.enrichment_ad_spend_range || (lead.ad_spend_monthly ? `${lead.ad_spend_monthly.toLocaleString('cs-CZ')} Kč` : null), key: 'ad_spend_monthly' },
-    { label: 'Skóre', value: lead.lead_score !== null && lead.lead_score !== undefined ? String(lead.lead_score) : null, key: 'lead_score' },
-    { label: 'Kvalifikace', value: lead.enrichment_qualification_tier, key: 'enrichment_qualification_tier' },
+    { label: 'Skóre', value: lead.lead_score !== null && lead.lead_score !== undefined ? String(lead.lead_score) : null, readOnly: true },
+    { label: 'Kvalifikace', value: lead.enrichment_qualification_tier, readOnly: true },
     { label: 'Schůzka', value: lead.booking_datetime ? new Date(lead.booking_datetime).toLocaleDateString('cs-CZ') : '–', readOnly: true },
     { label: 'Datum', value: lead.created_at ? new Date(lead.created_at).toLocaleDateString('cs-CZ') : null, readOnly: true },
   ];
