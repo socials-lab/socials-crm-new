@@ -435,23 +435,26 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         o => o.clientId === clientId && o.outputTypeId === outputTypeId && o.year === year && o.month === month
       );
       
-      const totalCount = (data.normalCount ?? existing?.normalCount ?? 0) + (data.expressCount ?? existing?.expressCount ?? 0);
+      const nextNormalCount = data.normalCount ?? existing?.normalCount ?? 0;
+      const nextExpressCount = data.expressCount ?? existing?.expressCount ?? 0;
+      const totalCount = nextNormalCount + nextExpressCount;
         
       if (existing) {
-        if (totalCount === 0) {
-          // Delete if both counts are 0
-          const { error } = await supabase.from('creative_boost_outputs').delete().eq('id', existing.id);
-          if (error) throw error;
-        } else {
-          // Update existing
-          const updateData: Record<string, unknown> = {};
-          if (data.normalCount !== undefined) updateData.normal_count = data.normalCount;
-          if (data.expressCount !== undefined) updateData.express_count = data.expressCount;
-          if (data.colleagueId !== undefined) updateData.colleague_id = data.colleagueId || null;
+        // Always update existing rows (including zero counts).
+        // This avoids requiring DELETE permission when user sets values to 0.
+        const updateData: Record<string, unknown> = {};
+        if (data.normalCount !== undefined) updateData.normal_count = data.normalCount;
+        if (data.expressCount !== undefined) updateData.express_count = data.expressCount;
 
-          const { error } = await supabase.from('creative_boost_outputs').update(updateData).eq('id', existing.id);
-          if (error) throw error;
+        // If output is now zero, clear colleague assignment to keep data consistent.
+        if (totalCount === 0) {
+          updateData.colleague_id = null;
+        } else if (data.colleagueId !== undefined) {
+          updateData.colleague_id = data.colleagueId || null;
         }
+
+        const { error } = await supabase.from('creative_boost_outputs').update(updateData).eq('id', existing.id);
+        if (error) throw error;
       } else if (totalCount > 0) {
         // Create new - need to get client_month_id for the FK relationship
         const { data: clientMonthData } = await supabase
