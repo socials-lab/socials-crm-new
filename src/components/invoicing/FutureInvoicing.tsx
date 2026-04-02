@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useRecurringInvoiceItems } from '@/hooks/useRecurringInvoiceItems';
 import { EngagementInvoiceCard } from './EngagementInvoiceCard';
 import { IssueInvoicesDialog } from './IssueInvoicesDialog';
 import { AddInvoiceDialog } from './AddInvoiceDialog';
@@ -56,6 +57,7 @@ function calculateOutputCredits(outputTypeId: string, normalCount: number, expre
 
 export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvoicingProps) {
   const { clients, engagements, engagementServices, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices } = useCRMData();
+  const { addRecurringItem, getRecurringItemsForMonth, removeRecurringItem } = useRecurringInvoiceItems();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<MonthlyEngagementInvoice[]>([]);
   const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
@@ -295,6 +297,39 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
           });
         });
 
+        // Add recurring manual items for this engagement
+        const recurringForMonth = getRecurringItemsForMonth(year, month);
+        recurringForMonth
+          .filter(ri => ri.engagement_id === engagement.id)
+          .forEach(ri => {
+            lineItems.push({
+              id: `li-rec-${ri.id}-${year}-${month}`,
+              invoice_id: `inv-${engagement.id}-${year}-${month}`,
+              source: 'manual' as const,
+              engagement_id: engagement.id,
+              extra_work_id: null,
+              source_description: `${ri.description} (opakovaná)`,
+              source_amount: ri.amount,
+              period_start: format(periodStart, 'yyyy-MM-dd'),
+              period_end: format(periodEnd, 'yyyy-MM-dd'),
+              prorated_days: totalDays,
+              total_days_in_month: totalDays,
+              prorated_amount: ri.amount,
+              line_description: `${ri.description}`,
+              unit_price: ri.amount,
+              quantity: 1,
+              adjustment_amount: 0,
+              adjustment_reason: '',
+              final_amount: ri.amount,
+              is_approved: false,
+              note: `🔄 Opakovaná položka od ${ri.start_month}/${ri.start_year}`,
+              hours: ri.hours,
+              hourly_rate: ri.hourly_rate,
+              currency: ri.currency,
+              is_reverse_charge: ri.is_reverse_charge,
+            });
+          });
+
         if (lineItems.length === 0) return;
 
         const subtotal = lineItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
@@ -322,7 +357,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       });
 
     return newInvoices;
-  }, [year, month, engagements, clients, getClientById, getUnbilledOneOffServices]);
+  }, [year, month, engagements, clients, getClientById, getUnbilledOneOffServices, getRecurringItemsForMonth]);
 
   // Merge generated invoices with any saved changes
   const currentInvoices = useMemo(() => {
@@ -483,7 +518,29 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     hourly_rate: number | null;
     currency: string;
     is_reverse_charge: boolean;
+    is_recurring: boolean;
   }) => {
+    // If recurring, save to recurring store (will auto-appear in future months)
+    if (itemData.is_recurring) {
+      addRecurringItem({
+        engagement_id: engagementId,
+        description: itemData.description,
+        amount: itemData.amount,
+        hours: itemData.hours,
+        hourly_rate: itemData.hourly_rate,
+        currency: itemData.currency,
+        is_reverse_charge: itemData.is_reverse_charge,
+        start_year: year,
+        start_month: month,
+        end_year: null,
+        end_month: null,
+      });
+      toast({
+        title: 'Opakovaná položka vytvořena',
+        description: `"${itemData.description}" se bude zobrazovat každý měsíc od ${month}/${year}.`,
+      });
+      return;
+    }
     const periodStart = startOfMonth(new Date(year, month - 1));
     const periodEnd = endOfMonth(new Date(year, month - 1));
     const totalDays = getDaysInMonth(new Date(year, month - 1));

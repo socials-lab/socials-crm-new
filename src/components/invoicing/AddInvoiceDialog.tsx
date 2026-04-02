@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCRMData } from '@/hooks/useCRMData';
-import { FileText, Building2, Calculator } from 'lucide-react';
+import { FileText, Building2, Calculator, Repeat } from 'lucide-react';
 
 export interface NewInvoiceItemData {
   description: string;
@@ -28,6 +28,7 @@ export interface NewInvoiceItemData {
   hourly_rate: number | null;
   currency: string;
   is_reverse_charge: boolean;
+  is_recurring: boolean;
 }
 
 interface AddInvoiceDialogProps {
@@ -57,6 +58,7 @@ export function AddInvoiceDialog({
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('CZK');
   const [isReverseCharge, setIsReverseCharge] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
   const [isAmountManual, setIsAmountManual] = useState(false);
 
   // Sort engagements - active first, then by name
@@ -97,6 +99,7 @@ export function AddInvoiceDialog({
       hourly_rate: hourlyRate ? Number(hourlyRate) : null,
       currency,
       is_reverse_charge: isReverseCharge,
+      is_recurring: isRecurring,
     });
     handleClose();
   };
@@ -109,6 +112,7 @@ export function AddInvoiceDialog({
     setAmount('');
     setCurrency('CZK');
     setIsReverseCharge(false);
+    setIsRecurring(false);
     setIsAmountManual(false);
     onOpenChange(false);
   };
@@ -255,6 +259,26 @@ export function AddInvoiceDialog({
               Fakturovat v přenesené daňové odpovědnosti
             </Label>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="recurring" 
+              checked={isRecurring}
+              onCheckedChange={(checked) => setIsRecurring(checked === true)}
+            />
+            <Label 
+              htmlFor="recurring" 
+              className="text-sm font-normal cursor-pointer flex items-center gap-1.5"
+            >
+              <Repeat className="h-3.5 w-3.5" />
+              Opakovat každý měsíc
+            </Label>
+          </div>
+          {isRecurring && (
+            <p className="text-xs text-muted-foreground pl-6">
+              Položka se bude automaticky zobrazovat ve fakturaci každý měsíc od aktuálního období.
+            </p>
+          )}
         </div>
 
         <DialogFooter>

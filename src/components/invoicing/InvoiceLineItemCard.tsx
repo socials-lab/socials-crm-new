@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { FileText, AlertTriangle, Trash2, Plus, CheckCircle2, Copy, MessageSquare, Clock, ArrowRightLeft } from 'lucide-react';
+import { FileText, AlertTriangle, Trash2, Plus, CheckCircle2, Copy, MessageSquare, Clock, ArrowRightLeft, Repeat } from 'lucide-react';
 import type { InvoiceLineItem } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
@@ -21,6 +21,7 @@ interface InvoiceLineItemCardProps {
 export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDuplicate }: InvoiceLineItemCardProps) {
   const isProrated = item.prorated_days < item.total_days_in_month;
   const isManual = item.source === 'manual';
+  const isRecurring = item.id.startsWith('li-rec-');
   const hasNote = item.note && item.note.trim().length > 0;
 
   const formatCurrency = (amount: number) => {
@@ -64,6 +65,12 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
               {item.source === 'extra_work' && (
                 <Badge variant="outline" className="text-xs h-5 bg-purple-100 text-purple-800 border-purple-300">
                   Vícepráce
+                </Badge>
+              )}
+              {isRecurring && (
+                <Badge variant="outline" className="text-xs h-5 bg-blue-100 text-blue-800 border-blue-300 gap-0.5">
+                  <Repeat className="h-3 w-3" />
+                  Opakovaná
                 </Badge>
               )}
               {isProrated && !isManual && (
