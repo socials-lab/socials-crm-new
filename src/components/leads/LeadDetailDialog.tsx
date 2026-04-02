@@ -642,7 +642,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                     Marketing
                   </h4>
                   <div className="space-y-2 text-sm">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-2">
                       <div>
                         <span className="text-muted-foreground text-xs">Kanály</span>
                         <InlineEditField
