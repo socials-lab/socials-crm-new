@@ -499,7 +499,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             creative_boost_min_credits: offerSvc.is_creative_boost ? (offerSvc.cb_credits || null) : null,
             creative_boost_max_credits: offerSvc.is_creative_boost ? (offerSvc.cb_credits || null) : null,
             creative_boost_price_per_credit: offerSvc.is_creative_boost ? (offerSvc.cb_price_per_credit || null) : null,
-          });
+            // Commission tracking - only on monthly services
+            ...(commissionColleagueId && commissionColleagueId !== 'none' && offerSvc.billing_type === 'monthly' ? {
+              upsold_by_id: commissionColleagueId,
+              upsell_commission_percent: 10,
+            } : {}),
+          } as any);
           createdServiceIds.push(created.id);
         } catch (e) {
           console.error('Error creating engagement service:', e);
