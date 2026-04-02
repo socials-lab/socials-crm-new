@@ -93,18 +93,47 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
 }
 
 /** Summary bar shown at the top of lead detail */
-export function LeadSummaryBar({ lead }: LeadEnrichmentSectionProps) {
-  const fields = [
-    { label: 'Jméno', value: lead.contact_name },
-    { label: 'E-mail', value: lead.contact_email },
-    { label: 'Telefon', value: lead.contact_phone },
-    { label: 'Web', value: lead.website, isLink: true },
-    { label: 'Rozpočet', value: lead.enrichment_ad_spend_range || (lead.ad_spend_monthly ? `${lead.ad_spend_monthly.toLocaleString('cs-CZ')} Kč` : null) },
-    { label: 'Skóre', value: lead.lead_score !== null && lead.lead_score !== undefined ? String(lead.lead_score) : null },
-    { label: 'Kvalifikace', value: lead.enrichment_qualification_tier },
-    { label: 'Schůzka', value: lead.booking_datetime ? new Date(lead.booking_datetime).toLocaleDateString('cs-CZ') : '–' },
-    { label: 'Datum', value: lead.created_at ? new Date(lead.created_at).toLocaleDateString('cs-CZ') : null },
+export function LeadSummaryBar({ lead, onUpdate }: LeadEnrichmentSectionProps) {
+  const fields: { label: string; value: string | null | undefined; key?: string; isLink?: boolean; readOnly?: boolean }[] = [
+    { label: 'Jméno', value: lead.contact_name, key: 'contact_name' },
+    { label: 'E-mail', value: lead.contact_email, key: 'contact_email' },
+    { label: 'Telefon', value: lead.contact_phone, key: 'contact_phone' },
+    { label: 'Web', value: lead.website, key: 'website', isLink: true },
+    { label: 'Rozpočet', value: lead.enrichment_ad_spend_range || (lead.ad_spend_monthly ? `${lead.ad_spend_monthly.toLocaleString('cs-CZ')} Kč` : null), key: 'ad_spend_monthly' },
+    { label: 'Skóre', value: lead.lead_score !== null && lead.lead_score !== undefined ? String(lead.lead_score) : null, key: 'lead_score' },
+    { label: 'Kvalifikace', value: lead.enrichment_qualification_tier, key: 'enrichment_qualification_tier' },
+    { label: 'Schůzka', value: lead.booking_datetime ? new Date(lead.booking_datetime).toLocaleDateString('cs-CZ') : '–', readOnly: true },
+    { label: 'Datum', value: lead.created_at ? new Date(lead.created_at).toLocaleDateString('cs-CZ') : null, readOnly: true },
   ];
+
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+
+  const startEdit = (key: string, currentValue: string | null | undefined) => {
+    if (!onUpdate) return;
+    setEditingField(key);
+    setEditValue(String(currentValue ?? ''));
+  };
+
+  const saveEdit = (key: string) => {
+    if (!onUpdate) return;
+    const val = editValue.trim();
+    if (key === 'ad_spend_monthly') {
+      const num = parseInt(val.replace(/\s/g, '').replace(/[^0-9]/g, ''), 10);
+      onUpdate(lead.id, { ad_spend_monthly: isNaN(num) ? null : num } as any);
+    } else if (key === 'lead_score') {
+      const num = parseInt(val, 10);
+      onUpdate(lead.id, { lead_score: isNaN(num) ? null : num } as any);
+    } else {
+      onUpdate(lead.id, { [key]: val || null } as any);
+    }
+    setEditingField(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, key: string) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveEdit(key); }
+    if (e.key === 'Escape') setEditingField(null);
+  };
 
   return (
     <div className="rounded-lg border bg-card overflow-x-auto">
@@ -120,22 +149,46 @@ export function LeadSummaryBar({ lead }: LeadEnrichmentSectionProps) {
         </thead>
         <tbody>
           <tr>
-            {fields.map(f => (
-              <td key={`v-${f.label}`} className="px-3 py-2.5 whitespace-nowrap">
-                {f.isLink && f.value ? (
-                  <a href={f.value.startsWith('http') ? f.value : `https://${f.value}`} target="_blank" rel="noopener noreferrer"
-                    className="text-primary hover:underline">
-                    {f.value}
-                  </a>
-                ) : f.label === 'Kvalifikace' && f.value ? (
-                  <TierBadge tier={f.value} />
-                ) : (
-                  <span className={cn(!f.value && "text-muted-foreground")}>
-                    {f.value || '–'}
-                  </span>
-                )}
-              </td>
-            ))}
+            {fields.map(f => {
+              const key = f.key;
+              const isEditing = editingField === key;
+              const canEdit = onUpdate && key && !f.readOnly;
+
+              return (
+                <td key={`v-${f.label}`} className="px-3 py-1.5 whitespace-nowrap">
+                  {isEditing && key ? (
+                    <input
+                      autoFocus
+                      className="w-full min-w-[80px] bg-transparent border-b border-primary outline-none text-sm py-0.5"
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      onBlur={() => saveEdit(key)}
+                      onKeyDown={e => handleKeyDown(e, key)}
+                    />
+                  ) : (
+                    <span
+                      className={cn(
+                        !f.value && "text-muted-foreground",
+                        canEdit && "cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 transition-colors"
+                      )}
+                      onClick={canEdit ? () => startEdit(key!, f.value) : undefined}
+                    >
+                      {f.isLink && f.value ? (
+                        <a href={f.value.startsWith('http') ? f.value : `https://${f.value}`} target="_blank" rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                          onClick={e => e.stopPropagation()}>
+                          {f.value}
+                        </a>
+                      ) : f.label === 'Kvalifikace' && f.value ? (
+                        <TierBadge tier={f.value} />
+                      ) : (
+                        f.value || '–'
+                      )}
+                    </span>
+                  )}
+                </td>
+              );
+            })}
           </tr>
         </tbody>
       </table>
