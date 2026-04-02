@@ -509,9 +509,12 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Adresa</span>
-                        <p className="font-medium text-sm">
-                          {lead.company_address || [lead.billing_street, lead.billing_city, lead.billing_zip].filter(Boolean).join(', ') || '–'}
-                        </p>
+                        <InlineEditField
+                          value={lead.company_address || [lead.billing_street, lead.billing_city, lead.billing_zip].filter(Boolean).join(', ')}
+                          onSave={(v) => { updateLead(lead.id, { billing_street: v } as any); toast.success('Uloženo'); }}
+                          emptyText="Doplnit adresu"
+                          displayClassName="font-medium text-sm"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">E-shop</span>
