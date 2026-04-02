@@ -249,6 +249,8 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
   const hasDetailedSections = service.detailed_sections && service.detailed_sections.length > 0;
   const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline;
   const hasCountryVariants = service.country_variants && service.country_variants.length > 0;
+  const variantTotal = (service.country_variants || []).reduce((sum, v) => sum + v.price, 0);
+  const serviceTotalPrice = service.price + variantTotal;
   const countryFlags = [
     ...(service.managed_countries || []),
     ...(service.country_variants || []).map(v => v.country_code),
