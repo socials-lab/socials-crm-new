@@ -16,6 +16,7 @@ export interface ActivityReward {
   activity_date: string;
   created_at: string;
   client_name?: string;
+  is_recurring?: boolean;
 }
 
 export const CATEGORY_LABELS: Record<ActivityCategory, string> = {
