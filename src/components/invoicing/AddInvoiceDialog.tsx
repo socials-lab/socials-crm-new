@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCRMData } from '@/hooks/useCRMData';
-import { FileText, Building2, Calculator } from 'lucide-react';
+import { FileText, Building2, Calculator, Repeat } from 'lucide-react';
 
 export interface NewInvoiceItemData {
   description: string;
