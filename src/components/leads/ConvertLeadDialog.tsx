@@ -607,6 +607,41 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       // 7. Mark lead as converted
       await markLeadAsConverted(lead.id, newClient.id, newEngagement.id);
 
+      // 8. Add commission as activity reward for the colleague
+      if (commissionColleagueId && commissionColleagueId !== 'none') {
+        const monthlyFromServices = offerServices
+          .filter(s => s.billing_type === 'monthly')
+          .reduce((sum, s) => sum + s.price, 0);
+        const monthlyBase = monthlyFromServices || data.monthly_fee || 0;
+        const commissionAmount = Math.round(monthlyBase * 0.1);
+        if (commissionAmount > 0) {
+          try {
+            const STORAGE_KEY = 'activity-rewards';
+            const stored = localStorage.getItem(STORAGE_KEY);
+            const existing = stored ? JSON.parse(stored) : [];
+            const now = new Date();
+            const newReward = {
+              id: crypto.randomUUID(),
+              colleague_id: commissionColleagueId,
+              category: 'client_work',
+              description: `Provize za převod – ${data.brand_name || data.client_name}`,
+              invoice_item_name: `Přímá služba – ${data.brand_name || data.client_name} – Provize za převod (10 %)`,
+              billing_type: 'fixed',
+              amount: commissionAmount,
+              hours: null,
+              hourly_rate: null,
+              activity_date: now.toISOString().split('T')[0],
+              created_at: now.toISOString(),
+              client_name: data.brand_name || data.client_name,
+              is_recurring: false,
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([newReward, ...existing]));
+          } catch (e) {
+            console.error('Error saving commission reward:', e);
+          }
+        }
+      }
+
       // Show conversion summary
       const assignedMembers = teamMembers.filter(m => m.colleague_id && m.role);
       setConversionResult({
