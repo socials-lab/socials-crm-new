@@ -436,7 +436,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
             <div className="p-6 space-y-5">
 
               {/* === SUMMARY BAR === */}
-              <LeadSummaryBar lead={lead} />
+              <LeadSummaryBar lead={lead} onUpdate={(id, data) => { updateLead(id, data); toast.success('Uloženo'); }} />
 
               {/* === THREE INFO CARDS === */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
