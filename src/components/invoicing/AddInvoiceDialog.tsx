@@ -259,6 +259,26 @@ export function AddInvoiceDialog({
               Fakturovat v přenesené daňové odpovědnosti
             </Label>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="recurring" 
+              checked={isRecurring}
+              onCheckedChange={(checked) => setIsRecurring(checked === true)}
+            />
+            <Label 
+              htmlFor="recurring" 
+              className="text-sm font-normal cursor-pointer flex items-center gap-1.5"
+            >
+              <Repeat className="h-3.5 w-3.5" />
+              Opakovat každý měsíc
+            </Label>
+          </div>
+          {isRecurring && (
+            <p className="text-xs text-muted-foreground pl-6">
+              Položka se bude automaticky zobrazovat ve fakturaci každý měsíc od aktuálního období.
+            </p>
+          )}
         </div>
 
         <DialogFooter>
