@@ -189,7 +189,7 @@ export function useModificationRequests() {
       );
       if (sessionError) throw sessionError;
       if (!session) {
-        throw new Error('Session expired. Please sign in again.');
+        throw new Error('Session expired while creating modification request. Please sign in again.');
       }
 
       // Get engagement and client info

@@ -28,7 +28,7 @@ import { ColleagueCard } from '@/components/colleagues/ColleagueCard';
 import type { ColleagueStatus, Colleague } from '@/types/crm';
 import { toast } from 'sonner';
 import { CreativeBoostProvider, useCreativeBoostData } from '@/hooks/useCreativeBoostData';
-import { supabase } from '@/integrations/supabase/client';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 import { TeamInvoicingOverview } from '@/components/colleagues/TeamInvoicingOverview';
 
 type ColleaguesTab = 'team' | 'invoicing' | 'access';
@@ -155,7 +155,7 @@ function ColleaguesContent() {
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
 
-        const { data: responseData, error } = await supabase.functions.invoke('invite-user', {
+        const { data: responseData, error } = await invokeWithTimeout<{ error?: string }>('invite-user', {
           body: {
             email: colleagueData.email,
             firstName,

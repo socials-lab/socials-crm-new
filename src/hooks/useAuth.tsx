@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import * as Sentry from '@sentry/react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { getSessionEnsuringFresh, refreshSessionSafely } from '@/lib/authSession';
+import { clearSupabaseAuthStorage, getSessionEnsuringFresh, refreshSessionSafely } from '@/lib/authSession';
 import { withTimeout } from '@/utils/asyncUtils';
 
 interface AuthContextType {
@@ -43,8 +43,14 @@ function isHardAuthFailure(error: unknown): boolean {
     message.includes('invalid refresh token') ||
     message.includes('refresh_token_not_found') ||
     message.includes('session refresh returned no session') ||
+    message.includes('session refresh returned invalid user token') ||
     message.includes('auth session missing')
   );
+}
+
+function isAccessTokenAuthFailure(error: unknown): boolean {
+  const message = String((error as { message?: string })?.message ?? '').toLowerCase();
+  return message.includes('invalid jwt') || message.includes('jwt expired');
 }
 
 function shouldSuppressSessionToast(pathname: string): boolean {
@@ -144,7 +150,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
+        if (isAccessTokenAuthFailure(error)) {
+          try {
+            const { session: refreshedSession, error: refreshError } = await withTimeout(
+              refreshSessionSafely(),
+              8000,
+              'Timeout while recovering access token',
+            );
+
+            if (!refreshError && refreshedSession) {
+              setAuthState(refreshedSession);
+              sessionLossToastShownRef.current = false;
+            }
+          } catch (recoveryError) {
+            console.warn('Access token recovery failed:', recoveryError);
+          }
+          return;
+        }
+
         if (isHardAuthFailure(error)) {
+          clearSupabaseAuthStorage();
+          void supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
           setAuthState(null);
           if (!shouldSuppressSessionToast(window.location.pathname) && !sessionLossToastShownRef.current) {
             toast.error('Session expired. Please sign in again.');

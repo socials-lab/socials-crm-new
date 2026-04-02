@@ -69,14 +69,6 @@ serve(async (req) => {
       );
     }
     const tokenPayload = decodeJwtPayload(token);
-    const sessionIdRaw = tokenPayload["session_id"];
-    const sessionId = typeof sessionIdRaw === "string" ? sessionIdRaw : null;
-    if (!sessionId) {
-      return new Response(
-        JSON.stringify({ error: "Missing session_id in JWT." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !authData.user) {
@@ -88,6 +80,18 @@ serve(async (req) => {
 
     const caller = authData.user;
     callerId = caller.id;
+    const tokenSubject = typeof tokenPayload["sub"] === "string" ? tokenPayload["sub"] : null;
+    if (tokenSubject && tokenSubject !== caller.id) {
+      return new Response(
+        JSON.stringify({ error: "Token subject mismatch." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const sessionIdRaw = tokenPayload["session_id"];
+    const sessionIdFromJwt = typeof sessionIdRaw === "string" ? sessionIdRaw.trim() : "";
+    // Some older/legacy auth sessions do not carry session_id claim.
+    // In that case, bind impersonation to a per-user legacy bucket.
+    const sessionId = sessionIdFromJwt.length > 0 ? sessionIdFromJwt : `legacy:${caller.id}`;
 
     const body = (await req.json()) as ImpersonationRequest;
     if (body.action !== "start" && body.action !== "stop" && body.action !== "status") {

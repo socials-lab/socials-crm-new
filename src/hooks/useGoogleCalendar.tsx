@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useImpersonation } from '@/hooks/useImpersonation';
-import { getSessionEnsuringFresh, refreshSessionSafely } from '@/lib/authSession';
+import { getSessionEnsuringFresh } from '@/lib/authSession';
 import { toast } from '@/components/ui/sonner';
-import { invokeWithTimeout } from '@/lib/supabaseUtils';
+import { invokeWithTimeout, isAuthInvokeError } from '@/lib/supabaseUtils';
 
 export interface GoogleCalendarEvent {
   id: string;
@@ -111,7 +111,7 @@ export function useGoogleCalendar() {
       requireNoImpersonation();
       const redirectUri = 'https://crm.socials.cz/auth-proxy/calendar-callback';
 
-      const { data, error } = await supabase.functions.invoke('calendar-oauth-callback', {
+      const { data, error } = await invokeWithTimeout<{ error?: string }>('calendar-oauth-callback', {
         body: { code, redirect_uri: redirectUri },
       });
       
@@ -269,39 +269,13 @@ export function useGoogleCalendar() {
     return true;
   };
 
-  const isAuthFunctionError = (error: unknown) => {
-    if (!error) return false;
-
-    const candidate = error as {
-      message?: string;
-      name?: string;
-      context?: { status?: number };
-      status?: number;
-    };
-
-    const message = candidate.message?.toLowerCase() ?? '';
-    const status = candidate.context?.status ?? candidate.status;
-
-    if (status === 401) return true;
-
-    const looksLikeInvalidJwt =
-      message.includes('invalid jwt') ||
-      message.includes('jwt expired') ||
-      message.includes('unauthorized') ||
-      message.includes('session') ||
-      message.includes('401');
-
-    const isFunctionsHttpError = candidate.name === 'FunctionsHttpError';
-    return status === 401 || (isFunctionsHttpError && looksLikeInvalidJwt) || looksLikeInvalidJwt;
-  };
-
   const createCalendarEvent = async (meetingId: string) => {
     setIsLoading(true);
     setError(null);
     
     try {
       requireNoImpersonation();
-      const { data, error } = await supabase.functions.invoke('calendar-create-event', {
+      const { data, error } = await invokeWithTimeout<{ error?: string }>('calendar-create-event', {
         body: { meeting_id: meetingId },
       });
       
@@ -396,70 +370,18 @@ export function useGoogleCalendar() {
 
       console.log('Fetching calendar events with options:', body);
 
-      const invokeCalendarFetch = (accessToken?: string | null) =>
-        supabase.functions.invoke('calendar-fetch-events', {
-          body,
-          headers: accessToken
-            ? {
-                Authorization: `Bearer ${accessToken}`,
-                apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-              }
-            : undefined,
-        });
+      const { data, error } = await invokeWithTimeout<{
+        tokenRevoked?: boolean;
+        error?: string;
+        events?: GoogleCalendarEvent[];
+      }>('calendar-fetch-events', {
+        body,
+      });
 
-      let { data, error } = await invokeCalendarFetch(session.access_token);
-
-      if (error && isAuthFunctionError(error)) {
-        console.warn('Calendar fetch auth error detected, trying session recovery flow', error);
-
-        // 1) Re-read current session and retry once with explicit latest token
-        const { session: latestSession, error: latestError } = await getSessionEnsuringFresh(60);
-
-        if (!latestError && latestSession) {
-          if (await handleProjectRefMismatch(latestSession.access_token)) {
-            return [];
-          }
-
-          const retryWithLatest = await invokeCalendarFetch(latestSession.access_token);
-          data = retryWithLatest.data;
-          error = retryWithLatest.error;
-
-          if (!error || !isAuthFunctionError(error)) {
-            // Recovery succeeded
-          } else {
-            // 2) If still auth failing, force refresh and retry once more
-            const { session: refreshedSession, error: refreshError } = await refreshSessionSafely();
-
-            if (!refreshError && refreshedSession) {
-              if (await handleProjectRefMismatch(refreshedSession.access_token)) {
-                return [];
-              }
-
-              const retryAfterRefresh = await invokeCalendarFetch(refreshedSession.access_token);
-              data = retryAfterRefresh.data;
-              error = retryAfterRefresh.error;
-            }
-          }
-        } else {
-          // 2b) No session from getSession() — try refresh once
-          const { session: refreshedSession, error: refreshError } = await refreshSessionSafely();
-
-          if (!refreshError && refreshedSession) {
-            if (await handleProjectRefMismatch(refreshedSession.access_token)) {
-              return [];
-            }
-
-            const retryAfterRefresh = await invokeCalendarFetch(refreshedSession.access_token);
-            data = retryAfterRefresh.data;
-            error = retryAfterRefresh.error;
-          }
-        }
-
-        if (error && isAuthFunctionError(error)) {
-          console.error('Calendar fetch still failing auth after full recovery flow, re-login required', error);
-          notifyReloginRequired();
-          return [];
-        }
+      if (error && isAuthInvokeError(error)) {
+        console.error('Calendar fetch auth failed after recovery attempts, re-login required', error);
+        notifyReloginRequired();
+        return [];
       }
 
       console.log('Calendar fetch response:', { data, error });

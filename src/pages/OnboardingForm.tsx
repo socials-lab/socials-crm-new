@@ -20,9 +20,9 @@ import { useAresLookup } from '@/hooks/useAresLookup';
 import { cn } from '@/lib/utils';
 import socialsLogo from '@/assets/socials-logo.png';
 import { LeadService } from '@/types/crm';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { isValidUrlInput, normalizeUrlProtocol } from '@/lib/validation';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 // Type for lead data from Edge Function
 interface OnboardingLead {
@@ -209,8 +209,12 @@ export default function OnboardingForm() {
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke('get-onboarding-lead', {
+        const { data, error } = await invokeWithTimeout<{
+          error?: string;
+          lead?: OnboardingLead;
+        }>('get-onboarding-lead', {
           body: { leadId },
+          authMode: 'none',
         });
 
         if (error || data?.error) {
@@ -307,7 +311,7 @@ export default function OnboardingForm() {
         : data.projectContacts;
 
       // Submit form via Edge Function
-      const { data: result, error } = await supabase.functions.invoke('submit-onboarding-form', {
+      const { data: result, error } = await invokeWithTimeout<{ error?: string }>('submit-onboarding-form', {
         body: {
           leadId: lead.id,
           company_name: data.company_name,
@@ -324,19 +328,11 @@ export default function OnboardingForm() {
           projectContacts,
           startDate: format(data.startDate, 'yyyy-MM-dd'),
         },
+        authMode: 'none',
       });
 
       if (error || result?.error) {
-        // Try to get the actual error from the response body
-        let errorMessage = result?.error || 'Neznámá chyba';
-        if (error && !result?.error) {
-          try {
-            const errBody = await error.context?.json?.();
-            errorMessage = errBody?.error || error.message || errorMessage;
-          } catch {
-            errorMessage = error.message || errorMessage;
-          }
-        }
+        const errorMessage = result?.error || error?.message || 'Neznámá chyba';
         console.error('Submission failed:', errorMessage);
         toast.error(`Nepodařilo se odeslat formulář: ${errorMessage}`);
         return;

@@ -14,8 +14,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/components/ui/sonner';
 import { Loader2, ShieldCheck } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -85,7 +85,7 @@ export function ApproveUserDialog({
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('approve-user', {
+      const { data, error } = await invokeWithTimeout<{ error?: string }>('approve-user', {
         body: {
           user_id: user.id,
           role,

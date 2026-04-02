@@ -38,6 +38,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Lead, CostModel, ClientTier, ServiceRewardRole, ServiceRewardTierConfig } from '@/types/crm';
 import { toast } from 'sonner';
 import { getLeadOfferUrl } from '@/utils/offerUrl';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 const convertSchema = z.object({
   // Editable client fields
@@ -366,14 +367,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       // This prevents orphaned subjects - if this fails, client exists and can be synced later manually
       const clientId = conversionResult.client_id;
       try {
-        const { data: fakturoidResult, error: fakturoidError } = await supabase.functions.invoke(
-          'fakturoid-create-subject',
-          {
-            body: {
-              client_id: clientId, // Use the newly created client ID
-            }
-          }
-        );
+        const { data: fakturoidResult, error: fakturoidError } = await invokeWithTimeout<{
+          success?: boolean;
+          error?: string;
+        }>('fakturoid-create-subject', {
+          body: {
+            client_id: clientId, // Use the newly created client ID
+          },
+        });
 
         if (fakturoidError || !fakturoidResult?.success) {
           console.warn('Fakturoid subject creation failed (non-blocking):', fakturoidError || fakturoidResult?.error);

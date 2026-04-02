@@ -87,7 +87,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         );
 
         if (sessionError || !session) {
-          throw sessionError || new Error('Session expired. Please sign in again.');
+          throw sessionError || new Error('Session expired while loading access profile. Please sign in again.');
         }
       }
 

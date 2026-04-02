@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getSessionEnsuringFresh, refreshSessionSafely } from '@/lib/authSession';
+import { isAuthInvokeError } from '@/lib/supabaseUtils';
 
 interface ImpersonatedProfile {
   id: string;
@@ -21,6 +23,111 @@ interface ImpersonationContextType {
 }
 
 const ImpersonationContext = createContext<ImpersonationContextType | undefined>(undefined);
+const IMPERSONATION_FUNCTION_NAME = 'impersonation-session';
+const IMPERSONATION_REQUEST_TIMEOUT_MS = 20000;
+
+interface HttpError extends Error {
+  httpStatus?: number;
+}
+
+function withHttpStatus(message: string, status?: number): HttpError {
+  const error = new Error(message) as HttpError;
+  if (typeof status === 'number') {
+    error.httpStatus = status;
+  }
+  return error;
+}
+
+function looksLikeJwtToken(token: string | null | undefined): token is string {
+  if (typeof token !== 'string') return false;
+  const parts = token.trim().split('.');
+  return parts.length === 3 && parts.every((part) => part.length > 0);
+}
+
+async function getValidAccessToken(forceRefresh = false): Promise<string | null> {
+  if (forceRefresh) {
+    const { session } = await refreshSessionSafely();
+    const refreshedToken = session?.access_token ?? null;
+    return looksLikeJwtToken(refreshedToken) ? refreshedToken : null;
+  }
+
+  const { session } = await getSessionEnsuringFresh(45);
+  const currentToken = session?.access_token ?? null;
+  return looksLikeJwtToken(currentToken) ? currentToken : null;
+}
+
+async function invokeImpersonationRequest(
+  body: { action: 'status' } | { action: 'start'; target_user_id: string } | { action: 'stop' },
+  accessToken: string,
+): Promise<{ data: unknown | null; error: Error | null }> {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+  if (!supabaseUrl) {
+    return {
+      data: null,
+      error: withHttpStatus('Supabase environment variables are missing for impersonation request.'),
+    };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), IMPERSONATION_REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/${IMPERSONATION_FUNCTION_NAME}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    let parsedBody: unknown = null;
+    try {
+      parsedBody = await response.clone().json();
+    } catch {
+      try {
+        parsedBody = await response.text();
+      } catch {
+        parsedBody = null;
+      }
+    }
+
+    if (!response.ok) {
+      const parsedObject = parsedBody as { error?: string; message?: string } | null;
+      const errorMessage =
+        parsedObject?.error ||
+        parsedObject?.message ||
+        (typeof parsedBody === 'string' && parsedBody.length > 0 ? parsedBody : null) ||
+        `Impersonation function failed with HTTP ${response.status}.`;
+
+      return {
+        data: null,
+        error: withHttpStatus(errorMessage, response.status),
+      };
+    }
+
+    return {
+      data: parsedBody,
+      error: null,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        data: null,
+        error: withHttpStatus('Impersonation request timed out. Please try again.'),
+      };
+    }
+
+    return {
+      data: null,
+      error: error instanceof Error ? error : withHttpStatus('Unexpected impersonation request failure.'),
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 async function loadProfile(userId: string): Promise<ImpersonatedProfile | null> {
   const { data, error } = await supabase
@@ -69,19 +176,63 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     setImpersonatedProfile(null);
   }, []);
 
+  const invokeImpersonation = useCallback(async (
+    body: { action: 'status' } | { action: 'start'; target_user_id: string } | { action: 'stop' },
+  ) => {
+    let token = await getValidAccessToken(false);
+    if (!token) {
+      token = await getValidAccessToken(true);
+    }
+
+    if (!token) {
+      return {
+        data: null,
+        error: withHttpStatus(`Neplatná relace uživatele (${IMPERSONATION_FUNCTION_NAME}). Přihlaste se prosím znovu.`),
+      };
+    }
+
+    let lastResult = await invokeImpersonationRequest(body, token);
+    if (!lastResult.error || !isAuthInvokeError(lastResult.error)) {
+      return lastResult;
+    }
+
+    // Retry a few times with forced token refresh to avoid false session-expired errors
+    // when auth state and network timing briefly race.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const refreshedToken = await getValidAccessToken(true);
+      if (!refreshedToken) {
+        break;
+      }
+
+      lastResult = await invokeImpersonationRequest(body, refreshedToken);
+      if (!lastResult.error || !isAuthInvokeError(lastResult.error)) {
+        return lastResult;
+      }
+    }
+
+    return lastResult;
+  }, []);
+
   const syncImpersonationStatus = useCallback(async () => {
     if (!user?.id) {
       stopImpersonation();
       return;
     }
 
-    const { data, error } = await supabase.functions.invoke('impersonation-session', {
-      body: { action: 'status' },
-    });
+    const { data, error } = await invokeImpersonation({
+      action: 'status',
+    }) as {
+      data: {
+        impersonated_user_id?: string;
+        impersonated_profile?: unknown;
+        error?: string;
+      } | null;
+      error: Error | null;
+    };
+
     if (error) {
-      const status = (error as { context?: { status?: number } })?.context?.status;
-      if (status === 401) {
-        // Keep UX stable when token/session is in a transient invalid state.
+      if (isAuthInvokeError(error)) {
+        // Keep UX stable when session is invalid.
         stopImpersonation();
         return;
       }
@@ -105,7 +256,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 
     const fallbackProfile = await loadProfile(targetUserId);
     setImpersonatedProfile(fallbackProfile);
-  }, [stopImpersonation, user?.id]);
+  }, [invokeImpersonation, stopImpersonation, user?.id]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -135,14 +286,30 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 
     setIsImpersonationLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('impersonation-session', {
-        body: {
-          action: 'start',
-          target_user_id: targetUserId,
-        },
-      });
+      const { data, error } = await invokeImpersonation({
+        action: 'start',
+        target_user_id: targetUserId,
+      }) as {
+        data: { error?: string } | null;
+        error: Error | null;
+      };
 
-      if (error) throw error;
+      if (error) {
+        if (isAuthInvokeError(error)) {
+          // Operation might have succeeded server-side despite a transient auth transport failure.
+          const statusCheck = await invokeImpersonation({
+            action: 'status',
+          });
+          const statusData = statusCheck.data as { impersonated_user_id?: string } | null;
+          if (!statusCheck.error && statusData?.impersonated_user_id === targetUserId) {
+            await syncImpersonationStatus();
+            toast.success('Impersonation started.');
+            return;
+          }
+          throw new Error('Session expired during impersonation. Please sign in again.');
+        }
+        throw error;
+      }
       if (data?.error) throw new Error(data.error);
 
       await syncImpersonationStatus();
@@ -150,7 +317,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsImpersonationLoading(false);
     }
-  }, [syncImpersonationStatus, user?.id]);
+  }, [invokeImpersonation, syncImpersonationStatus, user?.id]);
 
   const stopImpersonationRemote = useCallback(async () => {
     if (!impersonatedUserId) {
@@ -160,10 +327,30 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 
     setIsImpersonationLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('impersonation-session', {
-        body: { action: 'stop' },
-      });
-      if (error) throw error;
+      const { data, error } = await invokeImpersonation({
+        action: 'stop',
+      }) as {
+        data: { error?: string } | null;
+        error: Error | null;
+      };
+
+      if (error) {
+        if (isAuthInvokeError(error)) {
+          // Operation might have succeeded server-side despite a transient auth transport failure.
+          const statusCheck = await invokeImpersonation({
+            action: 'status',
+          });
+          const statusData = statusCheck.data as { impersonated_user_id?: string } | null;
+          if (!statusCheck.error && !statusData?.impersonated_user_id) {
+            stopImpersonation();
+            toast.success('Impersonation stopped.');
+            return;
+          }
+          stopImpersonation();
+          throw new Error('Session expired during impersonation. Please sign in again.');
+        }
+        throw error;
+      }
       if (data?.error) throw new Error(data.error);
 
       await syncImpersonationStatus();
@@ -171,7 +358,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsImpersonationLoading(false);
     }
-  }, [impersonatedUserId, stopImpersonation, syncImpersonationStatus]);
+  }, [impersonatedUserId, invokeImpersonation, stopImpersonation, syncImpersonationStatus]);
 
   const effectiveUserId = impersonatedUserId ?? user?.id ?? null;
 

@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Loader2, Mail, UserPlus } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -41,7 +41,7 @@ export function AddCRMUserDialog({ open, onOpenChange, onAdd }: AddCRMUserDialog
     setIsSubmitting(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('invite-user', {
+      const { data, error } = await invokeWithTimeout<{ error?: string }>('invite-user', {
         body: {
           email,
           firstName,

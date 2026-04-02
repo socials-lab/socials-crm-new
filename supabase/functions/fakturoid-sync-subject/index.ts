@@ -33,15 +33,23 @@ serve(async (req) => {
   );
 
   try {
-    // Authenticate user (optional - for logging purposes)
     const authHeader = req.headers.get("Authorization");
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-      if (user) {
-        userId = user.id;
-      }
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Chybí autorizace" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Neplatná autorizace" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    userId = user.id;
 
     // Parse request
     const { client_id }: SyncSubjectRequest = await req.json();

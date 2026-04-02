@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,27 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ status: "error", message: "Missing or invalid authorization header", requestId }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 },
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "").trim();
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !authData.user?.id) {
+      return new Response(
+        JSON.stringify({ status: "error", message: "Invalid authorization token", requestId }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 },
+      );
+    }
+
     const { dic }: VatReliabilityRequest = await req.json();
 
     if (!dic) {

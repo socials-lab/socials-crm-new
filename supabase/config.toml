@@ -14,7 +14,19 @@ client_id = "env(GOOGLE_CLIENT_ID)"
 secret = "env(GOOGLE_CLIENT_SECRET)"
 redirect_uri = "https://crm.socials.cz/auth-proxy/callback"
 
+[functions.impersonation-session]
+verify_jwt = false
+
 [functions.invite-user]
+verify_jwt = false
+
+[functions.approve-user]
+verify_jwt = false
+
+[functions.calendar-oauth-callback]
+verify_jwt = false
+
+[functions.calendar-refresh-token]
 verify_jwt = false
 
 [functions.calendar-fetch-events]
@@ -23,16 +35,37 @@ verify_jwt = false
 [functions.calendar-create-event]
 verify_jwt = false
 
-[functions.calendar-oauth-callback]
-verify_jwt = false
-
 [functions.gmail-send-email]
 verify_jwt = false
 
 [functions.send-email]
 verify_jwt = false
 
-[functions.send-notification-email]
+[functions.send-broadcast]
+verify_jwt = false
+
+[functions.fakturoid-create-subject]
+verify_jwt = false
+
+[functions.fakturoid-get-subject]
+verify_jwt = false
+
+[functions.fakturoid-sync-subject]
+verify_jwt = false
+
+[functions.fakturoid-create-invoice]
+verify_jwt = false
+
+[functions.fakturoid-bidirectional-sync]
+verify_jwt = false
+
+[functions.digisign-create-contract]
+verify_jwt = false
+
+[functions.rollback-issued-invoice]
+verify_jwt = false
+
+[functions.vat-reliability]
 verify_jwt = false
 
 [functions.get-onboarding-lead]
@@ -47,9 +80,6 @@ verify_jwt = false
 [functions.submit-applicant-onboarding]
 verify_jwt = false
 
-[functions.send-broadcast]
-verify_jwt = false
-
 [functions.broadcast-track]
 verify_jwt = false
 
@@ -57,4 +87,31 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.create-lead-webhook]
+verify_jwt = false
+
+[functions.prospect-webhook]
+verify_jwt = false
+
+[functions.fakturoid-webhook]
+verify_jwt = false
+
+[functions.digisign-webhook]
+verify_jwt = false
+
+[functions.ares-search]
+verify_jwt = false
+
+[functions.ares-lookup]
+verify_jwt = false
+
+[functions.google-auth-exchange]
+verify_jwt = false
+
+[functions.bug-link-pr]
+verify_jwt = false
+
+[functions.fakturoid-update-invoice-urls]
+verify_jwt = false
+
+[functions.send-notification-email]
 verify_jwt = false

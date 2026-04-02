@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Loader2 } from 'lucide-react';
 import { withTimeout } from '@/utils/asyncUtils';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -51,12 +52,17 @@ export default function AuthCallback() {
         if (code && oauthType === 'google_calendar') {
           sessionStorage.removeItem('oauth_type');
           const redirectUri = 'https://crm.socials.cz/auth-proxy/calendar-callback';
-          const { data, error } = await withTimeout(
-            supabase.functions.invoke('calendar-oauth-callback', {
+          const hasCalendarSession = await resolveSessionWithRetry();
+          if (!hasCalendarSession) {
+            throw new Error('No auth session while processing Google Calendar callback');
+          }
+
+          const { data, error } = await invokeWithTimeout<{ error?: string }>(
+            'calendar-oauth-callback',
+            {
               body: { code, redirect_uri: redirectUri },
-            }),
-            12000,
-            'Timeout while processing Google Calendar callback'
+            },
+            12000
           );
 
           if (error || data?.error) {

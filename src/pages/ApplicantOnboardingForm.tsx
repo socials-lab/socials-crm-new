@@ -29,11 +29,11 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import socialsLogo from '@/assets/socials-logo.png';
 import { AvatarUpload } from '@/components/forms/AvatarUpload';
 import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
 import type { CompanySearchResult } from '@/hooks/useAresSearch';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 const formSchema = z.object({
   full_name: z.string().min(2, 'Jméno je povinné'),
@@ -55,6 +55,25 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+interface ApplicantOnboardingPayload {
+  full_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  position?: string | null;
+  birthday?: string | null;
+  personal_email?: string | null;
+  avatar_url?: string | null;
+  ico?: string | null;
+  company_name?: string | null;
+  dic?: string | null;
+  billing_country?: string | null;
+  billing_street?: string | null;
+  billing_city?: string | null;
+  billing_zip?: string | null;
+  hourly_rate?: number | null;
+  bank_account?: string | null;
+}
 
 const TOTAL_STEPS = 6;
 const stepLabels = [
@@ -122,19 +141,20 @@ export default function ApplicantOnboardingForm() {
 
     async function fetchApplicant() {
       try {
-        const { data, error } = await supabase.functions.invoke('get-applicant-onboarding', {
+        const { data, error } = await invokeWithTimeout<{
+          error?: string;
+          applicant?: ApplicantOnboardingPayload;
+        }>('get-applicant-onboarding', {
           body: { applicantId },
+          authMode: 'none',
         });
 
         if (error) {
-          try {
-            const errBody = await error.context?.json?.();
-            if (errBody?.error === 'Onboarding already completed') {
-              setAlreadyCompleted(true);
-              setIsLoading(false);
-              return;
-            }
-          } catch { /* ignore parse error */ }
+          if (error.message === 'Onboarding already completed') {
+            setAlreadyCompleted(true);
+            setIsLoading(false);
+            return;
+          }
           setNotFound(true);
           setIsLoading(false);
           return;
@@ -224,24 +244,17 @@ export default function ApplicantOnboardingForm() {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('submit-applicant-onboarding', {
+      const { data, error } = await invokeWithTimeout<{ error?: string }>('submit-applicant-onboarding', {
         body: {
           applicantId,
           ...formData,
           birthday: formData.birthday ? toDateOnlyString(formData.birthday) : null,
         },
+        authMode: 'none',
       });
 
       if (error || data?.error) {
-        let errorMessage = data?.error || 'Neznámá chyba';
-        if (error && !data?.error) {
-          try {
-            const errBody = await error.context?.json?.();
-            errorMessage = errBody?.error || error.message || errorMessage;
-          } catch {
-            errorMessage = error.message || errorMessage;
-          }
-        }
+        const errorMessage = data?.error || error?.message || 'Neznámá chyba';
         toast.error(`Nepodařilo se uložit: ${errorMessage}`);
         return;
       }

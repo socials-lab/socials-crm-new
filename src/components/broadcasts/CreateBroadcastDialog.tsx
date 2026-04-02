@@ -10,6 +10,7 @@ import { RecipientSelector, type Recipient } from './RecipientSelector';
 import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 import { Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 interface CreateBroadcastDialogProps {
   open: boolean;
@@ -124,7 +125,7 @@ export function CreateBroadcastDialog({ open, onOpenChange, onCreated }: CreateB
 
       const broadcastId = (broadcastData as any)?.id;
 
-      const { error: functionError } = await supabase.functions.invoke('send-broadcast', {
+      const { error: functionError } = await invokeWithTimeout('send-broadcast', {
         body: {
           subject,
           body,
