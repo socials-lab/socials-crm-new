@@ -58,6 +58,7 @@ export function AddInvoiceDialog({
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('CZK');
   const [isReverseCharge, setIsReverseCharge] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
   const [isAmountManual, setIsAmountManual] = useState(false);
 
   // Sort engagements - active first, then by name
