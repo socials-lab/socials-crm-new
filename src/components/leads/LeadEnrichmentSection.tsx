@@ -23,6 +23,7 @@ import type { Lead } from '@/types/crm';
 
 interface LeadEnrichmentSectionProps {
   lead: Lead;
+  onUpdate?: (id: string, data: Partial<Lead>) => void;
 }
 
 function BooleanBadge({ value, label }: { value: boolean | null; label: string }) {
