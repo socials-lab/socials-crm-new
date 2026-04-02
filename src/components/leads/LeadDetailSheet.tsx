@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
+import { InlineEditField } from './InlineEditField';
 import { 
   Building2, 
   Globe, 
@@ -422,91 +423,132 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
               </h4>
               
               <div className="space-y-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground text-xs">Název firmy</span>
+                  <InlineEditField
+                    value={lead.company_name}
+                    onSave={(v) => updateLead(lead.id, { company_name: v } as any)}
+                    displayClassName="font-medium"
+                    emptyText="Doplnit název firmy"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <span className="text-muted-foreground text-xs">IČO</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{lead.ico}</span>
-                      <a
-                        href={`https://ares.gov.cz/ekonomicke-subjekty/res/${lead.ico}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        ARES
-                      </a>
+                      <InlineEditField
+                        value={lead.ico}
+                        onSave={(v) => updateLead(lead.id, { ico: v } as any)}
+                        displayClassName="font-medium"
+                        emptyText="Doplnit IČO"
+                      />
+                      {lead.ico && (
+                        <a
+                          href={`https://ares.gov.cz/ekonomicke-subjekty/res/${lead.ico}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          ARES
+                        </a>
+                      )}
                     </div>
                   </div>
-                  {lead.dic && (
-                    <div>
-                      <span className="text-muted-foreground text-xs">DIČ</span>
-                      <p className="font-medium">{lead.dic}</p>
-                    </div>
-                  )}
+                  <div>
+                    <span className="text-muted-foreground text-xs">DIČ</span>
+                    <InlineEditField
+                      value={lead.dic}
+                      onSave={(v) => updateLead(lead.id, { dic: v || null } as any)}
+                      displayClassName="font-medium"
+                      emptyText="Doplnit DIČ"
+                    />
+                  </div>
                 </div>
 
-                {lead.website && (
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <a 
-                      href={lead.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      {lead.website}
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <InlineEditField
+                    value={lead.website}
+                    onSave={(v) => updateLead(lead.id, { website: v || null } as any)}
+                    type="url"
+                    emptyText="Doplnit web"
+                  />
+                  {lead.website && (
+                    <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
                     </a>
-                  </div>
-                )}
-                {lead.industry && (
-                  <p className="text-muted-foreground">Obor: {lead.industry}</p>
-                )}
+                  )}
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Obor</span>
+                  <InlineEditField
+                    value={lead.industry}
+                    onSave={(v) => updateLead(lead.id, { industry: v || null } as any)}
+                    emptyText="Doplnit obor"
+                  />
+                </div>
               </div>
             </div>
 
             <Separator />
 
             {/* Billing Address Section */}
-            {(lead.billing_street || lead.billing_city || lead.billing_email) && (
-              <>
-                <div className="space-y-4">
-                  <h4 className="font-medium text-sm flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    Fakturační údaje
-                  </h4>
-                  
-                  <div className="space-y-3 text-sm">
-                    {(lead.billing_street || lead.billing_city) && (
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          {lead.billing_street && <p>{lead.billing_street}</p>}
-                          {(lead.billing_zip || lead.billing_city) && (
-                            <p>{[lead.billing_zip, lead.billing_city].filter(Boolean).join(' ')}</p>
-                          )}
-                          {lead.billing_country && <p>{lead.billing_country}</p>}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {lead.billing_email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <a 
-                          href={`mailto:${lead.billing_email}`}
-                          className="text-primary hover:underline"
-                        >
-                          {lead.billing_email}
-                        </a>
-                      </div>
-                    )}
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Fakturační údaje
+              </h4>
+              
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-muted-foreground text-xs">Ulice</span>
+                    <InlineEditField
+                      value={lead.billing_street}
+                      onSave={(v) => updateLead(lead.id, { billing_street: v || null } as any)}
+                      emptyText="Doplnit ulici"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Město</span>
+                    <InlineEditField
+                      value={lead.billing_city}
+                      onSave={(v) => updateLead(lead.id, { billing_city: v || null } as any)}
+                      emptyText="Doplnit město"
+                    />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-muted-foreground text-xs">PSČ</span>
+                    <InlineEditField
+                      value={lead.billing_zip}
+                      onSave={(v) => updateLead(lead.id, { billing_zip: v || null } as any)}
+                      emptyText="Doplnit PSČ"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Země</span>
+                    <InlineEditField
+                      value={lead.billing_country}
+                      onSave={(v) => updateLead(lead.id, { billing_country: v || null } as any)}
+                      emptyText="Doplnit zemi"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Fakturační e-mail</span>
+                  <InlineEditField
+                    value={lead.billing_email}
+                    onSave={(v) => updateLead(lead.id, { billing_email: v || null } as any)}
+                    emptyText="Doplnit fakturační e-mail"
+                  />
+                </div>
+              </div>
+            </div>
 
-                <Separator />
-              </>
-            )}
+            <Separator />
 
             {/* Contact Section */}
             <div className="space-y-4">
@@ -516,36 +558,43 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
               </h4>
               
               <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{lead.contact_name}</span>
-                  {lead.contact_position && (
-                    <span className="text-muted-foreground">– {lead.contact_position}</span>
-                  )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-muted-foreground text-xs">Jméno</span>
+                    <InlineEditField
+                      value={lead.contact_name}
+                      onSave={(v) => updateLead(lead.id, { contact_name: v } as any)}
+                      displayClassName="font-medium"
+                      emptyText="Doplnit jméno"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Pozice</span>
+                    <InlineEditField
+                      value={lead.contact_position}
+                      onSave={(v) => updateLead(lead.id, { contact_position: v || null } as any)}
+                      emptyText="Doplnit pozici"
+                    />
+                  </div>
                 </div>
                 
-                {lead.contact_email && (
-                  <div className="flex items-center gap-2 ml-0">
-                    <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                    <a 
-                      href={`mailto:${lead.contact_email}`}
-                      className="text-primary hover:underline"
-                    >
-                      {lead.contact_email}
-                    </a>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <InlineEditField
+                    value={lead.contact_email}
+                    onSave={(v) => updateLead(lead.id, { contact_email: v || null } as any)}
+                    emptyText="Doplnit e-mail"
+                  />
+                </div>
                 
-                {lead.contact_phone && (
-                  <div className="flex items-center gap-2 ml-0">
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                    <a 
-                      href={`tel:${lead.contact_phone}`}
-                      className="text-primary hover:underline"
-                    >
-                      {lead.contact_phone}
-                    </a>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <InlineEditField
+                    value={lead.contact_phone}
+                    onSave={(v) => updateLead(lead.id, { contact_phone: v || null } as any)}
+                    emptyText="Doplnit telefon"
+                  />
+                </div>
               </div>
             </div>
 
@@ -572,31 +621,38 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                   </Select>
                 </div>
 
-                <div className="text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Zdroj:</span>
-                    <p className="font-medium">
-                      {lead.source === 'other' && lead.source_custom 
-                        ? lead.source_custom 
-                        : SOURCE_LABELS[lead.source]}
-                    </p>
-                  </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Zdroj</span>
+                  <InlineEditField
+                    value={lead.source}
+                    onSave={(v) => updateLead(lead.id, { source: v } as any)}
+                    type="select"
+                    options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label }))}
+                  />
                 </div>
 
-                {lead.ad_spend_monthly && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                    <Coins className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Měsíční investice:</span>
-                    <span className="font-medium">{lead.ad_spend_monthly.toLocaleString()} Kč</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                  <Coins className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Měsíční investice:</span>
+                  <InlineEditField
+                    value={lead.ad_spend_monthly}
+                    onSave={(v) => updateLead(lead.id, { ad_spend_monthly: v ? Number(v) : null } as any)}
+                    type="number"
+                    suffix="Kč"
+                    emptyText="Doplnit"
+                    displayClassName="font-medium"
+                  />
+                </div>
 
-                {lead.client_message && (
-                  <div className="p-3 rounded-lg border-l-4 border-primary/50 bg-muted/30">
-                    <span className="text-xs text-muted-foreground block mb-1">Zpráva od klienta:</span>
-                    <p className="text-sm italic">"{lead.client_message}"</p>
-                  </div>
-                )}
+                <div>
+                  <span className="text-muted-foreground text-xs">Zpráva od klienta</span>
+                  <InlineEditField
+                    value={lead.client_message}
+                    onSave={(v) => updateLead(lead.id, { client_message: v || null } as any)}
+                    type="textarea"
+                    emptyText="Žádná zpráva"
+                  />
+                </div>
 
               </div>
             </div>
