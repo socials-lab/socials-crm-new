@@ -527,7 +527,12 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Kredibilita</span>
-                        <p className="font-medium">{lead.credibility_score !== null && lead.credibility_score !== undefined ? lead.credibility_score : '–'}</p>
+                        <InlineEditField
+                          value={lead.credibility_score !== null && lead.credibility_score !== undefined ? String(lead.credibility_score) : ''}
+                          onSave={(v) => { updateLead(lead.id, { credibility_score: v || null } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                     </div>
                     {/* Social */}
