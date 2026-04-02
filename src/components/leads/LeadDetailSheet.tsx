@@ -494,45 +494,61 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
             <Separator />
 
             {/* Billing Address Section */}
-            {(lead.billing_street || lead.billing_city || lead.billing_email) && (
-              <>
-                <div className="space-y-4">
-                  <h4 className="font-medium text-sm flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    Fakturační údaje
-                  </h4>
-                  
-                  <div className="space-y-3 text-sm">
-                    {(lead.billing_street || lead.billing_city) && (
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          {lead.billing_street && <p>{lead.billing_street}</p>}
-                          {(lead.billing_zip || lead.billing_city) && (
-                            <p>{[lead.billing_zip, lead.billing_city].filter(Boolean).join(' ')}</p>
-                          )}
-                          {lead.billing_country && <p>{lead.billing_country}</p>}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {lead.billing_email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <a 
-                          href={`mailto:${lead.billing_email}`}
-                          className="text-primary hover:underline"
-                        >
-                          {lead.billing_email}
-                        </a>
-                      </div>
-                    )}
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Fakturační údaje
+              </h4>
+              
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-muted-foreground text-xs">Ulice</span>
+                    <InlineEditField
+                      value={lead.billing_street}
+                      onSave={(v) => updateLead(lead.id, { billing_street: v || null } as any)}
+                      emptyText="Doplnit ulici"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Město</span>
+                    <InlineEditField
+                      value={lead.billing_city}
+                      onSave={(v) => updateLead(lead.id, { billing_city: v || null } as any)}
+                      emptyText="Doplnit město"
+                    />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-muted-foreground text-xs">PSČ</span>
+                    <InlineEditField
+                      value={lead.billing_zip}
+                      onSave={(v) => updateLead(lead.id, { billing_zip: v || null } as any)}
+                      emptyText="Doplnit PSČ"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Země</span>
+                    <InlineEditField
+                      value={lead.billing_country}
+                      onSave={(v) => updateLead(lead.id, { billing_country: v || null } as any)}
+                      emptyText="Doplnit zemi"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Fakturační e-mail</span>
+                  <InlineEditField
+                    value={lead.billing_email}
+                    onSave={(v) => updateLead(lead.id, { billing_email: v || null } as any)}
+                    emptyText="Doplnit fakturační e-mail"
+                  />
+                </div>
+              </div>
+            </div>
 
-                <Separator />
-              </>
-            )}
+            <Separator />
 
             {/* Contact Section */}
             <div className="space-y-4">
