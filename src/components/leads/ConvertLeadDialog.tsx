@@ -1809,9 +1809,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               )}
 
               {teamMembers.map((member, index) => {
-                const monthlyTotal = offerServices
+                const monthlyFromServices = offerServices
                   .filter(s => s.billing_type === 'monthly')
                   .reduce((sum, s) => sum + s.price, 0);
+                const monthlyTotal = monthlyFromServices || form.watch('monthly_fee') || 0;
                 const commissionAmount = Math.round(monthlyTotal * 0.1);
                 
                 return (
