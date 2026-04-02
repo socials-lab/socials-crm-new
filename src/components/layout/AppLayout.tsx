@@ -5,9 +5,10 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { Outlet } from 'react-router-dom';
 import { BugReportFAB } from '@/components/bug-reports/BugReportFAB';
-import { Menu, LogOut } from 'lucide-react';
+import { Menu, LogOut, ShieldAlert, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useImpersonation } from '@/hooks/useImpersonation';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -41,6 +42,7 @@ function MobileMenuButton() {
 
 function UserMenu() {
   const { user, signOut } = useAuth();
+  const { isImpersonating, isImpersonationLoading, stopImpersonation } = useImpersonation();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -103,6 +105,19 @@ function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {isImpersonating && (
+          <>
+            <DropdownMenuItem onClick={stopImpersonation} disabled={isImpersonationLoading}>
+              {isImpersonationLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ShieldAlert className="mr-2 h-4 w-4" />
+              )}
+              {isImpersonationLoading ? 'Ukončuji impersonaci...' : 'Ukončit impersonaci'}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
           <LogOut className="mr-2 h-4 w-4" />
           Odhlásit se
@@ -113,11 +128,39 @@ function UserMenu() {
 }
 
 export function AppLayout() {
+  const { isImpersonating, impersonatedProfile, impersonatedUserId, isImpersonationLoading, stopImpersonation } = useImpersonation();
+  const impersonatedName =
+    impersonatedProfile?.fullName ||
+    impersonatedProfile?.email ||
+    impersonatedProfile?.id ||
+    impersonatedUserId ||
+    'unknown user';
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {isImpersonating && (
+            <div className="flex items-center justify-between gap-2 border-b border-amber-300 bg-amber-100 px-4 py-2 text-sm text-amber-900">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4" />
+                <span>
+                  Impersonujete účet: <strong>{impersonatedName}</strong>
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={stopImpersonation}
+                disabled={isImpersonationLoading}
+                className="border-amber-400 bg-white/70 hover:bg-white"
+              >
+                {isImpersonationLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                {isImpersonationLoading ? 'Ukončuji...' : 'Ukončit'}
+              </Button>
+            </div>
+          )}
           {/* Top header bar */}
           <header className="flex h-12 shrink-0 items-center justify-between border-b bg-background px-4">
             <div className="flex items-center gap-2">

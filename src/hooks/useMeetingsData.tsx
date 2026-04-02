@@ -170,6 +170,7 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
   const addMeetingMutation = useMutation({
     mutationFn: async (data: Omit<Meeting, 'id' | 'created_at' | 'updated_at'>) => {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
       const { data: result, error } = await supabase
         .from('meetings')
         .insert({
@@ -187,7 +188,7 @@ export function MeetingsDataProvider({ children }: { children: ReactNode }) {
           transcript: data.transcript,
           ai_summary: data.ai_summary,
           notes: data.notes,
-          created_by: user?.id || null,
+          created_by: user.id,
         })
         .select()
         .single();

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { format, startOfToday, addDays, isBefore, isAfter, isSameDay, startOfMonth, endOfMonth, addMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Calendar, Filter, Search, RefreshCw, Loader2 } from 'lucide-react';
@@ -27,7 +27,7 @@ import type { Meeting, MeetingType } from '@/types/meetings';
 export default function Meetings() {
   const { meetings, participants, isLoading } = useMeetingsData();
   const { clients, colleagues } = useCRMData();
-  const { connectGoogleCalendar, fetchCalendarEvents, isConnected, isCheckingConnection } = useGoogleCalendar();
+  const { connectGoogleCalendar, fetchCalendarEvents, isConnected, isCheckingConnection, isGoogleFeatureBlocked } = useGoogleCalendar();
 
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -42,7 +42,7 @@ export default function Meetings() {
   const [googleError, setGoogleError] = useState<string | null>(null);
 
   // Fetch Google Calendar events when connected
-  const loadGoogleEvents = async () => {
+  const loadGoogleEvents = useCallback(async () => {
     if (!isConnected) return;
 
     setIsLoadingGoogle(true);
@@ -66,14 +66,14 @@ export default function Meetings() {
     } finally {
       setIsLoadingGoogle(false);
     }
-  };
+  }, [fetchCalendarEvents, isConnected]);
 
   // Load Google events on mount and when connection status changes
   useEffect(() => {
     if (isConnected && !isCheckingConnection) {
-      loadGoogleEvents();
+      void loadGoogleEvents();
     }
-  }, [isConnected, isCheckingConnection]);
+  }, [isConnected, isCheckingConnection, loadGoogleEvents]);
 
   const today = startOfToday();
 
@@ -208,7 +208,12 @@ export default function Meetings() {
         description="Evidence interních a klientských meetingů"
         actions={
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            {isConnected ? (
+            {isGoogleFeatureBlocked ? (
+              <Button variant="outline" disabled className="w-full sm:w-auto">
+                <CalendarCheck className="h-4 w-4 mr-2" />
+                <span className="sm:inline">Google během impersonace vypnut</span>
+              </Button>
+            ) : isConnected ? (
               <Button
                 variant="outline"
                 onClick={loadGoogleEvents}
@@ -334,7 +339,7 @@ export default function Meetings() {
             <div className="text-center py-12 text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Žádné nadcházející meetingy</p>
-              {!isConnected && (
+              {!isConnected && !isGoogleFeatureBlocked && (
                 <p className="text-sm mt-2">
                   <button
                     onClick={connectGoogleCalendar}
@@ -343,6 +348,11 @@ export default function Meetings() {
                     Propojte Google účet
                   </button>{' '}
                   pro zobrazení událostí z kalendáře
+                </p>
+              )}
+              {isGoogleFeatureBlocked && (
+                <p className="text-sm mt-2">
+                  Google kalendář je během impersonace vypnutý.
                 </p>
               )}
             </div>

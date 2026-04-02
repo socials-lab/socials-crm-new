@@ -21,6 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useImpersonation } from '@/hooks/useImpersonation';
 import { ColleagueForm } from '@/components/forms/ColleagueForm';
 import { UserManagement } from '@/components/settings/UserManagement';
 import { ColleagueCard } from '@/components/colleagues/ColleagueCard';
@@ -49,6 +50,7 @@ function ColleaguesContent() {
   const highlightedRef = useRef<HTMLDivElement>(null);
   
   const { isSuperAdmin: superAdmin, canSeeFinancials } = useUserRole();
+  const { isImpersonating, stopImpersonation } = useImpersonation();
   const canViewFinancials = superAdmin || canSeeFinancials;
   const [activeTab, setActiveTab] = useState<ColleaguesTab>(() => resolveTab(tabParam, superAdmin));
 
@@ -57,6 +59,7 @@ function ColleaguesContent() {
     engagements,
     assignments,
     clients,
+    isLoading: crmLoading,
     updateColleague,
     updateAssignment,
   } = useCRMData();
@@ -194,6 +197,8 @@ function ColleaguesContent() {
     toast.success('Odměna aktualizována');
   };
 
+  const hasActiveFilters = searchQuery.trim().length > 0 || statusFilter !== 'all';
+
   return (
     <div className="space-y-4 animate-fade-in p-4 sm:space-y-6 sm:p-6">
       <PageHeader 
@@ -300,9 +305,36 @@ function ColleaguesContent() {
             })}
           </div>
 
-      {filteredColleagues.length === 0 && (
+      {!crmLoading && filteredColleagues.length === 0 && (
+        <div className="py-12 text-center text-muted-foreground space-y-3">
+          {colleagues.length === 0 ? (
+            <>
+              <p>
+                {isImpersonating
+                  ? 'Impersonovaný účet aktuálně nevidí žádné kolegy.'
+                  : 'Aktuální účet nevidí žádné kolegy.'}
+              </p>
+              {isImpersonating && (
+                <div>
+                  <Button variant="outline" size="sm" onClick={stopImpersonation}>
+                    Ukončit impersonaci
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <p>
+              {hasActiveFilters
+                ? 'Žádní kolegové neodpovídají vašim kritériím'
+                : 'V seznamu kolegů nejsou dostupná data.'}
+            </p>
+          )}
+        </div>
+      )}
+
+      {crmLoading && (
         <div className="py-12 text-center text-muted-foreground">
-          Žádní kolegové neodpovídají vašim kritériím
+          Načítání kolegů...
         </div>
       )}
 

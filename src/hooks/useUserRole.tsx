@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useImpersonation } from '@/hooks/useImpersonation';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { getSessionEnsuringFresh } from '@/lib/authSession';
@@ -28,6 +29,7 @@ const DEFAULT_PAGES_WITHOUT_EXPLICIT_PERMISSIONS = ['my-work'];
 
 export function UserRoleProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
+  const { effectiveUserId, isImpersonationLoading } = useImpersonation();
   const [role, setRole] = useState<AppRole | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [colleagueId, setColleagueId] = useState<string | null>(null);
@@ -40,11 +42,11 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const [lastFetchedUserId, setLastFetchedUserId] = useState<string | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
 
-  // Use user.id as dependency instead of user object to prevent refetching on token refresh
-  const userId = user?.id ?? null;
+  // Use effective user id to support full UI impersonation.
+  const userId = effectiveUserId;
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || isImpersonationLoading) return;
 
     if (!userId) {
       setRole(null);
@@ -153,15 +155,10 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       try {
         await ensureSessionReady();
 
-        // Fetch user role - use raw query to handle both old and new schema
-        const { data: roleData, error: roleError } = await runWithSessionRecovery(
+        // Fetch effective role/profile through SECURITY DEFINER RPC.
+        const { data: roleRows, error: roleError } = await runWithSessionRecovery<Array<Record<string, unknown>>>(
           (signal) =>
-            supabase
-              .from('user_roles')
-              .select('*')
-              .eq('user_id', userId)
-              .maybeSingle()
-              .abortSignal(signal),
+            supabase.rpc('get_effective_access_profile').abortSignal(signal),
           8000,
           'Timeout while loading user role'
         );
@@ -172,15 +169,15 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
           setError(message);
         }
 
+        const roleData = roleRows && roleRows.length > 0 ? roleRows[0] : null;
+
         if (roleData) {
-          setRole(roleData.role);
-          setIsSuperAdmin(roleData.is_super_admin || false);
-          // Handle new columns that might not exist yet
-          const data = roleData as Record<string, unknown>;
-          setCanSeeFinancials((data.can_see_financials as boolean) || false);
-          setCanEditAcademy((data.can_edit_academy as boolean) || false);
+          setRole(roleData.role as AppRole);
+          setIsSuperAdmin((roleData.is_super_admin as boolean) || false);
+          setCanSeeFinancials((roleData.can_see_financials as boolean) || false);
+          setCanEditAcademy((roleData.can_edit_academy as boolean) || false);
           // Extract allowed pages from page_permissions array
-          const pagePermissions = data.page_permissions as Array<{ page: string; can_view: boolean }> | null;
+          const pagePermissions = roleData.page_permissions as Array<{ page: string; can_view: boolean }> | null;
           if (pagePermissions && Array.isArray(pagePermissions)) {
             const pages = pagePermissions.filter(p => p.can_view).map(p => p.page);
             setAllowedPages(pages);
@@ -211,7 +208,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     };
 
     fetchUserRole();
-  }, [userId, authLoading, lastFetchedUserId, reloadNonce]);
+  }, [user?.id, userId, authLoading, isImpersonationLoading, lastFetchedUserId, reloadNonce]);
 
   const hasRole = (checkRole: AppRole): boolean => {
     if (isSuperAdmin) return true;

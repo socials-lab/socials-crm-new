@@ -110,8 +110,16 @@ export function BugReportsProvider({ children }: { children: ReactNode }) {
     mutationFn: async (input: AddReportInput) => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
+      if (!userData.user?.id) throw new Error("Cannot resolve authenticated reporter identity");
 
-      const reporter = userData.user?.email ?? userData.user?.id;
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", userData.user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+
+      const reporter = profileData?.email ?? userData.user.id;
       if (!reporter) {
         throw new Error("Cannot resolve authenticated reporter identity");
       }

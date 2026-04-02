@@ -9,6 +9,7 @@ import { refreshSessionSafely } from "@/lib/authSession";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ImpersonationProvider } from "@/hooks/useImpersonation";
 import { UserRoleProvider } from "@/hooks/useUserRole";
 import { CRMDataProvider } from "@/hooks/useCRMData";
 import { LeadsDataProvider } from "@/hooks/useLeadsData";
@@ -128,18 +129,19 @@ const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="socials-theme">
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <UserRoleProvider>
-          <CRMDataProvider>
-            <CreativeBoostProvider>
-              <LeadsDataProvider>
-                <ApplicantsDataProvider>
-                  <MeetingsDataProvider>
-                    <FeedbackProvider>
-                      <SOPDataProvider>
-                        <BugReportsProvider>
-                          <TooltipProvider>
-                            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                              <Routes>
+        <ImpersonationProvider>
+          <UserRoleProvider>
+            <CRMDataProvider>
+              <CreativeBoostProvider>
+                <LeadsDataProvider>
+                  <ApplicantsDataProvider>
+                    <MeetingsDataProvider>
+                      <FeedbackProvider>
+                        <SOPDataProvider>
+                          <BugReportsProvider>
+                            <TooltipProvider>
+                              <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                                <Routes>
                             {/* Public routes */}
                             <Route path="/auth" element={<Auth />} />
                             <Route path="/auth/callback" element={<AuthCallback />} />
@@ -184,20 +186,21 @@ const App = () => (
                               <Route path="/offer-management" element={<OfferManagement />} />
                             </Route>
                             <Route path="*" element={<NotFound />} />
-                              </Routes>
-                            </BrowserRouter>
-                            <Toaster />
-                            <Sonner />
-                          </TooltipProvider>
-                        </BugReportsProvider>
-                      </SOPDataProvider>
-                    </FeedbackProvider>
-                  </MeetingsDataProvider>
-                </ApplicantsDataProvider>
-              </LeadsDataProvider>
-            </CreativeBoostProvider>
-          </CRMDataProvider>
-        </UserRoleProvider>
+                                </Routes>
+                              </BrowserRouter>
+                              <Toaster />
+                              <Sonner />
+                            </TooltipProvider>
+                          </BugReportsProvider>
+                        </SOPDataProvider>
+                      </FeedbackProvider>
+                    </MeetingsDataProvider>
+                  </ApplicantsDataProvider>
+                </LeadsDataProvider>
+              </CreativeBoostProvider>
+            </CRMDataProvider>
+          </UserRoleProvider>
+        </ImpersonationProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ThemeProvider>

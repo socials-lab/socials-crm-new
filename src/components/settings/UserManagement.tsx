@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil, User, Clock, CheckCircle2, RefreshCw, XCircle, UserMinus, UserCheck } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ShieldCheck, ExternalLink, UserX, Pencil, User, Clock, CheckCircle2, RefreshCw, XCircle, UserMinus, UserCheck, Loader2 } from 'lucide-react';
 import { TierBadge } from '@/components/shared/TierBadge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { AddCRMUserDialog } from './AddCRMUserDialog';
@@ -15,6 +15,9 @@ import { ApproveUserDialog } from './ApproveUserDialog';
 import { TerminateUserDialog, type LifecycleMode } from './TerminateUserDialog';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useImpersonation } from '@/hooks/useImpersonation';
 import type { Database } from '@/integrations/supabase/types';
 import type { PagePermission } from '@/types/crm';
 
@@ -49,6 +52,9 @@ interface PendingUser {
 
 export function UserManagement() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isSuperAdmin: isViewerSuperAdmin } = useUserRole();
+  const { startImpersonation, impersonatedUserId, isImpersonationLoading } = useImpersonation();
   useCRMData(); // Ensure CRMDataProvider is initialized (needed for CreateColleagueForUserDialog)
   const [activeUserRoles, setActiveUserRoles] = useState<UserRoleData[]>([]);
   const [inactiveUserRoles, setInactiveUserRoles] = useState<UserRoleData[]>([]);
@@ -84,6 +90,7 @@ export function UserManagement() {
   const [lifecycleDialogOpen, setLifecycleDialogOpen] = useState(false);
   const [lifecycleMode, setLifecycleMode] = useState<LifecycleMode>('terminate');
   const [lifecycleUser, setLifecycleUser] = useState<UserRoleData | null>(null);
+  const [isStartingImpersonationFor, setIsStartingImpersonationFor] = useState<string | null>(null);
 
   const fetchUserRoles = useCallback(async () => {
     setLoading(true);
@@ -250,6 +257,19 @@ export function UserManagement() {
         window.location.assign(targetPath);
       }
     }, 120);
+  }
+
+  async function handleStartImpersonation(targetUserId: string) {
+    try {
+      setIsStartingImpersonationFor(targetUserId);
+      await startImpersonation(targetUserId);
+      toast.success('Impersonace je aktivní.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Nepodařilo se spustit impersonaci.';
+      toast.error(message);
+    } finally {
+      setIsStartingImpersonationFor(null);
+    }
   }
 
   if (loading) {
@@ -427,6 +447,26 @@ export function UserManagement() {
                               <DropdownMenuItem onSelect={() => handleOpenColleagueCard(userRole.colleague!.id)}>
                                 <ExternalLink className="h-4 w-4 mr-2" />
                                 Zobrazit kartu kolegy
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {isViewerSuperAdmin && !userRole.is_super_admin && userRole.user_id !== user?.id && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                disabled={isStartingImpersonationFor === userRole.user_id || isImpersonationLoading}
+                                onClick={() => handleStartImpersonation(userRole.user_id)}
+                              >
+                                {isStartingImpersonationFor === userRole.user_id || isImpersonationLoading ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                )}
+                                {isStartingImpersonationFor === userRole.user_id || isImpersonationLoading
+                                  ? 'Spouštím impersonaci...'
+                                  : impersonatedUserId === userRole.user_id
+                                    ? 'Aktuálně impersonujete'
+                                    : 'Přihlásit se jako uživatel'}
                               </DropdownMenuItem>
                             </>
                           )}

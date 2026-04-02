@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useImpersonation } from '@/hooks/useImpersonation';
 import { getSessionEnsuringFresh, refreshSessionSafely } from '@/lib/authSession';
 import { toast } from '@/components/ui/sonner';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
 
 export interface GoogleCalendarEvent {
@@ -40,15 +40,29 @@ export const DEFAULT_GMAIL_BCC = 'danny@socials.cz';
 
 export function useGoogleCalendar() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { isImpersonating } = useImpersonation();
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [hasGmailScope, setHasGmailScope] = useState(false);
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
+  const impersonationBlockMessage = 'Google funkce jsou během impersonace vypnuté.';
+
+  function requireNoImpersonation() {
+    if (isImpersonating) {
+      throw new Error(impersonationBlockMessage);
+    }
+  }
 
   const checkConnection = useCallback(async () => {
+    if (isImpersonating) {
+      setIsConnected(false);
+      setHasGmailScope(false);
+      setIsCheckingConnection(false);
+      return;
+    }
+
     if (!user?.id) {
       setIsCheckingConnection(false);
       return;
@@ -82,7 +96,7 @@ export function useGoogleCalendar() {
     } finally {
       setIsCheckingConnection(false);
     }
-  }, [user?.id]);
+  }, [isImpersonating, user?.id]);
 
   useEffect(() => {
     checkConnection();
@@ -94,6 +108,7 @@ export function useGoogleCalendar() {
     setError(null);
     
     try {
+      requireNoImpersonation();
       const redirectUri = 'https://crm.socials.cz/auth-proxy/calendar-callback';
 
       const { data, error } = await supabase.functions.invoke('calendar-oauth-callback', {
@@ -120,6 +135,11 @@ export function useGoogleCalendar() {
   };
 
   const connectGoogleCalendar = () => {
+    if (isImpersonating) {
+      toast.error(impersonationBlockMessage);
+      return;
+    }
+
     // Store state to identify Google OAuth callback
     sessionStorage.setItem('oauth_type', 'google_calendar');
     
@@ -280,6 +300,7 @@ export function useGoogleCalendar() {
     setError(null);
     
     try {
+      requireNoImpersonation();
       const { data, error } = await supabase.functions.invoke('calendar-create-event', {
         body: { meeting_id: meetingId },
       });
@@ -312,6 +333,7 @@ export function useGoogleCalendar() {
     setError(null);
 
     try {
+      requireNoImpersonation();
       const { data, error } = await invokeWithTimeout('gmail-send-email', {
         body: {
           to,
@@ -350,6 +372,7 @@ export function useGoogleCalendar() {
     maxResults?: number;
   }): Promise<GoogleCalendarEvent[]> => {
     try {
+      requireNoImpersonation();
       // Check current session
       const { session } = await getSessionEnsuringFresh(120);
       console.log('Current session:', session ? 'exists' : 'null', session?.user?.email);
@@ -471,7 +494,8 @@ export function useGoogleCalendar() {
       return data?.events || [];
     } catch (err) {
       console.error('Failed to fetch calendar events:', err);
-      toast.error('Nepodařilo se načíst kalendář');
+      const message = err instanceof Error ? err.message : 'Nepodařilo se načíst kalendář';
+      toast.error(message);
       return [];
     }
   };
@@ -485,6 +509,7 @@ export function useGoogleCalendar() {
     checkConnection,
     isConnected,
     hasGmailScope,
+    isGoogleFeatureBlocked: isImpersonating,
     isCheckingConnection,
     isLoading,
     error
