@@ -1107,3 +1107,21 @@ export interface ModificationRequestWithDetails extends ModificationRequest {
 export function isClientFacingRequestType(type: ModificationRequestType): boolean {
   return ['expand_country', 'add_service', 'update_service_price', 'deactivate_service', 'new_engagement', 'bulk_edit'].includes(type);
 }
+
+// Recurring manual invoice item - repeats every month from start_month
+export interface RecurringInvoiceItem {
+  id: string;
+  engagement_id: string;
+  description: string;
+  amount: number;
+  hours: number | null;
+  hourly_rate: number | null;
+  currency: string;
+  is_reverse_charge: boolean;
+  start_year: number;
+  start_month: number; // 1-12
+  end_year: number | null;
+  end_month: number | null;
+  is_active: boolean;
+  created_at: string;
+}
