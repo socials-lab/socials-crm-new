@@ -433,6 +433,17 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                     <p className="text-sm font-semibold">Jazykové mutace:</p>
                   </div>
                   <div className="space-y-2">
+                    {/* Base market */}
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{(service.managed_countries || []).map(c => getCountryFlag(c)).join(' ') || '🏠'}</span>
+                        <span>{(service.managed_countries || []).map(c => getCountryName(c)).join(', ') || 'Hlavní trh'}</span>
+                      </div>
+                      <span className="font-semibold text-[#94e700]">
+                        {service.price.toLocaleString('cs-CZ')} {service.currency}
+                        {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                      </span>
+                    </div>
                     {service.country_variants!.map((variant, vIdx) => (
                       <div key={vIdx} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
@@ -446,6 +457,14 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                         </span>
                       </div>
                     ))}
+                    {/* Total */}
+                    <div className="flex items-center justify-between text-sm pt-2 border-t border-foreground/[0.08]">
+                      <span className="font-medium">Celkem</span>
+                      <span className="font-bold text-[#94e700]">
+                        {serviceTotalPrice.toLocaleString('cs-CZ')} {service.currency}
+                        {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
