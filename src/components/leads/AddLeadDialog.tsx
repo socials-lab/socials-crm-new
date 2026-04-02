@@ -299,7 +299,6 @@ export function AddLeadDialog({ open, onOpenChange, lead }: AddLeadDialogProps) 
       estimated_price: data.estimated_price,
       currency: data.currency,
       probability_percent: data.probability_percent,
-      offer_token: lead?.offer_token || null,
       offer_created_at: lead?.offer_created_at || null,
       potential_services: lead?.potential_services || [],
       meeting_request_sent_at: lead?.meeting_request_sent_at || null,

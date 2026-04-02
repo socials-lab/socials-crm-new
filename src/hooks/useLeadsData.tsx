@@ -211,11 +211,12 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   // Mutations
   const addLeadMutation = useMutation({
     mutationFn: async (data: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'notes' | 'converted_to_client_id' | 'converted_to_engagement_id' | 'converted_at'>) => {
+      const { offer_token: _offerToken, ...dbData } = data;
       const insertData = {
-        ...data,
+        ...dbData,
         notes: [],
-        potential_services: data.potential_services || [],
-        access_request_platforms: data.access_request_platforms || [],
+        potential_services: dbData.potential_services || [],
+        access_request_platforms: dbData.access_request_platforms || [],
         converted_to_client_id: null,
         converted_to_engagement_id: null,
         converted_at: null,
@@ -250,8 +251,9 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
 
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Lead> }) => {
+      const { offer_token: _offerToken, ...dbData } = data;
       const { error } = await supabase.from('leads').update({
-        ...data,
+        ...dbData,
         updated_at: now(),
       }).eq('id', id);
       if (error) throw error;
@@ -295,7 +297,7 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     // Log field changes before updating
     const historyPromises: Promise<void>[] = [];
     Object.keys(data).forEach(key => {
-      if (key === 'updated_at' || key === 'updated_by' || key === 'notes') return;
+      if (key === 'updated_at' || key === 'updated_by' || key === 'notes' || key === 'offer_token') return;
       const oldVal = String((lead as Record<string, unknown>)[key] ?? '');
       const newVal = String((data as Record<string, unknown>)[key] ?? '');
       if (oldVal !== newVal) {
