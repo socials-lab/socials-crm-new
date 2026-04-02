@@ -423,46 +423,71 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
               </h4>
               
               <div className="space-y-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground text-xs">Název firmy</span>
+                  <InlineEditField
+                    value={lead.company_name}
+                    onSave={(v) => updateLead(lead.id, { company_name: v } as any)}
+                    displayClassName="font-medium"
+                    emptyText="Doplnit název firmy"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <span className="text-muted-foreground text-xs">IČO</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{lead.ico}</span>
-                      <a
-                        href={`https://ares.gov.cz/ekonomicke-subjekty/res/${lead.ico}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        ARES
-                      </a>
+                      <InlineEditField
+                        value={lead.ico}
+                        onSave={(v) => updateLead(lead.id, { ico: v } as any)}
+                        displayClassName="font-medium"
+                        emptyText="Doplnit IČO"
+                      />
+                      {lead.ico && (
+                        <a
+                          href={`https://ares.gov.cz/ekonomicke-subjekty/res/${lead.ico}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          ARES
+                        </a>
+                      )}
                     </div>
                   </div>
-                  {lead.dic && (
-                    <div>
-                      <span className="text-muted-foreground text-xs">DIČ</span>
-                      <p className="font-medium">{lead.dic}</p>
-                    </div>
-                  )}
+                  <div>
+                    <span className="text-muted-foreground text-xs">DIČ</span>
+                    <InlineEditField
+                      value={lead.dic}
+                      onSave={(v) => updateLead(lead.id, { dic: v || null } as any)}
+                      displayClassName="font-medium"
+                      emptyText="Doplnit DIČ"
+                    />
+                  </div>
                 </div>
 
-                {lead.website && (
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <a 
-                      href={lead.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      {lead.website}
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <InlineEditField
+                    value={lead.website}
+                    onSave={(v) => updateLead(lead.id, { website: v || null } as any)}
+                    type="url"
+                    emptyText="Doplnit web"
+                  />
+                  {lead.website && (
+                    <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
                     </a>
-                  </div>
-                )}
-                {lead.industry && (
-                  <p className="text-muted-foreground">Obor: {lead.industry}</p>
-                )}
+                  )}
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Obor</span>
+                  <InlineEditField
+                    value={lead.industry}
+                    onSave={(v) => updateLead(lead.id, { industry: v || null } as any)}
+                    emptyText="Doplnit obor"
+                  />
+                </div>
               </div>
             </div>
 
