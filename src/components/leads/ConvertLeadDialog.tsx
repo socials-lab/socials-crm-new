@@ -137,7 +137,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   }>>([]);
   const [introDiscountPercent, setIntroDiscountPercent] = useState(0);
   const [introDiscountMonths, setIntroDiscountMonths] = useState(3);
-  const [commissionMembers, setCommissionMembers] = useState<Record<number, boolean>>({});
+  const [commissionColleagueId, setCommissionColleagueId] = useState<string>('');
   const [isConverting, setIsConverting] = useState(false);
   const [conversionStep, setConversionStep] = useState('');
   const [conversionResult, setConversionResult] = useState<{
