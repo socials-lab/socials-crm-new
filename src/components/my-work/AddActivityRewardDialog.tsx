@@ -52,6 +52,7 @@ export function AddActivityRewardDialog({
   const [hours, setHours] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
   const [activityDate, setActivityDate] = useState(defaultDate || format(new Date(), 'yyyy-MM-dd'));
+  const [isRecurring, setIsRecurring] = useState(false);
 
   // Update activityDate when defaultDate changes (dialog re-opened for different month)
   useEffect(() => {
