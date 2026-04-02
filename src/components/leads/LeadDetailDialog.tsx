@@ -518,7 +518,12 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">E-shop</span>
-                        <p className="font-medium">{lead.is_ecommerce !== null && lead.is_ecommerce !== undefined ? (lead.is_ecommerce ? 'Ano' : 'Ne') : '–'}</p>
+                        <InlineEditField
+                          value={lead.is_ecommerce !== null && lead.is_ecommerce !== undefined ? (lead.is_ecommerce ? 'Ano' : 'Ne') : ''}
+                          onSave={(v) => { updateLead(lead.id, { is_ecommerce: v.toLowerCase() === 'ano' } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Kredibilita</span>
