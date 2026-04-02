@@ -105,6 +105,7 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
       is_freelancer: colleague?.is_freelancer || false,
       internal_hourly_cost: colleague?.internal_hourly_cost || 0,
       monthly_fixed_cost: colleague?.monthly_fixed_cost ?? null,
+      minimum_reward: colleague?.minimum_reward ?? null,
       max_engagements: colleague?.max_engagements ?? 5,
       capacity_slots: existingSlots,
       status: colleague?.status || 'active',
