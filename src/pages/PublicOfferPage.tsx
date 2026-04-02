@@ -249,6 +249,8 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
   const hasDetailedSections = service.detailed_sections && service.detailed_sections.length > 0;
   const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline;
   const hasCountryVariants = service.country_variants && service.country_variants.length > 0;
+  const variantTotal = (service.country_variants || []).reduce((sum, v) => sum + v.price, 0);
+  const serviceTotalPrice = service.price + variantTotal;
   const countryFlags = [
     ...(service.managed_countries || []),
     ...(service.country_variants || []).map(v => v.country_code),
@@ -318,7 +320,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                   <div className="hidden md:flex items-center gap-3">
                     <div className="text-right whitespace-nowrap">
                       <span className="font-bold text-lg text-[#94e700]">
-                        {service.price.toLocaleString('cs-CZ')} {service.currency}
+                        {serviceTotalPrice.toLocaleString('cs-CZ')} {service.currency}
                       </span>
                       {service.billing_type === 'monthly' && (
                         <span className="text-xs text-muted-foreground/70 ml-1">/měs</span>
@@ -341,7 +343,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                 <div className="flex md:hidden items-center justify-between mt-2.5">
                   <div className="whitespace-nowrap">
                     <span className="font-bold text-base text-[#94e700]">
-                      {service.price.toLocaleString('cs-CZ')} {service.currency}
+                      {serviceTotalPrice.toLocaleString('cs-CZ')} {service.currency}
                     </span>
                     {service.billing_type === 'monthly' && (
                       <span className="text-xs text-muted-foreground/70 ml-1">/měs</span>
@@ -431,6 +433,17 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                     <p className="text-sm font-semibold">Jazykové mutace:</p>
                   </div>
                   <div className="space-y-2">
+                    {/* Base market */}
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{(service.managed_countries || []).map(c => getCountryFlag(c)).join(' ') || '🏠'}</span>
+                        <span>{(service.managed_countries || []).map(c => getCountryName(c)).join(', ') || 'Hlavní trh'}</span>
+                      </div>
+                      <span className="font-semibold text-[#94e700]">
+                        {service.price.toLocaleString('cs-CZ')} {service.currency}
+                        {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                      </span>
+                    </div>
                     {service.country_variants!.map((variant, vIdx) => (
                       <div key={vIdx} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
@@ -444,6 +457,14 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                         </span>
                       </div>
                     ))}
+                    {/* Total */}
+                    <div className="flex items-center justify-between text-sm pt-2 border-t border-foreground/[0.08]">
+                      <span className="font-medium">Celkem</span>
+                      <span className="font-bold text-[#94e700]">
+                        {serviceTotalPrice.toLocaleString('cs-CZ')} {service.currency}
+                        {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -977,16 +998,18 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   }
 
   const isExpired = offer.valid_until && new Date(offer.valid_until) < new Date();
+  const getServiceTotal = (s: PublicOfferService) => 
+    s.price + (s.country_variants || []).reduce((sum, v) => sum + v.price, 0);
   const coreMonthly = offer.services
     .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
-    .reduce((sum, s) => sum + s.price, 0);
+    .reduce((sum, s) => sum + getServiceTotal(s), 0);
   const addonMonthly = offer.services
     .filter(s => s.billing_type === 'monthly' && s.service_type !== 'core')
-    .reduce((sum, s) => sum + s.price, 0);
+    .reduce((sum, s) => sum + getServiceTotal(s), 0);
   const totalMonthly = coreMonthly + addonMonthly;
   const totalOneOff = offer.services
     .filter(s => s.billing_type === 'one_off')
-    .reduce((sum, s) => sum + s.price, 0);
+    .reduce((sum, s) => sum + getServiceTotal(s), 0);
 
   const onboardingUrl = `/onboarding/${offer.lead_id}`;
 
