@@ -262,11 +262,52 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       month: number;
       settings?: Partial<CreativeBoostClientMonth>;
     }) => {
-      // Check if already exists
-      const existing = clientMonths.find(
-        cm => cm.clientId === clientId && cm.year === year && cm.month === month
+      const targetEngagementServiceId = settings?.engagementServiceId ?? null;
+      const targetEngagementId = settings?.engagementId ?? null;
+
+      // Exact match by engagement service (or both null when service is not provided).
+      const existingExact = clientMonths.find(
+        (cm) =>
+          cm.clientId === clientId &&
+          cm.year === year &&
+          cm.month === month &&
+          (cm.engagementServiceId ?? null) === targetEngagementServiceId
       );
-      if (existing) return existing;
+      if (existingExact) return existingExact;
+
+      // Legacy repair path:
+      // Earlier versions created month rows without engagement_service_id.
+      // When we now know the service, link the orphan row instead of skipping.
+      if (targetEngagementServiceId !== null) {
+        const orphanRows = clientMonths.filter(
+          (cm) =>
+            cm.clientId === clientId &&
+            cm.year === year &&
+            cm.month === month &&
+            (cm.engagementServiceId ?? null) === null
+        );
+
+        if (orphanRows.length > 1) {
+          throw new Error(
+            `Creative Boost data integrity issue: multiple orphan month rows for client ${clientId} ${year}-${month}.`
+          );
+        }
+
+        if (orphanRows.length === 1) {
+          const orphan = orphanRows[0];
+          const { data: repaired, error: repairError } = await supabase
+            .from('creative_boost_client_months')
+            .update({
+              engagement_service_id: targetEngagementServiceId,
+              engagement_id: targetEngagementId,
+            })
+            .eq('id', orphan.id)
+            .select()
+            .single();
+          if (repairError) throw repairError;
+          return transformClientMonth(repaired);
+        }
+      }
 
       const { data: result, error } = await supabase
         .from('creative_boost_client_months')
