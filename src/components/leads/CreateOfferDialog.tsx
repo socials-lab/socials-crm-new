@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -156,6 +156,7 @@ const DEFAULT_PORTFOLIO_OPTIONS: Omit<PortfolioLink, 'id'>[] = [
 export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existingOffer }: CreateOfferDialogProps) {
   const { services, colleagues } = useCRMData();
   const { user } = useAuth();
+  const initializedFormKeyRef = useRef<string>('');
   const [resolvedExistingOffer, setResolvedExistingOffer] = useState<PublicOffer | null>(null);
   const [isLoadingExistingOffer, setIsLoadingExistingOffer] = useState(false);
   const offerForEdit = existingOffer || resolvedExistingOffer;
@@ -231,8 +232,14 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   }, [open, existingOffer, lead.id, lead.offer_token]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initializedFormKeyRef.current = '';
+      return;
+    }
     if (isLoadingExistingOffer) return;
+
+    const initKey = offerForEdit ? `offer:${offerForEdit.id}` : `lead:${lead.id}`;
+    if (initializedFormKeyRef.current === initKey) return;
     
     // Edit mode: populate from existing offer
     if (offerForEdit) {
@@ -250,6 +257,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       if (offerForEdit.portfolio_links?.length > 0) {
         setPortfolioLinks(offerForEdit.portfolio_links);
       }
+      initializedFormKeyRef.current = initKey;
       return;
     }
     
@@ -296,10 +304,12 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         };
       });
       setEditableServices(initialServices);
+      initializedFormKeyRef.current = initKey;
       return;
     }
     
     // Otherwise, auto-suggest services based on lead's channels/platforms
+    if (services.length === 0) return;
     const suggestedCodes = suggestServiceCodes(lead);
     if (suggestedCodes.length > 0) {
       const suggested: PublicOfferService[] = [];
@@ -311,6 +321,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       }
       setEditableServices(suggested);
     }
+    initializedFormKeyRef.current = initKey;
   }, [open, lead, lead.potential_services, services, offerForEdit, isLoadingExistingOffer]);
 
   // Initialize reward overrides from catalog when services change

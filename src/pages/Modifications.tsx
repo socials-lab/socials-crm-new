@@ -462,12 +462,12 @@ export default function Modifications() {
 
   const getUpgradeLink = (token: string | null) => {
     if (!token) return '';
-    return `${window.location.origin}/upgrade/${token}`;
+    return `${window.location.origin}/modification/${token}`;
   };
 
   const handleCopyLink = async () => {
     if (approvedRequest?.upgrade_offer_token) {
-      const link = `${window.location.origin}/upgrade/${approvedRequest.upgrade_offer_token}`;
+      const link = `${window.location.origin}/modification/${approvedRequest.upgrade_offer_token}`;
       await navigator.clipboard.writeText(link);
       setLinkCopied(true);
       toast.success('Odkaz zkopírován do schránky');
@@ -477,7 +477,7 @@ export default function Modifications() {
 
   const getClientLink = () => {
     if (approvedRequest?.upgrade_offer_token) {
-      return `${window.location.origin}/upgrade/${approvedRequest.upgrade_offer_token}`;
+      return `${window.location.origin}/modification/${approvedRequest.upgrade_offer_token}`;
     }
     return '';
   };

@@ -239,7 +239,7 @@ export function ModificationRequestCard({
   
   const handleCopyLink = async () => {
     if (request.upgrade_offer_token) {
-      const link = `${window.location.origin}/upgrade/${request.upgrade_offer_token}`;
+      const link = `${window.location.origin}/modification/${request.upgrade_offer_token}`;
       await navigator.clipboard.writeText(link);
       setLinkCopied(true);
       toast.success('Odkaz zkopírován');
@@ -1021,7 +1021,7 @@ export function ModificationRequestCard({
                           variant="ghost"
                           size="sm"
                           className="h-8"
-                          onClick={() => window.open(`/upgrade/${request.upgrade_offer_token}`, '_blank')}
+                          onClick={() => window.open(`/modification/${request.upgrade_offer_token}`, '_blank')}
                         >
                           <Eye className="h-3.5 w-3.5 mr-1" />
                           Náhled

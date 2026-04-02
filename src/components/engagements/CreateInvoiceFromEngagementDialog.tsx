@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -96,6 +96,7 @@ export function CreateInvoiceFromEngagementDialog({
   isLoading = false,
   onCreateInvoice,
 }: CreateInvoiceFromEngagementDialogProps) {
+  const initializedForOpenRef = useRef(false);
   if (!engagement.currency) {
     throw new Error(`Missing engagement currency for ${engagement.id}`);
   }
@@ -169,39 +170,45 @@ export function CreateInvoiceFromEngagementDialog({
 
   // Reset form and prefill items when dialog opens
   useEffect(() => {
-    if (open) {
-      setSelectedPeriod(defaultPeriod);
-      
-      const periodLabel = getPeriodLabel(defaultPeriod);
-      const selectedOption = periodOptions.find((option) => option.value === defaultPeriod);
-      if (!selectedOption) {
-        throw new Error(`Missing period option for ${defaultPeriod}`);
-      }
-      const defaultPeriodStart = startOfMonth(new Date(selectedOption.year, selectedOption.month - 1));
-      const defaultPeriodEnd = endOfMonth(new Date(selectedOption.year, selectedOption.month - 1));
-      const activeServices = engagementServices.filter((service) =>
-        isEngagementServiceActiveInPeriod(service, defaultPeriodStart, defaultPeriodEnd),
-      );
-      
-      if (activeServices.length > 0) {
-        const prefilled = activeServices.map(s => ({
-          id: `item-${s.id}`,
-          serviceId: s.id,
-          serviceName: s.name,
-          description: `${s.name} - ${periodLabel}`,
-          hours: '',
-          hourlyRate: '',
-          amount: getServiceSuggestedInvoiceAmount(s).toString(),
-          currency: engagementCurrency,
-          isReverseCharge: false,
-          isAmountManual: true,
-        }));
-        setItems(prefilled);
-      } else {
-        setItems([createEmptyItem(engagementCurrency)]);
-      }
+    if (!open) {
+      initializedForOpenRef.current = false;
+      return;
     }
-  }, [open, engagementServices, engagementCurrency, defaultPeriod, getPeriodLabel, periodOptions]);
+    if (initializedForOpenRef.current) return;
+    if (isLoading) return;
+
+    setSelectedPeriod(defaultPeriod);
+    
+    const periodLabel = getPeriodLabel(defaultPeriod);
+    const selectedOption = periodOptions.find((option) => option.value === defaultPeriod);
+    if (!selectedOption) {
+      throw new Error(`Missing period option for ${defaultPeriod}`);
+    }
+    const defaultPeriodStart = startOfMonth(new Date(selectedOption.year, selectedOption.month - 1));
+    const defaultPeriodEnd = endOfMonth(new Date(selectedOption.year, selectedOption.month - 1));
+    const activeServices = engagementServices.filter((service) =>
+      isEngagementServiceActiveInPeriod(service, defaultPeriodStart, defaultPeriodEnd),
+    );
+    
+    if (activeServices.length > 0) {
+      const prefilled = activeServices.map(s => ({
+        id: `item-${s.id}`,
+        serviceId: s.id,
+        serviceName: s.name,
+        description: `${s.name} - ${periodLabel}`,
+        hours: '',
+        hourlyRate: '',
+        amount: getServiceSuggestedInvoiceAmount(s).toString(),
+        currency: engagementCurrency,
+        isReverseCharge: false,
+        isAmountManual: true,
+      }));
+      setItems(prefilled);
+    } else {
+      setItems([createEmptyItem(engagementCurrency)]);
+    }
+    initializedForOpenRef.current = true;
+  }, [open, isLoading, engagementServices, engagementCurrency, defaultPeriod, getPeriodLabel, periodOptions]);
 
   // Update descriptions when period changes
   useEffect(() => {

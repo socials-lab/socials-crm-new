@@ -140,6 +140,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   // For update_service_price (merged with update_assignment)
   const [selectedEngagementServiceId, setSelectedEngagementServiceId] = useState<string>('');
   const [newPrice, setNewPrice] = useState<number>(0);
+  const lastAutoFilledServiceIdRef = useRef<string>('');
   // Editable assignments for the selected service (used in update_service_price)
   const [serviceAssignmentEdits, setServiceAssignmentEdits] = useState<Array<{
     assignment_id: string;
@@ -443,18 +444,24 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
 
   // Auto-fill price and assignments when selecting engagement service for update
   useEffect(() => {
+    if (!selectedEngagementServiceId) {
+      lastAutoFilledServiceIdRef.current = '';
+      return;
+    }
+
     if (selectedEngagementServiceId) {
       const engService = currentEngagementServices.find(es => es.id === selectedEngagementServiceId);
       if (engService) {
-        setNewPrice(engService.price);
-        
-        // Pre-populate Creative Boost fields from existing service
-        const catalogSvc = engService.service_id ? services.find(s => s.id === engService.service_id) : null;
-        if (catalogSvc?.code === CREATIVE_BOOST_CODE) {
-          setCbMaxCredits(engService.creative_boost_max_credits ?? 30);
-          setCbPricePerCredit(engService.creative_boost_price_per_credit ?? 400);
-          setCbColleagueReward(150); // defaults, could be stored in assignments
-          setCbEditorReward(100);
+        if (lastAutoFilledServiceIdRef.current !== selectedEngagementServiceId) {
+          setNewPrice(engService.price);
+          const catalogSvc = engService.service_id ? services.find(s => s.id === engService.service_id) : null;
+          if (catalogSvc?.code === CREATIVE_BOOST_CODE) {
+            setCbMaxCredits(engService.creative_boost_max_credits ?? 30);
+            setCbPricePerCredit(engService.creative_boost_price_per_credit ?? 400);
+            setCbColleagueReward(150); // defaults, could be stored in assignments
+            setCbEditorReward(100);
+          }
+          lastAutoFilledServiceIdRef.current = selectedEngagementServiceId;
         }
       }
       // Load assignments linked to this service (or all for the engagement)

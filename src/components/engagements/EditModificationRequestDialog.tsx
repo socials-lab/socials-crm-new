@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
@@ -47,6 +47,7 @@ export function EditModificationRequestDialog({
   onSave,
   isSaving,
 }: EditModificationRequestDialogProps) {
+  const initializedRequestIdRef = useRef<string>('');
   const [effectiveFrom, setEffectiveFrom] = useState<Date | undefined>();
   const [note, setNote] = useState('');
   const [commission, setCommission] = useState(10);
@@ -59,21 +60,28 @@ export function EditModificationRequestDialog({
   const [newPrice, setNewPrice] = useState(0);
 
   useEffect(() => {
-    if (request) {
-      setEffectiveFrom(request.effective_from ? new Date(request.effective_from) : undefined);
-      setNote(request.note || '');
-      setCommission(request.upsell_commission_percent || 10);
-      
-      if (request.request_type === 'add_service') {
-        const changes = request.proposed_changes as AddServiceProposedChanges;
-        setServiceName(changes.name);
-        setServicePrice(changes.price);
-      } else if (request.request_type === 'update_service_price') {
-        const changes = request.proposed_changes as UpdateServicePriceProposedChanges;
-        setNewPrice(changes.new_price);
-      }
+    if (!open) {
+      initializedRequestIdRef.current = '';
+      return;
     }
-  }, [request]);
+    if (!request) return;
+    if (initializedRequestIdRef.current === request.id) return;
+
+    setEffectiveFrom(request.effective_from ? new Date(request.effective_from) : undefined);
+    setNote(request.note || '');
+    setCommission(request.upsell_commission_percent || 10);
+    
+    if (request.request_type === 'add_service') {
+      const changes = request.proposed_changes as AddServiceProposedChanges;
+      setServiceName(changes.name);
+      setServicePrice(changes.price);
+    } else if (request.request_type === 'update_service_price') {
+      const changes = request.proposed_changes as UpdateServicePriceProposedChanges;
+      setNewPrice(changes.new_price);
+    }
+
+    initializedRequestIdRef.current = request.id;
+  }, [open, request]);
 
   const handleSave = async () => {
     if (!request) return;

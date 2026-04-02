@@ -115,6 +115,7 @@ export function AddEngagementServiceDialog({
   const [priceConversionMeta, setPriceConversionMeta] = useState<PriceConversionMeta | null>(null);
   const [serviceToEngagementRate, setServiceToEngagementRate] = useState<number | null>(null);
   const latestConversionRequestRef = useRef(0);
+  const initializedDialogKeyRef = useRef<string>('');
   
   const activeColleagues = colleagues.filter(c => c.status === 'active');
 
@@ -141,7 +142,13 @@ export function AddEngagementServiceDialog({
   const isEditing = existingService !== null;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initializedDialogKeyRef.current = '';
+      return;
+    }
+    const dialogKey = existingService ? `edit:${existingService.id}` : `new:${engagementCurrency}`;
+    if (initializedDialogKeyRef.current === dialogKey) return;
+
     if (existingService) {
       form.reset({
         service_id: existingService.service_id,
@@ -158,6 +165,7 @@ export function AddEngagementServiceDialog({
         creative_boost_reward_per_credit_video: existingService.creative_boost_reward_per_credit_video,
       });
       setUpsoldById(existingService.upsold_by_id);
+      initializedDialogKeyRef.current = dialogKey;
       return;
     }
 
@@ -176,7 +184,8 @@ export function AddEngagementServiceDialog({
       creative_boost_reward_per_credit_video: null,
     });
     setUpsoldById(null);
-  }, [open, engagementCurrency, existingService, form]);
+    initializedDialogKeyRef.current = dialogKey;
+  }, [open, engagementCurrency, existingService?.id, form]);
 
   const selectedService = services.find(s => s.id === selectedServiceId);
   const isCreativeBoost = isCreativeBoostService(selectedService);

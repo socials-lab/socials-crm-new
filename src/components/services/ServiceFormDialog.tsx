@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,7 @@ const REWARD_TYPE_OPTIONS: { value: ServiceRewardRole['reward_type']; label: str
 const currencyOptions = ['CZK', 'EUR', 'USD'];
 
 export function ServiceFormDialog({ open, onOpenChange, service, onSave }: ServiceFormDialogProps) {
+  const initializedServiceKeyRef = useRef<string>('');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('addon');
@@ -68,6 +69,14 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
   const isEditing = !!service;
 
   useEffect(() => {
+    if (!open) {
+      initializedServiceKeyRef.current = '';
+      return;
+    }
+
+    const initKey = service ? `edit:${service.id}` : 'new';
+    if (initializedServiceKeyRef.current === initKey) return;
+
     if (service) {
       setName(service.name);
       setCode(service.code);
@@ -103,7 +112,8 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSave }: Servi
       setRewardConfig([]);
       setShowRewardConfig(false);
     }
-  }, [service, open]);
+    initializedServiceKeyRef.current = initKey;
+  }, [open, service]);
 
   const handleTierPriceChange = (tier: 'growth' | 'pro' | 'elite', value: string) => {
     setTierPricing(prev => prev.map(tp => 
