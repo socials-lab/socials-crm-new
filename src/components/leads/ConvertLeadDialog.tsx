@@ -1996,21 +1996,21 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 <div className="space-y-1">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tým</p>
                   <p className="text-xs text-muted-foreground">
-                    {teamMembers.filter(m => m.colleague_id).map((m, idx) => {
+                    {teamMembers.filter(m => m.colleague_id).map(m => {
                       const c = colleagues.find(col => col.id === m.colleague_id);
-                      const hasCommission = commissionMembers[teamMembers.indexOf(m)];
-                      return c ? `${c.full_name} (${m.role})${hasCommission ? ' 💰' : ''}` : m.role;
+                      return c ? `${c.full_name} (${m.role})` : m.role;
                     }).join(', ')}
                   </p>
-                  {Object.values(commissionMembers).some(Boolean) && (() => {
-                    const monthlyTotal = offerServices
+                  {commissionColleagueId && commissionColleagueId !== 'none' && (() => {
+                    const seller = colleagues.find(c => c.id === commissionColleagueId);
+                    const monthlyFromServices = offerServices
                       .filter(s => s.billing_type === 'monthly')
                       .reduce((sum, s) => sum + s.price, 0);
-                    const commissionCount = Object.values(commissionMembers).filter(Boolean).length;
-                    const commissionAmount = Math.round(monthlyTotal * 0.1);
+                    const monthlyBase = monthlyFromServices || form.watch('monthly_fee') || 0;
+                    const commissionAmount = Math.round(monthlyBase * 0.1);
                     return (
                       <p className="text-xs text-muted-foreground">
-                        💰 Provize: {commissionCount}× {commissionAmount.toLocaleString('cs-CZ')} {lead.currency} (10 % z {monthlyTotal.toLocaleString('cs-CZ')} {lead.currency}/měs)
+                        💰 Provize: {seller?.full_name || '?'} — {commissionAmount.toLocaleString('cs-CZ')} {lead.currency} (10 % z {monthlyBase.toLocaleString('cs-CZ')} {lead.currency}/měs)
                       </p>
                     );
                   })()}
