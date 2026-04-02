@@ -891,8 +891,8 @@ export function ModificationRequestCard({
               )}
               
               {/* Footer */}
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 flex-wrap items-center gap-1 text-xs text-muted-foreground">
                   <User className="h-3 w-3" />
                   <span>Navrhl: {request.upsold_by_name || 'Neznámý'}</span>
                   <span>•</span>
@@ -928,7 +928,7 @@ export function ModificationRequestCard({
 
                 {/* Copy link button for approved requests waiting for client */}
                 {showCopyLinkOnly && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                     {canDelete && (
                       <Button
                         variant="ghost"
@@ -989,7 +989,7 @@ export function ModificationRequestCard({
                 
                 {/* Actions for pending requests */}
                 {showActions && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                     {/* Delete button */}
                     {canDelete && (
                       <Button
