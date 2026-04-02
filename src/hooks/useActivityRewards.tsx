@@ -16,6 +16,7 @@ export interface ActivityReward {
   activity_date: string;
   created_at: string;
   client_name?: string;
+  is_recurring?: boolean;
 }
 
 export const CATEGORY_LABELS: Record<ActivityCategory, string> = {
@@ -161,13 +162,25 @@ export function useActivityRewards(colleagueId: string | null) {
 
   const getRewardsByMonth = useCallback((year: number, month: number) => {
     if (!colleagueId) return [];
-    const start = startOfMonth(new Date(year, month - 1));
-    const end = endOfMonth(new Date(year, month - 1));
+    const targetStart = startOfMonth(new Date(year, month - 1));
+    const targetEnd = endOfMonth(new Date(year, month - 1));
     
-    return rewards.filter(r => {
+    const result: ActivityReward[] = [];
+    
+    rewards.forEach(r => {
       const date = parseISO(r.activity_date);
-      return isWithinInterval(date, { start, end });
+      if (r.is_recurring) {
+        // Recurring: show in every month from the original date onwards
+        const rewardStart = startOfMonth(date);
+        if (targetStart >= rewardStart) {
+          result.push({ ...r, activity_date: format(targetStart, 'yyyy-MM-dd') });
+        }
+      } else if (isWithinInterval(date, { start: targetStart, end: targetEnd })) {
+        result.push(r);
+      }
     });
+    
+    return result;
   }, [rewards, colleagueId]);
 
   const getRewardsByCategory = useCallback((year: number, month: number) => {

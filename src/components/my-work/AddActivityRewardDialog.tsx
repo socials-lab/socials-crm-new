@@ -19,7 +19,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calculator, Info, Megaphone, Building2, Briefcase } from 'lucide-react';
+import { Calculator, Info, Megaphone, Building2, Briefcase, Repeat } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useMemo } from 'react';
@@ -51,6 +52,7 @@ export function AddActivityRewardDialog({
   const [hours, setHours] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
   const [activityDate, setActivityDate] = useState(defaultDate || format(new Date(), 'yyyy-MM-dd'));
+  const [isRecurring, setIsRecurring] = useState(false);
 
   // Update activityDate when defaultDate changes (dialog re-opened for different month)
   useEffect(() => {
@@ -124,6 +126,7 @@ export function AddActivityRewardDialog({
       hourly_rate: billingType === 'hourly' && hourlyRate ? Number(hourlyRate) : null,
       activity_date: activityDate,
       client_name: category === 'client_work' ? clientName : undefined,
+      is_recurring: isRecurring,
     });
     handleClose();
   };
@@ -138,6 +141,7 @@ export function AddActivityRewardDialog({
     setHourlyRate('');
     setActivityDate(defaultDate || format(new Date(), 'yyyy-MM-dd'));
     setIsAmountManual(false);
+    setIsRecurring(false);
     onOpenChange(false);
   };
 
@@ -334,7 +338,28 @@ export function AddActivityRewardDialog({
               placeholder="0"
               min={0}
             />
+
+          {/* Recurring toggle */}
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox
+              id="recurring"
+              checked={isRecurring}
+              onCheckedChange={(checked) => setIsRecurring(checked === true)}
+            />
+            <Label
+              htmlFor="recurring"
+              className="text-sm font-normal cursor-pointer flex items-center gap-1.5"
+            >
+              <Repeat className="h-3.5 w-3.5" />
+              Opakovat každý měsíc
+            </Label>
           </div>
+          {isRecurring && (
+            <p className="text-xs text-muted-foreground pl-6">
+              Položka se bude automaticky zobrazovat ve fakturaci každý měsíc od zvoleného data.
+            </p>
+          )}
+        </div>
         </div>
 
         <DialogFooter>
