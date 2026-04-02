@@ -697,12 +697,15 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                         />
                       </div>
                     </div>
-                    {lead.pain_point && (
-                      <div className="p-2.5 rounded-lg border-l-4 border-red-400 bg-red-500/5">
-                        <span className="text-xs text-muted-foreground block mb-0.5">🎯 Pain point</span>
-                        <p className="text-sm font-medium">{lead.pain_point}</p>
-                      </div>
-                    )}
+                    <div className="p-2.5 rounded-lg border-l-4 border-red-400 bg-red-500/5">
+                      <span className="text-xs text-muted-foreground block mb-0.5">🎯 Pain point</span>
+                      <InlineEditField
+                        value={lead.pain_point || ''}
+                        onSave={(v) => { updateLead(lead.id, { pain_point: v || null } as any); toast.success('Uloženo'); }}
+                        emptyText="Doplnit pain point"
+                        displayClassName="text-sm font-medium"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
