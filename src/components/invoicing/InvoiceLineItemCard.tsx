@@ -21,6 +21,7 @@ interface InvoiceLineItemCardProps {
 export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDuplicate }: InvoiceLineItemCardProps) {
   const isProrated = item.prorated_days < item.total_days_in_month;
   const isManual = item.source === 'manual';
+  const isRecurring = item.id.startsWith('li-rec-');
   const hasNote = item.note && item.note.trim().length > 0;
 
   const formatCurrency = (amount: number) => {
