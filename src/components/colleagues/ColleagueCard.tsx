@@ -456,6 +456,18 @@ export function ColleagueCard({
                       <span className="font-medium">{colleague.internal_hourly_cost.toLocaleString()} Kč/h</span>
                     </div>
                   )}
+
+                  {/* Minimum Reward */}
+                  {canSeeFinancials && colleague.minimum_reward != null && colleague.minimum_reward > 0 && (
+                    <div className={`flex items-center justify-between text-sm p-2 rounded ${
+                      details.totalMonthlyEarnings >= colleague.minimum_reward
+                        ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400'
+                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                    }`}>
+                      <span>Minimální odměna</span>
+                      <span className="font-medium">{colleague.minimum_reward.toLocaleString()} Kč</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
