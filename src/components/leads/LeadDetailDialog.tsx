@@ -574,15 +574,30 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                       <div>
                         <span className="text-muted-foreground text-xs">Typ webu</span>
-                        <p className="font-medium">{lead.is_ecommerce ? 'E-shop' : lead.business_type || '–'}</p>
+                        <InlineEditField
+                          value={lead.is_ecommerce ? 'E-shop' : lead.business_type || ''}
+                          onSave={(v) => { updateLead(lead.id, { business_type: v } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Platforma</span>
-                        <p className="font-medium">{lead.enrichment_platform || '–'}</p>
+                        <InlineEditField
+                          value={lead.enrichment_platform || ''}
+                          onSave={(v) => { updateLead(lead.id, { enrichment_platform: v || null } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Vyspělost</span>
-                        <p className="font-medium">{lead.marketing_maturity || '–'}</p>
+                        <InlineEditField
+                          value={lead.marketing_maturity || ''}
+                          onSave={(v) => { updateLead(lead.id, { marketing_maturity: v || null } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Web</span>
