@@ -846,8 +846,8 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
     async (year: number, month: number) => {
       if (!cbServiceId) return; // No Creative Boost service found
       
-    const monthStart = new Date(year, month - 1, 1);
-    const monthEnd = new Date(year, month, 0);
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = new Date(year, month, 0);
 
       const promises: Promise<void>[] = [];
     
@@ -864,7 +864,10 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
           es => es.engagement_id === engagement.id && es.service_id === cbServiceId
       );
       
-      if (!cbService) return;
+      if (!cbService || !cbService.is_active) return;
+
+      const serviceStartDate = cbService.effective_from ? new Date(cbService.effective_from) : null;
+      if (serviceStartDate && serviceStartDate > monthEnd) return;
       
       const existingMonth = clientMonths.find(
         cm => cm.engagementServiceId === cbService.id && cm.year === year && cm.month === month

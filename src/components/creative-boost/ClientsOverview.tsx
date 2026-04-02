@@ -93,6 +93,9 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
   }, [year, month, engagements.length, engagementServices.length, ensureClientMonthsForActiveEngagements]);
 
   const summaries = useMemo(() => {
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0);
+
     return getClientMonthSummaries(year, month).filter((summary) => {
       const monthData = clientMonths.find(
         (cm) => cm.clientId === summary.clientId && cm.year === year && cm.month === month
@@ -107,13 +110,22 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
       }
 
       const linkedService = engagementServices.find((service) => service.id === monthData.engagementServiceId);
+      const linkedEngagement = engagements.find((engagement) => engagement.id === monthData.engagementId);
+
+      const serviceStartDate = linkedService?.effective_from ? new Date(linkedService.effective_from) : null;
+      const engagementStartDate = linkedEngagement?.start_date ? new Date(linkedEngagement.start_date) : null;
+      const engagementEndDate = linkedEngagement?.end_date ? new Date(linkedEngagement.end_date) : null;
+
       return Boolean(
         linkedService &&
         linkedService.is_active &&
-        linkedService.creative_boost_price_per_credit !== null
+        linkedService.creative_boost_price_per_credit !== null &&
+        (!serviceStartDate || serviceStartDate <= monthEnd) &&
+        (!engagementStartDate || engagementStartDate <= monthEnd) &&
+        (!engagementEndDate || engagementEndDate >= monthStart)
       );
     });
-  }, [getClientMonthSummaries, year, month, clientMonths, engagementServices]);
+  }, [getClientMonthSummaries, year, month, clientMonths, engagementServices, engagements]);
 
   const filteredSummaries = useMemo(() => {
     return summaries.filter(s => {
