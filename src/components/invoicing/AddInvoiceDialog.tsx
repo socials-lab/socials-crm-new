@@ -112,6 +112,7 @@ export function AddInvoiceDialog({
     setAmount('');
     setCurrency('CZK');
     setIsReverseCharge(false);
+    setIsRecurring(false);
     setIsAmountManual(false);
     onOpenChange(false);
   };
