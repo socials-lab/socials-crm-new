@@ -84,8 +84,8 @@ export function CreativeBoostCreditOverview({
     <>
       <div className="p-3 rounded-lg bg-muted/50 border space-y-3" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center">
               <Palette className="h-3.5 w-3.5 text-primary" />
             </div>
@@ -97,7 +97,7 @@ export function CreativeBoostCreditOverview({
               {engagementService.creative_boost_fixed_billing !== false ? 'Fixní' : 'Dle čerpání'}
             </Badge>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="ml-auto shrink-0 flex items-center gap-1">
             {canSeeFinancials && (
               <Button
                 variant="ghost"
@@ -129,7 +129,7 @@ export function CreativeBoostCreditOverview({
         {/* Settings edit mode - only for users with financial access */}
         {isEditing && canSeeFinancials && (
           <div className="p-2 rounded-lg bg-background border space-y-2">
-            <div className="flex items-center justify-between pt-1 border-t">
+            <div className="flex items-center justify-between pt-1">
               <div className="space-y-0.5">
                 <span className="text-xs font-medium">Fixní fakturace</span>
                 <p className="text-[10px] text-muted-foreground">

@@ -337,22 +337,12 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
           const isOverMax = summary.usedCredits > summary.maxCredits;
           const clientOutputs = getClientOutputs(summary.clientId, year, month);
           const monthData = clientMonths.find(cm => cm.clientId === summary.clientId && cm.year === year && cm.month === month);
-          const linkedEngagementService = monthData?.engagementServiceId
-            ? engagementServices.find(es => es.id === monthData.engagementServiceId)
-            : null;
           const assignedColleague = monthData?.colleagueId 
             ? designerColleagues.find(c => c.id === monthData.colleagueId)
             : null;
           const linkedEngagement = monthData?.engagementId 
             ? engagements.find(e => e.id === monthData.engagementId)
             : null;
-
-          const hasMissingEngagementService = !!monthData?.engagementServiceId && !linkedEngagementService;
-          const hasMissingServiceRewards =
-            !!linkedEngagementService &&
-            (linkedEngagementService.creative_boost_reward_per_credit_banner === null ||
-              linkedEngagementService.creative_boost_reward_per_credit_video === null);
-
           return (
             <Collapsible key={summary.clientId} open={isExpanded} onOpenChange={() => toggleExpand(summary.clientId)}>
               <Card className="overflow-hidden">
@@ -790,98 +780,6 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                           <span className="text-muted-foreground">Odhad fakturace:</span>
                           <span className="ml-1.5 font-semibold">{formatCurrency(summary.estimatedInvoice)}</span>
                         </div>
-                      </div>
-                      
-                      {/* Inline settings */}
-                      <div className="flex flex-wrap items-center gap-4 pt-2 border-t">
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">Max. kreditů:</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={getDraftOrValue(`settings-${summary.clientId}-maxCredits`, monthData?.maxCredits ?? 0)}
-                            onFocus={() => startNumberDraft(`settings-${summary.clientId}-maxCredits`, monthData?.maxCredits ?? 0)}
-                            onChange={(e) => updateNumberDraft(`settings-${summary.clientId}-maxCredits`, e.target.value)}
-                            onBlur={() => {
-                              const key = `settings-${summary.clientId}-maxCredits`;
-                              const value = toNonNegativeNumber(draftNumbers[key] ?? String(monthData?.maxCredits ?? 0));
-                              handleSettingsChange(summary.clientId, 'maxCredits', value);
-                              clearNumberDraft(key);
-                            }}
-                            className="w-20 h-7 text-center"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">Cena/kredit:</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={getDraftOrValue(`settings-${summary.clientId}-pricePerCredit`, monthData?.pricePerCredit ?? 0)}
-                            onFocus={() => startNumberDraft(`settings-${summary.clientId}-pricePerCredit`, monthData?.pricePerCredit ?? 0)}
-                            onChange={(e) => updateNumberDraft(`settings-${summary.clientId}-pricePerCredit`, e.target.value)}
-                            onBlur={() => {
-                              const key = `settings-${summary.clientId}-pricePerCredit`;
-                              const value = toNonNegativeNumber(draftNumbers[key] ?? String(monthData?.pricePerCredit ?? 0));
-                              handleSettingsChange(summary.clientId, 'pricePerCredit', value);
-                              clearNumberDraft(key);
-                            }}
-                            className="w-24 h-7 text-center"
-                          />
-                          <span className="text-muted-foreground">Kč</span>
-                        </div>
-                        {linkedEngagementService && !hasMissingServiceRewards && (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground">Odměna B:</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={getDraftOrValue(`settings-${summary.clientId}-rewardBannerPerCredit`, linkedEngagementService.creative_boost_reward_per_credit_banner as number)}
-                                onFocus={() => startNumberDraft(`settings-${summary.clientId}-rewardBannerPerCredit`, linkedEngagementService.creative_boost_reward_per_credit_banner as number)}
-                                onChange={(e) => updateNumberDraft(`settings-${summary.clientId}-rewardBannerPerCredit`, e.target.value)}
-                                onBlur={() => {
-                                  const key = `settings-${summary.clientId}-rewardBannerPerCredit`;
-                                  const value = toNonNegativeNumber(draftNumbers[key] ?? String(linkedEngagementService.creative_boost_reward_per_credit_banner as number));
-                                  handleSettingsChange(summary.clientId, 'rewardBannerPerCredit', value);
-                                  clearNumberDraft(key);
-                                }}
-                                className="w-24 h-7 text-center"
-                              />
-                              <span className="text-muted-foreground">Kč</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground">Odměna V:</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={getDraftOrValue(`settings-${summary.clientId}-rewardVideoPerCredit`, linkedEngagementService.creative_boost_reward_per_credit_video as number)}
-                                onFocus={() => startNumberDraft(`settings-${summary.clientId}-rewardVideoPerCredit`, linkedEngagementService.creative_boost_reward_per_credit_video as number)}
-                                onChange={(e) => updateNumberDraft(`settings-${summary.clientId}-rewardVideoPerCredit`, e.target.value)}
-                                onBlur={() => {
-                                  const key = `settings-${summary.clientId}-rewardVideoPerCredit`;
-                                  const value = toNonNegativeNumber(draftNumbers[key] ?? String(linkedEngagementService.creative_boost_reward_per_credit_video as number));
-                                  handleSettingsChange(summary.clientId, 'rewardVideoPerCredit', value);
-                                  clearNumberDraft(key);
-                                }}
-                                className="w-24 h-7 text-center"
-                              />
-                              <span className="text-muted-foreground">Kč</span>
-                            </div>
-                          </>
-                        )}
-                        {hasMissingEngagementService && (
-                          <p className="text-xs text-destructive">
-                            Chyba: chybí Creative Boost služba ({monthData?.engagementServiceId}) pro tento měsíc.
-                          </p>
-                        )}
-                        {hasMissingServiceRewards && (
-                          <p className="text-xs text-destructive">
-                            Chyba: na Creative Boost službě chybí odměna za kredit (B/V).
-                          </p>
-                        )}
                       </div>
                     </div>
                   </CardContent>

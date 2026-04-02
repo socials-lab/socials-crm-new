@@ -822,7 +822,7 @@ function EngagementsContent() {
                     );
                   })()}
 
-                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                     <div className="space-y-3">
                       <h4 className="font-medium text-sm flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -924,7 +924,7 @@ function EngagementsContent() {
                       const totalServicesPrice = engServices.reduce((sum, s) => sum + s.price, 0);
                       return (
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
                             <h4 className="font-medium text-sm flex items-center gap-2">
                               <Briefcase className="h-4 w-4 text-muted-foreground" />
                               Služby ({engServices.length})
@@ -1003,15 +1003,15 @@ function EngagementsContent() {
                                 return (
                                   <div 
                                     key={engService.id}
-                                    className="flex items-center justify-between p-2 rounded-lg bg-background border"
+                                    className="flex items-start justify-between gap-3 p-2 rounded-lg bg-background border"
                                   >
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
                                       <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
                                         {service?.code?.charAt(0) || engService.name.charAt(0)}
                                       </div>
-                                      <div>
+                                      <div className="min-w-0">
                                         <div className="flex items-center gap-2">
-                                          <p className="text-sm font-medium">{engService.name}</p>
+                                          <p className="truncate text-sm font-medium">{engService.name}</p>
                                           {service?.service_type === 'core' && (
                                             <DropdownMenu>
                                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -1063,7 +1063,7 @@ function EngagementsContent() {
                                         </p>
                                       </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="shrink-0 flex items-center gap-2">
                                       {canViewFinancials && (
                                         <span className="text-xs text-muted-foreground">
                                           {engService.price.toLocaleString()} {engService.currency}
@@ -1107,7 +1107,7 @@ function EngagementsContent() {
                     })()}
 
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <h4 className="font-medium text-sm flex items-center gap-2">
                           <Users className="h-4 w-4 text-muted-foreground" />
                           Přiřazení kolegové ({engagementAssignments.length})
