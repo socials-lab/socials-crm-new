@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
+import { InlineEditField } from './InlineEditField';
 import { 
   Building2, 
   Globe, 
