@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useRecurringInvoiceItems } from '@/hooks/useRecurringInvoiceItems';
 import { EngagementInvoiceCard } from './EngagementInvoiceCard';
 import { IssueInvoicesDialog } from './IssueInvoicesDialog';
 import { AddInvoiceDialog } from './AddInvoiceDialog';
