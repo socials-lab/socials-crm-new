@@ -19,7 +19,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calculator, Info, Megaphone, Building2, Briefcase } from 'lucide-react';
+import { Calculator, Info, Megaphone, Building2, Briefcase, Repeat } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useMemo } from 'react';
