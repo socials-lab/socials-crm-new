@@ -411,6 +411,25 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="minimum_reward"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Minimální měsíční odměna (CZK)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min={0}
+                      value={field.value ?? ''} 
+                      onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                      placeholder="Nenastaveno"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         </div>
 
