@@ -449,7 +449,12 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold">{lead.company_name}</span>
+                      <InlineEditField
+                        value={lead.company_name}
+                        onSave={(v) => { updateLead(lead.id, { company_name: v }); toast.success('Uloženo'); }}
+                        displayClassName="font-semibold"
+                        emptyText="Doplnit název"
+                      />
                       {lead.ico && (
                         <a href={`https://or.justice.cz/ias/ui/rejstrik-firma.vysledky?ico=${lead.ico}`} target="_blank" rel="noopener noreferrer"
                           className="text-xs text-primary hover:underline">📋 Rejstřík</a>
