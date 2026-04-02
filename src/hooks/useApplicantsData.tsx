@@ -33,7 +33,6 @@ const INITIAL_MOCK_APPLICANTS: Applicant[] = [
     billing_city: 'Praha',
     billing_zip: '11000',
     bank_account: '1234567890/0100',
-    minimum_reward: null,
     birthday: '1995-06-15',
     personal_email: 'jan.novak.osobni@gmail.com',
     avatar_url: null,
