@@ -67,6 +67,12 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
                   Vícepráce
                 </Badge>
               )}
+              {isRecurring && (
+                <Badge variant="outline" className="text-xs h-5 bg-blue-100 text-blue-800 border-blue-300 gap-0.5">
+                  <Repeat className="h-3 w-3" />
+                  Opakovaná
+                </Badge>
+              )}
               {isProrated && !isManual && (
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs">
                   <AlertTriangle className="h-3 w-3" />
