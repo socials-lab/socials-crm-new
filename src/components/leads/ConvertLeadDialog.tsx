@@ -1899,7 +1899,46 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
               })}
             </div>
 
-            {/* ===== SUMMARY CARD: What's being converted ===== */}
+            {/* ── SECTION 6: Provize za převod ── */}
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+              <div className="flex items-center gap-3 pb-2 border-b">
+                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">6</div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-sm">Provize za převod (10 %)</h4>
+                  <p className="text-xs text-muted-foreground">Jednorázová provize 10 % z měsíční fakturace (bez jednorázových položek)</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">Provize pro kolegu</label>
+                  <Select value={commissionColleagueId} onValueChange={setCommissionColleagueId}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Bez provize" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Bez provize</SelectItem>
+                      {activeColleagues.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {commissionColleagueId && commissionColleagueId !== 'none' && (() => {
+                  const monthlyFromServices = offerServices
+                    .filter(s => s.billing_type === 'monthly')
+                    .reduce((sum, s) => sum + s.price, 0);
+                  const monthlyBase = monthlyFromServices || form.watch('monthly_fee') || 0;
+                  const amount = Math.round(monthlyBase * 0.1);
+                  return (
+                    <Badge variant="outline" className="text-sm gap-1 self-end mb-1">
+                      <Percent className="h-3 w-3" />
+                      {amount.toLocaleString('cs-CZ')} {lead.currency}
+                    </Badge>
+                  );
+                })()}
+              </div>
+            </div>
+
             <div className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] p-4 space-y-4">
               <h4 className="font-semibold text-sm flex items-center gap-2">
                 <Package className="h-4 w-4 text-primary" />
