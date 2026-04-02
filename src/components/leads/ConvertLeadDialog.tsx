@@ -1935,8 +1935,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   const monthlyBase = monthlyFromServices || form.watch('monthly_fee') || 0;
                   const amount = Math.round(monthlyBase * 0.1);
                   return (
-                    <Badge variant="outline" className="text-sm gap-1 self-end mb-1">
-                      <Percent className="h-3 w-3" />
+                    <Badge variant="outline" className="text-sm self-end mb-1">
                       {amount.toLocaleString('cs-CZ')} {lead.currency}
                     </Badge>
                   );
