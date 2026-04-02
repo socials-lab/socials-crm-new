@@ -13,6 +13,19 @@ interface ImpersonationRequest {
   target_user_id?: string;
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  const parts = token.split(".");
+  if (parts.length < 2) {
+    throw new Error("Invalid JWT format.");
+  }
+  const payloadPart = parts[1]
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .padEnd(Math.ceil(parts[1].length / 4) * 4, "=");
+  const decoded = atob(payloadPart);
+  return JSON.parse(decoded) as Record<string, unknown>;
+}
+
 async function loadProfile(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
@@ -50,6 +63,16 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
+    const tokenPayload = decodeJwtPayload(token);
+    const sessionIdRaw = tokenPayload["session_id"];
+    const sessionId = typeof sessionIdRaw === "string" ? sessionIdRaw : null;
+    if (!sessionId) {
+      return new Response(
+        JSON.stringify({ error: "Missing session_id in JWT." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !authData.user) {
       return new Response(
@@ -74,6 +97,7 @@ serve(async (req) => {
         .from("impersonation_sessions")
         .select("impersonated_user_id, expires_at")
         .eq("impersonator_user_id", caller.id)
+        .eq("impersonator_session_id", sessionId)
         .is("stopped_at", null)
         .gt("expires_at", new Date().toISOString())
         .order("started_at", { ascending: false })
@@ -162,6 +186,7 @@ serve(async (req) => {
           stopped_by: caller.id,
         })
         .eq("impersonator_user_id", caller.id)
+        .eq("impersonator_session_id", sessionId)
         .is("stopped_at", null);
       if (closeExistingError) throw closeExistingError;
 
@@ -169,6 +194,7 @@ serve(async (req) => {
         .from("impersonation_sessions")
         .insert({
           impersonator_user_id: caller.id,
+          impersonator_session_id: sessionId,
           impersonated_user_id: targetUserId,
           started_at: new Date().toISOString(),
           expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
@@ -201,6 +227,7 @@ serve(async (req) => {
         stopped_by: caller.id,
       })
       .eq("impersonator_user_id", caller.id)
+      .eq("impersonator_session_id", sessionId)
       .is("stopped_at", null);
     if (stopSessionError) throw stopSessionError;
 
