@@ -343,7 +343,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                 <div className="flex md:hidden items-center justify-between mt-2.5">
                   <div className="whitespace-nowrap">
                     <span className="font-bold text-base text-[#94e700]">
-                      {service.price.toLocaleString('cs-CZ')} {service.currency}
+                      {serviceTotalPrice.toLocaleString('cs-CZ')} {service.currency}
                     </span>
                     {service.billing_type === 'monthly' && (
                       <span className="text-xs text-muted-foreground/70 ml-1">/měs</span>
