@@ -1894,25 +1894,6 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                     </Button>
                   </div>
                   </div>
-                  {/* Commission checkbox */}
-                  {member.colleague_id && (
-                    <div className="flex items-center gap-2 pt-1 border-t">
-                      <Checkbox
-                        id={`commission-${index}`}
-                        checked={!!commissionMembers[index]}
-                        onCheckedChange={(checked) => setCommissionMembers(prev => ({ ...prev, [index]: !!checked }))}
-                      />
-                      <label htmlFor={`commission-${index}`} className="text-xs text-muted-foreground cursor-pointer">
-                        Provize 10 % z měsíční fakturace
-                      </label>
-                      {commissionMembers[index] && (
-                        <Badge variant="outline" className="text-xs ml-auto gap-1">
-                          <Percent className="h-3 w-3" />
-                          {commissionAmount.toLocaleString('cs-CZ')} {lead.currency}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
                 </div>
                 );
               })}
