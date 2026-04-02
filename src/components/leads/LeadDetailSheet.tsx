@@ -653,7 +653,6 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                     emptyText="Žádná zpráva"
                   />
                 </div>
-                )}
 
               </div>
             </div>
