@@ -28,6 +28,7 @@ export interface NewInvoiceItemData {
   hourly_rate: number | null;
   currency: string;
   is_reverse_charge: boolean;
+  is_recurring: boolean;
 }
 
 interface AddInvoiceDialogProps {
