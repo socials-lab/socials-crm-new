@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { FileText, AlertTriangle, Trash2, Plus, CheckCircle2, Copy, MessageSquare, Clock, ArrowRightLeft } from 'lucide-react';
+import { FileText, AlertTriangle, Trash2, Plus, CheckCircle2, Copy, MessageSquare, Clock, ArrowRightLeft, Repeat } from 'lucide-react';
 import type { InvoiceLineItem } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
