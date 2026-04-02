@@ -126,6 +126,7 @@ export function AddActivityRewardDialog({
       hourly_rate: billingType === 'hourly' && hourlyRate ? Number(hourlyRate) : null,
       activity_date: activityDate,
       client_name: category === 'client_work' ? clientName : undefined,
+      is_recurring: isRecurring,
     });
     handleClose();
   };
