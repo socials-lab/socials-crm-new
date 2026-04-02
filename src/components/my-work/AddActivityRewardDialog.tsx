@@ -141,6 +141,7 @@ export function AddActivityRewardDialog({
     setHourlyRate('');
     setActivityDate(defaultDate || format(new Date(), 'yyyy-MM-dd'));
     setIsAmountManual(false);
+    setIsRecurring(false);
     onOpenChange(false);
   };
 
