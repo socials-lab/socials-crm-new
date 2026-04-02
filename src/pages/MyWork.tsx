@@ -400,6 +400,19 @@ function MyWorkContent() {
               <span className="font-medium">Celkem za klientskou práci</span>
               <span className="text-xl font-bold text-primary">{totalClientEarnings.toLocaleString()} Kč</span>
             </div>
+            {currentColleague.minimum_reward != null && currentColleague.minimum_reward > 0 && (
+              <div className={`flex items-center justify-between pt-1.5 text-sm rounded-md px-2 py-1.5 mt-1 ${
+                totalClientEarnings >= currentColleague.minimum_reward 
+                  ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' 
+                  : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+              }`}>
+                <span className="flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  Minimální odměna
+                </span>
+                <span className="font-medium">{currentColleague.minimum_reward.toLocaleString()} Kč</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
