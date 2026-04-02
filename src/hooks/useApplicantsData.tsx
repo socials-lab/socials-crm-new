@@ -305,6 +305,7 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
       billing_city: data.billing_city,
       billing_zip: data.billing_zip,
       bank_account: data.bank_account,
+      minimum_reward: null,
       contract_cooperation_url: null,
       contract_gdpr_url: null,
       created_at: new Date().toISOString(),
