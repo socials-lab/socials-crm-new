@@ -1808,8 +1808,15 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 </p>
               )}
 
-              {teamMembers.map((member, index) => (
-                <div key={index} className="grid gap-4 sm:grid-cols-5 p-3 border rounded-lg">
+              {teamMembers.map((member, index) => {
+                const monthlyTotal = offerServices
+                  .filter(s => s.billing_type === 'monthly')
+                  .reduce((sum, s) => sum + s.price, 0);
+                const commissionAmount = Math.round(monthlyTotal * 0.1);
+                
+                return (
+                <div key={index} className="p-3 border rounded-lg space-y-3">
+                  <div className="grid gap-4 sm:grid-cols-5">
                   <div>
                     <label className="text-xs text-muted-foreground">Kolega</label>
                     <Select 
@@ -1885,8 +1892,29 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
+                  </div>
+                  {/* Commission checkbox */}
+                  {monthlyTotal > 0 && member.colleague_id && (
+                    <div className="flex items-center gap-2 pt-1 border-t">
+                      <Checkbox
+                        id={`commission-${index}`}
+                        checked={!!commissionMembers[index]}
+                        onCheckedChange={(checked) => setCommissionMembers(prev => ({ ...prev, [index]: !!checked }))}
+                      />
+                      <label htmlFor={`commission-${index}`} className="text-xs text-muted-foreground cursor-pointer">
+                        Provize 10 % z měsíční fakturace
+                      </label>
+                      {commissionMembers[index] && (
+                        <Badge variant="outline" className="text-xs ml-auto gap-1">
+                          <Percent className="h-3 w-3" />
+                          {commissionAmount.toLocaleString('cs-CZ')} {lead.currency}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* ===== SUMMARY CARD: What's being converted ===== */}
