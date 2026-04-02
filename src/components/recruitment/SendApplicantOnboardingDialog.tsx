@@ -20,7 +20,7 @@ import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
-import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 interface SendApplicantOnboardingDialogProps {
@@ -49,7 +49,7 @@ export function SendApplicantOnboardingDialog({
   const onboardingUrl = `${window.location.origin}/applicant-onboarding/${applicant.id}`;
 
   const getDefaults = () => fillTemplate('applicant_onboarding', {
-    name: applicant.full_name.split(' ')[0],
+    name: inflectVocativeFullName(applicant.full_name),
     position: applicant.position,
     url: onboardingUrl,
     signature,

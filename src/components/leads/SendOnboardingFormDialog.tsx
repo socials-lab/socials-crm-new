@@ -17,7 +17,7 @@ import { toast } from '@/components/ui/sonner';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
-import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Lead } from '@/types/crm';
 
@@ -123,7 +123,7 @@ export function SendOnboardingFormDialog({
   function generateDefaultEmail() {
     const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' });
     return fillTemplate('send_onboarding_form', {
-      contact_name: lead.contact_name,
+      contact_name: inflectVocativeFullName(lead.contact_name),
       domain: lead.website ? cleanWebsite(lead.website) : lead.company_name,
       url: formUrl,
       signature,

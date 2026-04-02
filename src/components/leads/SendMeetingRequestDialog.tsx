@@ -20,7 +20,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useMeetingScheduleUrl } from '@/hooks/useMeetingScheduleUrl';
 import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 
 interface SendMeetingRequestDialogProps {
   open: boolean;
@@ -107,7 +107,7 @@ export function SendMeetingRequestDialog({
   const defaults = useMemo(() => {
     return fillTemplate('meeting_request', {
       company: companyName,
-      name: contactName,
+      name: inflectVocativeFullName(contactName),
       meeting_url: meetingUrl || '',
       signature: getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' }),
     });

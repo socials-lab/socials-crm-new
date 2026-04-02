@@ -1,4 +1,6 @@
 import type { Colleague } from '@/types/crm';
+// @ts-ignore - no types available
+import { vokativ } from 'vokativ';
 
 type SignatureColleague = Pick<
   Colleague,
@@ -10,6 +12,26 @@ interface EmailSignatureOptions {
   includePosition?: boolean;
   includeEmail?: boolean;
   includePhone?: boolean;
+}
+
+export function inflectVocativeFullName(fullName: string): string {
+  const parts = fullName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return '';
+
+  return parts
+    .map((part, index) => {
+      const isSurnamePart = index > 0;
+      try {
+        const inflected = vokativ(part, null, isSurnamePart);
+        return inflected.replace(/^./, (c: string) => c.toUpperCase());
+      } catch {
+        return part.replace(/^./, (c: string) => c.toUpperCase());
+      }
+    })
+    .join(' ');
 }
 
 export function getDefaultEmailSignature(

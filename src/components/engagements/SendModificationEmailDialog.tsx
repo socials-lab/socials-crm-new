@@ -28,7 +28,7 @@ import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 import { recordEmailSent, type StoredModificationRequest } from '@/hooks/useModificationRequests';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 import type {
   AddServiceProposedChanges,
   UpdateServicePriceProposedChanges,
@@ -156,7 +156,8 @@ export function SendModificationEmailDialog({
     if (!currentUserColleague || !open) return;
     
     const contactName = getContactName();
-    const greeting = contactName ? `Dobrý den, ${contactName},` : 'Dobrý den,';
+    const greetingName = contactName ? inflectVocativeFullName(contactName) : '';
+    const greeting = greetingName ? `Dobrý den, ${greetingName},` : 'Dobrý den,';
     const changeTypeLabel = REQUEST_TYPE_LABELS[request.request_type] || 'Změna služby';
     const changeDetails = getChangeDetails();
     const effectiveFrom = request.effective_from 

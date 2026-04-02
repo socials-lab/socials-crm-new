@@ -17,7 +17,7 @@ import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useCRMData } from '@/hooks/useCRMData';
-import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Lead } from '@/types/crm';
 
@@ -98,7 +98,7 @@ export function SendOfferDialog({
     });
 
     const { body } = fillTemplate('send_offer', {
-      contact_name: lead.contact_name,
+      contact_name: inflectVocativeFullName(lead.contact_name),
       company: lead.company_name,
       domain: lead.website ? cleanWebsite(lead.website) : lead.company_name,
       services_list: servicesText,

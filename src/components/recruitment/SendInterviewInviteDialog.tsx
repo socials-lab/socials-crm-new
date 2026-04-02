@@ -12,7 +12,7 @@ import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
-import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 interface SendInterviewInviteDialogProps {
@@ -36,7 +36,7 @@ export function SendInterviewInviteDialog({
   const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' });
 
   const getDefaults = () => fillTemplate('interview_invite', {
-    name: applicant.full_name.split(' ')[0],
+    name: inflectVocativeFullName(applicant.full_name),
     position: applicant.position,
     signature,
   });
