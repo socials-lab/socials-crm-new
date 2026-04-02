@@ -1895,7 +1895,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   </div>
                   </div>
                   {/* Commission checkbox */}
-                  {monthlyTotal > 0 && member.colleague_id && (
+                  {member.colleague_id && (
                     <div className="flex items-center gap-2 pt-1 border-t">
                       <Checkbox
                         id={`commission-${index}`}
