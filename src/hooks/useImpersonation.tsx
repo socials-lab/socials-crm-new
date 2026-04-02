@@ -78,7 +78,15 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.functions.invoke('impersonation-session', {
       body: { action: 'status' },
     });
-    if (error) throw error;
+    if (error) {
+      const status = (error as { context?: { status?: number } })?.context?.status;
+      if (status === 401) {
+        // Keep UX stable when token/session is in a transient invalid state.
+        stopImpersonation();
+        return;
+      }
+      throw error;
+    }
     if (data?.error) throw new Error(data.error);
 
     const targetUserId = typeof data?.impersonated_user_id === 'string' ? data.impersonated_user_id : null;

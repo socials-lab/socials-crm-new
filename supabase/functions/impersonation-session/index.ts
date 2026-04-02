@@ -13,6 +13,13 @@ interface ImpersonationRequest {
   target_user_id?: string;
 }
 
+function extractBearerToken(authHeader: string | null): string | null {
+  if (!authHeader) return null;
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+  return match[1].trim();
+}
+
 function decodeJwtPayload(token: string): Record<string, unknown> {
   const parts = token.split(".");
   if (parts.length < 2) {
@@ -54,15 +61,13 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    const token = extractBearerToken(req.headers.get("Authorization"));
+    if (!token) {
       return new Response(
-        JSON.stringify({ error: "Missing authorization header." }),
+        JSON.stringify({ error: "Missing or invalid authorization header." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    const token = authHeader.replace("Bearer ", "");
     const tokenPayload = decodeJwtPayload(token);
     const sessionIdRaw = tokenPayload["session_id"];
     const sessionId = typeof sessionIdRaw === "string" ? sessionIdRaw : null;
