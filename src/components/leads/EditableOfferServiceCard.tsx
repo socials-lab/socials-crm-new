@@ -175,7 +175,12 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 shrink-0">
-              <CardTitle className="text-base">{service.name}</CardTitle>
+              <Input
+                value={service.name}
+                onChange={(e) => handleFieldChange('name', e.target.value)}
+                className="text-base font-semibold h-8 w-48 px-2"
+                onClick={(e) => e.stopPropagation()}
+              />
               {tierInfo && (
                 <Badge variant="secondary" className={tierInfo.color}>
                   {tierInfo.label}
