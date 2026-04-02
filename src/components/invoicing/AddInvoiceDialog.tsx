@@ -99,6 +99,7 @@ export function AddInvoiceDialog({
       hourly_rate: hourlyRate ? Number(hourlyRate) : null,
       currency,
       is_reverse_charge: isReverseCharge,
+      is_recurring: isRecurring,
     });
     handleClose();
   };
