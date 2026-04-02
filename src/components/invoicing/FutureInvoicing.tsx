@@ -297,6 +297,39 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
           });
         });
 
+        // Add recurring manual items for this engagement
+        const recurringForMonth = getRecurringItemsForMonth(year, month);
+        recurringForMonth
+          .filter(ri => ri.engagement_id === engagement.id)
+          .forEach(ri => {
+            lineItems.push({
+              id: `li-rec-${ri.id}-${year}-${month}`,
+              invoice_id: `inv-${engagement.id}-${year}-${month}`,
+              source: 'manual' as const,
+              engagement_id: engagement.id,
+              extra_work_id: null,
+              source_description: `${ri.description} (opakovaná)`,
+              source_amount: ri.amount,
+              period_start: format(periodStart, 'yyyy-MM-dd'),
+              period_end: format(periodEnd, 'yyyy-MM-dd'),
+              prorated_days: totalDays,
+              total_days_in_month: totalDays,
+              prorated_amount: ri.amount,
+              line_description: `${ri.description}`,
+              unit_price: ri.amount,
+              quantity: 1,
+              adjustment_amount: 0,
+              adjustment_reason: '',
+              final_amount: ri.amount,
+              is_approved: false,
+              note: `🔄 Opakovaná položka od ${ri.start_month}/${ri.start_year}`,
+              hours: ri.hours,
+              hourly_rate: ri.hourly_rate,
+              currency: ri.currency,
+              is_reverse_charge: ri.is_reverse_charge,
+            });
+          });
+
         if (lineItems.length === 0) return;
 
         const subtotal = lineItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
@@ -324,7 +357,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       });
 
     return newInvoices;
-  }, [year, month, engagements, clients, getClientById, getUnbilledOneOffServices]);
+  }, [year, month, engagements, clients, getClientById, getUnbilledOneOffServices, getRecurringItemsForMonth]);
 
   // Merge generated invoices with any saved changes
   const currentInvoices = useMemo(() => {
