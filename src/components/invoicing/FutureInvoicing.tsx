@@ -518,7 +518,29 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     hourly_rate: number | null;
     currency: string;
     is_reverse_charge: boolean;
+    is_recurring: boolean;
   }) => {
+    // If recurring, save to recurring store (will auto-appear in future months)
+    if (itemData.is_recurring) {
+      addRecurringItem({
+        engagement_id: engagementId,
+        description: itemData.description,
+        amount: itemData.amount,
+        hours: itemData.hours,
+        hourly_rate: itemData.hourly_rate,
+        currency: itemData.currency,
+        is_reverse_charge: itemData.is_reverse_charge,
+        start_year: year,
+        start_month: month,
+        end_year: null,
+        end_month: null,
+      });
+      toast({
+        title: 'Opakovaná položka vytvořena',
+        description: `"${itemData.description}" se bude zobrazovat každý měsíc od ${month}/${year}.`,
+      });
+      return;
+    }
     const periodStart = startOfMonth(new Date(year, month - 1));
     const periodEnd = endOfMonth(new Date(year, month - 1));
     const totalDays = getDaysInMonth(new Date(year, month - 1));
