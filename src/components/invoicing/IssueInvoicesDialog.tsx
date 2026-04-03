@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Send, CheckCircle2, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Loader2, Send, CheckCircle2, ExternalLink, AlertTriangle, Copy } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { useCRMData } from '@/hooks/useCRMData';
 import type { MonthlyEngagementInvoice, IssuedInvoice } from '@/types/crm';
@@ -292,9 +292,22 @@ export function IssueInvoicesDialog({
       onIssueSuccess(successfullyIssuedDraftIds);
     }
 
-    toast.success('Faktury vystaveny', {
-      description: `Úspěšně vystaveno ${count} faktur do Fakturoid.`,
-    });
+    if (issuedInvoiceInfos.length === 1 && issuedInvoiceInfos[0].fakturoid_url) {
+      toast.success('Faktura vystavena', {
+        description: issuedInvoiceInfos[0].invoice_number,
+        action: {
+          label: 'Kopírovat URL',
+          onClick: () => {
+            navigator.clipboard.writeText(issuedInvoiceInfos[0].fakturoid_url!);
+            toast.success('URL zkopírována');
+          },
+        },
+      });
+    } else {
+      toast.success('Faktury vystaveny', {
+        description: `Úspěšně vystaveno ${count} faktur do Fakturoid.`,
+      });
+    }
   };
 
   const handleClose = () => {
@@ -351,15 +364,29 @@ export function IssueInvoicesDialog({
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-sm">{formatCurrency(inv.amount, inv.currency)}</span>
                     {inv.fakturoid_url ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2"
-                        onClick={() => window.open(inv.fakturoid_url!, '_blank')}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                        Fakturoid
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => {
+                            navigator.clipboard.writeText(inv.fakturoid_url!);
+                            toast.success('URL zkopírována');
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-1" />
+                          Kopírovat
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => window.open(inv.fakturoid_url!, '_blank')}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                          Otevřít
+                        </Button>
+                      </div>
                     ) : (
                       <span className="text-xs text-orange-600 flex items-center gap-1">
                         <AlertTriangle className="h-3.5 w-3.5" />

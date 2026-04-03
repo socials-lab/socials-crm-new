@@ -19,7 +19,7 @@ import {
 import { Save, Send, FileText, AlertTriangle, Plus, CheckCircle2, RotateCcw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { InvoiceLineItem, MonthlyEngagementInvoice } from '@/types/crm';
-import { getDaysInMonth, parseISO, startOfMonth, endOfMonth, format, isAfter, isBefore } from 'date-fns';
+import { getDaysInMonth, parseISO, startOfMonth, endOfMonth, format, isAfter, isBefore, subMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { isEngagementServiceActiveInPeriod } from '@/lib/engagementServiceLifecycle';
@@ -45,6 +45,13 @@ function requireCurrency(value: string | null | undefined, context: string): str
     return 'CZK';
   }
   return value;
+}
+
+const CZ_COUNTRY_NAMES = ['cz', 'česko', 'czech republic', 'česká republika'];
+
+function isCzechClient(billingCountry: string | null | undefined): boolean {
+  if (!billingCountry) return true; // default to CZ if unknown
+  return CZ_COUNTRY_NAMES.includes(billingCountry.toLowerCase().trim());
 }
 
 function requireSingleCurrency(items: InvoiceLineItem[], context: string): string {
@@ -134,6 +141,8 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     const periodStart = startOfMonth(new Date(year, month - 1));
     const periodEnd = endOfMonth(new Date(year, month - 1));
     const totalDays = getDaysInMonth(new Date(year, month - 1));
+    // Invoice descriptions use the previous month (work was done in prior period)
+    const invoiceLabelDate = subMonths(periodStart, 1);
 
     // Get Creative Boost data for the period (grouped by engagement)
     // Skip months that are already invoiced to prevent double-billing
@@ -196,6 +205,9 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
         if (!startsBeforeEnd || !endsAfterStart) return;
 
         const lineItems: InvoiceLineItem[] = [];
+        // Reverse charge (přenesená daňová odpovědnost) for non-CZK currency OR non-CZ client
+        const client = getClientById(engagement.client_id);
+        const isReverseCharge = requireCurrency(engagement.currency, `engagement ${engagement.id}`) !== 'CZK' || !isCzechClient(client?.billing_country);
 
         // Calculate active days in this period
         const effectiveStart = isAfter(engStartDate, periodStart) ? engStartDate : periodStart;
@@ -240,7 +252,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
               prorated_days: activeDays,
               total_days_in_month: totalDays,
               prorated_amount: proratedAmount,
-              line_description: `${service.name} - ${format(periodStart, 'LLLL yyyy', { locale: cs })}`,
+              line_description: `${service.name} - ${format(invoiceLabelDate, 'LLLL yyyy', { locale: cs })}`,
               unit_price: proratedAmount,
               quantity: 1,
               adjustment_amount: 0,
@@ -251,7 +263,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
               hours: null,
               hourly_rate: null,
               currency: requireCurrency(service.currency, `service ${service.id}`),
-              is_reverse_charge: false,
+              is_reverse_charge: isReverseCharge,
             });
           });
 
@@ -272,7 +284,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             prorated_days: totalDays,
             total_days_in_month: totalDays,
             prorated_amount: cbData.totalAmount,
-            line_description: `Creative Boost - ${format(periodStart, 'LLLL yyyy', { locale: cs })} (${cbData.usedCredits} kreditů)`,
+            line_description: `Creative Boost - ${format(invoiceLabelDate, 'LLLL yyyy', { locale: cs })} (${cbData.usedCredits} kreditů)`,
             unit_price: cbData.pricePerCredit,
             quantity: cbData.usedCredits,
             adjustment_amount: 0,
@@ -283,7 +295,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             hours: null,
             hourly_rate: null,
             currency: requireCurrency(engagement.currency, `engagement ${engagement.id}`),
-            is_reverse_charge: false,
+            is_reverse_charge: isReverseCharge,
           });
           // Remove from map so it's not duplicated
           creativeBoostData.delete(engagement.id);
@@ -316,7 +328,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             hours: ew.hours_worked,
             hourly_rate: ew.hourly_rate,
             currency: requireCurrency(ew.currency, `extra work ${ew.id}`),
-            is_reverse_charge: false,
+            is_reverse_charge: isReverseCharge,
           });
         });
 
@@ -348,7 +360,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             hours: null,
             hourly_rate: null,
             currency: requireCurrency(service.currency, `service ${service.id}`),
-            is_reverse_charge: false,
+            is_reverse_charge: isReverseCharge,
           });
         });
 
@@ -385,7 +397,10 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   // Merge generated invoices with any saved changes
   const currentInvoices = useMemo(() => {
     if (invoices.length > 0) {
-      return invoices;
+      // Merge: keep draft edits for existing invoices, add any new generated ones (e.g. newly added EUR engagements)
+      const draftIds = new Set(invoices.map(inv => inv.id));
+      const newInvoices = generatedInvoices.filter(inv => !draftIds.has(inv.id));
+      return [...invoices, ...newInvoices];
     }
     return generatedInvoices;
   }, [invoices, generatedInvoices]);
@@ -424,6 +439,8 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     const base = invoices.length > 0 ? invoices : generatedInvoices;
     const invoice = base.find(inv => inv.id === invoiceId);
     const parentCurrency = requireCurrency(invoice?.currency, `invoice ${invoiceId}`);
+    const manualClient = invoice?.client_id ? getClientById(invoice.client_id) : null;
+    const manualIsReverseCharge = parentCurrency !== 'CZK' || !isCzechClient(manualClient?.billing_country);
 
     const newItem: InvoiceLineItem = {
       id: `li-manual-${Date.now()}`,
@@ -449,7 +466,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       hours: null,
       hourly_rate: null,
       currency: parentCurrency,
-      is_reverse_charge: false,
+      is_reverse_charge: manualIsReverseCharge,
     };
 
     setInvoices(prev => {

@@ -125,7 +125,7 @@ serve(async (req) => {
     // Fetch client to get Fakturoid subject_id
     const { data: client } = await supabaseAdmin
       .from("clients")
-      .select("id, name, fakturoid_subject_id")
+      .select("id, name, fakturoid_subject_id, billing_country")
       .eq("id", invoice.client_id)
       .single();
 
@@ -160,23 +160,28 @@ serve(async (req) => {
     // Set FAKTUROID_VAT_PAYER=true if you become VAT registered
     const isVatPayer = Deno.env.get("FAKTUROID_VAT_PAYER") === "true";
 
+    // Reverse charge (přenesená daňová odpovědnost) for non-CZK currency OR non-CZ client
+    const czCountryNames = ['cz', 'česko', 'czech republic', 'česká republika'];
+    const clientBillingCountry = (client.billing_country || '').toLowerCase().trim();
+    const isCzClient = !clientBillingCountry || czCountryNames.includes(clientBillingCountry);
+    const useReverseCharge = invoiceCurrency !== 'CZK' || !isCzClient;
+
     // Map line items to Fakturoid format
     const lines: FakturoidInvoiceItem[] = lineItems.map((item, index) => ({
       name: item.line_description,
       quantity: parseNumber(item.quantity, `line item ${index + 1} quantity`, { min: 0, allowZero: false }),
       unit_name: item.unit_name || 'ks',
       unit_price: parseNumber(item.unit_price, `line item ${index + 1} unit_price`, { min: 0 }),
-      // Non-CZK = reverse charge (transferred_tax_liability) => vat 0
+      // Reverse charge (non-CZK or non-CZ client) => vat 0
       // Non-VAT payer: always 0%, VAT payer: use reverse charge or line item rate
-      vat_rate: invoiceCurrency !== 'CZK' ? 0 : (isVatPayer ? (item.is_reverse_charge ? 0 : parseNumber(item.vat_rate ?? 21, `line item ${index + 1} vat_rate`, { min: 0 })) : 0),
+      vat_rate: useReverseCharge ? 0 : (isVatPayer ? (item.is_reverse_charge ? 0 : parseNumber(item.vat_rate ?? 21, `line item ${index + 1} vat_rate`, { min: 0 })) : 0),
     }));
 
-    // Non-CZK invoices must be issued with reverse charge (přenesená daňová odpovědnost)
-    const useReverseCharge = invoiceCurrency !== 'CZK';
+    // DUZP (taxable fulfillment date) = last day of previous month relative to invoice period
+    // e.g. invoice period = April (month=4) → DUZP = March 31st
+    const duzpDate = new Date(invoice.year, invoice.month - 1, 0); // day 0 of month = last day of previous month
+    const duzpFormatted = `${duzpDate.getFullYear()}-${String(duzpDate.getMonth() + 1).padStart(2, '0')}-${String(duzpDate.getDate()).padStart(2, '0')}`;
 
-    // Note: We don't send issued_on or due dates - let Fakturoid use its server's current date
-    // This avoids date validation issues when local system clock differs from Fakturoid's server
-    // Fakturoid will use today's date for issued_on and calculate due based on account settings (default 14 days)
     const payload = {
       subject_id: client.fakturoid_subject_id,
       lines,
@@ -184,6 +189,7 @@ serve(async (req) => {
       transferred_tax_liability: useReverseCharge,
       // due_in: 14 means "due 14 days from issued_on" - Fakturoid will calculate actual date
       due_in: 14,
+      taxable_fulfillment_due: duzpFormatted,
       note: `Faktura ${invoice.invoice_number}`,
     };
 
