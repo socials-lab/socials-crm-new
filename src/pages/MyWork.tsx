@@ -84,8 +84,10 @@ function MyWorkContent() {
   } = useActivityRewards(colleagueId);
 
   const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth() + 1;
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const currentYear = selectedYear;
+  const currentMonth = selectedMonth;
 
   // Get current colleague
   const currentColleague = useMemo(() => {
@@ -325,9 +327,14 @@ function MyWorkContent() {
         {/* Earnings Summary - CLIENT WORK ONLY */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 flex-wrap">
               <Coins className="h-4 w-4 text-primary" />
-              Odměny tento měsíc
+              Odměny
+              <div className="flex items-center gap-1">
+                <button className="text-xs px-1.5 py-0.5 rounded border hover:bg-muted" onClick={() => { if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); } else setSelectedMonth(m => m - 1); }}>←</button>
+                <span className="text-xs font-normal min-w-[80px] text-center">{selectedMonth}/{selectedYear}</span>
+                <button className="text-xs px-1.5 py-0.5 rounded border hover:bg-muted" onClick={() => { if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear(y => y + 1); } else setSelectedMonth(m => m + 1); }}>→</button>
+              </div>
               <Badge variant="outline" className="text-xs font-normal">za klientskou práci</Badge>
             </CardTitle>
           </CardHeader>
@@ -354,13 +361,38 @@ function MyWorkContent() {
               </div>
             )}
             
-            {totalCreativeBoostReward > 0 && (
-              <div className="flex items-center justify-between py-1.5 border-t">
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
+            {creditsByClient.length > 0 && (
+              <div className="space-y-1.5 border-t pt-1.5">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Sparkles className="h-3 w-3" />
                   Creative Boost ({monthCredits} kr)
-                </span>
-                <span className="font-medium text-primary">{totalCreativeBoostReward.toLocaleString()} Kč</span>
+                </div>
+                {creditsByClient.map((cb) => (
+                  <div key={cb.clientId} className="flex items-center justify-between py-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-sm truncate">{cb.brandName || cb.clientName}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {cb.bannerCredits > 0 && (
+                          <Badge variant="outline" className="text-[10px] h-4">
+                            🖼️ {cb.bannerCredits} kr × {cb.bannerRewardPerCredit} Kč
+                          </Badge>
+                        )}
+                        {cb.videoCredits > 0 && (
+                          <Badge variant="secondary" className="text-[10px] h-4">
+                            🎬 {cb.videoCredits} kr × {cb.videoRewardPerCredit} Kč
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <span className="font-medium text-primary whitespace-nowrap">{cb.totalReward.toLocaleString()} Kč</span>
+                  </div>
+                ))}
+                {creditsByClient.length > 1 && (
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <span className="text-muted-foreground">Creative Boost celkem</span>
+                    <span className="font-semibold text-primary">{totalCreativeBoostReward.toLocaleString()} Kč</span>
+                  </div>
+                )}
               </div>
             )}
             
