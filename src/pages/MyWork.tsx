@@ -672,9 +672,5 @@ function MyWorkContent() {
 }
 
 export default function MyWork() {
-  return (
-    <CreativeBoostProvider>
-      <MyWorkContent />
-    </CreativeBoostProvider>
-  );
+  return <MyWorkContent />;
 }
