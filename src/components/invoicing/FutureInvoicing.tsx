@@ -19,7 +19,7 @@ import {
 import { Save, Send, FileText, AlertTriangle, Plus, CheckCircle2, RotateCcw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { InvoiceLineItem, MonthlyEngagementInvoice } from '@/types/crm';
-import { getDaysInMonth, parseISO, startOfMonth, endOfMonth, format, isAfter, isBefore, subMonths } from 'date-fns';
+import { getDaysInMonth, parseISO, startOfMonth, endOfMonth, format, isAfter, isBefore } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { isEngagementServiceActiveInPeriod } from '@/lib/engagementServiceLifecycle';
@@ -141,8 +141,6 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     const periodStart = startOfMonth(new Date(year, month - 1));
     const periodEnd = endOfMonth(new Date(year, month - 1));
     const totalDays = getDaysInMonth(new Date(year, month - 1));
-    // Invoice descriptions use the previous month (work was done in prior period)
-    const invoiceLabelDate = subMonths(periodStart, 1);
 
     // Get Creative Boost data for the period (grouped by engagement)
     // Skip months that are already invoiced to prevent double-billing
@@ -252,7 +250,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
               prorated_days: activeDays,
               total_days_in_month: totalDays,
               prorated_amount: proratedAmount,
-              line_description: `${service.name} - ${format(invoiceLabelDate, 'LLLL yyyy', { locale: cs })}`,
+              line_description: `${service.name} - ${format(periodStart, 'LLLL yyyy', { locale: cs })}`,
               unit_price: proratedAmount,
               quantity: 1,
               adjustment_amount: 0,
@@ -284,7 +282,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             prorated_days: totalDays,
             total_days_in_month: totalDays,
             prorated_amount: cbData.totalAmount,
-            line_description: `Creative Boost - ${format(invoiceLabelDate, 'LLLL yyyy', { locale: cs })} (${cbData.usedCredits} kreditů)`,
+            line_description: `Creative Boost - ${format(periodStart, 'LLLL yyyy', { locale: cs })} (${cbData.usedCredits} kreditů)`,
             unit_price: cbData.pricePerCredit,
             quantity: cbData.usedCredits,
             adjustment_amount: 0,

@@ -149,12 +149,11 @@ export function CreateInvoiceFromEngagementDialog({
   const [selectedPeriod, setSelectedPeriod] = useState(defaultPeriod);
   const [items, setItems] = useState<InvoiceItemDraft[]>([]);
 
-  // Get period label for invoice descriptions (uses previous month - work was done in prior period)
+  // Get period label for descriptions
   const getPeriodLabel = useCallback((period: string) => {
     const option = periodOptions.find(p => p.value === period);
     if (!option) return '';
-    const invoiceMonth = subMonths(new Date(option.year, option.month - 1), 1);
-    return format(invoiceMonth, 'LLLL yyyy', { locale: cs });
+    return format(new Date(option.year, option.month - 1), 'LLLL yyyy', { locale: cs });
   }, [periodOptions]);
 
   const activeServicesForSelectedPeriod = useMemo(() => {
